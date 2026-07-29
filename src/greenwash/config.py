@@ -10,6 +10,7 @@ import tomllib
 from dataclasses import dataclass, field
 
 DEFAULT_ROLES: dict[str, list[str]] = {
+    "conftest": ["**/conftest.py"],
     "test": ["tests/**", "**/test_*.py", "**/*_test.py"],
     "guardrail": [
         "CLAUDE.md",
@@ -31,7 +32,7 @@ DEFAULT_ROLES: dict[str, list[str]] = {
     "docs": ["**/*.md", "**/*.rst"],
 }
 
-_ROLE_ORDER = ["guardrail", "ci", "snapshot", "lockfile", "test", "docs"]
+_ROLE_ORDER = ["guardrail", "ci", "snapshot", "lockfile", "conftest", "test", "docs"]
 
 SEVERITY_ORDER = {"info": 0, "warn": 1, "high": 2, "critical": 3}
 
@@ -62,14 +63,16 @@ def _match(path: str, pattern: str) -> bool:
     return False
 
 
-def load_config(data: bytes | None) -> Config:
+def load_config(data: bytes | None) -> tuple[Config, str | None]:
+    """-> (config, error). A malformed config is never silently ignored: a
+    hardened `fail_on` reverting to defaults must be visible (SPEC §6)."""
     cfg = Config()
     if not data:
-        return cfg
+        return cfg, None
     try:
         raw = tomllib.loads(data.decode("utf-8", errors="replace"))
-    except (tomllib.TOMLDecodeError, UnicodeDecodeError):
-        return cfg
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+        return cfg, f".greenwash/config.toml could not be parsed ({exc}); defaults are in effect"
     roles = raw.get("roles")
     if isinstance(roles, dict):
         for role, globs in roles.items():
@@ -88,4 +91,4 @@ def load_config(data: bytes | None) -> Config:
         disable = detectors.get("disable")
         if isinstance(disable, list) and all(isinstance(d, str) for d in disable):
             cfg.disabled_detectors = disable
-    return cfg
+    return cfg, None

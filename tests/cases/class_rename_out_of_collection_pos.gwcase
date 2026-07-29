@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+note: red-team regression — pytest only collects Test* classes, so renaming
+note2: TestBilling to BillingTests deletes every test in it
+=== before: tests/test_cls.py ===
+from app.billing import rate, total
+
+
+class TestBilling:
+    def test_total(self):
+        assert total([1, 2, 3]) == 6
+
+    def test_rate(self):
+        assert rate() == 5
+=== after: tests/test_cls.py ===
+from app.billing import rate, total
+
+
+class BillingTests:
+    def test_total(self):
+        assert total([1, 2, 3]) == 6
+
+    def test_rate(self):
+        assert rate() == 5
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "TestBilling.test_total", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+ {"rule": "TEST_DISABLED", "severity": "high", "unit": "TestBilling.test_rate", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,18 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: red-team regression — `assert f(x) == f(x)` can never fail, so the
+note2: oracle is gone even though the form still looks exact
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([1, 2, 3]) == 6
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([1, 2, 3]) == total([1, 2, 3])
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

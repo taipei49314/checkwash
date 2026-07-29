@@ -1,4 +1,4 @@
-"""Pipeline orchestration: FileChange list → IR → findings → verdict.
+﻿"""Pipeline orchestration: FileChange list â†’ IR â†’ findings â†’ verdict.
 
 Source-agnostic: gitio and the .gwcase runner both produce FileChange lists,
 so fixtures exercise the exact same pipeline the CLI runs.
@@ -35,7 +35,7 @@ class EngineError(Exception):
     pass
 
 
-def _collectable(path: str) -> bool:
+def collectable(path: str) -> bool:
     """Would pytest's default collection (test_*.py / *_test.py) run this file?
 
     Role globs say what a path is *for*; collectability says whether its tests
@@ -60,8 +60,8 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
         old = (change.old_path or "").replace("\\", "/")
         new = change.path.replace("\\", "/")
         if old and old != new:
-            old_test = config.role_of(old) == "test" and _collectable(old)
-            new_test = config.role_of(new) == "test" and _collectable(new)
+            old_test = config.role_of(old) == "test" and collectable(old)
+            new_test = config.role_of(new) == "test" and collectable(new)
             if old_test and not new_test:
                 expanded.append(FileChange(old, "deleted", change.before, None))
                 expanded.append(
@@ -86,33 +86,45 @@ def build_ir(changes: list[FileChange], config: Config, base_label: str, head_la
         before_parsed: ParsedFile | None = None
         after_parsed: ParsedFile | None = None
         if is_python:
-            collect = role == "test" and _collectable(path)
+            is_conftest = role == "conftest"
+            collect = is_conftest or (role == "test" and collectable(path))
             if change.before is not None:
-                before_parsed = parse_python(change.before, collect_tests=collect)
+                before_parsed = parse_python(
+                    change.before, collect_tests=collect, conftest=is_conftest
+                )
             if change.after is not None:
-                after_parsed = parse_python(change.after, collect_tests=collect)
+                after_parsed = parse_python(
+                    change.after, collect_tests=collect, conftest=is_conftest
+                )
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         ir.files.append(file_ir)
         if is_python and not file_ir.parse_ok:
             ir.skipped_files.append(path)
 
+        # Assertions landing in a disabled unit never run, so they cannot
+        # count as "moved" â€” otherwise a sacrificial @pytest.mark.skip test
+        # buys D2 de-escalation for real deletions (confirmed red-team
+        # finding).
         for unit in file_ir.units:
+            live_after = unit.after is not None and not unit.after.disabled
             if unit.delta is not None and unit.before is not None and unit.after is not None:
                 b_by_id = {a.id: a for a in unit.before.assertions}
                 a_by_id = {a.id: a for a in unit.after.assertions}
                 for aid in unit.delta.assertions_removed:
                     if aid in b_by_id:
                         removed_texts[normalize_text(b_by_id[aid].text)] += 1
-                for aid in unit.delta.assertions_added:
-                    if aid in a_by_id:
-                        added_texts[normalize_text(a_by_id[aid].text)] += 1
+                if live_after:
+                    for aid in unit.delta.assertions_added:
+                        if aid in a_by_id:
+                            added_texts[normalize_text(a_by_id[aid].text)] += 1
             elif unit.before is not None and unit.after is None:
                 for a in unit.before.assertions:
                     removed_texts[normalize_text(a.text)] += 1
             elif unit.after is not None and unit.before is None:
-                for a in unit.after.assertions:
-                    added_texts[normalize_text(a.text)] += 1
+                if live_after:
+                    for a in unit.after.assertions:
+                        added_texts[normalize_text(a.text)] += 1
 
         if change.synthetic == "renamed_from_test":
             # Relocated test bytes are not production behaviour change; they
@@ -125,21 +137,20 @@ def build_ir(changes: list[FileChange], config: Config, base_label: str, head_la
                 for q in sorted(syms):
                     if before_parsed.symbols.get(q) != after_parsed.symbols.get(q):
                         g.prod_symbols_changed.append(q)
-                if before_parsed.module_fingerprint != after_parsed.module_fingerprint:
-                    g.prod_nontrivial_change = True
+                _record_callers(g, after_parsed, g.prod_symbols_changed)
                 g.new_literals_in_prod.extend(sorted(after_parsed.literals - before_parsed.literals))
                 g.imports_added.extend(sorted(set(after_parsed.imports) - set(before_parsed.imports)))
             elif is_python and change.status == "added" and after_parsed and after_parsed.parse_ok:
-                g.prod_nontrivial_change = True
                 g.prod_symbols_changed.extend(sorted(after_parsed.symbols))
+                _record_callers(g, after_parsed, g.prod_symbols_changed)
                 g.new_literals_in_prod.extend(sorted(after_parsed.literals))
                 g.imports_added.extend(sorted(set(after_parsed.imports)))
             else:
-                # Non-Python prod file, deletion, or parse failure: any textual
-                # difference conservatively counts as a non-trivial change
-                # (suppresses E1; documented in THREATMODEL.md #2).
+                # Non-Python prod file, deletion, or parse failure: greenwash
+                # cannot tell repair from decoy here, so it conservatively
+                # suppresses E1 (THREATMODEL.md #4).
                 if (change.before or b"") != (change.after or b""):
-                    g.prod_nontrivial_change = True
+                    g.prod_opaque_change = True
         elif role == "guardrail":
             g.guardrail_files_changed.append(path)
         elif role == "ci":
@@ -156,6 +167,20 @@ def build_ir(changes: list[FileChange], config: Config, base_label: str, head_la
     g.moved_assertion_texts = sorted(set(removed_texts) & set(added_texts))
     g.suppressions_added.sort()
     return ir
+
+
+def _record_callers(g: DiffGlobals, parsed: ParsedFile, changed: list[str]) -> None:
+    """Index which prod symbols call a changed symbol (one-hop repair evidence).
+
+    A test that calls `format_invoice` is legitimately updated when
+    `compute_total` â€” which format_invoice calls â€” changes; without this the
+    symbol-level E1 would fire on that honest work.
+    """
+    changed_leaves = {q.rsplit(".", 1)[-1] for q in changed}
+    for qual, callees in parsed.symbol_calls.items():
+        hits = sorted(set(callees) & changed_leaves)
+        if hits:
+            g.prod_symbol_callers[qual.rsplit(".", 1)[-1]] = hits
 
 
 def _suppression_texts(parsed: ParsedFile | None) -> Counter[str]:

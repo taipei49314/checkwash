@@ -9,7 +9,7 @@ from greenwash.ir.model import IR
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role != "test":
+        if file.role not in ("test", "conftest"):
             continue
         for unit in file.units:
             if unit.before is not None and unit.after is None:
@@ -34,11 +34,16 @@ def detect(ir: IR) -> list[Finding]:
                 marker_by_name = {m.name: m for m in unit.after.markers}
                 for name in unit.delta.markers_added:
                     m = marker_by_name.get(name)
+                    what = (
+                        "suite-level collection control added"
+                        if name.startswith("conftest.")
+                        else "disabling marker added"
+                    )
                     findings.append(
                         Finding(
                             rule="TEST_DISABLED",
                             severity="warn",
-                            message=f"{unit.qualname}: disabling marker added ({name})",
+                            message=f"{unit.qualname}: {what} ({name})",
                             path=file.path,
                             unit=unit.qualname,
                             before=None,
@@ -46,4 +51,25 @@ def detect(ir: IR) -> list[Finding]:
                             fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, name),
                         )
                     )
+            if unit.delta.param_cases_removed:
+                n = unit.delta.param_cases_removed
+                before_n = unit.before.param_cases if unit.before else None
+                after_n = unit.after.param_cases
+                findings.append(
+                    Finding(
+                        rule="TEST_DISABLED",
+                        severity="warn",
+                        message=(
+                            f"{unit.qualname}: {n} parametrized case(s) deleted "
+                            f"({before_n} -> {after_n if after_n is not None else 1})"
+                        ),
+                        path=file.path,
+                        unit=unit.qualname,
+                        before=None,
+                        after=Evidence(text=f"parametrize cases: {after_n}", span=unit.after.span),
+                        fingerprint=make_fingerprint(
+                            "TEST_DISABLED", file.path, unit.qualname, "parametrize"
+                        ),
+                    )
+                )
     return findings

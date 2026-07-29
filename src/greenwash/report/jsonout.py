@@ -9,7 +9,9 @@ from greenwash.findings import Finding
 from greenwash.ir.model import IR, to_jsonable
 
 
-def findings_to_json(ir: IR, findings: list[Finding], verdict: str) -> str:
+def findings_to_json(
+    ir: IR, findings: list[Finding], verdict: str, errors: list[str] | None = None
+) -> str:
     counts = {"critical": 0, "high": 0, "warn": 0, "info": 0}
     for f in findings:
         counts[f.severity] += 1
@@ -23,6 +25,7 @@ def findings_to_json(ir: IR, findings: list[Finding], verdict: str) -> str:
         "findings": [to_jsonable(f) for f in findings],
         "summary": counts,
         "skipped_files": list(ir.skipped_files),
+        "config_errors": list(errors or []),
         "verdict": verdict,
     }
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"

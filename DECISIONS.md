@@ -26,6 +26,31 @@ warn + escalator table). Frozen: uniform base `warn`, deterministic
 escalator/de-escalator table in SPEC §5. One gating philosophy, one file
 (`gating.py`), auditable in one read.
 
+## D-004 (2026-07-30): repair evidence is symbol-relevant, not diff-global
+
+Round-2 review reproduced the load-bearing bypass: E1 keyed on one global
+flag ("some prod file changed non-trivially"), so appending `_UNUSED = 0` to
+any prod file demoted every oracle finding in the diff from high to warn and
+the run exited 0.
+
+Frozen: evidence must be relevant to the *specific* test (SPEC §5) — a
+changed symbol the test calls, or one hop from it. Measured effect: the dead
+constant, the pure statement reorder, the dead helper function, and the
+unrelated-function edit all block again, while an honest repair (change
+`compute_total`, update the test that calls it) still passes, and an indirect
+repair through `format_invoice` still holds at warn.
+
+The cost is a narrower conservative fallback: only prod changes greenwash
+*cannot parse* still suppress E1 (THREATMODEL #4).
+
+## D-005 (2026-07-30): greenwash models pytest collection, not just roles
+
+Four separate bypasses (file rename, class rename, conftest hook, early
+return / parametrize rows) were the same mistake: treating "is this a test
+file?" as the question, when the question is "do these assertions still
+run?". SPEC §2b now states the collection model explicitly, and every gap
+between role and collection is a bug, not a limitation.
+
 ## D-003 (2026-07-29): exemptions are visible, not locked
 
 Original design read exemptions only from base side AND made any

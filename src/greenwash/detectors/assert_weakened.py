@@ -10,7 +10,7 @@ from greenwash.ir.strength import name_of
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role != "test":
+        if file.role not in ("test", "conftest"):
             continue
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:

@@ -73,6 +73,11 @@ _SKIP_CALLS = {"pytest.skip", "pytest.xfail", "pytest.importorskip", "self.skipT
 
 _BROAD_EXCEPTIONS = {"Exception", "BaseException"}
 
+# conftest.py is where pytest lets you disable collection for a whole tree.
+# These are the curated suite-level controls TEST_DISABLED watches for.
+_CONFTEST_HOOKS = {"pytest_ignore_collect", "pytest_collection_modifyitems"}
+_CONFTEST_NAMES = {"collect_ignore", "collect_ignore_glob"}
+
 
 @dataclass
 class ParsedUnit:
@@ -87,6 +92,7 @@ class ParsedFile:
     parse_ok: bool
     units: list[ParsedUnit] = field(default_factory=list)
     symbols: dict[str, str] = field(default_factory=dict)  # qualname -> behaviour fingerprint
+    symbol_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)  # qualname -> callees
     module_fingerprint: str = ""
     imports: list[str] = field(default_factory=list)
     suppressions: list[str] = field(default_factory=list)
@@ -133,6 +139,10 @@ def _dotted(node: ast.AST) -> str | None:
 
 def _is_container_literal(node: ast.AST) -> bool:
     return isinstance(node, (ast.List, ast.Dict, ast.Set, ast.Tuple)) and _is_literal(node)
+
+
+def _norm(text: str) -> str:
+    return "".join(text.split())
 
 
 def _is_literal(node: ast.AST) -> bool:
@@ -191,6 +201,12 @@ def _classify_assert(node: ast.Assert, text: str) -> tuple[str, int | None, str 
         left_text = ast.get_source_segment(text, left)
         right_lit = _literal_repr(comparators[0], text) if comparators else None
         if isinstance(op, (ast.Eq, ast.NotEq)):
+            # Self-comparison (`assert f(x) == f(x)`) can never fail: the
+            # oracle is gone even though the form still looks exact
+            # (confirmed red-team finding).
+            right_text = ast.get_source_segment(text, comparators[0]) if comparators else None
+            if left_text and right_text and _norm(left_text) == _norm(right_text):
+                return ("tautology", S.TAUTOLOGY, left_text, right_lit, None)
             if isinstance(left, ast.Call) and _dotted(left.func) == "len":
                 return ("type_shape", S.TYPE_SHAPE, left_text, right_lit, None)
             if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
@@ -239,6 +255,10 @@ def _classify_unittest_call(node: ast.Call, text: str) -> tuple[str, int | None,
                 epsilon = ast.get_source_segment(text, kw.value)
     if form == "truthy" and node.args and _is_literal(node.args[0]):
         form, level = "tautology", S.TAUTOLOGY
+    if form == "compare_eq" and len(node.args) > 1:
+        right_text = ast.get_source_segment(text, node.args[1])
+        if left_text and right_text and _norm(left_text) == _norm(right_text):
+            form, level = "tautology", S.TAUTOLOGY
     return (form, level, left_text, right_lit, epsilon)
 
 
@@ -273,6 +293,55 @@ def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Mark
     return markers
 
 
+def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
+    """Node ids under statements that can never execute.
+
+    `return` (or `raise`) parked at the top of a test body leaves every
+    assertion in the AST while killing the test — a one-token cheat that was
+    completely silent before (confirmed red-team finding).
+    """
+    dead: set[int] = set()
+
+    def scan(body: list[ast.stmt]) -> None:
+        stop = None
+        for i, stmt in enumerate(body):
+            if stop is not None:
+                for node in ast.walk(stmt):
+                    dead.add(id(node))
+                continue
+            if isinstance(stmt, (ast.Return, ast.Raise)):
+                stop = i
+                continue
+            for name in ("body", "orelse", "finalbody"):
+                inner = getattr(stmt, name, None)
+                if isinstance(inner, list) and inner and isinstance(inner[0], ast.stmt):
+                    scan(inner)
+            for handler in getattr(stmt, "handlers", []) or []:
+                scan(handler.body)
+
+    scan(func.body)
+    return dead
+
+
+def _param_case_count(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None:
+    """pytest test-item count contributed by @pytest.mark.parametrize rows.
+
+    Deleting rows deletes test items; in pytest's model each row IS a test
+    unit, so the count belongs in the IR (confirmed red-team finding).
+    """
+    total: int | None = None
+    for dec in func.decorator_list:
+        if not isinstance(dec, ast.Call):
+            continue
+        if _dotted(dec.func) not in ("pytest.mark.parametrize", "mark.parametrize", "parametrize"):
+            continue
+        if len(dec.args) < 2 or not isinstance(dec.args[1], (ast.List, ast.Tuple)):
+            continue
+        rows = len(dec.args[1].elts)
+        total = rows if total is None else total * rows
+    return total
+
+
 def _collect_unit(
     func: ast.FunctionDef | ast.AsyncFunctionDef,
     qualname: str,
@@ -285,8 +354,11 @@ def _collect_unit(
     markers = _decorator_markers(func, text, off) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
+    dead = _unreachable_ids(func)
 
     for node in ast.walk(func):
+        if id(node) in dead:
+            continue
         if isinstance(node, ast.Assert):
             form, level, left_text, right_lit, eps = _classify_assert(node, text)
             seg = ast.get_source_segment(text, node) or ""
@@ -352,8 +424,42 @@ def _collect_unit(
         calls=tuple(sorted(calls)),
         markers=sorted(markers, key=lambda m: m.span),
         handlers=sorted(handlers, key=lambda h: h.span),
+        param_cases=_param_case_count(func),
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
+
+
+def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
+    """Suite-level collection controls in a conftest, as one synthetic unit."""
+    markers: list[Marker] = _pytestmark_markers(tree, text, off)
+    for node in ast.walk(tree):
+        name = None
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in _CONFTEST_HOOKS:
+            name = f"conftest.{node.name}"
+        elif isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id in _CONFTEST_NAMES for t in node.targets
+        ):
+            name = "conftest.collect_ignore"
+        elif isinstance(node, ast.Call) and (_dotted(node.func) or "").endswith("add_marker"):
+            arg = _dotted(node.args[0].func) if node.args and isinstance(node.args[0], ast.Call) else (
+                _dotted(node.args[0]) if node.args else None
+            )
+            if arg in _SKIP_DECORATORS:
+                name = "conftest.add_marker_skip"
+        if name is None:
+            continue
+        seg = (ast.get_source_segment(text, node) or name).split("\n")[0]
+        markers.append(Marker(name=name, text=seg, span=off.span(node)))
+
+    seen: set[str] = set()
+    unique = []
+    for m in sorted(markers, key=lambda m: m.span):
+        if m.name in seen:
+            continue
+        seen.add(m.name)
+        unique.append(m)
+    side = UnitSide(span=(0, len(text)), markers=unique)
+    return ParsedUnit(qualname="<suite>", span=side.span, side=side, shingles=frozenset())
 
 
 def _shingles(func: ast.AST, k: int = 5) -> frozenset[tuple[str, ...]]:
@@ -394,40 +500,75 @@ def _is_test_name(name: str) -> bool:
     return name.startswith("test")
 
 
-def parse_python(data: bytes, collect_tests: bool) -> ParsedFile:
+def _is_test_class(name: str) -> bool:
+    """pytest's default python_classes = Test*.
+
+    Methods of a class that does not match are never collected, so renaming
+    `TestBilling` to `BillingTests` silently deletes every test in it
+    (confirmed red-team finding).
+    """
+    return name.startswith("Test")
+
+
+def _callees(node: ast.AST) -> tuple[str, ...]:
+    names: set[str] = set()
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Call):
+            dotted = _dotted(sub.func)
+            if dotted:
+                names.add(dotted.rsplit(".", 1)[-1])
+    return tuple(sorted(names))
+
+
+def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> ParsedFile:
     text = normalize_source(data)
     try:
         tree = ast.parse(text)
     except SyntaxError:
         return ParsedFile(parse_ok=False)
+    except (RecursionError, ValueError, MemoryError):
+        # Deeply nested expressions raise RecursionError, not SyntaxError.
+        # Head-side content is attacker-controlled: degrade visibly instead
+        # of crashing the process (confirmed red-team finding).
+        return ParsedFile(parse_ok=False)
 
     off = _Offsets(text)
     units: list[ParsedUnit] = []
     symbols: dict[str, str] = {}
+    symbol_calls: dict[str, tuple[str, ...]] = {}
     literals: set[str] = set()
     imports: list[str] = []
 
     module_markers = _pytestmark_markers(tree, text, off) if collect_tests else []
 
-    def visit(node: ast.AST, prefix: str, inherited: list[Marker]) -> None:
+    def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{prefix}{child.name}"
                 symbols[qual] = _fingerprint(_strip_docstrings(ast.parse(ast.unparse(child))))
-                if collect_tests and _is_test_name(child.name):
+                symbol_calls[qual] = _callees(child)
+                if collect_tests and collectible and _is_test_name(child.name):
                     units.append(_collect_unit(child, qual, text, off, inherited))
-                visit(child, qual + ".", inherited)
+                # Nested defs are never collected as pytest items.
+                visit(child, qual + ".", inherited, False)
             elif isinstance(child, ast.ClassDef):
                 qual = f"{prefix}{child.name}"
                 symbols[qual] = _fingerprint(_strip_docstrings(ast.parse(ast.unparse(child))))
                 # Class-level skip decorators disable every test inside the
                 # class — they must reach each unit (confirmed red-team FN).
                 class_markers = _decorator_markers(child, text, off) if collect_tests else []
-                visit(child, qual + ".", inherited + class_markers)
+                visit(
+                    child,
+                    qual + ".",
+                    inherited + class_markers,
+                    collectible and _is_test_class(child.name),
+                )
             else:
-                visit(child, prefix, inherited)
+                visit(child, prefix, inherited, collectible)
 
-    visit(tree, "", module_markers)
+    visit(tree, "", module_markers, True)
+    if conftest:
+        units = [_conftest_unit(tree, text, off)]
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -451,6 +592,7 @@ def parse_python(data: bytes, collect_tests: bool) -> ParsedFile:
         parse_ok=True,
         units=units,
         symbols=symbols,
+        symbol_calls=symbol_calls,
         module_fingerprint=module_fp,
         imports=sorted(set(imports)),
         suppressions=suppressions,

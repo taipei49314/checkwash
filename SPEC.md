@@ -22,6 +22,7 @@ Paths are normalized to forward slashes before matching. Default role globs
 
 | role      | default globs |
 |-----------|---------------|
+| conftest  | `**/conftest.py` |
 | test      | `tests/**`, `**/test_*.py`, `**/*_test.py` |
 | guardrail | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.claude/**`, `.greenwash/**`, `.pre-commit-config.yaml` |
 | ci        | `.github/workflows/**`, `.gitlab-ci.yml` |
@@ -32,6 +33,23 @@ Paths are normalized to forward slashes before matching. Default role globs
 
 Note: `Makefile` is deliberately **not** classified as `ci` by default
 (false-positive control; teams can opt in via config).
+
+## 2b. Collection semantics
+
+A role says what a file is *for*; collection says whether its tests actually
+execute. greenwash models pytest's default collection, because every gap
+between the two is a laundering route (all confirmed by reproduction):
+
+- file: `test_*.py` / `*_test.py` — a rename out of this set is a
+  disappearance, not a rename (both in range and worktree mode)
+- class: `Test*` — methods of a non-matching class are never collected
+- function: `test*`, and only at module level or inside a collected class
+- statements after an unconditional `return`/`raise` never execute, so
+  assertions there are not collected (their loss reads as removal)
+- `@pytest.mark.parametrize` rows are test items: deleting rows deletes units
+- `conftest.py` is analysed for suite-level collection controls
+  (`pytest_collection_modifyitems`, `pytest_ignore_collect`,
+  `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`, `pytestmark`)
 
 ## 3. Assertion strength lattice
 
@@ -48,7 +66,7 @@ strength decreases. Defined once, in `src/greenwash/ir/strength.py`.
 | 40    | BOUND        | `>` `>=` `<` `<=`, `assertGreater` family |
 | 30    | NON_NULL     | `is not None`, `assertIsNotNone`, `assertIsNone` |
 | 20    | TRUTHY       | `assert x`, `assertTrue(x)`, any non-comparison expression |
-| 10    | TAUTOLOGY    | both operands literal (`assert True`, `assert 1 == 1`) |
+| 10    | TAUTOLOGY    | both operands literal (`assert True`, `assert 1 == 1`), or the two sides of an equality are the same expression (`assert f(x) == f(x)` — it can never fail) |
 | 0     | REMOVED      | assertion disappeared |
 
 Assertion forms that cannot be classified (e.g. `assertRaises`, custom
@@ -70,7 +88,7 @@ detectors can only be disabled whole.
 |---|---|
 | `ASSERT_REMOVED` | an assertion disappeared from a surviving test unit |
 | `ASSERT_WEAKENED` | aligned assertion strength decreased |
-| `TEST_DISABLED` | skip/xfail marker added, or a whole test unit disappeared |
+| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, the module's `pytestmark`, `self.skipTest`, or a conftest suite control), a whole test unit disappeared (including out of collection, per §2b), or parametrized cases deleted |
 | `TOLERANCE_LOOSENED` | Decimal(after epsilon) > Decimal(before epsilon) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `EXPECTED_VALUE_HARDCODED` | new assertion literal equals a constant newly introduced in prod in the same diff |
@@ -89,17 +107,29 @@ The rest land in M1. Rule IDs are frozen now so schemas never churn.
 
 | id | condition | effect |
 |---|---|---|
-| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding, and the diff contains **no non-trivial prod change** (non-trivial = AST-visible behaviour difference after stripping comments/whitespace/docstrings; non-parseable changed prod files count as non-trivial — conservative) | warn → high |
+| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below) | warn → high |
 | E2 `ORACLE_FREEZE` | contract declares `oracle_freeze: true` | warn → high |
 | E3 `HARDCODE_FINGERPRINT` | `EXPECTED_VALUE_HARDCODED` hit | → high |
 | E4 `META` | guardrail / greenwash-own-config touched | → critical |
-| D1 `REPAIR_EVIDENCE` | symbols called by the weakened test intersect prod symbols with **non-trivial** behaviour change | hold at warn |
-| D2 `ASSERTION_MOVED` | removed assertion's normalized text reappears verbatim elsewhere in the added side of the diff | → info |
+| D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
+| D2 `ASSERTION_MOVED` | removed assertion's normalized text reappears verbatim in a **live** (not disabled) added unit | → info |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 
-E1/D1 operate at **symbol level with a triviality filter** — a comment-only
-prod edit does not defuse E1, and D1 requires the specific called symbol to
-have changed, not merely "some prod file was touched".
+**Repair evidence** answers one question — is there a production change that
+plausibly explains editing *this* test? E1 and D1 are the two sides of it, so
+exactly one of them applies to every oracle finding. Evidence exists when:
+
+1. a symbol the test calls changed behaviour (AST fingerprint of that symbol,
+   docstrings stripped), or
+2. a symbol the test calls itself calls a changed symbol (one hop — a test
+   going through `format_invoice` is legitimately updated when the
+   `compute_total` it calls changes), or
+3. the diff contains a prod change greenwash cannot analyse (non-Python,
+   deleted, or unparseable file) — conservative, see THREATMODEL #4.
+
+Evidence is deliberately **not** "some prod file in this diff changed". That
+diff-global test let a single dead constant, a statement reorder, or an edit
+to an unrelated function disarm the gate for the whole run.
 
 ## 6. Exemptions
 
@@ -153,11 +183,28 @@ exemptions.
 - Source text is normalized CRLF→LF before parsing; all spans are character
   offsets into the normalized text. Determinism is promised at this
   normalized layer (identical findings JSON bytes across OSes).
-- JSON output: sorted keys, `ensure_ascii=False`, `\n` line endings.
+- JSON output: sorted keys, `ensure_ascii=False`, `\n` line endings, written
+  to stdout as **UTF-8 bytes** regardless of the ambient locale. (Writing
+  text to a cp1252/cp950 pipe made the bytes locale-dependent and mangled
+  non-ASCII evidence to `?`.) The human report may degrade unencodable
+  glyphs; machine formats never may.
 - Severity is a four-value enum (`info < warn < high < critical`). No scores.
 
-## 9. Exit codes
+## 9. Ranges, exit codes, and failure surfacing
+
+`BASE..HEAD` is a tree-to-tree diff. `BASE...HEAD` means
+`merge-base(BASE, HEAD)..HEAD` — the PR-diff idiom — and is resolved as such;
+it must never be silently downgraded to two dots, which would pull
+base-branch prod commits into the diff and disarm E1.
 
 `0` = no finding at or above `fail_on` (default `high`);
 `1` = verdict block;
-`2` = engine error (CI is advised to set `on_engine_error = "block"`).
+`2` = engine error — including any unexpected exception. An unhandled
+traceback exiting 1 would be indistinguishable from a real block for CI, so
+every crash path is mapped to 2.
+
+Base-side `config.toml` / `allow.toml` that fail to parse are never silently
+ignored: the diagnostic goes to stderr and to `config_errors` in the JSON
+payload, and with `on_engine_error = "block"` the run exits 2. A hardened
+gate must not quietly revert to defaults, and a corrupt ledger must not
+quietly void every exemption in the repo.

@@ -26,17 +26,24 @@ def _symbols(stream) -> dict[str, str]:
     """
     enc = getattr(stream, "encoding", None) or "ascii"
     try:
-        "✓✗⚠".encode(enc)
+        "✓✗⚠—".encode(enc)
     except (UnicodeEncodeError, LookupError):
-        return {"pass": "OK", "block": "X", "warn": "!"}
-    return {"pass": "✓", "block": "✗", "warn": "⚠"}
+        return {"pass": "OK", "block": "X", "warn": "!", "dash": "-"}
+    return {"pass": "✓", "block": "✗", "warn": "⚠", "dash": "—"}
 
 
 def _c(code: str, text: str, color: bool) -> str:
     return f"\x1b[{code}m{text}\x1b[0m" if color else text
 
 
-def render(ir: IR, findings: list[Finding], verdict: str, fail_on: str, stream=None) -> str:
+def render(
+    ir: IR,
+    findings: list[Finding],
+    verdict: str,
+    fail_on: str,
+    stream=None,
+    errors: list[str] | None = None,
+) -> str:
     stream = stream or sys.stdout
     color = _use_color(stream)
     sym = _symbols(stream)
@@ -52,7 +59,7 @@ def render(ir: IR, findings: list[Finding], verdict: str, fail_on: str, stream=N
     else:
         n_high = sum(1 for f in visible if f.severity in ("high", "critical"))
         if blocking:
-            head = f"greenwash: {n_high} finding(s) at or above {fail_on} — blocking"
+            head = f"greenwash: {n_high} finding(s) at or above {fail_on} {sym['dash']} blocking"
             lines.append(_c("31", sym["block"] + " " + head, color))
         else:
             head = f"greenwash: {len(visible)} finding(s), none at or above {fail_on}"
@@ -77,6 +84,8 @@ def render(ir: IR, findings: list[Finding], verdict: str, fail_on: str, stream=N
             lines.append(f'    greenwash allow "{f.fingerprint}" --reason "..."')
         lines.append("")
 
+    for message in errors or []:
+        lines.append(_c("33", "! " + message, color))
     if ir.skipped_files:
         lines.append(f"skipped (unparseable): {', '.join(ir.skipped_files)}")
     if suppressed:

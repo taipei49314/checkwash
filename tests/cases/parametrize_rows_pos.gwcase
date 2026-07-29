@@ -1,0 +1,37 @@
+=== meta ===
+rule: TEST_DISABLED
+note: red-team regression — deleting parametrize rows deletes pytest test
+note2: items while the assert line stays untouched
+=== before: tests/test_param.py ===
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([1, 2, 3], 6),
+        ([], 0),
+        ([-1, 1], 0),
+        ([10] * 5, 50),
+    ],
+)
+def test_total_cases(items, expected):
+    assert total(items) == expected
+=== after: tests/test_param.py ===
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([1, 2, 3], 6),
+    ],
+)
+def test_total_cases(items, expected):
+    assert total(items) == expected
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

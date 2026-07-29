@@ -35,6 +35,10 @@ def rev_parse(repo: str, rev: str) -> str:
     return _run(repo, ["rev-parse", "--short", rev]).decode("ascii").strip()
 
 
+def merge_base(repo: str, a: str, b: str) -> str:
+    return _run(repo, ["merge-base", a, b]).decode("ascii").strip()
+
+
 def _read_blob(repo: str, rev: str, path: str) -> bytes | None:
     try:
         return _run(repo, ["show", f"{rev}:{path}"])
@@ -98,13 +102,19 @@ def list_worktree_changes(repo: str) -> list[FileChange]:
             continue
         xy, path = token[:2], token[3:]
         before = _read_blob(repo, "HEAD", path)
-        disk = os.path.join(repo, path.replace("/", os.sep))
-        after: bytes | None
-        try:
-            with open(disk, "rb") as fh:
-                after = fh.read()
-        except OSError:
-            after = None
+        # Trust git's status codes over the filesystem: on a case-insensitive
+        # volume, reading a deleted path back off disk returns the *renamed*
+        # file's bytes, which made case-only test renames vanish entirely
+        # (confirmed red-team finding).
+        deleted = "D" in xy
+        after: bytes | None = None
+        if not deleted:
+            disk = os.path.join(repo, path.replace("/", os.sep))
+            try:
+                with open(disk, "rb") as fh:
+                    after = fh.read()
+            except OSError:
+                after = None
         if before is None and after is None:
             continue
         if before is None:
@@ -116,4 +126,44 @@ def list_worktree_changes(repo: str) -> list[FileChange]:
                 continue
             status = "modified"
         changes.append(FileChange(path=path, status=status, before=before, after=after))
-    return changes
+    return _detect_worktree_renames(changes)
+
+
+def _detect_worktree_renames(changes: list[FileChange]) -> list[FileChange]:
+    """Pair identical delete+add halves into renames.
+
+    `git status` is asked for --no-renames (its rename detection needs the
+    index), so relocation would otherwise look like two unrelated events and
+    slip past the rename handling in the engine — the round-1 git-mv fix was
+    live only in range mode (confirmed red-team finding).
+    """
+    deleted = [c for c in changes if c.status == "deleted" and c.before is not None]
+    added = [c for c in changes if c.status == "added" and c.after is not None]
+    if not deleted or not added:
+        return changes
+
+    paired: dict[int, FileChange] = {}
+    used_add: set[int] = set()
+    for d in sorted(deleted, key=lambda c: c.path):
+        for a in sorted(added, key=lambda c: c.path):
+            if id(a) in used_add or a.after != d.before:
+                continue
+            used_add.add(id(a))
+            paired[id(d)] = FileChange(
+                path=a.path,
+                status="modified",
+                before=d.before,
+                after=a.after,
+                old_path=d.path,
+            )
+            break
+
+    result: list[FileChange] = []
+    for c in changes:
+        if id(c) in paired:
+            result.append(paired[id(c)])
+        elif id(c) in used_add:
+            continue
+        else:
+            result.append(c)
+    return result

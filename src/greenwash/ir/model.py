@@ -48,6 +48,11 @@ class UnitSide:
     calls: tuple[str, ...] = ()  # sorted, unique
     markers: list[Marker] = field(default_factory=list)
     handlers: list[Handler] = field(default_factory=list)
+    param_cases: int | None = None  # parametrized case count, None = not parametrized
+
+    @property
+    def disabled(self) -> bool:
+        return bool(self.markers)
 
 
 @dataclass
@@ -65,6 +70,7 @@ class UnitDelta:
     markers_added: list[str] = field(default_factory=list)
     handlers_widened: list[str] = field(default_factory=list)
     tolerance_changes: list[tuple[str, str]] = field(default_factory=list)
+    param_cases_removed: int = 0  # parametrized cases deleted (pytest test items)
 
 
 @dataclass
@@ -92,7 +98,12 @@ class FileIR:
 class DiffGlobals:
     prod_files_changed: list[str] = field(default_factory=list)
     prod_symbols_changed: list[str] = field(default_factory=list)  # non-trivial only
-    prod_nontrivial_change: bool = False
+    # Callers of changed prod symbols, for one-hop repair evidence:
+    # {caller leaf name: [changed symbol leaf names it calls]}.
+    prod_symbol_callers: dict[str, list[str]] = field(default_factory=dict)
+    # A changed prod file greenwash cannot reason about (non-Python, deleted,
+    # or unparseable). Conservatively suppresses E1 — see THREATMODEL #4.
+    prod_opaque_change: bool = False
     new_literals_in_prod: list[str] = field(default_factory=list)
     guardrail_files_changed: list[str] = field(default_factory=list)
     ci_files_changed: list[str] = field(default_factory=list)

@@ -34,6 +34,26 @@ def _symbol_match(calls: tuple[str, ...], changed_symbols: list[str]) -> bool:
     return False
 
 
+def _repair_evidence(unit: Unit | None, ir: IR) -> bool:
+    """Did production change in a way that plausibly explains editing THIS test?
+
+    Diff-global "some prod file changed" was the old test, and one dead line
+    in any prod file disarmed the whole run (confirmed red-team finding).
+    Evidence is now symbol-relevant: the test calls a changed symbol, or
+    calls something that calls a changed symbol.
+    """
+    if ir.globals.prod_opaque_change:
+        return True  # cannot reason about it — stay conservative, THREATMODEL #4
+    if unit is None:
+        return False
+    side = unit.before or unit.after
+    if side is None:
+        return False
+    if _symbol_match(side.calls, ir.globals.prod_symbols_changed):
+        return True
+    return any(name in ir.globals.prod_symbol_callers for name in side.calls)
+
+
 def apply_gates(
     ir: IR,
     findings: list[Finding],
@@ -70,8 +90,11 @@ def apply_gates(
                 f.deescalators.append("ASSERTION_MOVED")
                 continue
 
-        # E1 NO_PROD_CHANGE_IN_DIFF (symbol-level, triviality-filtered upstream)
-        if not ir.globals.prod_nontrivial_change:
+        # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
+        # question: is there a production change that explains this edit?
+        if _repair_evidence(unit, ir):
+            f.deescalators.append("REPAIR_EVIDENCE")
+        else:
             f.severity = "high"
             f.escalators.append("NO_PROD_CHANGE_IN_DIFF")
 
@@ -79,14 +102,6 @@ def apply_gates(
         if contract.oracle_freeze:
             f.severity = "high"
             f.escalators.append("ORACLE_FREEZE")
-
-        # D1 REPAIR_EVIDENCE: the symbols this test calls really changed.
-        # By construction it cannot fire together with E1; recorded as
-        # supporting evidence for reviewers.
-        if unit is not None:
-            side = unit.before or unit.after
-            if side is not None and _symbol_match(side.calls, ir.globals.prod_symbols_changed):
-                f.deescalators.append("REPAIR_EVIDENCE")
 
     threshold = SEVERITY_ORDER[config.fail_on]
     blocking = [

@@ -199,3 +199,105 @@ def test_rename_test_file_to_collected_name_is_benign(repo):
     result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 0, result.stdout
     assert json.loads(result.stdout)["verdict"] == "pass"
+
+
+def test_worktree_mode_catches_plain_mv_relocation(repo):
+    # The round-1 rename fix only covered range mode; hook mode (the primary
+    # integration) still laundered it (confirmed red-team finding).
+    (repo / "attic").mkdir()
+    os.replace(repo / "tests" / "test_billing.py", repo / "attic" / "legacy.py")
+    result = _greenwash(repo, "check", "--format", "json")
+    assert result.returncode == 1, result.stdout
+    payload = json.loads(result.stdout)
+    disabled = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
+    assert disabled and disabled[0]["severity"] == "high"
+
+
+def test_worktree_case_only_rename_is_visible(repo):
+    # On a case-insensitive volume the deleted path used to be read back off
+    # disk as the renamed file's bytes and dropped as unchanged.
+    os.replace(repo / "tests" / "test_billing.py", repo / "tests" / "Billing_Checks.py")
+    result = _greenwash(repo, "check", "--format", "json")
+    assert result.returncode == 1, result.stdout
+    payload = json.loads(result.stdout)
+    assert any(f["rule"] == "TEST_DISABLED" for f in payload["findings"])
+
+
+def test_three_dot_range_uses_merge_base(repo):
+    # A...B means merge-base(A,B)..B. Downgrading it to two dots pulled base
+    # branch prod commits in and disarmed E1 (confirmed red-team finding).
+    _git(repo, "checkout", "-q", "-b", "feat")
+    _weaken(repo)
+    _git(repo, "commit", "-am", "weaken assertion")
+    _git(repo, "checkout", "-q", "main")
+    (repo / "discount.py").write_text("def discount(x):\n    return x * 9 // 10\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "main: add discount")
+
+    three = _greenwash(repo, "check", "main...feat", "--format", "json")
+    assert three.returncode == 1, three.stdout
+    payload = json.loads(three.stdout)
+    weakened = [f for f in payload["findings"] if f["rule"] == "ASSERT_WEAKENED"]
+    assert weakened and weakened[0]["severity"] == "high"
+    assert "NO_PROD_CHANGE_IN_DIFF" in weakened[0]["escalators"]
+
+
+def test_json_is_utf8_regardless_of_locale(repo):
+    test_file = repo / "tests" / "test_billing.py"
+    test_file.write_text(
+        "from billing import compute_invoice_total\n\n\n"
+        "def test_invoice_total():\n"
+        '    assert compute_invoice_total([1]) == "發票總額"\n',
+        encoding="utf-8",
+    )
+    _git(repo, "commit", "-am", "non-ascii expectation")
+    test_file.write_text(
+        "from billing import compute_invoice_total\n\n\n"
+        "def test_invoice_total():\n"
+        "    assert compute_invoice_total([1]) is not None\n",
+        encoding="utf-8",
+    )
+    _git(repo, "commit", "-am", "weaken")
+    result = _greenwash_cp1252(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 1
+    payload = json.loads(result.stdout.decode("utf-8"))  # must be valid UTF-8
+    assert "發票總額" in json.dumps(payload, ensure_ascii=False)
+
+
+def test_recursion_bomb_is_engine_error_not_block(repo):
+    (repo / "tests" / "test_deep.py").write_text(
+        "def test_deep():\n    assert " + "1+" * 20000 + "1\n", encoding="utf-8"
+    )
+    result = _greenwash(repo, "check", "--format", "json")
+    # Either parsed fine or degraded visibly — but never a bogus "block",
+    # and never an unhandled traceback.
+    assert result.returncode in (0, 2), result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_malformed_config_is_reported_not_swallowed(repo):
+    cfg = repo / ".greenwash"
+    cfg.mkdir()
+    (cfg / "config.toml").write_text('[gate]\nfail_on = "warn"\n[roles\n', encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "add config")
+    _weaken(repo)
+    result = _greenwash(repo, "check", "--format", "json")
+    payload = json.loads(result.stdout)
+    assert payload["config_errors"], "a config that failed to parse must be surfaced"
+    assert "config.toml" in result.stderr
+
+
+def test_allow_reason_with_backslash_stays_valid_toml(repo):
+    _weaken(repo)
+    first = _greenwash(repo, "check", "--format", "json")
+    fingerprint = json.loads(first.stdout)["findings"][0]["fingerprint"]
+    allow = _greenwash(
+        repo, "allow", fingerprint, "--reason", r"see notes in C:\Users\bob\review.md"
+    )
+    assert allow.returncode == 0, allow.stderr
+    import tomllib
+
+    data = (repo / ".greenwash" / "allow.toml").read_bytes()
+    parsed = tomllib.loads(data.decode("utf-8"))
+    assert parsed["allow"][0]["reason"] == r"see notes in C:\Users\bob\review.md"

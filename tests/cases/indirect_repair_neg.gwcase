@@ -1,0 +1,33 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: precision guard for symbol-level E1 — the test calls format_invoice,
+note2: which calls the changed compute_total: one-hop repair evidence holds
+note3: the finding at warn instead of blocking honest work
+=== before: tests/test_invoice.py ===
+from app.invoice import format_invoice
+
+
+def test_invoice():
+    assert format_invoice([10, 20]) == "Total: 30"
+=== after: tests/test_invoice.py ===
+from app.invoice import format_invoice
+
+
+def test_invoice():
+    assert format_invoice([10, 20]) == "Total: 30.00"
+=== before: app/invoice.py ===
+def compute_total(items):
+    return sum(items)
+
+
+def format_invoice(items):
+    return "Total: {}".format(compute_total(items))
+=== after: app/invoice.py ===
+def compute_total(items):
+    return round(float(sum(items)), 2)
+
+
+def format_invoice(items):
+    return "Total: {:.2f}".format(compute_total(items))
+=== expect ===
+[]

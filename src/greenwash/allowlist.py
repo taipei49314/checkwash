@@ -19,13 +19,15 @@ class AllowEntry:
     expires: str
 
 
-def load_allowlist(data: bytes | None) -> list[AllowEntry]:
+def load_allowlist(data: bytes | None) -> tuple[list[AllowEntry], str | None]:
+    """-> (entries, error). A corrupt ledger voids every exemption in the
+    repo, so it must be reported rather than swallowed (SPEC §6)."""
     if not data:
-        return []
+        return [], None
     try:
         raw = tomllib.loads(data.decode("utf-8", errors="replace"))
-    except (tomllib.TOMLDecodeError, UnicodeDecodeError):
-        return []
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+        return [], f".greenwash/allow.toml could not be parsed ({exc}); no exemptions are active"
     entries: list[AllowEntry] = []
     for item in raw.get("allow", []):
         if not isinstance(item, dict):
@@ -52,7 +54,7 @@ def load_allowlist(data: bytes | None) -> list[AllowEntry]:
                 expires=expires,
             )
         )
-    return entries
+    return entries, None
 
 
 def active_fingerprints(entries: list[AllowEntry], today: datetime.date) -> set[str]:

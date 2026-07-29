@@ -127,6 +127,14 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
         if h.is_broad and normalize_text(h.text) not in b_handler_texts
     ]
 
+    before_cases = before.side.param_cases
+    after_cases = after.side.param_cases
+    param_removed = 0
+    if before_cases is not None and after_cases is not None and after_cases < before_cases:
+        param_removed = before_cases - after_cases
+    elif before_cases is not None and after_cases is None:
+        param_removed = before_cases - 1
+
     return UnitDelta(
         assertion_pairs=assertion_pairs,
         assertions_removed=[b.id for b in sorted(removed, key=lambda x: x.span)],
@@ -134,6 +142,7 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
         markers_added=markers_added,
         handlers_widened=handlers_widened,
         tolerance_changes=tolerance_changes,
+        param_cases_removed=max(0, param_removed),
     )
 
 
