@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      - run: pytest
+      - name: emit corpus findings (determinism artifact)
+        shell: bash
+        run: python tools/emit_corpus.py > corpus-findings.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corpus-${{ matrix.os }}-py${{ matrix.python }}
+          path: corpus-findings.json
+
+  byte-compare:
+    # The cross-OS determinism gate: every OS/Python combination must emit
+    # byte-identical corpus findings (SPEC §8).
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: corpus
+      - name: all artifacts must be byte-identical
+        run: |
+          sha256sum corpus/*/corpus-findings.json
+          count=$(sha256sum corpus/*/corpus-findings.json | awk '{print $1}' | sort -u | wc -l)
+          test "$count" = "1"

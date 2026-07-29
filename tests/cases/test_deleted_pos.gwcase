@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+note: the whole failing test deleted, nothing repaired
+=== before: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.3
+
+
+def test_empty_invoice():
+    assert compute_invoice_total([]) == 0
+=== after: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_empty_invoice():
+    assert compute_invoice_total([]) == 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

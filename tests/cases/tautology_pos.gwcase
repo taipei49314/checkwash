@@ -1,0 +1,18 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: the classic assertTrue(True) laundering
+=== before: tests/test_engine.py ===
+from engine import answer
+
+
+def test_answer():
+    assert answer() == 42
+=== after: tests/test_engine.py ===
+from engine import answer
+
+
+def test_answer():
+    answer()
+    assert True
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

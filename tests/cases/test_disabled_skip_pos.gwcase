@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+note: a failing test silenced with a skip marker, nothing repaired
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.3
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import compute_invoice_total
+
+
+@pytest.mark.skip(reason="flaky, revisit later")
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.3
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

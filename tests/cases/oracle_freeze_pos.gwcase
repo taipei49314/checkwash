@@ -1,0 +1,36 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: oracle_freeze contract makes any weakening high even with prod changes
+=== task ===
+---
+greenwash:
+  scope:
+    allow:
+      - "billing.py"
+      - "tests/test_billing.py"
+  oracle_freeze: true
+  intent: "fix rounding bug in invoice total"
+---
+Fix the rounding bug described in issue #482.
+=== before: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.3
+=== after: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total > 0
+=== before: billing.py ===
+def compute_invoice_total(items):
+    return sum(items)
+=== after: billing.py ===
+def compute_invoice_total(items):
+    return round(sum(items), 2)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["ORACLE_FREEZE"]}]

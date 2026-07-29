@@ -1,0 +1,26 @@
+=== meta ===
+rule: ASSERT_REMOVED
+note: assertion moved to another test in the same diff — D2 downgrades to info
+=== before: tests/test_auth.py ===
+from auth import login
+
+
+def test_login_all_cases():
+    assert login("alice", "wrong") is None
+    assert login("alice", "correct") is not None
+
+
+def test_login_rejects_bad_password():
+    pass
+=== after: tests/test_auth.py ===
+from auth import login
+
+
+def test_login_all_cases():
+    assert login("alice", "correct") is not None
+
+
+def test_login_rejects_bad_password():
+    assert login("alice", "wrong") is None
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]

@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: unittest style — assertEqual laundered into assertTrue
+=== before: tests/test_engine.py ===
+import unittest
+
+from engine import answer
+
+
+class TestAnswer(unittest.TestCase):
+    def test_answer(self):
+        self.assertEqual(answer(), 42)
+=== after: tests/test_engine.py ===
+import unittest
+
+from engine import answer
+
+
+class TestAnswer(unittest.TestCase):
+    def test_answer(self):
+        self.assertTrue(answer())
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

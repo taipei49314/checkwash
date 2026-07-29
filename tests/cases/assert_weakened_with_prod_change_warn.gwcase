@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: weakened while prod changed — stays warn, annotated with repair evidence
+=== before: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.3
+=== after: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total > 0
+=== before: billing.py ===
+def compute_invoice_total(items):
+    return sum(items)
+=== after: billing.py ===
+def compute_invoice_total(items):
+    return round(sum(items), 2)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "greenwash"
+version = "0.1.0.dev0"
+description = "Your agent deleted the failing test to make CI green. greenwash catches it before merge."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [{ name = "taipei49314" }]
+keywords = ["ai-agent", "code-review", "test-tampering", "reward-hacking", "ci"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+# Zero runtime dependencies is a product feature, not an accident. See DECISIONS.md D-001.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+greenwash = "greenwash.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/taipei49314/greenwash"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/greenwash"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

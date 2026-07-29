@@ -1,0 +1,21 @@
+=== meta ===
+rule: none
+note: whitespace/comment-only edits must be silent (format-invariance)
+=== before: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.3
+=== after: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    # recompute the invoice total for two items
+    total = compute_invoice_total([10.5, 94.8])
+
+    assert total == 105.3
+=== expect ===
+[]

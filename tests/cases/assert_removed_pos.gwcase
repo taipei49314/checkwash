@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_REMOVED
+note: assertion deleted from a surviving test, nothing repaired
+=== before: tests/test_auth.py ===
+from auth import login
+
+
+def test_login_rejects_bad_password():
+    session = login("alice", "wrong")
+    assert session is None
+    assert login("alice", "correct") is not None
+=== after: tests/test_auth.py ===
+from auth import login
+
+
+def test_login_rejects_bad_password():
+    session = login("alice", "wrong")
+    assert login("alice", "correct") is not None
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,17 @@
+=== meta ===
+rule: TEST_DISABLED
+note: test moved to another file — unit-level D2 keeps it at info
+=== before: tests/test_auth.py ===
+from auth import login
+
+
+def test_login_rejects_bad_password():
+    assert login("alice", "wrong") is None
+=== after: tests/test_auth_flows.py ===
+from auth import login
+
+
+def test_login_rejects_bad_password():
+    assert login("alice", "wrong") is None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]
