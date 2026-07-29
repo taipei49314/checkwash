@@ -71,12 +71,28 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
     a_rest2 = [a for bucket in a_by_key.values() for a in bucket]
     a_rest2.sort(key=lambda x: x.span)
 
-    # 3. order fallback
-    n = min(len(b_rest2), len(a_rest2))
-    for i in range(n):
-        pairs.append((b_rest2[i], a_rest2[i]))
-    removed = b_rest2[n:]
-    added = a_rest2[n:]
+    # 3. order fallback — but never absorb a classifiable assertion into an
+    # unclassifiable one (or vice versa): pairing assertEqual with an added
+    # assertRaises would yield strength_change=None and silently suppress
+    # ASSERT_REMOVED (confirmed red-team finding). A fallback pair requires
+    # either both strengths known, or an identical form.
+    used = [False] * len(a_rest2)
+    removed = []
+    for b in b_rest2:
+        idx = None
+        for j, a in enumerate(a_rest2):
+            if used[j]:
+                continue
+            compatible = (b.strength is not None and a.strength is not None) or b.form == a.form
+            if compatible:
+                idx = j
+                break
+        if idx is None:
+            removed.append(b)
+        else:
+            used[idx] = True
+            pairs.append((b, a_rest2[idx]))
+    added = [a for j, a in enumerate(a_rest2) if not used[j]]
 
     pairs.sort(key=lambda p: p[0].span)
     assertion_pairs = []

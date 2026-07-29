@@ -124,5 +124,35 @@ def to_jsonable(obj: Any) -> Any:
 
 
 def normalize_text(text: str) -> str:
-    """Whitespace-insensitive normal form used for pairing, moves and fingerprints."""
-    return "".join(text.split())
+    """Normal form for pairing, moves and fingerprints.
+
+    Strips whitespace *outside* string literals only: whitespace inside a
+    quoted string is semantics, and erasing it would let a relocated
+    assertion with a silently edited expected value count as "moved
+    verbatim" (SPEC §5 D2 — confirmed red-team finding).
+    """
+    out: list[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if ch in "\"'":
+            quote = ch * 3 if text[i : i + 3] == ch * 3 else ch
+            out.append(quote)
+            i += len(quote)
+            while i < n:
+                if text[i] == "\\" and len(quote) == 1 and i + 1 < n:
+                    out.append(text[i : i + 2])
+                    i += 2
+                    continue
+                if text.startswith(quote, i):
+                    out.append(quote)
+                    i += len(quote)
+                    break
+                out.append(text[i])
+                i += 1
+        elif ch.isspace():
+            i += 1
+        else:
+            out.append(ch)
+            i += 1
+    return "".join(out)

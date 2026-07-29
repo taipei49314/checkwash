@@ -20,14 +20,19 @@ _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
 # unittest assertion method -> (form, strength). Unknown methods are left
 # unclassified on purpose (fail-safe: no guess, no noise).
 _UNITTEST_MAP: dict[str, tuple[str, int | None]] = {
+    # The whole *Equal family sits at EXACT_VALUE; the container-LITERAL
+    # upgrade to EXACT_STRUCT is applied uniformly afterwards. unittest's
+    # assertEqual type-dispatches to assertListEqual at runtime, so rating
+    # them differently turned a style cleanup into a blocking "weakening"
+    # (confirmed red-team false positive).
     "assertEqual": ("compare_eq", S.EXACT_VALUE),
     "assertNotEqual": ("compare_eq", S.EXACT_VALUE),
-    "assertListEqual": ("compare_eq", S.EXACT_STRUCT),
-    "assertDictEqual": ("compare_eq", S.EXACT_STRUCT),
-    "assertSetEqual": ("compare_eq", S.EXACT_STRUCT),
-    "assertTupleEqual": ("compare_eq", S.EXACT_STRUCT),
-    "assertSequenceEqual": ("compare_eq", S.EXACT_STRUCT),
-    "assertMultiLineEqual": ("compare_eq", S.EXACT_STRUCT),
+    "assertListEqual": ("compare_eq", S.EXACT_VALUE),
+    "assertDictEqual": ("compare_eq", S.EXACT_VALUE),
+    "assertSetEqual": ("compare_eq", S.EXACT_VALUE),
+    "assertTupleEqual": ("compare_eq", S.EXACT_VALUE),
+    "assertSequenceEqual": ("compare_eq", S.EXACT_VALUE),
+    "assertMultiLineEqual": ("compare_eq", S.EXACT_VALUE),
     "assertAlmostEqual": ("approx", S.APPROX),
     "assertNotAlmostEqual": ("approx", S.APPROX),
     "assertTrue": ("truthy", S.TRUTHY),
@@ -64,7 +69,7 @@ _SKIP_DECORATORS = {
     "expectedFailure",
 }
 
-_SKIP_CALLS = {"pytest.skip", "pytest.xfail", "pytest.importorskip"}
+_SKIP_CALLS = {"pytest.skip", "pytest.xfail", "pytest.importorskip", "self.skipTest"}
 
 _BROAD_EXCEPTIONS = {"Exception", "BaseException"}
 
@@ -126,6 +131,10 @@ def _dotted(node: ast.AST) -> str | None:
     return None
 
 
+def _is_container_literal(node: ast.AST) -> bool:
+    return isinstance(node, (ast.List, ast.Dict, ast.Set, ast.Tuple)) and _is_literal(node)
+
+
 def _is_literal(node: ast.AST) -> bool:
     if isinstance(node, ast.Constant):
         return True
@@ -184,6 +193,8 @@ def _classify_assert(node: ast.Assert, text: str) -> tuple[str, int | None, str 
         if isinstance(op, (ast.Eq, ast.NotEq)):
             if isinstance(left, ast.Call) and _dotted(left.func) == "len":
                 return ("type_shape", S.TYPE_SHAPE, left_text, right_lit, None)
+            if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
+                return ("compare_eq", S.EXACT_STRUCT, left_text, right_lit, None)
             return ("compare_eq", S.EXACT_VALUE, left_text, right_lit, None)
         if isinstance(op, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)):
             return ("compare_ord", S.BOUND, left_text, right_lit, None)
@@ -220,9 +231,7 @@ def _classify_unittest_call(node: ast.Call, text: str) -> tuple[str, int | None,
         if len(node.args) > 1:
             right_lit = _literal_repr(node.args[1], text)
         if form == "compare_eq" and level == S.EXACT_VALUE and len(node.args) > 1:
-            if isinstance(node.args[0], (ast.List, ast.Dict, ast.Set, ast.Tuple)) or isinstance(
-                node.args[1], (ast.List, ast.Dict, ast.Set, ast.Tuple)
-            ):
+            if _is_container_literal(node.args[0]) or _is_container_literal(node.args[1]):
                 level = S.EXACT_STRUCT
     if form == "approx":
         for kw in node.keywords:
@@ -233,7 +242,9 @@ def _classify_unittest_call(node: ast.Call, text: str) -> tuple[str, int | None,
     return (form, level, left_text, right_lit, epsilon)
 
 
-def _decorator_markers(node: ast.FunctionDef | ast.AsyncFunctionDef, text: str, off: _Offsets) -> list[Marker]:
+def _decorator_markers(
+    node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef, text: str, off: _Offsets
+) -> list[Marker]:
     markers: list[Marker] = []
     for dec in node.decorator_list:
         target = dec.func if isinstance(dec, ast.Call) else dec
@@ -244,15 +255,34 @@ def _decorator_markers(node: ast.FunctionDef | ast.AsyncFunctionDef, text: str, 
     return markers
 
 
+def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Marker]:
+    """Module-level `pytestmark = pytest.mark.skip(...)` (single or list)."""
+    markers: list[Marker] = []
+    for stmt in tree.body:
+        if not isinstance(stmt, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in stmt.targets):
+            continue
+        values = stmt.value.elts if isinstance(stmt.value, ast.List) else [stmt.value]
+        for value in values:
+            target = value.func if isinstance(value, ast.Call) else value
+            name = _dotted(target)
+            if name in _SKIP_DECORATORS:
+                seg = ast.get_source_segment(text, stmt) or name
+                markers.append(Marker(name=name, text=seg, span=off.span(stmt)))
+    return markers
+
+
 def _collect_unit(
     func: ast.FunctionDef | ast.AsyncFunctionDef,
     qualname: str,
     text: str,
     off: _Offsets,
+    inherited_markers: list[Marker] | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
-    markers = _decorator_markers(func, text, off)
+    markers = _decorator_markers(func, text, off) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
 
@@ -377,22 +407,27 @@ def parse_python(data: bytes, collect_tests: bool) -> ParsedFile:
     literals: set[str] = set()
     imports: list[str] = []
 
-    def visit(node: ast.AST, prefix: str) -> None:
+    module_markers = _pytestmark_markers(tree, text, off) if collect_tests else []
+
+    def visit(node: ast.AST, prefix: str, inherited: list[Marker]) -> None:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{prefix}{child.name}"
                 symbols[qual] = _fingerprint(_strip_docstrings(ast.parse(ast.unparse(child))))
                 if collect_tests and _is_test_name(child.name):
-                    units.append(_collect_unit(child, qual, text, off))
-                visit(child, qual + ".")
+                    units.append(_collect_unit(child, qual, text, off, inherited))
+                visit(child, qual + ".", inherited)
             elif isinstance(child, ast.ClassDef):
                 qual = f"{prefix}{child.name}"
                 symbols[qual] = _fingerprint(_strip_docstrings(ast.parse(ast.unparse(child))))
-                visit(child, qual + ".")
+                # Class-level skip decorators disable every test inside the
+                # class — they must reach each unit (confirmed red-team FN).
+                class_markers = _decorator_markers(child, text, off) if collect_tests else []
+                visit(child, qual + ".", inherited + class_markers)
             else:
-                visit(child, prefix)
+                visit(child, prefix, inherited)
 
-    visit(tree, "")
+    visit(tree, "", module_markers)
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):

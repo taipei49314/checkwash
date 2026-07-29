@@ -142,3 +142,60 @@ def test_allow_roundtrip(repo):
 def test_engine_error_exit_code(tmp_path):
     result = _greenwash(tmp_path, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 2
+
+
+def _greenwash_cp1252(repo, *args):
+    # Forces the legacy-locale pipe encoding that crashed the term report
+    # (confirmed red-team finding): exit codes must survive cp1252.
+    env = {**_ENV, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"}
+    return subprocess.run(
+        [sys.executable, "-m", "greenwash", *args, "--repo", str(repo)],
+        capture_output=True,
+        env=env,
+    )
+
+
+def test_cp1252_pipe_clean_diff_exits_zero(repo):
+    (repo / "notes.md").write_text("notes\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "docs")
+    result = _greenwash_cp1252(repo, "check", "HEAD~1..HEAD")
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    assert b"greenwash" in result.stdout
+
+
+def test_cp1252_pipe_block_exits_one(repo):
+    _weaken(repo)
+    result = _greenwash_cp1252(repo, "check")
+    assert result.returncode == 1, result.stderr.decode("utf-8", "replace")
+    assert b"ASSERT_WEAKENED" in result.stdout
+
+
+def test_rename_test_file_out_of_tests_blocks(repo):
+    # git mv tests/test_billing.py legacy_billing.py laundered TEST_DISABLED
+    # with zero findings (confirmed red-team bypass).
+    _git(repo, "mv", "tests/test_billing.py", "legacy_billing.py")
+    _git(repo, "commit", "-m", "archive tests")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 1, result.stdout
+    payload = json.loads(result.stdout)
+    disabled = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
+    assert disabled and disabled[0]["severity"] == "high"
+    assert "NO_PROD_CHANGE_IN_DIFF" in disabled[0]["escalators"]
+
+
+def test_rename_test_file_to_uncollected_name_blocks(repo):
+    _git(repo, "mv", "tests/test_billing.py", "tests/billing_checks.py")
+    _git(repo, "commit", "-m", "reorganize")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 1, result.stdout
+    payload = json.loads(result.stdout)
+    assert any(f["rule"] == "TEST_DISABLED" for f in payload["findings"])
+
+
+def test_rename_test_file_to_collected_name_is_benign(repo):
+    _git(repo, "mv", "tests/test_billing.py", "tests/test_invoices.py")
+    _git(repo, "commit", "-m", "rename test module")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 0, result.stdout
+    assert json.loads(result.stdout)["verdict"] == "pass"

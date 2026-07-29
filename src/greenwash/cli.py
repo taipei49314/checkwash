@@ -31,6 +31,19 @@ def _today() -> datetime.date:
     return datetime.date.today()
 
 
+def _write_stdout(text: str) -> None:
+    """Belt-and-braces encode guard: report content includes repo-controlled
+    text (evidence lines), and a UnicodeEncodeError on a legacy-locale pipe
+    must never turn into a bogus exit code (SPEC §9)."""
+    enc = getattr(sys.stdout, "encoding", None)
+    if enc:
+        try:
+            text.encode(enc)
+        except (UnicodeEncodeError, LookupError):
+            text = text.encode(enc, errors="replace").decode(enc, errors="replace")
+    sys.stdout.write(text)
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     repo = args.repo
     if args.range:
@@ -71,12 +84,12 @@ def _cmd_check(args: argparse.Namespace) -> int:
     )
 
     if args.emit_ir:
-        sys.stdout.write(ir_to_json(ir))
+        _write_stdout(ir_to_json(ir))
         return 0
     if args.format == "json":
-        sys.stdout.write(findings_to_json(ir, findings, verdict))
+        _write_stdout(findings_to_json(ir, findings, verdict))
     else:
-        sys.stdout.write(render(ir, findings, verdict, config.fail_on))
+        _write_stdout(render(ir, findings, verdict, config.fail_on))
     return 1 if verdict == "block" else 0
 
 

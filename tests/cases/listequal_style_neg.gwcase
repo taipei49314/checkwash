@@ -1,0 +1,26 @@
+=== meta ===
+rule: none
+note: red-team regression — assertListEqual -> assertEqual on a variable is a
+note2: semantic no-op (assertEqual type-dispatches) and must stay silent
+=== before: tests/test_series.py ===
+import unittest
+
+from calc import series
+
+
+class TestSeries(unittest.TestCase):
+    def test_series(self):
+        expected = [1, 2, 3]
+        self.assertListEqual(series(3), expected)
+=== after: tests/test_series.py ===
+import unittest
+
+from calc import series
+
+
+class TestSeries(unittest.TestCase):
+    def test_series(self):
+        expected = [1, 2, 3]
+        self.assertEqual(series(3), expected)
+=== expect ===
+[]

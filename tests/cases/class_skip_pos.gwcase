@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+note: red-team regression — class-level skip disables every test in the class
+=== before: tests/test_calc.py ===
+import pytest
+
+
+class TestMath:
+    def test_add(self):
+        assert 1 + 1 == 2
+
+    def test_mul(self):
+        assert 2 * 3 == 6
+=== after: tests/test_calc.py ===
+import pytest
+
+
+@pytest.mark.skip(reason="flaky on CI")
+class TestMath:
+    def test_add(self):
+        assert 1 + 1 == 2
+
+    def test_mul(self):
+        assert 2 * 3 == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "TestMath.test_add", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+ {"rule": "TEST_DISABLED", "severity": "high", "unit": "TestMath.test_mul", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

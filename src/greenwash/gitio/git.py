@@ -66,6 +66,7 @@ def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
                     status="modified" if code == "R" else "added",
                     before=_read_blob(repo, base, old) if code == "R" else None,
                     after=_read_blob(repo, head, new),
+                    old_path=old if code == "R" else None,
                 )
             )
         else:

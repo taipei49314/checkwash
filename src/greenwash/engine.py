@@ -27,10 +27,49 @@ class FileChange:
     status: str  # added | modified | deleted
     before: bytes | None
     after: bytes | None
+    old_path: str | None = None  # set for git renames (R status)
+    synthetic: str | None = None  # marks halves of an expanded rename
 
 
 class EngineError(Exception):
     pass
+
+
+def _collectable(path: str) -> bool:
+    """Would pytest's default collection (test_*.py / *_test.py) run this file?
+
+    Role globs say what a path is *for*; collectability says whether its tests
+    actually execute. A rename that keeps the test role but leaves collection
+    (tests/billing_checks.py) kills the tests just as dead as deletion.
+    """
+    base = path.rsplit("/", 1)[-1]
+    return (base.startswith("test_") and base.endswith(".py")) or base.endswith("_test.py")
+
+
+def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChange]:
+    """A rename that moves a test file out of collection is a disappearance.
+
+    git's rename folding would otherwise analyse only the new path: `git mv
+    tests/test_x.py attic/legacy.py` (R100) erased every unit from analysis
+    with zero findings (confirmed red-team bypass). The added half is marked
+    synthetic so relocated bytes don't count as a "non-trivial prod change"
+    and defuse E1.
+    """
+    expanded: list[FileChange] = []
+    for change in changes:
+        old = (change.old_path or "").replace("\\", "/")
+        new = change.path.replace("\\", "/")
+        if old and old != new:
+            old_test = config.role_of(old) == "test" and _collectable(old)
+            new_test = config.role_of(new) == "test" and _collectable(new)
+            if old_test and not new_test:
+                expanded.append(FileChange(old, "deleted", change.before, None))
+                expanded.append(
+                    FileChange(new, "added", None, change.after, synthetic="renamed_from_test")
+                )
+                continue
+        expanded.append(change)
+    return expanded
 
 
 def build_ir(changes: list[FileChange], config: Config, base_label: str, head_label: str) -> IR:
@@ -39,7 +78,7 @@ def build_ir(changes: list[FileChange], config: Config, base_label: str, head_la
     removed_texts: Counter[str] = Counter()
     added_texts: Counter[str] = Counter()
 
-    for change in sorted(changes, key=lambda c: c.path):
+    for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
         path = change.path.replace("\\", "/")
         role = config.role_of(path)
         is_python = path.endswith(".py")
@@ -47,7 +86,7 @@ def build_ir(changes: list[FileChange], config: Config, base_label: str, head_la
         before_parsed: ParsedFile | None = None
         after_parsed: ParsedFile | None = None
         if is_python:
-            collect = role == "test"
+            collect = role == "test" and _collectable(path)
             if change.before is not None:
                 before_parsed = parse_python(change.before, collect_tests=collect)
             if change.after is not None:
@@ -75,7 +114,11 @@ def build_ir(changes: list[FileChange], config: Config, base_label: str, head_la
                 for a in unit.after.assertions:
                     added_texts[normalize_text(a.text)] += 1
 
-        if role == "prod":
+        if change.synthetic == "renamed_from_test":
+            # Relocated test bytes are not production behaviour change; they
+            # must not defuse E1 nor feed prod symbol/literal/import globals.
+            pass
+        elif role == "prod":
             g.prod_files_changed.append(path)
             if is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
                 syms = set(before_parsed.symbols) | set(after_parsed.symbols)

@@ -1,0 +1,19 @@
+=== meta ===
+rule: TEST_DISABLED
+note: red-team regression — module-level pytestmark disables the whole file
+=== before: tests/test_calc.py ===
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import pytest
+
+pytestmark = pytest.mark.skip(reason="revisit later")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

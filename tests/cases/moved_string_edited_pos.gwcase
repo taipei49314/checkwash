@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_REMOVED
+note: red-team regression — a "moved" assertion whose expected string lost
+note2: its internal spaces is NOT verbatim; D2 must not de-escalate it
+=== before: tests/test_msg.py ===
+from fmt import greeting
+
+
+def test_greeting():
+    assert greeting("sam") == "hello world sam"
+=== after: tests/test_msg.py ===
+from fmt import greeting
+
+
+def test_greeting():
+    greeting("sam")
+
+
+def test_greeting_relocated():
+    assert greeting("sam") == "helloworldsam"
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

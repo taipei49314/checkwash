@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+note: red-team regression — unittest's dynamic self.skipTest
+=== before: tests/test_billing.py ===
+import unittest
+
+from billing import compute_total
+
+
+class TestBilling(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(compute_total([10, 20]), 30)
+=== after: tests/test_billing.py ===
+import unittest
+
+from billing import compute_total
+
+
+class TestBilling(unittest.TestCase):
+    def test_total(self):
+        self.skipTest("temporarily disabled")
+        self.assertEqual(compute_total([10, 20]), 30)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

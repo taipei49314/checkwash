@@ -17,6 +17,21 @@ def _use_color(stream) -> bool:
     return hasattr(stream, "isatty") and stream.isatty()
 
 
+def _symbols(stream) -> dict[str, str]:
+    """Unicode glyphs only when the stream encoding can carry them.
+
+    Piped output on legacy-locale Windows is cp1252; writing '✓' there raised
+    UnicodeEncodeError and turned a clean diff into exit 1 (confirmed
+    red-team crash). ASCII fallback keeps the exit-code contract intact.
+    """
+    enc = getattr(stream, "encoding", None) or "ascii"
+    try:
+        "✓✗⚠".encode(enc)
+    except (UnicodeEncodeError, LookupError):
+        return {"pass": "OK", "block": "X", "warn": "!"}
+    return {"pass": "✓", "block": "✗", "warn": "⚠"}
+
+
 def _c(code: str, text: str, color: bool) -> str:
     return f"\x1b[{code}m{text}\x1b[0m" if color else text
 
@@ -24,6 +39,7 @@ def _c(code: str, text: str, color: bool) -> str:
 def render(ir: IR, findings: list[Finding], verdict: str, fail_on: str, stream=None) -> str:
     stream = stream or sys.stdout
     color = _use_color(stream)
+    sym = _symbols(stream)
     lines: list[str] = []
 
     visible = [f for f in findings if not f.allowlisted]
@@ -32,15 +48,15 @@ def render(ir: IR, findings: list[Finding], verdict: str, fail_on: str, stream=N
 
     if not visible and not suppressed:
         head = "greenwash: no known tampering pattern detected"
-        lines.append(_c("32", "✓ " + head, color))
+        lines.append(_c("32", sym["pass"] + " " + head, color))
     else:
         n_high = sum(1 for f in visible if f.severity in ("high", "critical"))
         if blocking:
             head = f"greenwash: {n_high} finding(s) at or above {fail_on} — blocking"
-            lines.append(_c("31", "✗ " + head, color))
+            lines.append(_c("31", sym["block"] + " " + head, color))
         else:
             head = f"greenwash: {len(visible)} finding(s), none at or above {fail_on}"
-            lines.append(_c("33", "⚠ " + head, color))
+            lines.append(_c("33", sym["warn"] + " " + head, color))
     lines.append("")
 
     for f in visible:

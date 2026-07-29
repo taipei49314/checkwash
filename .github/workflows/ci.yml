@@ -25,6 +25,8 @@ jobs:
       - run: pytest
       - name: emit corpus findings (determinism artifact)
         shell: bash
+        env:
+          PYTHONUTF8: "1"  # artifact bytes must not depend on runner locale
         run: python tools/emit_corpus.py > corpus-findings.json
       - uses: actions/upload-artifact@v4
         with:

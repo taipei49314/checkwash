@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_REMOVED
+note: red-team regression — swapping the only real oracle for an easy
+note2: assertRaises on a different input must surface the removal
+=== before: tests/test_compute.py ===
+import unittest
+
+from calc import compute
+
+
+class TestCompute(unittest.TestCase):
+    def test_compute(self):
+        self.assertEqual(compute(5), 42)
+=== after: tests/test_compute.py ===
+import unittest
+
+from calc import compute
+
+
+class TestCompute(unittest.TestCase):
+    def test_compute(self):
+        self.assertRaises(ValueError, compute, -1)
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

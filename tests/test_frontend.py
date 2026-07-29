@@ -113,3 +113,59 @@ def test_suppression_scan():
         b"import os  # noqa\nx = 1  # type: ignore\n", collect_tests=False
     )
     assert len(parsed.suppressions) == 2
+
+
+def test_class_level_skip_reaches_units():
+    src = (
+        "import pytest\n\n"
+        "@pytest.mark.skip(reason='flaky')\n"
+        "class TestMath:\n"
+        "    def test_add(self):\n"
+        "        assert 1 + 1 == 2\n"
+        "    def test_mul(self):\n"
+        "        assert 2 * 3 == 6\n"
+    )
+    parsed = parse_python(src.encode(), collect_tests=True)
+    assert len(parsed.units) == 2
+    for unit in parsed.units:
+        assert "pytest.mark.skip" in [m.name for m in unit.side.markers]
+
+
+def test_pytestmark_reaches_units():
+    src = (
+        "import pytest\n\n"
+        "pytestmark = pytest.mark.skip(reason='later')\n\n"
+        "def test_add():\n"
+        "    assert 1 + 1 == 2\n"
+    )
+    parsed = parse_python(src.encode(), collect_tests=True)
+    assert [m.name for m in parsed.units[0].side.markers] == ["pytest.mark.skip"]
+
+
+def test_self_skiptest_is_a_marker():
+    src = (
+        "class TestX:\n"
+        "    def test_a(self):\n"
+        "        self.skipTest('disabled')\n"
+        "        assert 1 + 1 == 2\n"
+    )
+    parsed = parse_python(src.encode(), collect_tests=True)
+    assert "self.skipTest" in [m.name for m in parsed.units[0].side.markers]
+
+
+def test_container_literal_upgrade_is_uniform():
+    eq_var = _single_test_assertions(
+        "def test_x():\n    expected = [1, 2]\n    assert f() == expected\n"
+    )[0]
+    eq_lit = _single_test_assertions("def test_x():\n    assert f() == [1, 2]\n")[0]
+    assert eq_var.strength == S.EXACT_VALUE
+    assert eq_lit.strength == S.EXACT_STRUCT
+
+
+def test_normalize_preserves_string_interior():
+    from greenwash.ir.model import normalize_text
+
+    a = normalize_text('assert g("s") == "hello world"')
+    b = normalize_text('assert g("s") == "helloworld"')
+    assert a != b
+    assert normalize_text("assert  x ==  1") == normalize_text("assert x == 1")
