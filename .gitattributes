@@ -1,0 +1,8 @@
+# Byte-stability matters to a tool that promises byte-identical verdicts:
+# every text file is committed and checked out with LF, on every OS.
+* text=auto eol=lf
+*.py text eol=lf
+*.gwcase text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
