@@ -1,0 +1,26 @@
+=== meta ===
+rule: ASSERT_REMOVED
+note: triage finding — an excinfo substring assert folded into
+note2: pytest.raises(match=...) keeps a PATTERN-strength oracle; the removal
+note3: stays visible at warn but must not block
+=== before: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_rejected():
+    with pytest.raises(ValueError) as excinfo:
+        create("relative/path")
+    assert "must be absolute" in str(excinfo.value)
+=== after: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_rejected():
+    with pytest.raises(ValueError, match="must be absolute"):
+        create("relative/path")
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "warn", "deescalators": ["SAME_UNIT_REWRITE"]}]

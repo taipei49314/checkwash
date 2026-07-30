@@ -436,6 +436,25 @@ def _collect_unit(
                 if name in _SKIP_CALLS:
                     seg = text.seg(node) or name
                     markers.append(Marker(name=name, text=seg, span=off.span(node)))
+                if name in ("pytest.raises", "pytest.warns", "raises"):
+                    # `pytest.raises(E, match=...)` IS an oracle: triage found
+                    # human commits folding an excinfo substring assert into
+                    # match= and getting blocked for "removing" it.
+                    match_kw = next((kw for kw in node.keywords if kw.arg == "match"), None)
+                    seg = text.seg(node) or name
+                    assertions.append(
+                        Assertion(
+                            id=f"a{counter}",
+                            form="pattern" if match_kw is not None else "raises",
+                            strength=S.PATTERN if match_kw is not None else None,
+                            text=seg,
+                            span=off.span(node),
+                            right_literal=(
+                                _literal_repr(match_kw.value, text) if match_kw is not None else None
+                            ),
+                        )
+                    )
+                    counter += 1
             c = _classify_unittest_call(node, text)
             if c is not None:
                 seg = text.seg(node) or ""
@@ -624,6 +643,16 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     visit(tree, "", module_markers, True)
     if conftest:
         units = [_conftest_unit(tree, text, off)]
+
+    # Two defs sharing a name shadow each other at runtime, and name-keyed
+    # alignment produced phantom findings on comment-only diffs (triage,
+    # rich 6c48a5c). Disambiguate deterministically by order.
+    seen_names: dict[str, int] = {}
+    for unit in units:
+        n = seen_names.get(unit.qualname, 0)
+        seen_names[unit.qualname] = n + 1
+        if n:
+            unit.qualname = f"{unit.qualname}#{n + 1}"
 
     broad: list[str] = []
     for node in ast.walk(tree):

@@ -72,6 +72,68 @@ def _repair_evidence(unit: Unit | None, ir: IR) -> bool:
     return any(name in ir.globals.prod_symbol_callers for name in side.calls)
 
 
+def _same_unit_rewrite(unit: Unit | None) -> bool:
+    """The unit gained a NEWLY WRITTEN strong assertion alongside the removal.
+
+    Triage cluster: private-API asserts rewritten against the public API,
+    excinfo asserts folded into raises(match=...). "Newly written" is the
+    load-bearing word: a unit that merely KEEPS an old assertion while the
+    inconvenient one disappears is the sacrificial-cheat signature and must
+    keep blocking. Compensated findings stay visible at warn.
+    """
+    if unit is None or unit.delta is None or unit.before is None or unit.after is None:
+        return False
+    if not unit.delta.assertions_removed:
+        return False
+    before_texts = {normalize_text(a.text) for a in unit.before.assertions}
+    return any(
+        a.strength is not None
+        and a.strength >= 60
+        and normalize_text(a.text) not in before_texts
+        for a in unit.after.assertions
+    )
+
+
+def _oracle_mass(side) -> int:
+    strong = sum(1 for a in side.assertions if a.strength is not None and a.strength >= 60)
+    return strong * max(1, side.param_cases or 1)
+
+
+def _file_restructured(ir: IR) -> dict[str, bool]:
+    """path -> did the file's added live units replace its disappeared mass?
+
+    Triage cluster: N tests merged into one parametrize, splits, in-file
+    renames with rewrites. Oracle mass = strong assertions x parametrize rows;
+    if what appeared covers what disappeared, disappearances hold at warn.
+    """
+    result: dict[str, bool] = {}
+    for file in ir.files:
+        if file.role != "test":
+            continue
+        gone = added = 0
+        for unit in file.units:
+            if unit.before is not None and unit.after is None:
+                gone += _oracle_mass(unit.before)
+            elif unit.after is not None and unit.before is None and not unit.after.disabled:
+                added += _oracle_mass(unit.after)
+        if gone:
+            result[file.path] = added >= gone
+    return result
+
+
+_COMPAT_TOKENS = ("sys.version_info", "sys.platform", "platform.", "os.name")
+
+
+def _compat_gate(unit: Unit | None) -> bool:
+    """A skipif keyed on interpreter/OS version is a compat gate, not a kill."""
+    if unit is None or unit.after is None:
+        return False
+    for m in unit.after.markers:
+        if m.name.endswith("skipif") and any(tok in m.text for tok in _COMPAT_TOKENS):
+            return True
+    return False
+
+
 def apply_gates(
     ir: IR,
     findings: list[Finding],
@@ -84,6 +146,7 @@ def apply_gates(
     moved = set(ir.globals.moved_assertion_texts)
     units = _unit_index(ir)
     active_allows = active_fingerprints(allow_entries, today)
+    restructured = _file_restructured(ir)
 
     for f in findings:
         if f.fingerprint in active_allows:
@@ -139,10 +202,27 @@ def apply_gates(
             and (f.strength_after is None or f.strength_after >= 60)
         )
 
+        # Compensation evidence from the triage clusters: all of these hold
+        # the finding at warn (visible, allowlistable) instead of blocking.
+        compensation = None
+        if f.rule == "ASSERT_REMOVED" and _same_unit_rewrite(unit):
+            compensation = "SAME_UNIT_REWRITE"
+        elif (
+            f.rule == "TEST_DISABLED"
+            and unit is not None
+            and unit.after is None
+            and restructured.get(f.path)
+        ):
+            compensation = "RESTRUCTURED"
+        elif f.rule == "TEST_DISABLED" and _compat_gate(unit):
+            compensation = "COMPAT_GATE"
+
         # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
         # question: is there a production change that explains this edit?
         if _repair_evidence(unit, ir):
             f.deescalators.append("REPAIR_EVIDENCE")
+        elif compensation is not None:
+            f.deescalators.append(compensation)
         elif mild_weakening:
             f.deescalators.append("MILD_WEAKENING")
         else:

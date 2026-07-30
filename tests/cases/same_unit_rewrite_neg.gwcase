@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_REMOVED
+note: triage cluster — private-API asserts rewritten as an equal-strength
+note2: public-API assert in the same unit; visible at warn, not blocked
+=== before: tests/test_headers.py ===
+from headers import Headers, obfuscate
+
+
+def test_obfuscate():
+    h = Headers({"authorization": "secret"})
+    assert obfuscate(h.raw) == [("authorization", "[secure]")]
+    assert obfuscate(h.items()) == [("authorization", "[secure]")]
+=== after: tests/test_headers.py ===
+from headers import Headers, obfuscate
+
+
+def test_obfuscate():
+    h = Headers({"authorization": "secret"})
+    assert repr(h) == "Headers({'authorization': '[secure]'})"
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "warn", "deescalators": ["SAME_UNIT_REWRITE"]},
+ {"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["MILD_WEAKENING"]}]

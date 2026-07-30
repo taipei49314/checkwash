@@ -1,0 +1,38 @@
+=== meta ===
+rule: TEST_DISABLED
+note: triage cluster — N tests merged into one parametrize; oracle mass is
+note2: preserved, so the disappearances hold at warn instead of blocking
+=== before: tests/test_encoding.py ===
+from urls import parse
+
+
+def test_path_encoding():
+    assert parse("http://x/a b").path == "/a%20b"
+
+
+def test_query_encoding():
+    assert parse("http://x/?q=a b").query == "q=a%20b"
+
+
+def test_fragment_encoding():
+    assert parse("http://x/#a b").fragment == "a%20b"
+=== after: tests/test_encoding.py ===
+import pytest
+
+from urls import parse
+
+
+@pytest.mark.parametrize(
+    "url,attr,expected",
+    [
+        ("http://x/a b", "path", "/a%20b"),
+        ("http://x/?q=a b", "query", "q=a%20b"),
+        ("http://x/#a b", "fragment", "a%20b"),
+    ],
+)
+def test_percent_encoding(url, attr, expected):
+    assert getattr(parse(url), attr) == expected
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]},
+ {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]},
+ {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]

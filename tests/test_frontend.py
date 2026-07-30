@@ -106,6 +106,29 @@ def test_behaviour_change_is_nontrivial():
     assert before.symbols["f"] != after.symbols["f"]
 
 
+def test_duplicate_test_names_disambiguated():
+    # Two defs sharing a name shadow each other; name-keyed alignment made
+    # phantom findings on comment-only diffs (triage, rich 6c48a5c).
+    src = (
+        "def test_x():\n    assert f() == 1\n\n"
+        "def test_x():\n    assert g() == 2\n"
+    )
+    parsed = parse_python(src.encode(), collect_tests=True)
+    assert [u.qualname for u in parsed.units] == ["test_x", "test_x#2"]
+
+
+def test_raises_match_is_a_pattern_assertion():
+    src = (
+        "import pytest\n\n"
+        "def test_x():\n"
+        "    with pytest.raises(ValueError, match='bad input'):\n"
+        "        f(-1)\n"
+    )
+    parsed = parse_python(src.encode(), collect_tests=True)
+    strengths = [a.strength for a in parsed.units[0].side.assertions]
+    assert S.PATTERN in strengths
+
+
 def test_test_files_skip_symbol_fingerprints():
     # They cost real time and answer a question only prod files are asked.
     parsed = parse_python(b"def test_x():\n    assert f() == 1\n", collect_tests=True)

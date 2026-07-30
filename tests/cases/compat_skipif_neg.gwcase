@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+note: triage finding — skipif keyed on interpreter version is a compat gate
+=== before: tests/test_compat.py ===
+import sys
+
+import pytest
+
+
+def test_new_syntax():
+    assert eval("1 + 1") == 2
+=== after: tests/test_compat.py ===
+import sys
+
+import pytest
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="needs 3.12 syntax")
+def test_new_syntax():
+    assert eval("1 + 1") == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

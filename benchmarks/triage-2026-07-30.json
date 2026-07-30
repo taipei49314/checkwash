@@ -1,0 +1,343 @@
+{
+ "date": "2026-07-30",
+ "source": "sweep round 1 (pre precision-round-1 fixes), 6 OSS repos x 300 commits",
+ "method": "48 oracle-rule blocked commits, each triaged by an independent agent reading the real diff",
+ "verdicts": [
+  {
+   "commit": "a31e6b73469cb2bf7eb8f70b5ff21f710fd2e23c",
+   "repo": "flask",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Commit 'remove werkzeug host tests' deletes three host-handling tests (test_bad_environ_raises_bad_request, test_environ_for_valid_idna_completes, test_normal_environ_completes) from tests/test_reqctx.py with no other changes in the diff; the coverage now lives upstream in werkzeug, which no diff analyser can see, so blocking and asking for an allowlist entry is exactly the SPEC behavior."
+  },
+  {
+   "commit": "91c6b3fecf36b1f04554e57cc4060ccb737a445d",
+   "repo": "flask",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Commit 'remove unicode host test' is a single-file diff that purely deletes test_environ_for_valid_idna_completes from tests/test_reqctx.py with zero compensation anywhere in the diff; deliberate maintainer cleanup, and blocking it is defensible per SPEC."
+  },
+  {
+   "commit": "d98eb69a354158252854ed4a5c9778e03d089191",
+   "repo": "flask",
+   "category": "fixable_fp",
+   "mechanism": "in-place assert replacement: removed asserts on same subject replaced by equal-strength (PATTERN->PATTERN) assert in same unit; hunk is also an exact revert of the immediately preceding commit",
+   "summary": "In test_all_methods, `assert \"HEAD\" not in output` and `assert \"OPTIONS\" not in output` are replaced at the same position by `assert \"GET, HEAD, OPTIONS, POST\" not in output` — same strength class, same asserted variable, same test unit (it restores the original test text from before e82db2ca, committed 8 minutes earlier); a deterministic analyser could pair the removed and added asserts on the same subject within the unit and suppress the ASSERT_REMOVED finding."
+  },
+  {
+   "commit": "e82db2ca3a22c9614c1987392c9cfaa8c6ce99ad",
+   "repo": "flask",
+   "category": "fixable_fp",
+   "mechanism": "test split: removed unit name is a strict prefix of new test names added in the same file (test_provide_automatic_options_attr -> _attr_disable/_attr_enable), scenarios and assertions preserved",
+   "summary": "The flagged test_provide_automatic_options_attr in tests/test_basic.py is split in the same diff into test_provide_automatic_options_attr_disable and test_provide_automatic_options_attr_enable, carrying over both original scenarios (405 on OPTIONS; allow-header equality) alongside the prod fix in src/flask/sansio/app.py; a name-prefix match between the deleted unit and added units in the same file is a deterministic signal of compensation."
+  },
+  {
+   "commit": "53b8f08218796d95764c5252bccd8a50a173a6fb",
+   "repo": "flask",
+   "category": "fixable_fp",
+   "mechanism": "test rename-with-rewrite in same hunk: deleted and added units adjacent with high name similarity (test_redirect_keep_session -> test_redirect_session), assertions replaced; prod fix under test in same diff",
+   "summary": "test_redirect_keep_session is deleted and test_redirect_session is added in the very same hunk of tests/test_testing.py, testing the same behavior (session state across follow_redirects) against the bug fixed in src/flask/testing.py within the same commit; a deterministic analyser could recognise the adjacent removed/added defs with near-identical names as a rewrite, not a disable."
+  },
+  {
+   "commit": "0a00e1b6085f62fb776a95ef676ea661bff565f6",
+   "repo": "flask",
+   "category": "fixable_fp",
+   "mechanism": "assert-on-excinfo folded into pytest.raises(match=...): removed `assert \"must be absolute\" in str(excinfo.value)` reappears as raises(ValueError, match=\".*must be absolute\") with the same literal in the same unit",
+   "summary": "A tmpdir->tmp_path mechanical refactor; in test_explicit_instance_paths the removed substring assertion on excinfo is relocated into the pytest.raises context manager's match= argument with the identical pattern string, an equal-strength oracle visible in the added lines of the same diff — recognisable deterministically by matching the removed assert literal against added raises(match=...) kwargs."
+  },
+  {
+   "commit": "1d7281fe0770a97229a2a75189a712cff866b448",
+   "repo": "flask",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Deletes test_egg_installed_paths plus its install_egg conftest fixture because egg installs are unsupported and Python 3.12 removes setuptools; the only prod change is a comment edit, so the coverage is dropped with no replacement. Deliberate human cleanup the tool is right to surface for allowlisting."
+  },
+  {
+   "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
+   "repo": "httpx",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Widens 'assert response.encoding == \"ISO-8859-1\"' to 'in (\"ISO-8859-1\", \"WINDOWS-1252\")' so the test passes under both chardet <6.0 and 6.0. The oracle genuinely accepts a superset of values with no compensation in the diff; a justified weakening a reviewer would allowlist."
+  },
+  {
+   "commit": "eeb5e3c2a3ff2403ec47b5926715ecd61143d92d",
+   "repo": "httpx",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Commit 'Cleanup unneccessary test case' deletes test_netrc_auth_nopassword (23 lines) outright; the diff touches nothing else and adds no replacement coverage. Pure deletion, correctly blocked per spec."
+  },
+  {
+   "commit": "9fd6f0ca6616d0310a3ee0b0c6ef509a97995797",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "exact dict-equality rewritten as str()-wrapped exact string equality of the same call — an intra-exact-band transition (EXACT_STRUCT 100 -> EXACT_VALUE 90), not a weakening; same diff adds 3 new encoder tests",
+   "summary": "Compact-JSON change: the flagged assertion changes 'response.json() == {\"hello\": \"world\"}' to 'str(response.json()) == \"{'hello': 'world'}\"' — still an exact-literal comparison of the same expression, and the diff simultaneously updates many exact expected values and adds test_separators_for_compact_json/test_allow_nan_false/test_ensure_ascii_false covering the new prod behavior. Detector should not treat a 100->90 move within the exact band as a weakening."
+  },
+  {
+   "commit": "4f6edf36e93fd9f83ff95b065718fd6bd0c4d3c5",
+   "repo": "httpx",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Migrating test_parse_header_links to the public API replaces exact list equality with 'assert all(link in all_links for link in expected)' — genuine weakening from exact equality to subset containment (extra/spurious links now pass silently); the new no-link test only covers the empty case. Blocking is defensible, though scoring 'all(x in y ...)' as TRUTHY(20) rather than a containment tier (~70) overstates the drop."
+  },
+  {
+   "commit": "c7cd6aa5bdcf9f9d63e7dcea33cb78d6920aeed8",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "removed EXACT_VALUE assertions replaced in the same test unit by a new EXACT_VALUE repr-equality assertion consuming the same parametrized expected data (private-API call rewritten as public-API oracle)",
+   "summary": "test_obfuscate_sensitive_headers drops two exact list-equality assertions on the private function but adds, in the same unit, 'assert repr(headers_class) == f\"Headers({as_dict!r})\"' built from the same parametrized output — an equal-strength exact oracle via the public API. A deterministic analyser could recognize same-unit removal+addition of exact assertions over the same expected variable as a compensated rewrite (only the bytes-input variant coverage narrows)."
+  },
+  {
+   "commit": "a11fc3849b94157274c98d99501acad05cbfb221",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "N tests merged into one @pytest.mark.parametrize",
+   "summary": "Deletes test_path_percent_encoding, test_query_percent_encoding, test_fragment_percent_encoding, and test_url_with_url_encoded_path but adds test_path_query_fragment in the same file: a parametrized test whose cases contain the original input URLs verbatim and whose body asserts the same four properties (raw_path/path/query/fragment) at EXACT_VALUE strength, plus extra cases. A couple of expected values change because the prod encoding behavior is intentionally fixed in the same diff (httpx/_urlparse.py)."
+  },
+  {
+   "commit": "5b5f6d8e172910371b5901f6e21717097274c513",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "test renamed/split in same file, assertions preserved near-verbatim",
+   "summary": "Pure test-suite reorganization: test_url is split into test_basic_url and test_complete_url with all original assertions kept (plus added str(url) checks), and its copy_with assertions move into a new test_copy_with in the same file; the commit also folds test_urlparse.py into test_url.py. A diff analyser could match the deleted unit's assert lines to near-identical added lines in the same diff (rename/split detection via assertion-content similarity)."
+  },
+  {
+   "commit": "cca62060cb958e89078279e625a752aa0d02c40c",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "same-unit rewrite: each removed assert paired with added equal-strength assert via public API",
+   "summary": "test_line_decoder_cr keeps its name but is rewritten from the private LineDecoder.decode()/flush() API to the public iter_lines() API; each removed EXACT_STRUCT assertion is replaced in the same unit by an EXACT_STRUCT list-equality assertion on the same scenario input (e.g. b'a\\r\\rb\\rc' -> ['a','','b','c']). Assert count drops because incremental decode/flush steps collapse into one end-to-end equality, but every scenario retains an exact-value oracle; removals and additions pair within the rewritten unit."
+  },
+  {
+   "commit": "7488b15226263dbd06565d4e577fc6e339c1ef64",
+   "repo": "httpx",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Deliberate cleanup that deletes test_httpx_exceptions_exposed (which verified every class in httpx._exceptions is publicly re-exported) to drop private imports; the rewritten sibling test only checks httpcore-derived exception names against the public namespace, so httpx-only exceptions (InvalidURL, HTTPStatusError, TooManyRedirects, etc.) lose their exposure oracle with no equal-or-stronger replacement in the diff. Blocking is defensible; a reviewer would allowlist it."
+  },
+  {
+   "commit": "59914c7690573d5f9b17bce4172405294cb08278",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "prod feature under test deleted in same diff",
+   "summary": "test_auth_header_has_priority_over_netrc disappears because the behavior it tested — implicit netrc credential lookup with Authorization-header priority in BaseClient._build_auth — is itself removed from httpx/_client.py (and NetRCInfo from httpx/_utils.py) in the same commit; netrc support becomes an explicit httpx.NetRCAuth class with new replacement tests added in the same file."
+  },
+  {
+   "commit": "7947b56076db933079ec0c33d1f81406e33008e7",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "same-unit rewrite: removed asserts paired 1:1 with equal-strength EXACT_VALUE asserts on public API",
+   "summary": "All six flagged tests keep their names; the private encode_request() calls are replaced by public httpx.Request(...) + read(), and every removed 'assert content == b\"\".join(stream)' / 'assert headers == {...}' is paired inside the same unit with an added EXACT_VALUE assertion on request.content/request.headers carrying identical expected multipart byte payloads (mocked-urandom boundary replaced by a fixed 'BOUNDARY'). Only a trivial isinstance(stream, Iterable) check is lost."
+  },
+  {
+   "commit": "bddd774ce065f3442c1f46af1db5b85b1bfb7613",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "prod feature under test deleted in same diff (revert commit); deleted test's pytest.raises match string appears verbatim in deleted prod lines",
+   "summary": "Revert of 'Raise TypeError on invalid query params': the deleted test_invalid_query_params asserted a TypeError whose raise statement (with the identical message string) is removed from httpx/_utils.py in the same diff, so the oracle deletion is compensated by the prod behavior itself being removed."
+  },
+  {
+   "commit": "563a1031f5bd37445d2fdbf622ba5cab926207c9",
+   "repo": "httpx",
+   "category": "fixable_fp",
+   "mechanism": "test unit rewritten in-place; removed EXACT_VALUE asserts replaced by equal-strength EXACT_VALUE assert in the same unit (private-API check converted to public-API equivalent)",
+   "summary": "test_decoders_empty_cases survives with the same name but is rewritten to drop private decoder-class imports: the removed instance.decode()/flush() == b\"\" asserts become response.read() == b\"\" through the public API, still parametrized over the same four codecs via Content-Encoding headers."
+  },
+  {
+   "commit": "74007f67d203f902e88bdecba169786bf44a8aa2",
+   "repo": "attrs",
+   "category": "fixable_fp",
+   "mechanism": "deleted parametrize case token (__ne__) matches prod identifier whose behavior is removed in the same diff (cd['__ne__'] no longer passed through _add_method_dunders, becomes shared module-level function)",
+   "summary": "Performance refactor makes __ne__ a single shared module-level function instead of a per-class one run through _add_method_dunders, so the '__ne__' parametrize case checking meta dunders/docstrings is correctly dropped from both tests; the prod behavior under that case is deliberately removed in the same diff."
+  },
+  {
+   "commit": "7373d88f9bef8a2ff70972f81e8d8b9dfb7c5653",
+   "repo": "attrs",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Restores basic attrs functionality on Python 3.14-dev and adds PY_3_14_PLUS-gated xfail markers / imperative pytest.xfail calls to five tests that are genuinely broken on 3.14, with nothing in the diff replacing that coverage; the commit message itself says the tests need to be skipped for now, so blocking is exactly what the SPEC prescribes and a reviewer would allowlist it."
+  },
+  {
+   "commit": "f520d9a89f1fde6fdc5310ffe6c5d4c7467fb10b",
+   "repo": "attrs",
+   "category": "fixable_fp",
+   "mechanism": "prod feature under test deleted in same diff: both warnings.warn(DeprecationWarning ...) blocks for the hash argument are removed from src/attr/_make.py alongside the tests asserting pytest.deprecated_call()",
+   "summary": "Soft-deprecation decision: the hash argument no longer emits a DeprecationWarning, and the same diff removes the warning-emitting prod code together with both copies of test_hash_is_deprecated that asserted the warning, so the oracle removal tracks an intentional prod behavior removal."
+  },
+  {
+   "commit": "10b43c211b825181cb81ef383e8091fd41750150",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "N tests merged into one parametrize: all nine deleted (module, name) cases reappear as parametrize rows of new test_attr_deprecated in the same file, with a strictly stronger assertion (adds assert value == target)",
+   "summary": "test_stream_helper_deprecated and test_utilities_deprecated are consolidated into a single parametrized test_attr_deprecated in the same file that preserves every original case, adds many new ones, and strengthens the oracle by also asserting the resolved attribute equals its expected target."
+  },
+  {
+   "commit": "700798252a509ca57bc7a12f7aa7fd67f9f8fd25",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "tests moved verbatim to new file in same diff",
+   "summary": "Test-file reorganization: all four flagged tests are deleted from tests/test_utils.py and re-added with identical def names and bodies in the new tests/test_utils_2/test_open_file.py within the same diff. A deterministic analyser matching deleted test defs against added test defs elsewhere in the diff would clear every finding."
+  },
+  {
+   "commit": "1103c5cac2a9336dad3b4b5ce1a25a0bcff49ec0",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "2 tests moved verbatim in-diff; 3rd is dedup — identical copy pre-exists in post-commit tree",
+   "summary": "test_prompts_abort and test_full_prompt_passed_to_readline are moved verbatim to tests/test_utils_2/test_prompt.py in the same diff; test_confirm_repeat is deletion of a duplicate whose identical copy already lives at tests/test_utils_2/test_confirm.py:44 in the post-commit tree (copied there by an earlier commit in the refactor series), detectable by a post-state tree lookup for an identical-name/body twin."
+  },
+  {
+   "commit": "a391797d00d2ef32ebc4fb0034462a2ec5e6d3d4",
+   "repo": "click",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Refactor moving echo tests into tests/test_utils_2/: 5 of 6 flagged tests are re-added verbatim in-diff (fixable by move-detection), but test_prompt_cast_default is deleted and absent from the entire post-commit tree — it only returns 4 minutes later in commit 182944f. At this commit that coverage is genuinely gone with no compensation visible in the diff or the post-state tree, so per-commit blocking is defensible and a reviewer would allowlist it as part of the refactor series."
+  },
+  {
+   "commit": "1557e265222c431b1e4d6c4dd6754006ed10dc02",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "assertions replaced by equal-or-stronger pytest.warns(type, match=...) context manager in same hunk",
+   "summary": "Converts assert exit_code==1 / isinstance(exception, UserWarning) / substring-in-str(exception) into `with pytest.warns(UserWarning, match=\"used more than once\")` around the same runner.invoke call — the idiomatic helper enforces both the warning type and the message pattern, an equal-or-stronger oracle recognisable deterministically when a pytest.warns/pytest.raises with matching type and match string is added in the hunk that removed the assertions."
+  },
+  {
+   "commit": "b7e5fd4cc7de70280eccd39f2bb956df617e5519",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "prod behavior the test's oracle encodes is deleted in same diff (protocol revert); sibling parametrize expectations migrated to new format",
+   "summary": "Reverts the fish completion frame format from newline-separated 3-line frames to comma/tab; the deleted test_fish_multiline_help_complete hard-codes the old format whose producing prod line (return f\"{item.type}\\n{value}\\n{help_escaped}\" in FishComplete.format_completion) is removed in the same diff, and the fish parametrized cases in the same test file are updated to the new format. Caveat: no replacement test specifically covers multiline help, so a reviewer might still want a residual warning."
+  },
+  {
+   "commit": "c3535905c77a29afc84861b29d3ad366ce5451bd",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "prod behavior the test's oracle encodes is deleted in same diff (protocol revert); duplicate landing of identical patch on second branch line",
+   "summary": "Byte-identical patch to b7e5fd4 landed independently on a second branch line (neither commit is an ancestor of the other; both reachable from main via merges) — same fish-format revert deleting the old-format prod line together with the test that hard-coded it, with sibling fish parametrize expectations migrated in the same file. Same mechanism and same multiline-help coverage caveat as b7e5fd4."
+  },
+  {
+   "commit": "becbde5cf416441627f779e8dd34e57738ee1c1f",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "equal-strength exact assert survives under variable rename; removed identity assert invalidated by same-diff prod wrapper; new assert and new test added",
+   "summary": "Bugfix wraps the nullpager stream in _SkipClose so it no longer closes std streams; the test's exact-value assert (getvalue() == styled_text) is retained verbatim modulo rename, the removed 'pager is created[0]' identity assert could no longer hold because the same diff deliberately wraps the stream, a new 'not stream.closed' assert covers the new behavior, and a new end-to-end test is added in tests/test_testing.py. The detector mispaired the surviving exact assert against the newly added truthy assert."
+  },
+  {
+   "commit": "d15f3c23a177e80c324e1ee9681c9449c31ac965",
+   "repo": "click",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Adds a pytest.mark.skipif(MAC and Python 3.13+/GIL condition) to test_echo_via_pager because the generator-exception pager test is flaky on macOS free-threaded 3.14t; the test is genuinely disabled on that platform with no replacement coverage in the diff. A reviewer would allowlist this deliberate skip."
+  },
+  {
+   "commit": "b761eda3bad977ec2f485451d85fd8ec365f0bf4",
+   "repo": "click",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Adds skipif(WIN) to two real-pager tests and removes the Windows 'more' branch from the pager helper because Windows routes through _tempfilepager rather than _pipepager; Windows coverage for these paths is genuinely dropped with nothing compensating in the diff. Deliberate human platform skip a reviewer could allowlist."
+  },
+  {
+   "commit": "1aa2d53d63ff68bf14b35931177aac9270e39713",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "standalone test folded into sibling test's @pytest.mark.parametrize case (body extracted to helper, identical expected output)",
+   "summary": "Test refactor: test_get_pager_file_supports_multiple_write_sites' body became the helper _write_pager_from_multiple_sites and was added as a pytest.param(id='multiple write sites') case of the parametrized test_get_pager_file_with_real_pager_binary_stream in the same file, with the identical expected output 'prefix\\nmiddle\\nsuffix\\n'. Coverage is preserved within the same diff."
+  },
+  {
+   "commit": "39413d9b1d782317e72e82ec09d437bef8359078",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "test rewritten as renamed parametrized test; original scenario preserved as a parametrize case with equivalent assertions",
+   "summary": "test_string_show_default_shows_custom_string_in_prompt was rewritten as the renamed test_string_show_default_in_prompt with 7 parametrized cases; the original scenario survives as the 'simple-string' case asserting '(custom)' in and the actual default not in the prompt, and coverage is expanded (unicode, numeric, None/UNSET, empty-string cases). Same file, same diff."
+  },
+  {
+   "commit": "955ca492a6b9e8de0660dae1c415568ca6f9c4b3",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "two tests merged into one new @pytest.mark.parametrize test in the same file; both original scenarios preserved as cases, coverage expanded 2 to 6",
+   "summary": "Cleanup for the flag_value fix merges test_flag_value_optional_behavior and test_flag_value_with_type_conversion into the new parametrized test_flag_value_on_option_with_zero_or_one_args; both original scenarios (str flag-only using flag_value, and int type-conversion of flag_value) survive among 6 cases with exit-code and exact-output asserts intact."
+  },
+  {
+   "commit": "d36de6fc67882f23d7a7d61cd4c0e25e0f88b0ac",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "in-file rename with identical parametrize table and equal-or-stronger body",
+   "summary": "test_usage_show_choices was renamed to test_choice_usage_rendering in the same file, keeping the exact same 10-entry parametrize table (only pytest.param ids dropped) while adding assertions (stderr empty, exit codes, and a new usage-error check). Body-similarity or parametrize-table matching would identify this as a rename, not a disappearance."
+  },
+  {
+   "commit": "06847da9126a99c88bf347adf213d33bfe4e4af2",
+   "repo": "click",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "The flagged assertion changed from 'assert result.exit_code == 0' to 'assert result.exit_code == 0 if expected not in (REPEAT, INVALID) else 1', which by ternary precedence asserts the bare constant 1 (always true) on the REPEAT/INVALID paths — a genuine, likely accidental weakening with no compensating exit-code check; the detector surfaced a real latent test bug."
+  },
+  {
+   "commit": "bbe1eb6d41f54bd49690a5c385b0895d061a76c1",
+   "repo": "click",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Single-line removal of 'assert value is not True' (commit message: 'Remove duplicate test'). The check is semantically subsumed by a pre-existing loop asserting 'value is not real_value' over a tuple containing True, but that compensation is unchanged context outside the diff, and proving subsumption requires evaluating loop data — the diff itself only deletes; a reviewer allowlist is the right outcome."
+  },
+  {
+   "commit": "c498ced0e7b595880b70a81767ae86902714ee1c",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "in-file rename with rewritten equal-or-stronger parametrized replacement",
+   "summary": "Both flagged tests were renamed in the same file with expanded coverage: test_flag_value_dual_callback became test_default_dual_option_callback (5 -> 20 parametrize cases, same decorator stack and exact-output assertion) and test_custom_type_click_class_flag_value became test_dual_options_custom_type_sentinel_flag_value (single case converted to a 10-case parametrized test that includes the original scenario). Shared decorators, command construction, and docstring issue links make the rename deterministically matchable."
+  },
+  {
+   "commit": "b64ea07128a6368b5f6f93035c75d5693c7ba572",
+   "repo": "click",
+   "category": "fixable_fp",
+   "mechanism": "prod constraint under test deleted in same diff (raises-match string maps to removed raise) plus replacement coverage in same file",
+   "summary": "test_argument_unbounded_nargs_cant_have_default asserted pytest.raises(TypeError, match='nargs=-1'); the same commit deletes the corresponding raise TypeError(\"'default' is not supported for nargs=-1.\") guard from src/click/core.py (legalizing defaults for unbounded nargs per issue #2164) and adds positive coverage for the new behavior in test_good_defaults_for_nargs. A diff analyser could link the deleted test's exception-match string to the raise statement removed from prod code in the same diff."
+  },
+  {
+   "commit": "6c48a5c2e3d8daa58d566d14ced2f775f76102a7",
+   "repo": "rich",
+   "category": "fixable_fp",
+   "mechanism": "duplicate test-name shadowing makes name-keyed unit extraction unstable; phantom findings on a comment-only diff",
+   "summary": "The diff is a two-character comment typo fix touching neither flagged test, yet three findings fired because tests/test_console.py defines test_force_color twice (a 3-case parametrized version shadowed by a later unparametrized one) and test_soft_wrap twice; the extractor evidently resolved the duplicate names differently on the before and after sides, comparing the 3-case definition against the 1-case one. Fix: dedupe duplicate names deterministically (last-definition-wins, matching Python shadowing) and never emit findings for units whose source is byte-identical across the diff."
+  },
+  {
+   "commit": "82afcb4ff58db4d7628062a8a695de3bc64febab",
+   "repo": "rich",
+   "category": "spec_correct",
+   "mechanism": "",
+   "summary": "Deletes test_no_nested_live, whose asserted behavior (nested live raises LiveError) was removed in an earlier commit — no compensation visible in this diff, so blocking matches SPEC. Note: the other 3 findings (test_force_color x2, test_soft_wrap) are phantom — those tests are unchanged on both sides; the file has duplicate same-name defs (test_soft_wrap twice, test_force_color parametrized+plain) which break the detector's unit keying when line offsets shift."
+  },
+  {
+   "commit": "35b0f52cbf32058403e279b5a51c9735210bc03b",
+   "repo": "rich",
+   "category": "fixable_fp",
+   "mechanism": "skipif condition is a sys.version_info predicate (Python-version compat gate)",
+   "summary": "Adds @pytest.mark.skipif(sys.version_info.minor < 11) to test_notes because exception __notes__ only exists on Python 3.11+; the test still runs on supported interpreters. A deterministic analyzer can whitelist skipif markers whose condition references sys.version_info/platform."
+  },
+  {
+   "commit": "90b805fda70db2316d79aa577f4c3eb670f9a8a1",
+   "repo": "starlette",
+   "category": "fixable_fp",
+   "mechanism": "prod code in same diff changes the asserted literal (header rename), and the weakened assert is paired with newly added assertions in the same test unit",
+   "summary": "RFC 9110 fix moves 'multipart/byteranges; boundary=' from content-range to content-type in responses.py; the EXACT_VALUE->PATTERN change is forced because the value now embeds a random boundary, and the same hunk adds 'content-range not in headers' plus extracts the boundary for an exact chunk-list comparison. Net oracle strength is preserved within the diff."
+  },
+  {
+   "commit": "02b6ed7b18c741c00795010e9d716b58006af2c3",
+   "repo": "starlette",
+   "category": "fixable_fp",
+   "mechanism": "test renamed-with-edits (same file/position, high name similarity) + prod branch under test (has_cookie) deleted in same diff with sibling test assertion strengthened",
+   "summary": "CORS behavior change: origin reflection now keyed on allow_credentials instead of cookie sniffing. One flagged test was renamed ..._between_credentialed_requests -> ..._between_requests with edits; the other (cookie-triggered specific origin) tests a prod branch removed in the same diff, and test_cors_allow_all is updated in the same diff to assert the replacement behavior ('*' -> explicit origin)."
+  },
+  {
+   "commit": "b133ab45ad649cc91634dbe770f33c722dccd78b",
+   "repo": "starlette",
+   "category": "fixable_fp",
+   "mechanism": "prod feature deleted in same diff — identifiers and warning strings asserted by the deleted test appear verbatim in the prod-side deletions",
+   "summary": "Removes the deprecated WS_1004/WS_1005 constants and the whole __getattr__ deprecation shim from starlette/status.py in the same diff that deletes test_deprecated_types; the deleted test's oracle target (the DeprecationWarning shim) no longer exists."
+  },
+  {
+   "commit": "856c904a6dcf7368a999dd791e2f98a7c3812f0f",
+   "repo": "starlette",
+   "category": "fixable_fp",
+   "mechanism": "prod feature deleted in same diff — the deprecation __getattr__ proxy and symbol referenced by the deleted test are removed on the prod side",
+   "summary": "Removes the ExceptionMiddleware import-proxy deprecation shim from starlette/exceptions.py and, in the same diff, the test that asserted the shim's DeprecationWarning (the test even carries a comment saying to remove it once the shim goes)."
+  }
+ ]
+}
