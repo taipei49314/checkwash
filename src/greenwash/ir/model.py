@@ -23,7 +23,9 @@ class Assertion:
     span: tuple[int, int]
     left: str | None = None
     right_literal: str | None = None
+    right_value: str | None = None  # repr() of the evaluated literal, for hardcode matching
     epsilon: str | None = None  # literal source text of the tolerance, never a float
+    epsilon_kind: str | None = None  # rel | abs | delta (bigger=looser) | places (bigger=stricter)
 
 
 @dataclass
@@ -69,7 +71,7 @@ class UnitDelta:
     assertions_added: list[str] = field(default_factory=list)  # after-side assertion ids
     markers_added: list[str] = field(default_factory=list)
     handlers_widened: list[str] = field(default_factory=list)
-    tolerance_changes: list[tuple[str, str]] = field(default_factory=list)
+    tolerance_changes: list[tuple[str, str, str]] = field(default_factory=list)  # (kind, before, after)
     param_cases_removed: int = 0  # parametrized cases deleted (pytest test items)
 
 
@@ -104,12 +106,24 @@ class DiffGlobals:
     # A changed prod file greenwash cannot reason about (non-Python, deleted,
     # or unparseable). Conservatively suppresses E1 — see THREATMODEL #4.
     prod_opaque_change: bool = False
-    new_literals_in_prod: list[str] = field(default_factory=list)
+    new_literals_in_prod: list[str] = field(default_factory=list)  # repr() of constants
+    # Literals already present on the base side of any changed file. A value
+    # that already existed in the codebase is not a hardcode fingerprint,
+    # however new its latest occurrence looks (dogfood-found false positive).
+    base_literals: list[str] = field(default_factory=list)
     guardrail_files_changed: list[str] = field(default_factory=list)
     ci_files_changed: list[str] = field(default_factory=list)
+    ci_weakening_lines: list[tuple[str, str]] = field(default_factory=list)  # (path, line)
     snapshot_files_changed: list[str] = field(default_factory=list)
-    imports_added: list[str] = field(default_factory=list)
-    suppressions_added: list[str] = field(default_factory=list)
+    test_logic_changed: bool = False  # any test-role unit delta or one-sided unit
+    imports_added: list[str] = field(default_factory=list)  # "path:module"
+    unresolved_imports: list[tuple[str, str]] = field(default_factory=list)  # (path, module)
+    suppressions_added: list[str] = field(default_factory=list)  # "path:text"
+    broad_excepts_added: list[tuple[str, str]] = field(default_factory=list)  # (path, text)
+    hidden_unicode: list[tuple[str, str, str]] = field(default_factory=list)  # (path, codepoint, escaped line)
+    exemptions_added: list[str] = field(default_factory=list)  # fingerprints appended in head allow.toml
+    scope_allow: list[str] = field(default_factory=list)  # contract globs ([] = SCOPE_DRIFT off)
+    scope_drift: list[tuple[str, str]] = field(default_factory=list)  # (path, role)
     moved_assertion_texts: list[str] = field(default_factory=list)  # normalized, sorted
 
 

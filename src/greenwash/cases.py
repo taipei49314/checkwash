@@ -25,7 +25,9 @@ from dataclasses import dataclass, field
 
 from greenwash.engine import FileChange
 
-_SECTION_RE = re.compile(r"^=== (meta|task|expect|before: (?P<bpath>.+?)|after: (?P<apath>.+?)) ===$")
+_SECTION_RE = re.compile(
+    r"^=== (meta|task|expect|env|before: (?P<bpath>.+?)|after: (?P<apath>.+?)) ===$"
+)
 
 
 @dataclass
@@ -35,6 +37,9 @@ class Case:
     before: dict[str, str] = field(default_factory=dict)
     after: dict[str, str] = field(default_factory=dict)
     expect: list[dict] = field(default_factory=list)
+    # `env` lists declared modules, as a base-side dependency manifest would;
+    # absent means IMPORT_UNRESOLVED is off for this case.
+    env: list[str] | None = None
 
 
 def parse_case(text: str) -> Case:
@@ -56,6 +61,8 @@ def parse_case(text: str) -> Case:
             case.task = content
         elif kind == "expect":
             case.expect = json.loads(content) if content.strip() else []
+        elif kind == "env":
+            case.env = [line.strip() for line in content.split("\n") if line.strip()]
         elif kind == "before":
             case.before[path or ""] = content
         elif kind == "after":

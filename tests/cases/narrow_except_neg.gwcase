@@ -1,0 +1,16 @@
+=== meta ===
+rule: none
+note: a specific, named exception handler is ordinary defensive code
+=== before: app/loader.py ===
+def load(path):
+    with open(path) as fh:
+        return fh.read()
+=== after: app/loader.py ===
+def load(path):
+    try:
+        with open(path) as fh:
+            return fh.read()
+    except FileNotFoundError:
+        raise LookupError(path)
+=== expect ===
+[]

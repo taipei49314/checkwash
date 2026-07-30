@@ -1,0 +1,11 @@
+=== meta ===
+rule: SUPPRESSION_ADDED
+note: silencing the type checker rather than satisfying it
+=== before: app/loader.py ===
+def load(path):
+    return open(path).read()
+=== after: app/loader.py ===
+def load(path):
+    return open(path).read()  # type: ignore
+=== expect ===
+[{"rule": "SUPPRESSION_ADDED", "severity": "warn"}]

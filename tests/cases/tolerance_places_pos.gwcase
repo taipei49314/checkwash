@@ -1,0 +1,23 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+note: unittest's `places` gets LOOSER as it shrinks — direction must invert
+=== before: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, places=7)
+=== after: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, places=1)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

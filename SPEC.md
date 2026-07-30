@@ -100,8 +100,25 @@ detectors can only be disabled whole.
 | `SCOPE_DRIFT` | changed file outside contract globs (disabled without a manifest) |
 | `HIDDEN_UNICODE` | zero-width / bidi control characters in changed lines → high |
 
-v0.1 (M0) implements: `ASSERT_REMOVED`, `ASSERT_WEAKENED`, `TEST_DISABLED`.
-The rest land in M1. Rule IDs are frozen now so schemas never churn.
+All thirteen are live as of M1, plus one derived rule, `EXEMPTION_ADDED`
+(§6). Rule-specific notes:
+
+- `TOLERANCE_LOOSENED` direction depends on the tolerance kind: `rel`/`abs`/
+  `delta` loosen as they grow; unittest's `places` loosens as it *shrinks*.
+  Unparseable epsilon literals are skipped rather than guessed.
+- `EXPECTED_VALUE_HARDCODED` ignores trivial values (None/bools, |int| ≤ 2,
+  strings shorter than 3, 0.0/1.0) and any value that already existed on the
+  base side — shared vocabulary is not a fingerprint.
+- `IMPORT_UNRESOLVED` is **off entirely** when no dependency manifest
+  (`pyproject.toml`, `requirements*.txt`, `poetry.lock`, `uv.lock`) is present
+  on the base side: with nothing to resolve against, every third-party import
+  would look hallucinated. The stdlib baseline is a vendored snapshot
+  (`pyenv.py`), never `sys.stdlib_module_names`, so findings do not shift
+  between interpreter versions.
+- `SCOPE_DRIFT` is off without a task manifest. Only file globs are consulted;
+  intent is never parsed.
+- `SNAPSHOT_CODE_COCHANGE` requires snapshot + prod change **and** no test
+  logic change in the same diff.
 
 ## 5. Escalators / de-escalators (applied in order, all deterministic)
 
@@ -111,6 +128,9 @@ The rest land in M1. Rule IDs are frozen now so schemas never churn.
 | E2 `ORACLE_FREEZE` | contract declares `oracle_freeze: true` | warn → high |
 | E3 `HARDCODE_FINGERPRINT` | `EXPECTED_VALUE_HARDCODED` hit | → high |
 | E4 `META` | guardrail / greenwash-own-config touched | → critical |
+| E5 `HIDDEN_CONTROL_CHARS` | `HIDDEN_UNICODE` hit | → high |
+| E6 `CI_TEST_COMMAND_WEAKENED` | CI diff adds `continue-on-error`, `\|\| true`, `--ignore`, `-k`, `--deselect` | → high |
+| E7 `OUT_OF_SCOPE_PROD_TOUCH` | `SCOPE_DRIFT` onto a prod / ci / guardrail file | → high |
 | D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
 | D2 `ASSERTION_MOVED` | removed assertion's normalized text reappears verbatim in a **live** (not disabled) added unit | → info |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |

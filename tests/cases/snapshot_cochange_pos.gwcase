@@ -1,0 +1,15 @@
+=== meta ===
+rule: SNAPSHOT_CODE_COCHANGE
+note: golden file rewritten alongside prod, with no test logic touched
+=== before: render.py ===
+def render(name):
+    return "Hello, " + name + "!"
+=== after: render.py ===
+def render(name):
+    return "Hi " + name
+=== before: tests/golden/greeting.txt ===
+Hello, world!
+=== after: tests/golden/greeting.txt ===
+Hi world
+=== expect ===
+[{"rule": "SNAPSHOT_CODE_COCHANGE", "severity": "warn"}]

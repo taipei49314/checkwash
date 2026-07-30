@@ -1,0 +1,15 @@
+=== meta ===
+rule: none
+note: with no dependency manifest there is nothing to resolve against, so
+note2: IMPORT_UNRESOLVED stays off rather than flagging every third-party import
+=== before: app/client.py ===
+def fetch(url):
+    return url
+=== after: app/client.py ===
+import superfetch
+
+
+def fetch(url):
+    return superfetch.get(url)
+=== expect ===
+[]

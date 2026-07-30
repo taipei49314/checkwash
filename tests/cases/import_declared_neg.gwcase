@@ -1,0 +1,25 @@
+=== meta ===
+rule: none
+note: stdlib, declared deps, and repo-local modules all resolve
+=== env ===
+pytest
+requests
+=== before: app/client.py ===
+import requests
+
+
+def fetch(url):
+    return requests.get(url).text
+=== after: app/client.py ===
+import json
+import pathlib
+
+import requests
+
+from app import loader
+
+
+def fetch(url):
+    return json.loads(requests.get(url).text)
+=== expect ===
+[]

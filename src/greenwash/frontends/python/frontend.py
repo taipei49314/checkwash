@@ -93,10 +93,10 @@ class ParsedFile:
     units: list[ParsedUnit] = field(default_factory=list)
     symbols: dict[str, str] = field(default_factory=dict)  # qualname -> behaviour fingerprint
     symbol_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)  # qualname -> callees
-    module_fingerprint: str = ""
     imports: list[str] = field(default_factory=list)
     suppressions: list[str] = field(default_factory=list)
     literals: frozenset[str] = frozenset()
+    broad_handlers: tuple[str, ...] = ()  # normalized texts of broad except handlers, module-wide
 
 
 def normalize_source(data: bytes) -> str:
@@ -107,6 +107,13 @@ def normalize_source(data: bytes) -> str:
 
 
 class _Offsets:
+    """Line-start index over the normalized source.
+
+    `seg()` replaces ast.get_source_segment, which re-splits the whole file on
+    every call — O(file) per assertion made a 3000-line diff take seconds and
+    tripped the perf gate.
+    """
+
     def __init__(self, text: str) -> None:
         starts = [0]
         for i, ch in enumerate(text):
@@ -114,15 +121,23 @@ class _Offsets:
                 starts.append(i + 1)
         self._starts = starts
         self._len = len(text)
+        self.text = text
 
     def span(self, node: ast.AST) -> tuple[int, int]:
         lineno = getattr(node, "lineno", 1)
         col = getattr(node, "col_offset", 0)
         end_lineno = getattr(node, "end_lineno", lineno)
         end_col = getattr(node, "end_col_offset", col)
-        start = self._starts[lineno - 1] + col
-        end = self._starts[end_lineno - 1] + end_col
+        try:
+            start = self._starts[lineno - 1] + col
+            end = self._starts[end_lineno - 1] + end_col
+        except IndexError:  # synthesized node (e.g. inserted Pass)
+            return (0, 0)
         return (min(start, self._len), min(end, self._len))
+
+    def seg(self, node: ast.AST) -> str:
+        start, end = self.span(node)
+        return self.text[start:end]
 
 
 def _dotted(node: ast.AST) -> str | None:
@@ -161,7 +176,7 @@ def _is_literal(node: ast.AST) -> bool:
 
 def _literal_repr(node: ast.AST, text: str) -> str | None:
     if _is_literal(node):
-        seg = ast.get_source_segment(text, node)
+        seg = text.seg(node)
         if seg is not None and len(seg) <= 120:
             return seg
     return None
@@ -176,63 +191,83 @@ def _find_approx_call(node: ast.AST) -> ast.Call | None:
     return None
 
 
-def _approx_epsilon(call: ast.Call, text: str) -> str | None:
+def _approx_epsilon(call: ast.Call, text: str) -> tuple[str | None, str | None]:
     for kw in call.keywords:
         if kw.arg in ("rel", "abs"):
-            seg = ast.get_source_segment(text, kw.value)
+            seg = text.seg(kw.value)
             if seg is not None:
-                return seg
-    return None
+                return seg, kw.arg
+    return None, None
 
 
-def _classify_assert(node: ast.Assert, text: str) -> tuple[str, int | None, str | None, str | None, str | None]:
-    """-> (form, strength, left_text, right_literal, epsilon)"""
+def _literal_value(node: ast.AST) -> str | None:
+    """repr() of a literal's VALUE (quote-style independent), else None."""
+    try:
+        return repr(ast.literal_eval(node))
+    except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+        return None
+
+
+@dataclass
+class _Classified:
+    form: str
+    strength: int | None
+    left: str | None = None
+    right_literal: str | None = None
+    right_value: str | None = None
+    epsilon: str | None = None
+    epsilon_kind: str | None = None
+
+
+def _classify_assert(node: ast.Assert, text: str) -> _Classified:
     test = node.test
     approx = _find_approx_call(test)
     if approx is not None:
-        return ("approx", S.APPROX, None, None, _approx_epsilon(approx, text))
+        eps, kind = _approx_epsilon(approx, text)
+        return _Classified("approx", S.APPROX, epsilon=eps, epsilon_kind=kind)
     if isinstance(test, ast.Compare) and test.ops:
         left = test.left
         comparators = test.comparators
         all_literal = _is_literal(left) and all(_is_literal(c) for c in comparators)
         if all_literal:
-            return ("tautology", S.TAUTOLOGY, None, None, None)
+            return _Classified("tautology", S.TAUTOLOGY)
         op = test.ops[0]
-        left_text = ast.get_source_segment(text, left)
+        left_text = text.seg(left)
         right_lit = _literal_repr(comparators[0], text) if comparators else None
+        right_val = _literal_value(comparators[0]) if comparators else None
         if isinstance(op, (ast.Eq, ast.NotEq)):
             # Self-comparison (`assert f(x) == f(x)`) can never fail: the
             # oracle is gone even though the form still looks exact
             # (confirmed red-team finding).
-            right_text = ast.get_source_segment(text, comparators[0]) if comparators else None
+            right_text = text.seg(comparators[0]) if comparators else None
             if left_text and right_text and _norm(left_text) == _norm(right_text):
-                return ("tautology", S.TAUTOLOGY, left_text, right_lit, None)
+                return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
             if isinstance(left, ast.Call) and _dotted(left.func) == "len":
-                return ("type_shape", S.TYPE_SHAPE, left_text, right_lit, None)
+                return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
             if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
-                return ("compare_eq", S.EXACT_STRUCT, left_text, right_lit, None)
-            return ("compare_eq", S.EXACT_VALUE, left_text, right_lit, None)
+                return _Classified("compare_eq", S.EXACT_STRUCT, left_text, right_lit, right_val)
+            return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val)
         if isinstance(op, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)):
-            return ("compare_ord", S.BOUND, left_text, right_lit, None)
+            return _Classified("compare_ord", S.BOUND, left_text, right_lit, right_val)
         if isinstance(op, (ast.In, ast.NotIn)):
-            return ("membership", S.PATTERN, left_text, right_lit, None)
+            return _Classified("membership", S.PATTERN, left_text, right_lit, right_val)
         if isinstance(op, (ast.Is, ast.IsNot)):
             comp = comparators[0]
             if isinstance(comp, ast.Constant) and comp.value is None:
-                return ("non_null", S.NON_NULL, left_text, None, None)
-            return ("compare_eq", S.EXACT_VALUE, left_text, right_lit, None)
-        return ("unknown", None, left_text, None, None)
+                return _Classified("non_null", S.NON_NULL, left_text)
+            return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val)
+        return _Classified("unknown", None, left_text)
     if isinstance(test, ast.Call):
         name = _dotted(test.func)
         if name == "isinstance":
-            return ("type_shape", S.TYPE_SHAPE, None, None, None)
-        return ("truthy", S.TRUTHY, None, None, None)
+            return _Classified("type_shape", S.TYPE_SHAPE)
+        return _Classified("truthy", S.TRUTHY)
     if _is_literal(test):
-        return ("tautology", S.TAUTOLOGY, None, None, None)
-    return ("truthy", S.TRUTHY, None, None, None)
+        return _Classified("tautology", S.TAUTOLOGY)
+    return _Classified("truthy", S.TRUTHY)
 
 
-def _classify_unittest_call(node: ast.Call, text: str) -> tuple[str, int | None, str | None, str | None, str | None] | None:
+def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     if not (isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "self"):
         return None
     method = node.func.attr
@@ -241,25 +276,29 @@ def _classify_unittest_call(node: ast.Call, text: str) -> tuple[str, int | None,
     form, level = _UNITTEST_MAP[method]
     left_text = None
     right_lit = None
+    right_val = None
     epsilon = None
+    epsilon_kind = None
     if node.args:
-        left_text = ast.get_source_segment(text, node.args[0])
+        left_text = text.seg(node.args[0])
         if len(node.args) > 1:
             right_lit = _literal_repr(node.args[1], text)
+            right_val = _literal_value(node.args[1])
         if form == "compare_eq" and level == S.EXACT_VALUE and len(node.args) > 1:
             if _is_container_literal(node.args[0]) or _is_container_literal(node.args[1]):
                 level = S.EXACT_STRUCT
     if form == "approx":
         for kw in node.keywords:
             if kw.arg in ("places", "delta"):
-                epsilon = ast.get_source_segment(text, kw.value)
+                epsilon = text.seg(kw.value)
+                epsilon_kind = kw.arg
     if form == "truthy" and node.args and _is_literal(node.args[0]):
         form, level = "tautology", S.TAUTOLOGY
     if form == "compare_eq" and len(node.args) > 1:
-        right_text = ast.get_source_segment(text, node.args[1])
+        right_text = text.seg(node.args[1])
         if left_text and right_text and _norm(left_text) == _norm(right_text):
             form, level = "tautology", S.TAUTOLOGY
-    return (form, level, left_text, right_lit, epsilon)
+    return _Classified(form, level, left_text, right_lit, right_val, epsilon, epsilon_kind)
 
 
 def _decorator_markers(
@@ -270,7 +309,7 @@ def _decorator_markers(
         target = dec.func if isinstance(dec, ast.Call) else dec
         name = _dotted(target)
         if name in _SKIP_DECORATORS:
-            seg = ast.get_source_segment(text, dec) or name
+            seg = text.seg(dec) or name
             markers.append(Marker(name=name, text=seg, span=off.span(dec)))
     return markers
 
@@ -288,9 +327,21 @@ def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Mark
             target = value.func if isinstance(value, ast.Call) else value
             name = _dotted(target)
             if name in _SKIP_DECORATORS:
-                seg = ast.get_source_segment(text, stmt) or name
+                seg = text.seg(stmt) or name
                 markers.append(Marker(name=name, text=seg, span=off.span(stmt)))
     return markers
+
+
+def _handler_info(node: ast.ExceptHandler) -> tuple[tuple[str, ...], bool]:
+    caught: tuple[str, ...]
+    if node.type is None:
+        caught = ()
+    elif isinstance(node.type, ast.Tuple):
+        caught = tuple(_dotted(e) or "?" for e in node.type.elts)
+    else:
+        caught = (_dotted(node.type) or "?",)
+    is_broad = not caught or any(c.rsplit(".", 1)[-1] in _BROAD_EXCEPTIONS for c in caught)
+    return caught, is_broad
 
 
 def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
@@ -360,18 +411,20 @@ def _collect_unit(
         if id(node) in dead:
             continue
         if isinstance(node, ast.Assert):
-            form, level, left_text, right_lit, eps = _classify_assert(node, text)
-            seg = ast.get_source_segment(text, node) or ""
+            c = _classify_assert(node, text)
+            seg = text.seg(node) or ""
             assertions.append(
                 Assertion(
                     id=f"a{counter}",
-                    form=form,
-                    strength=level,
+                    form=c.form,
+                    strength=c.strength,
                     text=seg,
                     span=off.span(node),
-                    left=left_text,
-                    right_literal=right_lit,
-                    epsilon=eps,
+                    left=c.left,
+                    right_literal=c.right_literal,
+                    right_value=c.right_value,
+                    epsilon=c.epsilon,
+                    epsilon_kind=c.epsilon_kind,
                 )
             )
             counter += 1
@@ -381,35 +434,29 @@ def _collect_unit(
                 calls.add(name)
                 calls.add(name.rsplit(".", 1)[-1])
                 if name in _SKIP_CALLS:
-                    seg = ast.get_source_segment(text, node) or name
+                    seg = text.seg(node) or name
                     markers.append(Marker(name=name, text=seg, span=off.span(node)))
-            classified = _classify_unittest_call(node, text)
-            if classified is not None:
-                form, level, left_text, right_lit, eps = classified
-                seg = ast.get_source_segment(text, node) or ""
+            c = _classify_unittest_call(node, text)
+            if c is not None:
+                seg = text.seg(node) or ""
                 assertions.append(
                     Assertion(
                         id=f"a{counter}",
-                        form=form,
-                        strength=level,
+                        form=c.form,
+                        strength=c.strength,
                         text=seg,
                         span=off.span(node),
-                        left=left_text,
-                        right_literal=right_lit,
-                        epsilon=eps,
+                        left=c.left,
+                        right_literal=c.right_literal,
+                        right_value=c.right_value,
+                        epsilon=c.epsilon,
+                        epsilon_kind=c.epsilon_kind,
                     )
                 )
                 counter += 1
         elif isinstance(node, ast.ExceptHandler):
-            caught: tuple[str, ...]
-            if node.type is None:
-                caught = ()
-            elif isinstance(node.type, ast.Tuple):
-                caught = tuple(_dotted(e) or "?" for e in node.type.elts)
-            else:
-                caught = (_dotted(node.type) or "?",)
-            is_broad = not caught or any(c.rsplit(".", 1)[-1] in _BROAD_EXCEPTIONS for c in caught)
-            seg = ast.get_source_segment(text, node) or ""
+            caught, is_broad = _handler_info(node)
+            seg = text.seg(node) or ""
             handlers.append(
                 Handler(caught=caught, is_broad=is_broad, text=seg.split("\n")[0], span=off.span(node))
             )
@@ -448,7 +495,7 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
                 name = "conftest.add_marker_skip"
         if name is None:
             continue
-        seg = (ast.get_source_segment(text, node) or name).split("\n")[0]
+        seg = (text.seg(node) or name).split("\n")[0]
         markers.append(Marker(name=name, text=seg, span=off.span(node)))
 
     seen: set[str] = set()
@@ -458,7 +505,7 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
             continue
         seen.add(m.name)
         unique.append(m)
-    side = UnitSide(span=(0, len(text)), markers=unique)
+    side = UnitSide(span=(0, len(text.text)), markers=unique)
     return ParsedUnit(qualname="<suite>", span=side.span, side=side, shingles=frozenset())
 
 
@@ -521,9 +568,9 @@ def _callees(node: ast.AST) -> tuple[str, ...]:
 
 
 def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> ParsedFile:
-    text = normalize_source(data)
+    raw = normalize_source(data)
     try:
-        tree = ast.parse(text)
+        tree = ast.parse(raw)
     except SyntaxError:
         return ParsedFile(parse_ok=False)
     except (RecursionError, ValueError, MemoryError):
@@ -532,28 +579,36 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         # of crashing the process (confirmed red-team finding).
         return ParsedFile(parse_ok=False)
 
-    off = _Offsets(text)
+    # One parse, one in-place docstring strip: symbol fingerprints are dumped
+    # straight from subtrees instead of re-running unparse+parse per symbol.
+    _strip_docstrings(tree)
+    text = off = _Offsets(raw)
     units: list[ParsedUnit] = []
     symbols: dict[str, str] = {}
     symbol_calls: dict[str, tuple[str, ...]] = {}
     literals: set[str] = set()
     imports: list[str] = []
 
+    # Symbol fingerprints exist to answer "did prod behaviour change?"; test
+    # files never need them, and computing them dominated parse time.
+    want_symbols = not collect_tests
     module_markers = _pytestmark_markers(tree, text, off) if collect_tests else []
 
     def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{prefix}{child.name}"
-                symbols[qual] = _fingerprint(_strip_docstrings(ast.parse(ast.unparse(child))))
-                symbol_calls[qual] = _callees(child)
+                if want_symbols:
+                    symbols[qual] = _fingerprint(child)
+                    symbol_calls[qual] = _callees(child)
                 if collect_tests and collectible and _is_test_name(child.name):
                     units.append(_collect_unit(child, qual, text, off, inherited))
                 # Nested defs are never collected as pytest items.
                 visit(child, qual + ".", inherited, False)
             elif isinstance(child, ast.ClassDef):
                 qual = f"{prefix}{child.name}"
-                symbols[qual] = _fingerprint(_strip_docstrings(ast.parse(ast.unparse(child))))
+                if want_symbols:
+                    symbols[qual] = _fingerprint(child)
                 # Class-level skip decorators disable every test inside the
                 # class — they must reach each unit (confirmed red-team FN).
                 class_markers = _decorator_markers(child, text, off) if collect_tests else []
@@ -570,6 +625,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     if conftest:
         units = [_conftest_unit(tree, text, off)]
 
+    broad: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             imports.extend(alias.name for alias in node.names)
@@ -579,22 +635,26 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
             rep = repr(node.value)
             if len(rep) <= 64:
                 literals.add(rep)
+        elif isinstance(node, ast.ExceptHandler):
+            _caught, is_broad = _handler_info(node)
+            if is_broad:
+                broad.append(_norm((text.seg(node) or "except:").split("\n")[0]))
+    broad.sort()
 
     suppressions = [
         f"{i + 1}:{line.strip()}"
-        for i, line in enumerate(text.split("\n"))
+        for i, line in enumerate(raw.split("\n"))
         if _SUPPRESSION_RE.search(line)
     ]
 
-    module_fp = _fingerprint(_strip_docstrings(ast.parse(text)))
     units.sort(key=lambda u: u.span)
     return ParsedFile(
         parse_ok=True,
         units=units,
         symbols=symbols,
         symbol_calls=symbol_calls,
-        module_fingerprint=module_fp,
         imports=sorted(set(imports)),
         suppressions=suppressions,
         literals=frozenset(literals),
+        broad_handlers=tuple(broad),
     )

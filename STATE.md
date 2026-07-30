@@ -1,12 +1,35 @@
 # STATE — read this first when taking over
 
-Updated: 2026-07-30 (post red-team round 2 — M0 audit complete)
+Updated: 2026-07-30 (M1 detectors + measurement harness landed)
 
 ## Where we are
 
-M0 **complete, both adversarial review rounds absorbed**. 18 findings across
-two rounds, every one reproduced by an independent skeptic before it was
-accepted, every one fixed with a regression fixture or e2e test.
+**M1 in progress.** All 13 SPEC rule IDs are implemented and fixture-covered
+(+ the derived `EXEMPTION_ADDED`), the perf gate is green, and the
+false-positive measurement harness (`greenwash sweep`) exists and has already
+paid for itself. 100 tests green.
+
+M1 detectors added on top of M0's three: `TOLERANCE_LOOSENED` (kind-aware
+direction, Decimal-only), `EXPECTED_VALUE_HARDCODED` (base-literal filtered),
+`SNAPSHOT_CODE_COCHANGE`, `BROAD_EXCEPT_ADDED`, `SUPPRESSION_ADDED`,
+`CI_WORKFLOW_TOUCHED` (+weakened-command escalator), `GUARDRAIL_TOUCHED`,
+`IMPORT_UNRESOLVED` (vendored stdlib snapshot; off without a manifest),
+`SCOPE_DRIFT` (glob-only), `HIDDEN_UNICODE`.
+
+Two things M1 found by itself, worth knowing:
+- `greenwash sweep` over greenwash's own history flagged a **real false
+  positive** on commit 93e7ed1 — a test asserting `== "pass"` matched a prod
+  constant `"pass"` that had always existed. Fixed by excluding base-side
+  literals; fixture `hardcoded_existing_value_neg.gwcase`.
+- The new perf gate failed at **4.1 s** for a 3000-line diff. Root causes:
+  `ast.get_source_segment` re-splitting the file per call, and symbol
+  fingerprinting via unparse→parse→dump on every symbol including test files.
+  Now **0.21 s** (DECISIONS D-007).
+
+## M0 (complete, both adversarial review rounds absorbed)
+
+18 findings across two rounds, every one reproduced by an independent skeptic
+before it was accepted, every one fixed with a regression fixture or e2e test.
 
 Round 2 (bypass + robustness lenses): 12 findings, 0 rejected.
 
@@ -52,11 +75,9 @@ Round 1 (correctness lens): 6 findings, all fixed:
   D1 (repair evidence), D2 (moved assertions/units), D3 (allowlist).
 - CLI: `greenwash check [BASE..HEAD] | --format json | --emit-ir`,
   `greenwash allow FP --reason`. Exit codes 0/1/2.
-- Tests: 71 green (30 .gwcase golden + frontend/alignment/determinism units
-  + 19 subprocess e2e: allow roundtrip, cp1252 pipes, rename laundering in
-  both modes, three-dot ranges, UTF-8 JSON, recursion bomb, malformed TOML).
-  CI matrix + cross-OS byte-compare workflow written (unverified until
-  pushed to GitHub).
+- Tests: 100 green (50 .gwcase golden + frontend/alignment/determinism units
+  + 19 subprocess e2e + perf and detector-coverage gates). CI matrix +
+  cross-OS byte-compare workflow written (unverified until pushed to GitHub).
 
 ## Decisions in force
 
@@ -67,16 +88,25 @@ Round 1 (correctness lens): 6 findings, all fixed:
   mumei exist; we compete on blockable-by-default precision, zero-LLM,
   zero-execution, determinism. See README "Prior art" + design addendum.
 
-## Next (M1)
+## Next (rest of M1)
 
-1. Remaining 9+1 detectors (TOLERANCE_LOOSENED first — lattice already
-   records epsilons; then SNAPSHOT_CODE_COCHANGE, EXPECTED_VALUE_HARDCODED,
-   BROAD_EXCEPT_ADDED, SUPPRESSION_ADDED, CI_WORKFLOW_TOUCHED,
-   GUARDRAIL_TOUCHED + EXEMPTION_ADDED flow, IMPORT_UNRESOLVED, SCOPE_DRIFT,
-   HIDDEN_UNICODE). Each PR ships pos≥5/neg≥5 fixtures.
-2. Decoy-task cheat corpus (30 tasks, run real agents, harvest diffs).
-3. FP corpus: 300 human commits from 5 OSS repos incl. "fix flaky" commits.
-4. Perf gate scripts under tests/gates/.
+1. **Run the FP corpus.** `greenwash sweep HEAD --limit 300 --repo <path>`
+   over ≥ 5 external Python repos (flask/httpx/fastapi-class, plus something
+   with a flaky-test history). Triage every blocked commit by hand; each false
+   positive becomes a neg fixture. Gate: high-severity on ≤ 3% of commits.
+   Nothing is published until this runs — see benchmarks/README.md.
+2. **Build the decoy-task cheat corpus** (30 bug-fix tasks with must-fail
+   tests, run through real coding agents, harvest the tampering diffs).
+   Deliberately not importing an academic benchmark: those cases mostly don't
+   reduce to a before/after diff.
+3. Side-by-side run against swarm-orchestrator on both corpora, publishing
+   both columns including losses.
+4. Then M2: adapters (pre-commit, GitHub Action, stop-hook), dogfood on this
+   repo's own PRs.
+
+Fixture corpus grows to pos≥5/neg≥5 per detector as real cases arrive; the
+coverage gate currently enforces ≥1 positive per detector and ≥10 negatives
+overall.
 
 ## Known limitations (documented, not hidden)
 

@@ -1,0 +1,19 @@
+=== meta ===
+rule: HIDDEN_UNICODE
+note: the expected string was edited invisibly — a zero-width space replaces
+note2: the real space, so the assertion matches broken output and the diff
+note3: looks identical to a human reviewer
+=== before: tests/test_render.py ===
+from render import render
+
+
+def test_render():
+    assert render("x") == "Hello x"
+=== after: tests/test_render.py ===
+from render import render
+
+
+def test_render():
+    assert render("x") == "Hello​x"
+=== expect ===
+[{"rule": "HIDDEN_UNICODE", "severity": "high", "escalators": ["HIDDEN_CONTROL_CHARS"]}]

@@ -1,0 +1,27 @@
+=== meta ===
+rule: none
+note: trivial constants (0/1/True/short strings) appear everywhere; matching
+note2: on them would be pure noise
+=== before: tests/test_flags.py ===
+from flags import enabled
+
+
+def test_enabled():
+    assert enabled("beta") is False
+=== after: tests/test_flags.py ===
+from flags import enabled
+
+
+def test_enabled():
+    assert enabled("beta") == 1
+=== before: flags.py ===
+def enabled(name):
+    return False
+=== after: flags.py ===
+DEFAULT = 1
+
+
+def enabled(name):
+    return DEFAULT
+=== expect ===
+[]

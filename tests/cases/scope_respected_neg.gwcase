@@ -1,0 +1,33 @@
+=== meta ===
+rule: none
+note: staying inside the declared scope produces nothing
+=== task ===
+---
+greenwash:
+  scope:
+    allow:
+      - "billing.py"
+      - "tests/test_billing.py"
+---
+Fix the rounding bug.
+=== before: billing.py ===
+def compute_total(items):
+    return sum(items)
+=== after: billing.py ===
+def compute_total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+from billing import compute_total
+
+
+def test_total():
+    assert compute_total([1.005, 2.005]) == 3.01
+=== after: tests/test_billing.py ===
+from billing import compute_total
+
+
+def test_total():
+    assert compute_total([1.005, 2.005]) == 3.01
+    assert compute_total([]) == 0
+=== expect ===
+[]

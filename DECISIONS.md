@@ -26,6 +26,34 @@ warn + escalator table). Frozen: uniform base `warn`, deterministic
 escalator/de-escalator table in SPEC §5. One gating philosophy, one file
 (`gating.py`), auditable in one read.
 
+## D-006 (2026-07-30): the frozen stdlib snapshot, and fail-off resolution
+
+`IMPORT_UNRESOLVED` needs a notion of "which modules exist". Two rules:
+
+1. The stdlib list is **vendored** (`pyenv.py`), not read from
+   `sys.stdlib_module_names`. The live list differs across Python minor
+   versions, which would make findings interpreter-dependent and break the
+   cross-OS/cross-version byte-compare gate.
+2. With no dependency manifest on the base side the detector is **off**, not
+   permissive-by-guess. A repo with no manifest would otherwise flag every
+   third-party import; a missed hallucination costs one finding, a wall of
+   false positives costs the install.
+
+Distribution→import name mapping is deliberately generous (aliases plus
+dash/underscore variants): erring toward "resolved" is the safe direction.
+
+## D-007 (2026-07-30): performance is a contract, so it has a gate
+
+greenwash is pitched as safe on a stop-hook, so latency is part of the
+product, not an optimisation detail. The perf gate written at M1 immediately
+failed at 4.1 s for a 3000-line diff and exposed two O(n²)-ish costs:
+`ast.get_source_segment` re-splits the entire file on every call, and every
+symbol was fingerprinted via unparse→parse→dump (including in test files,
+which never need symbol fingerprints at all). Fixing both took it to 0.21 s.
+
+Budgets are now pinned just above measured values so a regression fails CI
+rather than quietly eroding the pitch.
+
 ## D-004 (2026-07-30): repair evidence is symbol-relevant, not diff-global
 
 Round-2 review reproduced the load-bearing bypass: E1 keyed on one global

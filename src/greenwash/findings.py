@@ -29,7 +29,13 @@ class Finding:
     allowlisted: bool = False
 
     def sort_key(self) -> tuple:
-        return (self.path, self.unit or "", self.rule, self.fingerprint)
+        from greenwash.gating import RULE_ORDER
+
+        try:
+            rank = RULE_ORDER.index(self.rule)
+        except ValueError:
+            rank = len(RULE_ORDER)
+        return (rank, self.path, self.unit or "", self.rule, self.fingerprint)
 
 
 def make_fingerprint(rule: str, path: str, qualname: str | None, before_text: str) -> str:

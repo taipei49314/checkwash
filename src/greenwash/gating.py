@@ -17,6 +17,24 @@ from greenwash.ir.model import IR, Unit, normalize_text
 
 ORACLE_RULES = {"ASSERT_REMOVED", "ASSERT_WEAKENED", "TEST_DISABLED", "TOLERANCE_LOOSENED"}
 
+# Report order: most severe rule classes first within a path.
+RULE_ORDER = [
+    "EXEMPTION_ADDED",
+    "GUARDRAIL_TOUCHED",
+    "HIDDEN_UNICODE",
+    "ASSERT_REMOVED",
+    "ASSERT_WEAKENED",
+    "TEST_DISABLED",
+    "TOLERANCE_LOOSENED",
+    "EXPECTED_VALUE_HARDCODED",
+    "SNAPSHOT_CODE_COCHANGE",
+    "CI_WORKFLOW_TOUCHED",
+    "BROAD_EXCEPT_ADDED",
+    "SUPPRESSION_ADDED",
+    "IMPORT_UNRESOLVED",
+    "SCOPE_DRIFT",
+]
+
 
 def _unit_index(ir: IR) -> dict[tuple[str, str], Unit]:
     index: dict[tuple[str, str], Unit] = {}
@@ -73,6 +91,27 @@ def apply_gates(
             f.deescalators.append("ALLOWLISTED")
             continue
         if f.rule not in ORACLE_RULES:
+            # Non-oracle escalations from the SPEC §5 table.
+            if f.rule == "EXPECTED_VALUE_HARDCODED":
+                f.severity = "high"
+                f.escalators.append("HARDCODE_FINGERPRINT")  # E3
+            elif f.rule == "GUARDRAIL_TOUCHED":
+                f.severity = "critical"
+                f.escalators.append("META")  # E4
+            elif f.rule == "HIDDEN_UNICODE":
+                f.severity = "high"
+                f.escalators.append("HIDDEN_CONTROL_CHARS")
+            elif f.rule == "CI_WORKFLOW_TOUCHED" and any(
+                path == f.path for path, _ in ir.globals.ci_weakening_lines
+            ):
+                f.severity = "high"
+                f.escalators.append("CI_TEST_COMMAND_WEAKENED")
+            elif f.rule == "SCOPE_DRIFT" and any(
+                path == f.path and role in ("prod", "ci", "guardrail")
+                for path, role in ir.globals.scope_drift
+            ):
+                f.severity = "high"
+                f.escalators.append("OUT_OF_SCOPE_PROD_TOUCH")
             continue
 
         unit = units.get((f.path, f.unit or ""))

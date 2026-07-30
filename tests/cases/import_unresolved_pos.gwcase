@@ -1,0 +1,21 @@
+=== meta ===
+rule: IMPORT_UNRESOLVED
+note: a hallucinated package that resolves against nothing declared
+=== env ===
+pytest
+requests
+=== before: app/client.py ===
+import requests
+
+
+def fetch(url):
+    return requests.get(url).text
+=== after: app/client.py ===
+import requests
+import superfetch
+
+
+def fetch(url):
+    return superfetch.get(url)
+=== expect ===
+[{"rule": "IMPORT_UNRESOLVED", "severity": "warn"}]

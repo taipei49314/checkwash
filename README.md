@@ -7,8 +7,10 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release, under construction (M0)**. Public claims, benchmark
-> numbers and the full README land at M3, and only from measured results.
+> Status: **pre-release, under construction (M1)**. All 13 detectors are
+> implemented and fixture-covered; the false-positive and recall corpora are
+> not yet run, so this README carries no rates and no badges. Numbers land at
+> M3, from the harnesses in [benchmarks/](benchmarks/README.md), or not at all.
 
 ```
 $ greenwash check HEAD~1..HEAD
@@ -24,6 +26,8 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 
 - **0 LLM calls, 0 network calls, 0 runtime dependencies.** Pure-stdlib
   Python; verdicts are deterministic and byte-identical across OSes.
+- **Sub-second on real diffs** (0.2 s for a 3000-line test diff, 0.7 s for
+  500 changed files), enforced by a gate rather than asserted.
 - Analyses the *diff*, not the code state: two-sided AST comparison against
   an assertion strength lattice (see [SPEC.md](SPEC.md)).
 - **Never executes the code under review.** Safe to run on every keystroke:

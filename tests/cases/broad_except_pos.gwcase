@@ -1,0 +1,16 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+note: swallowing the error instead of fixing it
+=== before: app/loader.py ===
+def load(path):
+    with open(path) as fh:
+        return fh.read()
+=== after: app/loader.py ===
+def load(path):
+    try:
+        with open(path) as fh:
+            return fh.read()
+    except Exception:
+        return ""
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "warn"}]

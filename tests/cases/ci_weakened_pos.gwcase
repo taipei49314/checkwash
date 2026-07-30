@@ -1,0 +1,18 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+note: making the test step non-fatal is tampering with the oracle's teeth
+=== before: .github/workflows/ci.yml ===
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest
+        continue-on-error: true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

@@ -1,0 +1,27 @@
+=== meta ===
+rule: none
+note: dogfood-found FP — a value that already existed on the base side is
+note2: shared vocabulary, not a hardcode fingerprint. greenwash flagged its
+note3: own test asserting == "pass" because gating.py "introduced" the string
+note4: "pass" it had always contained.
+=== before: gating.py ===
+def verdict(blocking):
+    if blocking:
+        return "block"
+    return "pass"
+=== after: gating.py ===
+STATUS_PASS = "pass"
+
+
+def verdict(blocking):
+    if blocking:
+        return "block"
+    return STATUS_PASS
+=== after: tests/test_gating.py ===
+from gating import verdict
+
+
+def test_verdict_pass():
+    assert verdict(False) == "pass"
+=== expect ===
+[]

@@ -18,7 +18,9 @@ from greenwash import __version__
 from greenwash.allowlist import MAX_EXPIRY_DAYS, load_allowlist
 from greenwash.config import SEVERITY_ORDER, load_config
 from greenwash.contract import Contract, parse_contract
+from greenwash.deps import MANIFESTS, parse_manifest
 from greenwash.engine import analyze
+from greenwash.pyenv import known_baseline
 from greenwash.gitio import (
     GitError,
     list_range_changes,
@@ -29,6 +31,7 @@ from greenwash.gitio import (
 )
 from greenwash.report.jsonout import findings_to_json, ir_to_json
 from greenwash.report.term import render
+from greenwash.sweep import sweep
 
 
 def _today() -> datetime.date:
@@ -119,6 +122,18 @@ def _cmd_check(args: argparse.Namespace) -> int:
         with open(args.task, encoding="utf-8") as fh:
             contract = parse_contract(fh.read())
 
+    known_modules: set[str] | None = None
+    declared: set[str] = set()
+    found_manifest = False
+    for manifest in MANIFESTS:
+        data = read_base_file(repo, config_side, manifest)
+        if data is None:
+            continue
+        found_manifest = True
+        declared |= parse_manifest(manifest, data)
+    if found_manifest:
+        known_modules = known_baseline() | declared
+
     ir, findings, verdict = analyze(
         changes,
         config,
@@ -127,6 +142,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         _today(),
         base_label=base_label,
         head_label=head_label,
+        known_modules=known_modules,
     )
 
     if args.emit_ir:
@@ -201,6 +217,14 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--emit-ir", action="store_true", help="print the IR JSON and exit")
     check.add_argument("--repo", default=".")
 
+    sweep_p = sub.add_parser(
+        "sweep", help="measure finding rates over a repo's commit history"
+    )
+    sweep_p.add_argument("revs", nargs="?", default="HEAD", help="rev-list range, e.g. HEAD or main")
+    sweep_p.add_argument("--limit", type=int, default=200)
+    sweep_p.add_argument("--fail-on", choices=list(SEVERITY_ORDER), default=None)
+    sweep_p.add_argument("--repo", default=".")
+
     allow = sub.add_parser("allow", help="record a reviewed exemption")
     allow.add_argument("fingerprint")
     allow.add_argument("--reason", required=True)
@@ -214,7 +238,7 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
         argv = ["check"]
-    elif argv[0] not in ("check", "allow", "-h", "--help", "--version"):
+    elif argv[0] not in ("check", "allow", "sweep", "-h", "--help", "--version"):
         argv = ["check", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -223,6 +247,10 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_check(args)
         if args.command == "allow":
             return _cmd_allow(args)
+        if args.command == "sweep":
+            result = sweep(args.repo, args.revs, args.limit, _today(), args.fail_on)
+            _write_machine(result.to_json())
+            return 0
         parser.print_help()
         return 2
     except (GitError, OSError, RecursionError) as exc:

@@ -1,0 +1,21 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+note: the classic 1e-8 -> 1e-2 epsilon widening
+=== before: tests/test_physics.py ===
+import pytest
+
+from sim import energy
+
+
+def test_energy():
+    assert energy(2.0) == pytest.approx(19.62, rel=1e-8)
+=== after: tests/test_physics.py ===
+import pytest
+
+from sim import energy
+
+
+def test_energy():
+    assert energy(2.0) == pytest.approx(19.62, rel=1e-2)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

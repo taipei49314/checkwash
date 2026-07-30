@@ -97,15 +97,20 @@ def test_docstring_and_comment_changes_are_trivial():
         b"# improved robustness\ndef f(x):\n    \"\"\"Add one.\"\"\"\n    return x + 1\n",
         collect_tests=False,
     )
-    assert before.module_fingerprint == after.module_fingerprint
     assert before.symbols["f"] == after.symbols["f"]
 
 
 def test_behaviour_change_is_nontrivial():
     before = parse_python(b"def f(x):\n    return x + 1\n", collect_tests=False)
     after = parse_python(b"def f(x):\n    return x + 2\n", collect_tests=False)
-    assert before.module_fingerprint != after.module_fingerprint
     assert before.symbols["f"] != after.symbols["f"]
+
+
+def test_test_files_skip_symbol_fingerprints():
+    # They cost real time and answer a question only prod files are asked.
+    parsed = parse_python(b"def test_x():\n    assert f() == 1\n", collect_tests=True)
+    assert parsed.symbols == {}
+    assert parsed.units
 
 
 def test_suppression_scan():

@@ -105,11 +105,12 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
             AssertionPair(before_id=b.id, after_id=a.id, strength_change=change)
         )
         if b.epsilon is not None and a.epsilon is not None and b.epsilon != a.epsilon:
+            kind = a.epsilon_kind or b.epsilon_kind or "abs"
             try:
                 if Decimal(a.epsilon) != Decimal(b.epsilon):
-                    tolerance_changes.append((b.epsilon, a.epsilon))
+                    tolerance_changes.append((kind, b.epsilon, a.epsilon))
             except InvalidOperation:
-                tolerance_changes.append((b.epsilon, a.epsilon))
+                tolerance_changes.append((kind, b.epsilon, a.epsilon))
 
     b_marker_names = [m.name for m in before.side.markers]
     markers_added = []

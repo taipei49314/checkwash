@@ -1,0 +1,21 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+note: rewriting an EXISTING exemption is not append-only — stays critical
+=== before: .greenwash/allow.toml ===
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_billing.py/test_total/5d41c9e2a7f0"
+rule = "ASSERT_WEAKENED"
+reason = "behaviour change #482"
+author = "alice"
+created = "2026-07-01"
+expires = "2026-08-01"
+=== after: .greenwash/allow.toml ===
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_billing.py/test_total/5d41c9e2a7f0"
+rule = "ASSERT_WEAKENED"
+reason = "behaviour change #482"
+author = "alice"
+created = "2026-07-01"
+expires = "2027-12-31"
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "critical", "escalators": ["META"]}]

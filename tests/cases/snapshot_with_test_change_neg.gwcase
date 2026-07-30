@@ -1,0 +1,31 @@
+=== meta ===
+rule: none
+note: golden + prod + real test-logic change is ordinary feature work
+=== before: render.py ===
+def render(name):
+    return "Hello, " + name + "!"
+=== after: render.py ===
+def render(name, punct="!"):
+    return "Hello, " + name + punct
+=== before: tests/golden/greeting.txt ===
+Hello, world!
+=== after: tests/golden/greeting.txt ===
+Hello, world?
+=== before: tests/test_render.py ===
+from render import render
+
+
+def test_render():
+    assert render("world") == "Hello, world!"
+=== after: tests/test_render.py ===
+from render import render
+
+
+def test_render():
+    assert render("world") == "Hello, world!"
+
+
+def test_render_punct():
+    assert render("world", "?") == "Hello, world?"
+=== expect ===
+[]

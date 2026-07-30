@@ -14,10 +14,19 @@ coding agents may run them, never edit them (AGENTS.md).
 4. Rename safety: renamed/moved tests never read as deletions
    (tests/test_diffalign.py, moved_test_file_neg.gwcase).
 
-## Deferred (M1+)
+## M1 gates (current)
 
-- Perf gate: 3000-line diff cold-start p95 < 800 ms; large-monorepo worktree
-  check p95 < 1 s. Lands with the benchmark harness in M1.
-- FP gate: high-severity findings on ≤ 3% of a 300-commit human-PR corpus.
-- Recall gate vs decoy-task cheat corpus (incl. side-by-side run against
+5. Perf (`tests/gates/test_perf.py`): 3000-line test diff under 1 s,
+   500 changed files under 2.5 s, pathological single-expression files must
+   degrade rather than hang. These caught a real 4.1 s regression the day
+   they were written.
+6. Every registered detector ships pos and neg `.gwcase` fixtures
+   (`tests/test_detector_coverage.py`).
+
+## Deferred
+
+- FP gate: high-severity findings on ≤ 3% of a 300-commit human corpus,
+  measured with `greenwash sweep` over ≥ 5 external repos. Harness done,
+  population runs not yet performed — see benchmarks/README.md.
+- Recall gate vs the decoy-task cheat corpus (incl. side-by-side run against
   swarm-orchestrator on the same corpus — see design addendum 2026-07-29).
