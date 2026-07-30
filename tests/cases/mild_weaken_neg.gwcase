@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: FP-sweep finding — a 10-point slide inside the exact family is style
+note2: drift; it stays visible at warn but must not block a test-only commit
+=== before: tests/test_series.py ===
+import unittest
+
+from calc import series
+
+
+class TestSeries(unittest.TestCase):
+    def test_series(self):
+        self.assertListEqual(series(3), [1, 2, 3])
+=== after: tests/test_series.py ===
+import unittest
+
+from calc import series
+
+
+class TestSeries(unittest.TestCase):
+    def test_series(self):
+        expected = [1, 2, 3]
+        self.assertEqual(series(3), expected)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["MILD_WEAKENING"]}]

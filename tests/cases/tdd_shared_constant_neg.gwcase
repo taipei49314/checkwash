@@ -1,0 +1,25 @@
+=== meta ===
+rule: none
+note: FP-sweep finding — a brand-new test asserting a brand-new prod constant
+note2: is ordinary feature work, not the hardcode fingerprint
+=== before: server.py ===
+def status_line():
+    return "OK"
+=== after: server.py ===
+PROTOCOL = "HTTP/1.1"
+
+
+def status_line():
+    return "OK"
+
+
+def protocol():
+    return PROTOCOL
+=== after: tests/test_server.py ===
+from server import protocol
+
+
+def test_protocol():
+    assert protocol() == "HTTP/1.1"
+=== expect ===
+[]

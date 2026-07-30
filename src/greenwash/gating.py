@@ -129,10 +129,22 @@ def apply_gates(
                 f.deescalators.append("ASSERTION_MOVED")
                 continue
 
+        # Materiality (ASSERT_WEAKENED only): a 10-point slide inside the
+        # exact family (e.g. assertListEqual -> assertEqual on a variable) is
+        # style drift, not oracle removal — the FP sweep blocked several such
+        # human commits. Material = fell by >= 30, or landed below PATTERN.
+        mild_weakening = (
+            f.rule == "ASSERT_WEAKENED"
+            and (f.strength_drop or 0) < 30
+            and (f.strength_after is None or f.strength_after >= 60)
+        )
+
         # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
         # question: is there a production change that explains this edit?
         if _repair_evidence(unit, ir):
             f.deescalators.append("REPAIR_EVIDENCE")
+        elif mild_weakening:
+            f.deescalators.append("MILD_WEAKENING")
         else:
             f.severity = "high"
             f.escalators.append("NO_PROD_CHANGE_IN_DIFF")

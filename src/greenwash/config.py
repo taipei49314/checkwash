@@ -12,15 +12,18 @@ from dataclasses import dataclass, field
 DEFAULT_ROLES: dict[str, list[str]] = {
     "conftest": ["**/conftest.py"],
     "test": ["tests/**", "**/test_*.py", "**/*_test.py"],
+    # guardrail = agent-instruction files + greenwash's own config. NOT
+    # pre-commit: hook-version bumps are weekly routine in human repos and
+    # critical-on-touch made it 62% of all blocked commits in the 1800-commit
+    # FP sweep. It lives under ci (warn; weakened commands still escalate).
     "guardrail": [
         "CLAUDE.md",
         "AGENTS.md",
         ".cursorrules",
         ".claude/**",
         ".greenwash/**",
-        ".pre-commit-config.yaml",
     ],
-    "ci": [".github/workflows/**", ".gitlab-ci.yml"],
+    "ci": [".github/workflows/**", ".gitlab-ci.yml", ".pre-commit-config.yaml"],
     "snapshot": ["**/__snapshots__/**", "**/golden/**", "**/*.golden", "**/*.snap"],
     "lockfile": [
         "poetry.lock",

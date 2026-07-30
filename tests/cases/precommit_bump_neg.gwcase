@@ -1,0 +1,18 @@
+=== meta ===
+rule: none
+note: FP-sweep finding — pre-commit hook version bumps are weekly routine
+note2: (62% of all blocked commits); ci role, warn, never critical
+=== before: .pre-commit-config.yaml ===
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+=== after: .pre-commit-config.yaml ===
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.2
+    hooks:
+      - id: ruff
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

@@ -109,7 +109,12 @@ def _added_lines(before: bytes | None, after: bytes | None) -> list[str]:
 
 
 def _scan_hidden_unicode(g: DiffGlobals, path: str, before: bytes | None, after: bytes | None) -> None:
-    if after is None or len(after) > 1_000_000:
+    # Source files only. Data fixtures legitimately contain bidi/zero-width
+    # characters (URL-parser test vectors), and binary blobs decode into
+    # garbage that matches by accident — both confirmed on the FP sweep.
+    if not path.endswith(".py"):
+        return
+    if after is None or len(after) > 1_000_000 or b"\x00" in after:
         return
     for line in _added_lines(before, after):
         hit = next((ch for ch in line if ord(ch) in _HIDDEN_CODEPOINTS), None)

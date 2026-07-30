@@ -31,14 +31,18 @@ def _significant(value_repr: str) -> bool:
 
 
 def _changed_after_assertions(unit: Unit):
-    """After-side assertions that are new or textually changed."""
-    if unit.after is None:
+    """Only assertions that EXISTED and were EDITED.
+
+    A brand-new test asserting a brand-new constant is ordinary feature work
+    (the 1800-commit FP sweep showed every hit in httpx/flask was exactly
+    that). The hardcode fingerprint is an *existing* expectation rewritten to
+    the implementation's new constant.
+    """
+    if unit.after is None or unit.before is None or unit.delta is None:
         return []
-    if unit.before is None or unit.delta is None:
-        return list(unit.after.assertions)
     by_id = {a.id: a for a in unit.after.assertions}
-    changed = [by_id[aid] for aid in unit.delta.assertions_added if aid in by_id]
     b_by_id = {a.id: a for a in unit.before.assertions}
+    changed = []
     for pair in unit.delta.assertion_pairs:
         b, a = b_by_id.get(pair.before_id), by_id.get(pair.after_id)
         if b is not None and a is not None and b.text != a.text:

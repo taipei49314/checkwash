@@ -1,0 +1,10 @@
+=== meta ===
+rule: none
+note: FP-sweep finding — bidi controls in a data fixture (URL-parser test
+note2: vectors) are the subject under test, not an attack; only .py is scanned
+=== before: tests/models/vectors.json ===
+[]
+=== after: tests/models/vectors.json ===
+[{"input": "https://example.com/‮evil", "expect": "reject"}]
+=== expect ===
+[]

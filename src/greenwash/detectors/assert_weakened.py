@@ -38,6 +38,8 @@ def detect(ir: IR) -> list[Finding]:
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_fingerprint("ASSERT_WEAKENED", file.path, unit.qualname, b.text),
+                        strength_drop=-pair.strength_change,
+                        strength_after=a.strength,
                     )
                 )
     return findings

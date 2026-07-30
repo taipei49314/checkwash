@@ -27,6 +27,10 @@ class Finding:
     deescalators: list[str] = field(default_factory=list)
     fingerprint: str = ""
     allowlisted: bool = False
+    # ASSERT_WEAKENED only: how far the strength fell and where it landed,
+    # so gating can distinguish material weakening from style drift.
+    strength_drop: int | None = None
+    strength_after: int | None = None
 
     def sort_key(self) -> tuple:
         from greenwash.gating import RULE_ORDER
