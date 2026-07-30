@@ -16,4 +16,5 @@ from render import render
 def test_render():
     assert render("x") == "Hello​x"
 === expect ===
-[{"rule": "HIDDEN_UNICODE", "severity": "high", "escalators": ["HIDDEN_CONTROL_CHARS"]}]
+[{"rule": "HIDDEN_UNICODE", "severity": "high", "escalators": ["HIDDEN_CONTROL_CHARS"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

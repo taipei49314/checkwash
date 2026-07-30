@@ -23,4 +23,5 @@ MAGIC_RESULT = 13.75
 def quote(base):
     return MAGIC_RESULT
 === expect ===
-[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "high", "escalators": ["HARDCODE_FINGERPRINT"]}]
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "high", "escalators": ["HARDCODE_FINGERPRINT"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

@@ -35,6 +35,65 @@ class EngineError(Exception):
     pass
 
 
+# Generated/binary artifacts. A changed file here says nothing about
+# production behaviour, so it must never buy repair evidence: pytest's own
+# untracked __pycache__/*.pyc silently disarmed the whole escalator in the
+# first decoy run (0/12 caught), which any build artifact would reproduce.
+_ARTIFACT_DIRS = (
+    "__pycache__/",
+    ".git/",
+    ".pytest_cache/",
+    ".mypy_cache/",
+    ".ruff_cache/",
+    ".tox/",
+    ".nox/",
+    ".venv/",
+    "venv/",
+    "node_modules/",
+    "dist/",
+    "build/",
+    "htmlcov/",
+    ".eggs/",
+)
+_ARTIFACT_SUFFIXES = (
+    ".pyc",
+    ".pyo",
+    ".pyd",
+    ".so",
+    ".dll",
+    ".dylib",
+    ".a",
+    ".o",
+    ".class",
+    ".jar",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".whl",
+    ".exe",
+    ".bin",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".ico",
+    ".pdf",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".mo",
+    ".coverage",
+    ".log",
+)
+
+
+def is_artifact(path: str) -> bool:
+    p = path.replace("\\", "/")
+    if any(seg in p for seg in _ARTIFACT_DIRS) or p.endswith(".egg-info"):
+        return True
+    return p.lower().endswith(_ARTIFACT_SUFFIXES)
+
+
 def collectable(path: str) -> bool:
     """Would pytest's default collection (test_*.py / *_test.py) run this file?
 
@@ -173,6 +232,8 @@ def build_ir(
 
     for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
         path = change.path.replace("\\", "/")
+        if is_artifact(path):
+            continue  # generated output is not evidence of anything
         role = config.role_of(path)
         is_python = path.endswith(".py")
 
@@ -257,6 +318,10 @@ def build_ir(
                 g.prod_symbols_changed.extend(sorted(after_parsed.symbols))
                 _record_callers(g, after_parsed, g.prod_symbols_changed)
                 g.new_literals_in_prod.extend(sorted(after_parsed.literals))
+            elif is_artifact(path):
+                # Generated output: no evidence either way, and crediting it
+                # would let any build artifact disarm the gate.
+                pass
             else:
                 # Non-Python prod file, deletion, or parse failure: greenwash
                 # cannot tell repair from decoy here, so it conservatively

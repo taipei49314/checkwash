@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from greenwash.findings import Evidence, Finding, make_fingerprint
-from greenwash.ir.model import IR
+from greenwash.ir.model import IR, normalize_text
 from greenwash.ir.strength import name_of
 
 
@@ -40,6 +40,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_fingerprint("ASSERT_WEAKENED", file.path, unit.qualname, b.text),
                         strength_drop=-pair.strength_change,
                         strength_after=a.strength,
+                        subject_changed=normalize_text(b.left or "") != normalize_text(a.left or ""),
                     )
                 )
     return findings

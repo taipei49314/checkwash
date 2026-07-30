@@ -43,7 +43,10 @@ between the two is a laundering route (all confirmed by reproduction):
 - file: `test_*.py` / `*_test.py` — a rename out of this set is a
   disappearance, not a rename (both in range and worktree mode)
 - class: `Test*` — methods of a non-matching class are never collected
-- function: `test*`, and only at module level or inside a collected class
+- function: `test*`, and only at module level or inside a collected class.
+  Two defs sharing a name shadow each other at runtime; greenwash keeps them
+  distinct as `name`, `name#2`, … in file order, so a comment-only edit
+  cannot produce phantom pairings
 - statements after an unconditional `return`/`raise` never execute, so
   assertions there are not collected (their loss reads as removal)
 - `@pytest.mark.parametrize` rows are test items: deleting rows deletes units
@@ -61,7 +64,7 @@ strength decreases. Defined once, in `src/greenwash/ir/strength.py`.
 | 100   | EXACT_STRUCT | `assertEqual` on container literal, exact snapshot compare |
 | 90    | EXACT_VALUE  | `==` / `!=`, `assertEqual` (scalar) |
 | 70    | APPROX       | `pytest.approx`, `assertAlmostEqual` |
-| 60    | PATTERN      | `assertRegex`, `in` membership, `assertIn` |
+| 60    | PATTERN      | `assertRegex`, `in` membership, `assertIn`, `pytest.raises(..., match=...)` |
 | 50    | TYPE_SHAPE   | `isinstance`, `len(x) == n`, `assertIsInstance` |
 | 40    | BOUND        | `>` `>=` `<` `<=`, `assertGreater` family |
 | 30    | NON_NULL     | `is not None`, `assertIsNotNone`, `assertIsNone` |
@@ -134,6 +137,24 @@ All thirteen are live as of M1, plus one derived rule, `EXEMPTION_ADDED`
 | D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
 | D2 `ASSERTION_MOVED` | removed assertion's normalized text reappears verbatim in a **live** (not disabled) added unit | → info |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
+| D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
+| D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units ≥ the mass lost to disappeared units | hold at warn |
+| D6 `COMPAT_GATE` | the added skip marker is a `skipif` keyed on `sys.version_info` / `sys.platform` / `platform.` / `os.name` | hold at warn |
+| D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ PATTERN | hold at warn |
+
+D4–D7 came from triaging 48 real blocked commits in OSS history
+(`benchmarks/triage-2026-07-30.json`). Two design notes that are load-bearing:
+
+- **D4 requires the replacement to be newly written.** A unit that merely
+  *keeps* an existing assertion while the inconvenient one disappears is the
+  sacrificial-cheat signature and must keep blocking. Normalized text
+  comparison against the before side is what separates the two.
+- **Oracle mass** (D5) = strong assertions (strength ≥ PATTERN) × parametrize
+  row count. Merging N tests into one parametrized test preserves mass;
+  deleting N tests does not.
+
+None of D4–D7 suppress a finding. They only decline to *escalate* it: the
+finding stays in the report at `warn`, visible and allowlistable.
 
 **Repair evidence** answers one question — is there a production change that
 plausibly explains editing *this* test? E1 and D1 are the two sides of it, so

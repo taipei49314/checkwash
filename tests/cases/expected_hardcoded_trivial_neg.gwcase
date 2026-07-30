@@ -24,4 +24,4 @@ DEFAULT = 1
 def enabled(name):
     return DEFAULT
 === expect ===
-[]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

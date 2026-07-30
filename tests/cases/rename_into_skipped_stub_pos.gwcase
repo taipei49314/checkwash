@@ -1,0 +1,23 @@
+=== meta ===
+rule: TEST_DISABLED
+note: the cheat that SPLIT_OR_RENAMED must not excuse — the replacement
+note2: carries the name but is permanently skipped, so it never runs
+=== before: tests/test_options.py ===
+from app import make_app
+
+
+def test_provide_automatic_options():
+    app = make_app()
+    assert app.open("/", method="OPTIONS").status_code == 405
+=== after: tests/test_options.py ===
+import pytest
+
+from app import make_app
+
+
+@pytest.mark.skip(reason="revisit")
+def test_provide_automatic_options_later():
+    app = make_app()
+    assert app.open("/", method="OPTIONS").status_code == 405
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

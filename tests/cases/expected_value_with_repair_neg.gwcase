@@ -1,0 +1,24 @@
+=== meta ===
+rule: none
+note: the same expectation edit is routine when the called symbol's behaviour
+note2: really changed — repair evidence holds it at warn, below the gate
+=== before: tests/test_retry.py ===
+from retry import total_attempts
+
+
+def test_total_attempts_includes_first_try():
+    assert total_attempts(3) == 4
+=== after: tests/test_retry.py ===
+from retry import total_attempts
+
+
+def test_total_attempts_includes_first_try():
+    assert total_attempts(3) == 5
+=== before: retry.py ===
+def total_attempts(max_retries):
+    return max_retries + 1
+=== after: retry.py ===
+def total_attempts(max_retries):
+    return max_retries + 2
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

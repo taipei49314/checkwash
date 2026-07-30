@@ -30,4 +30,4 @@ def compute_total(items):
 def format_invoice(items):
     return "Total: {:.2f}".format(compute_total(items))
 === expect ===
-[]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

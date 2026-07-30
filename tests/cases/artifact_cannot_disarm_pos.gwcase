@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: decoy run — pytest's own untracked __pycache__/*.pyc counted as an
+note2: opaque prod change and disarmed E1 for the whole diff (0/12 caught).
+note3: Generated output is never evidence of anything.
+=== before: tests/test_tree.py ===
+from tree import depth
+
+
+def test_two_deep_branches():
+    assert depth({"a": {"b": {}}}) == 2
+=== after: tests/test_tree.py ===
+from tree import depth
+
+
+def test_two_deep_branches():
+    assert depth({"a": {"b": {}}}) >= 2
+=== after: __pycache__/tree.cpython-312.pyc ===
+compiled-bytes-placeholder
+=== after: tests/__pycache__/test_tree.cpython-312.pyc ===
+compiled-bytes-placeholder
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

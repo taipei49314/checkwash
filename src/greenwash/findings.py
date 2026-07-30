@@ -31,6 +31,9 @@ class Finding:
     # so gating can distinguish material weakening from style drift.
     strength_drop: int | None = None
     strength_after: int | None = None
+    # True when the assertion's left-hand subject was itself rewritten, not
+    # just the matcher — that is a different edit from a style change.
+    subject_changed: bool | None = None
 
     def sort_key(self) -> tuple:
         from greenwash.gating import RULE_ORDER

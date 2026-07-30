@@ -25,4 +25,4 @@ TAX = 1.05
 def compute_invoice_total(items):
     return sum(items) * TAX
 === expect ===
-[]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

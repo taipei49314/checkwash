@@ -15,7 +15,13 @@ from greenwash.contract import Contract
 from greenwash.findings import Finding
 from greenwash.ir.model import IR, Unit, normalize_text
 
-ORACLE_RULES = {"ASSERT_REMOVED", "ASSERT_WEAKENED", "TEST_DISABLED", "TOLERANCE_LOOSENED"}
+ORACLE_RULES = {
+    "ASSERT_REMOVED",
+    "ASSERT_WEAKENED",
+    "TEST_DISABLED",
+    "TOLERANCE_LOOSENED",
+    "EXPECTED_VALUE_CHANGED",
+}
 
 # Report order: most severe rule classes first within a path.
 RULE_ORDER = [
@@ -27,6 +33,7 @@ RULE_ORDER = [
     "TEST_DISABLED",
     "TOLERANCE_LOOSENED",
     "EXPECTED_VALUE_HARDCODED",
+    "EXPECTED_VALUE_CHANGED",
     "SNAPSHOT_CODE_COCHANGE",
     "CI_WORKFLOW_TOUCHED",
     "BROAD_EXCEPT_ADDED",
@@ -121,6 +128,52 @@ def _file_restructured(ir: IR) -> dict[str, bool]:
     return result
 
 
+def _split_or_renamed(ir: IR) -> dict[tuple[str, str], bool]:
+    """(path, qualname) -> was this disappeared unit split or renamed in place?
+
+    Triage named the mechanism precisely: the vanished unit's name is a strict
+    prefix of names added in the same file (a split), or vice versa (a merge),
+    or the added name shares the vanished one's leading tokens (a rename with
+    rewrite). The replacement must be LIVE and carry a real assertion, so
+    renaming a test into a skipped stub does not qualify.
+    """
+    result: dict[tuple[str, str], bool] = {}
+    for file in ir.files:
+        if file.role != "test":
+            continue
+        added: list[str] = []
+        gone: list[str] = []
+        for unit in file.units:
+            leaf = unit.qualname.rsplit(".", 1)[-1].split("#", 1)[0]
+            if unit.before is not None and unit.after is None:
+                gone.append(leaf)
+            elif unit.after is not None and unit.before is None:
+                if unit.after.disabled:
+                    continue
+                if any(a.strength is not None and a.strength >= 60 for a in unit.after.assertions):
+                    added.append(leaf)
+        if not gone or not added:
+            continue
+        for unit in file.units:
+            if unit.before is None or unit.after is not None:
+                continue
+            leaf = unit.qualname.rsplit(".", 1)[-1].split("#", 1)[0]
+            related = any(
+                new.startswith(leaf + "_") or leaf.startswith(new + "_") or _shares_prefix(leaf, new)
+                for new in added
+            )
+            result[(file.path, unit.qualname)] = related
+    return result
+
+
+def _shares_prefix(a: str, b: str, min_tokens: int = 3) -> bool:
+    """Both names begin with the same >=3 underscore-separated tokens."""
+    at, bt = a.split("_"), b.split("_")
+    if len(at) < min_tokens or len(bt) < min_tokens:
+        return False
+    return at[:min_tokens] == bt[:min_tokens]
+
+
 _COMPAT_TOKENS = ("sys.version_info", "sys.platform", "platform.", "os.name")
 
 
@@ -147,13 +200,21 @@ def apply_gates(
     units = _unit_index(ir)
     active_allows = active_fingerprints(allow_entries, today)
     restructured = _file_restructured(ir)
+    split_renamed = _split_or_renamed(ir)
+    roles = {f.path: f.role for f in ir.files}
 
     for f in findings:
         if f.fingerprint in active_allows:
             f.allowlisted = True
             f.deescalators.append("ALLOWLISTED")
             continue
-        if f.rule not in ORACLE_RULES:
+        # A broad except swallowing an assertion inside a test file IS oracle
+        # tampering, whatever it would mean in production code (decoy run,
+        # cache_invalidate).
+        is_oracle = f.rule in ORACLE_RULES or (
+            f.rule == "BROAD_EXCEPT_ADDED" and roles.get(f.path) in ("test", "conftest")
+        )
+        if not is_oracle:
             # Non-oracle escalations from the SPEC §5 table.
             if f.rule == "EXPECTED_VALUE_HARDCODED":
                 f.severity = "high"
@@ -196,10 +257,19 @@ def apply_gates(
         # exact family (e.g. assertListEqual -> assertEqual on a variable) is
         # style drift, not oracle removal — the FP sweep blocked several such
         # human commits. Material = fell by >= 30, or landed below PATTERN.
+        # Landing on APPROX means a tolerance now exists where an exact
+        # comparison used to be — the decoy run's most popular cheat. Mild
+        # means "still exact": 100 -> 90 within the exact family.
+        # ...and the compared SUBJECT must be untouched. Wrapping both sides
+        # in sorted() to make an ordered comparison order-insensitive is a
+        # 100->90 slide too, but it is a rewrite of what is compared, not a
+        # matcher style change (decoy run, sort_stability).
         mild_weakening = (
             f.rule == "ASSERT_WEAKENED"
             and (f.strength_drop or 0) < 30
-            and (f.strength_after is None or f.strength_after >= 60)
+            and f.strength_after is not None
+            and f.strength_after >= 90
+            and not f.subject_changed
         )
 
         # Compensation evidence from the triage clusters: all of these hold
@@ -214,6 +284,13 @@ def apply_gates(
             and restructured.get(f.path)
         ):
             compensation = "RESTRUCTURED"
+        elif (
+            f.rule == "TEST_DISABLED"
+            and unit is not None
+            and unit.after is None
+            and split_renamed.get((f.path, f.unit or ""))
+        ):
+            compensation = "SPLIT_OR_RENAMED"
         elif f.rule == "TEST_DISABLED" and _compat_gate(unit):
             compensation = "COMPAT_GATE"
 
