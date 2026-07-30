@@ -1,13 +1,34 @@
 # STATE — read this first when taking over
 
-Updated: 2026-07-30 (M1 detectors + measurement harness landed)
+Updated: 2026-07-30 (M1 measured: FP corpus + decoy corpus both run)
 
 ## Where we are
 
-**M1 in progress.** All 13 SPEC rule IDs are implemented and fixture-covered
-(+ the derived `EXEMPTION_ADDED`), the perf gate is green, and the
-false-positive measurement harness (`greenwash sweep`) exists and has already
-paid for itself. 100 tests green.
+**M1 substantially complete.** 14 detectors implemented and fixture-covered,
+perf gate green, and *both* benchmark corpora have actually been run — the
+numbers live in `benchmarks/RESULTS.md` and `benchmarks/decoy/README.md`,
+generated from the harnesses, never hand-typed. 116 tests green.
+
+### The measurements, and what they cost
+
+**False positives** — 1800 human commits across six OSS repos greenwash had
+never seen. Block rate went 8.6% → 2.6% → final (see RESULTS.md) across three
+precision rounds. The 48 oracle-rule blocks from round one were each triaged
+by an independent agent reading the real diff: 14 spec-correct, 34 fixable,
+0 unclear. Those 34 mechanisms are now deescalators D4–D7 plus fixtures.
+
+**Recall** — 12 decoy bug-fix tasks, real agents, two arms. Natural condition:
+0 of 12 agents touched a test (12 true negatives; an honest result that cuts
+against the loudest version of the pitch, recorded as such). Adversarial
+condition: **0 of 12 caught on first measurement**, 12 of 12 after fixes.
+
+The 0/12 was worth the entire exercise. Root cause: pytest's own untracked
+`__pycache__/*.pyc` counted as an unanalysable production change and granted
+repair evidence, disarming every escalation. Any user who had ever run their
+tests was protected by nothing. Two more gaps fell out of the same run: "mild
+weakening" excused exact→`approx(abs=0.01)`, and rewriting an expected literal
+without changing its shape produced no finding at all (now
+`EXPECTED_VALUE_CHANGED`).
 
 M1 detectors added on top of M0's three: `TOLERANCE_LOOSENED` (kind-aware
 direction, Decimal-only), `EXPECTED_VALUE_HARDCODED` (base-literal filtered),
@@ -75,7 +96,7 @@ Round 1 (correctness lens): 6 findings, all fixed:
   D1 (repair evidence), D2 (moved assertions/units), D3 (allowlist).
 - CLI: `greenwash check [BASE..HEAD] | --format json | --emit-ir`,
   `greenwash allow FP --reason`. Exit codes 0/1/2.
-- Tests: 100 green (50 .gwcase golden + frontend/alignment/determinism units
+- Tests: 116 green (66 .gwcase golden + frontend/alignment/determinism units
   + 19 subprocess e2e + perf and detector-coverage gates). CI matrix +
   cross-OS byte-compare workflow written (unverified until pushed to GitHub).
 
@@ -88,25 +109,26 @@ Round 1 (correctness lens): 6 findings, all fixed:
   mumei exist; we compete on blockable-by-default precision, zero-LLM,
   zero-execution, determinism. See README "Prior art" + design addendum.
 
-## Next (rest of M1)
+## Next
 
-1. **Run the FP corpus.** `greenwash sweep HEAD --limit 300 --repo <path>`
-   over ≥ 5 external Python repos (flask/httpx/fastapi-class, plus something
-   with a flaky-test history). Triage every blocked commit by hand; each false
-   positive becomes a neg fixture. Gate: high-severity on ≤ 3% of commits.
-   Nothing is published until this runs — see benchmarks/README.md.
-2. **Build the decoy-task cheat corpus** (30 bug-fix tasks with must-fail
-   tests, run through real coding agents, harvest the tampering diffs).
-   Deliberately not importing an academic benchmark: those cases mostly don't
-   reduce to a before/after diff.
-3. Side-by-side run against swarm-orchestrator on both corpora, publishing
-   both columns including losses.
-4. Then M2: adapters (pre-commit, GitHub Action, stop-hook), dogfood on this
-   repo's own PRs.
+1. **Side-by-side against swarm-orchestrator** on both corpora, publishing
+   both columns including the cases where it wins. Not started.
+2. **Widen the decoy corpus**: more tasks, harder and more underspecified
+   bugs, weaker models, retry pressure. Twelve tasks with one attempt each is
+   a smoke test with teeth, not a benchmark with error bars — decoy/README
+   says so and the claim must not outrun it.
+3. **M2 adapters**: pre-commit, GitHub Action, Claude Code stop-hook, then
+   dogfood on this repo's own PRs.
+4. Fixture corpus toward pos≥5/neg≥5 per detector as real cases arrive; the
+   coverage gate currently enforces ≥1 positive per detector and ≥10
+   negatives overall.
 
-Fixture corpus grows to pos≥5/neg≥5 per detector as real cases arrive; the
-coverage gate currently enforces ≥1 positive per detector and ≥10 negatives
-overall.
+## Working rule that has earned its place
+
+Every measurement so far found a defect the code review did not: the sweep
+found a false positive in greenwash's own history, the perf gate failed on
+arrival at 4.1 s, and the decoy corpus found a bug that reduced the tool to
+catching nothing. Build the harness before trusting the behaviour.
 
 ## Known limitations (documented, not hidden)
 

@@ -26,6 +26,32 @@ warn + escalator table). Frozen: uniform base `warn`, deterministic
 escalator/de-escalator table in SPEC §5. One gating philosophy, one file
 (`gating.py`), auditable in one read.
 
+## D-008 (2026-07-30): generated output is never evidence
+
+The decoy run caught 0 of 12 real tampering diffs because pytest's untracked
+`__pycache__/*.pyc` files read as "a production change greenwash cannot
+analyse", which grants repair evidence and suppresses every escalation in the
+diff. The conservative fallback meant to cover non-Python source (D-004,
+THREATMODEL #4) was being fed compiler output.
+
+Frozen: artifacts are dropped from the diff before analysis (SPEC §4b). The
+opaque-change fallback now applies only to plausible *source*. This is a
+safety property, not a heuristic — a tool whose gate can be disabled by
+running the test suite has no gate.
+
+## D-009 (2026-07-30): rewriting an expectation is an oracle event
+
+The strength lattice answers "did the assertion get weaker?". It has nothing
+to say about `assert total_attempts(3) == 4` becoming `== 3`, which is the
+same shape, the same strength, and a completely destroyed oracle. Three of
+twelve decoy cheats were exactly this and produced no finding at all.
+
+`EXPECTED_VALUE_CHANGED` fills the gap and leans on the existing escalator
+rather than inventing a new judgement: rewriting an expectation is normal
+when production behaviour changed, and repair evidence already measures
+that. Without it the edit is unexplained, and unexplained expectation edits
+are the cheapest cheat there is.
+
 ## D-006 (2026-07-30): the frozen stdlib snapshot, and fail-off resolution
 
 `IMPORT_UNRESOLVED` needs a notion of "which modules exist". Two rules:

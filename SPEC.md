@@ -95,6 +95,7 @@ detectors can only be disabled whole.
 | `TOLERANCE_LOOSENED` | Decimal(after epsilon) > Decimal(before epsilon) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `EXPECTED_VALUE_HARDCODED` | new assertion literal equals a constant newly introduced in prod in the same diff |
+| `EXPECTED_VALUE_CHANGED` | an aligned assertion keeps its form and strength but its expected literal was rewritten |
 | `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` (JS forms in v0.2) added |
 | `CI_WORKFLOW_TOUCHED` | ci-role file changed; test command weakened → high |
@@ -122,6 +123,22 @@ All thirteen are live as of M1, plus one derived rule, `EXEMPTION_ADDED`
   intent is never parsed.
 - `SNAPSHOT_CODE_COCHANGE` requires snapshot + prod change **and** no test
   logic change in the same diff.
+- `EXPECTED_VALUE_CHANGED` covers the cheat the lattice cannot see: leave the
+  assertion's shape alone and edit the expected literal to whatever the buggy
+  code returns. It is an oracle rule, so it escalates only when no production
+  change explains the edit — legitimate expectation updates travel with one.
+- `BROAD_EXCEPT_ADDED` is treated as an **oracle** rule when it lands in a
+  test-role file: a broad `except` around an assertion is tampering there,
+  whatever it means in production code.
+
+## 4b. Artifacts are never evidence
+
+Generated and binary paths (`__pycache__/`, `.pyc/.so/.dll`, `dist/`,
+`build/`, `.pytest_cache/`, `node_modules/`, images, archives, …) are dropped
+from the diff before analysis. They cannot produce findings and, critically,
+cannot grant repair evidence: pytest's own untracked `.pyc` output was enough
+to disarm E1 for an entire diff, which any build artifact in any repo would
+have reproduced.
 
 ## 5. Escalators / de-escalators (applied in order, all deterministic)
 

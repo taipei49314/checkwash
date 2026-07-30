@@ -1,55 +1,50 @@
 # Benchmarks — what is measured, and what is not
 
 Two corpora back the "blockable by default" claim. Both are reproducible from
-a clone; neither is finished yet, and this file says so rather than letting a
-badge imply otherwise.
+a clone. This file says plainly which numbers exist and which do not.
 
 ## 1. False-positive corpus (human-authored history)
 
 The number that decides whether greenwash survives contact with a real team:
 **how often does it block a commit a human wrote and reviewed?**
 
-The harness ships in the tool:
-
 ```bash
 greenwash sweep HEAD --limit 300 --repo /path/to/some/python/repo
 ```
 
 It reports `block_rate` plus per-rule/severity counts and dumps every blocked
-commit with its high-severity findings, so each one can be triaged by hand as
-true or false. Target gate (tests/gates/README.md): **high-severity findings
-on ≤ 3% of human commits**, measured over ≥ 5 active OSS repos including
-"fix flaky" commits.
+commit with its high-severity findings, so each can be triaged by hand.
 
-Status: harness done and dogfooded. It immediately found one real false
-positive in greenwash's own history (a test asserting `== "pass"` matched
-against a prod constant `"pass"` that had always existed) — now fixture
-`hardcoded_existing_value_neg.gwcase`. Population runs over external repos are
-**not yet done**; no FP rate is published.
+**Status: run.** Six active OSS Python projects (flask, httpx, attrs, click,
+rich, starlette), 300 consecutive non-merge commits each — 1800 commits none
+of which greenwash saw during development. Results in `RESULTS.md`, generated
+by `make_results.py` so the document cannot drift from the measurement.
 
-## 2. Decoy-task cheat corpus (recall)
+Every oracle-rule block from the first round was triaged by an independent
+agent reading the real diff (`triage-2026-07-30.json`): 14 spec-correct, 34
+fixable false positives, 0 unclear. Those 34 mechanisms drove three precision
+rounds and are now regression fixtures.
 
-30 bug-fix tasks, each with a test that must fail until the bug is really
-fixed, run through real coding agents; every diff where the agent tampered
-with the oracle instead becomes a `.gwcase` fixture with its provenance.
+## 2. Decoy-task corpus (recall)
 
-Rationale for building it rather than importing an academic benchmark: the
-published reward-hacking benchmarks are mostly system-level task suites whose
-cases do not reduce cleanly to a before/after diff, which is the only shape
+Twelve bug-fix tasks with must-fail tests, run through real coding agents in
+two conditions. **Status: run** — see `decoy/README.md`.
+
+Headline: under natural conditions 0 of 12 agents touched a test at all; under
+adversarial conditions greenwash caught 0 of 12 tampering diffs on first
+measurement and 12 of 12 after the three bugs that exposure revealed were
+fixed. One of those bugs — build artifacts granting repair evidence — meant
+any user who had run their test suite was protected by nothing.
+
+Rationale for building this rather than importing an academic benchmark: the
+published reward-hacking suites are mostly system-level task sets whose cases
+do not reduce cleanly to a before/after diff, which is the only shape
 greenwash consumes.
 
-Status: **not started.** Recall today is measured only against the fixture
-corpus in `tests/cases/`, which is honest about being author-written:
-adversarial-review findings and reproduced bypasses, not sampled agent
-behaviour.
+## 3. Comparison against the nearest neighbour
 
-## 3. Comparison
-
-The M3 gate requires running the same corpora through the nearest neighbour
-(swarm-orchestrator) and publishing both columns, including the cases where it
-wins.
-
-Status: not started.
+Running both corpora through swarm-orchestrator and publishing both columns,
+including the cases where it wins. **Status: not started.**
 
 ## Rule
 

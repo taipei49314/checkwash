@@ -71,7 +71,9 @@ _SKIP_DECORATORS = {
 
 _SKIP_CALLS = {"pytest.skip", "pytest.xfail", "pytest.importorskip", "self.skipTest"}
 
-_BROAD_EXCEPTIONS = {"Exception", "BaseException"}
+# AssertionError belongs here: catching it is precisely how you swallow an
+# oracle, and it is the obvious variant of the broad-except cheat.
+_BROAD_EXCEPTIONS = {"Exception", "BaseException", "AssertionError"}
 
 # conftest.py is where pytest lets you disable collection for a whole tree.
 # These are the curated suite-level controls TEST_DISABLED watches for.
@@ -197,6 +199,12 @@ def _approx_epsilon(call: ast.Call, text: str) -> tuple[str | None, str | None]:
             seg = text.seg(kw.value)
             if seg is not None:
                 return seg, kw.arg
+    # pytest.approx(expected, rel) — a positional tolerance was invisible, so
+    # widening one by a million produced no finding at all.
+    if len(call.args) > 1:
+        seg = text.seg(call.args[1])
+        if seg:
+            return seg, "rel"
     return None, None
 
 
@@ -217,6 +225,36 @@ class _Classified:
     right_value: str | None = None
     epsilon: str | None = None
     epsilon_kind: str | None = None
+
+
+_BUILTIN_CALLS = frozenset(
+    {
+        "str", "int", "float", "bool", "len", "repr", "sorted", "list", "dict",
+        "set", "tuple", "abs", "round", "min", "max", "sum", "any", "all",
+        "reversed", "type", "format",
+    }
+)
+
+
+def _is_trivial_subject(node: ast.AST | None) -> bool:
+    """Does this expression depend on nothing but literals and builtins?
+
+    `assert str(1) == "1"` sits at EXACT_VALUE(90) and can never fail, so it
+    was usable as padding to fake compensation for a deleted oracle.
+    """
+    if node is None:
+        return True
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Call):
+            name = _dotted(sub.func)
+            if name is None or name.rsplit(".", 1)[-1] not in _BUILTIN_CALLS:
+                return False
+        elif isinstance(sub, ast.Name):
+            if sub.id not in _BUILTIN_CALLS:
+                return False
+        elif isinstance(sub, ast.Attribute):
+            return False
+    return True
 
 
 def _classify_assert(node: ast.Assert, text: str) -> _Classified:
@@ -292,6 +330,11 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             if kw.arg in ("places", "delta"):
                 epsilon = text.seg(kw.value)
                 epsilon_kind = kw.arg
+        # assertAlmostEqual(a, b, places) — positional third argument.
+        if epsilon is None and len(node.args) > 2:
+            seg = text.seg(node.args[2])
+            if seg:
+                epsilon, epsilon_kind = seg, "places"
     if form == "truthy" and node.args and _is_literal(node.args[0]):
         form, level = "tautology", S.TAUTOLOGY
     if form == "compare_eq" and len(node.args) > 1:
@@ -425,6 +468,7 @@ def _collect_unit(
                     right_value=c.right_value,
                     epsilon=c.epsilon,
                     epsilon_kind=c.epsilon_kind,
+                    trivial=_is_trivial_subject(node.test),
                 )
             )
             counter += 1
@@ -637,6 +681,15 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     inherited + class_markers,
                     collectible and _is_test_class(child.name),
                 )
+            elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):
+                # Module- and class-level constants are behaviour too. They
+                # were not symbols, so changing `TIMEOUT = 30` to 60 produced
+                # no repair evidence and every test updating its expectation
+                # blocked at high.
+                targets = child.targets if isinstance(child, ast.Assign) else [child.target]
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        symbols[f"{prefix}{target.id}"] = _fingerprint(child)
             else:
                 visit(child, prefix, inherited, collectible)
 
@@ -659,7 +712,10 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         if isinstance(node, ast.Import):
             imports.extend(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
-            imports.append(node.module)
+            # `from .helpers import x` resolves inside the package; recording
+            # it as top-level `helpers` made IMPORT_UNRESOLVED fire on it.
+            if not node.level:
+                imports.append(node.module)
         elif isinstance(node, ast.Constant) and not isinstance(node.value, (bool, type(None))):
             rep = repr(node.value)
             if len(rep) <= 64:

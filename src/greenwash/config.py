@@ -57,11 +57,14 @@ class Config:
 
 
 def _match(path: str, pattern: str) -> bool:
-    if fnmatch.fnmatch(path, pattern):
+    # fnmatchcase, never fnmatch: fnmatch folds case on Windows, so the same
+    # commit pair classified files differently per OS and broke the
+    # byte-identical guarantee (SPEC §8).
+    if fnmatch.fnmatchcase(path, pattern):
         return True
     # fnmatch's "*" already crosses "/" (it is not pathlib-style), but a
     # leading "**/" should also match paths with no directory component.
-    if pattern.startswith("**/") and fnmatch.fnmatch(path, pattern[3:]):
+    if pattern.startswith("**/") and fnmatch.fnmatchcase(path, pattern[3:]):
         return True
     return False
 

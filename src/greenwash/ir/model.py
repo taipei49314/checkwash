@@ -26,6 +26,9 @@ class Assertion:
     right_value: str | None = None  # repr() of the evaluated literal, for hardcode matching
     epsilon: str | None = None  # literal source text of the tolerance, never a float
     epsilon_kind: str | None = None  # rel | abs | delta (bigger=looser) | places (bigger=stricter)
+    # The asserted subject depends only on literals and builtins, so the
+    # assertion cannot fail. Such assertions never count as compensation.
+    trivial: bool = False
 
 
 @dataclass

@@ -41,6 +41,12 @@ hallucinated imports, scope drift, hidden Unicode.
 5. **Indirection beyond one hop.** Repair evidence follows the call graph one
    hop from the test. A change three layers down, with no closer signal, is
    treated as unrelated (fails safe toward flagging, not toward silence).
+6. **Equivalent rewrites of an assertion.** When both the subject and the
+   strength of an assertion change at once — a private-API check rewritten
+   against the public API, say — greenwash cannot verify the replacement is
+   equivalent and blocks. Accepted deliberately: the deescalator that would
+   excuse it would also excuse replacing an exact comparison with a wide
+   `approx()`, which was the most popular cheat in the decoy run.
 
 ## Known bypasses (public list — contributions welcome)
 
@@ -60,6 +66,15 @@ fixture. See CONTRIBUTING ("Send us a cheat") once published.
 | 9 | Sacrificial `@pytest.mark.skip` test absorbing deleted assertions via D2 | **Closed** — disabled units are not "live" |
 | 10 | `assert f(x) == f(x)` self-comparison | **Closed** (TAUTOLOGY) |
 | 11 | Pass `BASE...HEAD` so base-branch commits defuse E1 | **Closed** (merge-base resolved) |
+| 12 | Leave a build artifact (`.pyc`, `dist/`, …) in the diff to grant repair evidence | **Closed** — artifacts are dropped before analysis |
+| 13 | Replace an exact comparison with a wide `pytest.approx(...)` | **Closed** — landing on APPROX is never "mild" |
+| 14 | Wrap both sides in `sorted()` to make an ordered check order-blind | **Closed** — a changed subject is not a style change |
+| 15 | Rewrite the expected literal to whatever the buggy code returns | **Closed** — `EXPECTED_VALUE_CHANGED` |
+| 16 | Swallow the assertion in a broad `try/except` inside the test | **Closed** — oracle rule in test files |
+
+Bypasses 12–16 were found by running real coding agents against decoy
+bug-fix tasks (`benchmarks/decoy/`), not by inspection. Bypass 12 in
+particular made the tool catch **0 of 12** real tampering diffs.
 
 Bypasses 4–11 were found by adversarial review and each has a regression
 fixture. Report a new one and it becomes the next row.

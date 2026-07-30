@@ -119,8 +119,18 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
     contract = Contract()
     if args.task:
-        with open(args.task, encoding="utf-8") as fh:
-            contract = parse_contract(fh.read())
+        # The contract carries oracle_freeze and the scope globs, so reading
+        # it from the head side let a diff edit TASK.md to disarm E2 and E7
+        # for itself. Same rule as config and the allowlist: base side wins
+        # (SPEC §1); the working-tree copy is only a fallback when the task
+        # file is untracked.
+        rel = os.path.relpath(args.task, repo).replace("\\", "/")
+        data = read_base_file(repo, config_side, rel)
+        if data is not None:
+            contract = parse_contract(data.decode("utf-8", errors="replace"))
+        else:
+            with open(args.task, encoding="utf-8") as fh:
+                contract = parse_contract(fh.read())
 
     known_modules: set[str] | None = None
     declared: set[str] = set()

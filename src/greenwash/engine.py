@@ -39,21 +39,23 @@ class EngineError(Exception):
 # production behaviour, so it must never buy repair evidence: pytest's own
 # untracked __pycache__/*.pyc silently disarmed the whole escalator in the
 # first decoy run (0/12 caught), which any build artifact would reproduce.
-_ARTIFACT_DIRS = (
-    "__pycache__/",
-    ".git/",
-    ".pytest_cache/",
-    ".mypy_cache/",
-    ".ruff_cache/",
-    ".tox/",
-    ".nox/",
-    ".venv/",
-    "venv/",
-    "node_modules/",
-    "dist/",
-    "build/",
-    "htmlcov/",
-    ".eggs/",
+_ARTIFACT_SEGMENTS = frozenset(
+    {
+        "__pycache__",
+        ".git",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".tox",
+        ".nox",
+        ".venv",
+        "venv",
+        "node_modules",
+        "dist",
+        "build",
+        "htmlcov",
+        ".eggs",
+    }
 )
 _ARTIFACT_SUFFIXES = (
     ".pyc",
@@ -88,10 +90,14 @@ _ARTIFACT_SUFFIXES = (
 
 
 def is_artifact(path: str) -> bool:
+    # Segment-anchored, not substring: `build/` used to match `mybuild/` and
+    # `dist/` matched `redist/`, silently deleting real source trees from the
+    # analysis — which is both a false negative and a one-rename bypass.
     p = path.replace("\\", "/")
-    if any(seg in p for seg in _ARTIFACT_DIRS) or p.endswith(".egg-info"):
+    segments = p.split("/")
+    if any(seg in _ARTIFACT_SEGMENTS or seg.endswith(".egg-info") for seg in segments):
         return True
-    return p.lower().endswith(_ARTIFACT_SUFFIXES)
+    return segments[-1].lower().endswith(_ARTIFACT_SUFFIXES)
 
 
 def collectable(path: str) -> bool:
@@ -132,13 +138,16 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
 
 
 # Deterministic markers of a weakened test command in CI files.
+# Anchored, not bare substrings: `--ignore` matched `--ignore-missing-imports`
+# in a mypy step and blocked innocent CI edits at high.
 _CI_WEAKENING_TOKENS = (
-    "continue-on-error",
+    "continue-on-error: true",
     "|| true",
-    "--ignore",
-    " -k ",
+    "--ignore=",
+    "--ignore ",
     "--deselect",
-    "--no-cov-fail",
+    ' -k "',
+    " -k '",
 )
 
 # Invisible / direction-control characters (SPEC: HIDDEN_UNICODE).
@@ -387,9 +396,9 @@ def build_ir(
 def _scope_match(path: str, pattern: str) -> bool:
     import fnmatch
 
-    if fnmatch.fnmatch(path, pattern):
+    if fnmatch.fnmatchcase(path, pattern):  # case-folding fnmatch breaks §8
         return True
-    if pattern.startswith("**/") and fnmatch.fnmatch(path, pattern[3:]):
+    if pattern.startswith("**/") and fnmatch.fnmatchcase(path, pattern[3:]):
         return True
     return False
 

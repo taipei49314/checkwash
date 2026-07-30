@@ -21,6 +21,10 @@ ORACLE_RULES = {
     "TEST_DISABLED",
     "TOLERANCE_LOOSENED",
     "EXPECTED_VALUE_CHANGED",
+    # E3 used to escalate this unconditionally, which blocked the single most
+    # common honest repair there is: change a constant, update its test.
+    # It goes through repair evidence like every other oracle rule.
+    "EXPECTED_VALUE_HARDCODED",
 }
 
 # Report order: most severe rule classes first within a path.
@@ -59,6 +63,18 @@ def _symbol_match(calls: tuple[str, ...], changed_symbols: list[str]) -> bool:
     return False
 
 
+def _file_repair_evidence(path: str, ir: IR) -> bool:
+    """Repair evidence for a finding with no unit of its own (file-scoped
+    rules such as BROAD_EXCEPT_ADDED): does ANY unit in the file have it?"""
+    for file in ir.files:
+        if file.path != path:
+            continue
+        for unit in file.units:
+            if _repair_evidence(unit, ir):
+                return True
+    return False
+
+
 def _repair_evidence(unit: Unit | None, ir: IR) -> bool:
     """Did production change in a way that plausibly explains editing THIS test?
 
@@ -93,16 +109,17 @@ def _same_unit_rewrite(unit: Unit | None) -> bool:
     if not unit.delta.assertions_removed:
         return False
     before_texts = {normalize_text(a.text) for a in unit.before.assertions}
-    return any(
-        a.strength is not None
-        and a.strength >= 60
-        and normalize_text(a.text) not in before_texts
-        for a in unit.after.assertions
-    )
+    return any(_is_real_assertion(a) and normalize_text(a.text) not in before_texts
+               for a in unit.after.assertions)
+
+
+def _is_real_assertion(a) -> bool:
+    """Strong enough to be an oracle, and capable of failing at all."""
+    return a.strength is not None and a.strength >= 60 and not a.trivial
 
 
 def _oracle_mass(side) -> int:
-    strong = sum(1 for a in side.assertions if a.strength is not None and a.strength >= 60)
+    strong = sum(1 for a in side.assertions if _is_real_assertion(a))
     return strong * max(1, side.param_cases or 1)
 
 
@@ -150,7 +167,7 @@ def _split_or_renamed(ir: IR) -> dict[tuple[str, str], bool]:
             elif unit.after is not None and unit.before is None:
                 if unit.after.disabled:
                     continue
-                if any(a.strength is not None and a.strength >= 60 for a in unit.after.assertions):
+                if any(_is_real_assertion(a) for a in unit.after.assertions):
                     added.append(leaf)
         if not gone or not added:
             continue
@@ -175,6 +192,17 @@ def _shares_prefix(a: str, b: str, min_tokens: int = 3) -> bool:
 
 
 _COMPAT_TOKENS = ("sys.version_info", "sys.platform", "platform.", "os.name")
+# Version comparisons that hold on every Python 3 the tool can run on: a
+# skipif on one of these is an unconditional kill wearing a compat costume.
+_ALWAYS_TRUE_VERSION = (
+    ">=(3,)",
+    ">=(3,0)",
+    ">(2,",
+    ">=(2,",
+    "<(4,",
+    "<(9",
+    "<=(9",
+)
 
 
 def _compat_gate(unit: Unit | None) -> bool:
@@ -182,8 +210,14 @@ def _compat_gate(unit: Unit | None) -> bool:
     if unit is None or unit.after is None:
         return False
     for m in unit.after.markers:
-        if m.name.endswith("skipif") and any(tok in m.text for tok in _COMPAT_TOKENS):
-            return True
+        if not m.name.endswith("skipif"):
+            continue
+        if not any(tok in m.text for tok in _COMPAT_TOKENS):
+            continue
+        compact = normalize_text(m.text)
+        if any(pat in compact for pat in _ALWAYS_TRUE_VERSION):
+            continue  # always true: not a gate, a disable
+        return True
     return False
 
 
@@ -216,10 +250,7 @@ def apply_gates(
         )
         if not is_oracle:
             # Non-oracle escalations from the SPEC §5 table.
-            if f.rule == "EXPECTED_VALUE_HARDCODED":
-                f.severity = "high"
-                f.escalators.append("HARDCODE_FINGERPRINT")  # E3
-            elif f.rule == "GUARDRAIL_TOUCHED":
+            if f.rule == "GUARDRAIL_TOUCHED":
                 f.severity = "critical"
                 f.escalators.append("META")  # E4
             elif f.rule == "HIDDEN_UNICODE":
@@ -296,7 +327,10 @@ def apply_gates(
 
         # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
         # question: is there a production change that explains this edit?
-        if _repair_evidence(unit, ir):
+        has_evidence = (
+            _file_repair_evidence(f.path, ir) if unit is None else _repair_evidence(unit, ir)
+        )
+        if has_evidence:
             f.deescalators.append("REPAIR_EVIDENCE")
         elif compensation is not None:
             f.deescalators.append(compensation)
