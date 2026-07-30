@@ -12,10 +12,10 @@ generated from the harnesses, never hand-typed. 116 tests green.
 ### The measurements, and what they cost
 
 **False positives** — 1800 human commits across six OSS repos greenwash had
-never seen. Block rate went 8.6% → 2.6% → final (see RESULTS.md) across three
-precision rounds. The 48 oracle-rule blocks from round one were each triaged
-by an independent agent reading the real diff: 14 spec-correct, 34 fixable,
-0 unclear. Those 34 mechanisms are now deescalators D4–D7 plus fixtures.
+never seen. **40/1800 = 2.22%**, every repo under 4%, gate is ≤3%. Full
+progression and what moved each step: `benchmarks/README.md`. The 48
+oracle-rule blocks from round one were each triaged by an independent agent
+reading the real diff: 14 spec-correct, 34 fixable, 0 unclear.
 
 **Recall** — 12 decoy bug-fix tasks, real agents, two arms. Natural condition:
 0 of 12 agents touched a test (12 true negatives; an honest result that cuts
@@ -129,6 +129,13 @@ Every measurement so far found a defect the code review did not: the sweep
 found a false positive in greenwash's own history, the perf gate failed on
 arrival at 4.1 s, and the decoy corpus found a bug that reduced the tool to
 catching nothing. Build the harness before trusting the behaviour.
+
+Its sharpest instance: after the M1 self-review I predicted the eight fixes
+would bring httpx's 6.67% down. Re-running the sweep moved httpx by **zero**
+commits — the real cause was that repair evidence never reached through an
+unchanged intermediate module. Reasoning about the code produced a confident
+wrong answer; re-running the measurement produced the right one. Re-measure
+after every change, including the ones that "obviously" work.
 
 ## Known limitations (documented, not hidden)
 

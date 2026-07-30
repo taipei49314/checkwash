@@ -265,6 +265,8 @@ def build_ir(
         if is_python and not file_ir.parse_ok:
             ir.skipped_files.append(path)
 
+        if role in ("test", "conftest") and after_parsed and after_parsed.parse_ok:
+            g.test_file_imports[path] = list(after_parsed.imports)
         if role in ("test", "conftest"):
             for unit in file_ir.units:
                 if unit.before is None or unit.after is None:
@@ -316,6 +318,8 @@ def build_ir(
             pass
         elif role == "prod":
             g.prod_files_changed.append(path)
+            head = path.split("/", 1)[0]
+            g.prod_packages.append(head[:-3] if head.endswith(".py") else head)
             if is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
                 syms = set(before_parsed.symbols) | set(after_parsed.symbols)
                 for q in sorted(syms):
@@ -382,6 +386,7 @@ def build_ir(
 
     g.moved_assertion_texts = sorted(set(removed_texts) & set(added_texts))
     g.base_literals = sorted(base_literals)
+    g.prod_packages = sorted(set(g.prod_packages))
     g.suppressions_added.sort()
     g.imports_added.sort()
     g.unresolved_imports.sort()

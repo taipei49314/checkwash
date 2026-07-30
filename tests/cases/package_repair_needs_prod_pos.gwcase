@@ -1,0 +1,18 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: PACKAGE_REPAIR must not become a free pass — a test-only diff has no
+note2: changed prod package at all, so the cheat still blocks
+=== before: tests/models/test_url.py ===
+import httpx
+
+
+def test_url_query_encoding():
+    assert httpx.URL("http://x/?a=b c").raw_path == b"/?a=b%20c"
+=== after: tests/models/test_url.py ===
+import httpx
+
+
+def test_url_query_encoding():
+    assert httpx.URL("http://x/?a=b c").raw_path == b"/?a=b c"
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

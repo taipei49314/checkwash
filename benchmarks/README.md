@@ -25,6 +25,30 @@ agent reading the real diff (`triage-2026-07-30.json`): 14 spec-correct, 34
 fixable false positives, 0 unclear. Those 34 mechanisms drove three precision
 rounds and are now regression fixtures.
 
+### Measured progression
+
+Each row is a full re-run of the same harness over the same 1800 commits.
+`RESULTS.md` always holds the latest.
+
+| block rate | what changed since the previous row |
+|---:|---|
+| 8.56% | first measurement, M1 detectors as designed |
+| 2.61% | pre-commit hook bumps reclassified; TDD hardcode FP; mild-weakening band; unicode scan narrowed to source |
+| 3.00% | +`EXPECTED_VALUE_CHANGED` — added for recall, and it cost precision |
+| 2.83% | M1 self-review: 8 verified defects in the M1 code itself |
+| **2.22%** | repair evidence reaches through unchanged intermediate modules (`PACKAGE_REPAIR`) |
+
+The 3.00% row is the honest shape of the trade-off: closing a recall hole
+raised the false-positive rate, and only measurement showed by how much.
+
+The last row is worth its own note, because reasoning got it wrong. After the
+self-review I predicted those eight fixes would bring httpx (the worst repo,
+6.67%) down. Re-running the sweep moved httpx by exactly zero commits. The
+real cause was elsewhere: symbol-level repair evidence is built only from
+files the diff touched, so a test calling `httpx.URL(...)` got no credit for a
+fix in `httpx/_urlparse.py` sitting behind an unchanged `_urls.py`. Thirteen
+of httpx's twenty blocks were that one blind spot.
+
 ## 2. Decoy-task corpus (recall)
 
 Twelve bug-fix tasks with must-fail tests, run through real coding agents in

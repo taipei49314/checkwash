@@ -14,17 +14,17 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 54/1800 = 3.00%** (final (M1))
+**Blocked (would fail CI at the default `fail_on = high`): 40/1800 = 2.22%** (M1 final)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
 | flask | 300 | 37 | 4 | 1.33% |
-| httpx | 300 | 92 | 20 | 6.67% |
+| httpx | 300 | 92 | 11 | 3.67% |
 | attrs | 300 | 64 | 4 | 1.33% |
-| click | 300 | 109 | 12 | 4.00% |
-| rich | 300 | 71 | 7 | 2.33% |
-| starlette | 300 | 92 | 7 | 2.33% |
-| **total** | **1800** | **465** | **54** | **3.00%** |
+| click | 300 | 109 | 11 | 3.67% |
+| rich | 300 | 71 | 6 | 2.00% |
+| starlette | 300 | 92 | 4 | 1.33% |
+| **total** | **1800** | **465** | **40** | **2.22%** |
 
 Engine errors: 0.
 
@@ -33,11 +33,10 @@ Blocking findings by rule (commits containing at least one):
 | rule | commits |
 |---|---:|
 | `TEST_DISABLED` | 22 |
-| `EXPECTED_VALUE_CHANGED` | 20 |
 | `ASSERT_WEAKENED` | 9 |
-| `BROAD_EXCEPT_ADDED` | 6 |
+| `EXPECTED_VALUE_CHANGED` | 5 |
+| `BROAD_EXCEPT_ADDED` | 4 |
 | `EXPECTED_VALUE_HARDCODED` | 1 |
-| `CI_WORKFLOW_TOUCHED` | 1 |
 | `ASSERT_REMOVED` | 1 |
 
 ## What the blocks actually were

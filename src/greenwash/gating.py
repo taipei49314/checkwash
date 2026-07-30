@@ -63,6 +63,27 @@ def _symbol_match(calls: tuple[str, ...], changed_symbols: list[str]) -> bool:
     return False
 
 
+def _package_evidence(path: str, ir: IR) -> bool:
+    """Did the diff change production code in a package this test imports?
+
+    Weaker than symbol-level evidence on purpose, and used for exactly one
+    rule (see apply_gates). Symbol evidence cannot see through an unchanged
+    intermediate module — a test calling `httpx.URL(...)` gets no credit when
+    the diff fixes `httpx/_urlparse.py` — and that single blind spot produced
+    13 of httpx's 20 blocked commits in the 1800-commit sweep.
+
+    A test-only diff has no changed prod package at all, so this cannot
+    excuse the cheat the rule exists to catch.
+    """
+    packages = set(ir.globals.prod_packages)
+    if not packages:
+        return False
+    for module in ir.globals.test_file_imports.get(path, ()):
+        if module.split(".", 1)[0] in packages:
+            return True
+    return False
+
+
 def _file_repair_evidence(path: str, ir: IR) -> bool:
     """Repair evidence for a finding with no unit of its own (file-scoped
     rules such as BROAD_EXCEPT_ADDED): does ANY unit in the file have it?"""
@@ -330,8 +351,15 @@ def apply_gates(
         has_evidence = (
             _file_repair_evidence(f.path, ir) if unit is None else _repair_evidence(unit, ir)
         )
+        package_only = (
+            not has_evidence
+            and f.rule == "EXPECTED_VALUE_CHANGED"
+            and _package_evidence(f.path, ir)
+        )
         if has_evidence:
             f.deescalators.append("REPAIR_EVIDENCE")
+        elif package_only:
+            f.deescalators.append("PACKAGE_REPAIR")
         elif compensation is not None:
             f.deescalators.append(compensation)
         elif mild_weakening:

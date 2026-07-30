@@ -140,6 +140,17 @@ cannot grant repair evidence: pytest's own untracked `.pyc` output was enough
 to disarm E1 for an entire diff, which any build artifact in any repo would
 have reproduced.
 
+Matching is **path-segment anchored**, never substring. Bare substrings made
+`build/` match `mybuild/` and `dist/` match `redist/`, which silently deleted
+real source trees from the analysis and made a directory rename a bypass.
+
+## 4c. The task contract is base-side too
+
+`--task` carries `oracle_freeze` and the scope globs, i.e. two escalators. It
+is therefore read from the **base** side like config and the allowlist (§1);
+the working-tree copy is a fallback only when the file is untracked.
+Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
+
 ## 5. Escalators / de-escalators (applied in order, all deterministic)
 
 | id | condition | effect |
@@ -156,7 +167,7 @@ have reproduced.
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
 | D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units ≥ the mass lost to disappeared units | hold at warn |
-| D6 `COMPAT_GATE` | the added skip marker is a `skipif` keyed on `sys.version_info` / `sys.platform` / `platform.` / `os.name` | hold at warn |
+| D6 `COMPAT_GATE` | the added skip marker is a `skipif` keyed on `sys.version_info` / `sys.platform` / `platform.` / `os.name`, and the condition is **not** always true (`>= (3, 0)` and friends are an unconditional kill in a compat costume) | hold at warn |
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ PATTERN | hold at warn |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
@@ -166,9 +177,13 @@ D4–D7 came from triaging 48 real blocked commits in OSS history
   *keeps* an existing assertion while the inconvenient one disappears is the
   sacrificial-cheat signature and must keep blocking. Normalized text
   comparison against the before side is what separates the two.
-- **Oracle mass** (D5) = strong assertions (strength ≥ PATTERN) × parametrize
-  row count. Merging N tests into one parametrized test preserves mass;
-  deleting N tests does not.
+- **Oracle mass** (D5) = strong assertions × parametrize row count. Merging N
+  tests into one parametrized test preserves mass; deleting N tests does not.
+- **A strong assertion must be able to fail.** Everywhere compensation is
+  counted (D4, D5, split/rename), an assertion qualifies only if its strength
+  is ≥ PATTERN *and* its subject depends on something other than literals and
+  builtins. `assert str(1) == "1"` sits at EXACT_VALUE and is vacuous; one
+  such padding line could launder a whole file of deleted oracles.
 
 None of D4–D7 suppress a finding. They only decline to *escalate* it: the
 finding stays in the report at `warn`, visible and allowlistable.
@@ -184,6 +199,16 @@ exactly one of them applies to every oracle finding. Evidence exists when:
    `compute_total` it calls changes), or
 3. the diff contains a prod change greenwash cannot analyse (non-Python,
    deleted, or unparseable file) — conservative, see THREATMODEL #4.
+
+`EXPECTED_VALUE_CHANGED` additionally accepts **package-level** evidence
+(`PACKAGE_REPAIR`): the test file imports a package in which the diff changed
+production code. Symbol evidence is built only from files the diff touched,
+so it cannot see through an unchanged intermediate module — a test calling
+`httpx.URL(...)` earns nothing from a fix in `httpx/_urlparse.py` behind an
+unchanged `_urls.py`. That single blind spot was 13 of httpx's 20 blocked
+commits. It is scoped to this one rule deliberately: a test-only diff changes
+no production package at all, so it cannot excuse the cheat the rule exists
+to catch.
 
 Evidence is deliberately **not** "some prod file in this diff changed". That
 diff-global test let a single dead constant, a statement reorder, or an edit

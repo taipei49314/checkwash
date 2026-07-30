@@ -1,0 +1,26 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: FP-sweep root cause — symbol evidence is confined to files the diff
+note2: touched, so a test calling httpx.URL() gets no credit when the fix is
+note3: in httpx/_urlparse.py behind an unchanged _urls.py. 13 of httpx's 20
+note4: blocked commits were this. Package-level evidence holds it at warn.
+=== before: httpx/_urlparse.py ===
+def urlparse(url):
+    return url.replace(" ", "%20")
+=== after: httpx/_urlparse.py ===
+def urlparse(url):
+    return url.replace(" ", "%20").replace("/", "%2F")
+=== before: tests/models/test_url.py ===
+import httpx
+
+
+def test_url_query_encoding():
+    assert httpx.URL("http://x/?a=b c&d=e/f").raw_path == b"/?a=b%20c&d=e/f"
+=== after: tests/models/test_url.py ===
+import httpx
+
+
+def test_url_query_encoding():
+    assert httpx.URL("http://x/?a=b c&d=e/f").raw_path == b"/?a=b%20c&d=e%2Ff"
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["PACKAGE_REPAIR"]}]
