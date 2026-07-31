@@ -144,6 +144,46 @@ def test_engine_error_exit_code(tmp_path):
     assert result.returncode == 2
 
 
+def test_hook_json_blocks_with_reason(repo):
+    _weaken(repo)
+    result = _greenwash(repo, "check", "--format", "hook-json")
+    # Stop-hook protocol: decision travels in JSON, exit stays 0.
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["decision"] == "block"
+    assert "ASSERT_WEAKENED" in payload["reason"]
+    assert "greenwash allow" in payload["reason"]
+
+
+def test_hook_json_clean_is_empty_object(repo):
+    result = _greenwash(repo, "check", "--format", "hook-json")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {}
+
+
+def test_hook_install_merges_existing_settings(repo):
+    claude_dir = repo / ".claude"
+    claude_dir.mkdir()
+    (claude_dir / "settings.json").write_text(
+        '{"permissions": {"allow": ["Bash(pytest:*)"]}}', encoding="utf-8"
+    )
+    result = _greenwash(repo, "hook", "install", "--agent", "claude-code")
+    assert result.returncode == 0, result.stderr
+    settings = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
+    assert settings["permissions"]["allow"] == ["Bash(pytest:*)"]  # preserved
+    commands = [
+        h["command"]
+        for entry in settings["hooks"]["Stop"]
+        for h in entry["hooks"]
+    ]
+    assert "greenwash check --format hook-json" in commands
+    # idempotent
+    again = _greenwash(repo, "hook", "install", "--agent", "claude-code")
+    assert again.returncode == 0
+    settings2 = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
+    assert settings2 == settings
+
+
 def _greenwash_cp1252(repo, *args):
     # Forces the legacy-locale pipe encoding that crashed the term report
     # (confirmed red-team finding): exit codes must survive cp1252.

@@ -160,9 +160,86 @@ def _cmd_check(args: argparse.Namespace) -> int:
         return 0
     if args.format == "json":
         _write_machine(findings_to_json(ir, findings, verdict, errors))
+    elif args.format == "hook-json":
+        # Claude Code Stop-hook protocol: JSON on stdout carries the decision,
+        # exit 0 either way (non-zero would read as a hook failure).
+        import json as _json
+
+        if verdict == "block":
+            visible = [
+                f for f in findings
+                if not f.allowlisted and f.severity in ("high", "critical")
+            ]
+            head = visible[0] if visible else None
+            reason = "greenwash: " + (
+                f"{len(visible)} finding(s) blocking. "
+                + (f"{head.rule} {head.path}"
+                   + (f" :: {head.unit}" if head.unit else "")
+                   + f" — {head.message}. " if head else "")
+                + "Fix the production code, or record a reviewed exemption: "
+                + (f'greenwash allow "{head.fingerprint}" --reason "..."' if head else "")
+            )
+            _write_machine(_json.dumps({"decision": "block", "reason": reason}) + "\n")
+        else:
+            _write_machine("{}\n")
+        return 0
     else:
         _write_term(render(ir, findings, verdict, config.fail_on, errors=errors))
     return 1 if verdict == "block" else 0
+
+
+_PRECOMMIT_SNIPPET = """\
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: greenwash
+        name: greenwash (oracle-tampering tripwire)
+        entry: greenwash check --format term
+        language: system
+        pass_filenames: false
+        always_run: true
+"""
+
+
+def _cmd_hook_install(args: argparse.Namespace) -> int:
+    import json as _json
+
+    if args.agent == "pre-commit":
+        # Nothing to write for them — their config is theirs; print the block.
+        sys.stdout.write(_PRECOMMIT_SNIPPET)
+        return 0
+
+    settings_path = os.path.join(args.repo, ".claude", "settings.json")
+    settings: dict = {}
+    if os.path.exists(settings_path):
+        with open(settings_path, encoding="utf-8") as fh:
+            try:
+                settings = _json.load(fh)
+            except _json.JSONDecodeError:
+                print(f"error: {settings_path} is not valid JSON; not touching it", file=sys.stderr)
+                return 2
+    command = "greenwash check --format hook-json"
+    hooks = settings.setdefault("hooks", {})
+    stop = hooks.setdefault("Stop", [])
+    already = any(
+        h.get("command") == command
+        for entry in stop
+        if isinstance(entry, dict)
+        for h in entry.get("hooks", [])
+        if isinstance(h, dict)
+    )
+    if not already:
+        stop.append({"hooks": [{"type": "command", "command": command}]})
+    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+    with open(settings_path, "w", encoding="utf-8", newline="\n") as fh:
+        _json.dump(settings, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    print(
+        f"{'already installed' if already else 'installed'}: Stop hook in {settings_path}\n"
+        "greenwash will run when the agent finishes and block the stop on high findings."
+    )
+    return 0
 
 
 def _toml_str(value: str) -> str:
@@ -222,7 +299,7 @@ def build_parser() -> argparse.ArgumentParser:
     check = sub.add_parser("check", help="analyse a diff for verification-layer tampering")
     check.add_argument("range", nargs="?", help="BASE..HEAD; omit to check HEAD..worktree")
     check.add_argument("--task", help="task manifest file (TASK.md style)")
-    check.add_argument("--format", choices=["term", "json"], default="term")
+    check.add_argument("--format", choices=["term", "json", "hook-json"], default="term")
     check.add_argument("--fail-on", choices=list(SEVERITY_ORDER), default=None)
     check.add_argument("--emit-ir", action="store_true", help="print the IR JSON and exit")
     check.add_argument("--repo", default=".")
@@ -234,6 +311,12 @@ def build_parser() -> argparse.ArgumentParser:
     sweep_p.add_argument("--limit", type=int, default=200)
     sweep_p.add_argument("--fail-on", choices=list(SEVERITY_ORDER), default=None)
     sweep_p.add_argument("--repo", default=".")
+
+    hook = sub.add_parser("hook", help="integration helpers")
+    hook_sub = hook.add_subparsers(dest="hook_command")
+    hook_install = hook_sub.add_parser("install", help="wire greenwash into an agent or tool")
+    hook_install.add_argument("--agent", choices=["claude-code", "pre-commit"], required=True)
+    hook_install.add_argument("--repo", default=".")
 
     allow = sub.add_parser("allow", help="record a reviewed exemption")
     allow.add_argument("fingerprint")
@@ -248,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
         argv = ["check"]
-    elif argv[0] not in ("check", "allow", "sweep", "-h", "--help", "--version"):
+    elif argv[0] not in ("check", "allow", "sweep", "hook", "-h", "--help", "--version"):
         argv = ["check", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -257,6 +340,11 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_check(args)
         if args.command == "allow":
             return _cmd_allow(args)
+        if args.command == "hook":
+            if getattr(args, "hook_command", None) == "install":
+                return _cmd_hook_install(args)
+            parser.parse_args(["hook", "--help"])
+            return 2
         if args.command == "sweep":
             result = sweep(args.repo, args.revs, args.limit, _today(), args.fail_on)
             _write_machine(result.to_json())

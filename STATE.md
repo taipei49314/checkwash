@@ -109,6 +109,14 @@ Round 1 (correctness lens): 6 findings, all fixed:
   mumei exist; we compete on blockable-by-default precision, zero-LLM,
   zero-execution, determinism. See README "Prior art" + design addendum.
 
+## M2 (adapters) — done
+
+CLI `hook-json` format + `greenwash hook install --agent claude-code`
+(idempotent, merges into existing .claude/settings.json), pre-commit hook
+definition (`.pre-commit-hooks.yaml`), composite GitHub Action
+(`action/action.yml`), and a CI `dogfood` job that runs greenwash on its own
+PRs. 121 tests green; self-check on HEAD~3..HEAD is clean.
+
 ## Next
 
 1. **Side-by-side against swarm-orchestrator** on both corpora, publishing

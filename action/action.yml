@@ -1,0 +1,44 @@
+name: greenwash
+description: >-
+  Deterministic, zero-LLM detector for PR diffs that tamper with the test
+  oracle. Blocks on high-severity findings; every finding carries verbatim
+  before/after evidence.
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  fail-on:
+    description: severity that blocks (info|warn|high|critical)
+    required: false
+    default: high
+  base:
+    description: base ref to diff against (defaults to the PR base)
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      run: python -m pip install --quiet "${{ github.action_path }}/.."
+    - id: check
+      shell: bash
+      env:
+        PYTHONUTF8: "1"
+      run: |
+        BASE="${{ inputs.base }}"
+        if [ -z "$BASE" ] && [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+          BASE="${{ github.event.pull_request.base.sha }}"
+        fi
+        if [ -z "$BASE" ]; then
+          BASE="HEAD~1"
+        fi
+        # fetch enough history for the merge-base
+        git fetch --quiet --deepen=200 origin || true
+        set +e
+        greenwash check "$BASE...HEAD" --fail-on "${{ inputs.fail-on }}" --format term | tee "$GITHUB_STEP_SUMMARY"
+        code=${PIPESTATUS[0]}
+        set -e
+        exit $code

@@ -33,6 +33,24 @@ jobs:
           name: corpus-${{ matrix.os }}-py${{ matrix.python }}
           path: corpus-findings.json
 
+  dogfood:
+    # greenwash runs on its own pull requests. The judge gets judged.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install .
+      - env:
+          PYTHONUTF8: "1"
+        run: |
+          greenwash check "${{ github.event.pull_request.base.sha }}...HEAD" --format term | tee "$GITHUB_STEP_SUMMARY"
+          exit "${PIPESTATUS[0]}"
+
   byte-compare:
     # The cross-OS determinism gate: every OS/Python combination must emit
     # byte-identical corpus findings (SPEC §8).

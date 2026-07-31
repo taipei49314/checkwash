@@ -40,6 +40,22 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 - Honest by design: what it cannot catch is documented in
   [THREATMODEL.md](THREATMODEL.md), not discovered by commenters.
 
+## Integrations
+
+```bash
+# Claude Code — block the agent's stop on high findings
+greenwash hook install --agent claude-code
+
+# pre-commit — prints the config block to paste
+greenwash hook install --agent pre-commit
+
+# GitHub Actions — see action/action.yml; greenwash dogfoods it on its own PRs
+- uses: taipei49314/greenwash/action@main
+```
+
+`greenwash check BASE...HEAD` (three dots) resolves through the merge base,
+so PR diffs never include base-branch commits.
+
 ## Prior art
 
 greenwash is not the first tool to look for agent shortcuts in diffs, and
@@ -58,5 +74,48 @@ does not claim to be. Closest neighbours, credited up front:
 - mumei (reported; Claude-Code-specific harness with clean-HEAD test reruns
   and golden-file freezing) — a harness, where greenwash is a single-purpose
   differ any harness can call.
+
+## Install
+
+Pick the surface that fits; the engine is identical behind all of them.
+
+```bash
+pipx install greenwash          # or: uv tool install greenwash
+greenwash check HEAD~1..HEAD    # a range
+greenwash check                 # HEAD vs the working tree
+```
+
+**GitHub Action** — blocks a PR on high-severity findings:
+
+```yaml
+# .github/workflows/greenwash.yml
+on: [pull_request]
+jobs:
+  greenwash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: taipei49314/greenwash/action@v0
+```
+
+**pre-commit**:
+
+```yaml
+repos:
+  - repo: https://github.com/taipei49314/greenwash
+    rev: v0.1.0
+    hooks: [{ id: greenwash }]
+```
+
+**Claude Code stop-hook** — checks the diff the moment the agent finishes and
+blocks the stop on tampering:
+
+```bash
+greenwash hook install --agent claude-code
+```
+
+greenwash runs on its own pull requests (`.github/workflows/ci.yml`): the
+judge is judged.
 
 License: Apache-2.0.
