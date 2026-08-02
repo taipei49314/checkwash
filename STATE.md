@@ -1,14 +1,31 @@
 # STATE — read this first when taking over
 
-Updated: 2026-07-30 (M1 measured: FP corpus + decoy corpus both run)
+Updated: 2026-08-02 (public, v0.1.1, CI green)
 
 ## Where we are
 
-**M1 substantially complete.** 14 detectors implemented and fixture-covered,
-perf gate green, and *both* benchmark corpora have actually been run — the
-numbers live in `benchmarks/RESULTS.md` and `benchmarks/decoy/README.md`,
-generated from the harnesses, never hand-typed. Current test count: see
-README (pinned by `tests/test_packaging.py`, so it cannot drift).
+**Released and public.** `github.com/taipei49314/greenwash`, **public**,
+tagged **v0.1.1**, CI green on every leg including `byte-compare`. M0–M3 are
+done: 14 detectors, both benchmark corpora run, four adapters, the offline
+`greenwash demo`, and the launch docs. Numbers live in
+`benchmarks/RESULTS.md` and `benchmarks/decoy/README.md`, generated from the
+harnesses, never hand-typed; the test count lives in the README and is pinned
+by `tests/test_packaging.py` so it cannot drift.
+
+**Not done:** the asciinema cast (needs a human at a terminal), and PyPI —
+`pipx install greenwash` does not work yet and the README says so plainly.
+
+### If you are taking over, read this part
+
+The repository is public, so every claim in it is now someone else's to
+check — and a reader already found eight real defects by doing exactly that,
+including a CI job that had been red for days on the very claim the README
+made, and a README that told people to install a tag two fixes behind main.
+Both are recorded below. The lesson is not "be careful"; it is:
+
+> Anything this file, the README, or a commit message calls **done** is an
+> unverified claim until you re-run the thing that proves it. The harnesses
+> exist for that. Use them before you believe any of this.
 
 ### The measurements, and what they cost
 
@@ -141,42 +158,68 @@ THREATMODEL 23-25). The FP sweep was re-run after the fixes and held at
 precision cost on this corpus. README/CONTRIBUTING/docs carry the real
 numbers; launch copy is in docs/launch.md.
 
-**Technically, M3 is done.** What remains is not code:
-- Record the asciinema cast (examples/invoice for the live half, `greenwash
-  demo` for the replay half; design §6.3 storyboard). Needs a human at a
-  terminal — hand-off item.
-- **Flip the repo to public.** Pushed 2026-08-02 to
-  `taipei49314/greenwash` as **private**, on the owner's instruction, which
-  matches the docs/launch.md plan (private until T-1, then public and left to
-  settle for a day). Going public is the irreversible publishing step and
-  stays the owner's call — do NOT flip it autonomously.
+M3 is done and shipped. Published private on 2026-08-02, then made public on
+the owner's instruction after the pre-public audit; v0.1.1 is the current tag.
 
-  Pre-public blockers: **cleared.** v0.1.0 tagged and pushed; the README's
-  install line was fixed from a PyPI package that does not exist to
-  `git+…@v0.1.0`, and then *verified by actually installing it* into a clean
-  venv from GitHub (`greenwash --version` → 0.1.0, `greenwash demo` → 7/7).
-  Secret scan and local-path scan clean. `tests/test_packaging.py` now pins
-  the version strings, the empty dependency list, and that every
-  version-pinned README ref matches the package version.
+### What a reader of the public repo found (2026-08-02)
 
-  Optional before flipping: record the asciinema cast (Show HN impact, not
-  correctness), and publish to PyPI so `pipx install greenwash` works — the
-  README is honest that it does not yet.
+Eight defects, all reproduced before being accepted, all fixed. Recorded
+because the pattern matters more than the list: every one was something the
+project could have checked itself and had not.
+
+1. **CI had been red on `byte-compare` since before v0.1.0** — the job that
+   proves the README's byte-identical claim — and nobody looked. Cause:
+   `tools/emit_corpus.py` wrote through text-mode stdout, so Windows emitted
+   CRLF. The product path was always correct; the *proving harness* was the
+   liar. The local "verified across 3.11/3.12/3.13" check was worthless
+   because all three ran on Windows: three Pythons, one OS.
+2. **Set literals were hash-seed dependent** (`repr({"a","b"})`), leaking
+   non-determinism into finding messages and the IR. Now canonicalised.
+3. **Three different test counts** in three documents. Now collected from the
+   suite and pinned by a test.
+4. **RESULTS.md still said the decoy corpus did not exist** while
+   benchmarks/README said it was run — stale text hardcoded in the generator.
+5. **"2.2% false positives" was the wrong name.** A block is not
+   automatically a mistake. All 40 blocks of the current build were
+   re-adjudicated: 24 false positive (1.33%), 16 legitimate policy block
+   (0.89%), 0 unclear.
+6. **The README pinned `@v0.1.0`, a tag two fixes behind main** — visitors
+   read the fixed docs and installed the unfixed engine. `test_packaging.py`
+   now diffs the pinned tag's `src/` against the working tree and fails.
+7. **The CI matrix covered 3.11–3.12 while the README claimed 3.11–3.13.**
+   3.13 added to the matrix rather than shrinking the claim.
+8. **STATE.md itself described a world that no longer existed** — stale test
+   counts, "repo is private", "flip to public" still listed as to-do.
 
 ## Later
+
+- Record the asciinema cast; publish to PyPI.
+- **Adjudicate the block split more than once.** The 1.33% is one agent, one
+  pass, no inter-rater agreement. Two or three independent passes with
+  agreement reported would make it solid; RESULTS.md says so.
 
 - Widen the decoy corpus: more tasks, harder/underspecified bugs, weaker
   models, retry pressure. 12 tasks × 1 attempt is a smoke test with teeth.
 - Fixture corpus toward pos≥5/neg≥5 per detector.
 
-## Determinism, verified
+## Determinism, verified — and how the first verification fooled me
 
-The byte-identical claim (SPEC §8) was checked across Python 3.11.15 /
-3.12.13 / 3.13.14 on 2026-07-31: `tools/emit_corpus.py` produced the identical
-284849-byte artifact on all three (sha 5bd75e8d…). The CI `byte-compare` job
-keeps this true across OSes too. First measurement in this project that
-confirmed a claim rather than breaking it — worth noting precisely because the
-others didn't.
+On 2026-07-31 I checked the byte-identical claim (SPEC §8) across Python
+3.11.15 / 3.12.13 / 3.13.14, got an identical artifact on all three, and wrote
+here that it was "the first measurement in this project that confirmed a claim
+rather than breaking it."
+
+**That was wrong, and the way it was wrong is the useful part.** All three
+interpreters ran on Windows, so all three got the same CRLF translation from
+`tools/emit_corpus.py`'s text-mode stdout. Three Pythons, one OS — the varying
+axis I actually needed was the one I did not vary. Meanwhile the CI job that
+*did* vary it had been failing for days, and I did not look at it. A green
+local check plus a red ignored gate reads as confirmation and is the opposite.
+
+Now: the emitter writes bytes, and the claim is proved on every push by the
+`byte-compare` job across nine matrix legs (Linux/macOS/Windows × 3.11/3.12/
+3.13). All nine emitted `d8ff2848…` on the run that fixed it. Trust that job,
+not a local run.
 
 ## Working rule that has earned its place
 

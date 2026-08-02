@@ -7,7 +7,7 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release.** 14 detectors, 137 tests, zero runtime dependencies.
+> Status: **pre-release.** 14 detectors, 138 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -27,7 +27,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 - **0 LLM calls, 0 network calls, 0 runtime dependencies.** Pure-stdlib
   Python; verdicts are deterministic and byte-identical across Linux, macOS
   and Windows on Python 3.11–3.13 — proved on every push by the
-  `byte-compare` CI job, which diffs the artifacts from all six matrix legs.
+  `byte-compare` CI job, which diffs the artifacts from all nine matrix legs.
 - **Sub-second on real diffs** (0.2 s for a 3000-line test diff, 0.7 s for
   500 changed files), enforced by a gate rather than asserted.
 - Analyses the *diff*, not the code state: two-sided AST comparison against
@@ -80,7 +80,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; greenwash dogfoods it on its own PRs
-- uses: taipei49314/greenwash/action@v0.1.0
+- uses: taipei49314/greenwash/action@v0.1.1
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -112,8 +112,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.0
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.0
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.1
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.1
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -137,7 +137,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.0
+      - uses: taipei49314/greenwash/action@v0.1.1
 ```
 
 **pre-commit**:
@@ -145,7 +145,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.0
+    rev: v0.1.1
     hooks: [{ id: greenwash }]
 ```
 

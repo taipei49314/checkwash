@@ -63,6 +63,38 @@ def test_documented_test_count_is_accurate():
             )
 
 
+def test_pinned_tag_ships_the_current_source():
+    """The tag the README tells people to install must contain today's code.
+
+    Matching version *strings* is not enough: v0.1.0 pointed at a commit two
+    fixes behind main, so a visitor following the README got the pre-fix
+    engine while reading the post-fix docs. This compares the pinned tag's
+    `src/` and `pyproject.toml` against the working tree.
+    """
+    import subprocess
+
+    version = _pyproject()["project"]["version"]
+    tag = f"v{version}"
+    exists = subprocess.run(
+        ["git", "rev-parse", "--verify", f"{tag}^{{commit}}"],
+        capture_output=True,
+        cwd=str(ROOT),
+    )
+    if exists.returncode != 0:
+        # Not yet tagged is fine mid-development; shipping a stale tag is not.
+        return
+    diff = subprocess.run(
+        ["git", "diff", "--name-only", tag, "--", "src/", "pyproject.toml"],
+        capture_output=True,
+        cwd=str(ROOT),
+    )
+    changed = [p for p in diff.stdout.decode().split("\n") if p.strip()]
+    assert not changed, (
+        f"{tag} does not contain the current source — the README tells people "
+        f"to install it, but these differ: {changed}. Cut a new release."
+    )
+
+
 def test_readme_install_refs_match_version():
     """Every version-pinned install line in the README points at this version.
 
