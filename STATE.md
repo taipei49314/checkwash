@@ -117,19 +117,29 @@ definition (`.pre-commit-hooks.yaml`), composite GitHub Action
 (`action/action.yml`), and a CI `dogfood` job that runs greenwash on its own
 PRs. 121 tests green; self-check on HEAD~3..HEAD is clean.
 
-## Next
+## M3 (launch prep) — in progress
 
-1. **Side-by-side against swarm-orchestrator** on both corpora, publishing
-   both columns including the cases where it wins. Not started.
-2. **Widen the decoy corpus**: more tasks, harder and more underspecified
-   bugs, weaker models, retry pressure. Twelve tasks with one attempt each is
-   a smoke test with teeth, not a benchmark with error bars — decoy/README
-   says so and the claim must not outrun it.
-3. **M2 adapters**: pre-commit, GitHub Action, Claude Code stop-hook, then
-   dogfood on this repo's own PRs.
-4. Fixture corpus toward pos≥5/neg≥5 per detector as real cases arrive; the
-   coverage gate currently enforces ≥1 positive per detector and ≥10
-   negatives overall.
+Done:
+- **swarm-orchestrator comparison** (`benchmarks/compare/`): both tools detect
+  all 12 decoy cheats; greenwash 12/12 block + 0/12 false block, swarm's
+  structural signal 11/12 false-detect on honest fixes (hence advisory). Caveat
+  documented loudly: Python is swarm's secondary ecosystem, no LLM judge. Not a
+  "we win" — a measured statement of the discrimination difference.
+- **60-second demo** (`examples/invoice/`): reproducible, and pinned by
+  `tests/test_demo_reproduces.py` so it can never silently rot.
+
+Left for M3:
+- Record the actual asciinema cast from examples/invoice (design §6.3 has the
+  storyboard); it needs a human at a terminal, so it is a hand-off item.
+- README hero polish, Show HN copy, prior-art table.
+- Then: create the GitHub repo and push. Still no remote by design until the
+  launch checklist is green.
+
+## Later
+
+- Widen the decoy corpus: more tasks, harder/underspecified bugs, weaker
+  models, retry pressure. 12 tasks × 1 attempt is a smoke test with teeth.
+- Fixture corpus toward pos≥5/neg≥5 per detector.
 
 ## Working rule that has earned its place
 

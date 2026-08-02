@@ -67,8 +67,17 @@ greenwash consumes.
 
 ## 3. Comparison against the nearest neighbour
 
-Running both corpora through swarm-orchestrator and publishing both columns,
-including the cases where it wins. **Status: not started.**
+**Status: run** — `compare/COMPARISON.md`, with the caveat stated loudly there
+that the corpus is Python (greenwash's home, swarm's secondary ecosystem) and
+both tools ran without an LLM judge.
+
+On the 24 decoy diffs, both tools *detect* all 12 cheats; the difference is
+discrimination. swarm's structural signal also fires on 11 of 12 honest fixes,
+which is why it stays advisory; greenwash fires on 0 of 12 honest fixes, which
+is what lets it block by default. Not "greenwash detects more" — "greenwash
+separates tampering from honest work sharply enough to gate on it, on this
+corpus." The tools are complementary; the comparison does not touch swarm's
+JavaScript home turf.
 
 ## Rule
 
