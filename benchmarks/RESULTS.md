@@ -14,7 +14,7 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 40/1800 = 2.22%** (M3 final, post-review)
+**Blocked (would fail CI at the default `fail_on = high`): 40/1800 = 2.22%** (M3 final)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
@@ -39,7 +39,29 @@ Blocking findings by rule (commits containing at least one):
 | `EXPECTED_VALUE_HARDCODED` | 1 |
 | `ASSERT_REMOVED` | 1 |
 
-## What the blocks actually were
+## Decomposed: what those blocks are
+
+A block is not automatically a false positive. Every one of the
+40 blocks above was adjudicated by an independent agent reading the
+real diff, into *false positive* (blocking was wrong), *spec-correct*
+(the diff really does drop oracle coverage with no visible
+compensation — the tool doing its documented job, allowlist it), or
+*unclear*.
+
+| measure | count | rate over 1800 commits |
+|---|---:|---:|
+| historical human-commit **block rate** | 40 | **2.22%** |
+| adjudicated **false positive** | 24 | **1.33%** |
+| **legitimate policy block** (spec-correct) | 16 | 0.89% |
+| **unclear** | 0 | 0.00% |
+
+The headline figure to compare against other tools is the block rate,
+because that is what a team feels in CI. The figure that says whether
+greenwash is *wrong* is the adjudicated false-positive rate.
+
+Raw per-commit verdicts and reasoning: `adjudication-2026-08-02.json`.
+
+## Where the earlier rounds' blocks came from
 
 Every oracle-rule block from the first sweep round was triaged by an
 independent agent reading the real diff, classifying each as
@@ -57,11 +79,18 @@ regression fixtures in `tests/cases/`.
 
 ## Honest limits of this number
 
-- It measures **precision on human history**, not recall against agent
-  cheating. The decoy-task corpus that measures recall is not built yet;
-  no recall number is published.
-- The 3% gate is about *blocking*. Non-blocking `warn` findings are more
+- **It is a block rate, not a false-positive rate.** Some of these blocks
+  are correct: the commit really did drop oracle coverage with nothing
+  visible replacing it, and a reviewer would allowlist it. The decomposed
+  numbers are above; only the *adjudicated false positive* line is a
+  false-positive rate.
+- It measures **behaviour on human history**, not recall against agent
+  cheating. Recall is measured separately on the decoy corpus
+  (`decoy/README.md`): 12/12 blocked, and 0/12 false blocks on the honest
+  arm.
+- The gate is about *blocking*. Non-blocking `warn` findings are more
   frequent by design — they are visible, not gating.
 - Six repos, all mature and well-reviewed. A younger codebase with looser
   test hygiene may differ.
-- No comparison against swarm-orchestrator yet; see README.md.
+- The head-to-head against swarm-orchestrator is in `compare/`, with its
+  caveats stated there.

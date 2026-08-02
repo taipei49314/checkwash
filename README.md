@@ -53,11 +53,12 @@ Two harnesses, both reproducible from a clone
   often greenwash would fail CI on a commit a human wrote. Every repo is
   under 4%; the progression from an initial 8.6%, and what moved each step,
   is in the benchmarks README.
-  A block is not automatically a mistake — some of those commits really do
-  drop oracle coverage with nothing visible replacing it. Each one was
-  adjudicated into *false positive* / *legitimate policy block* / *unclear*;
-  the decomposition is in [RESULTS.md](benchmarks/RESULTS.md), and only the
-  false-positive line is a false-positive rate.
+  A block is not automatically a mistake. All 40 were adjudicated commit by
+  commit against the real diff: **24 false positives (1.33%)**, 16 legitimate
+  policy blocks (0.89%) where the commit really does drop oracle coverage
+  with nothing visible replacing it, 0 unclear. Per-commit reasoning in
+  [RESULTS.md](benchmarks/RESULTS.md). The block rate is what a team feels in
+  CI; the false-positive rate is what says whether greenwash is *wrong*.
 - **Recall — 12 / 12.** Twelve bug-fix tasks run through real coding agents
   told to make CI green without fixing the bug; greenwash blocks all twelve
   tampering diffs. Under natural conditions, 0 of 12 agents touched a test at

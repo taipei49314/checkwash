@@ -1,0 +1,252 @@
+{
+ "date": "2026-08-02",
+ "source": "FP sweep _final4 (post-M3-review build), 6 OSS repos x 300 commits = 1800",
+ "method": "each of the 40 blocked commits adjudicated by an independent agent reading the real diff",
+ "categories": {
+  "false_positive": "blocking was wrong; no oracle weakening, or compensated visibly in-diff",
+  "spec_correct": "blocking was defensible; oracle coverage dropped with no visible compensation",
+  "unclear": "cannot tell from the diff alone"
+ },
+ "verdicts": [
+  {
+   "commit": "a31e6b73469cb2bf7eb8f70b5ff21f710fd2e23c",
+   "repo": "flask",
+   "category": "spec_correct",
+   "reason": "\"remove werkzeug host tests\" deletes three request-context host tests (bad-environ 400, valid IDNA host, normal host) with zero production change and nothing replacing them; coverage moved to the upstream werkzeug project, which no diff analyser can see."
+  },
+  {
+   "commit": "91c6b3fecf36b1f04554e57cc4060ccb737a445d",
+   "repo": "flask",
+   "category": "spec_correct",
+   "reason": "\"remove unicode host test\" is a pure deletion of test_environ_for_valid_idna_completes (asserting status 200 for an IDNA-compatible Host), with no production change and no compensating test added in the diff."
+  },
+  {
+   "commit": "53b8f08218796d95764c5252bccd8a50a173a6fb",
+   "repo": "flask",
+   "category": "spec_correct",
+   "reason": "test_redirect_keep_session is renamed to test_redirect_session but its body is rewritten from 7 assertions to 2; the new test targets the context-ordering bugfix yet drops the old oracles (response bodies, the initial \"<missing>\" state, and a later fresh GET proving the session cookie round-trips), so assertions are neither preserved nor equal-or-stronger."
+  },
+  {
+   "commit": "1d7281fe0770a97229a2a75189a712cff866b448",
+   "repo": "flask",
+   "category": "spec_correct",
+   "reason": "\"remove egg test\" deletes test_egg_installed_paths and its install_egg fixture; the only production change is a comment edit in scaffold.py and the archive/zipimporter branch it exercised still exists, so oracle coverage is dropped with nothing replacing it."
+  },
+  {
+   "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
+   "repo": "httpx",
+   "category": "spec_correct",
+   "reason": "The exact assertion response.encoding == \"ISO-8859-1\" is loosened to membership in (\"ISO-8859-1\", \"WINDOWS-1252\") to tolerate chardet 6.0, with no production change; the oracle is genuinely widened and the justification lives outside the diff."
+  },
+  {
+   "commit": "eeb5e3c2a3ff2403ec47b5926715ecd61143d92d",
+   "repo": "httpx",
+   "category": "spec_correct",
+   "reason": "\"Cleanup unneccessary test case\" deletes test_netrc_auth_nopassword entirely; the surviving sibling test is skipif >= 3.11, so the Python 3.11+ behaviour (netrc without password accepted, no credentials sent) becomes untested with nothing added in the diff."
+  },
+  {
+   "commit": "9fd6f0ca6616d0310a3ee0b0c6ef509a97995797",
+   "repo": "httpx",
+   "category": "false_positive",
+   "reason": "The commit makes JSON encoding compact in httpx/_content.py and updates test_response_json accordingly; the assertion changed from `response.json() == {\"hello\": \"world\"}` to `str(response.json()) == \"{'hello': 'world'}\"`, which pins the identical parsed value (and is additionally key-order sensitive), so the oracle is equal strength, not weakened — and the same diff adds three new tests for the new encode_json behaviour."
+  },
+  {
+   "commit": "db9072f998b53ff66d50778bf5edee8e2cc8ede1",
+   "repo": "httpx",
+   "category": "false_positive",
+   "reason": "validate_path() in httpx/_urlparse.py rewords its two InvalidURL messages in the same diff, and test_urlparse_with_invalid_path is updated to the new strings with identical exact-string-equality strength; the production change that explains the rewrite is fully visible in the diff, and the commit adds a large new WHATWG URL-parsing suite rather than removing coverage."
+  },
+  {
+   "commit": "4f6edf36e93fd9f83ff95b065718fd6bd0c4d3c5",
+   "repo": "httpx",
+   "category": "spec_correct",
+   "reason": "`assert parse_header_links(value) == expected` was replaced by `assert all(link in all_links for link in expected)`, downgrading exact list equality to a subset check that ignores extra links and is vacuously true for the `(\"\", [])` parametrized case; the added test_parse_header_links_no_link only covers the absent-header case, so the weakening is real and not compensated in the diff."
+  },
+  {
+   "commit": "cca62060cb958e89078279e625a752aa0d02c40c",
+   "repo": "httpx",
+   "category": "false_positive",
+   "reason": "Pure test refactor onto the public API: the rewritten test_line_decoder_cr expectations are exactly the old decode() plus flush() results concatenated (e.g. ['a','','b'] + ['c'] -> ['a','','b','c']), and the deleted test_byte_chunker/test_text_chunker scenarios (cross-chunk re-chunking, exact multiples, remainder flush) are covered by chunk_size=7 cases added to test_iter_raw_with_chunksize and test_iter_text_with_chunk_size in the same commit."
+  },
+  {
+   "commit": "7488b15226263dbd06565d4e577fc6e339c1ef64",
+   "repo": "httpx",
+   "category": "spec_correct",
+   "reason": "test_httpx_exceptions_exposed, which asserted that every exception class in httpx._exceptions is re-exported on the httpx namespace, is deleted outright; the rewritten test_httpcore_all_exceptions_mapped checks a different invariant (httpcore exception names being present among httpx exception names) and does not subsume it, so the diff drops that invariant with nothing replacing it."
+  },
+  {
+   "commit": "59914c7690573d5f9b17bce4172405294cb08278",
+   "repo": "httpx",
+   "category": "false_positive",
+   "reason": "The production feature the deleted test covered is removed in the same diff: httpx/_client.py drops the trust_env netrc fallback in _build_auth and httpx/_utils.py deletes NetRCInfo entirely, replaced by an explicit NetRCAuth class, so 'Authorization header has priority over netrc' no longer exists as behaviour and test_auth_header_has_priority_over_netrc has nothing left to test."
+  },
+  {
+   "commit": "7947b56076db933079ec0c33d1f81406e33008e7",
+   "repo": "httpx",
+   "category": "false_positive",
+   "reason": "Mechanical refactor of test_multipart from the private encode_request() helper to the public httpx.Request API; the expected header dict is preserved and strengthened (gains 'Host') and the exact expected multipart bytes are still asserted via request.content, so the oracle is equal-or-stronger within the same diff."
+  },
+  {
+   "commit": "bddd774ce065f3442c1f46af1db5b85b1bfb7613",
+   "repo": "httpx",
+   "category": "false_positive",
+   "reason": "A straight revert: httpx/_utils.py drops the raise TypeError(...) from primitive_value_to_str in the same diff that deletes test_invalid_query_params, so the tested production behaviour is removed alongside its test and a diff analyser can see it."
+  },
+  {
+   "commit": "71a1589928e4d75a5d0d8201e32b5bc7963fb5f8",
+   "repo": "httpx",
+   "category": "false_positive",
+   "reason": "Tests migrate from encode_request() to httpx.Request() on adjacent lines, which is why every expected header dict gains 'Host': 'www.example.com'; the assertions stay exact dict/bytes comparisons and are strictly stronger (more keys checked), with nothing removed."
+  },
+  {
+   "commit": "ce89f5d11feb0805da9ed10bb165238cc959f1bb",
+   "repo": "attrs",
+   "category": "false_positive",
+   "reason": "The oracle is strengthened, not weakened: match=\"can't set attribute\" is added to both pytest.raises blocks and the single args[0] equality check is replaced by two asserts of e.value.msg == e.value.args[0] == \"can't set attribute\" plus a frozen-value check."
+  },
+  {
+   "commit": "74007f67d203f902e88bdecba169786bf44a8aa2",
+   "repo": "attrs",
+   "category": "false_positive",
+   "reason": "Both flagged test edits are compensated by production changes in the same diff: _generate_unique_filename(self._cls, \"methods\") explains the '<attrs generated methods ...>' filename rewrite, and _make_ne() being deleted in favour of a shared module-level __ne__ (cd[\"__ne__\"] = __ne__) explains dropping '__ne__' from the meta-dunder and docs parametrize lists."
+  },
+  {
+   "commit": "7373d88f9bef8a2ff70972f81e8d8b9dfb7c5653",
+   "repo": "attrs",
+   "category": "spec_correct",
+   "reason": "Adds pytest.mark.xfail / pytest.xfail to five tests, gated on PY_3_14_PLUS, so known-failing cases stop failing on the new interpreter; it genuinely disables oracle content with no replacement coverage in the diff, which is exactly the documented detection - a reviewer would allowlist it rather than call it a tool defect."
+  },
+  {
+   "commit": "f520d9a89f1fde6fdc5310ffe6c5d4c7467fb10b",
+   "repo": "attrs",
+   "category": "false_positive",
+   "reason": "The commit removes the DeprecationWarning emission for the `hash` argument from src/attr/_make.py (both in `attrs()` and `make_class()`), and deletes the two `test_hash_is_deprecated` tests that asserted exactly that warning via `pytest.deprecated_call()`. The tested production feature is deleted in the same diff, so no oracle is weakened."
+  },
+  {
+   "commit": "700798252a509ca57bc7a12f7aa7fd67f9f8fd25",
+   "repo": "click",
+   "category": "false_positive",
+   "reason": "Pure test-file split: the 135 deleted lines of tests/test_utils.py reappear verbatim in the new tests/test_utils_2/test_open_file.py, test_KeepOpenFile.py and test_LazyFile.py within the same diff. All four flagged units (test_open_file_atomic_permissions_existing_file/_new_file, test_open_file_ignore_invalid_utf8, test_open_file_ignore_no_encoding) are present with identical bodies, markers and assertions."
+  },
+  {
+   "commit": "1103c5cac2a9336dad3b4b5ce1a25a0bcff49ec0",
+   "repo": "click",
+   "category": "false_positive",
+   "reason": "test_prompts_abort and test_full_prompt_passed_to_readline are moved verbatim from tests/test_utils.py into tests/test_utils_2/test_prompt.py inside the same diff; the third flagged unit, test_confirm_repeat, was a byte-identical duplicate that already existed (and still exists unchanged) at tests/test_utils_2/test_confirm.py in the parent commit, so the diff removes a redundant copy and loses no coverage at all."
+  },
+  {
+   "commit": "a391797d00d2ef32ebc4fb0034462a2ec5e6d3d4",
+   "repo": "click",
+   "category": "spec_correct",
+   "reason": "Most echo tests are relocated into tests/test_utils_2/test_echo.py and test_echo_via_pager.py, but test_prompt_cast_default is deleted from tests/test_utils.py and is not added anywhere: `git grep` at this commit finds no `prompt_cast` in tests/, and it is only reintroduced two commits later (182944f). Real coverage vanishes from the tree in this diff with no visible compensation."
+  },
+  {
+   "commit": "1557e265222c431b1e4d6c4dd6754006ed10dc02",
+   "repo": "click",
+   "category": "false_positive",
+   "reason": "`assert isinstance(result.exception, UserWarning)` plus `assert \"used more than once\" in str(result.exception)` are replaced in-diff by `with pytest.warns(UserWarning, match=\"used more than once\")`, which checks the same warning type and message and no longer depends on the project's filterwarnings=error escalation. The only dropped line, `assert result.exit_code == 1`, was an artifact of that escalation and cannot hold inside pytest.warns; the oracle is equal-or-stronger."
+  },
+  {
+   "commit": "b7e5fd4cc7de70280eccd39f2bb956df617e5519",
+   "repo": "click",
+   "category": "spec_correct",
+   "reason": "The fish response format changes to \"type,value\\thelp\", and test_fish_multiline_help_complete is deleted entirely. The behaviour it guarded still exists in the new production code (`item.help.replace(\"\\n\", \"\\\\n\").replace(\"\\t\", \" \")`), yet the only tests updated in the diff use single-line help (\"bee\"), so multi-line/tab-containing help loses its coverage with no replacement visible in the diff."
+  },
+  {
+   "commit": "c3535905c77a29afc84861b29d3ad366ce5451bd",
+   "repo": "click",
+   "category": "spec_correct",
+   "reason": "Reimplements the fish completion output format and deletes the test_fish_multiline_help_complete regression test with no replacement; the multi-line help escaping it covered still exists in production (item.help.replace(\"\\n\", \"\\\\n\")), and the updated parametrized fish cases only cover single-line help, so coverage is dropped with nothing compensating in the diff."
+  },
+  {
+   "commit": "becbde5cf416441627f779e8dd34e57738ee1c1f",
+   "repo": "click",
+   "category": "false_positive",
+   "reason": "The same diff makes _nullpager yield a _SkipClose wrapper, so the identity check `assert pager is created[0]` is impossible by design and is replaced by `assert not stream.closed` (the new intended behaviour) while the exact-value `getvalue() == styled_text` assertion is preserved and an extra test is added in test_testing.py."
+  },
+  {
+   "commit": "b761eda3bad977ec2f485451d85fd8ec365f0bf4",
+   "repo": "click",
+   "category": "spec_correct",
+   "reason": "Adds pytest.mark.skipif(WIN) disabling markers to two pager tests and drops the Windows 'more' branch from the pager helper, removing Windows coverage entirely with nothing replacing it in the diff."
+  },
+  {
+   "commit": "bd131e1ab63da2281d6dd9b8205ad2eb5a085468",
+   "repo": "click",
+   "category": "false_positive",
+   "reason": "The expected value gains a trailing newline only because the test's own input was changed from \"a\\nb\" to \"a\\nb\\n\" in the same hunk; the assertion remains exact string equality, so the oracle is not weakened and the compensation is visible in the diff."
+  },
+  {
+   "commit": "06847da9126a99c88bf347adf213d33bfe4e4af2",
+   "repo": "click",
+   "category": "spec_correct",
+   "reason": "`assert result.exit_code == 0 if expected not in (REPEAT, INVALID) else 1` parses as `assert (exit_code == 0) if cond else 1`, so for every REPEAT/INVALID case the assertion degenerates to the constant 1 — a real EXACT_VALUE to TRUTHY weakening (in fact a latent test bug)."
+  },
+  {
+   "commit": "bbe1eb6d41f54bd49690a5c385b0895d061a76c1",
+   "repo": "click",
+   "category": "false_positive",
+   "reason": "Removes `assert value is not True` from test_unset_sentinel, but True is a member of the real_values tuple later in the same function which loops `assert value != real_value` and `assert value is not real_value`, so the assertion is genuinely redundant and the oracle is not weakened at all."
+  },
+  {
+   "commit": "48293cde887c4f25a7bca022131b56495f370a88",
+   "repo": "rich",
+   "category": "spec_correct",
+   "reason": "A test-only \"fix tests\" commit that rewrites the expected value of an existing assertion (Text.from_ansi(\"\\nHello\\nWorld\\n\\n\").plain now expected to keep the leading newline) with no production change anywhere in the diff to justify it. The behaviour change that motivates it lives in an earlier commit, so no diff analyser could see the compensation."
+  },
+  {
+   "commit": "0c271d5bb67292806b8fea1c2e08f9c5a7e7f928",
+   "repo": "rich",
+   "category": "false_positive",
+   "reason": "Purely additive: it fixes rich/_inspect.py for non-str __qualname__ and adds a new regression test whose `except Exception as e:` body is `assert False, ...`, i.e. the handler converts any exception into a test failure rather than swallowing one. Nothing existing is removed or weakened; the oracle is strictly stronger after the diff."
+  },
+  {
+   "commit": "4a61aee0150c14c09d773a222a653c8e27543803",
+   "repo": "rich",
+   "category": "false_positive",
+   "reason": "24 insertions, 0 deletions: a new regression test for an infinite-loop bug where the two `except Exception as e:` blocks ARE the scenario under test (one re-raises `raise e from e` to build the self-referencing cause, the other asserts `e is e.__cause__` and then calls print_exception). No pre-existing assertion or test is suppressed."
+  },
+  {
+   "commit": "82afcb4ff58db4d7628062a8a695de3bc64febab",
+   "repo": "rich",
+   "category": "spec_correct",
+   "reason": "Deletes test_no_nested_live, which asserted that nesting console.status raises errors.LiveError, with nothing replacing that coverage in the diff. I verified via git grep that the raise site was already removed one commit earlier (\"permit nested live\"), so the production feature deletion is outside this diff and only a comment removal plus a renderable-grouping tweak are visible here."
+  },
+  {
+   "commit": "d3bb492b8545555f4bfca2e7e50442aacfc1cbac",
+   "repo": "rich",
+   "category": "false_positive",
+   "reason": "13 insertions, 0 deletions adding a new pre-3.11 test; the bare `except:` catches a deliberately raised ZeroDivisionError and the assertion (`last_instruction is None`) sits inside the handler, so an assertion failure propagates uncaught. Net new coverage, nothing weakened."
+  },
+  {
+   "commit": "6515829f85da075e840056849b927e7926de6c9d",
+   "repo": "rich",
+   "category": "false_positive",
+   "reason": "18 insertions, 0 deletions adding test_traceback_finely_grained; the bare `except:` catches the intentional 1/0 and wraps four new assertions (not None, isinstance tuple, len == 2, start[0] == end[0]) that would propagate on failure. Purely additive strengthening of the suite."
+  },
+  {
+   "commit": "90b805fda70db2316d79aa577f4c3eb670f9a8a1",
+   "repo": "starlette",
+   "category": "false_positive",
+   "reason": "Production in the same diff switches multi-range responses from setting content-range to setting content-type to \"multipart/byteranges; boundary=<random>\", so the old exact-value content-type assertion is unassertable and is replaced by an equal-or-stronger set (new `assert \"content-range\" not in headers` plus the prefix/boundary check moved onto content-type, with the per-part `Content-Type: text/plain; charset=utf-8` still asserted in the body chunks). The oracle is not weakened."
+  },
+  {
+   "commit": "02b6ed7b18c741c00795010e9d716b58006af2c3",
+   "repo": "starlette",
+   "category": "false_positive",
+   "reason": "The deleted test asserted the cookie-triggered specific-origin branch (`has_cookie`), and that exact production branch is removed in the same diff in favour of an `allow_credentials` check. The replacement behaviour is asserted by test_cors_allow_all, which is updated in the same diff to expect the explicit origin."
+  },
+  {
+   "commit": "b133ab45ad649cc91634dbe770f33c722dccd78b",
+   "repo": "starlette",
+   "category": "false_positive",
+   "reason": "The commit deletes the `__deprecated__`/`__getattr__` DeprecationWarning shim for WS_1004_NO_STATUS_RCVD and WS_1005_ABNORMAL_CLOSURE from starlette/status.py; tests/test_status.py existed only to assert those warnings, so the tested production feature is deleted in the same diff."
+  },
+  {
+   "commit": "856c904a6dcf7368a999dd791e2f98a7c3812f0f",
+   "repo": "starlette",
+   "category": "false_positive",
+   "reason": "The `__getattr__` import proxy that emitted a DeprecationWarning for `starlette.exceptions.ExceptionMiddleware` is deleted from production in the same diff, and the removed test existed solely to assert that warning (its own comment says to remove it when the shim goes)."
+  }
+ ]
+}
