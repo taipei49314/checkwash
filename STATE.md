@@ -147,6 +147,15 @@ Left for M3:
   models, retry pressure. 12 tasks × 1 attempt is a smoke test with teeth.
 - Fixture corpus toward pos≥5/neg≥5 per detector.
 
+## Determinism, verified
+
+The byte-identical claim (SPEC §8) was checked across Python 3.11.15 /
+3.12.13 / 3.13.14 on 2026-07-31: `tools/emit_corpus.py` produced the identical
+284849-byte artifact on all three (sha 5bd75e8d…). The CI `byte-compare` job
+keeps this true across OSes too. First measurement in this project that
+confirmed a claim rather than breaking it — worth noting precisely because the
+others didn't.
+
 ## Working rule that has earned its place
 
 Every measurement so far found a defect the code review did not: the sweep

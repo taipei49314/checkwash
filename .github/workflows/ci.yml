@@ -61,6 +61,9 @@ jobs:
         with:
           path: corpus
       - name: all artifacts must be byte-identical
+        # Across every OS AND every Python version in the matrix. Verified
+        # locally 2026-07-31 on 3.11.15 / 3.12.13 / 3.13.14 (identical, sha
+        # 5bd75e8d…); this job keeps it true on Linux/macOS/Windows too.
         run: |
           sha256sum corpus/*/corpus-findings.json
           count=$(sha256sum corpus/*/corpus-findings.json | awk '{print $1}' | sort -u | wc -l)
