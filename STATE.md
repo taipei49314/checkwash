@@ -133,13 +133,20 @@ Done:
   Pinned by `tests/test_demo_command.py`, including that the cases load via
   `importlib.resources` — the exact path a pipx install reads them by.
 
-Left for M3:
-- Record the actual asciinema cast (examples/invoice for the live capture,
-  then `greenwash demo` for the replay half; design §6.3 storyboard). Needs a
-  human at a terminal — hand-off item.
-- README hero polish, Show HN copy, prior-art table.
-- Then: create the GitHub repo and push. Still no remote by design until the
-  launch checklist is green.
+M3 adversarial review of the newest code (PACKAGE_REPAIR, triviality filter,
+self-comparison) found 3 defects, all reproduced and fixed (DECISIONS D-010,
+THREATMODEL 23-25). The FP sweep was re-run after the fixes and held at
+40/1800 = 2.22% — tightening PACKAGE_REPAIR closed the bypass at zero
+precision cost on this corpus. README/CONTRIBUTING/docs carry the real
+numbers; launch copy is in docs/launch.md.
+
+**Technically, M3 is done.** What remains is not code:
+- Record the asciinema cast (examples/invoice for the live half, `greenwash
+  demo` for the replay half; design §6.3 storyboard). Needs a human at a
+  terminal — hand-off item.
+- **Create the GitHub repo and push.** This is an outward, irreversible,
+  publishing action. It is left for the human to decide and do — the project
+  has deliberately had no remote the entire time. Do NOT push autonomously.
 
 ## Later
 
