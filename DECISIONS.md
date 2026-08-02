@@ -26,6 +26,28 @@ warn + escalator table). Frozen: uniform base `warn`, deterministic
 escalator/de-escalator table in SPEC §5. One gating philosophy, one file
 (`gating.py`), auditable in one read.
 
+## D-010 (2026-07-31): PACKAGE_REPAIR needs a modified symbol, not a touched file
+
+The M3 review found that PACKAGE_REPAIR — added in M1 to stop httpx's
+through-an-unchanged-module false positives — credited *any* prod change in an
+imported package. So a diff could rewrite an expected value to match buggy
+output and defuse the block with one dead function, or a comment, in an
+unrelated file of that package. That is bypass #4 reopened for
+EXPECTED_VALUE_CHANGED.
+
+Frozen: `prod_packages` records a package only when a **modified existing
+symbol** lives in it (before and after both have the symbol, with different
+fingerprints). A newly added dead function or a comment-only edit no longer
+counts. Verified: the httpx behaviour-change commits still pass, the no-op
+decoy blocks. The residual — a test-only diff that rewrites expectations with
+no prod change at all — correctly blocks and is allowlisted by a human, the
+same as any spec-correct oracle edit.
+
+This is the second time a fix for a false positive introduced a false
+negative (see the EXPECTED_VALUE_HARDCODED trade-off, D-009). The lesson is
+banked: any deescalator added to fix an FP gets adversarially reviewed for
+the FN it opens, before it ships.
+
 ## D-008 (2026-07-30): generated output is never evidence
 
 The decoy run caught 0 of 12 real tampering diffs because pytest's untracked

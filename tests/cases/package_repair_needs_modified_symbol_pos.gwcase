@@ -1,0 +1,36 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: A no-op prod edit in an imported package must not launder an oracle rewrite
+origin: M3 review — PACKAGE_REPAIR was package-relevant, reopening bypass #4 for EXPECTED_VALUE_CHANGED
+=== env ===
+pytest
+=== before: mypkg/core.py ===
+def compute(x):
+    return x + 1
+=== after: mypkg/core.py ===
+def compute(x):
+    return x + 1
+=== before: mypkg/util.py ===
+def format_thing(s):
+    return "[" + s + "]"
+=== after: mypkg/util.py ===
+def format_thing(s):
+    return "[" + s + "]"
+
+
+def _never_called():
+    return 0
+=== before: tests/test_core.py ===
+import mypkg.core as core
+
+
+def test_compute():
+    assert core.compute(3) == 4
+=== after: tests/test_core.py ===
+import mypkg.core as core
+
+
+def test_compute():
+    assert core.compute(3) == 3
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

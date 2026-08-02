@@ -83,8 +83,15 @@ Bypasses 12–16 were found by running real coding agents against decoy
 bug-fix tasks (`benchmarks/decoy/`), not by inspection. Bypass 12 in
 particular made the tool catch **0 of 12** real tampering diffs.
 
+| 23 | Rewrite an expected value while touching an *unrelated* file in an imported package to earn PACKAGE_REPAIR | **Closed** — credit needs a *modified existing symbol*, not any file change |
+| 24 | `assert f(x) == f(x) + 0` — self-comparison behind an identity op | **Closed** — identity ops stripped before the check |
+| 25 | Pad a faked compensation with `assert str(1) == "1"` (vacuous) | **Closed** — triviality recognised (and, conversely, a local named `sum` is *not* mistaken for the builtin) |
+
 Bypasses 17–22 came from adversarially reviewing the M1 code after it
-shipped. Every one was a defect in detector code written to catch cheating.
+shipped. Bypasses 23–25 from reviewing the M3 code (the newest deescalators)
+the same way. Every one was a defect in detector code written to catch
+cheating — including PACKAGE_REPAIR, added in M1 to *fix* a false positive,
+which reopened bypass #4 until this pass caught it.
 
 Bypasses 4–11 were found by adversarial review and each has a regression
 fixture. Report a new one and it becomes the next row.

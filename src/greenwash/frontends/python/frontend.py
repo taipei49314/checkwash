@@ -162,6 +162,39 @@ def _norm(text: str) -> str:
     return "".join(text.split())
 
 
+def _strip_identity(node: ast.AST, text) -> str:
+    """Source text of `node` with outer no-op arithmetic peeled off.
+
+    `x + 0`, `0 + x`, `x - 0`, `x * 1`, `1 * x`, `x / 1` all reduce to `x`,
+    recursively. Used only to unmask `f(x) == f(x) + 0` self-comparisons.
+    """
+    if isinstance(node, ast.BinOp):
+        left, right = node.left, node.right
+        if isinstance(node.op, ast.Add):
+            if _is_zero(right):
+                return _strip_identity(left, text)
+            if _is_zero(left):
+                return _strip_identity(right, text)
+        elif isinstance(node.op, ast.Sub) and _is_zero(right):
+            return _strip_identity(left, text)
+        elif isinstance(node.op, ast.Mult):
+            if _is_one(right):
+                return _strip_identity(left, text)
+            if _is_one(left):
+                return _strip_identity(right, text)
+        elif isinstance(node.op, ast.Div) and _is_one(right):
+            return _strip_identity(left, text)
+    return text.seg(node) or ""
+
+
+def _is_zero(node: ast.AST) -> bool:
+    return isinstance(node, ast.Constant) and node.value == 0 and not isinstance(node.value, bool)
+
+
+def _is_one(node: ast.AST) -> bool:
+    return isinstance(node, ast.Constant) and node.value == 1 and not isinstance(node.value, bool)
+
+
 def _is_literal(node: ast.AST) -> bool:
     if isinstance(node, ast.Constant):
         return True
@@ -237,24 +270,46 @@ _BUILTIN_CALLS = frozenset(
 
 
 def _is_trivial_subject(node: ast.AST | None) -> bool:
-    """Does this expression depend on nothing but literals and builtins?
+    """Does this expression depend on nothing but literals and builtin calls?
 
     `assert str(1) == "1"` sits at EXACT_VALUE(90) and can never fail, so it
     was usable as padding to fake compensation for a deleted oracle.
+
+    A **bare** name is state, not a builtin, even when it is spelled like one:
+    `sum == 42` (a local named `sum`) is a real, fallible assertion. Only a
+    builtin used as a call — `sum(xs) == 42` — is trivial (confirmed
+    red-team false positive). Recursion, not ast.walk, so a call's function
+    Name is judged in call context, not as a bare reference.
     """
     if node is None:
         return True
-    for sub in ast.walk(node):
-        if isinstance(sub, ast.Call):
-            name = _dotted(sub.func)
-            if name is None or name.rsplit(".", 1)[-1] not in _BUILTIN_CALLS:
-                return False
-        elif isinstance(sub, ast.Name):
-            if sub.id not in _BUILTIN_CALLS:
-                return False
-        elif isinstance(sub, ast.Attribute):
-            return False
-    return True
+    if isinstance(node, ast.Constant):
+        return True
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return all(_is_trivial_subject(e) for e in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(k is not None and _is_trivial_subject(k) for k in node.keys) and all(
+            _is_trivial_subject(v) for v in node.values
+        )
+    if isinstance(node, ast.BinOp):
+        return _is_trivial_subject(node.left) and _is_trivial_subject(node.right)
+    if isinstance(node, ast.UnaryOp):
+        return _is_trivial_subject(node.operand)
+    if isinstance(node, ast.BoolOp):
+        return all(_is_trivial_subject(v) for v in node.values)
+    if isinstance(node, ast.Compare):
+        return _is_trivial_subject(node.left) and all(
+            _is_trivial_subject(c) for c in node.comparators
+        )
+    if isinstance(node, ast.Call):
+        name = _dotted(node.func)
+        if name is None or name.rsplit(".", 1)[-1] not in _BUILTIN_CALLS:
+            return False  # a non-builtin call can fail
+        return all(_is_trivial_subject(a) for a in node.args) and all(
+            _is_trivial_subject(k.value) for k in node.keywords
+        )
+    # Bare Name, Attribute, Subscript, comprehension, … = depends on state.
+    return False
 
 
 def _classify_assert(node: ast.Assert, text: str) -> _Classified:
@@ -275,10 +330,12 @@ def _classify_assert(node: ast.Assert, text: str) -> _Classified:
         right_val = _literal_value(comparators[0]) if comparators else None
         if isinstance(op, (ast.Eq, ast.NotEq)):
             # Self-comparison (`assert f(x) == f(x)`) can never fail: the
-            # oracle is gone even though the form still looks exact
-            # (confirmed red-team finding).
-            right_text = text.seg(comparators[0]) if comparators else None
-            if left_text and right_text and _norm(left_text) == _norm(right_text):
+            # oracle is gone even though the form still looks exact. Strip
+            # identity ops (+0, -0, *1, /1) from both sides first, so
+            # `f(x) == f(x) + 0` is caught too (confirmed red-team finding).
+            if comparators and _norm(_strip_identity(left, text)) == _norm(
+                _strip_identity(comparators[0], text)
+            ):
                 return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
             if isinstance(left, ast.Call) and _dotted(left.func) == "len":
                 return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)

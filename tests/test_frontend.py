@@ -1,7 +1,49 @@
 """Frontend unit tests: strength classification, markers, parse failure."""
 
-from greenwash.frontends.python.frontend import parse_python
+import ast
+
+from greenwash.frontends.python.frontend import (
+    _Offsets,
+    _classify_assert,
+    _is_trivial_subject,
+    parse_python,
+)
 from greenwash.ir import strength as S
+
+
+def _triviality(expr: str) -> bool:
+    node = ast.parse(f"assert {expr}").body[0]
+    return _is_trivial_subject(node.test)
+
+
+def _classify(expr: str):
+    src = f"assert {expr}"
+    node = ast.parse(src).body[0]
+    return _classify_assert(node, _Offsets(src))
+
+
+def test_shadowed_builtin_name_is_not_trivial():
+    # A bare name spelled like a builtin is a local variable = real state.
+    # Treating it as vacuous discarded legitimate compensation (red-team FP).
+    assert _triviality("sum == 42") is False
+    assert _triviality("list == [1, 2, 3]") is False
+    assert _triviality("type == 'admin'") is False
+    assert _triviality("total == 42") is False
+    # A builtin *called* on literals genuinely cannot fail.
+    assert _triviality("str(1) == '1'") is True
+    assert _triviality("len([1, 2]) == 2") is True
+    # But a builtin call on real state can fail.
+    assert _triviality("len(rows) == 2") is False
+
+
+def test_self_comparison_behind_identity_op_is_tautology():
+    # `f(x) == f(x) + 0` can never fail; the identity op must be stripped
+    # before the self-comparison check (red-team FN).
+    for expr in ("f(x) == f(x) + 0", "f(x) == 0 + f(x)", "f(x) == f(x) * 1", "f(x) == f(x) - 0"):
+        c = _classify(expr)
+        assert c.strength == S.TAUTOLOGY, f"{expr} -> {c.strength}"
+    # A genuine expected value is untouched.
+    assert _classify("result == 4").strength == S.EXACT_VALUE
 
 
 def _single_test_assertions(src: str):

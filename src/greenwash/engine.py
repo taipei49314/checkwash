@@ -319,15 +319,23 @@ def build_ir(
         elif role == "prod":
             g.prod_files_changed.append(path)
             head = path.split("/", 1)[0]
-            g.prod_packages.append(head[:-3] if head.endswith(".py") else head)
+            package = head[:-3] if head.endswith(".py") else head
             if is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
-                syms = set(before_parsed.symbols) | set(after_parsed.symbols)
-                for q in sorted(syms):
+                for q in sorted(set(before_parsed.symbols) | set(after_parsed.symbols)):
                     if before_parsed.symbols.get(q) != after_parsed.symbols.get(q):
                         g.prod_symbols_changed.append(q)
+                        # PACKAGE_REPAIR credit requires a MODIFIED existing
+                        # symbol in the package — a real behaviour change. A
+                        # newly added dead function or a comment does not
+                        # count, or it reopens bypass #4 for
+                        # EXPECTED_VALUE_CHANGED (confirmed red-team finding).
+                        if q in before_parsed.symbols and q in after_parsed.symbols:
+                            g.prod_packages.append(package)
                 _record_callers(g, after_parsed, g.prod_symbols_changed)
                 g.new_literals_in_prod.extend(sorted(after_parsed.literals - before_parsed.literals))
             elif is_python and change.status == "added" and after_parsed and after_parsed.parse_ok:
+                # A brand-new prod file is all new symbols; nothing "modified"
+                # in it explains editing an existing test's expectation.
                 g.prod_symbols_changed.extend(sorted(after_parsed.symbols))
                 _record_callers(g, after_parsed, g.prod_symbols_changed)
                 g.new_literals_in_prod.extend(sorted(after_parsed.literals))
@@ -386,6 +394,8 @@ def build_ir(
 
     g.moved_assertion_texts = sorted(set(removed_texts) & set(added_texts))
     g.base_literals = sorted(base_literals)
+    # packages with >=1 genuinely modified symbol; deliberately NOT every
+    # package with any prod change (see PACKAGE_REPAIR credit above).
     g.prod_packages = sorted(set(g.prod_packages))
     g.suppressions_added.sort()
     g.imports_added.sort()

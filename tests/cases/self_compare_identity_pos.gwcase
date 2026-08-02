@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: Self-comparison hidden behind an identity op (`+ 0`) still collapses to tautology
+origin: M3 review — `f(x) == f(x) + 0` evaded the text-equality self-comparison check
+=== before: tests/test_compute.py ===
+from calc import compute
+
+
+def test_compute():
+    result = compute(3)
+    assert result == 4
+=== after: tests/test_compute.py ===
+from calc import compute
+
+
+def test_compute():
+    result = compute(3)
+    assert compute(3) == compute(3) + 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,26 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: But a real behaviour change in the imported package still earns PACKAGE_REPAIR
+origin: M3 review — the httpx URL-parser pattern must keep passing
+=== env ===
+pytest
+=== before: mypkg/core.py ===
+def compute(x):
+    return x + 1
+=== after: mypkg/core.py ===
+def compute(x):
+    return x + 2
+=== before: tests/test_core.py ===
+import mypkg.core as core
+
+
+def test_compute():
+    assert core.compute(3) == 4
+=== after: tests/test_core.py ===
+import mypkg.core as core
+
+
+def test_compute():
+    assert core.compute(3) == 5
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
