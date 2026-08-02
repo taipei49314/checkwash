@@ -29,6 +29,40 @@ def test_no_runtime_dependencies():
     assert _pyproject()["project"]["dependencies"] == []
 
 
+def test_documented_test_count_is_accurate():
+    """The test count in prose must match reality.
+
+    README said 131 while the suite had 134 and the release notes said 134 —
+    three numbers, one truth. Rather than remember to update prose, this
+    fails when it drifts.
+    """
+    import os
+    import subprocess
+    import sys
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only"],
+        capture_output=True,
+        cwd=str(ROOT),
+        env={**os.environ, "PYTHONUTF8": "1"},
+    )
+    out = proc.stdout.decode("utf-8", "replace")
+    m = re.search(r"(\d+) tests? collected", out)
+    actual = (
+        int(m.group(1))
+        if m
+        else len([ln for ln in out.splitlines() if "::" in ln and ln.strip()])
+    )
+    assert actual > 0, f"could not determine collected test count:\n{out[-400:]}"
+
+    for doc in ("README.md", "CONTRIBUTING.md"):
+        text = (ROOT / doc).read_text(encoding="utf-8")
+        for claimed in re.findall(r"(\d+) tests\b", text):
+            assert int(claimed) == actual, (
+                f"{doc} claims {claimed} tests, suite collects {actual}"
+            )
+
+
 def test_readme_install_refs_match_version():
     """Every version-pinned install line in the README points at this version.
 

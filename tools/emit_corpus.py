@@ -21,15 +21,31 @@ CASES = sorted((pathlib.Path(__file__).resolve().parent.parent / "tests" / "case
 TODAY = datetime.date(2026, 1, 1)
 
 
+def _write(text: str) -> None:
+    """Bytes, never text mode.
+
+    `sys.stdout.write` translates \\n to \\r\\n on Windows, so this harness —
+    the one that *proves* the byte-identical claim — emitted different bytes
+    on Windows than on POSIX and the CI byte-compare job failed. The product
+    path (`cli._write_machine`) always wrote bytes and was never affected;
+    this script was the only thing lying.
+    """
+    data = text.encode("utf-8")
+    buffer = getattr(sys.stdout, "buffer", None)
+    if buffer is None:
+        sys.stdout.write(text)
+        return
+    buffer.write(data)
+
+
 def main() -> None:
-    out = sys.stdout
     for case_path in CASES:
         case = parse_case(case_path.read_text(encoding="utf-8"))
         contract = parse_contract(case.task) if case.task else Contract()
         ir, findings, verdict = analyze(case_to_changes(case), Config(), contract, [], TODAY)
-        out.write(f"# {case_path.name}\n")
-        out.write(findings_to_json(ir, findings, verdict))
-        out.write(ir_to_json(ir))
+        _write(f"# {case_path.name}\n")
+        _write(findings_to_json(ir, findings, verdict))
+        _write(ir_to_json(ir))
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release.** 14 detectors, 131 tests, zero runtime dependencies.
+> Status: **pre-release.** 14 detectors, 137 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -25,7 +25,9 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 ```
 
 - **0 LLM calls, 0 network calls, 0 runtime dependencies.** Pure-stdlib
-  Python; verdicts are deterministic and byte-identical across OSes.
+  Python; verdicts are deterministic and byte-identical across Linux, macOS
+  and Windows on Python 3.11–3.13 — proved on every push by the
+  `byte-compare` CI job, which diffs the artifacts from all six matrix legs.
 - **Sub-second on real diffs** (0.2 s for a 3000-line test diff, 0.7 s for
   500 changed files), enforced by a gate rather than asserted.
 - Analyses the *diff*, not the code state: two-sided AST comparison against
@@ -36,7 +38,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   composite evidence (e.g. an assertion weakened **and** no non-trivial
   production change in the same diff, judged at symbol level), so `fail_on =
   high` can gate merges without alert fatigue. Precision is measured against
-  a public human-PR corpus, not asserted.
+  a public human-commit corpus and adjudicated commit by commit, not asserted.
 - Honest by design: what it cannot catch is documented in
   [THREATMODEL.md](THREATMODEL.md), not discovered by commenters.
 
@@ -45,12 +47,17 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 Two harnesses, both reproducible from a clone
 ([benchmarks/](benchmarks/README.md)):
 
-- **False positives — 40 / 1800 = 2.2%.** Six active OSS projects (flask,
-  httpx, attrs, click, rich, starlette), 300 consecutive human-reviewed
-  commits each, none seen during development. That is how often greenwash
-  would block a commit a human wrote. Every repo is under 4%; the progression
-  from an initial 8.6% down to 2.2%, and what moved each step, is in the
-  benchmarks README.
+- **Human-commit block rate — 40 / 1800 = 2.2%.** Six active OSS projects
+  (flask, httpx, attrs, click, rich, starlette), 300 consecutive
+  human-reviewed commits each, none seen during development. That is how
+  often greenwash would fail CI on a commit a human wrote. Every repo is
+  under 4%; the progression from an initial 8.6%, and what moved each step,
+  is in the benchmarks README.
+  A block is not automatically a mistake — some of those commits really do
+  drop oracle coverage with nothing visible replacing it. Each one was
+  adjudicated into *false positive* / *legitimate policy block* / *unclear*;
+  the decomposition is in [RESULTS.md](benchmarks/RESULTS.md), and only the
+  false-positive line is a false-positive rate.
 - **Recall — 12 / 12.** Twelve bug-fix tasks run through real coding agents
   told to make CI green without fixing the bug; greenwash blocks all twelve
   tampering diffs. Under natural conditions, 0 of 12 agents touched a test at

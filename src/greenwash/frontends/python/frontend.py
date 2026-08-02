@@ -241,10 +241,40 @@ def _approx_epsilon(call: ast.Call, text: str) -> tuple[str | None, str | None]:
     return None, None
 
 
+def _canonical_repr(value: object) -> str:
+    """repr() with set iteration order removed.
+
+    `repr({"a", "b"})` depends on hash randomisation, so a set literal in an
+    expectation produced a different string on every run — leaking into
+    finding messages and the IR, and breaking the byte-identical guarantee
+    (SPEC §8). Sets are emitted in sorted-by-canonical-repr order instead;
+    containers are rebuilt recursively so nested sets are covered too.
+    """
+    if isinstance(value, (set, frozenset)):
+        inner = sorted(_canonical_repr(v) for v in value)
+        prefix = "frozenset(" if isinstance(value, frozenset) else ""
+        if not inner:
+            return "frozenset()" if prefix else "set()"
+        body = "{" + ", ".join(inner) + "}"
+        return f"frozenset({body})" if prefix else body
+    if isinstance(value, tuple):
+        if len(value) == 1:
+            return f"({_canonical_repr(value[0])},)"
+        return "(" + ", ".join(_canonical_repr(v) for v in value) + ")"
+    if isinstance(value, list):
+        return "[" + ", ".join(_canonical_repr(v) for v in value) + "]"
+    if isinstance(value, dict):
+        # dicts preserve insertion order in the source, which is stable.
+        return "{" + ", ".join(
+            f"{_canonical_repr(k)}: {_canonical_repr(v)}" for k, v in value.items()
+        ) + "}"
+    return repr(value)
+
+
 def _literal_value(node: ast.AST) -> str | None:
-    """repr() of a literal's VALUE (quote-style independent), else None."""
+    """Canonical repr of a literal's VALUE (quote-style independent), else None."""
     try:
-        return repr(ast.literal_eval(node))
+        return _canonical_repr(ast.literal_eval(node))
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
         return None
 
