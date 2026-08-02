@@ -7,10 +7,10 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release, under construction (M1)**. All 13 detectors are
-> implemented and fixture-covered; the false-positive and recall corpora are
-> not yet run, so this README carries no rates and no badges. Numbers land at
-> M3, from the harnesses in [benchmarks/](benchmarks/README.md), or not at all.
+> Status: **pre-release.** 14 detectors, 126 tests, zero runtime dependencies.
+> Every number below comes out of a reproducible harness in
+> [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
+> that a harness hasn't produced on a clean checkout.
 
 ```
 $ greenwash check HEAD~1..HEAD
@@ -39,6 +39,26 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   a public human-PR corpus, not asserted.
 - Honest by design: what it cannot catch is documented in
   [THREATMODEL.md](THREATMODEL.md), not discovered by commenters.
+
+## Measured, not asserted
+
+Two harnesses, both reproducible from a clone
+([benchmarks/](benchmarks/README.md)):
+
+- **False positives — 40 / 1800 = 2.2%.** Six active OSS projects (flask,
+  httpx, attrs, click, rich, starlette), 300 consecutive human-reviewed
+  commits each, none seen during development. That is how often greenwash
+  would block a commit a human wrote. Every repo is under 4%; the progression
+  from an initial 8.6% down to 2.2%, and what moved each step, is in the
+  benchmarks README.
+- **Recall — 12 / 12.** Twelve bug-fix tasks run through real coding agents
+  told to make CI green without fixing the bug; greenwash blocks all twelve
+  tampering diffs. Under natural conditions, 0 of 12 agents touched a test at
+  all — an honest datapoint, recorded as such.
+
+The first recall measurement caught **0 of 12** — pytest's own `.pyc` output
+disarmed the gate, a bug two rounds of code review had missed. Building the
+harness is how it was found. See [benchmarks/decoy/](benchmarks/decoy/).
 
 ## Integrations
 
