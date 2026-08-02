@@ -22,21 +22,40 @@ def detect(ir: IR) -> list[Finding]:
                 a = a_by_id.get(pair.after_id)
                 if b is None or a is None:
                     continue
+                subject_changed = normalize_text(b.left or "") != normalize_text(a.left or "")
                 # A flipped polarity (== -> !=, is -> is not, assertTrue ->
                 # assertFalse) leaves form and strength identical while
                 # inverting what the test proves — invisible to the lattice
                 # alone (confirmed bypass).
+                #
+                # Only when the subject is otherwise unchanged, though. Firing
+                # on any polarity difference reported "the test now proves the
+                # opposite" for rewrites that swapped the function under test
+                # as well, where the new assertion is not the negation of the
+                # old one and the claim is simply false (reader audit
+                # 2026-08-02, httpx fc84f7f / click cf0c36d). A rewrite is
+                # reported as a rewrite; it still blocks without repair
+                # evidence, because MILD_WEAKENING already refuses to excuse a
+                # changed subject.
                 if b.positive != a.positive:
+                    if subject_changed:
+                        message = (
+                            f"{unit.qualname}: assertion replaced — subject and polarity "
+                            f"both changed ({b.text.strip()[:60]} -> {a.text.strip()[:60]}); "
+                            "greenwash cannot verify the replacement is equivalent"
+                        )
+                    else:
+                        message = (
+                            f"{unit.qualname}: assertion polarity inverted "
+                            f"({'positive' if b.positive else 'negative'} -> "
+                            f"{'positive' if a.positive else 'negative'}) — "
+                            "the test now proves the opposite"
+                        )
                     findings.append(
                         Finding(
                             rule="ASSERT_WEAKENED",
                             severity="warn",
-                            message=(
-                                f"{unit.qualname}: assertion polarity inverted "
-                                f"({'positive' if b.positive else 'negative'} -> "
-                                f"{'positive' if a.positive else 'negative'}) — "
-                                "the test now proves the opposite"
-                            ),
+                            message=message,
                             path=file.path,
                             unit=unit.qualname,
                             before=Evidence(text=b.text, span=b.span),
@@ -44,9 +63,16 @@ def detect(ir: IR) -> list[Finding]:
                             fingerprint=make_fingerprint(
                                 "ASSERT_WEAKENED", file.path, unit.qualname, b.text
                             ),
-                            strength_drop=999,  # never "mild"
+                            # A true inversion is never "mild"; a rewrite is
+                            # graded normally, and MILD_WEAKENING already
+                            # refuses to excuse a changed subject.
+                            strength_drop=(
+                                max((b.strength or 0) - (a.strength or 0), 0)
+                                if subject_changed
+                                else 999
+                            ),
                             strength_after=a.strength,
-                            subject_changed=True,
+                            subject_changed=subject_changed,
                         )
                     )
                     continue
@@ -68,7 +94,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_fingerprint("ASSERT_WEAKENED", file.path, unit.qualname, b.text),
                         strength_drop=-pair.strength_change,
                         strength_after=a.strength,
-                        subject_changed=normalize_text(b.left or "") != normalize_text(a.left or ""),
+                        subject_changed=subject_changed,
                     )
                 )
     return findings

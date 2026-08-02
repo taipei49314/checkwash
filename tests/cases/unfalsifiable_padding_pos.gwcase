@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `assert "" in str(x)` cannot fail, so it is not compensation
+origin: fable audit — "can fail" was implemented as "subject is not literal-only"
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_a():
+    assert total(3) == 6
+
+
+def test_b():
+    assert total(4) == 8
+=== after: tests/test_calc.py ===
+from app import total
+
+
+def test_a():
+    assert "" in str(total(3))
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high"}, {"rule": "TEST_DISABLED", "severity": "high"}]

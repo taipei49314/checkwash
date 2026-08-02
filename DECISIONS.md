@@ -175,3 +175,86 @@ discarded qualifier was a bypass:
 Frozen: symbols are `module::qualname` and must be reachable from the test's
 imports; package evidence uses module reachability; marker identity includes
 its condition; moved assertions are a multiset whose credits are spent.
+
+## D-014 (2026-08-02): a module name is what the code imports, not where the file sits
+
+D-013 made repair evidence require the changed symbol's module to be reachable
+from the test's imports. The module name was derived from the file path, so
+`src/attr/_make.py` became `src.attr._make` — a name no test can import. Under
+the src-layout that attrs, click and flask all use, *every* changed module was
+unreachable, and the de-escalator was dead. The identical diff passed without a
+`src/` directory and blocked with one.
+
+Frozen: `_module_of` strips a leading `src/`, and `_module_reachable` compares
+dotted **components** against every suffix of the changed module, so `lib/`,
+`python/` and nested source roots work without a hardcoded list. The
+same-package collision that D-013 closed (`pkg.module_a` supplying evidence for
+`pkg.module_b`) stays closed, because no suffix of one aligns with the other.
+
+The lesson is the mirror image of D-010's. That one recorded a fix for a false
+positive opening a false negative. This one is a fix for a false negative
+opening a false positive — a *silent* one, because a de-escalator that never
+fires produces no error, just more blocks. Any tightening now ships with a
+fixture proving the de-escalator still fires in the honest case.
+
+## D-015 (2026-08-02): "an except clause exists" is not "an oracle was swallowed"
+
+BROAD_EXCEPT_ADDED fired on any broad handler appearing in a test file. Two of
+the corpus blocks were new tests that raise an error *on purpose* and assert
+inside the handler, and a helper whose handler re-raises. Neither hides
+anything; both are how you test error paths.
+
+Frozen: in a test file the handler counts only when the guarded block holds an
+oracle and the handler neither re-raises nor asserts. Production files keep the
+old, broader rule — there, swallowing an error instead of fixing it is the
+cheat, and there is no oracle to guard.
+
+## D-016 (2026-08-02): a de-escalator's condition gets evaluated, not pattern-matched
+
+D6 COMPAT_GATE decided whether a `skipif` was an honest compatibility gate by
+substring-matching its text against seven spellings of an always-true version
+comparison. Every other spelling earned the credit, so
+`skipif(True or sys.platform == "win32")` and `skipif(sys.version_info >= (3, 8))`
+were both read as compat gates. The de-escalator meant to recognise a narrow
+legitimate pattern was in practice a general switch for turning any test off.
+
+Frozen: the condition is parsed and evaluated over a matrix of Python versions
+and platforms. It is a gate only if it is true somewhere and false somewhere. A
+condition greenwash cannot evaluate earns nothing, which costs an exotic
+compat skip one allowlist entry and closes the hole.
+
+The general rule this instance stands for: wherever a policy asks "is this
+thing X?", a list of known spellings of X is not an answer. It is a list of
+the cases the author happened to think of, and the attacker only needs one
+they did not.
+
+## D-017 (2026-08-02): unparseable is a finding, not a skip
+
+`ast.parse` runs on whichever interpreter greenwash is installed under, so
+whether a file parses is a function of that interpreter's grammar version. A
+test file using newer syntax than the analyser was dropped into `skipped_files`
+and the run passed — while the same diff blocked on a newer Python. That
+contradicts the cross-version determinism claim, and it is a bypass: introduce
+syntax the analyser cannot read and the file's oracles stop being checked.
+
+Frozen: `TEST_FILE_UNPARSEABLE`. A file that never parsed (new, or newer than
+the analyser) reports at warn — loud, but choosing an older interpreter should
+not block every commit. A file that parsed on the base side and does not parse
+now has been moved out of greenwash's reach in this diff, and blocks.
+
+The README claim is narrowed to match what is actually proved: byte-identical
+across the three OSes and three Python versions **for source all of them can
+parse**, which is what the CI corpus contains.
+
+## D-018 (2026-08-02): an adjudication belongs to one sweep
+
+`make_results.py` paired whatever sweep directory it was handed with a
+hardcoded adjudication file and printed a false-positive rate. Change the
+engine, re-run the sweep, regenerate — and the block rate updates while the
+false-positive rate silently keeps describing the previous population.
+
+Frozen: the generator cross-checks the adjudicated `(repo, commit)` set against
+the sweep's blocked set and refuses to emit the decomposition unless they match
+exactly, naming the unadjudicated and stale commits. Sweep output now records
+the newest and oldest commit of the range it covered and the tool version, so a
+reader can tell what was measured without asking the author.

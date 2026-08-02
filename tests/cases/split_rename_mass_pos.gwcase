@@ -1,0 +1,38 @@
+=== meta ===
+rule: TEST_DISABLED
+title: One survivor excuses one disappearance, not five
+origin: fable audit — the name relation handed the same credit to every loss
+=== before: tests/test_billing.py ===
+from app import total
+
+
+def test_billing_total_basic():
+    assert total(1) == 2
+
+
+def test_billing_total_zero():
+    assert total(0) == 0
+
+
+def test_billing_total_negative():
+    assert total(-1) == -2
+
+
+def test_billing_total_large():
+    assert total(1000) == 2000
+
+
+def test_billing_total_rounding():
+    assert total(3) == 6
+=== after: tests/test_billing.py ===
+from app import total
+
+
+def test_billing_total_v2():
+    assert total(7) == 14
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_billing_total_zero"},
+ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_billing_total_large"},
+ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_billing_total_negative"},
+ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_billing_total_rounding"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_billing_total_v2"}]

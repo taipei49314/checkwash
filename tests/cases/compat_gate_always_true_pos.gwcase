@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `skipif(True or sys.platform == "win32")` is a kill, not a compat gate
+origin: fable audit — D6 substring-matched seven spellings instead of evaluating
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(True or sys.platform == "win32", reason="flaky")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

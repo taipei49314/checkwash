@@ -14,58 +14,62 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 40/1800 = 2.22%** (M3 final)
+**Blocked (would fail CI at the default `fail_on = high`): 45/1800 = 2.50%** (2026-08-03, v0.1.2)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
-| flask | 300 | 37 | 4 | 1.33% |
-| httpx | 300 | 92 | 11 | 3.67% |
-| attrs | 300 | 64 | 4 | 1.33% |
-| click | 300 | 109 | 11 | 3.67% |
-| rich | 300 | 71 | 6 | 2.00% |
-| starlette | 300 | 92 | 4 | 1.33% |
-| **total** | **1800** | **465** | **40** | **2.22%** |
+| flask | 300 | 37 | 6 | 2.00% |
+| httpx | 300 | 92 | 12 | 4.00% |
+| attrs | 300 | 65 | 4 | 1.33% |
+| click | 300 | 109 | 15 | 5.00% |
+| rich | 300 | 71 | 2 | 0.67% |
+| starlette | 300 | 92 | 6 | 2.00% |
+| **total** | **1800** | **466** | **45** | **2.50%** |
 
 Engine errors: 0.
+
+**Commits that received the blanket opaque-change exemption: 130/1800 = 7.2%.** A prod file greenwash cannot read — non-Python, deleted, unparseable — suppresses E1 for the whole diff (THREATMODEL #4). That is a documented blind spot, not analysis, and this is how often it is load-bearing on this corpus. Read the pass rate with it in mind.
 
 Blocking findings by rule (commits containing at least one):
 
 | rule | commits |
 |---|---:|
-| `TEST_DISABLED` | 22 |
-| `ASSERT_WEAKENED` | 9 |
-| `EXPECTED_VALUE_CHANGED` | 5 |
-| `BROAD_EXCEPT_ADDED` | 4 |
+| `TEST_DISABLED` | 24 |
+| `ASSERT_WEAKENED` | 11 |
+| `EXPECTED_VALUE_CHANGED` | 9 |
 | `EXPECTED_VALUE_HARDCODED` | 1 |
+| `CI_WORKFLOW_TOUCHED` | 1 |
 | `ASSERT_REMOVED` | 1 |
 
 ## Decomposed: what those blocks are
 
 A block is not automatically a false positive. Every one of the
-40 blocks above was adjudicated by an independent agent reading the
-real diff, into *false positive* (blocking was wrong), *spec-correct*
+45 blocks above was adjudicated against the real diff, into
+*false positive* (blocking was wrong), *spec-correct*
 (the diff really does drop oracle coverage with no visible
 compensation — the tool doing its documented job, allowlist it), or
 *unclear*.
 
 | measure | count | rate over 1800 commits |
 |---|---:|---:|
-| historical human-commit **block rate** | 40 | **2.22%** |
-| adjudicated **false positive** | 24 | **1.33%** |
-| **legitimate policy block** (spec-correct) | 16 | 0.89% |
+| historical human-commit **block rate** | 45 | **2.50%** |
+| adjudicated **false positive** | 30 | **1.67%** |
+| **legitimate policy block** (spec-correct) | 15 | 0.83% |
 | **unclear** | 0 | 0.00% |
 
 The headline figure to compare against other tools is the block rate,
 because that is what a team feels in CI. The figure that says whether
 greenwash is *wrong* is the adjudicated false-positive rate.
 
-Raw per-commit verdicts and reasoning: `adjudication-2026-08-02.json`.
+Raw per-commit verdicts and reasoning: `adjudication-2026-08-03.json`.
 
-**How much to trust the split.** Each commit was judged once, by one
-agent, with no second opinion and no inter-rater agreement measured.
-The block rate is a machine count and is exact; the split between
-*false positive* and *legitimate policy block* is a judgement call on
-40 diffs, and the boundary is genuinely arguable on some of them (a
+How they were judged: each of the 45 blocked commits adjudicated against the real diff; 40 by independent agents (nine batches, five each), 5 by the maintainer after one batch hit a session limit — noted because it is a weaker form of independence for those five.
+
+**How much to trust the split.** Each commit was judged once, with no
+second opinion and no inter-rater agreement measured. The block rate is
+a machine count and is exact; the split between *false positive* and
+*legitimate policy block* is a judgement call on 45 diffs, and the
+boundary is genuinely arguable on some of them (a
 test deleted because its coverage moved upstream is invisible to any
 diff analyser — called spec-correct here, another reviewer might say
 the tool should not have blocked). Read the per-commit reasoning and

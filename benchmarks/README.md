@@ -1,7 +1,23 @@
 # Benchmarks — what is measured, and what is not
 
-Two corpora back the "blockable by default" claim. Both are reproducible from
-a clone. This file says plainly which numbers exist and which do not.
+Two corpora back the "blockable by default" claim. This file says plainly
+which numbers exist and which do not.
+
+**What "reproducible" means here, precisely.** The decoy corpus is fully
+reproducible from this clone: `decoy/make_tasks.py` materializes all twelve
+repos, and the recorded agent diffs replay against them. The false-positive
+corpus is six third-party repositories, which this clone cannot contain; the
+sweep JSONs under `sweeps/` are tracked, and each records the newest and
+oldest commit of the range it covered, so you can clone those six projects,
+check out the recorded commit, and re-run the sweep to compare. Without that
+pin the numbers were not checkable by anyone but the author, which was a fair
+criticism.
+
+`make_results.py` will refuse to publish the false-positive decomposition
+unless the adjudication file describes exactly the set of commits the sweep
+blocked — it names the unadjudicated and stale commits instead. Pairing a
+fresh sweep with a stale adjudication produced a number that looked measured
+and described a different population.
 
 ## 1. False-positive corpus (human-authored history)
 
@@ -27,16 +43,25 @@ commit by commit, and `RESULTS.md` publishes the decomposition:
 
 | measure | current build |
 |---|---:|
-| historical human-commit block rate | 2.22% |
-| adjudicated **false positive** | **1.33%** |
-| legitimate policy block | 0.89% |
+| historical human-commit block rate | 2.50% |
+| adjudicated **false positive** | **1.67%** |
+| legitimate policy block | 0.83% |
 | unclear | 0.00% |
+
+Both rose from the previous round (2.22% / 1.33%). Twelve bypasses were closed
+in the 2026-08-03 build, and a tool that catches more also fires more; four
+false-positive classes were fixed in the same build and the net was still
+upward. That is the trade, reported as measured rather than as hoped.
 
 Two adjudication passes exist, of two different populations — the earlier one
 does not describe the current build and is kept only as history:
 
-- `adjudication-2026-08-02.json` — all 40 blocks of the **current** build:
-  24 false positive, 16 spec-correct, 0 unclear.
+- `adjudication-2026-08-03.json` — all 45 blocks of the **current** build:
+  30 false positive, 15 spec-correct, 0 unclear.
+- `adjudication-2026-08-02.json` — the 40 blocks of the previous build:
+  24 false positive, 16 spec-correct, 0 unclear. Kept as history; it does not
+  describe the current build, and `make_results.py` now refuses to pair it
+  with a sweep it does not match.
 - `triage-2026-07-30.json` — the 48 oracle-rule blocks of the **first** round:
   34 fixable false positives, 14 spec-correct, 0 unclear. Those 34 mechanisms
   drove three precision rounds and are now regression fixtures.
@@ -52,7 +77,8 @@ Each row is a full re-run of the same harness over the same 1800 commits.
 | 2.61% | pre-commit hook bumps reclassified; TDD hardcode FP; mild-weakening band; unicode scan narrowed to source |
 | 3.00% | +`EXPECTED_VALUE_CHANGED` — added for recall, and it cost precision |
 | 2.83% | M1 self-review: 8 verified defects in the M1 code itself |
-| **2.22%** | repair evidence reaches through unchanged intermediate modules (`PACKAGE_REPAIR`) |
+| 2.22% | repair evidence reaches through unchanged intermediate modules (`PACKAGE_REPAIR`) |
+| **2.50%** | second independent audit: 12 bypasses closed (raises the rate), 4 false-positive classes fixed (lowers it) |
 
 The 3.00% row is the honest shape of the trade-off: closing a recall hole
 raised the false-positive rate, and only measurement showed by how much.

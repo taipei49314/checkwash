@@ -1,0 +1,135 @@
+{
+  "block_rate": 0.02,
+  "blocked_commits": [
+    {
+      "commit": "06ea505ce2b2042af26e96d35ebf159af7c0869d",
+      "findings": [
+        {
+          "message": "TestGreenletContextCopying.test_greenlet_context_copying: test unit disappeared",
+          "path": "tests/test_reqctx.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestGreenletContextCopying.test_greenlet_context_copying"
+        },
+        {
+          "message": "TestGreenletContextCopying.test_greenlet_context_copying_api: test unit disappeared",
+          "path": "tests/test_reqctx.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestGreenletContextCopying.test_greenlet_context_copying_api"
+        }
+      ]
+    },
+    {
+      "commit": "a31e6b73469cb2bf7eb8f70b5ff21f710fd2e23c",
+      "findings": [
+        {
+          "message": "test_bad_environ_raises_bad_request: test unit disappeared",
+          "path": "tests/test_reqctx.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_bad_environ_raises_bad_request"
+        },
+        {
+          "message": "test_environ_for_valid_idna_completes: test unit disappeared",
+          "path": "tests/test_reqctx.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_environ_for_valid_idna_completes"
+        },
+        {
+          "message": "test_normal_environ_completes: test unit disappeared",
+          "path": "tests/test_reqctx.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_normal_environ_completes"
+        }
+      ]
+    },
+    {
+      "commit": "91c6b3fecf36b1f04554e57cc4060ccb737a445d",
+      "findings": [
+        {
+          "message": "test_environ_for_valid_idna_completes: test unit disappeared",
+          "path": "tests/test_reqctx.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_environ_for_valid_idna_completes"
+        }
+      ]
+    },
+    {
+      "commit": "d98eb69a354158252854ed4a5c9778e03d089191",
+      "findings": [
+        {
+          "message": "TestRoutes.test_all_methods: expected value rewritten 'HEAD' -> 'GET, HEAD, OPTIONS, POST' with no change in assertion strength",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "TestRoutes.test_all_methods"
+        }
+      ]
+    },
+    {
+      "commit": "53b8f08218796d95764c5252bccd8a50a173a6fb",
+      "findings": [
+        {
+          "message": "test_redirect_keep_session: test unit disappeared",
+          "path": "tests/test_testing.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_redirect_keep_session"
+        }
+      ]
+    },
+    {
+      "commit": "1d7281fe0770a97229a2a75189a712cff866b448",
+      "findings": [
+        {
+          "message": "test_egg_installed_paths: test unit disappeared",
+          "path": "tests/test_instance_config.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_egg_installed_paths"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 300,
+  "commits_blocked": 6,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 37,
+  "commits_with_opaque_prod_change": 35,
+  "corpus": {
+    "greenwash_version": "0.1.2",
+    "newest_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
+    "oldest_commit": "345f18442ceb29f9e365af99fc85bdc5986323d2"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "warn": 6
+    },
+    "BROAD_EXCEPT_ADDED": {
+      "warn": 5
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 235
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "high": 1,
+      "warn": 7
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 6
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 122
+    },
+    "TEST_DISABLED": {
+      "high": 8,
+      "info": 1,
+      "warn": 4
+    }
+  }
+}

@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `skipif(sys.version_info >= (3, 8))` is true on every supported Python
+origin: fable audit — spelling was outside the hardcoded blacklist
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(sys.version_info >= (3, 8), reason="legacy")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,18 @@
+=== meta ===
+rule: TEST_DISABLED
+title: Moving a test into build/ removes it from collection AND from analysis
+origin: fable audit — collectable() judged the basename only
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: build/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,10 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: Deleting tox.ini when its settings move to pyproject.toml is housekeeping
+origin: fable audit — flask 0109e49, httpx df5dbc0 both false-blocked
+=== before: tox.ini ===
+[testenv]
+commands = pytest -q
+=== after: tox.ini ===
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

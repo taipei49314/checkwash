@@ -30,4 +30,5 @@ REGISTRY = {
     "IMPORT_UNRESOLVED": globals_rules.detect_import_unresolved,
     "SCOPE_DRIFT": globals_rules.detect_scope_drift,
     "HIDDEN_UNICODE": globals_rules.detect_hidden_unicode,
+    "TEST_FILE_UNPARSEABLE": globals_rules.detect_unparseable_test,
 }

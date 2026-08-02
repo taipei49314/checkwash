@@ -1,0 +1,25 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: A test that provokes an error and asserts inside the handler hides nothing
+origin: fable audit — rich 44797c0, starlette 26d66bb both false-blocked
+=== before: tests/test_lib.py ===
+from lib import boom
+
+
+def test_one():
+    assert boom is not None
+=== after: tests/test_lib.py ===
+from lib import boom
+
+
+def test_one():
+    assert boom is not None
+
+
+def test_notes():
+    try:
+        boom()
+    except Exception as error:
+        assert str(error) == "y"
+=== expect ===
+[]

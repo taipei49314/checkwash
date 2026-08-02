@@ -40,17 +40,30 @@ A role says what a file is *for*; collection says whether its tests actually
 execute. greenwash models pytest's default collection, because every gap
 between the two is a laundering route (all confirmed by reproduction):
 
-- file: `test_*.py` / `*_test.py` — a rename out of this set is a
-  disappearance, not a rename (both in range and worktree mode)
+- file: `test_*.py` / `*_test.py`, **and** a directory pytest descends into —
+  its default `norecursedirs` skips dot-directories, `build/`, `dist/`,
+  virtualenvs and the like, so a move into one is a disappearance exactly as
+  a rename out of the filename set is (both in range and worktree mode)
 - class: `Test*` — methods of a non-matching class are never collected
 - function: `test*`, and only at module level or inside a collected class.
   Two defs sharing a name shadow each other at runtime; greenwash keeps them
   distinct as `name`, `name#2`, … in file order, so a comment-only edit
   cannot produce phantom pairings
 - statements after an unconditional `return`/`raise` never execute, and
-  neither do bodies of nested `def`/`class`/`lambda` or an `if False:`
-  branch; assertions there are not collected (their loss reads as removal)
-- `@pytest.mark.parametrize` rows are test items: deleting rows deletes units
+  neither do bodies of nested `def`/`class`/`lambda`. Branch conditions are
+  **constant-folded**, not pattern-matched: `if False:`, `if not True:`,
+  `if 1 == 2:`, `if False and x:`, `for _ in []:` and a `match` on a literal
+  that no case can meet are all dead. Assertions there are not collected
+  (their loss reads as removal)
+- `__test__ = False` at module or class scope removes it from collection —
+  pytest checks it before anything else
+- `@pytest.mark.parametrize` rows are test items: deleting rows deletes units,
+  and so does marking them `pytest.param(..., marks=pytest.mark.skip)`, because
+  a row is an item only if it runs
+- pytest's own configuration decides collection, so `pytest.ini`, `tox.ini`,
+  `setup.cfg` and `pyproject.toml` are test-runner config: narrowing
+  `python_files`/`testpaths`, or adding a filtering `addopts`, is a weakened
+  test command
 - `conftest.py` is analysed for suite-level collection controls
   (`pytest_collection_modifyitems`, `pytest_ignore_collect`,
   `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`, `pytestmark`)
@@ -96,19 +109,20 @@ detectors can only be disabled whole.
 | Rule ID | Trigger |
 |---|---|
 | `ASSERT_REMOVED` | an assertion disappeared from a surviving test unit |
-| `ASSERT_WEAKENED` | aligned assertion strength decreased, **or** its polarity flipped (`==`→`!=`, `is`→`is not`, `assertTrue`→`assertFalse`) — same form and strength, opposite meaning |
+| `ASSERT_WEAKENED` | aligned assertion strength decreased, **or** its polarity flipped with the subject unchanged (`==`→`!=`, `is`→`is not`, `assertTrue`→`assertFalse`, `assertIs`→`assertIsNot`) — same form and strength, opposite meaning. When the subject changed too it is reported as a rewrite, not as an inversion: greenwash cannot verify the replacement is equivalent, and saying "proves the opposite" would be a claim it has not established |
 | `TEST_DISABLED` | skip/xfail marker added (on the function, its class, the module's `pytestmark`, `self.skipTest`, or a conftest suite control), a whole test unit disappeared (including out of collection, per §2b), or parametrized cases deleted |
 | `TOLERANCE_LOOSENED` | any individual tolerance on the call got wider (each `rel`/`abs`/`places` compared separately, via Decimal) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `EXPECTED_VALUE_HARDCODED` | new assertion literal equals a constant newly introduced in prod in the same diff |
 | `EXPECTED_VALUE_CHANGED` | an aligned assertion keeps its form and strength but its expected literal was rewritten |
-| `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added |
+| `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` (JS forms in v0.2) added |
-| `CI_WORKFLOW_TOUCHED` | ci-role file changed; test command weakened → high |
+| `CI_WORKFLOW_TOUCHED` | ci-role file changed (CI workflows **and** pytest configuration — `pytest.ini`, `tox.ini`, `setup.cfg`, `pyproject.toml`); test command weakened → high. Deleting a workflow counts as weakening only if that workflow ran tests |
 | `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions) |
 | `IMPORT_UNRESOLVED` | new import fails to resolve against lockfile / site-packages |
 | `SCOPE_DRIFT` | changed file outside contract globs (disabled without a manifest) |
 | `HIDDEN_UNICODE` | zero-width / bidi control characters in changed lines → high |
+| `TEST_FILE_UNPARSEABLE` | a test/conftest file greenwash could not parse, so none of its oracles were checked → high if it parsed before this diff |
 
 All thirteen are live as of M1, plus one derived rule, `EXEMPTION_ADDED`
 (§6). Rule-specific notes:
@@ -173,7 +187,7 @@ Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
 | D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units ≥ the mass lost to disappeared units | hold at warn |
-| D6 `COMPAT_GATE` | the added skip marker is a `skipif` keyed on `sys.version_info` / `sys.platform` / `platform.` / `os.name`, and the condition is **not** always true (`>= (3, 0)` and friends are an unconditional kill in a compat costume) | hold at warn |
+| D6 `COMPAT_GATE` | the added skip marker is a `skipif` keyed on `sys.version_info` / `sys.platform` / `platform.` / `os.name`, and its condition, **evaluated** over a matrix of supported Python versions and platforms, is true somewhere and false somewhere. A condition that is always true is an unconditional kill in a compat costume; one greenwash cannot evaluate earns nothing | hold at warn |
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ PATTERN | hold at warn |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
@@ -190,6 +204,14 @@ D4–D7 came from triaging 48 real blocked commits in OSS history
   is ≥ PATTERN *and* its subject depends on something other than literals and
   builtins. `assert str(1) == "1"` sits at EXACT_VALUE and is vacuous; one
   such padding line could launder a whole file of deleted oracles.
+  "Depends on a variable" is necessary but not sufficient: shapes that are
+  true for every possible input — `assert "" in str(x)`, `assert len(x) >= 0`,
+  `assert (cond, "msg")`, `assert isinstance(x, object)` — are TAUTOLOGY, so
+  they never count. The list is a floor, not a completeness claim.
+- **Split/rename needs mass, not just a name.** A disappeared unit is excused
+  as split-or-renamed only when a related name arrived *and* the file's added
+  oracle mass covers what it lost. Name similarity alone let one weak survivor
+  excuse every deleted test in the file.
 
 None of D4–D7 suppress a finding. They only decline to *escalate* it: the
 finding stays in the report at `warn`, visible and allowlistable.
@@ -270,8 +292,17 @@ exemptions.
 - No clock reads that affect findings, except `GREENWASH_TODAY`-overridable
   expiry (§6). Findings JSON contains no timestamps or durations.
 - Source text is normalized CRLF→LF before parsing; all spans are character
-  offsets into the normalized text. Determinism is promised at this
+  offsets into the normalized text. CPython reports `col_offset` as a **UTF-8
+  byte** offset, so it is translated before use — treating it as a character
+  index shifted every span on any line containing non-ASCII text, which
+  garbled extracted source and defeated every text comparison built on it
+  (including the self-comparison check). Determinism is promised at this
   normalized layer (identical findings JSON bytes across OSes).
+- Whether a file parses depends on the analysing interpreter's grammar, which
+  is the one place the running Python version can change a verdict. It is
+  never silent: an unparseable test file is reported as
+  `TEST_FILE_UNPARSEABLE`, high if the file parsed before this diff. The
+  byte-identical claim covers source every supported version can parse.
 - JSON output: sorted keys, `ensure_ascii=False`, `\n` line endings, written
   to stdout as **UTF-8 bytes** regardless of the ambient locale. (Writing
   text to a cp1252/cp950 pipe made the bytes locale-dependent and mangled

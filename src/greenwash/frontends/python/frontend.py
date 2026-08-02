@@ -8,7 +8,9 @@ A file that fails to parse is reported with parse_ok=False and surfaces in
 from __future__ import annotations
 
 import ast
+import bisect
 import hashlib
+import operator
 import re
 from dataclasses import dataclass, field
 
@@ -39,6 +41,13 @@ _UNITTEST_MAP: dict[str, tuple[str, int | None]] = {
     "assertFalse": ("truthy", S.TRUTHY),
     "assertIsNone": ("non_null", S.NON_NULL),
     "assertIsNotNone": ("non_null", S.NON_NULL),
+    # THREATMODEL row 33 claimed `is`/`is not` polarity flips were closed, but
+    # the unittest spelling was never in this map at all, so assertIs ->
+    # assertIsNot produced no classification and no finding (reader audit
+    # 2026-08-02).
+    "assertIs": ("compare_eq", S.EXACT_VALUE),
+    "assertIsNot": ("compare_eq", S.EXACT_VALUE),
+    "assertCountEqual": ("compare_eq", S.EXACT_VALUE),
     "assertGreater": ("compare_ord", S.BOUND),
     "assertGreaterEqual": ("compare_ord", S.BOUND),
     "assertLess": ("compare_ord", S.BOUND),
@@ -99,6 +108,12 @@ class ParsedFile:
     suppressions: list[str] = field(default_factory=list)
     literals: frozenset[str] = frozenset()
     broad_handlers: tuple[str, ...] = ()  # normalized texts of broad except handlers, module-wide
+    # Subset of the above that actually hides a failure: the guarded block
+    # holds an oracle and the handler neither re-raises nor asserts. Test
+    # files are judged on this narrower list, production files on the full one
+    # — swallowing an error in prod is its own cheat, but a test that provokes
+    # an error on purpose and inspects it hides nothing.
+    swallowing_handlers: tuple[str, ...] = ()
 
 
 def normalize_source(data: bytes) -> str:
@@ -124,6 +139,37 @@ class _Offsets:
         self._starts = starts
         self._len = len(text)
         self.text = text
+        self._bytecols: dict[int, list[int]] = {}
+
+    def _char_col(self, lineno: int, col: int) -> int:
+        """Translate CPython's UTF-8 *byte* column into a character column.
+
+        `ast` documents col_offset as a byte offset. Adding it straight to a
+        character-indexed line start shifted every span on any line holding
+        non-ASCII text, so `seg()` returned garbled source — which silently
+        reopened the self-comparison bypass (#10), because the tautology check
+        compares extracted source strings and they no longer matched. One CJK
+        character in a test literal was enough (reader audit 2026-08-02).
+        """
+        idx = lineno - 1
+        if col <= 0 or idx < 0 or idx >= len(self._starts):
+            return col
+        start = self._starts[idx]
+        end = self._starts[idx + 1] if idx + 1 < len(self._starts) else self._len
+        line = self.text[start:end]
+        if line.isascii():  # the overwhelmingly common case: bytes == chars
+            return col
+        table = self._bytecols.get(idx)
+        if table is None:
+            table = []
+            byte = 0
+            for ch in line:
+                table.append(byte)
+                byte += len(ch.encode("utf-8"))
+            table.append(byte)
+            self._bytecols[idx] = table
+        pos = bisect.bisect_left(table, col)
+        return min(pos, len(table) - 1)
 
     def span(self, node: ast.AST) -> tuple[int, int]:
         lineno = getattr(node, "lineno", 1)
@@ -131,8 +177,8 @@ class _Offsets:
         end_lineno = getattr(node, "end_lineno", lineno)
         end_col = getattr(node, "end_col_offset", col)
         try:
-            start = self._starts[lineno - 1] + col
-            end = self._starts[end_lineno - 1] + end_col
+            start = self._starts[lineno - 1] + self._char_col(lineno, col)
+            end = self._starts[end_lineno - 1] + self._char_col(end_lineno, end_col)
         except IndexError:  # synthesized node (e.g. inserted Pass)
             return (0, 0)
         return (min(start, self._len), min(end, self._len))
@@ -308,6 +354,7 @@ _NEGATED_UNITTEST = frozenset(
     {
         "assertNotEqual", "assertFalse", "assertIsNone", "assertNotIn",
         "assertNotRegex", "assertNotIsInstance", "assertNotAlmostEqual",
+        "assertIsNot",
     }
 )
 
@@ -367,7 +414,53 @@ def _classify_assert(node: ast.Assert, text: str) -> _Classified:
     return _classify_assert_expr(node.test, text)
 
 
+def _is_unfalsifiable(test: ast.AST, text) -> bool:
+    """Assertions that are structurally incapable of failing.
+
+    `_is_trivial_subject` asks "does this depend on anything but literals?",
+    which `assert "" in str(x)` passes — it mentions `x` — while still being
+    true for every possible `x`. That made it valid compensation, and eight
+    deleted exact assertions could be laundered through D5 with one line of
+    padding (reader audit 2026-08-02). These are the shapes seen in the wild;
+    the list is a floor, not a claim of completeness.
+    """
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1:
+        return False
+    op = test.ops[0]
+    left, right = test.left, test.comparators[0]
+    # `"" in <str>` / `b"" in <bytes>` / `() in ...` — the empty needle is in
+    # every haystack of the same kind.
+    if isinstance(op, ast.In) and isinstance(left, ast.Constant) and left.value in ("", b""):
+        return True
+    # `len(x) >= 0`, `len(x) > -1`: a length is never negative. The bound is
+    # literal-evaluated, not isinstance-checked — `-1` is a UnaryOp, not a
+    # Constant, and matching only Constant missed exactly that spelling.
+    if isinstance(left, ast.Call) and _dotted(left.func) == "len" and _is_literal(right):
+        try:
+            bound = ast.literal_eval(right)
+        except (ValueError, SyntaxError, TypeError):
+            bound = None
+        if isinstance(bound, int) and not isinstance(bound, bool):
+            if isinstance(op, ast.GtE) and bound <= 0:
+                return True
+            if isinstance(op, ast.Gt) and bound < 0:
+                return True
+    # `x in x`, `x <= x`, `x >= x` — same expression both sides.
+    if isinstance(op, (ast.In, ast.LtE, ast.GtE)):
+        if _norm(_strip_identity(left, text)) == _norm(_strip_identity(right, text)):
+            return True
+    return False
+
+
 def _classify_assert_expr(test: ast.AST, text) -> _Classified:
+    # `assert (cond, "message")` asserts a non-empty tuple display, which is
+    # always truthy — CPython itself warns about it. It was rated TRUTHY(20),
+    # so neutering a real truthy assertion this way produced no finding at all
+    # (reader audit 2026-08-02).
+    if isinstance(test, ast.Tuple) and test.elts:
+        return _Classified("tautology", S.TAUTOLOGY)
+    if _is_unfalsifiable(test, text):
+        return _Classified("tautology", S.TAUTOLOGY)
     approx = _find_approx_call(test)
     if approx is not None:
         eps, kind = _approx_epsilon(approx, text)
@@ -426,6 +519,9 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
     if isinstance(test, ast.Call):
         name = _dotted(test.func)
         if name == "isinstance":
+            # `isinstance(x, object)` is true for every object.
+            if len(test.args) == 2 and _dotted(test.args[1]) == "object":
+                return _Classified("tautology", S.TAUTOLOGY)
             return _Classified("type_shape", S.TYPE_SHAPE)
         return _Classified("truthy", S.TRUTHY)
     if _is_literal(test):
@@ -547,10 +643,33 @@ def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Mark
     return markers
 
 
+def _test_attr_disabled(body: list[ast.stmt]) -> bool:
+    """`__test__ = False` at module or class scope removes it from collection."""
+    for stmt in body:
+        targets: list[ast.expr] = []
+        if isinstance(stmt, ast.Assign):
+            targets = list(stmt.targets)
+        elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None:
+            targets = [stmt.target]
+        else:
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "__test__" for t in targets):
+            continue
+        value = stmt.value
+        if isinstance(value, ast.Constant) and not value.value:
+            return True
+    return False
+
+
 def _module_skip_markers(tree: ast.Module, text, off: _Offsets) -> list[Marker]:
     """Module-level `pytest.skip(..., allow_module_level=True)` and
     `pytest.importorskip(...)` disable the whole file (confirmed bypass)."""
     markers: list[Marker] = []
+    if _test_attr_disabled(tree.body):
+        # pytest checks `safe_getattr(obj, "__test__", True)` before collecting
+        # a module or a class. One line at module scope de-collects the whole
+        # file and greenwash reported nothing at all (reader audit 2026-08-02).
+        markers.append(Marker(name="module.__test__", text="__test__ = False", span=(0, 0)))
     for stmt in tree.body:
         call = None
         if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
@@ -585,6 +704,49 @@ def _handler_info(node: ast.ExceptHandler) -> tuple[tuple[str, ...], bool]:
     return caught, is_broad
 
 
+def _is_oracle_call(node: ast.AST) -> bool:
+    """A call that can fail the test: `self.assertX(...)`, `pytest.fail()`,
+    `pytest.raises(...)`. Matched on the trailing component so an aliased
+    import cannot dodge it."""
+    if not isinstance(node, ast.Call):
+        return False
+    leaf = (_dotted(node.func) or "").rsplit(".", 1)[-1]
+    return leaf.startswith("assert") or leaf in ("fail", "raises")
+
+
+def _contains_oracle(body: list[ast.stmt]) -> bool:
+    """Is there something in these statements that can fail the test?
+
+    Nested `def`/`class`/`lambda` bodies are skipped: they are definitions,
+    not statements this block executes (same reasoning as `_unreachable_ids`).
+    """
+    stack: list[ast.AST] = list(body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ast.Assert) or _is_oracle_call(node):
+            return True
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+            ):
+                continue
+            stack.append(child)
+    return False
+
+
+def _swallows(handler: ast.ExceptHandler) -> bool:
+    """Does this handler make the caught failure disappear?
+
+    A handler that re-raises, or that asserts on what it caught, still lets
+    the test fail — it is inspection, not suppression.
+    """
+    for stmt in handler.body:
+        for sub in ast.walk(stmt):
+            if isinstance(sub, ast.Raise):
+                return False
+    return not _contains_oracle(handler.body)
+
+
 def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
     """Node ids under statements that can never execute.
 
@@ -614,19 +776,28 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
                 kill(stmt)
                 continue
             if isinstance(stmt, (ast.If, ast.While)):
-                test = stmt.test
-                falsy = _is_literal(test) and not _truthy_literal(test)
-                truthy = _is_literal(test) and _truthy_literal(test)
-                if falsy:
+                truth = _static_truth(stmt.test)
+                if truth is False:
                     for inner in stmt.body:
                         kill(inner)
                     scan(stmt.orelse)
                     continue
-                if truthy and isinstance(stmt, ast.If):
+                if truth is True and isinstance(stmt, ast.If):
                     scan(stmt.body)
                     for inner in stmt.orelse:
                         kill(inner)
                     continue
+            # `for _ in []:` never enters its body; the else clause still runs.
+            if isinstance(stmt, ast.For) and _is_literal(stmt.iter) and not _truthy_literal(stmt.iter):
+                for inner in stmt.body:
+                    kill(inner)
+                scan(stmt.orelse)
+                continue
+            if isinstance(stmt, ast.Match) and _match_is_dead(stmt):
+                for case in stmt.cases:
+                    for inner in case.body:
+                        kill(inner)
+                continue
             for name in ("body", "orelse", "finalbody"):
                 inner_body = getattr(stmt, name, None)
                 if isinstance(inner_body, list) and inner_body and isinstance(inner_body[0], ast.stmt):
@@ -642,11 +813,131 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
     return dead
 
 
+_CMP_OPS: dict[type, object] = {
+    ast.Eq: operator.eq,
+    ast.NotEq: operator.ne,
+    ast.Lt: operator.lt,
+    ast.LtE: operator.le,
+    ast.Gt: operator.gt,
+    ast.GtE: operator.ge,
+    ast.In: lambda a, b: a in b,
+    ast.NotIn: lambda a, b: a not in b,
+}
+# `is` / `is not` are deliberately absent: their result on literals depends on
+# interning, which differs between interpreters and would make the verdict
+# version-dependent. Unknown is the safe answer — it keeps the branch live.
+
+
+def _static_truth(node: ast.AST) -> bool | None:
+    """Constant-fold a branch condition to True / False / None (unknown).
+
+    `if False:` was recognised, but `if not True:`, `if 1 == 2:` and
+    `if False and x:` were all treated as live code, so a one-word edit parked
+    an assertion where greenwash still believed it ran — reopening bypass #29
+    (reader audit 2026-08-02).
+    """
+    if _is_literal(node):
+        return _truthy_literal(node)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        inner = _static_truth(node.operand)
+        return None if inner is None else not inner
+    if isinstance(node, ast.BoolOp):
+        values = [_static_truth(v) for v in node.values]
+        if isinstance(node.op, ast.And):
+            if any(v is False for v in values):
+                return False
+            return True if all(v is True for v in values) else None
+        if any(v is True for v in values):
+            return True
+        return False if all(v is False for v in values) else None
+    if (
+        isinstance(node, ast.Compare)
+        and _is_literal(node.left)
+        and all(_is_literal(c) for c in node.comparators)
+    ):
+        try:
+            left = ast.literal_eval(node.left)
+            for op, comparator in zip(node.ops, node.comparators):
+                fn = _CMP_OPS.get(type(op))
+                if fn is None:
+                    return None
+                right = ast.literal_eval(comparator)
+                if not fn(left, right):  # type: ignore[operator]
+                    return False
+                left = right
+            return True
+        except (ValueError, SyntaxError, TypeError):
+            return None
+    return None
+
+
+def _match_is_dead(stmt: ast.Match) -> bool:
+    """A `match` on a literal where no case can possibly fire.
+
+    Only the unambiguous shape is judged — literal subject, every case a
+    guardless literal value, no wildcard. Anything else is left live.
+    """
+    if not _is_literal(stmt.subject):
+        return False
+    try:
+        subject = ast.literal_eval(stmt.subject)
+    except (ValueError, SyntaxError, TypeError):
+        return False
+    for case in stmt.cases:
+        if case.guard is not None:
+            return False
+        pattern = case.pattern
+        if isinstance(pattern, ast.MatchAs) and pattern.pattern is None:
+            return False  # wildcard / capture: always matches
+        if not isinstance(pattern, ast.MatchValue) or not _is_literal(pattern.value):
+            return False
+        try:
+            if ast.literal_eval(pattern.value) == subject:
+                return False
+        except (ValueError, SyntaxError, TypeError):
+            return False
+    return True
+
+
 def _truthy_literal(node: ast.AST) -> bool:
     try:
         return bool(ast.literal_eval(node))
     except (ValueError, SyntaxError, TypeError):
         return True
+
+
+def _param_row_disabled(node: ast.AST) -> bool:
+    """`pytest.param(..., marks=pytest.mark.skip)` — a row that no longer runs.
+
+    Marker names are matched on their trailing components, so an aliased
+    `import pytest as p` cannot dodge it. `xfail` counts as disabled only when
+    it is strict=False (the default), because a non-strict xfail turns a
+    failure into a pass.
+    """
+    if not isinstance(node, ast.Call) or (_dotted(node.func) or "").rsplit(".", 1)[-1] != "param":
+        return False
+    for kw in node.keywords:
+        if kw.arg != "marks":
+            continue
+        marks = kw.value.elts if isinstance(kw.value, (ast.List, ast.Tuple)) else [kw.value]
+        for mark in marks:
+            target = mark.func if isinstance(mark, ast.Call) else mark
+            name = _dotted(target) or ""
+            leaf = name.rsplit(".", 1)[-1]
+            if leaf == "skip":
+                return True
+            if leaf == "xfail" and not _xfail_is_strict(mark):
+                return True
+    return False
+
+
+def _xfail_is_strict(mark: ast.AST) -> bool:
+    if not isinstance(mark, ast.Call):
+        return False
+    for kw in mark.keywords:
+        if kw.arg == "strict":
+            return bool(isinstance(kw.value, ast.Constant) and kw.value.value)
+    return False
 
 
 def _param_case_count(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None:
@@ -663,7 +954,12 @@ def _param_case_count(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int | Non
             continue
         if len(dec.args) < 2 or not isinstance(dec.args[1], (ast.List, ast.Tuple)):
             continue
-        rows = len(dec.args[1].elts)
+        # A row is a test item only if it still runs. Counting `len(elts)`
+        # meant wrapping every row in `pytest.param(..., marks=pytest.mark.skip)`
+        # left the count unchanged while the whole parametrized test stopped
+        # executing — deleting the same rows blocked, skipping them did not
+        # (reader audit 2026-08-02).
+        rows = sum(0 if _param_row_disabled(e) else 1 for e in dec.args[1].elts)
         total = rows if total is None else total * rows
     return total
 
@@ -917,7 +1213,9 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     child,
                     qual + ".",
                     inherited + class_markers,
-                    collectible and _is_test_class(child.name),
+                    collectible
+                    and _is_test_class(child.name)
+                    and not _test_attr_disabled(child.body),
                 )
             elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):
                 # Module- and class-level constants are behaviour too. They
@@ -946,6 +1244,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
             unit.qualname = f"{unit.qualname}#{n + 1}"
 
     broad: list[str] = []
+    swallowing: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             imports.extend(alias.name for alias in node.names)
@@ -958,11 +1257,25 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
             rep = repr(node.value)
             if len(rep) <= 64:
                 literals.add(rep)
-        elif isinstance(node, ast.ExceptHandler):
-            _caught, is_broad = _handler_info(node)
-            if is_broad:
-                broad.append(_norm((text.seg(node) or "except:").split("\n")[0]))
+        elif isinstance(node, (ast.Try, ast.TryStar)):
+            # In a test file the rule is "an oracle got swallowed", not "an
+            # except clause exists". Judging the handler alone flagged a
+            # brand-new test that provokes an error on purpose and asserts
+            # *inside* the handler, and a helper whose handler re-raises —
+            # neither hides anything (reader audit 2026-08-02, rich 44797c0 /
+            # starlette 26d66bb). Both lists are emitted; the engine picks by
+            # role.
+            guards_oracle = _contains_oracle(node.body)
+            for handler in node.handlers:
+                _caught, is_broad = _handler_info(handler)
+                if not is_broad:
+                    continue
+                seg = _norm((text.seg(handler) or "except:").split("\n")[0])
+                broad.append(seg)
+                if guards_oracle and _swallows(handler):
+                    swallowing.append(seg)
     broad.sort()
+    swallowing.sort()
 
     suppressions = [
         f"{i + 1}:{line.strip()}"
@@ -980,4 +1293,5 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         suppressions=suppressions,
         literals=frozenset(literals),
         broad_handlers=tuple(broad),
+        swallowing_handlers=tuple(swallowing),
     )

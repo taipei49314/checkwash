@@ -133,6 +133,8 @@ class DiffGlobals:
     unresolved_imports: list[tuple[str, str]] = field(default_factory=list)  # (path, module)
     suppressions_added: list[str] = field(default_factory=list)  # "path:text"
     broad_excepts_added: list[tuple[str, str]] = field(default_factory=list)  # (path, text)
+    # Test/conftest files greenwash could not parse: (path, parsed_before?).
+    unparseable_tests: list[tuple[str, bool]] = field(default_factory=list)
     hidden_unicode: list[tuple[str, str, str]] = field(default_factory=list)  # (path, codepoint, escaped line)
     exemptions_added: list[str] = field(default_factory=list)  # fingerprints appended in head allow.toml
     scope_allow: list[str] = field(default_factory=list)  # contract globs ([] = SCOPE_DRIFT off)

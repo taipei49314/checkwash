@@ -1,0 +1,11 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: A pytest.ini edit that does not touch collection stays at warn
+origin: fable audit — guard against the new role becoming noise
+=== before: pytest.ini ===
+[pytest]
+=== after: pytest.ini ===
+[pytest]
+xfail_strict = true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

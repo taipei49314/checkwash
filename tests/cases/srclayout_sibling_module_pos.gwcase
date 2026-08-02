@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: src-layout: a sibling module still supplies no evidence (bypass 35 stays closed)
+origin: fable audit — guard against the src/ fix loosening module reachability
+=== before: src/pkg/module_a.py ===
+def calculate(x):
+    return x + 1
+=== after: src/pkg/module_a.py ===
+def calculate(x):
+    return x + 2
+=== before: tests/test_b.py ===
+from pkg.module_b import calculate
+
+
+def test_calc():
+    assert calculate(2) == 20
+=== after: tests/test_b.py ===
+from pkg.module_b import calculate
+
+
+def test_calc():
+    assert calculate(2) == 99
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

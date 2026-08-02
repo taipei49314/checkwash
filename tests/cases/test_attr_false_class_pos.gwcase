@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `__test__ = False` on a Test* class de-collects its methods
+origin: fable audit
+=== before: tests/test_calc.py ===
+from app import total
+
+
+class TestTotal:
+    def test_total(self):
+        assert total(3) == 6
+=== after: tests/test_calc.py ===
+from app import total
+
+
+class TestTotal:
+    __test__ = False
+
+    def test_total(self):
+        assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

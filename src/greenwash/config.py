@@ -23,7 +23,20 @@ DEFAULT_ROLES: dict[str, list[str]] = {
         ".claude/**",
         ".greenwash/**",
     ],
-    "ci": [".github/workflows/**", ".gitlab-ci.yml", ".pre-commit-config.yaml"],
+    # CI and test-runner configuration. pytest's own config decides which
+    # files and functions are collected and what `addopts` filters them, so
+    # editing it can silence the entire suite — and none of these files had a
+    # role at all, which meant no detector ever looked at them (reader audit
+    # 2026-08-02).
+    "ci": [
+        ".github/workflows/**",
+        ".gitlab-ci.yml",
+        ".pre-commit-config.yaml",
+        "pytest.ini",
+        "tox.ini",
+        "setup.cfg",
+        "pyproject.toml",
+    ],
     "snapshot": ["**/__snapshots__/**", "**/golden/**", "**/*.golden", "**/*.snap"],
     "lockfile": [
         "poetry.lock",

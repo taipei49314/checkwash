@@ -1,0 +1,124 @@
+{
+  "block_rate": 0.0133,
+  "blocked_commits": [
+    {
+      "commit": "ce89f5d11feb0805da9ed10bb165238cc959f1bb",
+      "findings": [
+        {
+          "message": "TestFunctional.test_frozen_instance: assertion strength EXACT_VALUE(90) -> PATTERN(60)",
+          "path": "tests/test_functional.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "TestFunctional.test_frozen_instance"
+        }
+      ]
+    },
+    {
+      "commit": "74007f67d203f902e88bdecba169786bf44a8aa2",
+      "findings": [
+        {
+          "message": "TestClassBuilder.test_attaches_meta_dunders: 1 parametrized case(s) deleted (10 -> 9)",
+          "path": "tests/test_make.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestClassBuilder.test_attaches_meta_dunders"
+        },
+        {
+          "message": "TestDocs.test_docs: 1 parametrized case(s) deleted (8 -> 7)",
+          "path": "tests/test_make.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestDocs.test_docs"
+        }
+      ]
+    },
+    {
+      "commit": "7373d88f9bef8a2ff70972f81e8d8b9dfb7c5653",
+      "findings": [
+        {
+          "message": "TestCloudpickleCompat.test_repr: disabling marker added (pytest.mark.xfail(PY_3_14_PLUS))",
+          "path": "tests/test_3rd_party.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestCloudpickleCompat.test_repr"
+        },
+        {
+          "message": "TestAnnotations.test_forward_reference: disabling marker added (pytest.xfail)",
+          "path": "tests/test_annotations.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestAnnotations.test_forward_reference"
+        },
+        {
+          "message": "TestAnnotations.test_self_reference: disabling marker added (pytest.xfail)",
+          "path": "tests/test_annotations.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestAnnotations.test_self_reference"
+        },
+        {
+          "message": "TestClassBuilder.test_no_references_to_original_when_using_cached_property: disabling marker added (pytest.mark.xfail(PY_3_14_PLUS))",
+          "path": "tests/test_make.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestClassBuilder.test_no_references_to_original_when_using_cached_property"
+        },
+        {
+          "message": "test_slots_cached_property_infers_type: disabling marker added (pytest.mark.xfail(PY_3_14_PLUS))",
+          "path": "tests/test_slots.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_slots_cached_property_infers_type"
+        }
+      ]
+    },
+    {
+      "commit": "f520d9a89f1fde6fdc5310ffe6c5d4c7467fb10b",
+      "findings": [
+        {
+          "message": "test_hash_is_deprecated: test unit disappeared",
+          "path": "tests/test_make.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_hash_is_deprecated"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 300,
+  "commits_blocked": 4,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 65,
+  "commits_with_opaque_prod_change": 40,
+  "corpus": {
+    "greenwash_version": "0.1.2",
+    "newest_commit": "92e12eae712ef88c1a7e322cc51b7cd9e271aa3c",
+    "oldest_commit": "0a09c1aa2cde5816f4a9f5558fdd1ce792e7076e"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "warn": 3
+    },
+    "ASSERT_WEAKENED": {
+      "high": 1
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 297
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 12
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 1
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 3
+    },
+    "TEST_DISABLED": {
+      "high": 8,
+      "info": 1,
+      "warn": 1
+    }
+  }
+}

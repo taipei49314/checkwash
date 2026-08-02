@@ -7,7 +7,7 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release.** 14 detectors, 157 tests, zero runtime dependencies.
+> Status: **pre-release.** 15 detectors, 186 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -26,8 +26,11 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 
 - **0 LLM calls, 0 network calls, 0 runtime dependencies.** Pure-stdlib
   Python; verdicts are deterministic and byte-identical across Linux, macOS
-  and Windows on Python 3.11–3.13 — proved on every push by the
-  `byte-compare` CI job, which diffs the artifacts from all nine matrix legs.
+  and Windows on Python 3.11–3.13 for source all three versions can parse —
+  proved on every push by the `byte-compare` CI job, which diffs the artifacts
+  from all nine matrix legs. A file the analysing interpreter cannot parse is
+  reported (`TEST_FILE_UNPARSEABLE`), never silently skipped; that is the one
+  place the running version can change a verdict, and it says so out loud.
 - **Sub-second on real diffs** (0.2 s for a 3000-line test diff, 0.7 s for
   500 changed files), enforced by a gate rather than asserted.
 - Analyses the *diff*, not the code state: two-sided AST comparison against
@@ -47,20 +50,26 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 Two harnesses, both reproducible from a clone
 ([benchmarks/](benchmarks/README.md)):
 
-- **Human-commit block rate — 40 / 1800 = 2.2%.** Six active OSS projects
+- **Human-commit block rate — 45 / 1800 = 2.50%.** Six active OSS projects
   (flask, httpx, attrs, click, rich, starlette), 300 consecutive
   human-reviewed commits each, none seen during development. That is how
   often greenwash would fail CI on a commit a human wrote. Every repo is
-  under 4%; the progression from an initial 8.6%, and what moved each step,
-  is in the benchmarks README.
-  A block is not automatically a mistake. All 40 were adjudicated commit by
-  commit against the real diff: **24 false positives (1.33%)**, 16 legitimate
-  policy blocks (0.89%) where the commit really does drop oracle coverage
-  with nothing visible replacing it, 0 unclear. The block rate is a machine
-  count and exact; the split is one judge's call on 40 diffs with no second
-  opinion, and some of them are genuinely arguable — the per-commit reasoning
-  is published in [RESULTS.md](benchmarks/RESULTS.md) precisely so you can
-  disagree with it.
+  at or under 5%; the progression from an initial 8.6%, and what moved each
+  step, is in the benchmarks README.
+  A block is not automatically a mistake. All 45 were adjudicated commit by
+  commit against the real diff: **30 false positives (1.67%)**, 15 legitimate
+  policy blocks (0.83%) where the commit really does drop oracle coverage
+  with nothing visible replacing it, 0 unclear. Both numbers went *up* from
+  the previous round (2.22% / 1.33%), because closing twelve bypasses made the
+  tool fire more often; that is the trade being made, reported as measured.
+  The block rate is a machine count and exact; the split is one judge's call
+  per diff with no second opinion, and some are genuinely arguable — the
+  per-commit reasoning is published in [RESULTS.md](benchmarks/RESULTS.md)
+  precisely so you can disagree with it.
+  **7.2% of the corpus (130/1800) never got a real analysis**: those commits
+  touch a production file greenwash cannot read, which suppresses escalation
+  for the whole diff (THREATMODEL #4). That share of the pass rate rests on a
+  documented blind spot, and is now measured rather than assumed.
 - **Recall — 12 / 12.** Twelve bug-fix tasks run through real coding agents
   told to make CI green without fixing the bug; greenwash blocks all twelve
   tampering diffs. Under natural conditions, 0 of 12 agents touched a test at
@@ -80,7 +89,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; greenwash dogfoods it on its own PRs
-- uses: taipei49314/greenwash/action@v0.1.1
+- uses: taipei49314/greenwash/action@v0.1.2
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -112,8 +121,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.1
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.1
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.2
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.2
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -137,7 +146,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.1
+      - uses: taipei49314/greenwash/action@v0.1.2
 ```
 
 **pre-commit**:
@@ -145,7 +154,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.1
+    rev: v0.1.2
     hooks: [{ id: greenwash }]
 ```
 

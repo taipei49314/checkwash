@@ -101,13 +101,28 @@ def is_artifact(path: str) -> bool:
 
 
 def collectable(path: str) -> bool:
-    """Would pytest's default collection (test_*.py / *_test.py) run this file?
+    """Would pytest's default collection run this file?
 
     Role globs say what a path is *for*; collectability says whether its tests
     actually execute. A rename that keeps the test role but leaves collection
     (tests/billing_checks.py) kills the tests just as dead as deletion.
+
+    Two rules, not one. pytest's filename patterns (`test_*.py`, `*_test.py`)
+    decide the basename, and `norecursedirs` decides the directory: dot-dirs,
+    build output and virtualenvs are never descended into. Judging the
+    basename alone meant `git mv tests/test_x.py build/test_x.py` and
+    `... .attic/test_x.py` both read as "still a collected test file", so the
+    tests vanished from the suite and from the report (reader audit
+    2026-08-02).
     """
-    base = path.rsplit("/", 1)[-1]
+    p = path.replace("\\", "/")
+    segments = p.split("/")
+    for seg in segments[:-1]:
+        if seg in _ARTIFACT_SEGMENTS or seg.endswith(".egg-info"):
+            return False
+        if len(seg) > 1 and seg.startswith("."):
+            return False  # pytest's default norecursedirs excludes `.*`
+    base = segments[-1]
     return (base.startswith("test_") and base.endswith(".py")) or base.endswith("_test.py")
 
 
@@ -153,6 +168,26 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
 # Deterministic markers of a weakened test command in CI files.
 # Anchored, not bare substrings: `--ignore` matched `--ignore-missing-imports`
 # in a mypy step and blocked innocent CI edits at high.
+# Enough of a test runner to call a workflow's removal a loss of coverage.
+_TEST_RUNNER_TOKENS = (
+    "pytest",
+    "unittest",
+    "tox",
+    "nox",
+    "npm test",
+    "yarn test",
+    "pnpm test",
+    "go test",
+    "cargo test",
+    "make test",
+    "gradle test",
+    "mvn test",
+    "dotnet test",
+    "rspec",
+    "jest",
+    "vitest",
+)
+
 _CI_WEAKENING_TOKENS = (
     "continue-on-error: true",
     "|| true",
@@ -161,6 +196,17 @@ _CI_WEAKENING_TOKENS = (
     "--deselect",
     ' -k "',
     " -k '",
+    # pytest's own collection knobs. Narrowing `python_files` or `testpaths`,
+    # or adding `-p no:...`, silences tests without touching a single test
+    # file — and pytest.ini/tox.ini/setup.cfg/pyproject.toml had no role, so
+    # nothing inspected them (reader audit 2026-08-02).
+    "python_files",
+    "python_classes",
+    "python_functions",
+    "testpaths",
+    "norecursedirs",
+    "collect_ignore",
+    "-p no:",
 )
 
 # Invisible / direction-control characters (SPEC: HIDDEN_UNICODE).
@@ -204,6 +250,31 @@ def _scan_hidden_unicode(g: DiffGlobals, path: str, before: bytes | None, after:
                 f"\\u{ord(c):04x}" if ord(c) in _HIDDEN_CODEPOINTS else c for c in line
             )
             g.hidden_unicode.append((path, f"U+{ord(hit):04X}", escaped.strip()[:200]))
+
+
+def _is_ci_workflow(path: str) -> bool:
+    """A CI pipeline definition, as opposed to test-runner configuration.
+
+    Deleting a workflow removes a gate. Deleting `tox.ini` or `setup.cfg`
+    almost always means the settings moved into `pyproject.toml`, which is
+    housekeeping — treating that as "the test command was weakened" blocked
+    two such consolidations in the corpus. The edit is still reported at warn.
+    """
+    p = path.replace("\\", "/")
+    return p.startswith(".github/workflows/") or p in (".gitlab-ci.yml", ".pre-commit-config.yaml")
+
+
+def _runs_tests(data: bytes | None) -> bool:
+    """Did this CI file actually run a test suite?
+
+    Deliberately generous: any recognised runner anywhere in the file counts,
+    because the cost of guessing wrong in this direction is one warn-level
+    finding, while guessing wrong the other way blocks an honest commit.
+    """
+    if not data:
+        return False
+    text = data.decode("utf-8", errors="replace").lower()
+    return any(token in text for token in _TEST_RUNNER_TOKENS)
 
 
 def _scan_ci_weakening(g: DiffGlobals, path: str, before: bytes | None, after: bytes | None) -> None:
@@ -277,6 +348,16 @@ def build_ir(
         ir.files.append(file_ir)
         if is_python and not file_ir.parse_ok:
             ir.skipped_files.append(path)
+            # A test file greenwash cannot parse is a test file greenwash did
+            # not check. Reporting it only in `skipped_files` made the verdict
+            # depend on the analysing interpreter's grammar: source using
+            # newer-than-analyzer syntax was silently dropped and the run
+            # passed, while the same diff blocked on a newer Python (reader
+            # audit 2026-08-02). Now it is a finding, and one that escalates
+            # when the file used to parse.
+            if role in ("test", "conftest") and change.status != "deleted":
+                was_parseable = before_parsed is not None and before_parsed.parse_ok
+                g.unparseable_tests.append((path, was_parseable))
 
         if role in ("test", "conftest") and after_parsed and after_parsed.parse_ok:
             g.test_file_imports[path] = list(after_parsed.imports)
@@ -387,10 +468,14 @@ def build_ir(
                 g.guardrail_files_changed.append(path)
         elif role == "ci":
             g.ci_files_changed.append(path)
-            if change.status == "deleted":
+            if change.status == "deleted" and _is_ci_workflow(path) and _runs_tests(change.before):
                 # Deleting or relocating a workflow removes the gate outright,
                 # which is at least as strong a signal as weakening a command
-                # inside it.
+                # inside it — but only if that workflow ran the tests. Firing
+                # on any removal blocked commits that dropped a lint-only
+                # workflow (reader audit 2026-08-02, attrs 20734d9 dropping
+                # pinact.yml). A removed non-test workflow still surfaces as
+                # CI_WORKFLOW_TOUCHED at warn: visible, not blocking.
                 g.ci_weakening_lines.append((path, "workflow file removed"))
             _scan_ci_weakening(g, path, change.before, change.after)
         elif role == "snapshot":
@@ -419,8 +504,18 @@ def build_ir(
                 g.imports_added.append(f"{path}:{module}")
                 if resolvable is not None and module.split(".", 1)[0] not in resolvable:
                     g.unresolved_imports.append((path, module))
-            before_broad = Counter((before_parsed.broad_handlers if before_parsed and before_parsed.parse_ok else ()))
-            after_broad = Counter((after_parsed.broad_handlers if after_parsed and after_parsed.parse_ok else ()))
+            # A test file is judged on handlers that actually swallow an
+            # oracle; production code on every broad handler added, because
+            # there the cheat is silencing the error instead of fixing it.
+            def _handlers(parsed: ParsedFile | None) -> tuple[str, ...]:
+                if parsed is None or not parsed.parse_ok:
+                    return ()
+                if role in ("test", "conftest"):
+                    return parsed.swallowing_handlers
+                return parsed.broad_handlers
+
+            before_broad = Counter(_handlers(before_parsed))
+            after_broad = Counter(_handlers(after_parsed))
             for text, count in sorted((after_broad - before_broad).items()):
                 g.broad_excepts_added.extend([(path, text)] * count)
 
@@ -457,12 +552,22 @@ def _scope_match(path: str, pattern: str) -> bool:
 
 def _module_of(path: str) -> str:
     """`pkg/mod.py` -> `pkg.mod`. Symbols are qualified by module so a
-    same-named function in an unrelated module cannot supply evidence."""
+    same-named function in an unrelated module cannot supply evidence.
+
+    A leading `src/` is dropped. Under the src-layout that attrs, click and
+    flask all use, `src/attr/_make.py` is imported as `attr._make`; keeping
+    the source root in the name made the changed module unreachable from
+    every test's imports, which silently denied repair evidence to every
+    src-layout project in the corpus (reader audit 2026-08-02). Other source
+    roots are handled by suffix alignment in gating._module_reachable.
+    """
     p = path.replace("\\", "/")
     if p.endswith(".py"):
         p = p[:-3]
     if p.endswith("/__init__"):
         p = p[: -len("/__init__")]
+    if p.startswith("src/"):
+        p = p[len("src/") :]
     return p.replace("/", ".")
 
 

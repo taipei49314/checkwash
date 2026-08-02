@@ -1,0 +1,34 @@
+=== meta ===
+rule: TEST_DISABLED
+title: A real gate that also references a module constant still earns COMPAT_GATE
+origin: fable audit — refusing every unevaluable condition blocked 3 honest click commits
+=== before: tests/test_pager.py ===
+import sys
+
+import pytest
+
+from app import echo
+
+MAC = sys.platform == "darwin"
+
+
+def test_echo_via_pager():
+    assert echo("x") == "x"
+=== after: tests/test_pager.py ===
+import sys
+
+import pytest
+
+from app import echo
+
+MAC = sys.platform == "darwin"
+
+
+@pytest.mark.skipif(
+    MAC and sys.version_info >= (3, 13) and not sys._is_gil_enabled(),
+    reason="flaky on free-threaded macOS builds",
+)
+def test_echo_via_pager():
+    assert echo("x") == "x"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

@@ -1,0 +1,396 @@
+{
+  "block_rate": 0.04,
+  "blocked_commits": [
+    {
+      "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
+      "findings": [
+        {
+          "message": "test_response_decode_text_using_autodetect: assertion strength EXACT_VALUE(90) -> PATTERN(60)",
+          "path": "tests/models/test_responses.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_response_decode_text_using_autodetect"
+        }
+      ]
+    },
+    {
+      "commit": "eeb5e3c2a3ff2403ec47b5926715ecd61143d92d",
+      "findings": [
+        {
+          "message": "test_netrc_auth_nopassword: test unit disappeared",
+          "path": "tests/client/test_auth.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_netrc_auth_nopassword"
+        }
+      ]
+    },
+    {
+      "commit": "9fd6f0ca6616d0310a3ee0b0c6ef509a97995797",
+      "findings": [
+        {
+          "message": "test_response_json: assertion strength EXACT_STRUCT(100) -> EXACT_VALUE(90)",
+          "path": "tests/models/test_responses.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_response_json"
+        }
+      ]
+    },
+    {
+      "commit": "db9072f998b53ff66d50778bf5edee8e2cc8ede1",
+      "findings": [
+        {
+          "message": "test_urlparse_with_invalid_path: expected value \"Relative URLs cannot have a path starting with ':'\" equals a constant newly introduced in prod in this same diff",
+          "path": "tests/models/test_url.py",
+          "rule": "EXPECTED_VALUE_HARDCODED",
+          "severity": "high",
+          "unit": "test_urlparse_with_invalid_path"
+        },
+        {
+          "message": "test_urlparse_with_invalid_path: expected value \"Relative URLs cannot have a path starting with '//'\" equals a constant newly introduced in prod in this same diff",
+          "path": "tests/models/test_url.py",
+          "rule": "EXPECTED_VALUE_HARDCODED",
+          "severity": "high",
+          "unit": "test_urlparse_with_invalid_path"
+        }
+      ]
+    },
+    {
+      "commit": "fc84f7f6eb77fe5d4428261c837ac8016ec77a28",
+      "findings": [
+        {
+          "message": "test_not_same_origin: assertion replaced — subject and polarity both changed (assert not same_origin(origin1, origin2) -> assert headers[\"Host\"] == origin.netloc.decode(\"ascii\")); greenwash cannot verify the replacement is equivalent",
+          "path": "tests/test_utils.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_not_same_origin"
+        }
+      ]
+    },
+    {
+      "commit": "4f6edf36e93fd9f83ff95b065718fd6bd0c4d3c5",
+      "findings": [
+        {
+          "message": "test_parse_header_links: assertion strength EXACT_VALUE(90) -> TRUTHY(20)",
+          "path": "tests/test_utils.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_parse_header_links"
+        }
+      ]
+    },
+    {
+      "commit": "cca62060cb958e89078279e625a752aa0d02c40c",
+      "findings": [
+        {
+          "message": "test_byte_chunker: test unit disappeared",
+          "path": "tests/test_decoders.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_byte_chunker"
+        },
+        {
+          "message": "test_text_chunker: test unit disappeared",
+          "path": "tests/test_decoders.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_text_chunker"
+        },
+        {
+          "message": "test_line_decoder_cr: expected value rewritten ['c'] -> ['12345', 'foo bar baz'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_cr"
+        },
+        {
+          "message": "test_line_decoder_cr: expected value rewritten [] -> ['a', '', 'b', 'c'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_cr"
+        },
+        {
+          "message": "test_line_decoder_cr: expected value rewritten ['a', '', 'b'] -> ['a', '', 'b', 'c'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_cr"
+        },
+        {
+          "message": "test_line_decoder_crnl: expected value rewritten ['a', '', 'b'] -> ['a', '', 'b', 'c'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_crnl"
+        },
+        {
+          "message": "test_line_decoder_crnl: expected value rewritten [] -> ['a', '', 'b', 'c'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_crnl"
+        },
+        {
+          "message": "test_line_decoder_crnl: expected value rewritten [] -> ['12345', 'foo bar baz'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_crnl"
+        },
+        {
+          "message": "test_line_decoder_crnl: expected value rewritten ['c'] -> ['a', '', 'b', 'c'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_crnl"
+        },
+        {
+          "message": "test_line_decoder_nl: expected value rewritten ['c'] -> ['12345', 'foo bar baz'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_nl"
+        },
+        {
+          "message": "test_line_decoder_nl: expected value rewritten ['a', '', 'b'] -> ['a', '', 'b', 'c'] with no change in assertion strength",
+          "path": "tests/test_decoders.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_line_decoder_nl"
+        }
+      ]
+    },
+    {
+      "commit": "7488b15226263dbd06565d4e577fc6e339c1ef64",
+      "findings": [
+        {
+          "message": "test_httpx_exceptions_exposed: test unit disappeared",
+          "path": "tests/test_exceptions.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_httpx_exceptions_exposed"
+        }
+      ]
+    },
+    {
+      "commit": "59914c7690573d5f9b17bce4172405294cb08278",
+      "findings": [
+        {
+          "message": "test_auth_header_has_priority_over_netrc: test unit disappeared",
+          "path": "tests/client/test_auth.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_auth_header_has_priority_over_netrc"
+        },
+        {
+          "message": "test_trust_env_auth: test unit disappeared",
+          "path": "tests/client/test_auth.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_trust_env_auth"
+        }
+      ]
+    },
+    {
+      "commit": "7947b56076db933079ec0c33d1f81406e33008e7",
+      "findings": [
+        {
+          "message": "test_multipart_encode_non_seekable_filelike: assertion strength EXACT_STRUCT(100) -> EXACT_VALUE(90)",
+          "path": "tests/test_multipart.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_multipart_encode_non_seekable_filelike"
+        }
+      ]
+    },
+    {
+      "commit": "bddd774ce065f3442c1f46af1db5b85b1bfb7613",
+      "findings": [
+        {
+          "message": "test_invalid_query_params: test unit disappeared",
+          "path": "tests/models/test_queryparams.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_invalid_query_params"
+        }
+      ]
+    },
+    {
+      "commit": "71a1589928e4d75a5d0d8201e32b5bc7963fb5f8",
+      "findings": [
+        {
+          "message": "test_aiterator_content: expected value rewritten {'Transfer-Encoding': 'chunked'} -> {'Host': 'www.example.com', 'Transfer-Encoding': 'chunked'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_aiterator_content"
+        },
+        {
+          "message": "test_aiterator_content: expected value rewritten {'Transfer-Encoding': 'chunked'} -> {'Host': 'www.example.com', 'Transfer-Encoding': 'chunked'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_aiterator_content"
+        },
+        {
+          "message": "test_async_bytesio_content: expected value rewritten {'Transfer-Encoding': 'chunked'} -> {'Host': 'www.example.com', 'Transfer-Encoding': 'chunked'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_async_bytesio_content"
+        },
+        {
+          "message": "test_bytes_content: expected value rewritten {'Content-Length': '13'} -> {'Host': 'www.example.com', 'Content-Length': '13'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_bytes_content"
+        },
+        {
+          "message": "test_bytes_content: expected value rewritten {'Content-Length': '13'} -> {'Host': 'www.example.com', 'Content-Length': '13'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_bytes_content"
+        },
+        {
+          "message": "test_bytesio_content: expected value rewritten {'Content-Length': '13'} -> {'Host': 'www.example.com', 'Content-Length': '13'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_bytesio_content"
+        },
+        {
+          "message": "test_empty_content: expected value rewritten {} -> {'Host': 'www.example.com', 'Content-Length': '0'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_empty_content"
+        },
+        {
+          "message": "test_empty_request: expected value rewritten {} -> {'Host': 'www.example.com', 'Content-Length': '0'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_empty_request"
+        },
+        {
+          "message": "test_iterator_content: expected value rewritten {'Transfer-Encoding': 'chunked'} -> {'Host': 'www.example.com', 'Transfer-Encoding': 'chunked'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_iterator_content"
+        },
+        {
+          "message": "test_iterator_content: expected value rewritten {'Transfer-Encoding': 'chunked'} -> {'Host': 'www.example.com', 'Transfer-Encoding': 'chunked'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_iterator_content"
+        },
+        {
+          "message": "test_json_content: expected value rewritten {'Content-Length': '19', 'Content-Type': 'application/json'} -> {'Host': 'www.example.com', 'Content-Length': '19', 'Content-Type': 'application/json'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_json_content"
+        },
+        {
+          "message": "test_multipart_data_and_files_content: expected value rewritten {'Content-Length': '210', 'Content-Type': 'multipart/form-data; boundary=+++'} -> {'Host': 'www.example.com', 'Content-Length': '210', 'Content-Type': 'multipart/form-data; boundary=+++'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_multipart_data_and_files_content"
+        },
+        {
+          "message": "test_multipart_files_content: expected value rewritten {'Content-Length': '138', 'Content-Type': 'multipart/form-data; boundary=+++'} -> {'Host': 'www.example.com', 'Content-Length': '138', 'Content-Type': 'multipart/form-data; boundary=+++'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_multipart_files_content"
+        },
+        {
+          "message": "test_multipart_multiple_files_single_input_content: expected value rewritten {'Content-Length': '271', 'Content-Type': 'multipart/form-data; boundary=+++'} -> {'Host': 'www.example.com', 'Content-Length': '271', 'Content-Type': 'multipart/form-data; boundary=+++'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_multipart_multiple_files_single_input_content"
+        },
+        {
+          "message": "test_urlencoded_boolean: expected value rewritten {'Content-Length': '12', 'Content-Type': 'application/x-www-form-urlencoded'} -> {'Host': 'www.example.com', 'Content-Length': '12', 'Content-Type': 'application/x-www-form-urlencoded'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_urlencoded_boolean"
+        },
+        {
+          "message": "test_urlencoded_content: expected value rewritten {'Content-Length': '14', 'Content-Type': 'application/x-www-form-urlencoded'} -> {'Host': 'www.example.com', 'Content-Length': '14', 'Content-Type': 'application/x-www-form-urlencoded'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_urlencoded_content"
+        },
+        {
+          "message": "test_urlencoded_list: expected value rewritten {'Content-Length': '32', 'Content-Type': 'application/x-www-form-urlencoded'} -> {'Host': 'www.example.com', 'Content-Length': '32', 'Content-Type': 'application/x-www-form-urlencoded'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_urlencoded_list"
+        },
+        {
+          "message": "test_urlencoded_none: expected value rewritten {'Content-Length': '8', 'Content-Type': 'application/x-www-form-urlencoded'} -> {'Host': 'www.example.com', 'Content-Length': '8', 'Content-Type': 'application/x-www-form-urlencoded'} with no change in assertion strength",
+          "path": "tests/test_content.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_urlencoded_none"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 300,
+  "commits_blocked": 12,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 92,
+  "commits_with_opaque_prod_change": 13,
+  "corpus": {
+    "greenwash_version": "0.1.2",
+    "newest_commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
+    "oldest_commit": "69e13cbc393ee13624d0e4aa4b6f861a95e3f91c"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "warn": 65
+    },
+    "ASSERT_WEAKENED": {
+      "high": 5,
+      "warn": 4
+    },
+    "BROAD_EXCEPT_ADDED": {
+      "warn": 6
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 45
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "high": 27,
+      "warn": 74
+    },
+    "EXPECTED_VALUE_HARDCODED": {
+      "high": 2
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 7
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 29
+    },
+    "TEST_DISABLED": {
+      "high": 7,
+      "info": 47,
+      "warn": 26
+    }
+  }
+}

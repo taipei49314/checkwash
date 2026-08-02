@@ -80,9 +80,12 @@ def test_pinned_tag_ships_the_current_source():
         capture_output=True,
         cwd=str(ROOT),
     )
-    if exists.returncode != 0:
-        # Not yet tagged is fine mid-development; shipping a stale tag is not.
-        return
+    assert exists.returncode == 0, (
+        f"the README tells people to install {tag}, and that tag does not exist. "
+        "Bumping the version used to make this gate return early and pass, which "
+        "is the same 'green because it did not run' failure the gate exists to "
+        "prevent. Cut the tag, or do not advertise it."
+    )
     diff = subprocess.run(
         ["git", "diff", "--name-only", tag, "--", "src/", "pyproject.toml"],
         capture_output=True,

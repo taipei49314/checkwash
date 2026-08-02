@@ -1,0 +1,19 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `if not True:` parks an assertion just as dead as `if False:`
+origin: fable audit — _is_literal did not fold Not/Compare/BoolOp
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    if not True:
+        assert total(3) == 6
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

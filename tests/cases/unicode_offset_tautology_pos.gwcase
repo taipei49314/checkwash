@@ -1,0 +1,18 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: A CJK literal on the line must not hide a self-comparison
+origin: fable audit — ast col_offset is UTF-8 bytes, spans were character-indexed
+=== before: tests/test_calc.py ===
+from prod.calc import compute
+
+
+def test_total():
+    assert compute("日本") == 42
+=== after: tests/test_calc.py ===
+from prod.calc import compute
+
+
+def test_total():
+    assert compute("日本") == compute("日本")
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

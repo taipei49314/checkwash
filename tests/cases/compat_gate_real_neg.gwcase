@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: A real platform gate still earns COMPAT_GATE
+origin: fable audit — guard against the evaluator refusing genuine gates
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX only")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

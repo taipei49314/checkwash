@@ -1,0 +1,11 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: Narrowing `python_files` silences the suite without touching a test
+origin: fable audit — pytest config files had no role at all
+=== before: pytest.ini ===
+[pytest]
+=== after: pytest.ini ===
+[pytest]
+python_files = nothing_*.py
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

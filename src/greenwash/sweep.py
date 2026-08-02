@@ -15,6 +15,7 @@ import json
 from collections import Counter
 from dataclasses import dataclass, field
 
+from greenwash import __version__
 from greenwash.allowlist import load_allowlist
 from greenwash.config import load_config
 from greenwash.contract import Contract
@@ -33,6 +34,17 @@ class SweepResult:
     blocked: int = 0
     by_rule_severity: Counter = field(default_factory=Counter)
     blocked_commits: list[dict] = field(default_factory=list)
+    # What was measured, so the numbers can be reproduced from a clone: the
+    # newest and oldest commit in the swept range, and the tool version. A
+    # sweep JSON that does not say which commits it covered is not a
+    # measurement anyone else can check (reader audit 2026-08-02).
+    corpus_newest: str = ""
+    corpus_oldest: str = ""
+    # How many analysed commits carried a prod change greenwash cannot read
+    # (non-Python, deleted, or unparseable). Each of those gets the blanket
+    # conservative exemption of THREATMODEL #4, so this is the share of the
+    # pass rate that rests on a documented blind spot rather than on analysis.
+    opaque_prod_change: int = 0
 
     def to_json(self) -> str:
         counts: dict[str, dict[str, int]] = {}
@@ -47,8 +59,14 @@ class SweepResult:
             ),
             "engine_errors": self.errors,
             "commits_skipped_no_parent": self.skipped,
+            "commits_with_opaque_prod_change": self.opaque_prod_change,
             "findings_by_rule": counts,
             "blocked_commits": self.blocked_commits,
+            "corpus": {
+                "newest_commit": self.corpus_newest,
+                "oldest_commit": self.corpus_oldest,
+                "greenwash_version": __version__,
+            },
         }
         return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
 
@@ -63,6 +81,9 @@ def _commit_list(repo: str, revs: str, limit: int) -> list[str]:
 def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str | None = None) -> SweepResult:
     result = SweepResult()
     commits = _commit_list(repo, revs, limit)
+    if commits:
+        result.corpus_newest = commits[0]
+        result.corpus_oldest = commits[-1]
     for sha in commits:
         parent = f"{sha}^"
         try:
@@ -95,6 +116,8 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
             continue
 
         result.commits += 1
+        if ir.globals.prod_opaque_change:
+            result.opaque_prod_change += 1
         if any(f.role == "test" for f in ir.files) or any(
             f.role == "conftest" for f in ir.files
         ):

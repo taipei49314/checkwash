@@ -46,6 +46,33 @@ def detect_broad_except(ir: IR) -> list[Finding]:
     ]
 
 
+def detect_unparseable_test(ir: IR) -> list[Finding]:
+    """A test file greenwash could not parse is a test file it did not check.
+
+    Silence here made the verdict depend on the analysing interpreter's
+    grammar version, which contradicts the cross-version determinism claim.
+    A file that parsed on the base side and stopped parsing on the head side
+    is the suspicious transition and carries no de-escalation.
+    """
+    findings = []
+    for path, was_parseable in ir.globals.unparseable_tests:
+        findings.append(
+            Finding(
+                rule="TEST_FILE_UNPARSEABLE",
+                severity="warn",
+                message=(
+                    f"{path}: test file could not be parsed, so none of its oracles were checked"
+                    + (" — it parsed before this diff" if was_parseable else "")
+                ),
+                path=path,
+                unit=None,
+                after=Evidence(text=path, span=(0, 0)),
+                fingerprint=make_fingerprint("TEST_FILE_UNPARSEABLE", path, None, path),
+            )
+        )
+    return findings
+
+
 def detect_suppression(ir: IR) -> list[Finding]:
     findings = []
     for entry in ir.globals.suppressions_added:

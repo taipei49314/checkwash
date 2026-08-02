@@ -15,12 +15,14 @@ import sys
 
 REPOS = ["flask", "httpx", "attrs", "click", "rich", "starlette"]
 HERE = os.path.dirname(os.path.abspath(__file__))
+# The adjudication is tied to one sweep. Bump both together, never one.
+ADJUDICATION = "adjudication-2026-08-03.json"
 
 
 def load_round(directory: str) -> dict:
     per_repo = {}
     rule_blocks = collections.Counter()
-    total = blocked = touching = errors = 0
+    total = blocked = touching = errors = opaque = 0
     for name in REPOS:
         path = os.path.join(directory, f"{name}.json")
         if not os.path.exists(path) or os.path.getsize(path) == 0:
@@ -30,6 +32,7 @@ def load_round(directory: str) -> dict:
         per_repo[name] = d
         total += d["commits_analysed"]
         blocked += d["commits_blocked"]
+        opaque += d.get("commits_with_opaque_prod_change", 0)
         touching += d["commits_touching_tests"]
         errors += d["engine_errors"]
         for b in d["blocked_commits"]:
@@ -42,6 +45,7 @@ def load_round(directory: str) -> dict:
         "blocked": blocked,
         "touching": touching,
         "errors": errors,
+        "opaque": opaque,
     }
 
 
@@ -90,6 +94,13 @@ def main() -> None:
     w("")
     w(f"Engine errors: {r['errors']}.")
     w("")
+    if r["total"]:
+        w(f"**Commits that received the blanket opaque-change exemption: "
+          f"{r['opaque']}/{r['total']} = {r['opaque'] / r['total']:.1%}.** A prod file greenwash "
+          f"cannot read — non-Python, deleted, unparseable — suppresses E1 for the whole diff "
+          f"(THREATMODEL #4). That is a documented blind spot, not analysis, and this is how "
+          f"often it is load-bearing on this corpus. Read the pass rate with it in mind.")
+        w("")
     if r["rule_blocks"]:
         w("Blocking findings by rule (commits containing at least one):")
         w("")
@@ -98,11 +109,34 @@ def main() -> None:
         for rule, n in r["rule_blocks"].most_common():
             w(f"| `{rule}` | {n} |")
         w("")
-    adj_path = os.path.join(HERE, "adjudication-2026-08-02.json")
+    adj_path = os.path.join(HERE, ADJUDICATION)
     if os.path.exists(adj_path):
         with open(adj_path, encoding="utf-8") as fh:
             adj = json.load(fh)
         verdicts = adj["verdicts"]
+        # An adjudication describes a specific set of blocked commits. Pairing
+        # it with whatever sweep is passed on the command line printed a
+        # false-positive rate that looked measured while describing a
+        # different population (reader audit 2026-08-02). The two must match
+        # exactly, or the decomposition is not published at all.
+        swept = {
+            (name, b["commit"])
+            for name, d in r["per_repo"].items()
+            for b in d["blocked_commits"]
+        }
+        judged = {(v["repo"], v["commit"]) for v in verdicts}
+        if swept != judged:
+            missing = sorted(swept - judged)
+            stale = sorted(judged - swept)
+            raise SystemExit(
+                f"{ADJUDICATION} does not describe this sweep: "
+                f"{len(missing)} blocked commit(s) unadjudicated, "
+                f"{len(stale)} adjudicated commit(s) no longer blocked.\n"
+                + "".join(f"  unadjudicated {repo} {sha[:10]}\n" for repo, sha in missing[:20])
+                + "".join(f"  stale         {repo} {sha[:10]}\n" for repo, sha in stale[:20])
+                + "Re-adjudicate before regenerating RESULTS.md; a false-positive "
+                "rate computed across mismatched populations is not a measurement."
+            )
         acats = collections.Counter(v["category"] for v in verdicts)
         n = len(verdicts)
         fp = acats.get("false_positive", 0)
@@ -112,8 +146,8 @@ def main() -> None:
         w("## Decomposed: what those blocks are")
         w("")
         w("A block is not automatically a false positive. Every one of the")
-        w(f"{n} blocks above was adjudicated by an independent agent reading the")
-        w("real diff, into *false positive* (blocking was wrong), *spec-correct*")
+        w(f"{n} blocks above was adjudicated against the real diff, into")
+        w("*false positive* (blocking was wrong), *spec-correct*")
         w("(the diff really does drop oracle coverage with no visible")
         w("compensation — the tool doing its documented job, allowlist it), or")
         w("*unclear*.")
@@ -130,13 +164,15 @@ def main() -> None:
         w("because that is what a team feels in CI. The figure that says whether")
         w("greenwash is *wrong* is the adjudicated false-positive rate.")
         w("")
-        w("Raw per-commit verdicts and reasoning: `adjudication-2026-08-02.json`.")
+        w(f"Raw per-commit verdicts and reasoning: `{ADJUDICATION}`.")
         w("")
-        w("**How much to trust the split.** Each commit was judged once, by one")
-        w("agent, with no second opinion and no inter-rater agreement measured.")
-        w("The block rate is a machine count and is exact; the split between")
-        w("*false positive* and *legitimate policy block* is a judgement call on")
-        w("40 diffs, and the boundary is genuinely arguable on some of them (a")
+        w(f"How they were judged: {adj.get('method', 'unrecorded')}.")
+        w("")
+        w("**How much to trust the split.** Each commit was judged once, with no")
+        w("second opinion and no inter-rater agreement measured. The block rate is")
+        w("a machine count and is exact; the split between *false positive* and")
+        w(f"*legitimate policy block* is a judgement call on {n} diffs, and the")
+        w("boundary is genuinely arguable on some of them (a")
         w("test deleted because its coverage moved upstream is invisible to any")
         w("diff analyser — called spec-correct here, another reviewer might say")
         w("the tool should not have blocked). Read the per-commit reasoning and")

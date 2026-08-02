@@ -41,7 +41,16 @@ hallucinated imports, scope drift, hidden Unicode.
 5. **Indirection beyond one hop.** Repair evidence follows the call graph one
    hop from the test. A change three layers down, with no closer signal, is
    treated as unrelated (fails safe toward flagging, not toward silence).
-6. **Equivalent rewrites of an assertion.** When both the subject and the
+6. **A `skipif` condition greenwash cannot evaluate.** D6 refuses the
+   compatibility-gate credit only when the condition is provably true in every
+   supported environment *and* under every assignment to the parts it cannot
+   see (module constants, helper calls). So
+   `skipif(SOME_FLAG or sys.platform == "win32")`, where `SOME_FLAG` is set to
+   `True` elsewhere, still earns the de-escalation. Tightening this to "any
+   unknown means no credit" was tried and rejected: it blocked three honest
+   compatibility skips in the corpus, and real gates routinely reference
+   constants. The finding stays visible at `warn` either way.
+7. **Equivalent rewrites of an assertion.** When both the subject and the
    strength of an assertion change at once — a private-API check rewritten
    against the public API, say — greenwash cannot verify the replacement is
    equivalent and blocks. Accepted deliberately: the deescalator that would
@@ -112,6 +121,41 @@ Bypasses 26–39 were all found by one outside reader auditing the public
 repository, in a single pass, after four rounds of the project's own
 adversarial review had declared it done. That ratio is the most important
 number in this file.
+
+| # | Bypass | Status |
+|---|---|---|
+| 40 | `__test__ = False` at module or class scope de-collects everything | **Closed** — pytest's oldest collection switch is now modelled |
+| 41 | `pytest.param(..., marks=pytest.mark.skip)` on every row: the row count never changes | **Closed** — a row counts only if it runs |
+| 42 | Narrow `python_files` / `testpaths`, or add `addopts = -k ...`, in `pytest.ini` / `tox.ini` / `setup.cfg` / `pyproject.toml` | **Closed** — those files had no role at all; they are now test-runner config |
+| 43 | `git mv tests/test_x.py build/test_x.py` (or `.attic/`, `dist/`, `htmlcov/`, any dot-dir) | **Closed** — collectability models `norecursedirs`, not just the filename |
+| 44 | Any always-true `skipif` outside seven hardcoded spellings — `skipif(True or sys.platform == "win32")`, `skipif(sys.version_info >= (3, 8))`, `skipif(os.name != "java")` | **Closed** — the condition is evaluated over an environment matrix; unverifiable conditions earn nothing |
+| 45 | Delete 5 tests / 7 exact assertions, add 1 weak test with a similar name | **Closed** — SPLIT_OR_RENAMED now requires arriving oracle mass to cover what was lost |
+| 46 | `assert "" in str(x)` / `assert len(x) >= 0` as compensation padding | **Closed** — unfalsifiable shapes are TAUTOLOGY, not oracles |
+| 47 | One non-ASCII character on the assertion line, reopening #10 | **Closed** — `ast` col_offset is a UTF-8 byte offset and is now translated to characters |
+| 48 | `if not True:` / `if 1 == 2:` / `if False and x:` / `for _ in []:` / an unmatchable `match` | **Closed** — branch conditions are constant-folded, not pattern-matched |
+| 49 | `assert (cond, "message")` — the always-true tuple assert | **Closed** — TAUTOLOGY |
+| 50 | `assertIs` → `assertIsNot` (the unittest spelling was never in the map) | **Closed** |
+| 51 | Introduce syntax the analysing interpreter cannot parse; the file is skipped and the run passes | **Closed** — `TEST_FILE_UNPARSEABLE`, high when the file used to parse |
+
+Bypasses 40–51 came from a second independent audit (2026-08-02), run as six
+parallel lenses with a separate skeptic re-running every repro from an empty
+directory before it was accepted. Sixteen claims were made and sixteen
+survived refutation — including #47, which had quietly reopened #10 for any
+test file containing a non-ASCII string, and #44, where a de-escalator meant
+to recognise compatibility gates was in practice a general "disable this test"
+switch.
+
+## False positives closed in the same audit
+
+Bypasses are only half the failure surface; a tripwire nobody can live with
+gets removed. These were blocking honest commits:
+
+| Symptom | Cause | Status |
+|---|---|---|
+| Every `src/`-layout project denied repair evidence — the identical diff passed without a `src/` directory and blocked with one | module names were derived from the file path, so `src/attr/_make.py` was `src.attr._make` and matched no import | **Fixed** — source roots are stripped and reachability compares component suffixes |
+| A new test that provokes an error and asserts inside the handler, or whose handler re-raises | BROAD_EXCEPT judged the handler alone, never asking whether an oracle was guarded | **Fixed** — a test-file handler must actually swallow an oracle |
+| Dropping a lint-only workflow | any workflow deletion counted as "test command weakened" | **Fixed** — only workflows that ran tests |
+| "the test now proves the opposite" reported for rewrites that changed the function under test too | polarity was compared without checking the subject | **Fixed** — that is reported as a rewrite, which still blocks without repair evidence, but the report no longer states something untrue |
 
 Bypasses 4–11 were found by adversarial review and each has a regression
 fixture. Report a new one and it becomes the next row.

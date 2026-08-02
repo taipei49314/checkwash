@@ -1,0 +1,9 @@
+=== meta ===
+rule: TEST_FILE_UNPARSEABLE
+title: A newly added file greenwash cannot parse is loud but not a block
+origin: fable audit — choosing an older analyser must not block every commit
+=== after: tests/test_calc.py ===
+def test_total(:
+    assert 1 == 1
+=== expect ===
+[{"rule": "TEST_FILE_UNPARSEABLE", "severity": "warn"}]

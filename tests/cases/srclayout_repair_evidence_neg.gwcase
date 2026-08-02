@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: src-layout repo: changing a symbol the test imports IS repair evidence
+origin: fable audit — identical diff passed flat, blocked under src/
+=== before: src/pkg/core.py ===
+def render(n):
+    return "v%d" % n
+=== after: src/pkg/core.py ===
+def render(n):
+    return "rev-%d" % n
+=== before: tests/test_core.py ===
+from pkg.core import render
+
+
+def test_render():
+    assert render(1) == "v1"
+=== after: tests/test_core.py ===
+from pkg.core import render
+
+
+def test_render():
+    assert render(1) == "rev-1"
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

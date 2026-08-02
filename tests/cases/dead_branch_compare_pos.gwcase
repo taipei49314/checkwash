@@ -1,0 +1,19 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `if 1 == 2:` is a constant-false branch
+origin: fable audit
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    if 1 == 2:
+        assert total(3) == 6
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

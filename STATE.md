@@ -1,6 +1,46 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-02 (taken back to private — see "Why this is private again")
+Updated: 2026-08-02 (second independent audit closed; still private)
+
+## The number that matters right now
+
+Two independent audits have now been run against this repository. The first
+(an outside reader) found 11 defects in three passes, then ~20 more in a
+fourth. The second (six parallel lenses, each finding reproduced with the real
+CLI, each then re-run from scratch by a skeptic told to refute it) made 16
+claims and **all 16 survived refutation**.
+
+Between them, one of those audits reopened a bypass this file had listed as
+Closed for days: `ast` reports `col_offset` in UTF-8 **bytes**, greenwash
+treated it as characters, and a single CJK character anywhere on an assertion
+line garbled every extracted source string — which silently disabled the
+self-comparison check and every other text comparison in the tool.
+
+The project's own review has still never found a defect of that class before
+an outside pass did. Plan accordingly: the discovery rate has not levelled
+off, and "we reviewed it carefully" has a measured track record here of zero.
+
+## Known and unfixed, top of the next round
+
+Adjudicating the 45 blocks turned up one false-positive class that is NOT
+fixed, with two real examples in the corpus:
+
+- **Skip conditions that name a module constant are invisible to D6.**
+  `@pytest.mark.skipif(WIN, ...)` (click b761eda) and
+  `@pytest.mark.xfail(PY_3_14_PLUS, ...)` (attrs 7373d88) are both bona fide
+  compatibility gates. D6 only inspects `skipif` — never `xfail` — and only
+  when the marker *text* literally contains `sys.version_info` / `sys.platform`
+  / `platform.` / `os.name`. A constant defined three lines up in the same file
+  defeats it. The fix is to resolve module-level constants from the file the
+  frontend has already parsed, and to extend D6 to non-strict `xfail`.
+  Measured cost of leaving it: 2 of 45 blocks, ~4.4%.
+
+Also unfixed and now measured rather than assumed: **7.2% of the corpus
+(130/1800) receives the blanket opaque-change exemption** — a production file
+greenwash cannot read suppresses escalation for the entire diff
+(THREATMODEL #4). That is the share of the pass rate that is not analysis. It
+is the single largest hole in the tool and it is a design choice, not a bug,
+but "2.50% block rate" should be read next to it.
 
 ## Why this is private again
 
@@ -18,8 +58,8 @@ other than that judgement says so.
 
 ## Where we are
 
-Tagged **v0.1.1**, CI green on every leg including `byte-compare`. M0–M3 are
-done: 14 detectors, both benchmark corpora run, four adapters, the offline
+Tagged **v0.1.2**, CI green on every leg including `byte-compare`. M0–M3 are
+done: 15 detectors, both benchmark corpora run, four adapters, the offline
 `greenwash demo`, and the launch docs. Numbers live in
 `benchmarks/RESULTS.md` and `benchmarks/decoy/README.md`, generated from the
 harnesses, never hand-typed; the test count lives in the README and is pinned
@@ -44,7 +84,7 @@ green gate, and a green gate as weaker evidence than someone hostile looking.
 ### The measurements, and what they cost
 
 **False positives** — 1800 human commits across six OSS repos greenwash had
-never seen. **40/1800 = 2.22%**, every repo under 4%, gate is ≤3%. Full
+never seen. **45/1800 = 2.50%**, every repo at or under 5%. Full
 progression and what moved each step: `benchmarks/README.md`. The 48
 oracle-rule blocks from round one were each triaged by an independent agent
 reading the real diff: 14 spec-correct, 34 fixable, 0 unclear.

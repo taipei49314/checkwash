@@ -1,0 +1,22 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: A handler that re-raises is not swallowing the oracle
+origin: fable audit — starlette 26d66bb
+=== before: tests/test_ctx.py ===
+def test_one():
+    assert 1 == 1
+=== after: tests/test_ctx.py ===
+def test_one():
+    assert 1 == 1
+
+
+def test_context():
+    def inner():
+        try:
+            raise ValueError("inner")
+        except Exception:
+            raise RuntimeError("outer")
+
+    assert inner is not None
+=== expect ===
+[]

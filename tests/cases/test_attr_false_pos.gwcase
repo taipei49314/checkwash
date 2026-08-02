@@ -1,0 +1,20 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `__test__ = False` de-collects the whole module
+origin: fable audit — pytest's oldest collection switch was unmodelled
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+__test__ = False
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

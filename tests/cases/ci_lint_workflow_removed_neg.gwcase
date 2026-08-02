@@ -1,0 +1,12 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: Dropping a workflow that never ran tests is visible, not blocking
+origin: fable audit — attrs 20734d9 dropped pinact.yml and blocked
+=== before: .github/workflows/lint.yml ===
+jobs:
+  lint:
+    steps:
+      - run: ruff check .
+=== after: .github/workflows/lint.yml ===
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

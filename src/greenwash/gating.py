@@ -7,8 +7,10 @@ escalation entirely; the SPEC table remains the authority on semantics.)
 
 from __future__ import annotations
 
+import ast
 import collections
 import datetime
+import operator
 
 from greenwash.allowlist import AllowEntry, active_fingerprints
 from greenwash.config import SEVERITY_ORDER, Config
@@ -57,12 +59,32 @@ def _unit_index(ir: IR) -> dict[tuple[str, str], Unit]:
 
 
 def _module_reachable(module: str, imports: list[str]) -> bool:
-    """Could a test importing `imports` be reaching into `module`?"""
+    """Could a test importing `imports` be reaching into `module`?
+
+    Compared on dotted *components*, and against every suffix of the changed
+    module, not on the raw string. greenwash derives a module name from a file
+    path, so a source root that is not itself importable — `src/`, `lib/`,
+    `python/` — is part of the derived name and nothing a test imports can
+    ever match it. Literal comparison therefore denied repair evidence to
+    every src-layout project in the corpus; the identical diff passed without
+    a `src/` directory and blocked with one (reader audit 2026-08-02).
+
+    Still strict where it has to be: `pkg.module_a` and `pkg.module_b` share a
+    package, but no suffix of one aligns with the other, so the same-package
+    collision (bypass #35) is refused exactly as before.
+    """
     if not module:
         return True
+    mod = [c for c in module.split(".") if c]
     for imp in imports:
-        if imp == module or module.startswith(imp + ".") or imp.startswith(module + "."):
-            return True
+        want = [c for c in imp.split(".") if c]
+        if not want:
+            continue
+        for start in range(len(mod)):
+            tail = mod[start:]
+            overlap = min(len(tail), len(want))
+            if tail[:overlap] == want[:overlap]:
+                return True
     return False
 
 
@@ -206,33 +228,57 @@ def _split_or_renamed(ir: IR) -> dict[tuple[str, str], bool]:
     or the added name shares the vanished one's leading tokens (a rename with
     rewrite). The replacement must be LIVE and carry a real assertion, so
     renaming a test into a skipped stub does not qualify.
+
+    A name relation alone is not enough, and neither is a file-wide mass
+    check — that is exactly what D5 RESTRUCTURED already does, so requiring it
+    here would make this rule redundant and would reject genuine one-into-two
+    splits in files that also lost coverage elsewhere.
+
+    The credit is therefore *per unit and spent*: each arriving unit's oracle
+    mass can excuse related disappearances until it runs out. One weak
+    survivor could previously excuse five deleted tests holding seven exact
+    assertions, because every disappearance consulted the same single credit
+    (reader audit 2026-08-02).
     """
     result: dict[tuple[str, str], bool] = {}
     for file in ir.files:
         if file.role != "test":
             continue
-        added: list[str] = []
-        gone: list[str] = []
+        # leaf name -> remaining oracle mass this arrival can still vouch for
+        budget: dict[str, int] = {}
+        gone: list[tuple[str, str, int]] = []  # (qualname, leaf, mass)
         for unit in file.units:
             leaf = unit.qualname.rsplit(".", 1)[-1].split("#", 1)[0]
             if unit.before is not None and unit.after is None:
-                gone.append(leaf)
+                gone.append((unit.qualname, leaf, _oracle_mass(unit.before)))
             elif unit.after is not None and unit.before is None:
                 if unit.after.disabled:
                     continue
                 if any(_is_real_assertion(a) for a in unit.after.assertions):
-                    added.append(leaf)
-        if not gone or not added:
+                    budget[leaf] = budget.get(leaf, 0) + _oracle_mass(unit.after)
+        if not gone or not budget:
             continue
-        for unit in file.units:
-            if unit.before is None or unit.after is not None:
-                continue
-            leaf = unit.qualname.rsplit(".", 1)[-1].split("#", 1)[0]
-            related = any(
-                new.startswith(leaf + "_") or leaf.startswith(new + "_") or _shares_prefix(leaf, new)
-                for new in added
+        # Deterministic order: smallest loss first, then by name, so the
+        # outcome does not depend on file layout.
+        for qualname, leaf, mass in sorted(gone, key=lambda g: (g[2], g[1])):
+            related = sorted(
+                new
+                for new in budget
+                if new.startswith(leaf + "_")
+                or leaf.startswith(new + "_")
+                or _shares_prefix(leaf, new)
             )
-            result[(file.path, unit.qualname)] = related
+            available = sum(budget[new] for new in related)
+            excused = bool(related) and available >= mass
+            if excused:
+                owed = mass
+                for new in related:
+                    spend = min(budget[new], owed)
+                    budget[new] -= spend
+                    owed -= spend
+                    if not owed:
+                        break
+            result[(file.path, qualname)] = excused
     return result
 
 
@@ -245,17 +291,190 @@ def _shares_prefix(a: str, b: str, min_tokens: int = 3) -> bool:
 
 
 _COMPAT_TOKENS = ("sys.version_info", "sys.platform", "platform.", "os.name")
-# Version comparisons that hold on every Python 3 the tool can run on: a
-# skipif on one of these is an unconditional kill wearing a compat costume.
-_ALWAYS_TRUE_VERSION = (
-    ">=(3,)",
-    ">=(3,0)",
-    ">(2,",
-    ">=(2,",
-    "<(4,",
-    "<(9",
-    "<=(9",
+
+# Environments the condition is evaluated against. A real compatibility gate
+# skips somewhere and runs somewhere; one that is true everywhere is an
+# unconditional kill wearing a compat costume.
+_ENV_MATRIX = tuple(
+    {"version_info": version, "platform": plat, "os_name": osname, "system": system}
+    for version in ((3, 11, 0), (3, 12, 0), (3, 13, 0), (3, 14, 0))
+    for plat, osname, system in (
+        ("win32", "nt", "Windows"),
+        ("linux", "posix", "Linux"),
+        ("darwin", "posix", "Darwin"),
+    )
 )
+
+_EVAL_CMP_OPS: dict[type, object] = {
+    ast.Eq: operator.eq,
+    ast.NotEq: operator.ne,
+    ast.Lt: operator.lt,
+    ast.LtE: operator.le,
+    ast.Gt: operator.gt,
+    ast.GtE: operator.ge,
+    ast.In: lambda a, b: a in b,
+    ast.NotIn: lambda a, b: a not in b,
+}
+
+
+class _Maybe:
+    """A sub-expression greenwash cannot evaluate, kept as a free variable.
+
+    Refusing credit outright whenever anything was unevaluable blocked real
+    compatibility gates: `skipif(MAC and sys.version_info >= (3, 13) and not
+    sys._is_gil_enabled())` mentions a module constant and a helper call, and
+    is exactly the honest pattern D6 exists for. Three-valued logic keeps the
+    property that matters — a condition is only called an unconditional kill
+    when it is true *whatever* the unknown parts turn out to be.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return "MAYBE"
+
+
+MAYBE = _Maybe()
+
+
+def _eval_condition(node: ast.AST, env: dict) -> object:
+    """Evaluate a skipif condition in one hypothetical environment.
+
+    Deliberately tiny: only the constructs a compatibility gate actually uses.
+    Anything else evaluates to `MAYBE` and propagates through three-valued
+    logic, so the answer is `True` only when the condition holds no matter what
+    the unknown parts are.
+    """
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Tuple):
+        return tuple(_eval_condition(e, env) for e in node.elts)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        inner = _eval_condition(node.operand, env)
+        return MAYBE if inner is MAYBE else not inner
+    if isinstance(node, ast.BoolOp):
+        values = [_eval_condition(v, env) for v in node.values]
+        if isinstance(node.op, ast.And):
+            if any(v is not MAYBE and not v for v in values):
+                return False
+            return True if all(v is not MAYBE and v for v in values) else MAYBE
+        if any(v is not MAYBE and v for v in values):
+            return True
+        return False if all(v is not MAYBE and not v for v in values) else MAYBE
+    if isinstance(node, ast.Compare):
+        left = _eval_condition(node.left, env)
+        for op, comparator in zip(node.ops, node.comparators):
+            fn = _EVAL_CMP_OPS.get(type(op))
+            if fn is None:
+                return MAYBE
+            right = _eval_condition(comparator, env)
+            if left is MAYBE or right is MAYBE:
+                return MAYBE
+            try:
+                if not fn(left, right):  # type: ignore[operator]
+                    return False
+            except TypeError:
+                return MAYBE
+            left = right
+        return True
+    if isinstance(node, ast.Subscript):
+        value = _eval_condition(node.value, env)
+        # `sys.version_info[:2] < (3, 12)` is one of the two commonest ways to
+        # spell a real version gate; refusing to evaluate it would deny the
+        # de-escalation to honest code.
+        if isinstance(node.slice, ast.Slice):
+            lower = _eval_condition(node.slice.lower, env) if node.slice.lower else None
+            upper = _eval_condition(node.slice.upper, env) if node.slice.upper else None
+            step = _eval_condition(node.slice.step, env) if node.slice.step else None
+            try:
+                return value[slice(lower, upper, step)]  # type: ignore[index]
+            except TypeError:
+                return MAYBE
+        index = _eval_condition(node.slice, env)
+        try:
+            return value[index]  # type: ignore[index]
+        except (TypeError, IndexError, KeyError):
+            return MAYBE
+    if isinstance(node, ast.Call):
+        name = _dotted_name(node.func)
+        if name in ("platform.system", "system"):
+            return env["system"]
+        # `sys.platform.startswith("win")` — the other commonest spelling.
+        # Keyed on the attribute itself, not the dotted name: a chained call
+        # like `platform.system().lower()` has no dotted name at all.
+        if isinstance(node.func, ast.Attribute) and node.func.attr in (
+            "startswith",
+            "endswith",
+            "lower",
+            "upper",
+        ):
+            target = _eval_condition(node.func.value, env)
+            if isinstance(target, str):
+                args = [_eval_condition(a, env) for a in node.args]
+                method = getattr(target, node.func.attr)
+                try:
+                    return method(*args)
+                except TypeError:
+                    return MAYBE
+        return MAYBE
+    name = _dotted_name(node)
+    if name in ("sys.version_info", "version_info"):
+        return env["version_info"]
+    if name in ("sys.version_info.major", "version_info.major"):
+        return env["version_info"][0]
+    if name in ("sys.version_info.minor", "version_info.minor"):
+        return env["version_info"][1]
+    if name in ("sys.platform", "platform"):
+        return env["platform"]
+    if name in ("os.name", "name"):
+        return env["os_name"]
+    return MAYBE
+
+
+def _dotted_name(node: ast.AST) -> str | None:
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+        return ".".join(reversed(parts))
+    return None
+
+
+def _skipif_condition(marker_text: str) -> ast.AST | None:
+    src = marker_text.strip()
+    if src.startswith("@"):
+        src = src[1:]
+    try:
+        node = ast.parse(src, mode="eval").body
+    except SyntaxError:
+        return None
+    if isinstance(node, ast.Call) and node.args:
+        return node.args[0]
+    return None
+
+
+def _discriminates(condition: ast.AST) -> bool:
+    """Does this condition actually depend on the environment?
+
+    The old test was a substring match against seven hardcoded spellings of an
+    always-true version comparison. Every other spelling earned the credit —
+    `skipif(True or sys.platform == "win32")`, `skipif(sys.version_info >=
+    (3, 8))`, `skipif(os.name != "java")` — which turned D6 into a general
+    "disable this test" switch (reader audit 2026-08-02). The condition is now
+    evaluated over a matrix of environments.
+
+    Unknown sub-expressions stay unknown rather than voiding the whole
+    condition: real gates reference module constants and helper calls
+    (`MAC and sys.version_info >= (3, 13) and not sys._is_gil_enabled()`), and
+    refusing those blocked three honest click commits. The credit is denied
+    only when the condition is provably true in every environment *and* under
+    every assignment to the parts greenwash cannot see. The residual gap — a
+    same-diff constant that happens to always be true — is recorded in
+    THREATMODEL rather than papered over.
+    """
+    return not all(_eval_condition(condition, env) is True for env in _ENV_MATRIX)
 
 
 def _compat_gate(unit: Unit | None) -> bool:
@@ -270,9 +489,9 @@ def _compat_gate(unit: Unit | None) -> bool:
             continue
         if not any(tok in m.text for tok in _COMPAT_TOKENS):
             continue
-        compact = normalize_text(m.text)
-        if any(pat in compact for pat in _ALWAYS_TRUE_VERSION):
-            continue  # always true: not a gate, a disable
+        condition = _skipif_condition(m.text)
+        if condition is None or not _discriminates(condition):
+            continue  # always true, or unverifiable: not a gate, a disable
         return True
     return False
 
@@ -319,6 +538,16 @@ def apply_gates(
             ):
                 f.severity = "high"
                 f.escalators.append("CI_TEST_COMMAND_WEAKENED")
+            # A test file that parsed before this diff and does not parse now
+            # has been taken out of greenwash's reach. A file that never
+            # parsed (new, or newer syntax than the analyser) stays at warn:
+            # loud, but not a block for choosing an older interpreter.
+            elif f.rule == "TEST_FILE_UNPARSEABLE" and any(
+                path == f.path and was_parseable
+                for path, was_parseable in ir.globals.unparseable_tests
+            ):
+                f.severity = "high"
+                f.escalators.append("TEST_BECAME_UNANALYSABLE")
             elif f.rule == "SCOPE_DRIFT" and any(
                 path == f.path and role in ("prod", "ci", "guardrail")
                 for path, role in ir.globals.scope_drift

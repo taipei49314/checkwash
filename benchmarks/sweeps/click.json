@@ -1,0 +1,321 @@
+{
+  "block_rate": 0.05,
+  "blocked_commits": [
+    {
+      "commit": "700798252a509ca57bc7a12f7aa7fd67f9f8fd25",
+      "findings": [
+        {
+          "message": "test_open_file_atomic_permissions_existing_file: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_open_file_atomic_permissions_existing_file"
+        },
+        {
+          "message": "test_open_file_atomic_permissions_new_file: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_open_file_atomic_permissions_new_file"
+        },
+        {
+          "message": "test_open_file_ignore_invalid_utf8: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_open_file_ignore_invalid_utf8"
+        },
+        {
+          "message": "test_open_file_ignore_no_encoding: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_open_file_ignore_no_encoding"
+        },
+        {
+          "message": "test_open_file_pathlib_dash: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_open_file_pathlib_dash"
+        }
+      ]
+    },
+    {
+      "commit": "1103c5cac2a9336dad3b4b5ce1a25a0bcff49ec0",
+      "findings": [
+        {
+          "message": "test_confirm_repeat: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_confirm_repeat"
+        },
+        {
+          "message": "test_full_prompt_passed_to_readline: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_full_prompt_passed_to_readline"
+        },
+        {
+          "message": "test_prompts_abort: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_prompts_abort"
+        }
+      ]
+    },
+    {
+      "commit": "a391797d00d2ef32ebc4fb0034462a2ec5e6d3d4",
+      "findings": [
+        {
+          "message": "test_echo_no_streams: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_echo_no_streams"
+        },
+        {
+          "message": "test_echo_via_pager: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_echo_via_pager"
+        },
+        {
+          "message": "test_echo_via_pager_yields_before_exception: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_echo_via_pager_yields_before_exception"
+        },
+        {
+          "message": "test_echo_writing_to_standard_error: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_echo_writing_to_standard_error"
+        },
+        {
+          "message": "test_prompt_cast_default: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_prompt_cast_default"
+        },
+        {
+          "message": "test_stress_echo_via_pager_exception_cleanup: test unit disappeared",
+          "path": "tests/test_utils.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_stress_echo_via_pager_exception_cleanup"
+        }
+      ]
+    },
+    {
+      "commit": "1557e265222c431b1e4d6c4dd6754006ed10dc02",
+      "findings": [
+        {
+          "message": "test_flag_group_competition_duplicate_option_name: assertion strength EXACT_VALUE(90) -> PATTERN(60)",
+          "path": "tests/test_options.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_flag_group_competition_duplicate_option_name"
+        }
+      ]
+    },
+    {
+      "commit": "b7e5fd4cc7de70280eccd39f2bb956df617e5519",
+      "findings": [
+        {
+          "message": "test_fish_multiline_help_complete: test unit disappeared",
+          "path": "tests/test_shell_completion.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_fish_multiline_help_complete"
+        }
+      ]
+    },
+    {
+      "commit": "c3535905c77a29afc84861b29d3ad366ce5451bd",
+      "findings": [
+        {
+          "message": "test_fish_multiline_help_complete: test unit disappeared",
+          "path": "tests/test_shell_completion.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_fish_multiline_help_complete"
+        }
+      ]
+    },
+    {
+      "commit": "becbde5cf416441627f779e8dd34e57738ee1c1f",
+      "findings": [
+        {
+          "message": "test_get_pager_file_nullpager_keeps_stringio_stream: assertion replaced — subject and polarity both changed (assert pager is created[0] -> assert not stream.closed); greenwash cannot verify the replacement is equivalent",
+          "path": "tests/test_termui.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_get_pager_file_nullpager_keeps_stringio_stream"
+        }
+      ]
+    },
+    {
+      "commit": "b761eda3bad977ec2f485451d85fd8ec365f0bf4",
+      "findings": [
+        {
+          "message": "test_echo_via_pager_real_pager_handles_ansi: disabling marker added (pytest.mark.skipif(WIN))",
+          "path": "tests/test_termui.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_echo_via_pager_real_pager_handles_ansi"
+        },
+        {
+          "message": "test_get_pager_file_with_real_pager_binary_stream: disabling marker added (pytest.mark.skipif(WIN))",
+          "path": "tests/test_termui.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_get_pager_file_with_real_pager_binary_stream"
+        }
+      ]
+    },
+    {
+      "commit": "cf0c36d33734af1de9ecd5d3305970eb26ebba7f",
+      "findings": [
+        {
+          "message": "test_is_jupyter_kernel_output: assertion polarity inverted (negative -> positive) — the test now proves the opposite",
+          "path": "tests/test_compat.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_is_jupyter_kernel_output"
+        }
+      ]
+    },
+    {
+      "commit": "e3c0898975a7e095a3f11fd2d13035872a55a3e5",
+      "findings": [
+        {
+          "message": "test_argument_custom_class: expected value rewritten 'you wont see me' -> \"you won't see me\" with no change in assertion strength",
+          "path": "tests/test_options.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_argument_custom_class"
+        },
+        {
+          "message": "test_option_custom_class: expected value rewritten 'you wont see me' -> \"you won't see me\" with no change in assertion strength",
+          "path": "tests/test_options.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_option_custom_class"
+        },
+        {
+          "message": "test_option_custom_class_reusable: expected value rewritten 'you wont see me' -> \"you won't see me\" with no change in assertion strength",
+          "path": "tests/test_options.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_option_custom_class_reusable"
+        }
+      ]
+    },
+    {
+      "commit": "97b300c41b6b241570f598f387e2e018844be0f4",
+      "findings": [
+        {
+          "message": "CI configuration changed; test command weakened: workflow file removed",
+          "path": ".github/workflows/test-flask.yaml",
+          "rule": "CI_WORKFLOW_TOUCHED",
+          "severity": "high",
+          "unit": null
+        }
+      ]
+    },
+    {
+      "commit": "777a89e232d5771141be545ff749a7ad2eaa5fc2",
+      "findings": [
+        {
+          "message": "test_runner_logger: test unit disappeared",
+          "path": "tests/test_testing_logging.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_runner_logger"
+        }
+      ]
+    },
+    {
+      "commit": "bd131e1ab63da2281d6dd9b8205ad2eb5a085468",
+      "findings": [
+        {
+          "message": "test_edit: expected value rewritten 'aTest\\nbTest' -> 'aTest\\nbTest\\n' with no change in assertion strength",
+          "path": "tests/test_termui.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_edit"
+        }
+      ]
+    },
+    {
+      "commit": "06847da9126a99c88bf347adf213d33bfe4e4af2",
+      "findings": [
+        {
+          "message": "test_flag_value_prompt: assertion strength EXACT_VALUE(90) -> TRUTHY(20)",
+          "path": "tests/test_termui.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_flag_value_prompt"
+        }
+      ]
+    },
+    {
+      "commit": "bbe1eb6d41f54bd49690a5c385b0895d061a76c1",
+      "findings": [
+        {
+          "message": "test_unset_sentinel: assertion removed (strength EXACT_VALUE)",
+          "path": "tests/test_utils.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_unset_sentinel"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 300,
+  "commits_blocked": 15,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 109,
+  "commits_with_opaque_prod_change": 3,
+  "corpus": {
+    "greenwash_version": "0.1.2",
+    "newest_commit": "0f4738df88e3ea47c40a4a442103596a61cfee79",
+    "oldest_commit": "bd9d4f8db2744d95f75ae171c7aacc4b66558945"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "high": 1,
+      "info": 9,
+      "warn": 2
+    },
+    "ASSERT_WEAKENED": {
+      "high": 4,
+      "warn": 1
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "high": 1,
+      "warn": 64
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "high": 4,
+      "warn": 9
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 34
+    },
+    "TEST_DISABLED": {
+      "high": 19,
+      "info": 22,
+      "warn": 22
+    }
+  }
+}

@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: assertIs -> assertIsNot inverts the oracle
+origin: fable audit — the unittest spelling was absent from the map entirely
+=== before: tests/test_calc.py ===
+import unittest
+
+from app import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertIs(total(0), 0)
+=== after: tests/test_calc.py ===
+import unittest
+
+from app import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertIsNot(total(0), 0)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

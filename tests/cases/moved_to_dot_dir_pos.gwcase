@@ -1,0 +1,18 @@
+=== meta ===
+rule: TEST_DISABLED
+title: Moving a test into a dot-directory leaves pytest's norecursedirs default
+origin: fable audit
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: .attic/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

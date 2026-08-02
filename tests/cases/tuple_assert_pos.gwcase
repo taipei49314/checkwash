@@ -1,0 +1,18 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: `assert (cond, "msg")` asserts a non-empty tuple and can never fail
+origin: fable audit — rated TRUTHY(20) instead of TAUTOLOGY(10)
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert (total(3) == 6, "should match")
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
