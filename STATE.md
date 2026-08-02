@@ -146,11 +146,21 @@ numbers; launch copy is in docs/launch.md.
   terminal — hand-off item.
 - **Flip the repo to public.** Pushed 2026-08-02 to
   `taipei49314/greenwash` as **private**, on the owner's instruction, which
-  matches the docs/launch.md plan (repo private until T-1, then public and
-  left to settle for a day). Going public is the irreversible publishing
-  step and stays the owner's call — do NOT flip it autonomously.
-  Before flipping: record the asciinema cast, re-run `greenwash sweep` on all
-  six repos and confirm RESULTS.md, and bump the version off `0.1.0.dev0`.
+  matches the docs/launch.md plan (private until T-1, then public and left to
+  settle for a day). Going public is the irreversible publishing step and
+  stays the owner's call — do NOT flip it autonomously.
+
+  Pre-public blockers: **cleared.** v0.1.0 tagged and pushed; the README's
+  install line was fixed from a PyPI package that does not exist to
+  `git+…@v0.1.0`, and then *verified by actually installing it* into a clean
+  venv from GitHub (`greenwash --version` → 0.1.0, `greenwash demo` → 7/7).
+  Secret scan and local-path scan clean. `tests/test_packaging.py` now pins
+  the version strings, the empty dependency list, and that every
+  version-pinned README ref matches the package version.
+
+  Optional before flipping: record the asciinema cast (Show HN impact, not
+  correctness), and publish to PyPI so `pipx install greenwash` works — the
+  README is honest that it does not yet.
 
 ## Later
 
