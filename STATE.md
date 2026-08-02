@@ -1,11 +1,24 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-02 (public, v0.1.1, CI green)
+Updated: 2026-08-02 (taken back to private — see "Why this is private again")
+
+## Why this is private again
+
+It was public for a few hours on 2026-08-02 and was taken back to private by
+the owner, deliberately, because the defect-discovery rate had not levelled
+off: a reader auditing the public repo found **eleven** real problems in three
+passes, and the project found **none** of them on its own initiative in that
+window. Every one was checkable from inside — a red CI job, a stale tag, a
+contradiction between two files in the same directory.
+
+The code is in good shape. The *process that decides when it is ready* is
+not, and shipping under that process is what needs to stop. Do not flip this
+public again on a judgement that it "looks done"; flip it when something
+other than that judgement says so.
 
 ## Where we are
 
-**Released and public.** `github.com/taipei49314/greenwash`, **public**,
-tagged **v0.1.1**, CI green on every leg including `byte-compare`. M0–M3 are
+Tagged **v0.1.1**, CI green on every leg including `byte-compare`. M0–M3 are
 done: 14 detectors, both benchmark corpora run, four adapters, the offline
 `greenwash demo`, and the launch docs. Numbers live in
 `benchmarks/RESULTS.md` and `benchmarks/decoy/README.md`, generated from the
@@ -17,15 +30,16 @@ by `tests/test_packaging.py` so it cannot drift.
 
 ### If you are taking over, read this part
 
-The repository is public, so every claim in it is now someone else's to
-check — and a reader already found eight real defects by doing exactly that,
-including a CI job that had been red for days on the very claim the README
-made, and a README that told people to install a tag two fixes behind main.
-Both are recorded below. The lesson is not "be careful"; it is:
-
 > Anything this file, the README, or a commit message calls **done** is an
 > unverified claim until you re-run the thing that proves it. The harnesses
 > exist for that. Use them before you believe any of this.
+
+That is not a general caution, it is the specific failure this project keeps
+having. The eleven defects below were all found by an outside reader; the
+project's own self-audits, run repeatedly and in good faith, produced zero of
+them until a direction was pointed at. Self-review here reliably confirms
+what it already believes. Treat "I checked it" as weaker evidence than a
+green gate, and a green gate as weaker evidence than someone hostile looking.
 
 ### The measurements, and what they cost
 
