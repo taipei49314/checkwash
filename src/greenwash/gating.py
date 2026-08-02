@@ -7,6 +7,7 @@ escalation entirely; the SPEC table remains the authority on semantics.)
 
 from __future__ import annotations
 
+import collections
 import datetime
 
 from greenwash.allowlist import AllowEntry, active_fingerprints
@@ -55,10 +56,36 @@ def _unit_index(ir: IR) -> dict[tuple[str, str], Unit]:
     return index
 
 
-def _symbol_match(calls: tuple[str, ...], changed_symbols: list[str]) -> bool:
+def _module_reachable(module: str, imports: list[str]) -> bool:
+    """Could a test importing `imports` be reaching into `module`?"""
+    if not module:
+        return True
+    for imp in imports:
+        if imp == module or module.startswith(imp + ".") or imp.startswith(module + "."):
+            return True
+    return False
+
+
+def _symbol_match(
+    calls: tuple[str, ...], changed_symbols: list[str], imports: list[str] | None = None
+) -> bool:
+    """Does the test call a symbol the diff actually changed?
+
+    Entries are `module::qualname`. Matching on the leaf name alone let
+    `module_a.calculate` supply repair evidence for a test that calls
+    `module_b.calculate` — a same-name collision in an unrelated module
+    (confirmed bypass). The changed symbol's module must also be reachable
+    from what this test file imports.
+    """
     call_set = set(calls)
-    for sym in changed_symbols:
-        if sym in call_set or sym.rsplit(".", 1)[-1] in call_set:
+    for entry in changed_symbols:
+        module, _, qual = entry.rpartition("::")
+        leaf = qual.rsplit(".", 1)[-1]
+        if qual not in call_set and leaf not in call_set:
+            continue
+        # No import information (unparsed test file): fall back to the old,
+        # more permissive behaviour rather than inventing evidence either way.
+        if imports is None or _module_reachable(module, imports):
             return True
     return False
 
@@ -75,28 +102,32 @@ def _package_evidence(path: str, ir: IR) -> bool:
     A test-only diff has no changed prod package at all, so this cannot
     excuse the cheat the rule exists to catch.
     """
-    packages = set(ir.globals.prod_packages)
-    if not packages:
+    changed = ir.globals.prod_packages
+    if not changed:
         return False
-    for module in ir.globals.test_file_imports.get(path, ()):
-        if module.split(".", 1)[0] in packages:
-            return True
-    return False
+    imports = list(ir.globals.test_file_imports.get(path, ()))
+    if not imports:
+        return False
+    # Module reachability, not top-level-package equality: a test importing
+    # `pkg.module_b` earned evidence from a change to `pkg.module_a` merely
+    # because they share `pkg` (confirmed bypass). A test importing `httpx`
+    # still reaches `httpx._urlparse`, which is what this rule is for.
+    return any(_module_reachable(module, imports) for module in changed)
 
 
 def _file_repair_evidence(path: str, ir: IR) -> bool:
-    """Repair evidence for a finding with no unit of its own (file-scoped
-    rules such as BROAD_EXCEPT_ADDED): does ANY unit in the file have it?"""
-    for file in ir.files:
-        if file.path != path:
-            continue
-        for unit in file.units:
-            if _repair_evidence(unit, ir):
-                return True
-    return False
+    """Repair evidence for a finding with no unit of its own.
+
+    Deliberately narrow: ONLY the opaque-change fallback applies. Asking
+    whether *any* unit in the file had evidence let an unrelated
+    `except AssertionError: pass` ride on a sibling test's legitimate repair
+    (confirmed bypass). A file-scoped finding earns nothing from a unit it is
+    not in.
+    """
+    return ir.globals.prod_opaque_change
 
 
-def _repair_evidence(unit: Unit | None, ir: IR) -> bool:
+def _repair_evidence(unit: Unit | None, ir: IR, path: str | None = None) -> bool:
     """Did production change in a way that plausibly explains editing THIS test?
 
     Diff-global "some prod file changed" was the old test, and one dead line
@@ -111,7 +142,8 @@ def _repair_evidence(unit: Unit | None, ir: IR) -> bool:
     side = unit.before or unit.after
     if side is None:
         return False
-    if _symbol_match(side.calls, ir.globals.prod_symbols_changed):
+    imports = ir.globals.test_file_imports.get(path) if path else None
+    if _symbol_match(side.calls, ir.globals.prod_symbols_changed, imports):
         return True
     return any(name in ir.globals.prod_symbol_callers for name in side.calls)
 
@@ -231,7 +263,10 @@ def _compat_gate(unit: Unit | None) -> bool:
     if unit is None or unit.after is None:
         return False
     for m in unit.after.markers:
-        if not m.name.endswith("skipif"):
+        # Marker names now carry their condition (`skipif(cond)`), so match
+        # the canonical part before the parenthesis.
+        canonical = m.name.split("(", 1)[0]
+        if not canonical.endswith("skipif"):
             continue
         if not any(tok in m.text for tok in _COMPAT_TOKENS):
             continue
@@ -251,7 +286,9 @@ def apply_gates(
     today: datetime.date,
 ) -> str:
     """Mutates findings' severity/escalators in place; returns the verdict."""
-    moved = set(ir.globals.moved_assertion_texts)
+    # A multiset of credits: each ASSERTION_MOVED de-escalation spends one, so
+    # two deletions cannot both be excused by a single re-appearance.
+    moved = collections.Counter(ir.globals.moved_assertion_texts)
     units = _unit_index(ir)
     active_allows = active_fingerprints(allow_entries, today)
     restructured = _file_restructured(ir)
@@ -292,15 +329,20 @@ def apply_gates(
 
         unit = units.get((f.path, f.unit or ""))
 
-        # D2 ASSERTION_MOVED: conclusively benign, skips escalation.
+        # D2 ASSERTION_MOVED: conclusively benign, skips escalation. Each
+        # de-escalation *spends* a credit from the multiset.
         if f.rule == "ASSERT_REMOVED" and f.before is not None:
-            if normalize_text(f.before.text) in moved:
+            key = normalize_text(f.before.text)
+            if moved[key] > 0:
+                moved[key] -= 1
                 f.severity = "info"
                 f.deescalators.append("ASSERTION_MOVED")
                 continue
         if f.rule == "TEST_DISABLED" and unit is not None and unit.after is None and unit.before is not None:
             texts = [normalize_text(a.text) for a in unit.before.assertions]
-            if texts and all(t in moved for t in texts):
+            needed = collections.Counter(texts)
+            if texts and all(moved[t] >= n for t, n in needed.items()):
+                moved.subtract(needed)
                 f.severity = "info"
                 f.deescalators.append("ASSERTION_MOVED")
                 continue
@@ -349,7 +391,7 @@ def apply_gates(
         # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
         # question: is there a production change that explains this edit?
         has_evidence = (
-            _file_repair_evidence(f.path, ir) if unit is None else _repair_evidence(unit, ir)
+            _file_repair_evidence(f.path, ir) if unit is None else _repair_evidence(unit, ir, f.path)
         )
         package_only = (
             not has_evidence

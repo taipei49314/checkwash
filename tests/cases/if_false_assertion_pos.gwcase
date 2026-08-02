@@ -1,0 +1,19 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: An assertion under `if False:` never executes
+origin: reader audit — unreachable analysis only handled return/raise
+=== before: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    assert calc() == 3
+=== after: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    if False:
+        assert calc() == 3
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

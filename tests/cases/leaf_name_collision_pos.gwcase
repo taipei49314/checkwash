@@ -1,0 +1,32 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: A same-named function in an unrelated module is not repair evidence
+origin: reader audit — module identity was erased by leaf-name matching
+=== env ===
+pytest
+=== before: pkg/module_a.py ===
+def calculate():
+    return 3
+=== after: pkg/module_a.py ===
+def calculate():
+    return 4
+=== before: pkg/module_b.py ===
+def calculate():
+    return 5
+=== after: pkg/module_b.py ===
+def calculate():
+    return 5
+=== before: tests/test_calc.py ===
+from pkg.module_b import calculate
+
+
+def test_calc():
+    assert calculate() == 5
+=== after: tests/test_calc.py ===
+from pkg.module_b import calculate
+
+
+def test_calc():
+    assert calculate() == 99
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

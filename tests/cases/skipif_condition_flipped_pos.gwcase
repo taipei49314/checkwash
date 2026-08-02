@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+title: skipif(False) -> skipif(True) disables the test
+origin: reader audit — marker alignment compared names, never conditions
+=== before: tests/test_calc.py ===
+import pytest
+
+from app import calc
+
+
+@pytest.mark.skipif(False, reason="x")
+def test_calc():
+    assert calc() == 3
+=== after: tests/test_calc.py ===
+import pytest
+
+from app import calc
+
+
+@pytest.mark.skipif(True, reason="x")
+def test_calc():
+    assert calc() == 3
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

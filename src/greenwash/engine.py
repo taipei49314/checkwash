@@ -111,6 +111,11 @@ def collectable(path: str) -> bool:
     return (base.startswith("test_") and base.endswith(".py")) or base.endswith("_test.py")
 
 
+# Roles whose files are supervised for their own sake. Moving a file out of
+# one of these is itself the event, not a neutral relocation.
+_SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"})
+
+
 def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChange]:
     """A rename that moves a test file out of collection is a disappearance.
 
@@ -125,9 +130,17 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
         old = (change.old_path or "").replace("\\", "/")
         new = change.path.replace("\\", "/")
         if old and old != new:
-            old_test = config.role_of(old) == "test" and collectable(old)
-            new_test = config.role_of(new) == "test" and collectable(new)
-            if old_test and not new_test:
+            old_role = config.role_of(old)
+            new_role = config.role_of(new)
+            old_test = old_role == "test" and collectable(old)
+            new_test = new_role == "test" and collectable(new)
+            # Moving a file out of a supervised role is a way of escaping
+            # supervision: `git mv AGENTS.md docs/AGENTS.old` or a workflow
+            # out of .github/workflows/ silenced the guardrail and CI rules
+            # entirely. Any such rename is expanded so the old path is still
+            # judged under the role it had.
+            escaped = old_role in _SUPERVISED_ROLES and new_role != old_role
+            if (old_test and not new_test) or escaped:
                 expanded.append(FileChange(old, "deleted", change.before, None))
                 expanded.append(
                     FileChange(new, "added", None, change.after, synthetic="renamed_from_test")
@@ -271,14 +284,27 @@ def build_ir(
             for unit in file_ir.units:
                 if unit.before is None or unit.after is None:
                     g.test_logic_changed = True
-                elif unit.delta is not None and (
-                    unit.delta.assertion_pairs
-                    or unit.delta.assertions_removed
-                    or unit.delta.assertions_added
-                    or unit.delta.markers_added
-                    or unit.delta.param_cases_removed
-                ):
-                    g.test_logic_changed = True
+                elif unit.delta is not None:
+                    # `assertion_pairs` holds every matched pair, changed or
+                    # not, so testing it for emptiness marked a comment-only
+                    # edit as a logic change and silently switched off
+                    # SNAPSHOT_CODE_COCHANGE (reader audit 2026-08-02). Only
+                    # pairs whose text actually differs count.
+                    b_by_id = {a.id: a for a in unit.before.assertions}
+                    a_by_id = {a.id: a for a in unit.after.assertions}
+                    edited = any(
+                        (b := b_by_id.get(p.before_id)) is not None
+                        and (a := a_by_id.get(p.after_id)) is not None
+                        and normalize_text(b.text) != normalize_text(a.text)
+                        for p in unit.delta.assertion_pairs
+                    )
+                    if edited or (
+                        unit.delta.assertions_removed
+                        or unit.delta.assertions_added
+                        or unit.delta.markers_added
+                        or unit.delta.param_cases_removed
+                    ):
+                        g.test_logic_changed = True
 
         if g.scope_allow and not any(
             _scope_match(path, glob) for glob in g.scope_allow
@@ -318,12 +344,11 @@ def build_ir(
             pass
         elif role == "prod":
             g.prod_files_changed.append(path)
-            head = path.split("/", 1)[0]
-            package = head[:-3] if head.endswith(".py") else head
+            package = _module_of(path)
             if is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
                 for q in sorted(set(before_parsed.symbols) | set(after_parsed.symbols)):
                     if before_parsed.symbols.get(q) != after_parsed.symbols.get(q):
-                        g.prod_symbols_changed.append(q)
+                        g.prod_symbols_changed.append(f"{_module_of(path)}::{q}")
                         # PACKAGE_REPAIR credit requires a MODIFIED existing
                         # symbol in the package — a real behaviour change. A
                         # newly added dead function or a comment does not
@@ -336,7 +361,9 @@ def build_ir(
             elif is_python and change.status == "added" and after_parsed and after_parsed.parse_ok:
                 # A brand-new prod file is all new symbols; nothing "modified"
                 # in it explains editing an existing test's expectation.
-                g.prod_symbols_changed.extend(sorted(after_parsed.symbols))
+                g.prod_symbols_changed.extend(
+                    f"{_module_of(path)}::{q}" for q in sorted(after_parsed.symbols)
+                )
                 _record_callers(g, after_parsed, g.prod_symbols_changed)
                 g.new_literals_in_prod.extend(sorted(after_parsed.literals))
             elif is_artifact(path):
@@ -360,6 +387,11 @@ def build_ir(
                 g.guardrail_files_changed.append(path)
         elif role == "ci":
             g.ci_files_changed.append(path)
+            if change.status == "deleted":
+                # Deleting or relocating a workflow removes the gate outright,
+                # which is at least as strong a signal as weakening a command
+                # inside it.
+                g.ci_weakening_lines.append((path, "workflow file removed"))
             _scan_ci_weakening(g, path, change.before, change.after)
         elif role == "snapshot":
             g.snapshot_files_changed.append(path)
@@ -392,7 +424,12 @@ def build_ir(
             for text, count in sorted((after_broad - before_broad).items()):
                 g.broad_excepts_added.extend([(path, text)] * count)
 
-    g.moved_assertion_texts = sorted(set(removed_texts) & set(added_texts))
+    # Multiset, not set (SPEC §7): deleting the same assertion from two tests
+    # while adding one copy elsewhere must leave one deletion unexplained.
+    # `set(a) & set(b)` credited both (confirmed bypass). Only as many
+    # removals as there are additions may be called "moved".
+    moved = removed_texts & added_texts  # Counter intersection = min of counts
+    g.moved_assertion_texts = sorted(moved.elements())
     g.base_literals = sorted(base_literals)
     # packages with >=1 genuinely modified symbol; deliberately NOT every
     # package with any prod change (see PACKAGE_REPAIR credit above).
@@ -416,6 +453,17 @@ def _scope_match(path: str, pattern: str) -> bool:
     if pattern.startswith("**/") and fnmatch.fnmatchcase(path, pattern[3:]):
         return True
     return False
+
+
+def _module_of(path: str) -> str:
+    """`pkg/mod.py` -> `pkg.mod`. Symbols are qualified by module so a
+    same-named function in an unrelated module cannot supply evidence."""
+    p = path.replace("\\", "/")
+    if p.endswith(".py"):
+        p = p[:-3]
+    if p.endswith("/__init__"):
+        p = p[: -len("/__init__")]
+    return p.replace("/", ".")
 
 
 def _record_callers(g: DiffGlobals, parsed: ParsedFile, changed: list[str]) -> None:

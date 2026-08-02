@@ -227,18 +227,31 @@ def _find_approx_call(node: ast.AST) -> ast.Call | None:
 
 
 def _approx_epsilon(call: ast.Call, text: str) -> tuple[str | None, str | None]:
+    """All tolerances on the call, joined — not just the first.
+
+    `approx(x, rel=1e-9, abs=1e-9)` -> `approx(x, rel=1e-9, abs=1.0)` widened
+    the absolute tolerance by nine orders of magnitude and was invisible,
+    because only the first keyword found was recorded (confirmed bypass).
+    Each kind is compared independently by the detector.
+    """
+    parts: list[tuple[str, str]] = []
     for kw in call.keywords:
         if kw.arg in ("rel", "abs"):
             seg = text.seg(kw.value)
-            if seg is not None:
-                return seg, kw.arg
+            if seg:
+                parts.append((kw.arg, seg))
     # pytest.approx(expected, rel) — a positional tolerance was invisible, so
     # widening one by a million produced no finding at all.
-    if len(call.args) > 1:
+    if not parts and len(call.args) > 1:
         seg = text.seg(call.args[1])
         if seg:
-            return seg, "rel"
-    return None, None
+            parts.append(("rel", seg))
+    if not parts:
+        # `approx(42)` with no tolerance at all still has an implicit default;
+        # record it so approx(42) -> approx(7) is a value change, not silence.
+        return None, None
+    parts.sort()
+    return "|".join(f"{k}={v}" for k, v in parts), "multi" if len(parts) > 1 else parts[0][0]
 
 
 def _canonical_repr(value: object) -> str:
@@ -288,7 +301,15 @@ class _Classified:
     right_value: str | None = None
     epsilon: str | None = None
     epsilon_kind: str | None = None
+    positive: bool = True
 
+
+_NEGATED_UNITTEST = frozenset(
+    {
+        "assertNotEqual", "assertFalse", "assertIsNone", "assertNotIn",
+        "assertNotRegex", "assertNotIsInstance", "assertNotAlmostEqual",
+    }
+)
 
 _BUILTIN_CALLS = frozenset(
     {
@@ -343,7 +364,10 @@ def _is_trivial_subject(node: ast.AST | None) -> bool:
 
 
 def _classify_assert(node: ast.Assert, text: str) -> _Classified:
-    test = node.test
+    return _classify_assert_expr(node.test, text)
+
+
+def _classify_assert_expr(test: ast.AST, text) -> _Classified:
     approx = _find_approx_call(test)
     if approx is not None:
         eps, kind = _approx_epsilon(approx, text)
@@ -355,9 +379,19 @@ def _classify_assert(node: ast.Assert, text: str) -> _Classified:
         if all_literal:
             return _Classified("tautology", S.TAUTOLOGY)
         op = test.ops[0]
-        left_text = text.seg(left)
-        right_lit = _literal_repr(comparators[0], text) if comparators else None
-        right_val = _literal_value(comparators[0]) if comparators else None
+        # Chained comparisons (`0 < x < 10`): the last comparator carries the
+        # upper expectation, so consider every comparator, not just the first.
+        expect_node = comparators[-1] if comparators else None
+        # `assert 3 == calc()` puts the expectation on the LEFT. Taking the
+        # right side unconditionally made changing it invisible (confirmed
+        # bypass); prefer whichever side is the literal.
+        subject_node = left
+        if comparators and _is_literal(left) and not _is_literal(comparators[-1]):
+            expect_node, subject_node = left, comparators[-1]
+        left_text = text.seg(subject_node)
+        right_lit = _literal_repr(expect_node, text) if expect_node is not None else None
+        right_val = _literal_value(expect_node) if expect_node is not None else None
+        pos = not isinstance(op, (ast.NotEq, ast.IsNot, ast.NotIn))
         if isinstance(op, (ast.Eq, ast.NotEq)):
             # Self-comparison (`assert f(x) == f(x)`) can never fail: the
             # oracle is gone even though the form still looks exact. Strip
@@ -370,18 +404,25 @@ def _classify_assert(node: ast.Assert, text: str) -> _Classified:
             if isinstance(left, ast.Call) and _dotted(left.func) == "len":
                 return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
             if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
-                return _Classified("compare_eq", S.EXACT_STRUCT, left_text, right_lit, right_val)
-            return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val)
+                return _Classified("compare_eq", S.EXACT_STRUCT, left_text, right_lit, right_val, positive=pos)
+            return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val, positive=pos)
         if isinstance(op, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)):
-            return _Classified("compare_ord", S.BOUND, left_text, right_lit, right_val)
+            return _Classified("compare_ord", S.BOUND, left_text, right_lit, right_val, positive=pos)
         if isinstance(op, (ast.In, ast.NotIn)):
-            return _Classified("membership", S.PATTERN, left_text, right_lit, right_val)
+            return _Classified("membership", S.PATTERN, left_text, right_lit, right_val, positive=pos)
         if isinstance(op, (ast.Is, ast.IsNot)):
             comp = comparators[0]
             if isinstance(comp, ast.Constant) and comp.value is None:
-                return _Classified("non_null", S.NON_NULL, left_text)
-            return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val)
+                return _Classified("non_null", S.NON_NULL, left_text, positive=pos)
+            return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val, positive=pos)
         return _Classified("unknown", None, left_text)
+    if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+        # `assert not x` is the negated form of `assert x`.
+        inner = _classify_assert_expr(test.operand, text)
+        return _Classified(
+            inner.form, inner.strength, inner.left, inner.right_literal,
+            inner.right_value, inner.epsilon, inner.epsilon_kind, not inner.positive,
+        )
     if isinstance(test, ast.Call):
         name = _dotted(test.func)
         if name == "isinstance":
@@ -399,6 +440,7 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     if method not in _UNITTEST_MAP:
         return None
     form, level = _UNITTEST_MAP[method]
+    positive = method not in _NEGATED_UNITTEST
     left_text = None
     right_lit = None
     right_val = None
@@ -428,7 +470,42 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         right_text = text.seg(node.args[1])
         if left_text and right_text and _norm(left_text) == _norm(right_text):
             form, level = "tautology", S.TAUTOLOGY
-    return _Classified(form, level, left_text, right_lit, right_val, epsilon, epsilon_kind)
+    return _Classified(
+        form, level, left_text, right_lit, right_val, epsilon, epsilon_kind, positive
+    )
+
+
+def _canonical_marker(name: str | None) -> str | None:
+    """Resolve a decorator's dotted name to its canonical skip-marker name.
+
+    `import pytest as p` then `@p.mark.skip` is the same marker as
+    `@pytest.mark.skip`; matching the literal dotted string missed it
+    (confirmed bypass). Matching is done on the trailing components, which
+    are alias-independent.
+    """
+    if not name:
+        return None
+    if name in _SKIP_DECORATORS:
+        return name
+    parts = name.split(".")
+    for width in (3, 2, 1):
+        if len(parts) >= width:
+            tail = ".".join(parts[-width:])
+            if tail in _SKIP_DECORATORS:
+                return tail
+            if width >= 2 and parts[-2] == "mark" and f"pytest.mark.{parts[-1]}" in _SKIP_DECORATORS:
+                return f"pytest.mark.{parts[-1]}"
+    return None
+
+
+def _marker_identity(canonical: str, node: ast.AST, text) -> str:
+    """Marker name plus its condition, so `skipif(False)` -> `skipif(True)` is
+    a change and not a no-op (confirmed bypass: only names were compared)."""
+    if isinstance(node, ast.Call) and node.args:
+        cond = _norm(text.seg(node.args[0]) or "")
+        if cond:
+            return f"{canonical}({cond})"
+    return canonical
 
 
 def _decorator_markers(
@@ -437,10 +514,12 @@ def _decorator_markers(
     markers: list[Marker] = []
     for dec in node.decorator_list:
         target = dec.func if isinstance(dec, ast.Call) else dec
-        name = _dotted(target)
-        if name in _SKIP_DECORATORS:
-            seg = text.seg(dec) or name
-            markers.append(Marker(name=name, text=seg, span=off.span(dec)))
+        canonical = _canonical_marker(_dotted(target))
+        if canonical:
+            seg = text.seg(dec) or canonical
+            markers.append(
+                Marker(name=_marker_identity(canonical, dec, text), text=seg, span=off.span(dec))
+            )
     return markers
 
 
@@ -455,10 +534,42 @@ def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Mark
         values = stmt.value.elts if isinstance(stmt.value, ast.List) else [stmt.value]
         for value in values:
             target = value.func if isinstance(value, ast.Call) else value
-            name = _dotted(target)
-            if name in _SKIP_DECORATORS:
-                seg = text.seg(stmt) or name
-                markers.append(Marker(name=name, text=seg, span=off.span(stmt)))
+            canonical = _canonical_marker(_dotted(target))
+            if canonical:
+                seg = text.seg(stmt) or canonical
+                markers.append(
+                    Marker(
+                        name=_marker_identity(canonical, value, text),
+                        text=seg,
+                        span=off.span(stmt),
+                    )
+                )
+    return markers
+
+
+def _module_skip_markers(tree: ast.Module, text, off: _Offsets) -> list[Marker]:
+    """Module-level `pytest.skip(..., allow_module_level=True)` and
+    `pytest.importorskip(...)` disable the whole file (confirmed bypass)."""
+    markers: list[Marker] = []
+    for stmt in tree.body:
+        call = None
+        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+            call = stmt.value
+        elif isinstance(stmt, ast.Assign) and isinstance(stmt.value, ast.Call):
+            # `pytestmark = pytest.mark.skip(...)` is _pytestmark_markers' job;
+            # only the assigned-result form of importorskip belongs here.
+            if any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in stmt.targets):
+                continue
+            call = stmt.value
+        if call is None:
+            continue
+        name = _dotted(call.func)
+        if not name:
+            continue
+        leaf = name.rsplit(".", 1)[-1]
+        if leaf in ("skip", "xfail", "importorskip"):
+            seg = (text.seg(stmt) or leaf).split("\n")[0]
+            markers.append(Marker(name=f"module.{leaf}", text=seg, span=off.span(stmt)))
     return markers
 
 
@@ -483,25 +594,59 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
     """
     dead: set[int] = set()
 
+    def kill(node: ast.AST) -> None:
+        for sub in ast.walk(node):
+            dead.add(id(sub))
+
     def scan(body: list[ast.stmt]) -> None:
-        stop = None
-        for i, stmt in enumerate(body):
-            if stop is not None:
-                for node in ast.walk(stmt):
-                    dead.add(id(node))
+        stop = False
+        for stmt in body:
+            if stop:
+                kill(stmt)
                 continue
             if isinstance(stmt, (ast.Return, ast.Raise)):
-                stop = i
+                stop = True
                 continue
+            # A nested def/lambda/class body does not run when the test runs;
+            # moving an assertion into one keeps it in the AST while removing
+            # it from execution (confirmed bypass).
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                kill(stmt)
+                continue
+            if isinstance(stmt, (ast.If, ast.While)):
+                test = stmt.test
+                falsy = _is_literal(test) and not _truthy_literal(test)
+                truthy = _is_literal(test) and _truthy_literal(test)
+                if falsy:
+                    for inner in stmt.body:
+                        kill(inner)
+                    scan(stmt.orelse)
+                    continue
+                if truthy and isinstance(stmt, ast.If):
+                    scan(stmt.body)
+                    for inner in stmt.orelse:
+                        kill(inner)
+                    continue
             for name in ("body", "orelse", "finalbody"):
-                inner = getattr(stmt, name, None)
-                if isinstance(inner, list) and inner and isinstance(inner[0], ast.stmt):
-                    scan(inner)
+                inner_body = getattr(stmt, name, None)
+                if isinstance(inner_body, list) and inner_body and isinstance(inner_body[0], ast.stmt):
+                    scan(inner_body)
             for handler in getattr(stmt, "handlers", []) or []:
                 scan(handler.body)
 
     scan(func.body)
+    # Lambdas anywhere in the body are deferred code too.
+    for node in ast.walk(func):
+        if isinstance(node, ast.Lambda):
+            kill(node.body)
     return dead
+
+
+def _truthy_literal(node: ast.AST) -> bool:
+    try:
+        return bool(ast.literal_eval(node))
+    except (ValueError, SyntaxError, TypeError):
+        return True
 
 
 def _param_case_count(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None:
@@ -556,6 +701,7 @@ def _collect_unit(
                     epsilon=c.epsilon,
                     epsilon_kind=c.epsilon_kind,
                     trivial=_is_trivial_subject(node.test),
+                    positive=c.positive,
                 )
             )
             counter += 1
@@ -601,6 +747,7 @@ def _collect_unit(
                         right_value=c.right_value,
                         epsilon=c.epsilon,
                         epsilon_kind=c.epsilon_kind,
+                        positive=c.positive,
                     )
                 )
                 counter += 1
@@ -742,7 +889,11 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # Symbol fingerprints exist to answer "did prod behaviour change?"; test
     # files never need them, and computing them dominated parse time.
     want_symbols = not collect_tests
-    module_markers = _pytestmark_markers(tree, text, off) if collect_tests else []
+    module_markers = (
+        _pytestmark_markers(tree, text, off) + _module_skip_markers(tree, text, off)
+        if collect_tests
+        else []
+    )
 
     def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
         for child in ast.iter_child_nodes(node):

@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+title: Module-level pytest.skip disables the whole file
+origin: reader audit — only decorators and pytestmark were inspected
+=== before: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    assert calc() == 3
+=== after: tests/test_calc.py ===
+import pytest
+
+pytest.skip("nope", allow_module_level=True)
+
+from app import calc
+
+
+def test_calc():
+    assert calc() == 3
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

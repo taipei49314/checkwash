@@ -1,0 +1,22 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: A routine CI edit that does not weaken the test command
+origin: coverage gap — CI_WORKFLOW_TOUCHED had no stays-quiet fixture
+=== before: .github/workflows/ci.yml ===
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

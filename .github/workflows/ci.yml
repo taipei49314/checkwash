@@ -21,6 +21,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Tags are needed by the release-tag gate; a shallow checkout made
+          # that test silently return early (reader audit).
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -47,12 +51,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install .
-      - env:
-          PYTHONUTF8: "1"
-        run: |
-          greenwash check "${{ github.event.pull_request.base.sha }}...HEAD" --format term | tee "$GITHUB_STEP_SUMMARY"
-          exit "${PIPESTATUS[0]}"
+      # Exercise the published composite action itself, not just the CLI —
+      # otherwise action/action.yml ships untested (reader audit 2026-08-02).
+      - uses: ./action
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
 
   byte-compare:
     # The cross-OS determinism gate: every OS/Python combination must emit

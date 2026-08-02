@@ -1,0 +1,22 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+title: A hand-edited exemption beyond the 180-day cap is not honoured
+origin: reader audit — the cap was only enforced when writing, not reading
+=== before: .greenwash/allow.toml ===
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_x.py/test_x/aaaaaaaaaaaa"
+rule = "ASSERT_WEAKENED"
+reason = "reviewed"
+author = "alice"
+created = "2026-01-01"
+expires = "2026-04-01"
+=== after: .greenwash/allow.toml ===
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_x.py/test_x/aaaaaaaaaaaa"
+rule = "ASSERT_WEAKENED"
+reason = "reviewed"
+author = "alice"
+created = "2026-01-01"
+expires = "2036-01-01"
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "critical", "escalators": ["META"]}]

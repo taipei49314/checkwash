@@ -24,8 +24,8 @@ Paths are normalized to forward slashes before matching. Default role globs
 |-----------|---------------|
 | conftest  | `**/conftest.py` |
 | test      | `tests/**`, `**/test_*.py`, `**/*_test.py` |
-| guardrail | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.claude/**`, `.greenwash/**`, `.pre-commit-config.yaml` |
-| ci        | `.github/workflows/**`, `.gitlab-ci.yml` |
+| guardrail | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.claude/**`, `.greenwash/**` |
+| ci        | `.github/workflows/**`, `.gitlab-ci.yml`, `.pre-commit-config.yaml` |
 | snapshot  | `**/__snapshots__/**`, `**/golden/**`, `**/*.golden`, `**/*.snap` |
 | lockfile  | `poetry.lock`, `uv.lock`, `package-lock.json`, `pnpm-lock.yaml`, `requirements*.txt` |
 | docs      | `**/*.md`, `**/*.rst` (that are not guardrail) |
@@ -47,12 +47,18 @@ between the two is a laundering route (all confirmed by reproduction):
   Two defs sharing a name shadow each other at runtime; greenwash keeps them
   distinct as `name`, `name#2`, … in file order, so a comment-only edit
   cannot produce phantom pairings
-- statements after an unconditional `return`/`raise` never execute, so
-  assertions there are not collected (their loss reads as removal)
+- statements after an unconditional `return`/`raise` never execute, and
+  neither do bodies of nested `def`/`class`/`lambda` or an `if False:`
+  branch; assertions there are not collected (their loss reads as removal)
 - `@pytest.mark.parametrize` rows are test items: deleting rows deletes units
 - `conftest.py` is analysed for suite-level collection controls
   (`pytest_collection_modifyitems`, `pytest_ignore_collect`,
   `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`, `pytestmark`)
+- module-level `pytest.skip(..., allow_module_level=True)` and
+  `importorskip` disable the whole file
+- a skip marker's identity includes its **condition**, so
+  `skipif(False)` → `skipif(True)` is a change; and the marker is matched on
+  its trailing components, so `import pytest as p; @p.mark.skip` counts
 
 ## 3. Assertion strength lattice
 
@@ -90,9 +96,9 @@ detectors can only be disabled whole.
 | Rule ID | Trigger |
 |---|---|
 | `ASSERT_REMOVED` | an assertion disappeared from a surviving test unit |
-| `ASSERT_WEAKENED` | aligned assertion strength decreased |
+| `ASSERT_WEAKENED` | aligned assertion strength decreased, **or** its polarity flipped (`==`→`!=`, `is`→`is not`, `assertTrue`→`assertFalse`) — same form and strength, opposite meaning |
 | `TEST_DISABLED` | skip/xfail marker added (on the function, its class, the module's `pytestmark`, `self.skipTest`, or a conftest suite control), a whole test unit disappeared (including out of collection, per §2b), or parametrized cases deleted |
-| `TOLERANCE_LOOSENED` | Decimal(after epsilon) > Decimal(before epsilon) |
+| `TOLERANCE_LOOSENED` | any individual tolerance on the call got wider (each `rel`/`abs`/`places` compared separately, via Decimal) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `EXPECTED_VALUE_HARDCODED` | new assertion literal equals a constant newly introduced in prod in the same diff |
 | `EXPECTED_VALUE_CHANGED` | an aligned assertion keeps its form and strength but its expected literal was rewritten |

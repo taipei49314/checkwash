@@ -1,0 +1,22 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: Widening `abs` while `rel` stays put
+origin: reader audit — only the first tolerance found was recorded
+=== before: tests/test_calc.py ===
+import pytest
+
+from app import calc
+
+
+def test_calc():
+    assert calc() == pytest.approx(3.0, rel=1e-9, abs=1e-9)
+=== after: tests/test_calc.py ===
+import pytest
+
+from app import calc
+
+
+def test_calc():
+    assert calc() == pytest.approx(3.0, rel=1e-9, abs=1.0)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

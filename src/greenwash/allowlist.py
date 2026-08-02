@@ -58,12 +58,27 @@ def load_allowlist(data: bytes | None) -> tuple[list[AllowEntry], str | None]:
 
 
 def active_fingerprints(entries: list[AllowEntry], today: datetime.date) -> set[str]:
+    """Exemptions still in force today.
+
+    The MAX_EXPIRY_DAYS cap was only checked when `greenwash allow` wrote an
+    entry, so a hand-edited ledger could grant a ten-year exemption and be
+    honoured (reader audit 2026-08-02). The cap is enforced here too, against
+    `created` where it is present and against today otherwise, so the reading
+    side never trusts a window the writing side would have refused.
+    """
     active: set[str] = set()
     for e in entries:
         try:
             expiry = datetime.date.fromisoformat(e.expires)
         except ValueError:
             continue
-        if expiry >= today:
-            active.add(e.fingerprint)
+        if expiry < today:
+            continue
+        try:
+            start = datetime.date.fromisoformat(e.created)
+        except ValueError:
+            start = today
+        if (expiry - start).days > MAX_EXPIRY_DAYS:
+            continue  # over the cap: treat as not exempted
+        active.add(e.fingerprint)
     return active

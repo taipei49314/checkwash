@@ -1,0 +1,18 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: `== 3` -> `!= 3` inverts what the test proves
+origin: reader audit — both map to the same form and strength
+=== before: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    assert calc() == 3
+=== after: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    assert calc() != 3
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

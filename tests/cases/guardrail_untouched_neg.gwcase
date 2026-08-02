@@ -1,0 +1,14 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+title: A docs file that is not a guardrail may change freely
+origin: coverage gap — GUARDRAIL_TOUCHED had no stays-quiet fixture
+=== before: docs/usage.md ===
+# Usage
+
+Run the thing.
+=== after: docs/usage.md ===
+# Usage
+
+Run the thing, then check the output.
+=== expect ===
+[]

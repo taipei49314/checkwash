@@ -1,0 +1,35 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: Two identical deletions, one re-appearance — only one is "moved"
+origin: reader audit — Counter was collapsed to a set, crediting both
+=== before: tests/test_calc.py ===
+from app import calc
+
+
+def test_a():
+    assert calc() == 3
+
+
+def test_b():
+    assert calc() == 3
+
+
+def test_c():
+    pass
+=== after: tests/test_calc.py ===
+from app import calc
+
+
+def test_a():
+    pass
+
+
+def test_b():
+    pass
+
+
+def test_c():
+    assert calc() == 3
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]},
+ {"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

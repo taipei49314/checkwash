@@ -133,3 +133,45 @@ Original design read exemptions only from base side AND made any
 `.greenwash/**` edit critical — which deadlocks the documented
 `greenwash allow` flow (red-team finding #1). Resolution in SPEC §6:
 append-only additions surface as `EXEMPTION_ADDED` instead of critical.
+
+## D-011 (2026-08-02): supervision follows the file, not the path
+
+A rename could carry a file out of a supervised role and silence its rules
+entirely — `AGENTS.md` to `docs/AGENTS.old`, a workflow out of
+`.github/workflows/`. `_expand_renames` only ever considered test files.
+
+Frozen: leaving `guardrail`, `ci`, `test`, `conftest` or `snapshot` is
+expanded into a deletion at the old path plus an addition at the new one, so
+the old role still judges it. Relocation is not a neutral act for a file
+whose location is what makes it supervised.
+
+## D-012 (2026-08-02): an assertion counts only if it can run and can fail
+
+Three separate bypasses were the same misconception — that an assertion
+present in the AST is an assertion in force:
+
+- moved into a nested `def` or `lambda` (never called),
+- parked under `if False:`,
+- polarity flipped, so it still runs but proves the opposite.
+
+Collection now models execution: nested scopes and constant-false branches
+are unreachable, and polarity is part of an assertion's identity rather than
+a detail the lattice happens to ignore.
+
+## D-013 (2026-08-02): identity needs its qualifier
+
+Several checks compared names with their qualifiers thrown away, and each
+discarded qualifier was a bypass:
+
+- symbols matched on leaf name, so `module_a.calculate` supplied repair
+  evidence for a test calling `module_b.calculate`;
+- PACKAGE_REPAIR matched top-level package, so any change in `pkg` excused an
+  expectation rewrite in any test importing any part of `pkg`;
+- skip markers matched their name but not their condition, so
+  `skipif(False)` → `skipif(True)` was a no-op;
+- the moved-assertion set was a `set`, so two deletions could be excused by
+  one re-appearance.
+
+Frozen: symbols are `module::qualname` and must be reachable from the test's
+imports; package evidence uses module reachability; marker identity includes
+its condition; moved assertions are a multiset whose credits are spent.

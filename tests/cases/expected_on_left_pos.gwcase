@@ -1,0 +1,18 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: The expectation can be on the left: `assert 3 == calc()`
+origin: reader audit — only the right comparator was read
+=== before: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    assert 3 == calc()
+=== after: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    assert 99 == calc()
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

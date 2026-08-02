@@ -87,11 +87,31 @@ particular made the tool catch **0 of 12** real tampering diffs.
 | 24 | `assert f(x) == f(x) + 0` — self-comparison behind an identity op | **Closed** — identity ops stripped before the check |
 | 25 | Pad a faked compensation with `assert str(1) == "1"` (vacuous) | **Closed** — triviality recognised (and, conversely, a local named `sum` is *not* mistaken for the builtin) |
 
+| 26 | `git mv AGENTS.md docs/AGENTS.old` — escape the guardrail role by renaming | **Closed** — leaving a supervised role is itself the event |
+| 27 | Move a workflow out of `.github/workflows/` | **Closed** — same rule; removal escalates like a weakened command |
+| 28 | Move an assertion into a never-called nested `def` (or `lambda`) | **Closed** — nested scopes do not execute |
+| 29 | Park an assertion under `if False:` | **Closed** — constant-condition branches are unreachable |
+| 30 | `skipif(False)` → `skipif(True)` | **Closed** — a marker's identity includes its condition |
+| 31 | Module-level `pytest.skip(..., allow_module_level=True)` / `importorskip` | **Closed** |
+| 32 | `import pytest as p` then `@p.mark.skip` | **Closed** — markers matched on trailing components, not the literal string |
+| 33 | `== 42` → `!= 42` (also `is`/`is not`, `in`/`not in`, `assertTrue`/`assertFalse`) | **Closed** — polarity is part of the assertion |
+| 34 | Delete the same assertion twice, re-add one copy — both excused as "moved" | **Closed** — the moved set is a multiset again, each credit spent once |
+| 35 | Change `module_a.calculate` to supply evidence for a test calling `module_b.calculate` | **Closed** — symbols are module-qualified and must be reachable from the test's imports |
+| 36 | An unrelated `except AssertionError: pass` riding on a sibling test's repair evidence | **Closed** — file-scoped findings earn no unit's evidence |
+| 37 | Widen `abs` while leaving `rel` alone | **Closed** — every tolerance compared independently |
+| 38 | Put the expectation on the left: `assert 3 == calc()` | **Closed** — the literal side is the expectation, either way |
+| 39 | Hand-edit an exemption past the 180-day cap | **Closed** — the cap is enforced on read, not only on write |
+
 Bypasses 17–22 came from adversarially reviewing the M1 code after it
 shipped. Bypasses 23–25 from reviewing the M3 code (the newest deescalators)
 the same way. Every one was a defect in detector code written to catch
 cheating — including PACKAGE_REPAIR, added in M1 to *fix* a false positive,
 which reopened bypass #4 until this pass caught it.
+
+Bypasses 26–39 were all found by one outside reader auditing the public
+repository, in a single pass, after four rounds of the project's own
+adversarial review had declared it done. That ratio is the most important
+number in this file.
 
 Bypasses 4–11 were found by adversarial review and each has a regression
 fixture. Report a new one and it becomes the next row.

@@ -29,6 +29,10 @@ class Assertion:
     # The asserted subject depends only on literals and builtins, so the
     # assertion cannot fail. Such assertions never count as compensation.
     trivial: bool = False
+    # False for negated forms (!=, is not, not in, assertFalse, ...).
+    # Flipping polarity inverts what the test proves while leaving form and
+    # strength identical, so it needs to be part of the assertion's identity.
+    positive: bool = True
 
 
 @dataclass

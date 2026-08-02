@@ -1,0 +1,12 @@
+=== meta ===
+rule: SCOPE_DRIFT
+title: With no task manifest, SCOPE_DRIFT is off entirely
+origin: coverage gap — SCOPE_DRIFT had no stays-quiet fixture
+=== before: anywhere/thing.py ===
+def thing():
+    return 1
+=== after: anywhere/thing.py ===
+def thing():
+    return 2
+=== expect ===
+[]

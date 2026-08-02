@@ -7,7 +7,7 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release.** 14 detectors, 138 tests, zero runtime dependencies.
+> Status: **pre-release.** 14 detectors, 157 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -120,7 +120,7 @@ greenwash check                 # HEAD vs the working tree
 greenwash demo                  # replay real tampering cases, fully offline
 ```
 
-`greenwash demo` replays eight real tampering cases — a softened assertion, a
+`greenwash demo` replays seven real tampering cases — a softened assertion, a
 widened tolerance, a rewritten expectation, an xfail'd failure, a swallowed
 error, a relaxed CI step, a self-edited CLAUDE.md — plus one honest fix that
 stays silent. No network, no key, no LLM; every verdict comes from the same

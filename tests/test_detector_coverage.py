@@ -56,3 +56,36 @@ def test_negative_fixtures_exist_in_quantity():
     # Negatives are the false-positive defence line; they must not lag far
     # behind the positive corpus.
     assert negatives >= 10, f"only {negatives} negative fixtures"
+
+
+def test_every_detector_appears_in_a_negative_fixture():
+    """Each detector must have at least one case where it does NOT fire.
+
+    A detector with only positive fixtures is an unbounded false-positive
+    risk, and SUPPRESSION_ADDED had exactly that until a reader pointed it
+    out. "Appears in a negative fixture" means: the fixture exercises the
+    same construct and the expectation is that nothing (or nothing from this
+    rule) is reported.
+    """
+    exercised: set[str] = set()
+    for case_path in CASES:
+        case = parse_case(case_path.read_text(encoding="utf-8"))
+        subject = case.meta.get("rule", "")
+        if subject not in REGISTRY:
+            continue
+        # A negative for rule R: the fixture is *about* R and R does not
+        # block in it — either nothing is expected, or R only appears
+        # de-escalated.
+        blocking = {
+            e.get("rule")
+            for e in case.expect
+            if e.get("severity") in ("high", "critical")
+        }
+        if subject not in blocking:
+            exercised.add(subject)
+    missing = sorted(set(REGISTRY) - exercised - DERIVED_RULES)
+    assert not missing, (
+        f"detectors with no fixture proving they stay quiet: {missing}. "
+        "Every detector needs a case where it does not block, or it is an "
+        "unbounded false-positive risk."
+    )

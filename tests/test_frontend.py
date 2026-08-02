@@ -78,7 +78,7 @@ def test_approx_epsilon_extracted():
         "import pytest\n\ndef test_x():\n    assert total == pytest.approx(105.3, rel=1e-6)\n"
     )
     assert asserts[0].strength == S.APPROX
-    assert asserts[0].epsilon == "1e-6"
+    assert asserts[0].epsilon == "rel=1e-6"
 
 
 def test_unittest_mapping():
@@ -108,7 +108,7 @@ def test_skip_markers_detected():
         "    assert f() == 1\n"
     )
     parsed = parse_python(src.encode(), collect_tests=True)
-    assert [m.name for m in parsed.units[0].side.markers] == ["pytest.mark.skip"]
+    assert [m.name.split("(")[0] for m in parsed.units[0].side.markers] == ["pytest.mark.skip"]
 
 
 def test_syntax_error_is_visible_degradation():
@@ -209,7 +209,7 @@ def test_pytestmark_reaches_units():
         "    assert 1 + 1 == 2\n"
     )
     parsed = parse_python(src.encode(), collect_tests=True)
-    assert [m.name for m in parsed.units[0].side.markers] == ["pytest.mark.skip"]
+    assert [m.name.split("(")[0] for m in parsed.units[0].side.markers] == ["pytest.mark.skip"]
 
 
 def test_self_skiptest_is_a_marker():

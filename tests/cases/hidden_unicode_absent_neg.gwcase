@@ -1,0 +1,12 @@
+=== meta ===
+rule: HIDDEN_UNICODE
+title: Ordinary non-ASCII text is not a hidden control character
+origin: coverage gap — HIDDEN_UNICODE had no stays-quiet fixture
+=== before: app/greet.py ===
+def greet():
+    return "hello"
+=== after: app/greet.py ===
+def greet():
+    return "café 日本語 —"
+=== expect ===
+[]

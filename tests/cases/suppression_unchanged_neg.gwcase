@@ -1,0 +1,19 @@
+=== meta ===
+rule: none
+title: A pre-existing suppression carried through a refactor is not an addition
+origin: reader audit — SUPPRESSION_ADDED had no negative fixture at all
+=== before: app/loader.py ===
+import os  # noqa
+
+
+def load(path):
+    return open(path).read()
+=== after: app/loader.py ===
+import os  # noqa
+
+
+def load(path):
+    with open(path) as fh:
+        return fh.read()
+=== expect ===
+[]

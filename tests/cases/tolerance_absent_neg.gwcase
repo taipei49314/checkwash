@@ -1,0 +1,23 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: Adding an unrelated assertion near an approx does not loosen it
+origin: coverage gap — TOLERANCE_LOOSENED had no stays-quiet fixture
+=== before: tests/test_physics.py ===
+import pytest
+
+from physics import energy
+
+
+def test_energy():
+    assert energy(2.0) == pytest.approx(19.62, rel=1e-6)
+=== after: tests/test_physics.py ===
+import pytest
+
+from physics import energy
+
+
+def test_energy():
+    assert energy(2.0) == pytest.approx(19.62, rel=1e-6)
+    assert energy(0.0) == pytest.approx(0.0, rel=1e-6)
+=== expect ===
+[]
