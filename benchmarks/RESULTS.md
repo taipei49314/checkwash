@@ -61,6 +61,18 @@ greenwash is *wrong* is the adjudicated false-positive rate.
 
 Raw per-commit verdicts and reasoning: `adjudication-2026-08-02.json`.
 
+**How much to trust the split.** Each commit was judged once, by one
+agent, with no second opinion and no inter-rater agreement measured.
+The block rate is a machine count and is exact; the split between
+*false positive* and *legitimate policy block* is a judgement call on
+40 diffs, and the boundary is genuinely arguable on some of them (a
+test deleted because its coverage moved upstream is invisible to any
+diff analyser — called spec-correct here, another reviewer might say
+the tool should not have blocked). Read the per-commit reasoning and
+disagree; the file exists so you can. What would make the split solid
+is two or three independent passes with agreement reported, which has
+not been done.
+
 ## Where the earlier rounds' blocks came from
 
 Every oracle-rule block from the first sweep round was triaged by an

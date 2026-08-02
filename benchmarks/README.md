@@ -20,10 +20,26 @@ rich, starlette), 300 consecutive non-merge commits each — 1800 commits none
 of which greenwash saw during development. Results in `RESULTS.md`, generated
 by `make_results.py` so the document cannot drift from the measurement.
 
-Every oracle-rule block from the first round was triaged by an independent
-agent reading the real diff (`triage-2026-07-30.json`): 14 spec-correct, 34
-fixable false positives, 0 unclear. Those 34 mechanisms drove three precision
-rounds and are now regression fixtures.
+**A block rate is not a false-positive rate.** Some blocked commits really do
+drop oracle coverage with nothing visible replacing it — the tool doing its
+documented job, to be allowlisted by a reviewer. So the blocks are adjudicated
+commit by commit, and `RESULTS.md` publishes the decomposition:
+
+| measure | current build |
+|---|---:|
+| historical human-commit block rate | 2.22% |
+| adjudicated **false positive** | **1.33%** |
+| legitimate policy block | 0.89% |
+| unclear | 0.00% |
+
+Two adjudication passes exist, of two different populations — the earlier one
+does not describe the current build and is kept only as history:
+
+- `adjudication-2026-08-02.json` — all 40 blocks of the **current** build:
+  24 false positive, 16 spec-correct, 0 unclear.
+- `triage-2026-07-30.json` — the 48 oracle-rule blocks of the **first** round:
+  34 fixable false positives, 14 spec-correct, 0 unclear. Those 34 mechanisms
+  drove three precision rounds and are now regression fixtures.
 
 ### Measured progression
 

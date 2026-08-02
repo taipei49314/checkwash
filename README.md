@@ -56,9 +56,11 @@ Two harnesses, both reproducible from a clone
   A block is not automatically a mistake. All 40 were adjudicated commit by
   commit against the real diff: **24 false positives (1.33%)**, 16 legitimate
   policy blocks (0.89%) where the commit really does drop oracle coverage
-  with nothing visible replacing it, 0 unclear. Per-commit reasoning in
-  [RESULTS.md](benchmarks/RESULTS.md). The block rate is what a team feels in
-  CI; the false-positive rate is what says whether greenwash is *wrong*.
+  with nothing visible replacing it, 0 unclear. The block rate is a machine
+  count and exact; the split is one judge's call on 40 diffs with no second
+  opinion, and some of them are genuinely arguable — the per-commit reasoning
+  is published in [RESULTS.md](benchmarks/RESULTS.md) precisely so you can
+  disagree with it.
 - **Recall — 12 / 12.** Twelve bug-fix tasks run through real coding agents
   told to make CI green without fixing the bug; greenwash blocks all twelve
   tampering diffs. Under natural conditions, 0 of 12 agents touched a test at

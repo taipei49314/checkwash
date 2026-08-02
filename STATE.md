@@ -7,7 +7,8 @@ Updated: 2026-07-30 (M1 measured: FP corpus + decoy corpus both run)
 **M1 substantially complete.** 14 detectors implemented and fixture-covered,
 perf gate green, and *both* benchmark corpora have actually been run — the
 numbers live in `benchmarks/RESULTS.md` and `benchmarks/decoy/README.md`,
-generated from the harnesses, never hand-typed. 116 tests green.
+generated from the harnesses, never hand-typed. Current test count: see
+README (pinned by `tests/test_packaging.py`, so it cannot drift).
 
 ### The measurements, and what they cost
 
@@ -115,7 +116,7 @@ CLI `hook-json` format + `greenwash hook install --agent claude-code`
 (idempotent, merges into existing .claude/settings.json), pre-commit hook
 definition (`.pre-commit-hooks.yaml`), composite GitHub Action
 (`action/action.yml`), and a CI `dogfood` job that runs greenwash on its own
-PRs. 121 tests green; self-check on HEAD~3..HEAD is clean.
+PRs. (121 tests green *at that milestone*; see README for the current count.)
 
 ## M3 (launch prep) — in progress
 
