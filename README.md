@@ -70,7 +70,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; greenwash dogfoods it on its own PRs
-- uses: taipei49314/greenwash/action@main
+- uses: taipei49314/greenwash/action@v0.1.0
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -99,8 +99,12 @@ does not claim to be. Closest neighbours, credited up front:
 
 Pick the surface that fits; the engine is identical behind all of them.
 
+Not on PyPI yet — install from the repo:
+
 ```bash
-pipx install greenwash          # or: uv tool install greenwash
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.0
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.0
+
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
 greenwash demo                  # replay real tampering cases, fully offline
@@ -123,7 +127,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0
+      - uses: taipei49314/greenwash/action@v0.1.0
 ```
 
 **pre-commit**:
