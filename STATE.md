@@ -144,9 +144,13 @@ numbers; launch copy is in docs/launch.md.
 - Record the asciinema cast (examples/invoice for the live half, `greenwash
   demo` for the replay half; design §6.3 storyboard). Needs a human at a
   terminal — hand-off item.
-- **Create the GitHub repo and push.** This is an outward, irreversible,
-  publishing action. It is left for the human to decide and do — the project
-  has deliberately had no remote the entire time. Do NOT push autonomously.
+- **Flip the repo to public.** Pushed 2026-08-02 to
+  `taipei49314/greenwash` as **private**, on the owner's instruction, which
+  matches the docs/launch.md plan (repo private until T-1, then public and
+  left to settle for a day). Going public is the irreversible publishing
+  step and stays the owner's call — do NOT flip it autonomously.
+  Before flipping: record the asciinema cast, re-run `greenwash sweep` on all
+  six repos and confirm RESULTS.md, and bump the version off `0.1.0.dev0`.
 
 ## Later
 
