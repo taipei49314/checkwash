@@ -10,8 +10,13 @@ git init -q && git add -A && git commit -qm baseline
 # the bug: invoice_total never rounds, so the test fails
 python -m pytest -q          # 1 failed: 35.364999999999995 != 35.37
 
-# now let an agent "fix" it by weakening the oracle instead of the code:
-sed -i 's/== 35.37/> 0/' tests/test_billing.py
+# now let an agent "fix" it by weakening the oracle instead of the code
+# (portable in-place edit; sed -i differs between GNU and BSD/macOS):
+python - <<'PY'
+import pathlib
+p = pathlib.Path("tests/test_billing.py")
+p.write_text(p.read_text().replace("== 35.37", "> 0"))
+PY
 python -m pytest -q          # 1 passed  — CI is green, the bug is untouched
 
 greenwash check              # ✗ ASSERT_WEAKENED high: EXACT_VALUE -> BOUND,
