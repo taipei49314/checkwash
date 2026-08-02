@@ -83,7 +83,14 @@ Pick the surface that fits; the engine is identical behind all of them.
 pipx install greenwash          # or: uv tool install greenwash
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
+greenwash demo                  # replay real tampering cases, fully offline
 ```
+
+`greenwash demo` replays eight real tampering cases — a softened assertion, a
+widened tolerance, a rewritten expectation, an xfail'd failure, a swallowed
+error, a relaxed CI step, a self-edited CLAUDE.md — plus one honest fix that
+stays silent. No network, no key, no LLM; every verdict comes from the same
+engine `check` runs.
 
 **GitHub Action** — blocks a PR on high-severity findings:
 

@@ -318,6 +318,8 @@ def build_parser() -> argparse.ArgumentParser:
     hook_install.add_argument("--agent", choices=["claude-code", "pre-commit"], required=True)
     hook_install.add_argument("--repo", default=".")
 
+    sub.add_parser("demo", help="replay real tampering cases offline")
+
     allow = sub.add_parser("allow", help="record a reviewed exemption")
     allow.add_argument("fingerprint")
     allow.add_argument("--reason", required=True)
@@ -331,7 +333,7 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
         argv = ["check"]
-    elif argv[0] not in ("check", "allow", "sweep", "hook", "-h", "--help", "--version"):
+    elif argv[0] not in ("check", "allow", "sweep", "hook", "demo", "-h", "--help", "--version"):
         argv = ["check", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -349,6 +351,10 @@ def main(argv: list[str] | None = None) -> int:
             result = sweep(args.repo, args.revs, args.limit, _today(), args.fail_on)
             _write_machine(result.to_json())
             return 0
+        if args.command == "demo":
+            from greenwash.demo import run as run_demo
+
+            return run_demo()
         parser.print_help()
         return 2
     except (GitError, OSError, RecursionError) as exc:

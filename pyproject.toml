@@ -35,6 +35,8 @@ Homepage = "https://github.com/taipei49314/greenwash"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/greenwash"]
+# demo_cases/*.gwcase ship in the wheel so `greenwash demo` works after pipx.
+artifacts = ["src/greenwash/demo_cases/*.gwcase"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

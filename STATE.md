@@ -128,9 +128,15 @@ Done:
 - **60-second demo** (`examples/invoice/`): reproducible, and pinned by
   `tests/test_demo_reproduces.py` so it can never silently rot.
 
+- **`greenwash demo`**: replays 8 real tampering cases + 1 honest fix, fully
+  offline, from cases packaged in the wheel (`src/greenwash/demo_cases/`).
+  Pinned by `tests/test_demo_command.py`, including that the cases load via
+  `importlib.resources` — the exact path a pipx install reads them by.
+
 Left for M3:
-- Record the actual asciinema cast from examples/invoice (design §6.3 has the
-  storyboard); it needs a human at a terminal, so it is a hand-off item.
+- Record the actual asciinema cast (examples/invoice for the live capture,
+  then `greenwash demo` for the replay half; design §6.3 storyboard). Needs a
+  human at a terminal — hand-off item.
 - README hero polish, Show HN copy, prior-art table.
 - Then: create the GitHub repo and push. Still no remote by design until the
   launch checklist is green.
