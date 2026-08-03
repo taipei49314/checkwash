@@ -302,3 +302,55 @@ Frozen, five parts:
   invalidate reviewed exemptions. The cost of that choice is THREATMODEL 54
   (guard edits produce no event), kept open until there is an allowlist
   migration story.
+
+## D-020 (2026-08-03): "disabled" was doing three jobs, and honest removals deserve their own evidence
+
+Three mechanisms shared one definition: `disabled = bool(markers)`. It gated
+which added units may vouch for moved assertions (D2), which count toward
+restructure mass (D5), and which fund the split/rename budget. The definition
+was right for its original purpose — a sacrificial `@pytest.mark.skip` unit
+must buy nothing — and wrong for the FP corpus's most common honest shape: a
+test relocated across files *together with its own compat gate*
+(click a391797d00 / 700798252a carried `skipif(WIN)` along). One in three
+"disabled" destinations in those diffs was simply a Windows skip in transit.
+
+Frozen, four parts:
+
+- **Live means "no markers, or D6-qualified compat gates only"** — the same
+  evaluator, the same resolved constants, the same refusal for unconditional
+  skips, always-true conditions, and anything unverifiable (THREATMODEL 55
+  pins both costume variants). Bypass #9 stays closed.
+- **A disappeared unit's whole normalized body is a move credit** of its own
+  (`moved_unit_hashes`, sha256, decorators excluded, multiset spent once like
+  the assertion texts). It exists because an assertion-less smoke test that
+  relocates verbatim has nothing in the D2 multiset to prove it moved
+  (a391797d00, test_echo_no_streams).
+- **D8 PROD_SYMBOL_REMOVED**: feature removal is the honest twin of test
+  deletion. Removal shapes of TEST_DISABLED only (disappeared unit, deleted
+  parametrize rows — never an added marker), requires a prod symbol that
+  existed at base and is gone at head, connected by the test file's imports
+  (before-side imports for a deleted file) or the `test_<module>` naming
+  convention (starlette b133ab45ad reaches its module only through
+  `importlib.import_module("...")`, a string no static import list sees).
+  Holds at warn. The escort residual is THREATMODEL 56, measured cost on the
+  decoy corpus: zero.
+
+  The first cut of this rule counted *any* vanished symbol, and symbol
+  collection records assignments inside function bodies — so a rewritten
+  function "deleted" its old locals and the credit cleared two adjudicated
+  spec-correct blocks (click b7e5fd4cc7 / c3535905c7: fish completion
+  rewritten, its multiline-help test deleted, coverage genuinely gone). The
+  red-zone check caught it before it shipped. A deletion now counts only
+  when no prefix of the qualname survives: module-level names and whole
+  classes qualify, a surviving function's locals do not — and the corpus FPs
+  that had been riding the loose signal (attrs f520d9a89f, flask 06ea505ce2 /
+  53b8f08218, starlette 02b6ed7b18) went back to blocking, reported as such.
+- **D9 DEPENDENCY_DRIFT**: expectation literals tracking a manifest change
+  (httpx 0.28's compact JSON separators rewrote three starlette expectations)
+  hold at warn, EXPECTED_VALUE_CHANGED only — the same scoping argument as
+  PACKAGE_REPAIR, THREATMODEL 57 documents the escort.
+
+Not fixed, named honestly: a test deleted because an identical copy already
+exists *outside the diff* (click 1103c5cac2 test_confirm_repeat, a391797d00
+test_prompt_cast_default) needs head-tree enumeration greenwash does not do
+yet; those two commits stay blocked and stay adjudicated as false positives.

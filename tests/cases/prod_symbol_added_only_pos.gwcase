@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a purely additive prod change does not excuse deleting a test
+origin: PROD_SYMBOL_REMOVED requires a symbol that existed and is gone — new code explains no deletion
+=== before: src/app/exceptions.py ===
+class AppError(Exception):
+    pass
+=== after: src/app/exceptions.py ===
+class AppError(Exception):
+    pass
+
+
+def brand_new_helper():
+    return 1
+=== before: tests/test_exceptions.py ===
+from app.exceptions import AppError
+
+
+def test_error_is_exception():
+    assert issubclass(AppError, Exception)
+
+
+def test_error_repr():
+    assert "AppError" in repr(AppError)
+=== after: tests/test_exceptions.py ===
+from app.exceptions import AppError
+
+
+def test_error_is_exception():
+    assert issubclass(AppError, Exception)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

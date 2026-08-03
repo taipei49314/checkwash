@@ -1,0 +1,47 @@
+=== meta ===
+rule: TEST_DISABLED
+title: deleting the test of a deleted prod symbol is feature removal, not a kill
+origin: FP sweep adjudication 2026-08-03 — starlette 856c904a6d/b133ab45ad, httpx 59914c7690; the deprecation shim went away and its test with it, and symbol evidence cannot see an attribute access
+=== before: src/app/exceptions.py ===
+class AppError(Exception):
+    pass
+
+
+__deprecated__ = {"OldMiddleware": AppError}
+
+
+def __getattr__(name):
+    import warnings
+
+    if name in __deprecated__:
+        warnings.warn("deprecated", DeprecationWarning)
+        return __deprecated__[name]
+    raise AttributeError(name)
+=== after: src/app/exceptions.py ===
+class AppError(Exception):
+    pass
+=== before: tests/test_exceptions.py ===
+import pytest
+
+from app import exceptions
+from app.exceptions import AppError
+
+
+def test_deprecation_shim():
+    with pytest.deprecated_call():
+        assert exceptions.OldMiddleware is AppError
+
+
+def test_error_is_exception():
+    assert issubclass(AppError, Exception)
+=== after: tests/test_exceptions.py ===
+import pytest
+
+from app import exceptions
+from app.exceptions import AppError
+
+
+def test_error_is_exception():
+    assert issubclass(AppError, Exception)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["PROD_SYMBOL_REMOVED"]}]

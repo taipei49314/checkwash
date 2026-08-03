@@ -1,0 +1,20 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a deleted symbol in an unrelated module excuses nothing
+origin: PROD_SYMBOL_REMOVED needs imports or the naming convention to connect the halves — a bare co-occurrence is not a connection
+=== before: src/app/status.py ===
+OK = 200
+
+
+def legacy_helper():
+    return 1
+=== after: src/app/status.py ===
+OK = 200
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_billing_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

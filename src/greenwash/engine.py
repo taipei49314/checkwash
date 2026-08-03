@@ -13,9 +13,10 @@ from dataclasses import dataclass
 from greenwash.allowlist import AllowEntry
 from greenwash.config import Config
 from greenwash.contract import Contract
+from greenwash.deps import MANIFESTS
 from greenwash.detectors import REGISTRY
 from greenwash.findings import Finding
-from greenwash.gating import apply_gates
+from greenwash.gating import apply_gates, unit_is_live
 from greenwash.ir.diffalign import align_file
 from greenwash.ir.markers import bare_names, marker_call, parse_expr
 from greenwash.ir.model import IR, DiffGlobals, normalize_text
@@ -369,6 +370,17 @@ def build_ir(
 
         if role in ("test", "conftest") and after_parsed and after_parsed.parse_ok:
             g.test_file_imports[path] = list(after_parsed.imports)
+        elif (
+            role in ("test", "conftest")
+            and after_parsed is None
+            and before_parsed
+            and before_parsed.parse_ok
+        ):
+            # A deleted test file's units are judged against what that file
+            # imported when it existed — without this, PROD_SYMBOL_REMOVED
+            # could never connect a deleted test file to the feature removal
+            # that explains it (starlette b133ab45ad deletes both halves).
+            g.test_file_imports[path] = list(before_parsed.imports)
         if role in ("test", "conftest"):
             for unit in file_ir.units:
                 if unit.before is None or unit.after is None:
@@ -403,29 +415,8 @@ def build_ir(
         if role in ("test", "conftest", "prod", "ci", "guardrail"):
             _scan_hidden_unicode(g, path, change.before, change.after)
 
-        # Assertions landing in a disabled unit never run, so they cannot
-        # count as "moved" â€” otherwise a sacrificial @pytest.mark.skip test
-        # buys D2 de-escalation for real deletions (confirmed red-team
-        # finding).
-        for unit in file_ir.units:
-            live_after = unit.after is not None and not unit.after.disabled
-            if unit.delta is not None and unit.before is not None and unit.after is not None:
-                b_by_id = {a.id: a for a in unit.before.assertions}
-                a_by_id = {a.id: a for a in unit.after.assertions}
-                for aid in unit.delta.assertions_removed:
-                    if aid in b_by_id:
-                        removed_texts[normalize_text(b_by_id[aid].text)] += 1
-                if live_after:
-                    for aid in unit.delta.assertions_added:
-                        if aid in a_by_id:
-                            added_texts[normalize_text(a_by_id[aid].text)] += 1
-            elif unit.before is not None and unit.after is None:
-                for a in unit.before.assertions:
-                    removed_texts[normalize_text(a.text)] += 1
-            elif unit.after is not None and unit.before is None:
-                if live_after:
-                    for a in unit.after.assertions:
-                        added_texts[normalize_text(a.text)] += 1
+        if path in MANIFESTS and (change.before or b"") != (change.after or b""):
+            g.dependency_manifest_changed = True
 
         if change.synthetic == "renamed_from_test":
             # Relocated test bytes are not production behaviour change; they
@@ -438,6 +429,19 @@ def build_ir(
                 for q in sorted(set(before_parsed.symbols) | set(after_parsed.symbols)):
                     if before_parsed.symbols.get(q) != after_parsed.symbols.get(q):
                         g.prod_symbols_changed.append(f"{_module_of(path)}::{q}")
+                        # A deletion counts as feature removal only when its
+                        # enclosing scope is gone too. Symbol collection
+                        # records assignments inside functions, so a rewritten
+                        # function "deletes" its old locals — and that let a
+                        # body rewrite escort a test deletion into the D8
+                        # credit (click b7e5fd4cc7, adjudicated spec-correct,
+                        # cleared by the first cut of this rule). A surviving
+                        # prefix means internal rewrite, not removal.
+                        if q in before_parsed.symbols and q not in after_parsed.symbols:
+                            parts = q.split(".")
+                            prefixes = (".".join(parts[:i]) for i in range(1, len(parts)))
+                            if not any(p in after_parsed.symbols for p in prefixes):
+                                g.prod_symbols_deleted.append(f"{_module_of(path)}::{q}")
                         # PACKAGE_REPAIR credit requires a MODIFIED existing
                         # symbol in the package — a real behaviour change. A
                         # newly added dead function or a comment does not
@@ -527,12 +531,6 @@ def build_ir(
             for text, count in sorted((after_broad - before_broad).items()):
                 g.broad_excepts_added.extend([(path, text)] * count)
 
-    # Multiset, not set (SPEC §7): deleting the same assertion from two tests
-    # while adding one copy elsewhere must leave one deletion unexplained.
-    # `set(a) & set(b)` credited both (confirmed bypass). Only as many
-    # removals as there are additions may be called "moved".
-    moved = removed_texts & added_texts  # Counter intersection = min of counts
-    g.moved_assertion_texts = sorted(moved.elements())
     g.base_literals = sorted(base_literals)
     # packages with >=1 genuinely modified symbol; deliberately NOT every
     # package with any prod change (see PACKAGE_REPAIR credit above).
@@ -554,6 +552,50 @@ def build_ir(
         parsed = after_by_path.get(file.path)
         if file.role in ("test", "conftest") and parsed is not None:
             file.constants = _gate_constants(parsed, after_by_path, head_reader)
+
+    # Move credits, counted after the constant environments exist because
+    # liveness now consults them. Assertions (and whole units) landing in a
+    # unit that does not run never count as "moved" — a sacrificial
+    # @pytest.mark.skip test must not buy D2 de-escalation for real deletions
+    # (confirmed red-team finding) — but a unit carried across files together
+    # with its own compat gate is not dead, it is relocated (FP sweep, click
+    # a391797d00 / 700798252a).
+    removed_units: Counter[str] = Counter()
+    added_units: Counter[str] = Counter()
+    for file in ir.files:
+        constants = file.constants
+        for unit in file.units:
+            live_after = unit.after is not None and unit_is_live(unit.after, constants)
+            if unit.delta is not None and unit.before is not None and unit.after is not None:
+                b_by_id = {a.id: a for a in unit.before.assertions}
+                a_by_id = {a.id: a for a in unit.after.assertions}
+                for aid in unit.delta.assertions_removed:
+                    if aid in b_by_id:
+                        removed_texts[normalize_text(b_by_id[aid].text)] += 1
+                if live_after:
+                    for aid in unit.delta.assertions_added:
+                        if aid in a_by_id:
+                            added_texts[normalize_text(a_by_id[aid].text)] += 1
+            elif unit.before is not None and unit.after is None:
+                for a in unit.before.assertions:
+                    removed_texts[normalize_text(a.text)] += 1
+                if unit.before.body_hash:
+                    removed_units[unit.before.body_hash] += 1
+            elif unit.after is not None and unit.before is None:
+                if live_after:
+                    for a in unit.after.assertions:
+                        added_texts[normalize_text(a.text)] += 1
+                    if unit.after.body_hash:
+                        added_units[unit.after.body_hash] += 1
+
+    # Multiset, not set (SPEC §7): deleting the same assertion from two tests
+    # while adding one copy elsewhere must leave one deletion unexplained.
+    # `set(a) & set(b)` credited both (confirmed bypass). Only as many
+    # removals as there are additions may be called "moved". Units spend the
+    # same way through their body hashes.
+    moved = removed_texts & added_texts  # Counter intersection = min of counts
+    g.moved_assertion_texts = sorted(moved.elements())
+    g.moved_unit_hashes = sorted((removed_units & added_units).elements())
     return ir
 
 

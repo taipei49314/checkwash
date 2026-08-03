@@ -1,18 +1,6 @@
 {
-  "block_rate": 0.02,
+  "block_rate": 0.0067,
   "blocked_commits": [
-    {
-      "commit": "100f05a66bf3ff5643540164ae95fc3ad9ed3443",
-      "findings": [
-        {
-          "message": "test_request_headers: expected value rewritten {'headers': {'host': 'example.org', 'user-agent': 'testclient', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive'}} -> {'headers': {'host': 'example.org', 'user-agent': 'testclient', 'accept-encoding': 'gzip, deflate, zstd', 'accept': '*/*', 'connection': 'keep-alive'}} with no change in assertion strength",
-          "path": "tests/test_requests.py",
-          "rule": "EXPECTED_VALUE_CHANGED",
-          "severity": "high",
-          "unit": "test_request_headers"
-        }
-      ]
-    },
     {
       "commit": "90b805fda70db2316d79aa577f4c3eb670f9a8a1",
       "findings": [
@@ -43,65 +31,15 @@
           "unit": "test_cors_credentialed_requests_return_specific_origin"
         }
       ]
-    },
-    {
-      "commit": "b133ab45ad649cc91634dbe770f33c722dccd78b",
-      "findings": [
-        {
-          "message": "test_deprecated_types: test unit disappeared",
-          "path": "tests/test_status.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "test_deprecated_types"
-        }
-      ]
-    },
-    {
-      "commit": "856c904a6dcf7368a999dd791e2f98a7c3812f0f",
-      "findings": [
-        {
-          "message": "test_exception_middleware_deprecation: test unit disappeared",
-          "path": "tests/test_exceptions.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "test_exception_middleware_deprecation"
-        }
-      ]
-    },
-    {
-      "commit": "5ccbc62175eece867b498115724eb8d3fa27acb0",
-      "findings": [
-        {
-          "message": "test_wsgi_post: expected value rewritten '{\"example\": 123}' -> '{\"example\":123}' with no change in assertion strength",
-          "path": "tests/middleware/test_wsgi.py",
-          "rule": "EXPECTED_VALUE_CHANGED",
-          "severity": "high",
-          "unit": "test_wsgi_post"
-        },
-        {
-          "message": "test_request_body: expected value rewritten {'body': '{\"a\": \"123\"}'} -> {'body': '{\"a\":\"123\"}'} with no change in assertion strength",
-          "path": "tests/test_requests.py",
-          "rule": "EXPECTED_VALUE_CHANGED",
-          "severity": "high",
-          "unit": "test_request_body"
-        },
-        {
-          "message": "test_request_stream: expected value rewritten {'body': '{\"a\": \"123\"}'} -> {'body': '{\"a\":\"123\"}'} with no change in assertion strength",
-          "path": "tests/test_requests.py",
-          "rule": "EXPECTED_VALUE_CHANGED",
-          "severity": "high",
-          "unit": "test_request_stream"
-        }
-      ]
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 6,
+  "commits_blocked": 2,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 92,
   "commits_with_opaque_prod_change": 32,
   "corpus": {
-    "greenwash_version": "0.1.3",
+    "greenwash_version": "0.1.4",
     "newest_commit": "5174d4c8358a6f06aa8056bafd14c2272dab8dd1",
     "oldest_commit": "c78c9aac17a4d68e0647252310044502f1b7da71"
   },
@@ -117,8 +55,7 @@
       "warn": 94
     },
     "EXPECTED_VALUE_CHANGED": {
-      "high": 4,
-      "warn": 5
+      "warn": 9
     },
     "IMPORT_UNRESOLVED": {
       "warn": 4
@@ -127,8 +64,8 @@
       "warn": 46
     },
     "TEST_DISABLED": {
-      "high": 4,
-      "warn": 19
+      "high": 2,
+      "warn": 21
     }
   }
 }

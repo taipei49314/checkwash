@@ -1,0 +1,34 @@
+=== meta ===
+rule: TEST_DISABLED
+title: dropping the parametrize row of a deleted prod symbol tracks the removal
+origin: FP sweep adjudication 2026-08-03 — attrs 74007f67d2; __ne__ stopped being generated per class, its row left the list
+=== before: src/app/_make.py ===
+def _make_eq():
+    return "eq"
+
+
+def _make_ne():
+    return "ne"
+=== after: src/app/_make.py ===
+def _make_eq():
+    return "eq"
+=== before: tests/test_dunders.py ===
+import pytest
+
+from app._make import _make_eq
+
+
+@pytest.mark.parametrize("method", ["__eq__", "__ne__"])
+def test_attaches_meta_dunders(method):
+    assert _make_eq() == "eq"
+=== after: tests/test_dunders.py ===
+import pytest
+
+from app._make import _make_eq
+
+
+@pytest.mark.parametrize("method", ["__eq__"])
+def test_attaches_meta_dunders(method):
+    assert _make_eq() == "eq"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["PROD_SYMBOL_REMOVED"]}]

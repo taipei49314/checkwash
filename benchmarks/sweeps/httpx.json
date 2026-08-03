@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.04,
+  "block_rate": 0.0367,
   "blocked_commits": [
     {
       "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
@@ -175,25 +175,6 @@
       ]
     },
     {
-      "commit": "59914c7690573d5f9b17bce4172405294cb08278",
-      "findings": [
-        {
-          "message": "test_auth_header_has_priority_over_netrc: test unit disappeared",
-          "path": "tests/client/test_auth.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "test_auth_header_has_priority_over_netrc"
-        },
-        {
-          "message": "test_trust_env_auth: test unit disappeared",
-          "path": "tests/client/test_auth.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "test_trust_env_auth"
-        }
-      ]
-    },
-    {
       "commit": "7947b56076db933079ec0c33d1f81406e33008e7",
       "findings": [
         {
@@ -350,12 +331,12 @@
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 12,
+  "commits_blocked": 11,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 92,
   "commits_with_opaque_prod_change": 13,
   "corpus": {
-    "greenwash_version": "0.1.3",
+    "greenwash_version": "0.1.4",
     "newest_commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
     "oldest_commit": "69e13cbc393ee13624d0e4aa4b6f861a95e3f91c"
   },
@@ -388,9 +369,9 @@
       "warn": 29
     },
     "TEST_DISABLED": {
-      "high": 7,
+      "high": 5,
       "info": 47,
-      "warn": 26
+      "warn": 28
     }
   }
 }

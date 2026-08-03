@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.01,
+  "block_rate": 0.0067,
   "blocked_commits": [
     {
       "commit": "ce89f5d11feb0805da9ed10bb165238cc959f1bb",
@@ -10,25 +10,6 @@
           "rule": "ASSERT_WEAKENED",
           "severity": "high",
           "unit": "TestFunctional.test_frozen_instance"
-        }
-      ]
-    },
-    {
-      "commit": "74007f67d203f902e88bdecba169786bf44a8aa2",
-      "findings": [
-        {
-          "message": "TestClassBuilder.test_attaches_meta_dunders: 1 parametrized case(s) deleted (10 -> 9)",
-          "path": "tests/test_make.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "TestClassBuilder.test_attaches_meta_dunders"
-        },
-        {
-          "message": "TestDocs.test_docs: 1 parametrized case(s) deleted (8 -> 7)",
-          "path": "tests/test_make.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "TestDocs.test_docs"
         }
       ]
     },
@@ -46,12 +27,12 @@
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 3,
+  "commits_blocked": 2,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 65,
   "commits_with_opaque_prod_change": 40,
   "corpus": {
-    "greenwash_version": "0.1.3",
+    "greenwash_version": "0.1.4",
     "newest_commit": "92e12eae712ef88c1a7e322cc51b7cd9e271aa3c",
     "oldest_commit": "0a09c1aa2cde5816f4a9f5558fdd1ce792e7076e"
   },
@@ -76,9 +57,9 @@
       "warn": 3
     },
     "TEST_DISABLED": {
-      "high": 3,
+      "high": 1,
       "info": 1,
-      "warn": 6
+      "warn": 8
     }
   }
 }

@@ -1,0 +1,33 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a skip marker added while some prod symbol was deleted is still a kill
+origin: PROD_SYMBOL_REMOVED must cover removals only — silencing a live test is the cheat this rule exists for
+=== before: src/app/exceptions.py ===
+class AppError(Exception):
+    pass
+
+
+def legacy_shim(name):
+    return AppError
+=== after: src/app/exceptions.py ===
+class AppError(Exception):
+    pass
+=== before: tests/test_exceptions.py ===
+import pytest
+
+from app.exceptions import AppError
+
+
+def test_error_is_exception():
+    assert issubclass(AppError, Exception)
+=== after: tests/test_exceptions.py ===
+import pytest
+
+from app.exceptions import AppError
+
+
+@pytest.mark.skip(reason="broken since refactor")
+def test_error_is_exception():
+    assert issubclass(AppError, Exception)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

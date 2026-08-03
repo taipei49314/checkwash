@@ -1,0 +1,42 @@
+=== meta ===
+bypass: 55
+rule: TEST_DISABLED
+title: relocating a test under an always-true skipif costume is still a kill
+origin: the destination's marker must pass the full D6 evaluation, not just look conditional
+=== before: tests/test_utils.py ===
+import sys
+
+import pytest
+
+from app import render
+
+
+def test_pager_roundtrip():
+    assert render("x") == "x"
+
+
+def test_untouched():
+    assert render("y") == "y"
+=== after: tests/test_utils.py ===
+import sys
+
+import pytest
+
+from app import render
+
+
+def test_untouched():
+    assert render("y") == "y"
+=== after: tests/test_pager.py ===
+import sys
+
+import pytest
+
+from app import render
+
+
+@pytest.mark.skipif(sys.version_info >= (3, 8), reason="legacy")
+def test_pager_roundtrip():
+    assert render("x") == "x"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

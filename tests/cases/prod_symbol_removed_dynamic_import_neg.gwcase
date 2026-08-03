@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a deleted test_status.py tracks deleted symbols in status.py despite importlib
+origin: FP sweep adjudication 2026-08-03 — starlette b133ab45ad; importlib.import_module leaves no static import to connect the halves
+=== before: src/app/status.py ===
+OK = 200
+
+WS_1004_NO_STATUS_RCVD = 1004
+
+
+def __getattr__(name):
+    import warnings
+
+    warnings.warn("deprecated", DeprecationWarning)
+    raise AttributeError(name)
+=== after: src/app/status.py ===
+OK = 200
+=== before: tests/test_status.py ===
+import importlib
+
+import pytest
+
+
+def test_deprecated_types():
+    with pytest.warns(DeprecationWarning) as record:
+        getattr(importlib.import_module("app.status"), "WS_1004_NO_STATUS_RCVD")
+        assert len(record) == 1
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["PROD_SYMBOL_REMOVED"]}]

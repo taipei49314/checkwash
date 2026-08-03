@@ -179,6 +179,12 @@ adjudication surfaced (attrs 7373d88, click b761eda), closed by the v0.1.3
 constant-resolution round at zero measured cost on the 1800-commit corpus.
 Row 54 is that same round documenting the gap it chose to keep.
 
+| # | Bypass | Status |
+|---|---|---|
+| 55 | Launder a deleted test by "relocating" it into a copy wearing `@pytest.mark.skip`, or a `skipif` costume that is always true | **Closed** — relocation credits (assertions and whole unit bodies) require the destination to be live, and live now means "no markers, or D6-qualified compat gates only": an unconditional skip, an always-true condition, or anything unverifiable still counts as dead |
+| 56 | Delete a dead prod symbol in the same diff to escort a test deletion into the D8 credit | **Open by design** — D8 requires a deleted existing symbol reachable from the test file (imports or filename convention) and holds the finding at `warn`, visible; making the tool prove the deleted symbol was *load-bearing* would need execution. The decoy corpus still blocks 12/12 |
+| 57 | Bump any dependency pin in the same diff to escort an expected-value rewrite into the D9 credit | **Open by design** — scoped to `EXPECTED_VALUE_CHANGED` only, held at `warn`, and the manifest edit itself is loudly visible in review; a weakened or deleted oracle earns nothing from it |
+
 ## False positives closed in the same audit
 
 Bypasses are only half the failure surface; a tripwire nobody can live with

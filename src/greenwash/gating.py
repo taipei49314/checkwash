@@ -138,6 +138,62 @@ def _package_evidence(path: str, ir: IR) -> bool:
     return any(_module_reachable(module, imports) for module in changed)
 
 
+def _prod_removal_shape(f: Finding, unit: Unit | None) -> bool:
+    """Only the removal shapes of TEST_DISABLED are eligible for the
+    PROD_SYMBOL_REMOVED compensation: a unit that disappeared outright, or
+    parametrize rows that left. A disabling marker added to a *live* test is
+    the cheat this rule exists to catch, and stays out — discriminated on the
+    finding message because one unit can carry both events at once.
+    """
+    if unit is None:
+        return False
+    if unit.after is None and unit.before is not None:
+        return True
+    return (
+        unit.delta is not None
+        and unit.delta.param_cases_removed > 0
+        and "disabling marker added" not in f.message
+    )
+
+
+def _prod_symbol_removed(path: str | None, ir: IR) -> bool:
+    """Did this diff delete an existing prod symbol the test file can reach?
+
+    Feature removal is the honest twin of test deletion: the deprecation shim
+    goes and its test goes with it (starlette 856c904a6d, b133ab45ad; httpx
+    59914c7690; attrs 74007f67d2). Symbol-level evidence cannot connect them —
+    the deleted test touched the symbol through an attribute access or not at
+    all — so the credit is import-reachability against symbols that existed
+    at base and are gone at head. Additions prove nothing (new code explains
+    no deletion), and the compensation holds at warn, visible. The residual —
+    deleting a dead prod symbol to escort a test deletion — is documented in
+    THREATMODEL rather than papered over.
+    """
+    deleted = ir.globals.prod_symbols_deleted
+    if not deleted or not path:
+        return False
+    imports = list(ir.globals.test_file_imports.get(path, ()))
+    # `tests/test_status.py` testing `starlette/status.py` through
+    # `importlib.import_module("starlette.status")` has no static import to
+    # connect the two (starlette b133ab45ad). The naming convention is the
+    # remaining honest signal, accepted only for this rule and only for the
+    # two standard spellings.
+    stem = path.rsplit("/", 1)[-1].removesuffix(".py")
+    if stem.startswith("test_"):
+        stem = stem[len("test_"):]
+    elif stem.endswith("_test"):
+        stem = stem[: -len("_test")]
+    else:
+        stem = ""
+    for entry in deleted:
+        module = entry.rpartition("::")[0]
+        if imports and _module_reachable(module, imports):
+            return True
+        if stem and module.rsplit(".", 1)[-1] == stem:
+            return True
+    return False
+
+
 def _file_repair_evidence(path: str, ir: IR) -> bool:
     """Repair evidence for a finding with no unit of its own.
 
@@ -199,7 +255,7 @@ def _oracle_mass(side) -> int:
     return strong * max(1, side.param_cases or 1)
 
 
-def _file_restructured(ir: IR) -> dict[str, bool]:
+def _file_restructured(ir: IR, file_constants: dict[str, dict[str, str]]) -> dict[str, bool]:
     """path -> did the file's added live units replace its disappeared mass?
 
     Triage cluster: N tests merged into one parametrize, splits, in-file
@@ -214,14 +270,20 @@ def _file_restructured(ir: IR) -> dict[str, bool]:
         for unit in file.units:
             if unit.before is not None and unit.after is None:
                 gone += _oracle_mass(unit.before)
-            elif unit.after is not None and unit.before is None and not unit.after.disabled:
+            elif (
+                unit.after is not None
+                and unit.before is None
+                and unit_is_live(unit.after, file_constants.get(file.path))
+            ):
                 added += _oracle_mass(unit.after)
         if gone:
             result[file.path] = added >= gone
     return result
 
 
-def _split_or_renamed(ir: IR) -> dict[tuple[str, str], bool]:
+def _split_or_renamed(
+    ir: IR, file_constants: dict[str, dict[str, str]]
+) -> dict[tuple[str, str], bool]:
     """(path, qualname) -> was this disappeared unit split or renamed in place?
 
     Triage named the mechanism precisely: the vanished unit's name is a strict
@@ -253,7 +315,7 @@ def _split_or_renamed(ir: IR) -> dict[tuple[str, str], bool]:
             if unit.before is not None and unit.after is None:
                 gone.append((unit.qualname, leaf, _oracle_mass(unit.before)))
             elif unit.after is not None and unit.before is None:
-                if unit.after.disabled:
+                if not unit_is_live(unit.after, file_constants.get(file.path)):
                     continue
                 if any(_is_real_assertion(a) for a in unit.after.assertions):
                     budget[leaf] = budget.get(leaf, 0) + _oracle_mass(unit.after)
@@ -495,47 +557,76 @@ _GATE_DECORATORS = ("pytest.mark.skipif", "pytest.mark.xfail")
 _GATE_CALLS = ("pytest.skip", "pytest.xfail", "self.skipTest")
 
 
+def _parse_constants(raw: dict[str, str]) -> dict[str, ast.AST]:
+    return {name: expr for name, expr in ((n, parse_expr(t)) for n, t in raw.items()) if expr is not None}
+
+
+def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -> bool:
+    """Is this single marker a qualified interpreter/OS gate?
+
+    Marker names carry their condition (`skipif(cond)`), so the canonical
+    part before the parenthesis is matched. Names in the condition resolve
+    through the engine-built constant environment, so `skipif(WIN)` is judged
+    by what `WIN` is bound to — not by whether the marker text happens to
+    contain the string `sys.platform` (FP sweep: click b761eda, attrs
+    7373d88). The compat-token filter runs over the condition text *plus*
+    those resolved expressions, keeping the credit scoped to interpreter/OS
+    gates rather than becoming general skip amnesty.
+    """
+    canonical = m.name.split("(", 1)[0]
+    condition: ast.AST | None = None
+    if canonical in _GATE_DECORATORS:
+        call = marker_call(m.text)
+        if call is None or not call.args:
+            return False
+        if canonical == "pytest.mark.xfail" and _xfail_strict(call):
+            return False
+        condition = call.args[0]
+    elif canonical in _GATE_CALLS and m.guard:
+        condition = parse_expr(m.guard)
+    if condition is None:
+        return False
+    searched = " ".join([m.text, m.guard or "", *_expansion_texts(condition, raw)])
+    if not any(tok in searched for tok in _COMPAT_TOKENS):
+        return False
+    # always true, or unverifiable: not a gate, a disable
+    return _discriminates(condition, consts)
+
+
 def _compat_gate(unit: Unit | None, constants: dict[str, str] | None = None) -> bool:
     """A skip keyed on interpreter/OS version is a compat gate, not a kill.
 
     Three spellings earn the credit, all evaluated the same way: `skipif(cond)`,
     non-strict `xfail(cond)` (strict inverts the oracle instead of skipping
     it, which is not a gate), and an imperative `pytest.skip()`/`pytest.xfail()`
-    /`self.skipTest()` under recorded `if` guards. Names in the condition
-    resolve through the engine-built constant environment, so `skipif(WIN)`
-    is judged by what `WIN` is bound to — not by whether the marker text
-    happens to contain the string `sys.platform` (FP sweep: click b761eda,
-    attrs 7373d88). The compat-token filter runs over the condition text
-    *plus* those resolved expressions, keeping the credit scoped to
-    interpreter/OS gates rather than becoming general skip amnesty.
+    /`self.skipTest()` under recorded `if` guards.
     """
     if unit is None or unit.after is None:
         return False
     raw = constants or {}
-    consts = {name: expr for name, expr in ((n, parse_expr(t)) for n, t in raw.items()) if expr is not None}
-    for m in unit.after.markers:
-        # Marker names carry their condition (`skipif(cond)`), so match the
-        # canonical part before the parenthesis.
-        canonical = m.name.split("(", 1)[0]
-        condition: ast.AST | None = None
-        if canonical in _GATE_DECORATORS:
-            call = marker_call(m.text)
-            if call is None or not call.args:
-                continue
-            if canonical == "pytest.mark.xfail" and _xfail_strict(call):
-                continue
-            condition = call.args[0]
-        elif canonical in _GATE_CALLS and m.guard:
-            condition = parse_expr(m.guard)
-        if condition is None:
-            continue
-        searched = " ".join([m.text, m.guard or "", *_expansion_texts(condition, raw)])
-        if not any(tok in searched for tok in _COMPAT_TOKENS):
-            continue
-        if not _discriminates(condition, consts):
-            continue  # always true, or unverifiable: not a gate, a disable
+    consts = _parse_constants(raw)
+    return any(_marker_is_compat_gate(m, raw, consts) for m in unit.after.markers)
+
+
+def unit_is_live(side, constants: dict[str, str] | None) -> bool:
+    """Does this unit still run somewhere?
+
+    `disabled = bool(markers)` was the load-bearing definition for every
+    relocation credit (D2 moved assertions, D5 restructure mass, the
+    split/rename budget) — and it called a test carried across files together
+    with its own `skipif(WIN)` marker dead on arrival, which blocked three
+    pure test-file splits in the FP corpus (click a391797d00, 700798252a).
+    A unit is live when every marker on it is a D6-qualified compat gate:
+    the same evaluator, the same constants, the same refusal for `skip`,
+    always-true conditions, and anything unverifiable. Bypass #9 (the
+    sacrificial `@pytest.mark.skip` absorber) stays closed because an
+    unconditional skip qualifies for nothing.
+    """
+    if not side.markers:
         return True
-    return False
+    raw = constants or {}
+    consts = _parse_constants(raw)
+    return all(_marker_is_compat_gate(m, raw, consts) for m in side.markers)
 
 
 def _xfail_strict(call: ast.Call) -> bool:
@@ -574,14 +665,16 @@ def apply_gates(
 ) -> str:
     """Mutates findings' severity/escalators in place; returns the verdict."""
     # A multiset of credits: each ASSERTION_MOVED de-escalation spends one, so
-    # two deletions cannot both be excused by a single re-appearance.
+    # two deletions cannot both be excused by a single re-appearance. Whole
+    # units get the same treatment via their body hashes.
     moved = collections.Counter(ir.globals.moved_assertion_texts)
+    moved_units = collections.Counter(ir.globals.moved_unit_hashes)
     units = _unit_index(ir)
     active_allows = active_fingerprints(allow_entries, today)
-    restructured = _file_restructured(ir)
-    split_renamed = _split_or_renamed(ir)
     roles = {f.path: f.role for f in ir.files}
     file_constants = {f.path: f.constants for f in ir.files}
+    restructured = _file_restructured(ir, file_constants)
+    split_renamed = _split_or_renamed(ir, file_constants)
 
     for f in findings:
         if f.fingerprint in active_allows:
@@ -637,6 +730,16 @@ def apply_gates(
                 f.deescalators.append("ASSERTION_MOVED")
                 continue
         if f.rule == "TEST_DISABLED" and unit is not None and unit.after is None and unit.before is not None:
+            # The whole unit's normalized body reappearing as a live added
+            # unit is the strongest form of "moved" — and the only one an
+            # assertion-less smoke test can produce (click a391797d00,
+            # test_echo_no_streams: nothing in the multiset to match).
+            h = unit.before.body_hash
+            if h and moved_units[h] > 0:
+                moved_units[h] -= 1
+                f.severity = "info"
+                f.deescalators.append("ASSERTION_MOVED")
+                continue
             texts = [normalize_text(a.text) for a in unit.before.assertions]
             needed = collections.Counter(texts)
             if texts and all(moved[t] >= n for t, n in needed.items()):
@@ -685,6 +788,12 @@ def apply_gates(
             compensation = "SPLIT_OR_RENAMED"
         elif f.rule == "TEST_DISABLED" and _compat_gate(unit, file_constants.get(f.path)):
             compensation = "COMPAT_GATE"
+        elif (
+            f.rule == "TEST_DISABLED"
+            and _prod_removal_shape(f, unit)
+            and _prod_symbol_removed(f.path, ir)
+        ):
+            compensation = "PROD_SYMBOL_REMOVED"
 
         # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
         # question: is there a production change that explains this edit?
@@ -696,10 +805,23 @@ def apply_gates(
             and f.rule == "EXPECTED_VALUE_CHANGED"
             and _package_evidence(f.path, ir)
         )
+        # An expectation literal tracking a dependency change: httpx 0.28
+        # switched to compact JSON separators and every exact literal in the
+        # corpus followed it (starlette 5ccbc62175, 100f05a66b). Scoped to
+        # EXPECTED_VALUE_CHANGED exactly like PACKAGE_REPAIR: a manifest bump
+        # buys nothing for a weakened or deleted oracle.
+        dep_drift = (
+            not has_evidence
+            and not package_only
+            and f.rule == "EXPECTED_VALUE_CHANGED"
+            and ir.globals.dependency_manifest_changed
+        )
         if has_evidence:
             f.deescalators.append("REPAIR_EVIDENCE")
         elif package_only:
             f.deescalators.append("PACKAGE_REPAIR")
+        elif dep_drift:
+            f.deescalators.append("DEPENDENCY_DRIFT")
         elif compensation is not None:
             f.deescalators.append(compensation)
         elif mild_weakening:

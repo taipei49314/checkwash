@@ -1,0 +1,36 @@
+=== meta ===
+bypass: 55
+rule: TEST_DISABLED
+title: relocating a test into an unconditionally skipped copy is still a kill
+origin: bypass 9 family — the compat-aware liveness must not reopen the sacrificial-skip laundry
+=== before: tests/test_utils.py ===
+import pytest
+
+from app import render
+
+
+def test_pager_roundtrip():
+    assert render("x") == "x"
+
+
+def test_untouched():
+    assert render("y") == "y"
+=== after: tests/test_utils.py ===
+import pytest
+
+from app import render
+
+
+def test_untouched():
+    assert render("y") == "y"
+=== after: tests/test_pager.py ===
+import pytest
+
+from app import render
+
+
+@pytest.mark.skip(reason="flaky")
+def test_pager_roundtrip():
+    assert render("x") == "x"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

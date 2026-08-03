@@ -1,0 +1,29 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a dependency bump buys nothing for a weakened assertion
+origin: DEPENDENCY_DRIFT is scoped to expectation drift; loosening an oracle is not drift
+=== before: pyproject.toml ===
+[project]
+name = "app"
+version = "1.0"
+dependencies = ["httpx>=0.27.0,<0.28.0"]
+=== after: pyproject.toml ===
+[project]
+name = "app"
+version = "1.0"
+dependencies = ["httpx>=0.27.0,<0.29.0"]
+=== before: tests/test_wsgi.py ===
+from app import post_json
+
+
+def test_wsgi_post():
+    assert post_json({"example": 123}) == '{"example": 123}'
+=== after: tests/test_wsgi.py ===
+from app import post_json
+
+
+def test_wsgi_post():
+    assert post_json({"example": 123})
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+ {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

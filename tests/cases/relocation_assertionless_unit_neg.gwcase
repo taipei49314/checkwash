@@ -1,0 +1,42 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an assertion-less smoke test relocated verbatim is a move, not a kill
+origin: FP sweep adjudication 2026-08-03 — click a391797d00 test_echo_no_streams; no assertions means the D2 multiset had nothing to match
+=== before: tests/test_utils.py ===
+import sys
+
+from app import echo
+
+
+def test_echo_no_streams(monkeypatch):
+    """echo should not fail when stdout and stderr are None."""
+    monkeypatch.setattr(sys, "stdout", None)
+    monkeypatch.setattr(sys, "stderr", None)
+    echo("test")
+    echo("test", err=True)
+
+
+def test_untouched():
+    assert echo("y") == "y"
+=== after: tests/test_utils.py ===
+import sys
+
+from app import echo
+
+
+def test_untouched():
+    assert echo("y") == "y"
+=== after: tests/test_echo.py ===
+import sys
+
+from app import echo
+
+
+def test_echo_no_streams(monkeypatch):
+    """echo should not fail when stdout and stderr are None."""
+    monkeypatch.setattr(sys, "stdout", None)
+    monkeypatch.setattr(sys, "stderr", None)
+    echo("test")
+    echo("test", err=True)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]

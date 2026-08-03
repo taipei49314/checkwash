@@ -1,15 +1,17 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-03 (v0.1.3: D6 reads skip conditions instead of grepping them)
+Updated: 2026-08-03 (v0.1.4: the false-positive list attacked class by class)
 
 ## The number that matters right now
 
-**43/1800 = 2.39% block rate; adjudicated false positive 28/1800 = 1.56%.**
-Both down from 2.50% / 1.67%: the v0.1.3 build stopped blocking the two
-constant-named compat gates below, no commit became newly blocked, the
-adversarial decoy corpus still blocks 12/12, and 0 of the 1800 human commits
-lost credit to the stricter always-true rule. First round in this project's
-history where the headline moved *down* without a bypass being the cause.
+**36/1800 = 2.00% block rate; adjudicated false positive 21/1800 = 1.17%.**
+Down from 2.50% / 1.67% across two precision rounds in one day (v0.1.3 nine
+sections below, then v0.1.4). Nine adjudicated false positives cleared, zero
+commits newly blocked, every one of the 15 spec-correct blocks still blocks,
+decoy corpus 12/12 on every re-run. The v0.1.4 round also produced this
+project's first *caught-before-shipping* defect: the first cut of the
+feature-removal credit cleared two adjudicated-correct blocks and was
+tightened before commit — details below, they are the most useful part.
 
 Two independent audits have been run against this repository. The first
 (an outside reader) found 11 defects in three passes, then ~20 more in a
@@ -20,6 +22,58 @@ claims and **all 16 survived refutation**.
 The project's own review has still never found a defect of that class before
 an outside pass did. Plan accordingly: the discovery rate has not levelled
 off, and "we reviewed it carefully" has a measured track record here of zero.
+
+## The 2026-08-03 second round (v0.1.4): the false-positive list, class by class
+
+The 28 adjudicated false positives decomposed into mechanisms; three were
+fixable on principle this round:
+
+- **Relocation credits died on any marker.** `disabled = bool(markers)` gated
+  D2 moved-assertions, D5 restructure mass, and the split/rename budget — so
+  a test carried across files *together with its own `skipif(WIN)`* was dead
+  on arrival (click a391797d00 / 700798252a). Live now means "no markers, or
+  D6-qualified compat gates only", evaluated with the same resolved
+  constants. And a disappeared unit's whole normalized body is its own move
+  credit (`moved_unit_hashes`, multiset, spent once), because an
+  assertion-less smoke test has nothing in the D2 multiset to prove it moved.
+- **D8 `PROD_SYMBOL_REMOVED`**: feature removal is the honest twin of test
+  deletion (attrs 74007f67d2, httpx 59914c7690, starlette 856c904a6d /
+  b133ab45ad). Removal shapes of TEST_DISABLED only, deleted-existing
+  symbols only, connected by the test file's imports (before-side imports
+  for a deleted file) or the `test_<module>` filename convention —
+  b133ab45ad reaches its module only through
+  `importlib.import_module("starlette.status")`, a string no static import
+  list sees.
+- **D9 `DEPENDENCY_DRIFT`**: expectation literals tracking a manifest change
+  (httpx 0.28's compact JSON separators rewrote three starlette
+  expectations: 100f05a66b, 5ccbc62175). Scoped to EXPECTED_VALUE_CHANGED
+  exactly like PACKAGE_REPAIR.
+
+**The catch that matters more than the clears.** The first cut of D8 counted
+*any* vanished symbol — and symbol collection records assignments inside
+function bodies, so a rewritten function "deleted" its old locals, and the
+credit cleared **two adjudicated spec-correct blocks** (click b7e5fd4cc7 /
+c3535905c7: fish completion rewritten, its multiline-help test deleted,
+coverage genuinely gone — the headline cheat, laundered by touching the
+function under repair). It was caught by the red-zone check — diffing every
+sweep delta against the adjudication categories before accepting it — and a
+deletion now counts only when no prefix of its qualname survives. Both
+commits block again; four corpus FPs that had been riding the same loose
+signal (attrs f520d9a89f, flask 06ea505ce2 / 53b8f08218, starlette
+02b6ed7b18) went back to blocking with them, and the FP count is reported
+with them in it. Every future de-escalator gets this reconciliation pass.
+
+Verification: 6 of the round's first 11 fixtures failed on the v0.1.3 build
+(the rest pin behavior that must not change); 14 new fixtures total, 223
+tests green; nine targets re-checked live; decoy 12/12 twice (before and
+after the tightening); the full sweep re-run twice with the red-zone
+reconciliation on both; dogfood on the working tree: pass.
+
+Still adjudicated-FP and still blocked, named honestly: deleted-duplicate
+tests (click 1103c5cac2, and a391797d00's residual unit) need head-tree
+enumeration greenwash does not do yet; the rewrite-class (private→public API
+test rewrites, subject changes with in-diff compensation — most of httpx's
+remainder) is the next design round.
 
 ## The 2026-08-03 round (v0.1.3): D6 constant resolution
 

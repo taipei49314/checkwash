@@ -1,0 +1,29 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: an expected literal tracking a dependency pin change holds at warn
+origin: FP sweep adjudication 2026-08-03 — starlette 5ccbc62175/100f05a66b; httpx 0.28 switched to compact JSON separators and every exact literal followed
+=== before: pyproject.toml ===
+[project]
+name = "app"
+version = "1.0"
+dependencies = ["httpx>=0.27.0,<0.28.0"]
+=== after: pyproject.toml ===
+[project]
+name = "app"
+version = "1.0"
+dependencies = ["httpx>=0.27.0,<0.29.0"]
+=== before: tests/test_wsgi.py ===
+from app import post_json
+
+
+def test_wsgi_post():
+    assert post_json({"example": 123}) == '{"example": 123}'
+=== after: tests/test_wsgi.py ===
+from app import post_json
+
+
+def test_wsgi_post():
+    assert post_json({"example": 123}) == '{"example":123}'
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["DEPENDENCY_DRIFT"]},
+ {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

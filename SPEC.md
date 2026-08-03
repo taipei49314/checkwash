@@ -183,15 +183,20 @@ Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
 | E6 `CI_TEST_COMMAND_WEAKENED` | CI diff adds `continue-on-error`, `\|\| true`, `--ignore`, `-k`, `--deselect` | → high |
 | E7 `OUT_OF_SCOPE_PROD_TOUCH` | `SCOPE_DRIFT` onto a prod / ci / guardrail file | → high |
 | D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
-| D2 `ASSERTION_MOVED` | removed assertion's normalized text reappears verbatim in a **live** (not disabled) added unit | → info |
+| D2 `ASSERTION_MOVED` | removed assertion's normalized text — or, for a disappeared unit, its whole normalized body — reappears verbatim in a **live** added unit. Live means no disabling marker, or only markers that qualify as D6 compat gates: a test carried across files together with its own `skipif(WIN)` is relocated, not dead, while an unconditional skip or an always-true condition still counts as dead. Credits are a multiset, spent once each | → info |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
-| D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units ≥ the mass lost to disappeared units | hold at warn |
+| D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units (liveness as in D2) ≥ the mass lost to disappeared units | hold at warn |
 | D6 `COMPAT_GATE` | the added skip is a `skipif`, a non-strict `xfail`, or an imperative skip call (`pytest.skip` / `pytest.xfail` / `self.skipTest`) under recorded `if` guards. Its condition — with module constants resolved from the test file, from files in the diff, or from the head snapshot — must reference the interpreter/OS environment (`sys.version_info` / `sys.platform` / `platform.` / `os.name`, in the condition text or in a resolved constant), and, **evaluated** over a matrix of supported Python versions and platforms, must not be provably true everywhere. "True" means truthy: a condition that is always truthy is an unconditional kill in a compat costume. Sub-expressions that cannot be resolved stay unknown, and credit is denied only when the condition is true under every assignment of the unknowns; `strict=True` xfail earns nothing (it inverts the oracle instead of skipping it) | hold at warn |
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ PATTERN | hold at warn |
+| D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
+| D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED` — that rule only, exactly like PACKAGE_REPAIR — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A pinned dependency's behaviour change is the honest cause of expectation drift; a manifest bump buys nothing for a weakened or deleted oracle | hold at warn |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
-(`benchmarks/triage-2026-07-30.json`). Two design notes that are load-bearing:
+(`benchmarks/triage-2026-07-30.json`). D8–D9 came from the second
+adjudication pass (`benchmarks/adjudication-2026-08-03.json`): feature
+removals and dependency drift were the two largest honest clusters among the
+28 remaining false positives. Two design notes that are load-bearing:
 
 - **D4 requires the replacement to be newly written.** A unit that merely
   *keeps* an existing assertion while the inconvenient one disappears is the
@@ -213,7 +218,7 @@ D4–D7 came from triaging 48 real blocked commits in OSS history
   oracle mass covers what it lost. Name similarity alone let one weak survivor
   excuse every deleted test in the file.
 
-None of D4–D7 suppress a finding. They only decline to *escalate* it: the
+None of D4–D9 suppress a finding. They only decline to *escalate* it: the
 finding stays in the report at `warn`, visible and allowlistable.
 
 **Repair evidence** answers one question — is there a production change that

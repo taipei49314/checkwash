@@ -15,7 +15,7 @@ import re
 from dataclasses import dataclass, field
 
 from greenwash.ir import strength as S
-from greenwash.ir.model import Assertion, Handler, Marker, UnitSide
+from greenwash.ir.model import Assertion, Handler, Marker, UnitSide, normalize_text
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
 
@@ -1110,6 +1110,9 @@ def _collect_unit(
                 Handler(caught=caught, is_broad=is_broad, text=seg.split("\n")[0], span=off.span(node))
             )
 
+    body = text.seg(func) or ""
+    body_hash = hashlib.sha256(normalize_text(body).encode("utf-8")).hexdigest() if body else ""
+
     assertions.sort(key=lambda a: a.span)
     for i, a in enumerate(assertions):
         a.id = f"a{i}"
@@ -1121,6 +1124,7 @@ def _collect_unit(
         markers=sorted(markers, key=lambda m: m.span),
         handlers=sorted(handlers, key=lambda h: h.span),
         param_cases=_param_case_count(func),
+        body_hash=body_hash,
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 

@@ -1,0 +1,44 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test relocated together with its skipif(WIN) marker is a move, not a kill
+origin: FP sweep adjudication 2026-08-03 — click a391797d00/700798252a; any marker made the destination "disabled" and voided the move credit
+=== before: tests/test_utils.py ===
+import sys
+
+import pytest
+
+from app import render
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="pipe pager path")
+def test_pager_roundtrip():
+    assert render("x") == "x"
+    assert render("") == ""
+
+
+def test_untouched():
+    assert render("y") == "y"
+=== after: tests/test_utils.py ===
+import sys
+
+import pytest
+
+from app import render
+
+
+def test_untouched():
+    assert render("y") == "y"
+=== after: tests/test_pager.py ===
+import sys
+
+import pytest
+
+from app import render
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="pipe pager path")
+def test_pager_roundtrip():
+    assert render("x") == "x"
+    assert render("") == ""
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]

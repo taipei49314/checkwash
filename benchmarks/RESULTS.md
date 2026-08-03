@@ -14,17 +14,17 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 43/1800 = 2.39%** (2026-08-03, v0.1.3)
+**Blocked (would fail CI at the default `fail_on = high`): 36/1800 = 2.00%** (2026-08-03, v0.1.4)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
 | flask | 300 | 37 | 6 | 2.00% |
-| httpx | 300 | 92 | 12 | 4.00% |
-| attrs | 300 | 65 | 3 | 1.00% |
-| click | 300 | 109 | 14 | 4.67% |
+| httpx | 300 | 92 | 11 | 3.67% |
+| attrs | 300 | 65 | 2 | 0.67% |
+| click | 300 | 109 | 13 | 4.33% |
 | rich | 300 | 71 | 2 | 0.67% |
-| starlette | 300 | 92 | 6 | 2.00% |
-| **total** | **1800** | **466** | **43** | **2.39%** |
+| starlette | 300 | 92 | 2 | 0.67% |
+| **total** | **1800** | **466** | **36** | **2.00%** |
 
 Engine errors: 0.
 
@@ -34,9 +34,9 @@ Blocking findings by rule (commits containing at least one):
 
 | rule | commits |
 |---|---:|
-| `TEST_DISABLED` | 22 |
+| `TEST_DISABLED` | 17 |
 | `ASSERT_WEAKENED` | 11 |
-| `EXPECTED_VALUE_CHANGED` | 9 |
+| `EXPECTED_VALUE_CHANGED` | 6 |
 | `EXPECTED_VALUE_HARDCODED` | 1 |
 | `CI_WORKFLOW_TOUCHED` | 1 |
 | `ASSERT_REMOVED` | 1 |
@@ -44,7 +44,7 @@ Blocking findings by rule (commits containing at least one):
 ## Decomposed: what those blocks are
 
 A block is not automatically a false positive. Every one of the
-43 blocks above was adjudicated against the real diff, into
+36 blocks above was adjudicated against the real diff, into
 *false positive* (blocking was wrong), *spec-correct*
 (the diff really does drop oracle coverage with no visible
 compensation — the tool doing its documented job, allowlist it), or
@@ -52,8 +52,8 @@ compensation — the tool doing its documented job, allowlist it), or
 
 | measure | count | rate over 1800 commits |
 |---|---:|---:|
-| historical human-commit **block rate** | 43 | **2.39%** |
-| adjudicated **false positive** | 28 | **1.56%** |
+| historical human-commit **block rate** | 36 | **2.00%** |
+| adjudicated **false positive** | 21 | **1.17%** |
 | **legitimate policy block** (spec-correct) | 15 | 0.83% |
 | **unclear** | 0 | 0.00% |
 
@@ -63,12 +63,12 @@ greenwash is *wrong* is the adjudicated false-positive rate.
 
 Raw per-commit verdicts and reasoning: `adjudication-2026-08-03.json`.
 
-How they were judged: each of the 45 blocked commits of the v0.1.2 build adjudicated against the real diff; 40 by independent agents (nine batches, five each), 5 by the maintainer after one batch hit a session limit - noted because it is a weaker form of independence for those five. The v0.1.3 build stopped blocking two of the 45 (attrs 7373d88, click b761eda - both adjudicated false_positive, both compat gates D6 could not read until skip-condition constants resolved); their verdicts are removed here so this file describes exactly the 43 commits the current sweep blocks. No commit is newly blocked by v0.1.3; the remaining 43 verdicts are unchanged from the v0.1.2 adjudication.
+How they were judged: each of the 45 blocked commits of the v0.1.2 build adjudicated against the real diff; 40 by independent agents (nine batches, five each), 5 by the maintainer after one batch hit a session limit - noted because it is a weaker form of independence for those five. v0.1.3 stopped blocking two of the 45 (attrs 7373d88, click b761eda; both false_positive, D6 constant resolution). v0.1.4 stopped blocking seven more (attrs 74007f67d2, click 700798252a, httpx 59914c7690, starlette 100f05a66b/5ccbc62175/856c904a6d/b133ab45ad; all seven false_positive - relocation liveness, whole-unit move credit, PROD_SYMBOL_REMOVED, DEPENDENCY_DRIFT). No commit is newly blocked, every spec_correct block still blocks (the first cut of PROD_SYMBOL_REMOVED cleared two of them via rewritten-function locals and was tightened before shipping), and the remaining 36 verdicts are unchanged from the v0.1.2 adjudication.
 
 **How much to trust the split.** Each commit was judged once, with no
 second opinion and no inter-rater agreement measured. The block rate is
 a machine count and is exact; the split between *false positive* and
-*legitimate policy block* is a judgement call on 43 diffs, and the
+*legitimate policy block* is a judgement call on 36 diffs, and the
 boundary is genuinely arguable on some of them (a
 test deleted because its coverage moved upstream is invisible to any
 diff analyser — called spec-correct here, another reviewer might say

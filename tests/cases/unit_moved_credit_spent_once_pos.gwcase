@@ -1,0 +1,34 @@
+=== meta ===
+rule: TEST_DISABLED
+title: two deleted copies of a unit cannot both be excused by one re-appearance
+origin: bypass 34 discipline applied to the unit-body move credit — the multiset spends
+=== before: tests/test_a.py ===
+import sys
+
+from app import echo
+
+
+def test_echo_no_streams(monkeypatch):
+    monkeypatch.setattr(sys, "stdout", None)
+    echo("test")
+=== before: tests/test_b.py ===
+import sys
+
+from app import echo
+
+
+def test_echo_no_streams(monkeypatch):
+    monkeypatch.setattr(sys, "stdout", None)
+    echo("test")
+=== after: tests/test_c.py ===
+import sys
+
+from app import echo
+
+
+def test_echo_no_streams(monkeypatch):
+    monkeypatch.setattr(sys, "stdout", None)
+    echo("test")
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]},
+ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

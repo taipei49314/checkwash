@@ -1,0 +1,47 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a rewritten function body is not a feature removal, and excuses no deleted test
+origin: click b7e5fd4cc7 (adjudicated spec-correct) — the rewrite deleted the function's old locals, which counted as "deleted symbols" and cleared a real coverage drop
+=== before: src/app/complete.py ===
+class FishComplete:
+    def format_completion(self, item):
+        help_ = item.help or "_"
+        value = item.value.replace("\n", "-")
+        return f"{item.type}:{value}:{help_}"
+=== after: src/app/complete.py ===
+class FishComplete:
+    def format_completion(self, item):
+        if item.help:
+            return f"{item.type},{item.value}\t{item.help}"
+        return f"{item.type},{item.value}"
+=== before: tests/test_complete.py ===
+from app.complete import FishComplete
+
+
+def fish_line(value, help):
+    item = type("Item", (), {"type": "plain", "value": value, "help": help})()
+    return FishComplete().format_completion(item)
+
+
+def test_multiline_help_complete():
+    out = fish_line("x", "a\nb")
+    assert "-" in out
+
+
+def test_plain_complete():
+    out = fish_line("x", None)
+    assert out.startswith("plain")
+=== after: tests/test_complete.py ===
+from app.complete import FishComplete
+
+
+def fish_line(value, help):
+    item = type("Item", (), {"type": "plain", "value": value, "help": help})()
+    return FishComplete().format_completion(item)
+
+
+def test_plain_complete():
+    out = fish_line("x", None)
+    assert out.startswith("plain")
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high"}]

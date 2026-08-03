@@ -65,6 +65,10 @@ class UnitSide:
     markers: list[Marker] = field(default_factory=list)
     handlers: list[Handler] = field(default_factory=list)
     param_cases: int | None = None  # parametrized case count, None = not parametrized
+    # sha256 of the unit's normalized body (decorators excluded), for the
+    # whole-unit relocation credit: an assertion-less smoke test that moves
+    # files verbatim has nothing in the D2 multiset to prove it moved.
+    body_hash: str = ""
 
     @property
     def disabled(self) -> bool:
@@ -120,6 +124,10 @@ class FileIR:
 class DiffGlobals:
     prod_files_changed: list[str] = field(default_factory=list)
     prod_symbols_changed: list[str] = field(default_factory=list)  # non-trivial only
+    # Symbols that existed at base and are gone at head, in modified prod
+    # files. Feature removal explains a deleted test the way a modified
+    # symbol explains an edited expectation (PROD_SYMBOL_REMOVED).
+    prod_symbols_deleted: list[str] = field(default_factory=list)
     # Callers of changed prod symbols, for one-hop repair evidence:
     # {caller leaf name: [changed symbol leaf names it calls]}.
     prod_symbol_callers: dict[str, list[str]] = field(default_factory=dict)
@@ -153,6 +161,14 @@ class DiffGlobals:
     scope_allow: list[str] = field(default_factory=list)  # contract globs ([] = SCOPE_DRIFT off)
     scope_drift: list[tuple[str, str]] = field(default_factory=list)  # (path, role)
     moved_assertion_texts: list[str] = field(default_factory=list)  # normalized, sorted
+    # Body hashes of disappeared units that reappear verbatim as live added
+    # units — the whole-unit form of the D2 move credit, and the only form an
+    # assertion-less unit can earn. Multiset, spent like the texts above.
+    moved_unit_hashes: list[str] = field(default_factory=list)
+    # A dependency manifest (pyproject, requirements, lockfiles) changed in
+    # this diff — the honest cause of expectation drift like httpx 0.28's
+    # compact JSON separators (DEPENDENCY_DRIFT, EXPECTED_VALUE_CHANGED only).
+    dependency_manifest_changed: bool = False
 
 
 @dataclass
