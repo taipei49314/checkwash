@@ -42,7 +42,35 @@ greenwash cannot read suppresses escalation for the entire diff
 is the single largest hole in the tool and it is a design choice, not a bug,
 but "2.50% block rate" should be read next to it.
 
-## Why this is private again
+## Why this is public again
+
+Made public by the owner on 2026-08-03, after v0.1.2. What changed since the
+75-minute public window on 2026-08-02 is not confidence — it is that several
+things which used to be assertions are now checked by something that can fail:
+
+- the `byte-compare` job is green on all nine matrix legs, and was verified
+  green rather than assumed;
+- the `dogfood` job now actually executes `action/action.yml` on every push. It
+  never had; for the whole life of the project it reported "skipped" because it
+  was gated to pull requests in a repo that has never had one;
+- THREATMODEL's **Closed** column is machine-checked — each row names the
+  fixture pinning it, and the suite fails if a row has nothing behind it;
+- the benchmark numbers are regenerable from a clone, the sweeps are tracked
+  with their corpus boundary commits, and `make_results.py` refuses to pair a
+  sweep with an adjudication that does not describe it.
+
+**What has NOT changed, and you should weigh it.** The defect-discovery rate
+has not levelled off. On 2026-08-03 a second independent audit made sixteen
+claims and a separate skeptic refuted none of them — including one that had
+silently reopened a bypass this file listed as Closed. Two audits, roughly
+thirty real defects, and the project's own review has still never found a
+defect of that class before an outside pass did.
+
+So read the labels here accordingly. "Closed" now means a test pins it, not
+that it is safe. The most useful thing you can do with this repository is break
+it: THREATMODEL keeps a public bypass list and every report becomes a fixture.
+
+## Why it was private before
 
 It was public for a few hours on 2026-08-02 and was taken back to private by
 the owner, deliberately, because the defect-discovery rate had not levelled
