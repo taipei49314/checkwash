@@ -63,13 +63,22 @@ def test_documented_test_count_is_accurate():
             )
 
 
+# Everything a user's install or integration actually executes. The engine
+# alone is not enough: dogfood runs `./action` from the checkout, so a stale
+# action.yml on the advertised tag would pass every gate while shipping users
+# an old integration layer (owner review, 2026-08-04).
+PUBLIC_SURFACES = ["src/", "pyproject.toml", "action/", ".pre-commit-hooks.yaml"]
+
+
 def test_pinned_tag_ships_the_current_source():
     """The tag the README tells people to install must contain today's code.
 
     Matching version *strings* is not enough: v0.1.0 pointed at a commit two
     fixes behind main, so a visitor following the README got the pre-fix
-    engine while reading the post-fix docs. This compares the pinned tag's
-    `src/` and `pyproject.toml` against the working tree.
+    engine while reading the post-fix docs. This compares the pinned tag
+    against the working tree across every public install surface — the
+    engine, the packaging metadata, the GitHub Action wrapper, and the
+    pre-commit hook definition.
     """
     import subprocess
 
@@ -87,14 +96,14 @@ def test_pinned_tag_ships_the_current_source():
         "prevent. Cut the tag, or do not advertise it."
     )
     diff = subprocess.run(
-        ["git", "diff", "--name-only", tag, "--", "src/", "pyproject.toml"],
+        ["git", "diff", "--name-only", tag, "--", *PUBLIC_SURFACES],
         capture_output=True,
         cwd=str(ROOT),
     )
     changed = [p for p in diff.stdout.decode().split("\n") if p.strip()]
     assert not changed, (
-        f"{tag} does not contain the current source — the README tells people "
-        f"to install it, but these differ: {changed}. Cut a new release."
+        f"{tag} does not contain the current public surfaces — the README tells "
+        f"people to install it, but these differ: {changed}. Cut a new release."
     )
 
 

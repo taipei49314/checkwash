@@ -1,0 +1,114 @@
+"""STATE.md's authoritative table must match what the harnesses say.
+
+On 2026-08-04 the owner caught STATE.md carrying three generations of
+"current" numbers at once — the headline said one thing, "The number that
+matters" another, "Where we are" still described v0.1.2. Every paragraph had
+historical basis; the document as a whole could not be true. That is the
+exact claim drift greenwash exists to catch, happening in its own takeover
+file.
+
+The fix is structural: STATE.md now has exactly one authoritative table, and
+this test recomputes every row from its source of truth. Prose can narrate
+history; the table cannot drift.
+"""
+
+import json
+import pathlib
+import re
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _table() -> dict[str, str]:
+    text = (ROOT / "STATE.md").read_text(encoding="utf-8")
+    marker = "## The numbers that matter right now"
+    assert marker in text, "STATE.md lost its authoritative table heading"
+    section = text.split(marker, 1)[1]
+    rows: dict[str, str] = {}
+    for line in section.split("\n"):
+        m = re.match(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|$", line)
+        if m and m.group(1) != "authoritative number" and not set(m.group(1)) <= {"-"}:
+            rows[m.group(1)] = m.group(2)
+        if line.startswith("## ") and marker not in line:
+            break
+    assert rows, "STATE.md's authoritative table is empty or unparseable"
+    return rows
+
+
+def _sweeps() -> tuple[int, int, int]:
+    total = blocked = opaque = 0
+    for p in sorted((ROOT / "benchmarks" / "sweeps").glob("*.json")):
+        d = json.loads(p.read_text(encoding="utf-8"))
+        total += d["commits_analysed"]
+        blocked += d["commits_blocked"]
+        opaque += d["commits_with_opaque_prod_change"]
+    return total, blocked, opaque
+
+
+def test_version_row_matches_package():
+    from greenwash import __version__
+
+    assert _table()["version"] == f"v{__version__}"
+
+
+def test_detector_row_matches_registry():
+    from greenwash.detectors import REGISTRY
+
+    assert int(_table()["detectors"]) == len(REGISTRY)
+
+
+def test_block_rate_row_matches_sweeps():
+    total, blocked, _ = _sweeps()
+    want = f"{blocked}/{total} = {blocked / total:.2%}"
+    assert _table()["human-commit block rate"] == want
+
+
+def test_opaque_row_matches_sweeps():
+    total, _, opaque = _sweeps()
+    want = f"{opaque}/{total} = {opaque / total:.2%}"
+    assert _table()["opaque exemption share"] == want
+
+
+def test_split_rows_match_adjudication():
+    adj = json.loads(
+        (ROOT / "benchmarks" / "adjudication-2026-08-03.json").read_text(encoding="utf-8")
+    )
+    total, blocked, _ = _sweeps()
+    cats: dict[str, int] = {}
+    for v in adj["verdicts"]:
+        cats[v["category"]] = cats.get(v["category"], 0) + 1
+    assert sum(cats.values()) == blocked, "adjudication describes a different population"
+    fp, sc = cats.get("false_positive", 0), cats.get("spec_correct", 0)
+    table = _table()
+    assert table["adjudicated false positive"] == f"{fp}/{total} = {fp / total:.2%}"
+    assert table["legitimate policy block"] == f"{sc}/{total} = {sc / total:.2%}"
+
+
+def test_decoy_row_matches_recorded_arm():
+    arm = json.loads(
+        (ROOT / "benchmarks" / "decoy" / "arm-adversarial-2026-07-30.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    caught = sum(
+        1
+        for r in arm["runs"]
+        if r["suite_passing"] and r["greenwash_verdict"] == "block"
+    )
+    n = len(arm["runs"])
+    assert _table()["classic adversarial decoys blocked"] == f"{caught}/{n}"
+
+
+def test_threatmodel_floor_matches_adjudicated_rate():
+    adj = json.loads(
+        (ROOT / "benchmarks" / "adjudication-2026-08-03.json").read_text(encoding="utf-8")
+    )
+    total, _, _ = _sweeps()
+    fp = sum(1 for v in adj["verdicts"] if v["category"] == "false_positive")
+    want = f"~{fp / total:.2%}"
+    text = (ROOT / "THREATMODEL.md").read_text(encoding="utf-8")
+    m = re.search(r"false-positive floor(?: of this design on this corpus)? is (~[\d.]+%)", text)
+    assert m, "THREATMODEL.md no longer states the floor"
+    assert m.group(1) == want, (
+        f"THREATMODEL.md states the floor as {m.group(1)}, the adjudication says {want}"
+    )

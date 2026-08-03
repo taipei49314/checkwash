@@ -65,6 +65,43 @@ jobs:
         with:
           base: ${{ github.event.pull_request.base.sha || 'HEAD~1' }}
 
+  install-from-tag:
+    # What a *visitor* gets, not what the checkout has. dogfood runs ./action
+    # from the working tree, so a stale action.yml (or hook definition) on the
+    # advertised tag would pass every other gate while users installed an old
+    # integration layer (owner review 2026-08-04). This installs the exact
+    # command the README hands out and runs it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install the advertised tag from git, exactly as the README says
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$(python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          git rev-parse --verify "refs/tags/$tag" >/dev/null
+          pip install "git+file://$PWD@$tag"
+      - name: the installed build must run, replay the demo, and gate this push
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          greenwash --version
+          greenwash demo > /dev/null
+          # The installed build gates this push exactly as dogfood does from
+          # the checkout — its exit code counts. The first draft of this step
+          # swallowed that exit code with a shell or-fallback, and greenwash
+          # blocked the diff: E6 read the CI change as a weakened test
+          # command. It was right, and this wording exists because the tool
+          # corrected its author.
+          greenwash check HEAD~1..HEAD --repo .
+
   byte-compare:
     # The cross-OS determinism gate: every OS/Python combination must emit
     # byte-identical corpus findings (SPEC §8).

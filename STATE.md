@@ -74,22 +74,38 @@ commit that passed on its own merits, which is the best possible outcome:
 the number was fat, not load-bearing, and now the 2.5% that remains is the
 real measure of the blind spot.
 
-## The number that matters right now
+## The numbers that matter right now (authoritative — every other number in this file is history)
 
-**35/1800 = 1.94% block rate; adjudicated false positive 19/1800 = 1.06%.**
-Down from 2.50% / 1.67% across three precision rounds in one day. Ten
-adjudicated false positives cleared, zero commits newly blocked, every
-spec-correct block still blocks (now 16 — one verdict moved *into* that
-column on evidence), decoy corpus 12/12 on every re-run.
+This table is the only place this file states the current numbers, and
+`tests/test_state_claims.py` fails if any row drifts from what the
+harnesses actually say. Every later section narrates how a number *moved*;
+when a section and this table disagree, the section is describing the past.
+This rule exists because on 2026-08-04 the owner caught this very file
+carrying three generations of "current" numbers at once — the exact claim
+drift greenwash is built to catch.
 
-Two catches this day matter more than the clears. The first cut of the
-feature-removal credit cleared two adjudicated-correct blocks and was
-tightened before commit (v0.1.4 section). Then the v0.1.5 duplicate search
-overturned an adjudication verdict in the tool's favour: a commit judged
-"false positive — every deleted unit reappears in the same diff" turned out
-to have deleted one real oracle that reappears *nowhere* (`git grep` at that
-head is the proof), so the verdict — not the tool — was wrong. The
-measurement apparatus is now catching errors on both sides of itself.
+| authoritative number | value |
+|---|---|
+| version | v0.1.7 |
+| detectors | 16 |
+| human-commit block rate | 35/1800 = 1.94% |
+| adjudicated false positive | 20/1800 = 1.11% |
+| legitimate policy block | 15/1800 = 0.83% |
+| opaque exemption share | 45/1800 = 2.50% |
+| classic adversarial decoys blocked | 12/12 |
+
+The split is the majority of three raters (two blind re-adjudications;
+Fleiss' kappa 0.844). The probe arm (2026-08-04) additionally recorded 4/6
+cheats blocked at harvest, 2/6 escaped and closed the same day — both
+recorded escape diffs block under this version — and 0/6 false blocks on
+the natural arm.
+
+Two catches from 2026-08-03/04 matter more than any clear: the first cut of
+the feature-removal credit cleared two adjudicated-correct blocks and was
+tightened before commit (v0.1.4 section), and the v0.1.5 duplicate search
+overturned an adjudication verdict in the tool's favour. The measurement
+apparatus catches errors on both sides of itself; this table's test now
+also points it at this file.
 
 ## The 2026-08-03 third round (v0.1.5): DUPLICATE_REMAINS
 
@@ -111,7 +127,8 @@ a391797d00 was re-adjudicated false_positive → spec_correct as above.
 
 ## The 2026-08-03 fourth round: the residual 19 are a floor, and now it's proved
 
-The attack on the remaining 19 ran its recon and closed without shipping
+The attack on the then-remaining 19 false positives (the three-rater
+majority later made the count 20) ran its recon and closed without shipping
 code — the correct outcome, reached the correct way. Three candidate
 mechanisms (expectation edits explained by same-unit setup changes; weakened
 assertions excused by surviving anchors or new real assertions; two-hop
@@ -331,12 +348,17 @@ other than that judgement says so.
 
 ## Where we are
 
-Tagged **v0.1.2**, CI green on every leg including `byte-compare`. M0–M3 are
-done: 15 detectors, both benchmark corpora run, four adapters, the offline
-`greenwash demo`, and the launch docs. Numbers live in
-`benchmarks/RESULTS.md` and `benchmarks/decoy/README.md`, generated from the
-harnesses, never hand-typed; the test count lives in the README and is pinned
-by `tests/test_packaging.py` so it cannot drift.
+Tagged at the version in the authoritative table, CI green on every leg
+including `byte-compare` and `dogfood`. M0–M3 shipped long ago (detectors,
+both benchmark corpora, four adapters, the offline `greenwash demo`, launch
+docs); since then the work has been precision rounds, exemption narrowing,
+the probe arm, and the three-rater adjudication — each with its own dated
+section above. Numbers live in `benchmarks/RESULTS.md` and
+`benchmarks/decoy/`, generated from the harnesses, never hand-typed; the
+test count is pinned by `tests/test_packaging.py`, the public install
+surfaces (src, pyproject, action, pre-commit hook) are pinned against the
+advertised tag by the same file, and this file's own headline table is
+pinned by `tests/test_state_claims.py`.
 
 **Not done:** the asciinema cast (needs a human at a terminal), and PyPI —
 `pipx install greenwash` does not work yet and the README says so plainly.
@@ -354,10 +376,11 @@ them until a direction was pointed at. Self-review here reliably confirms
 what it already believes. Treat "I checked it" as weaker evidence than a
 green gate, and a green gate as weaker evidence than someone hostile looking.
 
-### The measurements, and what they cost
+### The measurements, and what they cost (the first full round, 2026-07-31 — history)
 
 **False positives** — 1800 human commits across six OSS repos greenwash had
-never seen. **45/1800 = 2.50%**, every repo at or under 5%. Full
+never seen. The first full sweep measured **45/1800 = 2.50%**, every repo at
+or under 5%; the current rate is in the authoritative table. Full
 progression and what moved each step: `benchmarks/README.md`. The 48
 oracle-rule blocks from round one were each triaged by an independent agent
 reading the real diff: 14 spec-correct, 34 fixable, 0 unclear.
@@ -507,7 +530,7 @@ project could have checked itself and had not.
 4. **RESULTS.md still said the decoy corpus did not exist** while
    benchmarks/README said it was run — stale text hardcoded in the generator.
 5. **"2.2% false positives" was the wrong name.** A block is not
-   automatically a mistake. All 40 blocks of the current build were
+   automatically a mistake. All 40 blocks of the then-current build were
    re-adjudicated: 24 false positive (1.33%), 16 legitimate policy block
    (0.89%), 0 unclear.
 6. **The README pinned `@v0.1.0`, a tag two fixes behind main** — visitors

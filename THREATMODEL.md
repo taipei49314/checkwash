@@ -75,7 +75,9 @@ hallucinated imports, scope drift, hidden Unicode.
    the residual false positives were each killed at design time by a
    spec-correct commit of the identical syntactic shape (the pairings are in
    benchmarks/README, "The floor"). On the 1800-commit corpus this design's
-   adjudicated false-positive floor is ~1.06%.
+   adjudicated false-positive floor is ~1.11% — by the majority of three
+   raters (Fleiss' kappa 0.844), and machine-checked against the
+   adjudication file by `tests/test_state_claims.py`.
 
 ## Known bypasses (public list — contributions welcome)
 

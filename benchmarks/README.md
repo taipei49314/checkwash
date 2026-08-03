@@ -120,10 +120,11 @@ files the diff touched, so a test calling `httpx.URL(...)` got no credit for a
 fix in `httpx/_urlparse.py` sitting behind an unchanged `_urls.py`. Thirteen
 of httpx's twenty blocks were that one blind spot.
 
-### The floor: why the remaining 19 stay
+### The floor: why the remaining false positives stay (19 at the time of this analysis; 20 after the three-rater majority)
 
-After three precision rounds, an attempt was made on the remaining 19
-adjudicated false positives (v0.1.5 population). Three candidate mechanisms
+After three precision rounds, an attempt was made on the 19 commits then
+adjudicated false positive (v0.1.5 population; the later three-rater
+majority moved one more commit into that column, making today's count 20). Three candidate mechanisms
 were designed, and **all three were killed at design time by spec-correct
 counterexamples in the same corpus** — the strongest evidence this project
 can produce that the residual is a floor, not a backlog:
@@ -157,8 +158,8 @@ The pattern across all three: the same *syntactic* shape appears on both
 sides of the adjudication, and what separates them is whether the rewrite is
 semantically equivalent — the judgement THREATMODEL #1 and #7 deliberately
 exclude from a zero-LLM, zero-execution differ. On this corpus the
-adjudicated false-positive floor of that design is **~1.06%**, and each of
-the 19 residuals names its cluster in the adjudication file: API-migration
+adjudicated false-positive floor of that design is **~1.11%** (majority of
+three raters), and each of the residuals names its cluster in the adjudication file: API-migration
 rewrites (httpx 71a1589928 / 7947b56076 / cca62060cb / 9fd6f0ca66), unit-
 internal co-changes (click bd131e1ab6 / e3c0898975 / bbe1eb6d41), equivalent
 replacements after feature change (becbde5cf4 / cf0c36d337 / 90b805fda7 /
