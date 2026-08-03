@@ -1,4 +1,5 @@
 === meta ===
+bypass: 4
 rule: ASSERT_WEAKENED
 note: red-team regression — an unreferenced prod constant must not disarm E1
 === before: tests/test_billing.py ===

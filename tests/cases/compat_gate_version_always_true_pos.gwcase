@@ -1,4 +1,5 @@
 === meta ===
+bypass: 19,44
 rule: TEST_DISABLED
 title: `skipif(sys.version_info >= (3, 8))` is true on every supported Python
 origin: fable audit — spelling was outside the hardcoded blacklist

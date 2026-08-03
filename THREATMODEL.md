@@ -62,6 +62,22 @@ hallucinated imports, scope drift, hidden Unicode.
 Maintained here on purpose: every bypass reported becomes a regression
 fixture. See CONTRIBUTING ("Send us a cheat") once published.
 
+**How much this column is worth.** "Closed" used to be nothing but the author's
+word. It has been wrong twice: row 10 sat here marked Closed while one
+non-ASCII character on the line reopened it, and a claim that the GitHub Action
+was dogfooded shipped while the CI job that would have proved it had never once
+executed. So the column is now checked: each row names the fixture that pins
+it (`bypass:` in the fixture's meta block), and `tests/test_threatmodel_pinned.py`
+fails if any Closed row has nothing behind it.
+
+That gate cannot prove a bypass is *closed* — row 10 had a fixture and the
+fixture was simply too narrow. It only makes "Closed with nothing behind it"
+unshippable, and makes the mapping visible so you can attack the fixture
+instead of trusting the table. Building it turned up seven rows (13, 14, 17, 20,
+21, 25, 36) that had been marked Closed for days with no test pinning them at
+all. All of them still held when a fixture was finally written — but nobody
+knew that until it was.
+
 | # | Bypass | Status |
 |---|---|---|
 | 1 | Rewrite prod logic so the weak test passes honestly | Out of scope (documented limit) |

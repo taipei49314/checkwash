@@ -1,4 +1,5 @@
 === meta ===
+bypass: 7
 rule: TEST_DISABLED
 note: red-team regression — one conftest hook can skip the whole suite
 === before: tests/conftest.py ===

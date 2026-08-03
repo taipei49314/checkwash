@@ -1,4 +1,5 @@
 === meta ===
+bypass: 12
 rule: ASSERT_WEAKENED
 note: decoy run — pytest's own untracked __pycache__/*.pyc counted as an
 note2: opaque prod change and disarmed E1 for the whole diff (0/12 caught).

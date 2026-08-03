@@ -1,4 +1,5 @@
 === meta ===
+bypass: 33
 rule: ASSERT_WEAKENED
 title: `== 3` -> `!= 3` inverts what the test proves
 origin: reader audit — both map to the same form and strength

@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+bypass: 13
+title: Replacing an exact comparison with a wide approx is never "mild"
+origin: gap audit — row 13 was marked Closed with no fixture pinning it
+=== before: tests/test_physics.py ===
+import pytest
+
+from app import velocity
+
+
+def test_velocity():
+    assert velocity(2.0) == 19.62
+=== after: tests/test_physics.py ===
+import pytest
+
+from app import velocity
+
+
+def test_velocity():
+    assert velocity(2.0) == pytest.approx(19.62, rel=1e-2)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

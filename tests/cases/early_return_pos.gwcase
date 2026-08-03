@@ -1,4 +1,5 @@
 === meta ===
+bypass: 8
 rule: ASSERT_REMOVED
 note: red-team regression — a `return` at the top of the body leaves the
 note2: assertions in the AST but kills the test

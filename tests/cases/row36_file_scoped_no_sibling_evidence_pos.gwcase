@@ -1,0 +1,38 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+bypass: 36
+title: A file-scoped finding earns nothing from a sibling test's repair evidence
+origin: gap audit — row 36 was Closed with nothing pinning it
+=== before: app/calc.py ===
+def compute_total(items):
+    return sum(items)
+=== after: app/calc.py ===
+def compute_total(items):
+    return sum(items) + 1
+=== before: tests/test_calc.py ===
+from app.calc import compute_total
+
+
+def test_total():
+    assert compute_total([1, 2]) == 3
+
+
+def test_unrelated():
+    assert compute_total([4]) == 4
+=== after: tests/test_calc.py ===
+from app.calc import compute_total
+
+
+def test_total():
+    assert compute_total([1, 2]) == 4
+
+
+def test_unrelated():
+    try:
+        assert compute_total([4]) == 5
+    except Exception:
+        pass
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "test_total"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "test_unrelated"}]

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 39
 rule: GUARDRAIL_TOUCHED
 title: A hand-edited exemption beyond the 180-day cap is not honoured
 origin: reader audit — the cap was only enforced when writing, not reading

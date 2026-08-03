@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+bypass: 20,25
+title: `assert str(1) == "1"` is vacuous and cannot compensate a deleted test
+origin: gap audit — rows 20 and 25 were marked Closed with no fixture pinning them
+=== before: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc_basic():
+    assert calc(1) == 3
+
+
+def test_calc_double():
+    assert calc(2) == 6
+=== after: tests/test_calc.py ===
+from app import calc
+
+
+def test_calc_basic():
+    assert calc(1) == 3
+
+
+def test_calc_padding():
+    assert str(1) == "1"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

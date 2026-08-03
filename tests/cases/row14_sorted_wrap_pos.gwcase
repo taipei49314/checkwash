@@ -1,0 +1,19 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+bypass: 14
+title: Wrapping both sides in sorted() makes an ordered check order-blind
+origin: gap audit — row 14 was marked Closed with no fixture pinning it
+=== before: tests/test_rank.py ===
+from app import ranking
+
+
+def test_ranking():
+    assert ranking() == ["a", "b", "c"]
+=== after: tests/test_rank.py ===
+from app import ranking
+
+
+def test_ranking():
+    assert sorted(ranking()) == sorted(["a", "b", "c"])
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

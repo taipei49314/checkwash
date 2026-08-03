@@ -1,4 +1,5 @@
 === meta ===
+bypass: 41
 rule: TEST_DISABLED
 title: Skip-marking every parametrize row disables the test without deleting a row
 origin: fable audit — rows were counted, not weighed for liveness

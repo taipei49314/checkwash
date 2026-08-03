@@ -1,4 +1,5 @@
 === meta ===
+bypass: 18
 rule: ASSERT_WEAKENED
 note: oracle_freeze contract makes any weakening high even with prod changes
 === task ===

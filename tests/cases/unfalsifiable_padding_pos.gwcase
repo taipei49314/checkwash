@@ -1,4 +1,5 @@
 === meta ===
+bypass: 46
 rule: ASSERT_REMOVED
 title: `assert "" in str(x)` cannot fail, so it is not compensation
 origin: fable audit — "can fail" was implemented as "subject is not literal-only"

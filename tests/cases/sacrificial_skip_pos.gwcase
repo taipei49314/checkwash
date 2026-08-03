@@ -1,4 +1,5 @@
 === meta ===
+bypass: 9
 rule: ASSERT_REMOVED
 note: red-team regression — deleted assertions pasted into a permanently
 note2: skipped test must not buy D2 ASSERTION_MOVED de-escalation

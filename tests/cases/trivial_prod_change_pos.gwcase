@@ -1,4 +1,5 @@
 === meta ===
+bypass: 4
 rule: ASSERT_WEAKENED
 note: red-team regression — a comment-only prod edit must NOT defuse E1
 === before: tests/test_billing.py ===

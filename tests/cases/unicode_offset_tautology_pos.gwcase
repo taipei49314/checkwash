@@ -1,4 +1,5 @@
 === meta ===
+bypass: 47
 rule: ASSERT_WEAKENED
 title: A CJK literal on the line must not hide a self-comparison
 origin: fable audit — ast col_offset is UTF-8 bytes, spans were character-indexed

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 49
 rule: ASSERT_WEAKENED
 title: `assert (cond, "msg")` asserts a non-empty tuple and can never fail
 origin: fable audit — rated TRUTHY(20) instead of TAUTOLOGY(10)

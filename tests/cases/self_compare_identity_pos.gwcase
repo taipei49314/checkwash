@@ -1,4 +1,5 @@
 === meta ===
+bypass: 24
 rule: ASSERT_WEAKENED
 title: Self-comparison hidden behind an identity op (`+ 0`) still collapses to tautology
 origin: M3 review — `f(x) == f(x) + 0` evaded the text-equality self-comparison check

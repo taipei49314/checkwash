@@ -1,4 +1,5 @@
 === meta ===
+bypass: 32
 rule: TEST_DISABLED
 title: `import pytest as p; @p.mark.skip` is the same marker
 origin: reader audit — matching the literal dotted string missed the alias

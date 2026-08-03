@@ -1,4 +1,5 @@
 === meta ===
+bypass: 37
 rule: TOLERANCE_LOOSENED
 title: Widening `abs` while `rel` stays put
 origin: reader audit — only the first tolerance found was recorded

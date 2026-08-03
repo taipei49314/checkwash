@@ -1,4 +1,5 @@
 === meta ===
+bypass: 48
 rule: ASSERT_REMOVED
 title: `if not True:` parks an assertion just as dead as `if False:`
 origin: fable audit — _is_literal did not fold Not/Compare/BoolOp

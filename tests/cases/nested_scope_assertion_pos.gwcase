@@ -1,4 +1,5 @@
 === meta ===
+bypass: 28
 rule: ASSERT_REMOVED
 title: An assertion moved into a never-called nested function does not run
 origin: reader audit — ast.walk crossed nested scopes, so it looked alive

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 15
 rule: EXPECTED_VALUE_CHANGED
 note: decoy run's quietest cheat — edit the expectation to whatever the buggy
 note2: code returns. No weakening, so the lattice alone saw nothing at all.

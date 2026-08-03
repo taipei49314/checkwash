@@ -1,4 +1,5 @@
 === meta ===
+bypass: 40
 rule: TEST_DISABLED
 title: `__test__ = False` de-collects the whole module
 origin: fable audit — pytest's oldest collection switch was unmodelled

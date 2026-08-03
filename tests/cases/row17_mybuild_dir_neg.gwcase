@@ -1,0 +1,19 @@
+=== meta ===
+rule: ASSERT_REMOVED
+bypass: 17
+title: A directory merely named `mybuild/` is real source, not build output
+origin: gap audit — row 17 was marked Closed with no fixture pinning it
+=== before: mybuild/tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    assert calc() == 3
+=== after: mybuild/tests/test_calc.py ===
+from app import calc
+
+
+def test_calc():
+    assert calc() is not None
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

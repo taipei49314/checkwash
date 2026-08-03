@@ -1,4 +1,5 @@
 === meta ===
+bypass: 33,50
 rule: ASSERT_WEAKENED
 title: assertIs -> assertIsNot inverts the oracle
 origin: fable audit — the unittest spelling was absent from the map entirely

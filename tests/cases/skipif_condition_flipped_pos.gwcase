@@ -1,4 +1,5 @@
 === meta ===
+bypass: 30
 rule: TEST_DISABLED
 title: skipif(False) -> skipif(True) disables the test
 origin: reader audit — marker alignment compared names, never conditions

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 35
 rule: EXPECTED_VALUE_CHANGED
 title: A same-named function in an unrelated module is not repair evidence
 origin: reader audit — module identity was erased by leaf-name matching

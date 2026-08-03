@@ -1,4 +1,5 @@
 === meta ===
+bypass: 29,48
 rule: ASSERT_REMOVED
 title: An assertion under `if False:` never executes
 origin: reader audit — unreachable analysis only handled return/raise

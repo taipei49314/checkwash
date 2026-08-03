@@ -1,4 +1,5 @@
 === meta ===
+bypass: 42
 rule: CI_WORKFLOW_TOUCHED
 title: Narrowing `python_files` silences the suite without touching a test
 origin: fable audit — pytest config files had no role at all

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 6
 rule: TEST_DISABLED
 note: red-team regression — pytest only collects Test* classes, so renaming
 note2: TestBilling to BillingTests deletes every test in it

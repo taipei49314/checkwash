@@ -1,4 +1,5 @@
 === meta ===
+bypass: 8
 rule: TEST_DISABLED
 note: red-team regression — deleting parametrize rows deletes pytest test
 note2: items while the assert line stays untouched

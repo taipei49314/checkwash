@@ -1,0 +1,23 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+bypass: 21
+title: A widened POSITIONAL tolerance counts too
+origin: gap audit — every tolerance fixture used keyword args; row 21 is the positional form
+=== before: tests/test_physics.py ===
+import pytest
+
+from app import velocity
+
+
+def test_velocity():
+    assert velocity(2.0) == pytest.approx(19.62, 0.001)
+=== after: tests/test_physics.py ===
+import pytest
+
+from app import velocity
+
+
+def test_velocity():
+    assert velocity(2.0) == pytest.approx(19.62, 1e6)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

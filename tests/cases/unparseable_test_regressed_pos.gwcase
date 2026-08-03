@@ -1,4 +1,5 @@
 === meta ===
+bypass: 51
 rule: TEST_FILE_UNPARSEABLE
 title: A test file that stops parsing has left greenwash's reach
 origin: fable audit — silent skip made the verdict interpreter-version dependent

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 34
 rule: ASSERT_REMOVED
 title: Two identical deletions, one re-appearance — only one is "moved"
 origin: reader audit — Counter was collapsed to a set, crediting both

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 44
 rule: TEST_DISABLED
 title: `skipif(True or sys.platform == "win32")` is a kill, not a compat gate
 origin: fable audit — D6 substring-matched seven spellings instead of evaluating

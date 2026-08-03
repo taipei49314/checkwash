@@ -1,4 +1,5 @@
 === meta ===
+bypass: 43
 rule: TEST_DISABLED
 title: Moving a test into a dot-directory leaves pytest's norecursedirs default
 origin: fable audit

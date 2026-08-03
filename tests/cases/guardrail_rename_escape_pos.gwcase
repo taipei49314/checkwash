@@ -1,4 +1,5 @@
 === meta ===
+bypass: 26,27
 rule: GUARDRAIL_TOUCHED
 title: Moving AGENTS.md out of the guardrail role is not a neutral relocation
 origin: reader audit 2026-08-02 — rename escaped supervision entirely

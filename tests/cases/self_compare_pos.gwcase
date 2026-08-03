@@ -1,4 +1,5 @@
 === meta ===
+bypass: 10
 rule: ASSERT_WEAKENED
 note: red-team regression — `assert f(x) == f(x)` can never fail, so the
 note2: oracle is gone even though the form still looks exact

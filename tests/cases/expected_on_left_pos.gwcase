@@ -1,4 +1,5 @@
 === meta ===
+bypass: 38
 rule: EXPECTED_VALUE_CHANGED
 title: The expectation can be on the left: `assert 3 == calc()`
 origin: reader audit — only the right comparator was read

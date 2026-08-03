@@ -1,4 +1,5 @@
 === meta ===
+bypass: 31
 rule: TEST_DISABLED
 title: Module-level pytest.skip disables the whole file
 origin: reader audit — only decorators and pytestmark were inspected

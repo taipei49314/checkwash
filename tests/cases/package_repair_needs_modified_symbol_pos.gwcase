@@ -1,4 +1,5 @@
 === meta ===
+bypass: 23
 rule: EXPECTED_VALUE_CHANGED
 title: A no-op prod edit in an imported package must not launder an oracle rewrite
 origin: M3 review — PACKAGE_REPAIR was package-relevant, reopening bypass #4 for EXPECTED_VALUE_CHANGED

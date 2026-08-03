@@ -1,4 +1,5 @@
 === meta ===
+bypass: 35
 rule: EXPECTED_VALUE_CHANGED
 title: src-layout: a sibling module still supplies no evidence (bypass 35 stays closed)
 origin: fable audit — guard against the src/ fix loosening module reachability
