@@ -62,7 +62,12 @@ hallucinated imports, scope drift, hidden Unicode.
    against the public API, say — greenwash cannot verify the replacement is
    equivalent and blocks. Accepted deliberately: the deescalator that would
    excuse it would also excuse replacing an exact comparison with a wide
-   `approx()`, which was the most popular cheat in the decoy run.
+   `approx()`, which was the most popular cheat in the decoy run. This limit
+   is now *measured*, not just asserted: three candidate de-escalators for
+   the residual false positives were each killed at design time by a
+   spec-correct commit of the identical syntactic shape (the pairings are in
+   benchmarks/README, "The floor"). On the 1800-commit corpus this design's
+   adjudicated false-positive floor is ~1.06%.
 
 ## Known bypasses (public list — contributions welcome)
 

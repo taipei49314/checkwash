@@ -115,6 +115,51 @@ files the diff touched, so a test calling `httpx.URL(...)` got no credit for a
 fix in `httpx/_urlparse.py` sitting behind an unchanged `_urls.py`. Thirteen
 of httpx's twenty blocks were that one blind spot.
 
+### The floor: why the remaining 19 stay
+
+After three precision rounds, an attempt was made on the remaining 19
+adjudicated false positives (v0.1.5 population). Three candidate mechanisms
+were designed, and **all three were killed at design time by spec-correct
+counterexamples in the same corpus** — the strongest evidence this project
+can produce that the residual is a floor, not a backlog:
+
+- *"An expectation edit is explained by a change to the unit's own setup"*
+  would clear httpx 71a1589928 (18 findings: `encode_request(...)` becomes
+  `httpx.Request(...)` and every expected header dict gains `Host`) — and
+  would also clear **flask d98eb69a35**, a spec-correct revert whose unit
+  setup changes too while coverage genuinely drops. The fallback ("new
+  expected value extends the old") dies on **rich 48293cde88**, spec-correct,
+  where the new value literally contains the old.
+- *"A weakened assertion whose unit gains a new real assertion, or whose
+  expected value survives into one, is a rewrite"* would clear attrs
+  ce89f5d11f (`match=` added and the exact check kept) — and would also
+  clear **httpx fc84f7f6eb**, spec-correct, which replaces its origin checks
+  with brand-new exact asserts on a different property. The same syntactic
+  shape, EXACT_VALUE(90)→PATTERN(60) with the anchor inside the pair,
+  appears as a false positive in click 1557e26522 and as a spec-correct
+  block in **httpx b5addb64f0** (`== "ISO-8859-1"` widened to
+  `in ("ISO-8859-1", "WINDOWS-1252")`).
+- *"Follow prod callers two hops instead of one"* would connect
+  db9072f998's rewritten `validate_path` to its tests — and would also hand
+  repair evidence to **httpx 4f6edf36e9**, spec-correct, whose test sits one
+  wrapper (`Response(...).links`) from the modified prod function.
+  THREATMODEL #5's one-hop stance survives on evidence.
+
+The pattern across all three: the same *syntactic* shape appears on both
+sides of the adjudication, and what separates them is whether the rewrite is
+semantically equivalent — the judgement THREATMODEL #1 and #7 deliberately
+exclude from a zero-LLM, zero-execution differ. On this corpus the
+adjudicated false-positive floor of that design is **~1.06%**, and each of
+the 19 residuals names its cluster in the adjudication file: API-migration
+rewrites (httpx 71a1589928 / 7947b56076 / cca62060cb / 9fd6f0ca66), unit-
+internal co-changes (click bd131e1ab6 / e3c0898975 / bbe1eb6d41), equivalent
+replacements after feature change (becbde5cf4 / cf0c36d337 / 90b805fda7 /
+02b6ed7b18 / 06ea505ce2 / 777a89e232 / 53b8f08218 / f520d9a89f / bddd774ce0
+/ ce89f5d11f / 1557e26522 / db9072f998). Lowering the floor honestly means
+adding a semantic layer (execution or a model) — a different product with a
+different threat model — or accepting reviewed allowlisting as the last
+mile, which is what the per-fingerprint exemption flow is for.
+
 ## 2. Decoy-task corpus (recall)
 
 Twelve bug-fix tasks with must-fail tests, run through real coding agents in

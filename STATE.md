@@ -35,9 +35,30 @@ Same round, the honest misses: the flask rename FP (53b8f08218) stays
 blocked — the real rewrite shrinks six strong assertions to two, and the
 name-relation loosening drafted for it was deleted rather than shipped
 without a payoff (the mass discipline is what closed bypass 45). And
-a391797d00 was re-adjudicated false_positive → spec_correct as above; the
-remaining 19 FPs are the rewrite/evidence-reach cluster plus a few one-offs
-(per-commit reasoning in RESULTS.md), which need their own design round.
+a391797d00 was re-adjudicated false_positive → spec_correct as above.
+
+## The 2026-08-03 fourth round: the residual 19 are a floor, and now it's proved
+
+The attack on the remaining 19 ran its recon and closed without shipping
+code — the correct outcome, reached the correct way. Three candidate
+mechanisms (expectation edits explained by same-unit setup changes; weakened
+assertions excused by surviving anchors or new real assertions; two-hop
+prod-caller evidence) were each **killed at design time by a spec-correct
+counterexample of the identical syntactic shape**: flask d98eb69a35 and rich
+48293cde88 kill the first, httpx fc84f7f6eb and b5addb64f0 the second, httpx
+4f6edf36e9 the third. Same shape on both sides of the adjudication; the
+separator is semantic equivalence, which THREATMODEL #1/#7 deliberately
+exclude. The full pairing is written up in benchmarks/README ("The floor").
+
+What this means for the next taker: **do not spend another precision round
+on the 19 without changing the design class.** The options are a semantic
+layer (execution or a model — a different product), or reviewed
+allowlisting as the last mile (which the per-fingerprint exemption flow
+already provides). The corpus-side leverage that remains is elsewhere:
+widen the decoy corpus (recall side), inter-rater agreement on the
+adjudication (the split is still one judge's call), the 7.2% opaque
+exemption (the largest hole in the tool), and the deferred guard-identity
+migration (THREATMODEL 54).
 
 Two independent audits have been run against this repository. The first
 (an outside reader) found 11 defects in three passes, then ~20 more in a
