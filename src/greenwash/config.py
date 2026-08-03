@@ -35,7 +35,10 @@ DEFAULT_ROLES: dict[str, list[str]] = {
         "pytest.ini",
         "tox.ini",
         "setup.cfg",
-        "pyproject.toml",
+        # Any pyproject, not just the root one: an example app's pyproject is
+        # still packaging/test-runner config, and as prod it fed the opaque
+        # exemption (13 flask commits in the FP corpus).
+        "**/pyproject.toml",
     ],
     "snapshot": ["**/__snapshots__/**", "**/golden/**", "**/*.golden", "**/*.snap"],
     "lockfile": [
@@ -44,8 +47,12 @@ DEFAULT_ROLES: dict[str, list[str]] = {
         "package-lock.json",
         "pnpm-lock.yaml",
         "requirements*.txt",
+        # pip-compile sources; fnmatch's * crosses "/", so this also catches
+        # flask's requirements/*.in layout. A pin source changes nothing at
+        # runtime until compiled, and the compiled .txt co-changes.
+        "requirements*.in",
     ],
-    "docs": ["**/*.md", "**/*.rst"],
+    "docs": ["**/*.md", "**/*.rst", "**/README"],
 }
 
 _ROLE_ORDER = ["guardrail", "ci", "snapshot", "lockfile", "conftest", "test", "docs"]

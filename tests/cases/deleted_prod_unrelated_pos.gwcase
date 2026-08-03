@@ -1,0 +1,21 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: deleting one prod file does not excuse weakening an unrelated test
+origin: opaque-exemption audit 2026-08-03 — a deleted Python file is fully analysable from its base side; it must stop granting the blanket
+=== before: src/app/legacy.py ===
+def old_render(x):
+    return str(x)
+=== before: tests/test_billing.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_billing.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -387,3 +387,37 @@ Two things this round did NOT do, on evidence:
   next-day commit 1103c5cac2 re-added it. The verdict is re-categorised
   spec-correct with the reproducible check recorded. The dedup machinery's
   first catch was a judge, not a diff.
+
+## D-022 (2026-08-03): the opaque blanket is for what cannot be read, not for what was not looked at
+
+7.2% of the corpus (130/1800 commits) passed under the THREATMODEL #4
+blanket: any changed prod file greenwash cannot analyse suppressed E1 for
+the whole diff. An audit of what those files actually were found the
+blanket mostly covered things nobody needed to read: mkdocs.yml alone on 24
+commits, .readthedocs on 13, type stubs on 22 touches, flask's
+requirements/*.in on ~30, example-app pyprojects on 13, GitHub metadata
+(dependabot, FUNDING, issue templates), .gitignore-class files — and five
+commits whose "opaque" change was a deleted Python file whose entire
+content sat parseable on the base side.
+
+Frozen, three parts:
+
+- **Role fixes over exemptions where a role fits.** `**/pyproject.toml`
+  (any directory) is ci — an example app's packaging config was never an
+  unanalysable production change. `requirements*.in` is lockfile, next to
+  the `.txt` it compiles into. Extensionless `README` joins docs.
+- **An explicit inert list** for prod-role files that cannot change the
+  runtime behaviour of the code under test: `.pyi` stubs, docs-site and
+  docs-build config, repo metadata, dev-tooling config. Deliberately short:
+  anything not on it stays opaque, which fails toward flagging. Misses cost
+  a visible, adjudicable block — the opposite failure was an invisible
+  diff-wide exemption.
+- **Deleted parseable Python is analysed, not excused.** Every symbol in
+  the deleted file is recorded as changed and deleted from the base-side
+  parse; symbol evidence and D8 then judge the diff exactly as if the
+  symbols had been removed from a surviving file.
+
+The direction is monotone — exemptions only shrink, blocks only stay or
+grow — so the decoy corpus could not regress (verified 12/12 adversarial,
+0/12 false blocks on the honest arm), and every commit newly blocked on the
+FP corpus gets a fresh adjudication rather than a silent number change.

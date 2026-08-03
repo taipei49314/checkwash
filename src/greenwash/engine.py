@@ -59,6 +59,41 @@ _ARTIFACT_SEGMENTS = frozenset(
         ".eggs",
     }
 )
+# Prod-role files that cannot change the runtime behaviour of the code under
+# test: type stubs (never executed), docs-site and docs-build config, repo
+# metadata, dev-tooling config. A change here is not repair evidence and must
+# not grant the opaque exemption (THREATMODEL #4) — docs and stubs were the
+# bulk of the 7.2% of corpus commits whose pass rested on the blanket. The
+# list is deliberately short and explicit: anything not on it stays opaque,
+# which fails toward flagging.
+_INERT_SUFFIXES = (".pyi", ".cff")
+_INERT_BASENAMES = frozenset(
+    {
+        ".gitignore",
+        ".gitattributes",
+        ".editorconfig",
+        ".flake8",
+        ".git_archival.txt",
+        ".python-version",
+        ".python-version-default",
+        "mkdocs.yml",
+        ".readthedocs.yaml",
+        ".readthedocs.yml",
+        "dependabot.yml",
+        "FUNDING.yml",
+        "CODEOWNERS",
+        "MANIFEST.in",
+    }
+)
+
+
+def _is_inert(path: str) -> bool:
+    if path.endswith(_INERT_SUFFIXES):
+        return True
+    base = path.rsplit("/", 1)[-1]
+    return base in _INERT_BASENAMES or base.startswith(("LICENSE", "COPYING"))
+
+
 _ARTIFACT_SUFFIXES = (
     ".pyc",
     ".pyo",
@@ -460,14 +495,33 @@ def build_ir(
                 )
                 _record_callers(g, after_parsed, g.prod_symbols_changed)
                 g.new_literals_in_prod.extend(sorted(after_parsed.literals))
+            elif (
+                is_python
+                and change.status == "deleted"
+                and before_parsed is not None
+                and before_parsed.parse_ok
+            ):
+                # A deleted Python file is fully analysable from its base
+                # side: every symbol in it changed, and every one is gone.
+                # It used to fall into the opaque blanket, which handed a
+                # diff-wide exemption to five corpus commits whose deletion
+                # was perfectly readable. Symbol-level evidence and D8 now
+                # judge it like any other change.
+                for q in sorted(before_parsed.symbols):
+                    g.prod_symbols_changed.append(f"{_module_of(path)}::{q}")
+                    g.prod_symbols_deleted.append(f"{_module_of(path)}::{q}")
             elif is_artifact(path):
                 # Generated output: no evidence either way, and crediting it
                 # would let any build artifact disarm the gate.
                 pass
+            elif _is_inert(path):
+                # Docs config, stubs, repo metadata: changes no runtime
+                # behaviour, so it is neither evidence nor opaque.
+                pass
             else:
-                # Non-Python prod file, deletion, or parse failure: greenwash
-                # cannot tell repair from decoy here, so it conservatively
-                # suppresses E1 (THREATMODEL.md #4).
+                # Other-language code, templates, data files, or a Python
+                # parse failure: greenwash cannot tell repair from decoy
+                # here, so it conservatively suppresses E1 (THREATMODEL #4).
                 if (change.before or b"") != (change.after or b""):
                     g.prod_opaque_change = True
         elif role == "guardrail":

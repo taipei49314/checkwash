@@ -14,7 +14,7 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (2026-08-03, v0.1.5)
+**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (2026-08-03, v0.1.6)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
@@ -28,7 +28,7 @@ greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 
 Engine errors: 0.
 
-**Commits that received the blanket opaque-change exemption: 130/1800 = 7.2%.** A prod file greenwash cannot read — non-Python, deleted, unparseable — suppresses E1 for the whole diff (THREATMODEL #4). That is a documented blind spot, not analysis, and this is how often it is load-bearing on this corpus. Read the pass rate with it in mind.
+**Commits that received the blanket opaque-change exemption: 45/1800 = 2.5%.** A prod file greenwash cannot read — non-Python, deleted, unparseable — suppresses E1 for the whole diff (THREATMODEL #4). That is a documented blind spot, not analysis, and this is how often it is load-bearing on this corpus. Read the pass rate with it in mind.
 
 Blocking findings by rule (commits containing at least one):
 
@@ -63,7 +63,7 @@ greenwash is *wrong* is the adjudicated false-positive rate.
 
 Raw per-commit verdicts and reasoning: `adjudication-2026-08-03.json`.
 
-How they were judged: each of the 45 blocked commits of the v0.1.2 build adjudicated against the real diff; 40 by independent agents (nine batches, five each), 5 by the maintainer after one batch hit a session limit - noted because it is a weaker form of independence for those five. v0.1.3 stopped blocking two (attrs 7373d88, click b761eda), v0.1.4 seven more (attrs 74007f67d2, click 700798252a, httpx 59914c7690, starlette 100f05a66b/5ccbc62175/856c904a6d/b133ab45ad), v0.1.5 one more (click 1103c5cac2, deleted duplicate with a live survivor outside the diff) - all ten false_positive. One verdict was re-categorised on evidence: click a391797d00 false_positive -> spec_correct, because its reason claimed every deleted unit reappears in the same diff and `git grep` at that head proves test_prompt_cast_default reappears nowhere; the re-check that found this is recorded in the verdict itself. No commit is newly blocked; every other verdict is unchanged from the v0.1.2 adjudication.
+How they were judged: each of the 45 blocked commits of the v0.1.2 build adjudicated against the real diff; 40 by independent agents (nine batches, five each), 5 by the maintainer after one batch hit a session limit - noted because it is a weaker form of independence for those five. v0.1.3 stopped blocking two (attrs 7373d88, click b761eda), v0.1.4 seven more (attrs 74007f67d2, click 700798252a, httpx 59914c7690, starlette 100f05a66b/5ccbc62175/856c904a6d/b133ab45ad), v0.1.5 one more (click 1103c5cac2, deleted duplicate with a live survivor outside the diff) - all ten false_positive. One verdict was re-categorised on evidence: click a391797d00 false_positive -> spec_correct, because its reason claimed every deleted unit reappears in the same diff and `git grep` at that head proves test_prompt_cast_default reappears nowhere; the re-check that found this is recorded in the verdict itself. No commit is newly blocked; every other verdict is unchanged from the v0.1.2 adjudication. v0.1.6 narrowed the opaque exemption (docs config, stubs, metadata, pin sources, deleted-parseable Python no longer qualify): opaque commits 130 -> 45, and the blocked set did not change by a single commit - every exemption removed had been protecting nothing.
 
 **How much to trust the split.** Each commit was judged once, with no
 second opinion and no inter-rater agreement measured. The block rate is

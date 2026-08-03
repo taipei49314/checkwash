@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: adapting the test of a deleted symbol is explained by the deletion
+origin: opaque-exemption audit 2026-08-03 — the deleted file's symbols are known exactly, so evidence stays symbol-relevant instead of blanket
+=== before: src/app/legacy.py ===
+def old_render(x):
+    return str(x)
+=== before: tests/test_legacy.py ===
+from app.legacy import old_render
+from app import fallback_render
+
+
+def test_render_compat():
+    assert old_render(3) == "3"
+    assert fallback_render(3) == "3"
+=== after: tests/test_legacy.py ===
+from app import fallback_render
+
+
+def test_render_compat():
+    assert fallback_render(3) is not None
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]},
+ {"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

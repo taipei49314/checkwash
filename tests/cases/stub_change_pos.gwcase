@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a type stub never executes, and buys no exemption
+origin: opaque-exemption audit 2026-08-03 — .pyi files counted as unanalysable prod changes
+=== before: src/app/core.pyi ===
+def total(items: list[int]) -> int: ...
+=== after: src/app/core.pyi ===
+def total(items: list[int], *, precise: bool = ...) -> int: ...
+=== before: tests/test_billing.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_billing.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,6 +1,33 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-03 (v0.1.5: the duplicate search, which also checked the judge)
+Updated: 2026-08-03 (v0.1.6: the opaque blanket cut from 7.2% to 2.5% at zero verdict cost)
+
+## The 2026-08-03 fifth round (v0.1.6): the biggest hole, measured and narrowed
+
+THREATMODEL #4's blanket — any unreadable prod change suppresses E1 for the
+whole diff — covered 130/1800 corpus commits (7.2% of the pass rate resting
+on a blind spot, not analysis). An audit of what those files actually were
+found the blanket mostly covered things nobody needed to read: mkdocs.yml
+alone on 24 commits, .readthedocs on 13, `.pyi` stubs, flask's
+requirements/*.in, example-app pyprojects, GitHub metadata — and five
+commits whose "opaque" change was a deleted Python file fully parseable on
+the base side.
+
+Three cuts (D-022): role fixes where a role fits (`**/pyproject.toml` → ci,
+`requirements*.in` → lockfile, bare `README` → docs); an explicit inert
+list for prod-role files that cannot change runtime behaviour (stubs, docs
+config, repo metadata — deliberately short, misses stay opaque, fails
+toward flagging); deleted parseable Python analysed from its base side
+instead of excused. What still grants the blanket is what greenwash
+genuinely cannot read: other-language code, templates, data files,
+unparseable Python.
+
+Result: **opaque 130 → 45 (2.5%), and the blocked set did not move by one
+commit** — 35 before, the same 35 after, zero new blocks, decoy 12/12 and
+honest arm 0/12 both held. Every removed exemption had been protecting a
+commit that passed on its own merits, which is the best possible outcome:
+the number was fat, not load-bearing, and now the 2.5% that remains is the
+real measure of the blind spot.
 
 ## The number that matters right now
 

@@ -1,0 +1,27 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: an example app's pyproject is packaging config, not an unanalysable prod change
+origin: opaque-exemption audit 2026-08-03 — flask's examples/*/pyproject.toml granted the blanket 13 times
+=== before: examples/tutorial/pyproject.toml ===
+[project]
+name = "tutorial"
+version = "1.0"
+=== after: examples/tutorial/pyproject.toml ===
+[project]
+name = "tutorial"
+version = "1.1"
+=== before: tests/test_billing.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_billing.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+ {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

@@ -33,11 +33,19 @@ hallucinated imports, scope drift, hidden Unicode.
    indirect assertions via fixtures are invisible until curated. Coverage is
    measured and reported, not assumed.
 4. **Opaque prod changes (v0.1).** Repair evidence is computed from Python
-   ASTs. A changed prod file greenwash cannot analyse — non-Python, deleted,
-   or unparseable — counts as evidence and therefore *suppresses* the E1
-   escalation. An agent can exploit this by touching one such file. Narrowed
-   when the JS/TS frontend lands (M1/v0.2); note that touching an unrelated
-   *Python* prod file no longer works.
+   ASTs. A changed prod file greenwash cannot analyse counts as evidence and
+   therefore *suppresses* the E1 escalation; an agent can exploit this by
+   touching one such file. The blanket has been narrowed twice: touching an
+   unrelated *Python* prod file stopped working when evidence went
+   symbol-level, and as of v0.1.6 the exemption is no longer granted by
+   deleted-but-parseable Python files (their symbols are read from the base
+   side and judged like any other change), by type stubs, or by docs-site
+   config, dependency-pin sources and repo metadata (the explicit inert list
+   in `engine.py`; nested `pyproject.toml` and `requirements*.in` moved to
+   the ci/lockfile roles). What still grants it — deliberately — is a change
+   greenwash genuinely cannot read: code in another language, templates,
+   runtime data files, and Python that does not parse. Narrowed further when
+   the JS/TS frontend lands (v0.2).
 5. **Indirection beyond one hop.** Repair evidence follows the call graph one
    hop from the test. A change three layers down, with no closer signal, is
    treated as unrelated (fails safe toward flagging, not toward silence).
@@ -93,7 +101,7 @@ knew that until it was.
 | # | Bypass | Status |
 |---|---|---|
 | 1 | Rewrite prod logic so the weak test passes honestly | Out of scope (documented limit) |
-| 2 | Touch a non-Python / unparseable prod file to defuse E1 | Open until JS/TS frontend (M1) |
+| 2 | Touch a non-Python / unparseable prod file to defuse E1 | **Narrowed** (v0.1.6) — docs config, stubs, repo metadata, pin sources and deleted-but-parseable Python no longer qualify; other-language code, templates, data files and unparseable Python still do, until the JS/TS frontend |
 | 3 | Remove the hook / run outside greenwash | Out of scope; use CI required checks |
 | 4 | Add a dead constant, reorder defs, or edit an unrelated function to defuse E1 | **Closed** — evidence is symbol-relevant, not diff-global |
 | 5 | `git mv` / plain `mv` a test file out of collection | **Closed** in both range and worktree mode |

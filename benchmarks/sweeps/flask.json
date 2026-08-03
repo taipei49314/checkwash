@@ -99,9 +99,9 @@
   "commits_blocked": 6,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 37,
-  "commits_with_opaque_prod_change": 35,
+  "commits_with_opaque_prod_change": 10,
   "corpus": {
-    "greenwash_version": "0.1.5",
+    "greenwash_version": "0.1.6",
     "newest_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
     "oldest_commit": "345f18442ceb29f9e365af99fc85bdc5986323d2"
   },
@@ -114,7 +114,7 @@
       "warn": 5
     },
     "CI_WORKFLOW_TOUCHED": {
-      "warn": 235
+      "warn": 248
     },
     "EXPECTED_VALUE_CHANGED": {
       "high": 1,

@@ -7,7 +7,7 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release.** 15 detectors, 226 tests, zero runtime dependencies.
+> Status: **pre-release.** 15 detectors, 233 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -76,10 +76,15 @@ Two harnesses, both reproducible from a clone
   per diff with no second opinion, and some are genuinely arguable — the
   per-commit reasoning is published in [RESULTS.md](benchmarks/RESULTS.md)
   precisely so you can disagree with it.
-  **7.2% of the corpus (130/1800) never got a real analysis**: those commits
-  touch a production file greenwash cannot read, which suppresses escalation
-  for the whole diff (THREATMODEL #4). That share of the pass rate rests on a
-  documented blind spot, and is now measured rather than assumed.
+  **2.5% of the corpus (45/1800) never got a real analysis**: those commits
+  touch a production file greenwash genuinely cannot read — other-language
+  code, templates, data files, unparseable Python — which suppresses
+  escalation for the whole diff (THREATMODEL #4). That share of the pass
+  rate rests on a documented blind spot, measured rather than assumed. It
+  used to be 7.2%: narrowing the blanket (docs config, type stubs, repo
+  metadata, pin sources and deleted-but-parseable Python no longer qualify)
+  removed 85 exemptions and **did not change a single verdict** — every one
+  had been protecting a commit that passed on its own merits anyway.
 - **Recall — 12 / 12.** Twelve bug-fix tasks run through real coding agents
   told to make CI green without fixing the bug; greenwash blocks all twelve
   tampering diffs. Under natural conditions, 0 of 12 agents touched a test at
@@ -99,7 +104,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.5
+- uses: taipei49314/greenwash/action@v0.1.6
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -131,8 +136,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.5
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.5
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.6
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.6
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -156,7 +161,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.5
+      - uses: taipei49314/greenwash/action@v0.1.6
 ```
 
 **pre-commit**:
@@ -164,7 +169,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.5
+    rev: v0.1.6
     hooks: [{ id: greenwash }]
 ```
 

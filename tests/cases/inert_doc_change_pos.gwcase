@@ -1,0 +1,27 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a docs-site config edit is not a production change, and buys no exemption
+origin: opaque-exemption audit 2026-08-03 — mkdocs.yml alone fed the blanket on 24 corpus commits (starlette, httpx)
+=== before: mkdocs.yml ===
+site_name: app
+nav:
+  - Home: index.md
+=== after: mkdocs.yml ===
+site_name: app
+nav:
+  - Home: index.md
+  - Guide: guide.md
+=== before: tests/test_billing.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_billing.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
