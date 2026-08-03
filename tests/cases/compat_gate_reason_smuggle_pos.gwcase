@@ -1,4 +1,5 @@
 === meta ===
+bypass: 52
 rule: TEST_DISABLED
 title: compat tokens smuggled into reason= do not buy credit for a truthy constant
 origin: FLAG resolved to True is an unconditional kill; before resolution this spelling earned credit

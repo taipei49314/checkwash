@@ -90,28 +90,29 @@ New gaps this round *created or documented*, none with corpus cost today:
 The 28 remaining adjudicated false positives are the next precision target;
 their per-commit reasoning is in `benchmarks/RESULTS.md`.
 
-## Owner actions queued (agent-read-only files)
+## Owner actions: applied 2026-08-03 on the owner's explicit instruction
 
-Per AGENTS.md this round touched none of SPEC.md / THREATMODEL.md /
-DECISIONS.md / tests/gates. Three edits are queued for the maintainer:
+The v0.1.3 code round left SPEC.md / THREATMODEL.md / DECISIONS.md untouched
+per AGENTS.md and queued three edits here. The owner then instructed they be
+applied, which is the sanctioned path for those files. Applied in the
+follow-up commit:
 
-1. **SPEC.md §5, D6 row** is now behind the code twice over: it says
-   "skipif" only, and says a condition greenwash cannot evaluate "earns
-   nothing" (the MAYBE-tolerant evaluator shipped rounds ago). Proposed row:
-   *"the added skip is a `skipif`, a non-strict `xfail`, or an if-guarded
-   imperative skip call, whose condition — with module constants resolved
-   from the head snapshot — references the interpreter/OS environment and,
-   evaluated over the version×platform matrix, is not provably true
-   everywhere (truthy counts as true). Unresolvable sub-expressions stay
-   unknown; a condition provably true under every assignment of the unknowns
-   earns nothing."*
-2. **THREATMODEL**: narrow the D6 residual (truthy constants are now
-   resolved and denied) and add the guard-identity gap above as a documented
-   bypass with the fingerprint-migration caveat.
-3. **DECISIONS**: record the resolution design (eager, engine-side, IR-carried,
-   bounded, fail-toward-flagging), the strict-xfail stance, and that
-   `Marker.guard` + `FileIR.constants` were added to IR v1 as additive fields
-   without a version bump.
+1. **SPEC.md §5, D6 row** rewritten to match the shipped semantics: skipif /
+   non-strict xfail / guarded imperative skips, constants resolved up to the
+   head snapshot, always-true means truthy, unresolvables stay unknown,
+   strict xfail earns nothing.
+2. **THREATMODEL**: "known and accepted" item 6 narrowed (constants are no
+   longer among the unseen parts); rows **52–53** added as Closed (the two
+   constant-blind FP shapes, pinned by `bypass:` claims in the
+   `compat_gate_*_pos` fixtures, enforced by `test_threatmodel_pinned`); row
+   **54** added as **Open** — guard edits on imperative skips produce no
+   event, kept open deliberately because guard-in-identity would change
+   fingerprints and invalidate recorded allowlists.
+3. **DECISIONS D-019** records the whole design: eager engine-side
+   resolution carried in the IR, token filter over resolved expressions,
+   truthy always-true, xfail strictness stance, guard-not-in-identity with
+   THREATMODEL 54 as its named cost, and `Marker.guard` + `FileIR.constants`
+   as additive IR v1 fields without a version bump.
 
 ## Why this is public again
 

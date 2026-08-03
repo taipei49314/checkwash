@@ -1,4 +1,5 @@
 === meta ===
+bypass: 52
 rule: TEST_DISABLED
 title: a constant that resolves to an always-true version check earns nothing
 origin: resolution must not become a rubber stamp — same rule as bypass 19, one hop away

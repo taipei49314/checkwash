@@ -41,15 +41,22 @@ hallucinated imports, scope drift, hidden Unicode.
 5. **Indirection beyond one hop.** Repair evidence follows the call graph one
    hop from the test. A change three layers down, with no closer signal, is
    treated as unrelated (fails safe toward flagging, not toward silence).
-6. **A `skipif` condition greenwash cannot evaluate.** D6 refuses the
-   compatibility-gate credit only when the condition is provably true in every
-   supported environment *and* under every assignment to the parts it cannot
-   see (module constants, helper calls). So
-   `skipif(SOME_FLAG or sys.platform == "win32")`, where `SOME_FLAG` is set to
-   `True` elsewhere, still earns the de-escalation. Tightening this to "any
-   unknown means no credit" was tried and rejected: it blocked three honest
-   compatibility skips in the corpus, and real gates routinely reference
-   constants. The finding stays visible at `warn` either way.
+6. **A skip condition greenwash cannot evaluate.** D6 refuses the
+   compatibility-gate credit only when the condition is provably true —
+   truthy — in every supported environment *and* under every assignment to
+   the parts it cannot see. Module constants are no longer among the unseen
+   parts: `skipif(WIN)`, non-strict `xfail(PY_3_14_PLUS)` and if-guarded
+   imperative skips are evaluated with the constant resolved from the test
+   file, from a file in the same diff, or from the head snapshot, and a
+   constant that resolves to something always-truthy earns nothing (rows
+   52–53). What remains unresolvable — helper calls, relative or
+   whole-module imports, chains crossing more than one module — still
+   defaults toward granting when a compat token is present:
+   `skipif(check("sys.platform"))` earns the credit today, in a marker and
+   in an `if` guard alike. Tightening to "any unknown means no credit" was
+   tried and rejected: it blocked three honest compatibility skips in the
+   corpus, and real gates routinely reference helpers. The finding stays
+   visible at `warn` either way.
 7. **Equivalent rewrites of an assertion.** When both the subject and the
    strength of an assertion change at once — a private-API check rewritten
    against the public API, say — greenwash cannot verify the replacement is
@@ -160,6 +167,17 @@ survived refutation — including #47, which had quietly reopened #10 for any
 test file containing a non-ASCII string, and #44, where a de-escalator meant
 to recognise compatibility gates was in practice a general "disable this test"
 switch.
+
+| # | Bypass | Status |
+|---|---|---|
+| 52 | Hide the always-true condition behind a module constant — `GATE = sys.version_info >= (3, 8)` then `skipif(GATE)`, with compat tokens smuggled into `reason=` so the old text filter passed | **Closed** — skip-condition constants are resolved and evaluated, and "always true" means truthy, so a constant bound to `True`, a non-empty string, or an all-versions comparison earns nothing |
+| 53 | Same, with the constant imported — `from app._compat import GATE` where the defining file is outside the diff | **Closed** — resolution follows top-level from-imports into files in the diff and then the head snapshot, bounded and failing toward flagging |
+| 54 | Edit the guard of an existing imperative skip: `if version < X: pytest.skip()` → `if True: pytest.skip()` | **Open** — the guard is deliberately not part of the marker's identity, so the edit produces no `markers_added` event. Kept out because fingerprints (and recorded allowlist entries) must not change under a doc-level refactor; closing this needs guard-in-identity plus an allowlist migration story |
+
+Rows 52–53 were the two constant-blind false positives the 2026-08-03
+adjudication surfaced (attrs 7373d88, click b761eda), closed by the v0.1.3
+constant-resolution round at zero measured cost on the 1800-commit corpus.
+Row 54 is that same round documenting the gap it chose to keep.
 
 ## False positives closed in the same audit
 

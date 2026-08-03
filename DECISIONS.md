@@ -258,3 +258,47 @@ the sweep's blocked set and refuses to emit the decomposition unless they match
 exactly, naming the unadjudicated and stale commits. Sweep output now records
 the newest and oldest commit of the range it covered and the tool version, so a
 reader can tell what was measured without asking the author.
+
+## D-019 (2026-08-03): a skip condition is read, not grepped — and resolution lives in the engine
+
+D6 decided "is this a compatibility gate?" from the marker's *text*: only
+`skipif`, and only when the string `sys.version_info` / `sys.platform` /
+`platform.` / `os.name` literally appeared in it. Both false positives the
+2026-08-03 adjudication surfaced were exactly that blindness: click marks
+tests `skipif(WIN)` with `WIN` imported from `click/_compat.py` (a file not
+in the diff), attrs marks them `xfail(PY_3_14_PLUS)` and writes
+`if PY_3_14_PLUS and not slots: pytest.xfail(...)` inside the body. All three
+spellings are the same honest gate; none contained a token.
+
+Frozen, five parts:
+
+- **Resolution is eager, engine-side, and IR-carried.** The engine resolves
+  the names a skip condition references — same-file constants, then top-level
+  from-imports against files in the diff, then the head snapshot (`git show`
+  in range/sweep mode, the working tree in worktree mode, `=== head: ===` in
+  fixtures) — into `FileIR.constants` before gating runs. Gating stays a pure
+  function of the IR, and `--emit-ir` shows exactly the environment the
+  verdict used. Bounded (≤24 entries, ≤8 head reads per file) and
+  fail-toward-flagging: cycles, collisions, shadowed names and parse failures
+  all resolve to "unevaluable", never to credit.
+- **The compat-token filter runs over the condition plus its resolved
+  expressions**, so `skipif(WIN)` qualifies through what `WIN` *is* rather
+  than through its `reason=` string — and the credit stays scoped to
+  interpreter/OS gates instead of becoming general skip amnesty.
+- **"Always true" means truthy, not `is True`.** A condition resolving to a
+  non-empty string or tuple skips everywhere exactly as `True` does; the old
+  identity test handed that spelling the credit (THREATMODEL 52). Measured
+  cost of the tightening on the 1800-commit corpus: zero.
+- **Non-strict `xfail(cond)` earns D6; `strict=True` earns nothing.** A
+  strict xfail still runs the test and inverts its oracle — that is an
+  assertion change, not a skip. Imperative `pytest.skip` / `pytest.xfail` /
+  `self.skipTest` earn D6 only through a recorded `if` guard; the recorded
+  guard is a subset of the real conjuncts, so a guard that is false somewhere
+  proves the real condition false there too.
+- **`Marker.guard` and `FileIR.constants` are additive fields on IR v1, no
+  version bump** — consistent with every prior additive field. The guard is
+  deliberately *not* part of marker identity: identity feeds fingerprints,
+  fingerprints feed recorded allowlists, and a doc-level refactor must not
+  invalidate reviewed exemptions. The cost of that choice is THREATMODEL 54
+  (guard edits produce no event), kept open until there is an allowlist
+  migration story.

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 53
 rule: TEST_DISABLED
 title: an imported constant that resolves to a literal True earns nothing
 origin: head-file resolution must deny credit exactly like same-file resolution does
