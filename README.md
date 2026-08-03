@@ -7,7 +7,7 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release.** 15 detectors, 197 tests, zero runtime dependencies.
+> Status: **pre-release.** 15 detectors, 209 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -50,18 +50,21 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 Two harnesses, both reproducible from a clone
 ([benchmarks/](benchmarks/README.md)):
 
-- **Human-commit block rate — 45 / 1800 = 2.50%.** Six active OSS projects
+- **Human-commit block rate — 43 / 1800 = 2.39%.** Six active OSS projects
   (flask, httpx, attrs, click, rich, starlette), 300 consecutive
   human-reviewed commits each, none seen during development. That is how
   often greenwash would fail CI on a commit a human wrote. Every repo is
   at or under 5%; the progression from an initial 8.6%, and what moved each
   step, is in the benchmarks README.
-  A block is not automatically a mistake. All 45 were adjudicated commit by
-  commit against the real diff: **30 false positives (1.67%)**, 15 legitimate
+  A block is not automatically a mistake. All 43 were adjudicated commit by
+  commit against the real diff: **28 false positives (1.56%)**, 15 legitimate
   policy blocks (0.83%) where the commit really does drop oracle coverage
-  with nothing visible replacing it, 0 unclear. Both numbers went *up* from
-  the previous round (2.22% / 1.33%), because closing twelve bypasses made the
-  tool fire more often; that is the trade being made, reported as measured.
+  with nothing visible replacing it, 0 unclear. Both numbers came *down* this
+  round (from 2.50% / 1.67%): D6 now resolves the constants a skip condition
+  names instead of grepping the marker text, which cleared two adjudicated
+  false positives at zero cost to recall — and the round before, closing
+  twelve bypasses had pushed both numbers *up*; each trade is reported as
+  measured.
   The block rate is a machine count and exact; the split is one judge's call
   per diff with no second opinion, and some are genuinely arguable — the
   per-commit reasoning is published in [RESULTS.md](benchmarks/RESULTS.md)
@@ -89,7 +92,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.2
+- uses: taipei49314/greenwash/action@v0.1.3
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -121,8 +124,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.2
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.2
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.3
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.3
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -146,7 +149,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.2
+      - uses: taipei49314/greenwash/action@v0.1.3
 ```
 
 **pre-commit**:
@@ -154,7 +157,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.2
+    rev: v0.1.3
     hooks: [{ id: greenwash }]
 ```
 

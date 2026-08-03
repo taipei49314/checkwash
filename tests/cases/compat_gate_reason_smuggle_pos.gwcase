@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_DISABLED
+title: compat tokens smuggled into reason= do not buy credit for a truthy constant
+origin: FLAG resolved to True is an unconditional kill; before resolution this spelling earned credit
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+FLAG = True
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+FLAG = True
+
+
+@pytest.mark.skipif(FLAG, reason="sys.platform quirk on some runners")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

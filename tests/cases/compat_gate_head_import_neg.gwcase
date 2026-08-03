@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_DISABLED
+title: skipif(WIN) resolves through an import from an unchanged file read at head
+origin: FP sweep adjudication 2026-08-03 — click b761eda; click/_compat.py was not in the diff
+=== head: src/app/_compat.py ===
+import sys
+
+WIN = sys.platform.startswith("win")
+=== before: tests/test_pager.py ===
+import pytest
+
+from app._compat import WIN
+from app import render
+
+
+def test_pipe_pager():
+    assert render("x") == "x"
+=== after: tests/test_pager.py ===
+import pytest
+
+from app._compat import WIN
+from app import render
+
+
+@pytest.mark.skipif(WIN, reason="exercises the pipe pager path")
+def test_pipe_pager():
+    assert render("x") == "x"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

@@ -17,8 +17,9 @@ from greenwash.detectors import REGISTRY
 from greenwash.findings import Finding
 from greenwash.gating import apply_gates
 from greenwash.ir.diffalign import align_file
+from greenwash.ir.markers import bare_names, marker_call, parse_expr
 from greenwash.ir.model import IR, DiffGlobals, normalize_text
-from greenwash.frontends.python.frontend import ParsedFile, parse_python
+from greenwash.frontends.python.frontend import ParsedFile, module_constants, parse_python
 
 
 @dataclass
@@ -307,6 +308,7 @@ def build_ir(
     head_label: str,
     scope_allow: list[str] | None = None,
     known_modules: set[str] | None = None,
+    head_reader=None,
 ) -> IR:
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
@@ -314,6 +316,9 @@ def build_ir(
     removed_texts: Counter[str] = Counter()
     added_texts: Counter[str] = Counter()
     base_literals: set[str] = set()
+    # After-side parses, kept so skip-condition constants imported from
+    # another file in the same diff resolve without re-reading anything.
+    after_by_path: dict[str, ParsedFile] = {}
     # Imports already present on the base side are presumed resolvable:
     # only NEW imports can be hallucinated.
     resolvable: set[str] | None = None
@@ -343,6 +348,9 @@ def build_ir(
                 after_parsed = parse_python(
                     change.after, collect_tests=collect, conftest=is_conftest
                 )
+
+        if after_parsed is not None and after_parsed.parse_ok:
+            after_by_path[path] = after_parsed
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         ir.files.append(file_ir)
@@ -537,7 +545,122 @@ def build_ir(
     g.hidden_unicode.sort()
     g.scope_drift.sort()
     g.exemptions_added.sort()
+
+    # D6 constant environments, resolved here so gating stays a pure function
+    # of the IR: same-file constants first, then names imported from files in
+    # this diff, then from the head snapshot (click's `from click._compat
+    # import WIN`, where _compat.py is not in the diff at all — FP sweep).
+    for file in ir.files:
+        parsed = after_by_path.get(file.path)
+        if file.role in ("test", "conftest") and parsed is not None:
+            file.constants = _gate_constants(parsed, after_by_path, head_reader)
     return ir
+
+
+# Bounds for skip-condition constant resolution. Small on purpose: a real
+# compatibility gate references one or two constants; anything needing more
+# reads than this stays unevaluable, which fails toward flagging.
+_MAX_CONST_ENTRIES = 24
+_MAX_HEAD_READS = 8
+
+
+def _gate_condition_names(parsed: ParsedFile) -> set[str]:
+    """Bare names referenced by this file's skipif/xfail conditions and guards."""
+    names: set[str] = set()
+    for unit in parsed.units:
+        for m in unit.side.markers:
+            canonical = m.name.split("(", 1)[0]
+            if canonical.rsplit(".", 1)[-1] in ("skipif", "xfail"):
+                call = marker_call(m.text)
+                if call is not None and call.args:
+                    names |= bare_names(call.args[0])
+            if m.guard:
+                guard = parse_expr(m.guard)
+                if guard is not None:
+                    names |= bare_names(guard)
+    return names
+
+
+def _pull_closure(out: dict[str, str], seeds: set[str], source: dict[str, str]) -> None:
+    """Copy seeds and the same-module names their expressions reference."""
+    queue = sorted(n for n in seeds if n in source and n not in out)
+    seen = set(queue)
+    while queue and len(out) < _MAX_CONST_ENTRIES:
+        name = queue.pop(0)
+        out[name] = source[name]
+        expr = parse_expr(source[name])
+        if expr is None:
+            continue
+        for ref in sorted(bare_names(expr)):
+            if ref not in seen and ref in source:
+                seen.add(ref)
+                queue.append(ref)
+
+
+def _module_candidates(module: str) -> list[str]:
+    # `module` comes from an `ast.ImportFrom` with level 0: a chain of
+    # identifiers, so joining on "/" cannot traverse outside the repo.
+    rel = module.replace(".", "/")
+    return [f"{rel}.py", f"src/{rel}.py", f"{rel}/__init__.py", f"src/{rel}/__init__.py"]
+
+
+def _gate_constants(
+    parsed: ParsedFile,
+    after_by_path: dict[str, ParsedFile],
+    head_reader,
+) -> dict[str, str]:
+    """The constant environment D6 evaluates this file's skip conditions in."""
+    needed = _gate_condition_names(parsed)
+    if not needed:
+        return {}
+    consts: dict[str, str] = {}
+    # A name bound both by a top-level assignment and a from-import is
+    # order-dependent at runtime; picking either binding could hand the
+    # credit to the wrong expression. Ambiguity resolves to "unevaluable".
+    unambiguous = {
+        n: e for n, e in parsed.constants.items() if n not in parsed.from_imports
+    }
+    _pull_closure(consts, needed, unambiguous)
+
+    module_cache: dict[str, dict[str, str] | None] = {}
+    reads = 0
+    for name in sorted(needed):
+        if len(consts) >= _MAX_CONST_ENTRIES:
+            break
+        if name in consts or name not in parsed.from_imports:
+            continue
+        if name in parsed.constants:
+            continue  # ambiguous: also assigned at top level in this file
+        module, orig = parsed.from_imports[name]
+        if module not in module_cache:
+            found: dict[str, str] | None = None
+            for candidate in _module_candidates(module):
+                in_diff = after_by_path.get(candidate)
+                if in_diff is not None:
+                    found = in_diff.constants
+                    break
+                if head_reader is not None and reads < _MAX_HEAD_READS:
+                    reads += 1
+                    data = head_reader(candidate)
+                    if data is not None:
+                        found = module_constants(data)
+                        break
+            module_cache[module] = found
+        source = module_cache[module]
+        if not source or orig not in source:
+            continue
+        sub: dict[str, str] = {}
+        _pull_closure(sub, {orig}, source)
+        expr = sub.pop(orig, None)
+        if expr is None:
+            continue
+        # A sibling constant colliding with a name already bound here would
+        # make the evaluation ambiguous; ambiguity resolves to "unevaluable".
+        if any(k in consts or k in parsed.constants or k in parsed.from_imports for k in sub):
+            continue
+        consts[name] = expr
+        consts.update(sub)
+    return {k: consts[k] for k in sorted(consts)}
 
 
 def _scope_match(path: str, pattern: str) -> bool:
@@ -613,6 +736,7 @@ def analyze(
     base_label: str = "base",
     head_label: str = "head",
     known_modules: set[str] | None = None,
+    head_reader=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -621,6 +745,7 @@ def analyze(
         head_label,
         scope_allow=contract.scope_allow,
         known_modules=known_modules,
+        head_reader=head_reader,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

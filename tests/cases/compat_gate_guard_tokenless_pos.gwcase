@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a guarded skip with no interpreter/OS signal anywhere is not a compat gate
+origin: guard support must stay scoped to compat conditions, not become general skip amnesty
+=== before: tests/test_pager.py ===
+import shutil
+
+import pytest
+
+from app import render
+
+
+def test_pipe_pager():
+    assert render("x") == "x"
+=== after: tests/test_pager.py ===
+import shutil
+
+import pytest
+
+from app import render
+
+
+def test_pipe_pager():
+    if not shutil.which("pager"):
+        pytest.skip("no pager binary on this runner")
+
+    assert render("x") == "x"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

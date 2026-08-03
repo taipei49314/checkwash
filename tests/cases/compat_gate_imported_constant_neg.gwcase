@@ -1,0 +1,33 @@
+=== meta ===
+rule: TEST_DISABLED
+title: xfail(PY_3_14_PLUS) resolves through an import from a prod file in the same diff
+origin: FP sweep adjudication 2026-08-03 — attrs 7373d88 shape; the constant lives in attr/_compat.py
+=== before: src/app/_compat.py ===
+import sys
+
+PY_3_13_PLUS = sys.version_info[:2] >= (3, 13)
+=== after: src/app/_compat.py ===
+import sys
+
+PY_3_13_PLUS = sys.version_info[:2] >= (3, 13)
+PY_3_14_PLUS = sys.version_info[:2] >= (3, 14)
+=== before: tests/test_third_party.py ===
+import pytest
+
+from app import roundtrip
+
+
+def test_repr():
+    assert roundtrip("x") == "x"
+=== after: tests/test_third_party.py ===
+import pytest
+
+from app._compat import PY_3_14_PLUS
+from app import roundtrip
+
+
+@pytest.mark.xfail(PY_3_14_PLUS, reason="serializer is currently broken on 3.14")
+def test_repr():
+    assert roundtrip("x") == "x"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

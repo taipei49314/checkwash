@@ -13,6 +13,9 @@ Sections:
     [{"rule": "...", "severity": "high"}]
 
 A path appearing only in `after` is an added file; only in `before`, deleted.
+A `=== head: path ===` section is a file present in the head snapshot but not
+part of the diff — what the engine's head reader would find in the repo (used
+by D6 to resolve skip-condition constants imported from unchanged files).
 Expectations are matched strictly: same count, and every expected finding
 must match a distinct actual finding on every key it specifies.
 """
@@ -26,7 +29,7 @@ from dataclasses import dataclass, field
 from greenwash.engine import FileChange
 
 _SECTION_RE = re.compile(
-    r"^=== (meta|task|expect|env|before: (?P<bpath>.+?)|after: (?P<apath>.+?)) ===$"
+    r"^=== (meta|task|expect|env|before: (?P<bpath>.+?)|after: (?P<apath>.+?)|head: (?P<hpath>.+?)) ===$"
 )
 
 
@@ -40,6 +43,8 @@ class Case:
     # `env` lists declared modules, as a base-side dependency manifest would;
     # absent means IMPORT_UNRESOLVED is off for this case.
     env: list[str] | None = None
+    # Files in the head snapshot but outside the diff, path -> content.
+    head: dict[str, str] = field(default_factory=dict)
 
 
 def parse_case(text: str) -> Case:
@@ -67,6 +72,8 @@ def parse_case(text: str) -> Case:
             case.before[path or ""] = content
         elif kind == "after":
             case.after[path or ""] = content
+        elif kind == "head":
+            case.head[path or ""] = content
 
     for line in text.replace("\r\n", "\n").split("\n"):
         m = _SECTION_RE.match(line.strip()) if line.startswith("===") else None
@@ -77,6 +84,8 @@ def parse_case(text: str) -> Case:
                 current = ("before", m.group("bpath"))
             elif m.group("apath"):
                 current = ("after", m.group("apath"))
+            elif m.group("hpath"):
+                current = ("head", m.group("hpath"))
             else:
                 current = (m.group(1), None)
         elif current is not None:

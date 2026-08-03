@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.05,
+  "block_rate": 0.0467,
   "blocked_commits": [
     {
       "commit": "700798252a509ca57bc7a12f7aa7fd67f9f8fd25",
@@ -163,25 +163,6 @@
       ]
     },
     {
-      "commit": "b761eda3bad977ec2f485451d85fd8ec365f0bf4",
-      "findings": [
-        {
-          "message": "test_echo_via_pager_real_pager_handles_ansi: disabling marker added (pytest.mark.skipif(WIN))",
-          "path": "tests/test_termui.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "test_echo_via_pager_real_pager_handles_ansi"
-        },
-        {
-          "message": "test_get_pager_file_with_real_pager_binary_stream: disabling marker added (pytest.mark.skipif(WIN))",
-          "path": "tests/test_termui.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "test_get_pager_file_with_real_pager_binary_stream"
-        }
-      ]
-    },
-    {
       "commit": "cf0c36d33734af1de9ecd5d3305970eb26ebba7f",
       "findings": [
         {
@@ -281,12 +262,12 @@
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 15,
+  "commits_blocked": 14,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 109,
   "commits_with_opaque_prod_change": 3,
   "corpus": {
-    "greenwash_version": "0.1.2",
+    "greenwash_version": "0.1.3",
     "newest_commit": "0f4738df88e3ea47c40a4a442103596a61cfee79",
     "oldest_commit": "bd9d4f8db2744d95f75ae171c7aacc4b66558945"
   },
@@ -313,9 +294,9 @@
       "warn": 34
     },
     "TEST_DISABLED": {
-      "high": 19,
+      "high": 17,
       "info": 22,
-      "warn": 22
+      "warn": 24
     }
   }
 }

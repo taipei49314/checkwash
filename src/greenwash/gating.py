@@ -16,6 +16,7 @@ from greenwash.allowlist import AllowEntry, active_fingerprints
 from greenwash.config import SEVERITY_ORDER, Config
 from greenwash.contract import Contract
 from greenwash.findings import Finding
+from greenwash.ir.markers import bare_names, marker_call, parse_expr
 from greenwash.ir.model import IR, Unit, normalize_text
 
 ORACLE_RULES = {
@@ -337,98 +338,113 @@ class _Maybe:
 MAYBE = _Maybe()
 
 
-def _eval_condition(node: ast.AST, env: dict) -> object:
+def _eval_condition(
+    node: ast.AST, env: dict, consts: dict[str, ast.AST] | None = None
+) -> object:
     """Evaluate a skipif condition in one hypothetical environment.
 
     Deliberately tiny: only the constructs a compatibility gate actually uses.
     Anything else evaluates to `MAYBE` and propagates through three-valued
     logic, so the answer is `True` only when the condition holds no matter what
     the unknown parts are.
+
+    `consts` maps bare names to their defining expressions, resolved by the
+    engine into the IR (same file, imported from the diff, or read at head):
+    `skipif(WIN)` evaluates whatever `WIN` was bound to. Resolution is
+    cycle-guarded and depth-capped; a name that cannot be chased stays MAYBE.
     """
-    if isinstance(node, ast.Constant):
-        return node.value
-    if isinstance(node, ast.Tuple):
-        return tuple(_eval_condition(e, env) for e in node.elts)
-    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
-        inner = _eval_condition(node.operand, env)
-        return MAYBE if inner is MAYBE else not inner
-    if isinstance(node, ast.BoolOp):
-        values = [_eval_condition(v, env) for v in node.values]
-        if isinstance(node.op, ast.And):
-            if any(v is not MAYBE and not v for v in values):
-                return False
-            return True if all(v is not MAYBE and v for v in values) else MAYBE
-        if any(v is not MAYBE and v for v in values):
-            return True
-        return False if all(v is not MAYBE and not v for v in values) else MAYBE
-    if isinstance(node, ast.Compare):
-        left = _eval_condition(node.left, env)
-        for op, comparator in zip(node.ops, node.comparators):
-            fn = _EVAL_CMP_OPS.get(type(op))
-            if fn is None:
-                return MAYBE
-            right = _eval_condition(comparator, env)
-            if left is MAYBE or right is MAYBE:
-                return MAYBE
-            try:
-                if not fn(left, right):  # type: ignore[operator]
+
+    def ev(node: ast.AST, resolving: frozenset[str] = frozenset()) -> object:
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.Tuple):
+            return tuple(ev(e, resolving) for e in node.elts)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+            inner = ev(node.operand, resolving)
+            return MAYBE if inner is MAYBE else not inner
+        if isinstance(node, ast.BoolOp):
+            values = [ev(v, resolving) for v in node.values]
+            if isinstance(node.op, ast.And):
+                if any(v is not MAYBE and not v for v in values):
                     return False
-            except TypeError:
-                return MAYBE
-            left = right
-        return True
-    if isinstance(node, ast.Subscript):
-        value = _eval_condition(node.value, env)
-        # `sys.version_info[:2] < (3, 12)` is one of the two commonest ways to
-        # spell a real version gate; refusing to evaluate it would deny the
-        # de-escalation to honest code.
-        if isinstance(node.slice, ast.Slice):
-            lower = _eval_condition(node.slice.lower, env) if node.slice.lower else None
-            upper = _eval_condition(node.slice.upper, env) if node.slice.upper else None
-            step = _eval_condition(node.slice.step, env) if node.slice.step else None
-            try:
-                return value[slice(lower, upper, step)]  # type: ignore[index]
-            except TypeError:
-                return MAYBE
-        index = _eval_condition(node.slice, env)
-        try:
-            return value[index]  # type: ignore[index]
-        except (TypeError, IndexError, KeyError):
-            return MAYBE
-    if isinstance(node, ast.Call):
-        name = _dotted_name(node.func)
-        if name in ("platform.system", "system"):
-            return env["system"]
-        # `sys.platform.startswith("win")` — the other commonest spelling.
-        # Keyed on the attribute itself, not the dotted name: a chained call
-        # like `platform.system().lower()` has no dotted name at all.
-        if isinstance(node.func, ast.Attribute) and node.func.attr in (
-            "startswith",
-            "endswith",
-            "lower",
-            "upper",
-        ):
-            target = _eval_condition(node.func.value, env)
-            if isinstance(target, str):
-                args = [_eval_condition(a, env) for a in node.args]
-                method = getattr(target, node.func.attr)
+                return True if all(v is not MAYBE and v for v in values) else MAYBE
+            if any(v is not MAYBE and v for v in values):
+                return True
+            return False if all(v is not MAYBE and not v for v in values) else MAYBE
+        if isinstance(node, ast.Compare):
+            left = ev(node.left, resolving)
+            for op, comparator in zip(node.ops, node.comparators):
+                fn = _EVAL_CMP_OPS.get(type(op))
+                if fn is None:
+                    return MAYBE
+                right = ev(comparator, resolving)
+                if left is MAYBE or right is MAYBE:
+                    return MAYBE
                 try:
-                    return method(*args)
+                    if not fn(left, right):  # type: ignore[operator]
+                        return False
                 except TypeError:
                     return MAYBE
+                left = right
+            return True
+        if isinstance(node, ast.Subscript):
+            value = ev(node.value, resolving)
+            # `sys.version_info[:2] < (3, 12)` is one of the two commonest
+            # ways to spell a real version gate; refusing to evaluate it would
+            # deny the de-escalation to honest code.
+            if isinstance(node.slice, ast.Slice):
+                lower = ev(node.slice.lower, resolving) if node.slice.lower else None
+                upper = ev(node.slice.upper, resolving) if node.slice.upper else None
+                step = ev(node.slice.step, resolving) if node.slice.step else None
+                try:
+                    return value[slice(lower, upper, step)]  # type: ignore[index]
+                except TypeError:
+                    return MAYBE
+            index = ev(node.slice, resolving)
+            try:
+                return value[index]  # type: ignore[index]
+            except (TypeError, IndexError, KeyError):
+                return MAYBE
+        if isinstance(node, ast.Call):
+            name = _dotted_name(node.func)
+            if name in ("platform.system", "system"):
+                return env["system"]
+            # `sys.platform.startswith("win")` — the other commonest spelling.
+            # Keyed on the attribute itself, not the dotted name: a chained
+            # call like `platform.system().lower()` has no dotted name at all.
+            if isinstance(node.func, ast.Attribute) and node.func.attr in (
+                "startswith",
+                "endswith",
+                "lower",
+                "upper",
+            ):
+                target = ev(node.func.value, resolving)
+                if isinstance(target, str):
+                    args = [ev(a, resolving) for a in node.args]
+                    method = getattr(target, node.func.attr)
+                    try:
+                        return method(*args)
+                    except TypeError:
+                        return MAYBE
+            return MAYBE
+        name = _dotted_name(node)
+        if name in ("sys.version_info", "version_info"):
+            return env["version_info"]
+        if name in ("sys.version_info.major", "version_info.major"):
+            return env["version_info"][0]
+        if name in ("sys.version_info.minor", "version_info.minor"):
+            return env["version_info"][1]
+        if name in ("sys.platform", "platform"):
+            return env["platform"]
+        if name in ("os.name", "name"):
+            return env["os_name"]
+        if consts and name and "." not in name and name not in resolving and len(resolving) < 16:
+            expr = consts.get(name)
+            if expr is not None:
+                return ev(expr, resolving | {name})
         return MAYBE
-    name = _dotted_name(node)
-    if name in ("sys.version_info", "version_info"):
-        return env["version_info"]
-    if name in ("sys.version_info.major", "version_info.major"):
-        return env["version_info"][0]
-    if name in ("sys.version_info.minor", "version_info.minor"):
-        return env["version_info"][1]
-    if name in ("sys.platform", "platform"):
-        return env["platform"]
-    if name in ("os.name", "name"):
-        return env["os_name"]
-    return MAYBE
+
+    return ev(node)
 
 
 def _dotted_name(node: ast.AST) -> str | None:
@@ -442,20 +458,7 @@ def _dotted_name(node: ast.AST) -> str | None:
     return None
 
 
-def _skipif_condition(marker_text: str) -> ast.AST | None:
-    src = marker_text.strip()
-    if src.startswith("@"):
-        src = src[1:]
-    try:
-        node = ast.parse(src, mode="eval").body
-    except SyntaxError:
-        return None
-    if isinstance(node, ast.Call) and node.args:
-        return node.args[0]
-    return None
-
-
-def _discriminates(condition: ast.AST) -> bool:
+def _discriminates(condition: ast.AST, consts: dict[str, ast.AST] | None) -> bool:
     """Does this condition actually depend on the environment?
 
     The old test was a substring match against seven hardcoded spellings of an
@@ -470,30 +473,95 @@ def _discriminates(condition: ast.AST) -> bool:
     (`MAC and sys.version_info >= (3, 13) and not sys._is_gil_enabled()`), and
     refusing those blocked three honest click commits. The credit is denied
     only when the condition is provably true in every environment *and* under
-    every assignment to the parts greenwash cannot see. The residual gap — a
-    same-diff constant that happens to always be true — is recorded in
-    THREATMODEL rather than papered over.
+    every assignment to the parts greenwash cannot see.
+
+    "Provably true" means truthy, not `is True`: a condition that resolves to
+    a non-empty string or tuple skips everywhere just as `True` does, and the
+    `is True` test used to hand exactly that spelling the credit (a truthy
+    constant plus a compat token smuggled into `reason=`).
     """
-    return not all(_eval_condition(condition, env) is True for env in _ENV_MATRIX)
+
+    def definitely(value: object) -> bool:
+        return value is not MAYBE and bool(value)
+
+    return not all(definitely(_eval_condition(condition, env, consts)) for env in _ENV_MATRIX)
 
 
-def _compat_gate(unit: Unit | None) -> bool:
-    """A skipif keyed on interpreter/OS version is a compat gate, not a kill."""
+# Condition-bearing decorator markers, exactly as _canonical_marker emits
+# them. unittest.skipIf is deliberately absent for now: unmeasured, and the
+# credit should not outrun the corpus.
+_GATE_DECORATORS = ("pytest.mark.skipif", "pytest.mark.xfail")
+# Imperative skips whose recorded guard plays the role of the condition.
+_GATE_CALLS = ("pytest.skip", "pytest.xfail", "self.skipTest")
+
+
+def _compat_gate(unit: Unit | None, constants: dict[str, str] | None = None) -> bool:
+    """A skip keyed on interpreter/OS version is a compat gate, not a kill.
+
+    Three spellings earn the credit, all evaluated the same way: `skipif(cond)`,
+    non-strict `xfail(cond)` (strict inverts the oracle instead of skipping
+    it, which is not a gate), and an imperative `pytest.skip()`/`pytest.xfail()`
+    /`self.skipTest()` under recorded `if` guards. Names in the condition
+    resolve through the engine-built constant environment, so `skipif(WIN)`
+    is judged by what `WIN` is bound to — not by whether the marker text
+    happens to contain the string `sys.platform` (FP sweep: click b761eda,
+    attrs 7373d88). The compat-token filter runs over the condition text
+    *plus* those resolved expressions, keeping the credit scoped to
+    interpreter/OS gates rather than becoming general skip amnesty.
+    """
     if unit is None or unit.after is None:
         return False
+    raw = constants or {}
+    consts = {name: expr for name, expr in ((n, parse_expr(t)) for n, t in raw.items()) if expr is not None}
     for m in unit.after.markers:
-        # Marker names now carry their condition (`skipif(cond)`), so match
-        # the canonical part before the parenthesis.
+        # Marker names carry their condition (`skipif(cond)`), so match the
+        # canonical part before the parenthesis.
         canonical = m.name.split("(", 1)[0]
-        if not canonical.endswith("skipif"):
+        condition: ast.AST | None = None
+        if canonical in _GATE_DECORATORS:
+            call = marker_call(m.text)
+            if call is None or not call.args:
+                continue
+            if canonical == "pytest.mark.xfail" and _xfail_strict(call):
+                continue
+            condition = call.args[0]
+        elif canonical in _GATE_CALLS and m.guard:
+            condition = parse_expr(m.guard)
+        if condition is None:
             continue
-        if not any(tok in m.text for tok in _COMPAT_TOKENS):
+        searched = " ".join([m.text, m.guard or "", *_expansion_texts(condition, raw)])
+        if not any(tok in searched for tok in _COMPAT_TOKENS):
             continue
-        condition = _skipif_condition(m.text)
-        if condition is None or not _discriminates(condition):
+        if not _discriminates(condition, consts):
             continue  # always true, or unverifiable: not a gate, a disable
         return True
     return False
+
+
+def _xfail_strict(call: ast.Call) -> bool:
+    for kw in call.keywords:
+        if kw.arg == "strict":
+            return bool(isinstance(kw.value, ast.Constant) and kw.value.value)
+    return False
+
+
+def _expansion_texts(condition: ast.AST, raw: dict[str, str]) -> list[str]:
+    """Defining expressions of every constant the condition (transitively)
+    names, in resolution order — the text the compat-token filter must also
+    see, or `skipif(WIN)` never looks like a platform gate."""
+    out: list[str] = []
+    seen: set[str] = set()
+    queue = sorted(n for n in bare_names(condition) if n in raw)
+    while queue:
+        name = queue.pop(0)
+        if name in seen:
+            continue
+        seen.add(name)
+        out.append(raw[name])
+        expr = parse_expr(raw[name])
+        if expr is not None:
+            queue.extend(sorted(n for n in bare_names(expr) if n in raw and n not in seen))
+    return out
 
 
 def apply_gates(
@@ -513,6 +581,7 @@ def apply_gates(
     restructured = _file_restructured(ir)
     split_renamed = _split_or_renamed(ir)
     roles = {f.path: f.role for f in ir.files}
+    file_constants = {f.path: f.constants for f in ir.files}
 
     for f in findings:
         if f.fingerprint in active_allows:
@@ -614,7 +683,7 @@ def apply_gates(
             and split_renamed.get((f.path, f.unit or ""))
         ):
             compensation = "SPLIT_OR_RENAMED"
-        elif f.rule == "TEST_DISABLED" and _compat_gate(unit):
+        elif f.rule == "TEST_DISABLED" and _compat_gate(unit, file_constants.get(f.path)):
             compensation = "COMPAT_GATE"
 
         # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one

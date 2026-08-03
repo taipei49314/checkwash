@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: non-strict xfail keyed on the interpreter version is a compat gate
+origin: FP sweep adjudication 2026-08-03 — D6 never inspected xfail at all
+=== before: tests/test_annot.py ===
+import sys
+
+import pytest
+
+from app import resolve
+
+
+def test_forward_reference():
+    assert resolve("A") == "A"
+=== after: tests/test_annot.py ===
+import sys
+
+import pytest
+
+from app import resolve
+
+
+@pytest.mark.xfail(sys.version_info[:2] >= (3, 14), reason="pending 3.14 support")
+def test_forward_reference():
+    assert resolve("A") == "A"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

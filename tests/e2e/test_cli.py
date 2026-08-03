@@ -341,3 +341,60 @@ def test_allow_reason_with_backslash_stays_valid_toml(repo):
     data = (repo / ".greenwash" / "allow.toml").read_bytes()
     parsed = tomllib.loads(data.decode("utf-8"))
     assert parsed["allow"][0]["reason"] == r"see notes in C:\Users\bob\review.md"
+
+
+def _add_compat_gate(repo):
+    """Base: a compat module + a test importing it. Diff: only the marker."""
+    (repo / "compat_helpers.py").write_text(
+        'import sys\n\nWIN = sys.platform.startswith("win")\n', encoding="utf-8"
+    )
+    test_file = repo / "tests" / "test_billing.py"
+    test_file.write_text(
+        textwrap.dedent(
+            """\
+            import pytest
+
+            from billing import compute_invoice_total
+            from compat_helpers import WIN
+
+
+            def test_invoice_total():
+                total = compute_invoice_total([10.5, 94.8])
+                assert total == 105.3
+            """
+        ),
+        encoding="utf-8",
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "add compat helper")
+    test_file.write_text(
+        test_file.read_text(encoding="utf-8").replace(
+            "def test_invoice_total():",
+            '@pytest.mark.skipif(WIN, reason="pipe pager path")\ndef test_invoice_total():',
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_range_mode_resolves_compat_constant_from_unchanged_file(repo):
+    # The constant's module is not in the diff at all: D6 must read it from
+    # the head revision (click b761eda, the FP the sweep adjudication found).
+    _add_compat_gate(repo)
+    _git(repo, "commit", "-am", "skip pager test on windows")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["verdict"] == "pass"
+    finding = next(f for f in payload["findings"] if f["rule"] == "TEST_DISABLED")
+    assert finding["severity"] == "warn"
+    assert "COMPAT_GATE" in finding["deescalators"]
+
+
+def test_worktree_mode_resolves_compat_constant_from_disk(repo):
+    _add_compat_gate(repo)
+    result = _greenwash(repo, "check", "--format", "json")
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["verdict"] == "pass"
+    finding = next(f for f in payload["findings"] if f["rule"] == "TEST_DISABLED")
+    assert "COMPAT_GATE" in finding["deescalators"]

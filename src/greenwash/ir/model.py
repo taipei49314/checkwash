@@ -40,6 +40,13 @@ class Marker:
     name: str  # e.g. "pytest.mark.skip"
     text: str
     span: tuple[int, int]
+    # For imperative skip calls (`pytest.skip()` et al.): the conjunction of
+    # enclosing `if` conditions, source text, `not (...)`-wrapped for else
+    # branches. `if PY_3_14_PLUS: pytest.xfail(...)` is the imperative spelling
+    # of `skipif(PY_3_14_PLUS)`, and without the guard D6 cannot tell it from
+    # an unconditional kill. Deliberately NOT part of the marker's identity:
+    # fingerprints (and therefore recorded allowlist entries) must not change.
+    guard: str | None = None
 
 
 @dataclass
@@ -101,6 +108,12 @@ class FileIR:
     units: list[Unit] = field(default_factory=list)
     alignment: str = "full"  # "full" | "degraded"
     parse_ok: bool = True
+    # Constant environment for D6 on this file's skip conditions: name ->
+    # defining expression source. Merged by the engine from the file's own
+    # module-level constants plus names imported from files it can read
+    # (in-diff first, then the head snapshot), so gating stays a pure
+    # function of the IR. Keys are inserted in sorted order.
+    constants: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

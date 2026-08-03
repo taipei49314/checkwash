@@ -96,12 +96,27 @@ def _cmd_check(args: argparse.Namespace) -> int:
         base_label = rev_parse(repo, base)
         head_label = rev_parse(repo, head)
         config_side = base
+
+        # D6 resolves skip-condition constants imported from files outside
+        # the diff; the head snapshot is where those files live.
+        def head_reader(path: str, _rev: str = head) -> bytes | None:
+            return read_base_file(repo, _rev, path)
     else:
         base = "HEAD"
         changes = list_worktree_changes(repo)
         base_label = rev_parse(repo, "HEAD")
         head_label = "worktree"
         config_side = "HEAD"
+
+        def head_reader(path: str) -> bytes | None:
+            # Worktree mode's head snapshot is the working tree itself, the
+            # same place list_worktree_changes reads the after side from.
+            disk = os.path.join(repo, path.replace("/", os.sep))
+            try:
+                with open(disk, "rb") as fh:
+                    return fh.read()
+            except OSError:
+                return None
 
     config, config_error = load_config(read_base_file(repo, config_side, ".greenwash/config.toml"))
     if args.fail_on:
@@ -153,6 +168,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         base_label=base_label,
         head_label=head_label,
         known_modules=known_modules,
+        head_reader=head_reader,
     )
 
     if args.emit_ir:

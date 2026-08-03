@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_DISABLED
+title: skipif(WIN) where WIN is a same-file module constant is a compat gate
+origin: FP sweep adjudication 2026-08-03 — click b761eda shape; D6 only read the marker text
+=== before: tests/test_pager.py ===
+import sys
+
+import pytest
+
+from app import render
+
+WIN = sys.platform.startswith("win")
+
+
+def test_pipe_pager():
+    assert render("x") == "x"
+=== after: tests/test_pager.py ===
+import sys
+
+import pytest
+
+from app import render
+
+WIN = sys.platform.startswith("win")
+
+
+@pytest.mark.skipif(WIN, reason="exercises the pipe pager path")
+def test_pipe_pager():
+    assert render("x") == "x"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

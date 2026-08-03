@@ -105,6 +105,14 @@ class ParsedFile:
     symbols: dict[str, str] = field(default_factory=dict)  # qualname -> behaviour fingerprint
     symbol_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)  # qualname -> callees
     imports: list[str] = field(default_factory=list)
+    # Top-level `NAME = <expr>` bindings, name -> expression source (last
+    # binding wins, matching module semantics). Conditional definitions
+    # (inside if/try) are deliberately absent: a name greenwash cannot pin
+    # to one expression stays unevaluable.
+    constants: dict[str, str] = field(default_factory=dict)
+    # Top-level absolute `from M import a as b` bindings, local -> (module,
+    # original). Relative and star imports are not recorded.
+    from_imports: dict[str, tuple[str, str]] = field(default_factory=dict)
     suppressions: list[str] = field(default_factory=list)
     literals: frozenset[str] = frozenset()
     broad_handlers: tuple[str, ...] = ()  # normalized texts of broad except handlers, module-wide
@@ -964,6 +972,51 @@ def _param_case_count(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int | Non
     return total
 
 
+_STMT_BODY_FIELDS = ("body", "orelse", "finalbody")
+
+
+def _skip_call_guards(func: ast.FunctionDef | ast.AsyncFunctionDef, text) -> dict[int, str]:
+    """id(call node) -> conjunction of enclosing `if` condition sources.
+
+    `if PY_3_14_PLUS and not slots: pytest.xfail(...)` is the imperative
+    spelling of `skipif(PY_3_14_PLUS and not slots)`; without the guard, D6
+    cannot tell it from an unconditional kill (attrs 7373d88, FP sweep).
+    Orelse branches contribute the negated test. Loop/try/with/match bodies
+    pass conditions through without adding their own: an unrecorded conjunct
+    only makes the real skip *more* conditional, so a recorded guard that is
+    false somewhere means the real condition is false there too, and one that
+    is not earns nothing — both err toward flagging.
+    """
+    out: dict[int, str] = {}
+
+    def record(stmts: list[ast.stmt], conds: tuple[str, ...]) -> None:
+        for stmt in stmts:
+            if isinstance(stmt, ast.If):
+                t = text.seg(stmt.test) or ""
+                record(stmt.body, conds + ((t,) if t else ()))
+                record(stmt.orelse, conds + ((f"not ({t})",) if t else ()))
+                continue
+            compound = False
+            for fname in _STMT_BODY_FIELDS:
+                sub = getattr(stmt, fname, None)
+                if isinstance(sub, list) and any(isinstance(s, ast.stmt) for s in sub):
+                    compound = True
+                    record([s for s in sub if isinstance(s, ast.stmt)], conds)
+            for handler in getattr(stmt, "handlers", None) or []:
+                compound = True
+                record(handler.body, conds)
+            for case in getattr(stmt, "cases", None) or []:
+                compound = True
+                record(case.body, conds)
+            if not compound and conds:
+                for node in ast.walk(stmt):
+                    if isinstance(node, ast.Call):
+                        out[id(node)] = " and ".join(conds)
+
+    record(func.body, ())
+    return out
+
+
 def _collect_unit(
     func: ast.FunctionDef | ast.AsyncFunctionDef,
     qualname: str,
@@ -977,6 +1030,7 @@ def _collect_unit(
     handlers: list[Handler] = []
     counter = 0
     dead = _unreachable_ids(func)
+    guards = _skip_call_guards(func, text)
 
     for node in ast.walk(func):
         if id(node) in dead:
@@ -1008,7 +1062,9 @@ def _collect_unit(
                 calls.add(name.rsplit(".", 1)[-1])
                 if name in _SKIP_CALLS:
                     seg = text.seg(node) or name
-                    markers.append(Marker(name=name, text=seg, span=off.span(node)))
+                    markers.append(
+                        Marker(name=name, text=seg, span=off.span(node), guard=guards.get(id(node)))
+                    )
                 if name in ("pytest.raises", "pytest.warns", "raises"):
                     # `pytest.raises(E, match=...)` IS an oracle: triage found
                     # human commits folding an excinfo substring assert into
@@ -1294,4 +1350,50 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         literals=frozenset(literals),
         broad_handlers=tuple(broad),
         swallowing_handlers=tuple(swallowing),
+        constants=_top_level_constants(tree, text),
+        from_imports=_top_level_from_imports(tree),
     )
+
+
+def _top_level_constants(tree: ast.Module, text) -> dict[str, str]:
+    """Top-level `NAME = <expr>` bindings, name -> expression source."""
+    out: dict[str, str] = {}
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Assign):
+            value, names = stmt.value, [t.id for t in stmt.targets if isinstance(t, ast.Name)]
+        elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None and isinstance(stmt.target, ast.Name):
+            value, names = stmt.value, [stmt.target.id]
+        else:
+            continue
+        seg = text.seg(value)
+        if seg:
+            for name in names:
+                out[name] = seg
+    return out
+
+
+def _top_level_from_imports(tree: ast.Module) -> dict[str, tuple[str, str]]:
+    """Top-level absolute `from M import a as b`, local name -> (module, original)."""
+    out: dict[str, tuple[str, str]] = {}
+    for stmt in tree.body:
+        if isinstance(stmt, ast.ImportFrom) and stmt.module and not stmt.level:
+            for alias in stmt.names:
+                if alias.name != "*":
+                    out[alias.asname or alias.name] = (stmt.module, alias.name)
+    return out
+
+
+def module_constants(data: bytes) -> dict[str, str]:
+    """Top-level constant bindings of a module greenwash was not diffing.
+
+    The engine uses this to resolve skip-condition names imported from files
+    outside the diff (click's `from click._compat import WIN`). An unreadable
+    or unparseable module yields nothing: the name stays unevaluable and the
+    compat-gate credit is simply not earned.
+    """
+    raw = normalize_source(data)
+    try:
+        tree = ast.parse(raw)
+    except (SyntaxError, RecursionError, ValueError, MemoryError):
+        return {}
+    return _top_level_constants(tree, _Offsets(raw))

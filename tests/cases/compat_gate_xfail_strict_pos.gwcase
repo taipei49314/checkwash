@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: strict xfail earns no compat-gate credit even with a real version condition
+origin: strict=True inverts the oracle instead of skipping it; D6 covers non-strict only
+=== before: tests/test_annot.py ===
+import sys
+
+import pytest
+
+from app import resolve
+
+
+def test_forward_reference():
+    assert resolve("A") == "A"
+=== after: tests/test_annot.py ===
+import sys
+
+import pytest
+
+from app import resolve
+
+
+@pytest.mark.xfail(sys.version_info[:2] >= (3, 14), strict=True, reason="3.14 pending")
+def test_forward_reference():
+    assert resolve("A") == "A"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a constant that resolves to an always-true version check earns nothing
+origin: resolution must not become a rubber stamp — same rule as bypass 19, one hop away
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+GATE = sys.version_info >= (3, 8)
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+GATE = sys.version_info >= (3, 8)
+
+
+@pytest.mark.skipif(GATE, reason="legacy interpreters")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

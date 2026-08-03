@@ -110,6 +110,7 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
             ir, findings, verdict = analyze(
                 changes, config, Contract(), allow, today, base_label=parent,
                 head_label=sha, known_modules=known,
+                head_reader=lambda p, _sha=sha: read_base_file(repo, _sha, p),
             )
         except Exception:  # noqa: BLE001 - a sweep must survive one bad commit
             result.errors += 1

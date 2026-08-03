@@ -1,46 +1,117 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-02 (second independent audit closed; still private)
+Updated: 2026-08-03 (v0.1.3: D6 reads skip conditions instead of grepping them)
 
 ## The number that matters right now
 
-Two independent audits have now been run against this repository. The first
+**43/1800 = 2.39% block rate; adjudicated false positive 28/1800 = 1.56%.**
+Both down from 2.50% / 1.67%: the v0.1.3 build stopped blocking the two
+constant-named compat gates below, no commit became newly blocked, the
+adversarial decoy corpus still blocks 12/12, and 0 of the 1800 human commits
+lost credit to the stricter always-true rule. First round in this project's
+history where the headline moved *down* without a bypass being the cause.
+
+Two independent audits have been run against this repository. The first
 (an outside reader) found 11 defects in three passes, then ~20 more in a
 fourth. The second (six parallel lenses, each finding reproduced with the real
 CLI, each then re-run from scratch by a skeptic told to refute it) made 16
 claims and **all 16 survived refutation**.
 
-Between them, one of those audits reopened a bypass this file had listed as
-Closed for days: `ast` reports `col_offset` in UTF-8 **bytes**, greenwash
-treated it as characters, and a single CJK character anywhere on an assertion
-line garbled every extracted source string — which silently disabled the
-self-comparison check and every other text comparison in the tool.
-
 The project's own review has still never found a defect of that class before
 an outside pass did. Plan accordingly: the discovery rate has not levelled
 off, and "we reviewed it carefully" has a measured track record here of zero.
 
+## The 2026-08-03 round (v0.1.3): D6 constant resolution
+
+The previous STATE said the fix was to "resolve module-level constants from
+the file the frontend has already parsed" because "a constant defined three
+lines up in the same file defeats it". **That diagnosis was wrong, and wrong
+in a way that matters**: in *both* real cases the constant is imported —
+click's `WIN` from `click/_compat.py`, a file **not in the diff at all**, and
+attrs' `PY_3_14_PLUS` from `src/attr/_compat.py`, which happened to be in the
+diff. attrs also had two blocking findings this file never mentioned:
+imperative `pytest.xfail("...")` calls under `if PY_3_14_PLUS and not slots:`,
+a spelling D6 had no channel for whatsoever. Read this file's diagnoses the
+way it tells you to read its "done" claims.
+
+What shipped, all of it fixture-pinned (10 new .gwcase + 2 e2e):
+
+- **Constant resolution, three tiers**: same-file module constants → names
+  imported from files in the diff → files read from the head snapshot
+  (`gitio.read_base_file` in range/sweep mode, the working tree in worktree
+  mode; `=== head: path ===` in .gwcase). The engine resolves eagerly into
+  `FileIR.constants` so gating stays a pure function of the IR. Bounded
+  (≤24 entries, ≤8 head reads), cycle-guarded, collision→unevaluable,
+  shadowed-name→unevaluable; every failure direction is toward flagging.
+- **Non-strict `xfail(cond)`** earns D6 like `skipif(cond)`; `strict=True`
+  earns nothing (it inverts the oracle, it doesn't skip it).
+- **Imperative skips carry their guards**: the frontend records the enclosing
+  `if` conjunction (`not (...)` for else-branches) on the Marker (`guard`
+  field, deliberately NOT part of identity/fingerprints so recorded allowlist
+  entries survive). D6 evaluates the guard as the condition. Soundness: the
+  recorded guard is a subset of the real conjuncts, so if the recorded part
+  is false somewhere the real condition is false there too.
+- **Always-true tightened from `is True` to truthy**: `skipif(FLAG)` with
+  `FLAG = True` and a compat token smuggled into `reason=` used to *earn*
+  credit (unresolvable → MAYBE → discriminates); it is now resolved, judged
+  always-true, and denied. Cost on the 1800-commit corpus: zero.
+
+Verification chain, in order: 7 of 10 new fixtures failed on the old build →
+all 209 green after → both corpus commits re-checked live with the real CLI
+(click high=0 warn=2, attrs high=0 warn=6, verdict pass, COMPAT_GATE visible
+on every de-escalated finding) → full 6-repo sweep re-run against the same
+recorded corpus pins, twice (second run to stamp the right version; block
+sets byte-identical across runs) → decoy corpus replayed from the preserved
+worktrees, 12/12 still block → dogfood on this round's own diff: pass.
+
 ## Known and unfixed, top of the next round
 
-Adjudicating the 45 blocks turned up one false-positive class that is NOT
-fixed, with two real examples in the corpus:
+Still unfixed and still measured: **7.2% of the corpus (130/1800) receives
+the blanket opaque-change exemption** — a production file greenwash cannot
+read suppresses escalation for the entire diff (THREATMODEL #4). Unchanged by
+this round, still the single largest hole, still a design choice rather than
+a bug; read "2.39% block rate" next to it.
 
-- **Skip conditions that name a module constant are invisible to D6.**
-  `@pytest.mark.skipif(WIN, ...)` (click b761eda) and
-  `@pytest.mark.xfail(PY_3_14_PLUS, ...)` (attrs 7373d88) are both bona fide
-  compatibility gates. D6 only inspects `skipif` — never `xfail` — and only
-  when the marker *text* literally contains `sys.version_info` / `sys.platform`
-  / `platform.` / `os.name`. A constant defined three lines up in the same file
-  defeats it. The fix is to resolve module-level constants from the file the
-  frontend has already parsed, and to extend D6 to non-strict `xfail`.
-  Measured cost of leaving it: 2 of 45 blocks, ~4.4%.
+New gaps this round *created or documented*, none with corpus cost today:
 
-Also unfixed and now measured rather than assumed: **7.2% of the corpus
-(130/1800) receives the blanket opaque-change exemption** — a production file
-greenwash cannot read suppresses escalation for the entire diff
-(THREATMODEL #4). That is the share of the pass rate that is not analysis. It
-is the single largest hole in the tool and it is a design choice, not a bug,
-but "2.50% block rate" should be read next to it.
+- **Guard edits on imperative skips produce no finding.** The guard is not
+  part of marker identity (kept out so existing allowlist fingerprints
+  survive), so `if version < X: pytest.skip()` → `if True: pytest.skip()` is
+  invisible to TEST_DISABLED — it was invisible before this round too, but
+  now it is invisible *by documented choice*. Fixing it means putting the
+  guard into the identity, which changes fingerprints and needs an allowlist
+  migration story. Owner call.
+- `skipif(condition=X)` keyword form and `unittest.skipIf` earn no credit
+  (0 corpus hits; conservative FP risk, not a bypass).
+- The MAYBE residual extends to guards: `if helper("sys.platform"): skip()`
+  earns credit exactly as `skipif(helper("sys.platform"))` always has. Same
+  class, same documented trade (refusing unevaluables blocked honest gates).
+
+The 28 remaining adjudicated false positives are the next precision target;
+their per-commit reasoning is in `benchmarks/RESULTS.md`.
+
+## Owner actions queued (agent-read-only files)
+
+Per AGENTS.md this round touched none of SPEC.md / THREATMODEL.md /
+DECISIONS.md / tests/gates. Three edits are queued for the maintainer:
+
+1. **SPEC.md §5, D6 row** is now behind the code twice over: it says
+   "skipif" only, and says a condition greenwash cannot evaluate "earns
+   nothing" (the MAYBE-tolerant evaluator shipped rounds ago). Proposed row:
+   *"the added skip is a `skipif`, a non-strict `xfail`, or an if-guarded
+   imperative skip call, whose condition — with module constants resolved
+   from the head snapshot — references the interpreter/OS environment and,
+   evaluated over the version×platform matrix, is not provably true
+   everywhere (truthy counts as true). Unresolvable sub-expressions stay
+   unknown; a condition provably true under every assignment of the unknowns
+   earns nothing."*
+2. **THREATMODEL**: narrow the D6 residual (truthy constants are now
+   resolved and denied) and add the guard-identity gap above as a documented
+   bypass with the fingerprint-migration caveat.
+3. **DECISIONS**: record the resolution design (eager, engine-side, IR-carried,
+   bounded, fail-toward-flagging), the strict-xfail stance, and that
+   `Marker.guard` + `FileIR.constants` were added to IR v1 as additive fields
+   without a version bump.
 
 ## Why this is public again
 

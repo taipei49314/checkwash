@@ -42,7 +42,11 @@ def main() -> None:
     for case_path in CASES:
         case = parse_case(case_path.read_text(encoding="utf-8"))
         contract = parse_contract(case.task) if case.task else Contract()
-        ir, findings, verdict = analyze(case_to_changes(case), Config(), contract, [], TODAY)
+        head = {p: c.encode("utf-8") for p, c in case.head.items()}
+        ir, findings, verdict = analyze(
+            case_to_changes(case), Config(), contract, [], TODAY,
+            head_reader=head.get if head else None,
+        )
         _write(f"# {case_path.name}\n")
         _write(findings_to_json(ir, findings, verdict))
         _write(ir_to_json(ir))

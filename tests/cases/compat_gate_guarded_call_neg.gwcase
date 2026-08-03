@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+title: imperative pytest.xfail under `if PY_3_14_PLUS and not slots:` is a compat gate
+origin: FP sweep adjudication 2026-08-03 — attrs 7373d88 test_annotations shape; calls carried no condition
+=== before: tests/test_annot.py ===
+import sys
+
+import pytest
+
+from app import resolve
+
+PY_3_14_PLUS = sys.version_info[:2] >= (3, 14)
+
+
+@pytest.mark.parametrize("slots", [True, False])
+def test_self_reference(slots):
+    assert resolve("A", slots) == "A"
+=== after: tests/test_annot.py ===
+import sys
+
+import pytest
+
+from app import resolve
+
+PY_3_14_PLUS = sys.version_info[:2] >= (3, 14)
+
+
+@pytest.mark.parametrize("slots", [True, False])
+def test_self_reference(slots):
+    if PY_3_14_PLUS and not slots:
+        pytest.xfail("references are changing a lot in 3.14")
+
+    assert resolve("A", slots) == "A"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

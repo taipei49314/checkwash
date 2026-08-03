@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an imported constant that resolves to a literal True earns nothing
+origin: head-file resolution must deny credit exactly like same-file resolution does
+=== head: src/app/_compat.py ===
+GATE = True
+=== before: tests/test_calc.py ===
+import pytest
+
+from app._compat import GATE
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import pytest
+
+from app._compat import GATE
+from app import total
+
+
+@pytest.mark.skipif(GATE, reason="sys.version_info gate")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
