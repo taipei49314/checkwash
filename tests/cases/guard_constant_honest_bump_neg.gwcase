@@ -1,0 +1,36 @@
+=== meta ===
+rule: TEST_DISABLED
+title: moving a version gate that still discriminates is not a kill
+origin: the guard-flip detector must fire on "became always true", not on any constant edit under a skip
+=== before: tests/test_compat.py ===
+import sys
+
+import pytest
+
+from app import parse
+
+NEEDS_NEW_PARSER = sys.version_info[:2] < (3, 12)
+
+
+def test_new_syntax():
+    if NEEDS_NEW_PARSER:
+        pytest.skip("needs the 3.12 parser")
+
+    assert parse("x") == "x"
+=== after: tests/test_compat.py ===
+import sys
+
+import pytest
+
+from app import parse
+
+NEEDS_NEW_PARSER = sys.version_info[:2] < (3, 13)
+
+
+def test_new_syntax():
+    if NEEDS_NEW_PARSER:
+        pytest.skip("needs the 3.13 parser")
+
+    assert parse("x") == "x"
+=== expect ===
+[]

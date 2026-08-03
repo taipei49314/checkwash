@@ -51,6 +51,25 @@ def detect(ir: IR) -> list[Finding]:
                             fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, name),
                         )
                     )
+            for name in unit.delta.guards_weakened:
+                m = next((x for x in unit.after.markers if x.name == name), None)
+                findings.append(
+                    Finding(
+                        rule="TEST_DISABLED",
+                        severity="warn",
+                        message=(
+                            f"{unit.qualname}: skip guard now always fires "
+                            f"({(m.guard if m else name)!r}) — its condition was edited elsewhere"
+                        ),
+                        path=file.path,
+                        unit=unit.qualname,
+                        before=None,
+                        after=Evidence(text=m.text, span=m.span) if m else None,
+                        fingerprint=make_fingerprint(
+                            "TEST_DISABLED", file.path, unit.qualname, f"guard:{name}"
+                        ),
+                    )
+                )
             if unit.delta.param_cases_removed:
                 n = unit.delta.param_cases_removed
                 before_n = unit.before.param_cases if unit.before else None

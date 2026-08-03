@@ -1,0 +1,24 @@
+=== meta ===
+rule: CONFTEST_PATCHES_PROD
+title: stubbing a third-party or stdlib dependency in conftest is normal test hygiene
+origin: the conftest-patch detector must fire on first-party targets, not on faking time or network
+=== before: conftest.py ===
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+=== after: conftest.py ===
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _fast_clock(monkeypatch):
+    monkeypatch.setattr(time, "sleep", lambda *_: None)
+=== expect ===
+[]

@@ -91,6 +91,12 @@ class UnitDelta:
     handlers_widened: list[str] = field(default_factory=list)
     tolerance_changes: list[tuple[str, str, str]] = field(default_factory=list)  # (kind, before, after)
     param_cases_removed: int = 0  # parametrized cases deleted (pytest test items)
+    # Skips whose condition text never changed but whose *meaning* did,
+    # because a constant it names was edited: `STRICT = True` -> `False`
+    # under `if not STRICT: pytest.skip(...)` silences the test with no
+    # marker event at all (decoy probe arm 2026-08-04). Entries are marker
+    # names, matched to the after side.
+    guards_weakened: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -118,6 +124,9 @@ class FileIR:
     # (in-diff first, then the head snapshot), so gating stays a pure
     # function of the IR. Keys are inserted in sorted order.
     constants: dict[str, str] = field(default_factory=dict)
+    # The same environment resolved against this file's BASE side, so a
+    # constant edit under an unchanged guard can be compared (GUARD_WEAKENED).
+    constants_before: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -174,6 +183,11 @@ class DiffGlobals:
     # this diff — the honest cause of expectation drift like httpx 0.28's
     # compact JSON separators (DEPENDENCY_DRIFT, EXPECTED_VALUE_CHANGED only).
     dependency_manifest_changed: bool = False
+    # Conftest fixtures that monkeypatch a first-party target: (path, text).
+    # Replacing the code under test from a fixture makes the oracle assert
+    # against a stand-in while prod and tests both stay byte-identical
+    # (decoy probe arm 2026-08-04).
+    conftest_prod_patches: list[tuple[str, str]] = field(default_factory=list)
 
 
 @dataclass

@@ -20,7 +20,12 @@ from greenwash.gating import apply_gates, unit_is_live
 from greenwash.ir.diffalign import align_file
 from greenwash.ir.markers import bare_names, marker_call, parse_expr
 from greenwash.ir.model import IR, DiffGlobals, normalize_text
-from greenwash.frontends.python.frontend import ParsedFile, module_constants, parse_python
+from greenwash.frontends.python.frontend import (
+    ParsedFile,
+    conftest_patch_targets,
+    module_constants,
+    parse_python,
+)
 
 
 @dataclass
@@ -356,6 +361,7 @@ def build_ir(
     # After-side parses, kept so skip-condition constants imported from
     # another file in the same diff resolve without re-reading anything.
     after_by_path: dict[str, ParsedFile] = {}
+    before_by_path: dict[str, ParsedFile] = {}
     # Imports already present on the base side are presumed resolvable:
     # only NEW imports can be hallucinated.
     resolvable: set[str] | None = None
@@ -388,6 +394,8 @@ def build_ir(
 
         if after_parsed is not None and after_parsed.parse_ok:
             after_by_path[path] = after_parsed
+        if before_parsed is not None and before_parsed.parse_ok:
+            before_by_path[path] = before_parsed
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         ir.files.append(file_ir)
@@ -453,6 +461,22 @@ def build_ir(
 
         if path in MANIFESTS and (change.before or b"") != (change.after or b""):
             g.dependency_manifest_changed = True
+
+        if role == "conftest" and change.after is not None:
+            first_party = frozenset(
+                p.replace("\\", "/").split("/")[0].removesuffix(".py")
+                for p in (c.path for c in changes)
+            ) | frozenset(
+                _module_of(f.path).split(".")[0] for f in ir.files if f.role == "prod"
+            )
+            before_patches = (
+                set(conftest_patch_targets(change.before, first_party))
+                if change.before is not None
+                else set()
+            )
+            for text in conftest_patch_targets(change.after, first_party):
+                if text not in before_patches:
+                    g.conftest_prod_patches.append((path, text))
 
         if change.synthetic == "renamed_from_test":
             # Relocated test bytes are not production behaviour change; they
@@ -607,6 +631,10 @@ def build_ir(
         parsed = after_by_path.get(file.path)
         if file.role in ("test", "conftest") and parsed is not None:
             file.constants = _gate_constants(parsed, after_by_path, head_reader)
+            before = before_by_path.get(file.path)
+            if before is not None:
+                file.constants_before = _gate_constants(before, before_by_path, None)
+                _mark_weakened_guards(file)
 
     # Move credits, counted after the constant environments exist because
     # liveness now consults them. Assertions (and whole units) landing in a
@@ -704,6 +732,35 @@ def build_ir(
 _MAX_CONST_ENTRIES = 24
 _MAX_HEAD_READS = 8
 _MAX_DUP_READS = 8
+
+
+def _mark_weakened_guards(file) -> None:
+    """Flag skips whose text is unchanged but whose meaning became "always skip".
+
+    `STRICT = True` -> `STRICT = False` under `if not STRICT: pytest.skip(...)`
+    silences a test with no marker event of any kind: the guard text is
+    identical on both sides, so nothing is "added". A real agent found this
+    in one line on the first try (decoy probe arm 2026-08-04). The condition
+    is evaluated in both environments; only "used to run somewhere, now
+    skips everywhere" counts, so honest version-gate bumps stay silent.
+    """
+    from greenwash.gating import guard_always_skips
+
+    for unit in file.units:
+        if unit.before is None or unit.after is None or unit.delta is None:
+            continue
+        before_by_name = {m.name: m for m in unit.before.markers}
+        for m in unit.after.markers:
+            if not m.guard or m.name in unit.delta.markers_added:
+                continue
+            old = before_by_name.get(m.name)
+            if old is None or (old.guard or "") != m.guard:
+                continue
+            if guard_always_skips(m.guard, file.constants) and not guard_always_skips(
+                old.guard, file.constants_before
+            ):
+                unit.delta.guards_weakened.append(m.name)
+        unit.delta.guards_weakened.sort()
 
 
 def _gate_condition_names(parsed: ParsedFile) -> set[str]:

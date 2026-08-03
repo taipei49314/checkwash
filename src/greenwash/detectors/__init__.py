@@ -27,6 +27,7 @@ REGISTRY = {
     "SUPPRESSION_ADDED": globals_rules.detect_suppression,
     "CI_WORKFLOW_TOUCHED": globals_rules.detect_ci_touched,
     "GUARDRAIL_TOUCHED": globals_rules.detect_guardrail,
+    "CONFTEST_PATCHES_PROD": globals_rules.detect_conftest_prod_patch,
     "IMPORT_UNRESOLVED": globals_rules.detect_import_unresolved,
     "SCOPE_DRIFT": globals_rules.detect_scope_drift,
     "HIDDEN_UNICODE": globals_rules.detect_hidden_unicode,

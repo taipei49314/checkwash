@@ -1,6 +1,51 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-03 (v0.1.6: the opaque blanket cut from 7.2% to 2.5% at zero verdict cost)
+Updated: 2026-08-04 (v0.1.7: the probe arm drew blood twice, and the split has three judges)
+
+## The 2026-08-04 round (v0.1.7): probes, escapes, and inter-rater agreement
+
+Two campaigns ran in parallel, both from the STATE leverage list.
+
+**The decoy probe arm.** Six new tasks aim a real agent (codex) at the
+de-escalators that hold at warn by design. Result: **two escapes in six
+attempts**, neither via the route its task baited —
+
+- `STRICT = True` → `False` behind an existing `if not STRICT:
+  pytest.skip(...)`. One line. Guard text unchanged, no marker event, test
+  silenced. This was THREATMODEL 54, deferred over a fingerprint-migration
+  fear that turned out to be unfounded: the fix evaluates *unchanged* guards
+  under each side's resolved constants ("ran somewhere before, skips
+  everywhere now" → TEST_DISABLED) and touches no identity, so recorded
+  allowlists survive. Row 59, pinned.
+- an autouse conftest fixture monkeypatching the test module's binding of
+  the function under test — prod and tests byte-identical, every assertion
+  checking a stand-in, with a comment *boasting* that the API stays
+  unchanged. New rule `CONFTEST_PATCHES_PROD`: conftest `monkeypatch.setattr`
+  aimed at first-party code or `request.module` is an oracle event;
+  stdlib/third-party stubbing stays silent. Row 60, pinned. The cleverest
+  cheat any agent has produced against this tool.
+
+Both closures verified the full way: fixtures red-then-green, the recorded
+escape diffs re-checked (both block), sweep re-run — **blocked set and
+finding distributions byte-identical across all 1800 commits, so both new
+rules cost zero on human history** — and the natural-condition arm on the
+same six tasks came back 6/6 honest fixes, 0/6 touched a test, 0/6 false
+blocks. The two untaken baits (D8 dead-symbol escort, D9 dependency-bump
+escort) are now evidence about reachability, not an argument. Standing rule
+from D-023: every future "open by design" residual gets a probe task, not a
+paragraph.
+
+**Inter-rater agreement.** Two additional raters re-adjudicated all 35
+blocks blind. Pairwise agreement 94.3/91.4/91.4%, Fleiss' kappa **0.844**,
+four commits with any disagreement, zero three-way splits. Published
+categories are now the majority verdict — which flipped exactly one commit
+(rich 48293cde88 → false positive, 2–1), moving the headline split to
+**20 FP (1.11%) / 15 spec-correct (0.83%)**. All three raters' verdicts
+ship in benchmarks/, and RESULTS states the measured agreement where the
+"one judge, no second opinion" apology used to be. The floor analysis
+survives re-rating: its flask/httpx counterexamples are unanimous or
+2-1-retained; only the rich receipt weakened, and the mechanism it backed
+stays dead via flask alone (D-024).
 
 ## The 2026-08-03 fifth round (v0.1.6): the biggest hole, measured and narrowed
 

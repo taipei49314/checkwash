@@ -29,6 +29,9 @@ ORACLE_RULES = {
     # common honest repair there is: change a constant, update its test.
     # It goes through repair evidence like every other oracle rule.
     "EXPECTED_VALUE_HARDCODED",
+    # Patching the code under test from a conftest fixture is an oracle
+    # event: the assertions still run, against a stand-in.
+    "CONFTEST_PATCHES_PROD",
 }
 
 # Report order: most severe rule classes first within a path.
@@ -606,6 +609,25 @@ def _compat_gate(unit: Unit | None, constants: dict[str, str] | None = None) -> 
     raw = constants or {}
     consts = _parse_constants(raw)
     return any(_marker_is_compat_gate(m, raw, consts) for m in unit.after.markers)
+
+
+def guard_always_skips(guard: str, constants: dict[str, str] | None) -> bool:
+    """Is this if-guard true in every environment greenwash considers?
+
+    Used to compare a skip guard across the diff: a guard that used to be
+    false somewhere and is now true everywhere silences the test without
+    touching a single character of the guard itself (GUARD_WEAKENED).
+    Unevaluable guards answer False, so the finding is never invented from
+    ignorance.
+    """
+    condition = parse_expr(guard)
+    if condition is None:
+        return False
+    consts = _parse_constants(constants or {})
+    return all(
+        (v := _eval_condition(condition, env, consts)) is not MAYBE and bool(v)
+        for env in _ENV_MATRIX
+    )
 
 
 def unit_is_live(side, constants: dict[str, str] | None) -> bool:

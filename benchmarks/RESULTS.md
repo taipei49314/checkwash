@@ -14,7 +14,7 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (2026-08-03, v0.1.6)
+**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (2026-08-03, v0.1.7 engine (re-verified identical))
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
@@ -53,8 +53,8 @@ compensation — the tool doing its documented job, allowlist it), or
 | measure | count | rate over 1800 commits |
 |---|---:|---:|
 | historical human-commit **block rate** | 35 | **1.94%** |
-| adjudicated **false positive** | 19 | **1.06%** |
-| **legitimate policy block** (spec-correct) | 16 | 0.89% |
+| adjudicated **false positive** | 20 | **1.11%** |
+| **legitimate policy block** (spec-correct) | 15 | 0.83% |
 | **unclear** | 0 | 0.00% |
 
 The headline figure to compare against other tools is the block rate,

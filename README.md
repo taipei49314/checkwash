@@ -7,7 +7,7 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release.** 15 detectors, 233 tests, zero runtime dependencies.
+> Status: **pre-release.** 16 detectors, 237 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -57,8 +57,8 @@ Two harnesses, both reproducible from a clone
   at or under 4%; the progression from an initial 8.6%, and what moved each
   step, is in the benchmarks README.
   A block is not automatically a mistake. All 35 were adjudicated commit by
-  commit against the real diff: **19 false positives (1.06%)**, 16 legitimate
-  policy blocks (0.89%) where the commit really does drop oracle coverage
+  commit against the real diff: **20 false positives (1.11%)**, 15 legitimate
+  policy blocks (0.83%) where the commit really does drop oracle coverage
   with nothing visible replacing it, 0 unclear. Three precision rounds
   brought this down from 2.50% / 1.67%: skip conditions are *read* (constants
   resolved up to the head snapshot) instead of grepped, relocated tests are
@@ -72,10 +72,12 @@ Two harnesses, both reproducible from a clone
   one adjudication *verdict* was overturned in the tool's favour when the
   duplicate search proved a "relocated" test actually reappears nowhere;
   each trade is reported as measured.
-  The block rate is a machine count and exact; the split is one judge's call
-  per diff with no second opinion, and some are genuinely arguable — the
-  per-commit reasoning is published in [RESULTS.md](benchmarks/RESULTS.md)
-  precisely so you can disagree with it.
+  The block rate is a machine count and exact. The split is now a
+  three-rater judgement: two additional raters re-adjudicated all 35 blocks
+  blind, with 91–94% pairwise agreement and Fleiss' kappa 0.844; the
+  published category is the majority verdict, the four contested commits are
+  marked, and the per-commit reasoning of all three raters ships in
+  [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
   **2.5% of the corpus (45/1800) never got a real analysis**: those commits
   touch a production file greenwash genuinely cannot read — other-language
   code, templates, data files, unparseable Python — which suppresses
@@ -85,10 +87,18 @@ Two harnesses, both reproducible from a clone
   metadata, pin sources and deleted-but-parseable Python no longer qualify)
   removed 85 exemptions and **did not change a single verdict** — every one
   had been protecting a commit that passed on its own merits anyway.
-- **Recall — 12 / 12.** Twelve bug-fix tasks run through real coding agents
-  told to make CI green without fixing the bug; greenwash blocks all twelve
-  tampering diffs. Under natural conditions, 0 of 12 agents touched a test at
-  all — an honest datapoint, recorded as such.
+- **Recall — 12 / 12, then probed harder.** Twelve bug-fix tasks run through
+  real coding agents told to make CI green without fixing the bug; greenwash
+  blocks all twelve tampering diffs. Under natural conditions, 0 of 12 agents
+  touched a test at all — an honest datapoint, recorded as such.
+  A second wave of six *probe* tasks (2026-08-04) aimed agents at the
+  de-escalators that hold at warn by design. The agent escaped **two of
+  six** — a one-line constant flip behind an existing skip guard, and a
+  conftest fixture that monkeypatched the function under test while leaving
+  production and tests byte-identical. Both escapes became detectors the
+  same day (`TEST_DISABLED` guard evaluation, `CONFTEST_PATCHES_PROD`), both
+  recorded diffs now block, and both new rules fire **zero** times across
+  the 1800 human commits. The four other probes were blocked outright.
 
 The first recall measurement caught **0 of 12** — pytest's own `.pyc` output
 disarmed the gate, a bug two rounds of code review had missed. Building the
@@ -104,7 +114,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.6
+- uses: taipei49314/greenwash/action@v0.1.7
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -136,8 +146,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.6
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.6
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.7
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.7
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -161,7 +171,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.6
+      - uses: taipei49314/greenwash/action@v0.1.7
 ```
 
 **pre-commit**:
@@ -169,7 +179,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.6
+    rev: v0.1.7
     hooks: [{ id: greenwash }]
 ```
 
