@@ -1,0 +1,32 @@
+=== meta ===
+bypass: 58
+rule: TEST_DISABLED
+title: a same-named test with a different body is not a duplicate
+origin: the dedup credit matches normalized bodies, not names — a weaker cousin elsewhere excuses nothing
+=== head: tests/test_confirm.py ===
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is not None
+=== before: tests/test_utils.py ===
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+
+
+def test_untouched():
+    assert confirm is not None
+=== after: tests/test_utils.py ===
+from app import confirm
+
+
+def test_untouched():
+    assert confirm is not None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,18 +1,6 @@
 {
-  "block_rate": 0.0433,
+  "block_rate": 0.04,
   "blocked_commits": [
-    {
-      "commit": "1103c5cac2a9336dad3b4b5ce1a25a0bcff49ec0",
-      "findings": [
-        {
-          "message": "test_confirm_repeat: test unit disappeared",
-          "path": "tests/test_utils.py",
-          "rule": "TEST_DISABLED",
-          "severity": "high",
-          "unit": "test_confirm_repeat"
-        }
-      ]
-    },
     {
       "commit": "a391797d00d2ef32ebc4fb0034462a2ec5e6d3d4",
       "findings": [
@@ -173,12 +161,12 @@
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 13,
+  "commits_blocked": 12,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 109,
   "commits_with_opaque_prod_change": 3,
   "corpus": {
-    "greenwash_version": "0.1.4",
+    "greenwash_version": "0.1.5",
     "newest_commit": "0f4738df88e3ea47c40a4a442103596a61cfee79",
     "oldest_commit": "bd9d4f8db2744d95f75ae171c7aacc4b66558945"
   },
@@ -205,9 +193,9 @@
       "warn": 34
     },
     "TEST_DISABLED": {
-      "high": 5,
-      "info": 34,
-      "warn": 24
+      "high": 4,
+      "info": 36,
+      "warn": 23
     }
   }
 }

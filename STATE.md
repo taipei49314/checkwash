@@ -1,17 +1,43 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-03 (v0.1.4: the false-positive list attacked class by class)
+Updated: 2026-08-03 (v0.1.5: the duplicate search, which also checked the judge)
 
 ## The number that matters right now
 
-**36/1800 = 2.00% block rate; adjudicated false positive 21/1800 = 1.17%.**
-Down from 2.50% / 1.67% across two precision rounds in one day (v0.1.3 nine
-sections below, then v0.1.4). Nine adjudicated false positives cleared, zero
-commits newly blocked, every one of the 15 spec-correct blocks still blocks,
-decoy corpus 12/12 on every re-run. The v0.1.4 round also produced this
-project's first *caught-before-shipping* defect: the first cut of the
+**35/1800 = 1.94% block rate; adjudicated false positive 19/1800 = 1.06%.**
+Down from 2.50% / 1.67% across three precision rounds in one day. Ten
+adjudicated false positives cleared, zero commits newly blocked, every
+spec-correct block still blocks (now 16 — one verdict moved *into* that
+column on evidence), decoy corpus 12/12 on every re-run.
+
+Two catches this day matter more than the clears. The first cut of the
 feature-removal credit cleared two adjudicated-correct blocks and was
-tightened before commit — details below, they are the most useful part.
+tightened before commit (v0.1.4 section). Then the v0.1.5 duplicate search
+overturned an adjudication verdict in the tool's favour: a commit judged
+"false positive — every deleted unit reappears in the same diff" turned out
+to have deleted one real oracle that reappears *nowhere* (`git grep` at that
+head is the proof), so the verdict — not the tool — was wrong. The
+measurement apparatus is now catching errors on both sides of itself.
+
+## The 2026-08-03 third round (v0.1.5): DUPLICATE_REMAINS
+
+click 1103c5cac2 deleted `test_confirm_repeat`; an identical copy had lived
+in an untouched file since the parent commit. No credit could see outside
+the diff. Now D10 does: one batched `git grep -l -F "def <leaf>("` at head
+(filesystem walk in worktree mode, the `=== head: ===` map in fixtures), at
+most eight candidate files parsed, and the survivor must hash-match the
+deleted body exactly, sit in a collectable untouched test file, and be live
+under the D2 rule — a skipped or edited survivor earns nothing (THREATMODEL
+58, both costume variants pinned). Not a multiset: an identical live
+survivor keeps running the oracle no matter how many copies were deleted.
+
+Same round, the honest misses: the flask rename FP (53b8f08218) stays
+blocked — the real rewrite shrinks six strong assertions to two, and the
+name-relation loosening drafted for it was deleted rather than shipped
+without a payoff (the mass discipline is what closed bypass 45). And
+a391797d00 was re-adjudicated false_positive → spec_correct as above; the
+remaining 19 FPs are the rewrite/evidence-reach cluster plus a few one-offs
+(per-commit reasoning in RESULTS.md), which need their own design round.
 
 Two independent audits have been run against this repository. The first
 (an outside reader) found 11 defects in three passes, then ~20 more in a

@@ -354,3 +354,36 @@ Not fixed, named honestly: a test deleted because an identical copy already
 exists *outside the diff* (click 1103c5cac2 test_confirm_repeat, a391797d00
 test_prompt_cast_default) needs head-tree enumeration greenwash does not do
 yet; those two commits stay blocked and stay adjudicated as false positives.
+
+## D-021 (2026-08-03): a deleted duplicate is dedup — and the checker checked the judge
+
+click 1103c5cac2 deletes test_confirm_repeat; an identical copy has lived in
+tests/test_confirm.py — a file the diff never touched — since the parent
+commit. No move credit can see it (nothing was added), no restructure mass
+covers it (nothing arrived), so a pure cleanup blocked. The missing
+capability was looking *outside the diff*.
+
+Frozen: D10 DUPLICATE_REMAINS. A disappeared unit whose identical normalized
+body still exists at head as a live, collectable unit outside the diff drops
+to info. The search is one batched `git grep -l -F` for `def <leaf>(` at the
+head revision (a filesystem walk in worktree mode, the head-section map in
+fixtures), at most eight candidate files parsed, liveness judged by the same
+compat-aware rule as D2. Not a multiset: one live survivor covers any number
+of identical deletions, because it keeps running either way — which is also
+why the escort attack fails (THREATMODEL 58): a skipped, uncollectable or
+edited survivor hash-fails or liveness-fails, and an identical live survivor
+still runs the oracle, so nothing is actually lost.
+
+Two things this round did NOT do, on evidence:
+
+- flask 53b8f08218 (rename test_redirect_keep_session -> test_redirect_session)
+  stays blocked. The real rewrite shrinks six strong assertions to two;
+  clearing it needs either semantic equivalence or weaker mass discipline,
+  and the mass discipline is what closed bypass 45. The name-relation
+  loosening built for it was deleted rather than shipped without a payoff.
+- a391797d00's residual finding (test_prompt_cast_default) turned out to be
+  the adjudication's error, not the tool's: `git grep` at that commit's head
+  finds the unit nowhere — the commit deleted a real oracle outright, and the
+  next-day commit 1103c5cac2 re-added it. The verdict is re-categorised
+  spec-correct with the reproducible check recorded. The dedup machinery's
+  first catch was a judge, not a diff.

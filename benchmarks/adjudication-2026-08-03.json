@@ -1,7 +1,7 @@
 {
   "date": "2026-08-03",
-  "source": "FP sweep benchmarks/sweeps/ (v0.1.4, relocation/removal/drift build), 6 OSS repos x 300 commits = 1800",
-  "method": "each of the 45 blocked commits of the v0.1.2 build adjudicated against the real diff; 40 by independent agents (nine batches, five each), 5 by the maintainer after one batch hit a session limit - noted because it is a weaker form of independence for those five. v0.1.3 stopped blocking two of the 45 (attrs 7373d88, click b761eda; both false_positive, D6 constant resolution). v0.1.4 stopped blocking seven more (attrs 74007f67d2, click 700798252a, httpx 59914c7690, starlette 100f05a66b/5ccbc62175/856c904a6d/b133ab45ad; all seven false_positive - relocation liveness, whole-unit move credit, PROD_SYMBOL_REMOVED, DEPENDENCY_DRIFT). No commit is newly blocked, every spec_correct block still blocks (the first cut of PROD_SYMBOL_REMOVED cleared two of them via rewritten-function locals and was tightened before shipping), and the remaining 36 verdicts are unchanged from the v0.1.2 adjudication",
+  "source": "FP sweep benchmarks/sweeps/ (v0.1.5, duplicate-survivor build), 6 OSS repos x 300 commits = 1800",
+  "method": "each of the 45 blocked commits of the v0.1.2 build adjudicated against the real diff; 40 by independent agents (nine batches, five each), 5 by the maintainer after one batch hit a session limit - noted because it is a weaker form of independence for those five. v0.1.3 stopped blocking two (attrs 7373d88, click b761eda), v0.1.4 seven more (attrs 74007f67d2, click 700798252a, httpx 59914c7690, starlette 100f05a66b/5ccbc62175/856c904a6d/b133ab45ad), v0.1.5 one more (click 1103c5cac2, deleted duplicate with a live survivor outside the diff) - all ten false_positive. One verdict was re-categorised on evidence: click a391797d00 false_positive -> spec_correct, because its reason claimed every deleted unit reappears in the same diff and `git grep` at that head proves test_prompt_cast_default reappears nowhere; the re-check that found this is recorded in the verdict itself. No commit is newly blocked; every other verdict is unchanged from the v0.1.2 adjudication",
   "categories": {
     "false_positive": "blocking was wrong; no oracle weakening, or compensated visibly in-diff",
     "spec_correct": "blocking was defensible; oracle coverage dropped with no visible in-diff compensation",
@@ -28,12 +28,6 @@
     },
     {
       "repo": "click",
-      "commit": "1103c5cac2a9336dad3b4b5ce1a25a0bcff49ec0",
-      "category": "false_positive",
-      "reason": "\"Move move test to prompt file.\" is a pure relocation: test_prompts_abort and test_full_prompt_passed_to_readline are deleted from tests/test_utils.py and re-added verbatim in tests/test_utils_2/test_prompt.py within the same diff, and test_confirm_repeat was a duplicate that already existed at tests/test_utils_2/test_confirm.py:44 in the parent commit, so no oracle coverage drops."
-    },
-    {
-      "repo": "click",
       "commit": "1557e265222c431b1e4d6c4dd6754006ed10dc02",
       "category": "false_positive",
       "reason": "\"Check for warning exception with idiomatic context manager\" replaces `assert result.exit_code == 1` / `isinstance(result.exception, UserWarning)` / `\"used more than once\" in str(...)` with `with pytest.warns(UserWarning, match=\"used more than once\"): runner.invoke(cli, [])`. The exit_code==1 assertion only held because pyproject sets `filterwarnings = [\"error\"]`; inside pytest.warns the warning is recorded instead of raised, so that assertion is no longer applicable, and pytest.warns still fails if the warning type or message is absent. The oracle moved form without losing strength."
@@ -53,8 +47,8 @@
     {
       "repo": "click",
       "commit": "a391797d00d2ef32ebc4fb0034462a2ec5e6d3d4",
-      "category": "false_positive",
-      "reason": "\"Make test echo file.\" is a pure file split: 430 lines removed from tests/test_utils.py and 435 added under tests/test_utils_2/test_echo.py and test_echo_via_pager.py. Every flagged unit (test_echo_no_streams, test_echo_via_pager, test_echo_via_pager_yields_before_exception, test_echo_writing_to_standard_error, test_stress_echo_via_pager_exception_cleanup, and the prompt/cast assertions) reappears verbatim in the new files in the same diff."
+      "category": "spec_correct",
+      "reason": "\"Make test echo file.\" moves nine echo/pager units verbatim into tests/test_utils_2/ (all de-escalated to info as moves once the relocation credits could see them), but it ALSO deletes test_prompt_cast_default outright: `git grep -l \"def test_prompt_cast_default\" a391797d00` finds the unit nowhere at that commit's head. A real oracle (prompt default cast to int, isinstance assert) vanished with no copy, no move and no replacement; the next-day commit 1103c5cac2 re-added it, which reads as an accidental deletion caught. The original adjudication said \"every flagged unit exists verbatim in the new files in the same diff\" - that was wrong for this unit, discovered when the v0.1.5 duplicate search went looking for the surviving copy and proved there was none. Blocking is correct."
     },
     {
       "repo": "click",

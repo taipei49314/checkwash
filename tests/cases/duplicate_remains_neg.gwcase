@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_DISABLED
+title: deleting one of two identical copies is dedup, not a kill — the other copy still runs
+origin: FP sweep adjudication 2026-08-03 — click 1103c5cac2 test_confirm_repeat; the surviving copy lives in a file the diff never touched
+=== head: tests/test_confirm.py ===
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+=== before: tests/test_utils.py ===
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+
+
+def test_untouched():
+    assert confirm is not None
+=== after: tests/test_utils.py ===
+from app import confirm
+
+
+def test_untouched():
+    assert confirm is not None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["DUPLICATE_REMAINS"]}]

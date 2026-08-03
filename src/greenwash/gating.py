@@ -669,6 +669,7 @@ def apply_gates(
     # units get the same treatment via their body hashes.
     moved = collections.Counter(ir.globals.moved_assertion_texts)
     moved_units = collections.Counter(ir.globals.moved_unit_hashes)
+    duplicates = set(ir.globals.duplicate_unit_hashes)
     units = _unit_index(ir)
     active_allows = active_fingerprints(allow_entries, today)
     roles = {f.path: f.role for f in ir.files}
@@ -739,6 +740,13 @@ def apply_gates(
                 moved_units[h] -= 1
                 f.severity = "info"
                 f.deescalators.append("ASSERTION_MOVED")
+                continue
+            # An identical live copy survives at head, outside the diff:
+            # dedup, not a kill. Not spent — one survivor covers any number
+            # of identical deletions, because it keeps running either way.
+            if h and h in duplicates:
+                f.severity = "info"
+                f.deescalators.append("DUPLICATE_REMAINS")
                 continue
             texts = [normalize_text(a.text) for a in unit.before.assertions]
             needed = collections.Counter(texts)

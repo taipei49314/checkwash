@@ -24,6 +24,11 @@ def test_case(case_path):
     ir, findings, _verdict = analyze(
         case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,
         head_reader=head.get if head else None,
+        head_searcher=(
+            (lambda needles: [p for p, data in sorted(head.items())
+                              if any(n.encode("utf-8") in data for n in needles)])
+            if head else None
+        ),
     )
     visible = [f for f in findings if not f.allowlisted]
     mismatch = match_expectations(case.expect, visible)

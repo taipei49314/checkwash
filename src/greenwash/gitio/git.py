@@ -50,6 +50,30 @@ def read_base_file(repo: str, base: str, path: str) -> bytes | None:
     return _read_blob(repo, base, path)
 
 
+def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
+    """Paths at `rev` whose content contains any needle (fixed strings).
+
+    One subprocess for the whole batch; used by the duplicate-unit search to
+    find surviving copies of deleted tests without reading the tree. git grep
+    exits 1 on no match, which is an answer, not an error.
+    """
+    if not needles:
+        return []
+    args = ["grep", "-l", "-F"]
+    for needle in needles:
+        args += ["-e", needle]
+    args.append(rev)
+    try:
+        out = _run(repo, args)
+    except GitError:
+        return []
+    paths = []
+    for line in out.decode("utf-8", "replace").split("\n"):
+        if ":" in line:
+            paths.append(line.split(":", 1)[1])
+    return paths
+
+
 def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
     out = _run(repo, ["diff", "--name-status", "-z", "--find-renames", base, head])
     tokens = [t for t in out.decode("utf-8", "replace").split("\0")]

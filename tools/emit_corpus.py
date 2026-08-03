@@ -46,6 +46,11 @@ def main() -> None:
         ir, findings, verdict = analyze(
             case_to_changes(case), Config(), contract, [], TODAY,
             head_reader=head.get if head else None,
+            head_searcher=(
+                (lambda needles, _h=head: [p for p, data in sorted(_h.items())
+                                           if any(n.encode("utf-8") in data for n in needles)])
+                if head else None
+            ),
         )
         _write(f"# {case_path.name}\n")
         _write(findings_to_json(ir, findings, verdict))

@@ -310,6 +310,7 @@ def build_ir(
     scope_allow: list[str] | None = None,
     known_modules: set[str] | None = None,
     head_reader=None,
+    head_searcher=None,
 ) -> IR:
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
@@ -596,6 +597,50 @@ def build_ir(
     moved = removed_texts & added_texts  # Counter intersection = min of counts
     g.moved_assertion_texts = sorted(moved.elements())
     g.moved_unit_hashes = sorted((removed_units & added_units).elements())
+
+    # Duplicate survivors: a disappeared unit whose identical live body still
+    # exists at head in a file this diff never touched. The needle search is
+    # one batched call (git grep in range mode); only matching files are read
+    # and parsed, capped. Deleting one of two identical copies leaves the
+    # oracle running — the attack shapes (survivor skipped, survivor edited)
+    # fail the liveness and hash checks and earn nothing.
+    if head_searcher is not None and head_reader is not None:
+        wanted: set[str] = set()
+        needles: set[str] = set()
+        for file in ir.files:
+            if file.role not in ("test", "conftest"):
+                continue
+            for unit in file.units:
+                if unit.before is not None and unit.after is None and unit.before.body_hash:
+                    h = unit.before.body_hash
+                    if added_units.get(h):
+                        continue  # relocated within the diff; D2 covers it
+                    wanted.add(h)
+                    leaf = unit.qualname.rsplit(".", 1)[-1].split("#", 1)[0]
+                    needles.add(f"def {leaf}(")
+        if wanted:
+            diff_paths = {f.path for f in ir.files}
+            candidates = sorted(
+                p.replace("\\", "/")
+                for p in head_searcher(sorted(needles))
+                if p.replace("\\", "/") not in diff_paths
+                and p.endswith(".py")
+                and config.role_of(p.replace("\\", "/")) == "test"
+                and collectable(p.replace("\\", "/"))
+            )
+            found: set[str] = set()
+            for path in candidates[:_MAX_DUP_READS]:
+                data = head_reader(path)
+                if data is None:
+                    continue
+                parsed = parse_python(data, collect_tests=True)
+                if not parsed.parse_ok:
+                    continue
+                consts = _gate_constants(parsed, after_by_path, head_reader)
+                for pu in parsed.units:
+                    if pu.side.body_hash in wanted and unit_is_live(pu.side, consts):
+                        found.add(pu.side.body_hash)
+            g.duplicate_unit_hashes = sorted(found)
     return ir
 
 
@@ -604,6 +649,7 @@ def build_ir(
 # reads than this stays unevaluable, which fails toward flagging.
 _MAX_CONST_ENTRIES = 24
 _MAX_HEAD_READS = 8
+_MAX_DUP_READS = 8
 
 
 def _gate_condition_names(parsed: ParsedFile) -> set[str]:
@@ -779,6 +825,7 @@ def analyze(
     head_label: str = "head",
     known_modules: set[str] | None = None,
     head_reader=None,
+    head_searcher=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -788,6 +835,7 @@ def analyze(
         scope_allow=contract.scope_allow,
         known_modules=known_modules,
         head_reader=head_reader,
+        head_searcher=head_searcher,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

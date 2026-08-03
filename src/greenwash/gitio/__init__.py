@@ -1,5 +1,6 @@
 from greenwash.gitio.git import (
     GitError,
+    grep_head_paths,
     list_range_changes,
     list_worktree_changes,
     merge_base,
@@ -9,6 +10,7 @@ from greenwash.gitio.git import (
 
 __all__ = [
     "GitError",
+    "grep_head_paths",
     "list_range_changes",
     "list_worktree_changes",
     "merge_base",

@@ -191,12 +191,14 @@ Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ PATTERN | hold at warn |
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
 | D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED` — that rule only, exactly like PACKAGE_REPAIR — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A pinned dependency's behaviour change is the honest cause of expectation drift; a manifest bump buys nothing for a weakened or deleted oracle | hold at warn |
+| D10 `DUPLICATE_REMAINS` | a disappeared unit whose identical normalized body still exists at head as a **live**, collectable unit in a file the diff never touched (deleting one of two identical copies leaves the oracle running). Found by a bounded needle search — one batched `git grep` at head, at most eight candidate files parsed — with liveness as in D2. Not spent: one survivor covers any number of identical deletions, because it keeps running either way | → info |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
-(`benchmarks/triage-2026-07-30.json`). D8–D9 came from the second
+(`benchmarks/triage-2026-07-30.json`). D8–D10 came from the second
 adjudication pass (`benchmarks/adjudication-2026-08-03.json`): feature
-removals and dependency drift were the two largest honest clusters among the
-28 remaining false positives. Two design notes that are load-bearing:
+removals, dependency drift and duplicate cleanups were the largest honest
+clusters among the 28 remaining false positives. Two design notes that are
+load-bearing:
 
 - **D4 requires the replacement to be newly written.** A unit that merely
   *keeps* an existing assertion while the inconvenient one disappears is the
@@ -218,8 +220,9 @@ removals and dependency drift were the two largest honest clusters among the
   oracle mass covers what it lost. Name similarity alone let one weak survivor
   excuse every deleted test in the file.
 
-None of D4–D9 suppress a finding. They only decline to *escalate* it: the
-finding stays in the report at `warn`, visible and allowlistable.
+None of D4–D10 suppress a finding. They only decline to *escalate* it: the
+finding stays in the report (D10, like D2, at `info`; the rest at `warn`),
+visible and allowlistable.
 
 **Repair evidence** answers one question — is there a production change that
 plausibly explains editing *this* test? E1 and D1 are the two sides of it, so

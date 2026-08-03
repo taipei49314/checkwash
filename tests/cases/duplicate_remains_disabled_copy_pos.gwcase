@@ -1,0 +1,40 @@
+=== meta ===
+bypass: 58
+rule: TEST_DISABLED
+title: a surviving copy that is itself skipped excuses nothing
+origin: the remaining duplicate must be live, or deleting the running copy while keeping a skipped one kills the oracle
+=== head: tests/test_confirm.py ===
+import pytest
+
+from app import confirm
+
+
+@pytest.mark.skip(reason="flaky")
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+=== before: tests/test_utils.py ===
+import pytest
+
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+
+
+def test_untouched():
+    assert confirm is not None
+=== after: tests/test_utils.py ===
+import pytest
+
+from app import confirm
+
+
+def test_untouched():
+    assert confirm is not None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

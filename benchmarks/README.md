@@ -43,33 +43,42 @@ commit by commit, and `RESULTS.md` publishes the decomposition:
 
 | measure | current build |
 |---|---:|
-| historical human-commit block rate | 2.00% |
-| adjudicated **false positive** | **1.17%** |
-| legitimate policy block | 0.83% |
+| historical human-commit block rate | 1.94% |
+| adjudicated **false positive** | **1.06%** |
+| legitimate policy block | 0.89% |
 | unclear | 0.00% |
 
-Down from 2.50% / 1.67% over two precision rounds (v0.1.3 and v0.1.4): skip
+Down from 2.50% / 1.67% over three precision rounds (v0.1.3–v0.1.5): skip
 conditions are read with their constants resolved instead of grepped
 (attrs 7373d88, click b761eda), relocated tests are recognised even when they
 carry their own skip markers or hold no assertions (click 700798252a),
 feature removals explain the removal of their tests (attrs 74007f67d2, httpx
-59914c7690, starlette 856c904a6d / b133ab45ad), and dependency bumps explain
-expectation drift (starlette 100f05a66b / 5ccbc62175). No commit became newly
-blocked, every spec-correct block still blocks, and the decoy corpus still
-blocks 12/12. The first cut of the feature-removal credit cleared two
-spec-correct blocks (a rewritten function's locals counted as "deleted
-symbols") and was caught by reconciling the sweep delta against the
-adjudication before it shipped — the strongest argument this file knows for
-adjudicating blocks instead of just counting them.
+59914c7690, starlette 856c904a6d / b133ab45ad), dependency bumps explain
+expectation drift (starlette 100f05a66b / 5ccbc62175), and deleting one of
+two identical copies is dedup when the survivor is found at head, live and
+collectable (click 1103c5cac2). No commit became newly blocked, every
+spec-correct block still blocks, and the decoy corpus still blocks 12/12.
+
+The process cut both ways, twice. The first cut of the feature-removal
+credit cleared two spec-correct blocks (a rewritten function's locals
+counted as "deleted symbols") and was caught by reconciling the sweep delta
+against the adjudication before it shipped. And the duplicate search
+overturned one adjudication *verdict* in the tool's favour: click a391797d00
+had been judged a false positive on the claim that every deleted unit
+reappears in the same diff — `git grep` at that commit's head proves
+test_prompt_cast_default reappears nowhere, so the verdict is now
+spec-correct and the commit correctly stays blocked. Adjudicating blocks
+instead of just counting them is what made both catches possible.
 
 Two adjudication passes exist, of two different populations — the earlier one
 does not describe the current build and is kept only as history:
 
-- `adjudication-2026-08-03.json` — all 36 blocks of the **current** (v0.1.4)
-  build: 21 false positive, 15 spec-correct, 0 unclear. Updated in place as
-  v0.1.3 and v0.1.4 stopped blocking nine of the 45 v0.1.2 blocks (all nine
-  adjudicated false positive); the file's `method` note records exactly what
-  was removed and why.
+- `adjudication-2026-08-03.json` — all 35 blocks of the **current** (v0.1.5)
+  build: 19 false positive, 16 spec-correct, 0 unclear. Updated in place as
+  v0.1.3–v0.1.5 stopped blocking ten of the 45 v0.1.2 blocks (all ten
+  adjudicated false positive) and one verdict was re-categorised on
+  reproducible evidence; the file's `method` note records exactly what
+  changed and why.
 - `adjudication-2026-08-02.json` — the 40 blocks of the v0.1.1 build:
   24 false positive, 16 spec-correct, 0 unclear. Kept as history; it does not
   describe the current build, and `make_results.py` now refuses to pair it
@@ -92,7 +101,8 @@ Each row is a full re-run of the same harness over the same 1800 commits.
 | 2.22% | repair evidence reaches through unchanged intermediate modules (`PACKAGE_REPAIR`) |
 | 2.50% | second independent audit: 12 bypasses closed (raises the rate), 4 false-positive classes fixed (lowers it) |
 | 2.39% | D6 resolves skip-condition constants (same file → in-diff imports → head snapshot), reads xfail and if-guarded imperative skips; always-true tightened to truthy at zero corpus cost |
-| **2.00%** | relocation liveness through compat gates + whole-unit move credit; `PROD_SYMBOL_REMOVED` (deleted-scope symbols only, after the locals version cleared two spec-correct blocks and was tightened); `DEPENDENCY_DRIFT` for expectation literals tracking manifest bumps |
+| 2.00% | relocation liveness through compat gates + whole-unit move credit; `PROD_SYMBOL_REMOVED` (deleted-scope symbols only, after the locals version cleared two spec-correct blocks and was tightened); `DEPENDENCY_DRIFT` for expectation literals tracking manifest bumps |
+| **1.94%** | `DUPLICATE_REMAINS`: a deleted unit whose identical live copy survives at head outside the diff is dedup — and the same search overturned one FP verdict (a391797d00) by proving the "relocated" unit reappears nowhere |
 
 The 3.00% row is the honest shape of the trade-off: closing a recall hole
 raised the false-positive rate, and only measurement showed by how much.

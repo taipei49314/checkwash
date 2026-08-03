@@ -165,6 +165,11 @@ class DiffGlobals:
     # units — the whole-unit form of the D2 move credit, and the only form an
     # assertion-less unit can earn. Multiset, spent like the texts above.
     moved_unit_hashes: list[str] = field(default_factory=list)
+    # Body hashes of disappeared units whose identical, live copy exists at
+    # head in a file the diff never touched (click 1103c5cac2: the deleted
+    # test was a duplicate; the survivor still runs). A set, not a multiset:
+    # one live survivor covers any number of identical deletions.
+    duplicate_unit_hashes: list[str] = field(default_factory=list)
     # A dependency manifest (pyproject, requirements, lockfiles) changed in
     # this diff — the honest cause of expectation drift like httpx 0.28's
     # compact JSON separators (DEPENDENCY_DRIFT, EXPECTED_VALUE_CHANGED only).

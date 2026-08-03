@@ -21,7 +21,7 @@ from greenwash.config import load_config
 from greenwash.contract import Contract
 from greenwash.deps import MANIFESTS, parse_manifest
 from greenwash.engine import analyze
-from greenwash.gitio import GitError, list_range_changes, read_base_file
+from greenwash.gitio import GitError, grep_head_paths, list_range_changes, read_base_file
 from greenwash.pyenv import known_baseline
 
 
@@ -111,6 +111,7 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
                 changes, config, Contract(), allow, today, base_label=parent,
                 head_label=sha, known_modules=known,
                 head_reader=lambda p, _sha=sha: read_base_file(repo, _sha, p),
+                head_searcher=lambda needles, _sha=sha: grep_head_paths(repo, _sha, needles),
             )
         except Exception:  # noqa: BLE001 - a sweep must survive one bad commit
             result.errors += 1

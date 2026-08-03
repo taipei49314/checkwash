@@ -23,6 +23,7 @@ from greenwash.engine import analyze
 from greenwash.pyenv import known_baseline
 from greenwash.gitio import (
     GitError,
+    grep_head_paths,
     list_range_changes,
     list_worktree_changes,
     merge_base,
@@ -101,6 +102,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         # the diff; the head snapshot is where those files live.
         def head_reader(path: str, _rev: str = head) -> bytes | None:
             return read_base_file(repo, _rev, path)
+
+        def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
+            return grep_head_paths(repo, _rev, needles)
     else:
         base = "HEAD"
         changes = list_worktree_changes(repo)
@@ -117,6 +121,30 @@ def _cmd_check(args: argparse.Namespace) -> int:
                     return fh.read()
             except OSError:
                 return None
+
+        def head_searcher(needles: list[str]) -> list[str]:
+            # Working-tree grep, bounded: .py files only, artifact dirs
+            # pruned, first 64 hits win. Only runs when a test unit
+            # disappeared from the working diff.
+            wanted = [n.encode("utf-8") for n in needles]
+            hits: list[str] = []
+            skip_dirs = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
+            for root, dirs, files in os.walk(repo):
+                dirs[:] = sorted(d for d in dirs if d not in skip_dirs and not d.startswith("."))
+                for fn in sorted(files):
+                    if not fn.endswith(".py"):
+                        continue
+                    full = os.path.join(root, fn)
+                    try:
+                        with open(full, "rb") as fh:
+                            data = fh.read(1_000_000)
+                    except OSError:
+                        continue
+                    if any(n in data for n in wanted):
+                        hits.append(os.path.relpath(full, repo).replace(os.sep, "/"))
+                        if len(hits) >= 64:
+                            return hits
+            return hits
 
     config, config_error = load_config(read_base_file(repo, config_side, ".greenwash/config.toml"))
     if args.fail_on:
@@ -169,6 +197,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         head_label=head_label,
         known_modules=known_modules,
         head_reader=head_reader,
+        head_searcher=head_searcher,
     )
 
     if args.emit_ir:
