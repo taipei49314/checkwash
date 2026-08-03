@@ -7,7 +7,7 @@ with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md and CI configs.
 
-> Status: **pre-release.** 15 detectors, 186 tests, zero runtime dependencies.
+> Status: **pre-release.** 15 detectors, 187 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -88,7 +88,7 @@ greenwash hook install --agent claude-code
 # pre-commit — prints the config block to paste
 greenwash hook install --agent pre-commit
 
-# GitHub Actions — see action/action.yml; greenwash dogfoods it on its own PRs
+# GitHub Actions — see action/action.yml; CI runs this action on every push
 - uses: taipei49314/greenwash/action@v0.1.2
 ```
 
@@ -165,7 +165,10 @@ blocks the stop on tampering:
 greenwash hook install --agent claude-code
 ```
 
-greenwash runs on its own pull requests (`.github/workflows/ci.yml`): the
-judge is judged.
+greenwash runs the published action against its own diff on every push
+(`.github/workflows/ci.yml`, the `dogfood` job): the judge is judged. That
+job was previously gated to pull requests, in a repository that has never had
+one, so it had never executed — a test now fails if it is made conditional
+again.
 
 License: Apache-2.0.

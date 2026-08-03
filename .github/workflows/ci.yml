@@ -41,8 +41,16 @@ jobs:
           path: corpus-findings.json
 
   dogfood:
-    # greenwash runs on its own pull requests. The judge gets judged.
-    if: github.event_name == 'pull_request'
+    # greenwash runs on its own changes. The judge gets judged.
+    #
+    # This job used to be `if: github.event_name == 'pull_request'`, and this
+    # repository has never had a pull request — so across every run in its
+    # history it reported "skipped" and action/action.yml had still never been
+    # executed once, while the README told people to use it. A previous audit
+    # asked for the action to be dogfooded and the fix that shipped changed
+    # *how* the job invoked it without noticing the job never ran at all.
+    # Green because it did not run is the failure mode this project keeps
+    # repeating; on a push there is a perfectly good diff to check.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +63,7 @@ jobs:
       # otherwise action/action.yml ships untested (reader audit 2026-08-02).
       - uses: ./action
         with:
-          base: ${{ github.event.pull_request.base.sha }}
+          base: ${{ github.event.pull_request.base.sha || 'HEAD~1' }}
 
   byte-compare:
     # The cross-OS determinism gate: every OS/Python combination must emit

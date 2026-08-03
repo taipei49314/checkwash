@@ -111,3 +111,33 @@ def test_readme_install_refs_match_version():
     )
     assert pinned, "README should pin at least one install ref"
     assert pinned == {f"v{version}"}, f"README pins {pinned}, package is v{version}"
+
+
+def test_dogfood_job_actually_runs():
+    """The job that exercises action/action.yml must not be unreachable.
+
+    It was `if: github.event_name == 'pull_request'` in a repository that has
+    never had a pull request, so it reported "skipped" on every run in the
+    project's history and the published GitHub Action had never executed once
+    — while the README told people to use it. An earlier audit asked for the
+    action to be dogfooded and the fix that shipped changed how the job
+    invoked it without noticing the job never ran. "Green because it did not
+    run" is the recurring failure here, so it gets a gate.
+    """
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "dogfood:" in ci, "the dogfood job disappeared"
+    body = ci.split("dogfood:", 1)[1].split("\n  byte-compare:", 1)[0]
+    conditions = [
+        line.strip()
+        for line in body.split("\n")
+        if line.strip().startswith("if:") and not line.strip().startswith("#")
+    ]
+    assert not conditions, (
+        f"the dogfood job is gated behind {conditions}; a job that does not run "
+        "proves nothing. Keep it unconditional so every push exercises "
+        "action/action.yml."
+    )
+    assert "uses: ./action" in body, (
+        "the dogfood job must invoke the composite action itself, not just the "
+        "CLI, or action/action.yml ships untested."
+    )
