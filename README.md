@@ -8,7 +8,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 17 detectors, 276 tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 280 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -182,9 +182,28 @@ does not claim to be. Closest neighbours, credited up front:
   and golden-file freezing) — a harness, where greenwash is a single-purpose
   differ any harness can call.
 
+## Sixty seconds, from nothing
+
+No install, no virtualenv, no network after the download. Every release
+attaches a single file that carries the whole tool — it has zero runtime
+dependencies, so there is nothing else to fetch.
+
+```bash
+curl -LO https://github.com/taipei49314/greenwash/releases/latest/download/greenwash.pyz
+python greenwash.pyz demo                       # 7 real tampering cases, blocked, offline
+python greenwash.pyz check HEAD~1..HEAD         # your last commit
+python greenwash.pyz sweep HEAD --limit 100     # how often it would have blocked you
+```
+
+`demo` takes under half a second and needs nothing but Python 3.11+. `sweep`
+is the honest one: point it at your own history and read the blocks yourself
+before you believe any number on this page. The single-file build is gated by
+`tests/test_zipapp.py` on every push, so it cannot quietly rot.
+
 ## Install
 
-Pick the surface that fits; the engine is identical behind all of them.
+Pick the surface that fits; the engine is identical behind all of them, and
+[docs/stability.md](docs/stability.md) says which parts of it are frozen.
 
 Not on PyPI yet — install from the repo:
 

@@ -1,0 +1,111 @@
+name: release
+
+# Two triggers, both deliberate:
+#   workflow_dispatch — build the artifacts and look at them, publishing nothing
+#   release: published — attach the artifacts to a release a human just cut
+#
+# Nothing here fires on a push. Cutting a release is a decision, and this
+# project's own history is the argument for making it one: a tag once shipped
+# pointing two fixes behind main, and visitors read the fixed docs while
+# installing the unfixed engine.
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # only to attach assets to an already-published release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+
+      - name: the version being built must match the tag, when there is one
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          version="v$(python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          test "$version" = "${{ github.event.release.tag_name }}"
+
+      - name: build sdist and wheel
+        run: python -m build
+
+      - name: the sdist and wheel must be well-formed
+        run: twine check dist/*
+
+      # Zero runtime dependencies and one console entry point make a zipapp a
+      # real distribution channel, not a trick: one file, no install, no
+      # virtualenv, no network. `tests/test_zipapp.py` gates it on every push;
+      # this builds the artifact people actually download.
+      - name: build the single-file zipapp
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          python -m zipapp src -m "greenwash.cli:main" -o dist/greenwash.pyz -c
+          python dist/greenwash.pyz --version
+          python dist/greenwash.pyz demo > /dev/null
+          ls -l dist/
+
+      - name: a fresh install of the wheel must run, replay the demo, and check a repo
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/fresh
+          /tmp/fresh/bin/pip install --quiet dist/*.whl
+          /tmp/fresh/bin/pip freeze | tee /tmp/frozen.txt
+          # Zero runtime dependencies is a claim on the README, so the frozen
+          # environment must contain greenwash and nothing else.
+          test "$(grep -civ '^greenwash' /tmp/frozen.txt)" = "0"
+          /tmp/fresh/bin/greenwash --version
+          /tmp/fresh/bin/greenwash demo > /dev/null
+          /tmp/fresh/bin/greenwash check HEAD~1..HEAD --repo .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: attach the artifacts to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
+
+  pypi:
+    # Deliberately gated. This job cannot run until a human creates a `pypi`
+    # environment on this repository AND configures greenwash as a trusted
+    # publisher on PyPI. No token is stored anywhere, by anyone; trusted
+    # publishing exchanges a short-lived OIDC identity instead. Until both
+    # exist, this job is skipped and the release is GitHub-only — which is
+    # what the README currently promises.
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: the zipapp is a GitHub asset, not a PyPI one
+        run: rm -f dist/greenwash.pyz
+      - uses: pypa/gh-action-pypi-publish@release/v1
