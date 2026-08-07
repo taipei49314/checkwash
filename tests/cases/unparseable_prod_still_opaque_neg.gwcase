@@ -2,12 +2,18 @@
 rule: ASSERT_WEAKENED
 title: a prod file greenwash cannot parse still suppresses escalation
 origin: the conservative fallback survives the narrowing — genuinely unreadable changes stay THREATMODEL #4
+origin2: INPUTS AMENDED 2026-08-07, expectation untouched. The base side used
+origin3: to be valid Python that the head side broke, which is not "genuinely
+origin4: unreadable" — it is unreadability the diff manufactures, and an audit
+origin5: reproduced it as a bypass (row 80, now pinned by
+origin6: `unparseable_self_inflicted_pos`). This case is the one the title
+origin7: always claimed: a file greenwash could not read on either side.
 === before: src/app/native.py ===
-def render(x):
-    return x
-=== after: src/app/native.py ===
-def render(x) ->> "oops this is not python":
+cdef extern render(x) ->> not python at all
     return x !!
+=== after: src/app/native.py ===
+cdef extern render(x, y) ->> still not python
+    return x + y !!
 === before: tests/test_billing.py ===
 from app import total
 

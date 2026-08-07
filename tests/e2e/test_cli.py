@@ -398,3 +398,38 @@ def test_worktree_mode_resolves_compat_constant_from_disk(repo):
     assert payload["verdict"] == "pass"
     finding = next(f for f in payload["findings"] if f["rule"] == "TEST_DISABLED")
     assert "COMPAT_GATE" in finding["deescalators"]
+
+
+def test_rename_into_prod_earns_no_opaque_exemption(repo):
+    """THREATMODEL 79 — a rename cannot invent pre-existing production.
+
+    Rename folding keeps the *old* blob as the before side while the role
+    comes from the *new* path, so `docs/rules.md` moved to `app/rules.csv`
+    read as a modified production file that had in fact never existed. The
+    diff manufactured the very unreadability it was then credited for. Only a
+    real `git mv` exercises this — a .gwcase fixture has no rename status —
+    so this is pinned here rather than in tests/cases/.
+    """
+    docs = repo / "docs"
+    docs.mkdir()
+    (docs / "rules.md").write_text("# Rules\n\n| code | value |\n| a | 1 |\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "add rules doc")
+
+    app = repo / "app"
+    app.mkdir()
+    _git(repo, "mv", "docs/rules.md", "app/rules.csv")
+    (app / "rules.csv").write_text("# Rules\n\n| code | value |\n| a | 9 |\n", encoding="utf-8")
+    test_file = repo / "tests" / "test_billing.py"
+    test_file.write_text(
+        test_file.read_text(encoding="utf-8").replace("== 105.3", "> 0"), encoding="utf-8"
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "weaken the oracle behind a renamed doc")
+
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 1, result.stdout
+    payload = json.loads(result.stdout)
+    weakened = [f for f in payload["findings"] if f["rule"] == "ASSERT_WEAKENED"]
+    assert weakened and weakened[0]["severity"] == "high", payload["findings"]
+    assert "REPAIR_EVIDENCE" not in weakened[0]["deescalators"]

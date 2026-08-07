@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 76
+rule: CI_WORKFLOW_TOUCHED
+title: `set -o errexit` is errexit, and removing it is removing errexit
+origin: audit 2026-08-07 — `_errexit_on` parsed single-letter flag clusters,
+origin2: so in `set -o errexit` the `-o` carries no `e` and the bare word was
+origin3: skipped. The long form is what the Google shell style guide
+origin4: recommends, so the spelling most likely to be in a careful project
+origin5: was the one greenwash could neither see armed nor see removed.
+=== before: scripts/test.sh ===
+#!/bin/sh
+set -o errexit
+set -o nounset
+
+pytest -q
+=== after: scripts/test.sh ===
+#!/bin/sh
+set -o nounset
+
+pytest -q
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

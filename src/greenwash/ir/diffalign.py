@@ -211,8 +211,36 @@ def align_file(
             Unit(kind="test_function", qualname=b.qualname, match=None, before=b.side, after=None, delta=None)
         )
     for a in a_unpaired:
+        # A conftest that did not exist at base brings every control it
+        # carries, and those controls act on tests that *do* exist. Added
+        # units get no delta, and TEST_DISABLED needs one, so this was the
+        # one place the marker pipeline never looked: a new `conftest.py`
+        # containing `collect_ignore = ["test_billing.py"]` took a failing
+        # suite to "no tests ran" and produced no finding of any severity
+        # (row 82, reproduced 2026-08-07).
+        #
+        # Scoped to conftest deliberately. A brand-new *test* file born with
+        # `@pytest.mark.xfail` is a bug repro, the most ordinary commit in
+        # test-driven work, and it stays silent — measured, not assumed.
+        added_controls = (
+            before is None
+            and role == "conftest"
+            and a.qualname == "<suite>"
+            and bool(a.side.markers)
+        )
         units.append(
-            Unit(kind="test_function", qualname=a.qualname, match=None, before=None, after=a.side, delta=None)
+            Unit(
+                kind="test_function",
+                qualname=a.qualname,
+                match=None,
+                before=None,
+                after=a.side,
+                delta=(
+                    UnitDelta(markers_added=[m.name for m in a.side.markers])
+                    if added_controls
+                    else None
+                ),
+            )
         )
 
     units.sort(key=lambda u: ((u.before or u.after).span, u.qualname))

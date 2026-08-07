@@ -717,3 +717,64 @@ identity gaps that make row 71 a fix for the new-marker case only (81–82).
 Whoever takes this next should start there, and should notice that the
 project's own review found none of them — the same sentence STATE has been
 carrying since 2026-08-02, now with two more data points.
+
+## D-029 (2026-08-07): five audit rows closed, two designs thrown away
+
+The audit left ten bypasses open. Five close here. The two that were designed
+and then rejected are the more useful record.
+
+**Closed, each reproduced by hand before anything was written.** Row 82: a
+`conftest.py` that did not exist at base was never inspected at all — added
+units carry no delta and `TEST_DISABLED` requires one, so one new file
+containing `collect_ignore = ["test_billing.py"]` took a suite from `1 failed`
+to `no tests ran` and produced no finding of any severity. A conftest absent
+at base now contributes every control it carries. Scoped to conftest on
+purpose: a brand-new *test* file born `@pytest.mark.xfail` is a bug repro, the
+most ordinary commit in test-driven work, and it was measured staying silent
+rather than assumed to.
+
+Rows 78, 79 and 80: the row-2 exemption now needs a **modification of
+pre-existing production**. Not a deletion — `git rm` of an unread data file
+bought it, and row 73's own argument reads the same way for a thing that is no
+longer there as for a thing that never was. Not a path this diff invented:
+rename folding keeps the old blob as the before side while the role comes from
+the new path, so `docs/rules.md` moved to `app/rules.csv` counted as
+pre-existing production, and the base-side path must now have been production
+too. And not opacity this diff manufactured: a prod `.py` that parsed at base
+and does not parse at head is reported as `skipped (unparseable)` in the same
+report, and rewarding it rewards the agent for breaking the reader.
+
+**Row 76, in part, and a second shipped false positive.** `set -o errexit` was
+invisible in both directions, because `_errexit_on` scanned single-letter flag
+clusters and the option name is a separate word. That was not only a bypass:
+`#!/bin/sh -e` becoming `set -o errexit` — a change that makes a script
+*stricter*, and which the Google shell style guide recommends — blocked at
+high with the message "a failing command no longer fails the script", over a
+script measured still exiting 1 on a failing test. v0.1.7 passes the same
+diff. Refusing to read a spelling is not the same as that spelling being
+absent, and printing the second when you mean the first is a false statement
+in a blocking message. Two shipped false positives found by adversarial review
+in one day, both of them the tool asserting something untrue in its own voice.
+
+**Thrown away after review.** A bounded shell model — statement lexing,
+errexit tracing, five weakening classes, roughly seven hundred lines — was
+designed and killed. Not for any single break: because its decline set
+(`eval`, `source`, a `set` inside a branch, a function-wrapped suite) is
+attacker-chosen and *published in this very file*, so one `eval ""` disarms
+every rule in it, and it produced three reproduced false positives on the way.
+A data-file repair credit with base-side reads and an anchor heuristic was
+killed as unimplementable as specified. And the row-75 fix was overridden
+twice: the first version created a second role source, which would have let
+SPEC's role table drift from `role_of` while the pin that exists to catch
+exactly that drift kept passing; the second made `docs/CLAUDE.md` resolve to
+guardrail, i.e. critical-on-touch, to fix a `justfile`. What shipped is a
+three-name glob for what `just` documents as its own search list. It is still
+an enumeration and the table says so.
+
+**Corpus cost: nothing, and by targeted checks rather than a sweep.** The
+opaque tightenings are bounded above by the experiment run earlier the same
+day — disabling that exemption *entirely* moved the block set by zero commits
+in all six repositories, so no subset of it can cost more. Zero of the 1800
+commits add a `conftest.py`; zero contain `set -o errexit`; zero touch any of
+the runner filenames added. A fifteen-minute sweep would have answered a
+question four one-minute greps already answered exactly.

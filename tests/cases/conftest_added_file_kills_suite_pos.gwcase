@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 82
+rule: TEST_DISABLED
+title: a conftest that did not exist at base was never inspected at all
+origin: adversarial audit 2026-08-07, reproduced by hand: base `1 failed`,
+origin2: head `no tests ran`, greenwash `no known tampering pattern detected`
+origin3: with zero findings of any severity. Added units carry no delta and
+origin4: TEST_DISABLED needs one, so a brand-new conftest was a free suite
+origin5: kill — one file, five words. Scoped to conftest: a new *test* file
+origin6: born `@pytest.mark.xfail` is a bug repro and stays silent.
+=== before: tests/test_billing.py ===
+from app.billing import discount
+
+
+def test_discount_applies():
+    assert discount(100, 10) == 90
+=== after: tests/test_billing.py ===
+from app.billing import discount
+
+
+def test_discount_applies():
+    assert discount(100, 10) == 90
+=== after: tests/conftest.py ===
+collect_ignore = ["test_billing.py"]
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

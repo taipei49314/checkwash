@@ -23,6 +23,9 @@ CASES = ROOT / "tests" / "cases"
 E2E_PINNED = {
     "5": "test_rename_test_file_out_of_tests_blocks",
     "11": "test_three_dot_range_uses_merge_base",
+    # A .gwcase pair has no rename status, so only a real `git mv` can
+    # exercise the base-side-role check that closes this row.
+    "79": "test_rename_into_prod_earns_no_opaque_exemption",
 }
 
 

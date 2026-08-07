@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 78
+rule: ASSERT_WEAKENED
+title: `git rm` of an unread data file is not repair evidence either
+origin: adversarial audit 2026-08-07 — v0.1.10 required a byte on the base
+origin2: side, which a deletion satisfies. Row 73's own argument, that a thing
+origin3: which was not there cannot repair behaviour that was, reads the same
+origin4: way for a thing that is no longer there. v0.1.6 already accepted it
+origin5: for deleted-but-parseable Python; non-Python deletions were left out.
+=== before: app/data/legacy_rates.csv ===
+rate,value
+old,1
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total(100, 3) == 270
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total(100, 3) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

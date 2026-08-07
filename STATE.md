@@ -1,6 +1,58 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-07 (v0.1.11: an audit of the same day's work, and the regression it found)
+Updated: 2026-08-07 (v0.1.12: five of the audit's rows closed, and a second shipped false positive)
+
+## The 2026-08-07 fifth round (v0.1.12): closing the audit, with two designs rejected
+
+The v0.1.11 audit left ten bypasses open. Five are closed here; the rest are
+open on purpose, and two proposed fixes were designed, adversarially reviewed
+and **thrown away** — which is the part of this round worth reading.
+
+**Closed, each reproduced by hand first.** Row 82: a `conftest.py` absent at
+base was never inspected at all — one new file with `collect_ignore =
+["test_billing.py"]` took a suite from `1 failed` to `no tests ran` with zero
+findings of any severity. Added units carry no delta and TEST_DISABLED needs
+one. Scoped to conftest, because a brand-new *test* file born
+`@pytest.mark.xfail` is a bug repro and must stay silent — measured, not
+assumed. Rows 78, 79, 80: the opaque exemption now needs a *modification of
+pre-existing production* — not a deletion, not a path this diff invented by
+renaming a doc onto it, and not opacity this diff manufactured by breaking a
+file's syntax. Row 76, partly: `set -o errexit` is errexit.
+
+**And the second shipped false positive.** That last one was not only a
+bypass. Moving errexit from the shebang to the long form — `#!/bin/sh -e`
+becoming `set -o errexit`, a change that makes a script *stricter* — was
+blocking at high with the message "a failing command no longer fails the
+script", over a script measured still exiting 1 on a failing test. v0.1.7
+passes the same diff. Refusing to read a spelling is not the same as that
+spelling being absent, and printing the second when you mean the first is a
+false statement in a blocking message. That is two shipped false positives
+found by adversarial review in one day, both stated in the tool's own voice.
+
+**Two designs rejected after review**, and this is the useful half. A bounded
+shell parser (statement lexing, errexit tracing, five weakening classes) was
+designed and killed: its decline set is attacker-chosen and published, so one
+`eval ""` disarms every rule in it, and it created three reproduced false
+positives on the way. A data-file repair credit with base-side reads was
+killed as unimplementable as specified. A third design's fix for row 75 was
+overridden twice — the author's version created a second role source that
+would have let the SPEC role table drift from `role_of` while its pin still
+passed, and the skeptic's version made `docs/CLAUDE.md` guardrail-critical.
+What shipped instead is a three-name glob for what `just` itself documents.
+
+**Corpus cost: nothing, and provably.** The opaque tightenings are bounded by
+today's earlier experiment — disabling that exemption *entirely* moved the
+block set by zero commits, so no subset of it can cost more. Zero corpus
+commits add a conftest; zero use long-form errexit; zero use the runner
+filenames added. Every check is targeted rather than a fifteen-minute sweep,
+and each is named in D-029.
+
+**Still open, deliberately**: rows 75 and 77 (filename and shell-dialect
+enumerations, honestly labelled as such), the rest of 76, 81, 83 and 84, and
+a false positive older than any of them — pytest's own documented `--runslow`
+recipe blocks at high, on v0.1.8 as well as today. The discriminator exists
+(the recipe *marks* items so the run reports skips; the cheat *removes* them
+so it reports nothing) but needs the hook's body in the IR.
 
 ## The 2026-08-07 fourth round (v0.1.11): audited, and one of the findings is ours
 
@@ -273,7 +325,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.11 |
+| version | v0.1.12 |
 | detectors | 17 |
 | human-commit block rate | 35/1800 = 1.94% |
 | adjudicated false positive | 20/1800 = 1.11% |

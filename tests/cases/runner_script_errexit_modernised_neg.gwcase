@@ -1,0 +1,22 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: moving errexit from the shebang to the long form makes the script stricter
+origin: a false positive this project shipped in v0.1.8 and an audit
+origin2: reproduced: `#!/bin/sh -e` -> `#!/bin/sh` + `set -o errexit` blocked
+origin3: at high saying "a failing command no longer fails the script", over a
+origin4: script that was measured still exiting 1 on a failing test. Refusing
+origin5: to read a spelling is not the same as that spelling being absent, and
+origin6: printing the second when you mean the first is a false statement in a
+origin7: blocking message.
+=== before: scripts/test.sh ===
+#!/bin/sh -e
+
+pytest -q
+=== after: scripts/test.sh ===
+#!/bin/sh
+set -o errexit
+set -o nounset
+
+pytest -q
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

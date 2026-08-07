@@ -406,11 +406,26 @@ def _errexit_on(data: bytes | None) -> bool:
             flags = words[1:]
         else:
             continue
-        for word in flags:
+        i = 0
+        while i < len(flags):
+            word = flags[i]
+            # `set -o errexit` / `set +o errexit`: the option name is a
+            # separate word, so the single-letter scan below saw neither an
+            # `e` in `-o` nor a flag in `errexit` and concluded errexit was
+            # never on. That is the spelling the Google shell style guide
+            # recommends, which made the most careful projects the least
+            # readable — and it printed "a failing command no longer fails
+            # the script" over a script that still exits 1 (audit 2026-08-07).
+            if word in ("-o", "+o") and i + 1 < len(flags):
+                if flags[i + 1] == "errexit":
+                    state = word == "-o"
+                i += 2
+                continue
             if word.startswith("-") and "e" in word.lstrip("-"):
                 state = True
             elif word.startswith("+") and "e" in word.lstrip("+"):
                 state = False
+            i += 1
     return state
 
 
@@ -691,7 +706,42 @@ def build_ir(
                 # cannot be the repair of behaviour that did — and if a new
                 # file genuinely implements a fix, the Python that reaches it
                 # changed too and supplies the evidence itself.
-                if change.before and (change.before or b"") != (change.after or b""):
+                # v0.1.10 spelled that as "was there a byte on the base
+                # side", which is weaker than the argument in three ways an
+                # audit then reproduced (rows 78-80). The exemption needs a
+                # *modification of something that was already production*:
+                #
+                #  - not a deletion. `git rm` of an unread data file bought
+                #    the exemption for a whole diff, and row 73's own
+                #    reasoning applies to removals word for word.
+                #  - the base-side path must have been production too. Rename
+                #    folding keeps the old blob as `before` while the role
+                #    comes from the new path, so `docs/rules.md` renamed to
+                #    `app/rules.csv` counted as pre-existing production the
+                #    diff had in fact just invented.
+                #  - not opacity this diff created. A prod `.py` that parsed
+                #    at base and does not parse at head is reported as
+                #    `skipped (unparseable)` in the same report; rewarding it
+                #    is rewarding the agent for breaking the reader.
+                #
+                # The cost of all three is bounded and known: re-sweeping the
+                # 1800-commit corpus with this exemption disabled *entirely*
+                # moved the block set by zero commits in all six repositories,
+                # so no subset of it can cost more than nothing here.
+                old_path = (change.old_path or path).replace("\\", "/")
+                self_inflicted = (
+                    is_python
+                    and before_parsed is not None
+                    and before_parsed.parse_ok
+                    and (after_parsed is None or not after_parsed.parse_ok)
+                )
+                if (
+                    change.before
+                    and change.after
+                    and change.before != change.after
+                    and config.role_of(old_path) == "prod"
+                    and not self_inflicted
+                ):
                     g.prod_opaque_change = True
         elif role == "guardrail":
             if path == ".greenwash/allow.toml":
