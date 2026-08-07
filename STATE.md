@@ -855,3 +855,58 @@ after every change, including the ones that "obviously" work.
 - Worktree snapshot is read-per-file, not the incremental index plan yet.
 - `_conftest_unit` watches a curated control list; exotic collection tricks
   are not covered.
+
+## Field integration, 2026-08-07 — out of sample, it does worse
+
+Three projects that were never in the tuning corpus (psf/requests,
+pallets/jinja, pydantic/pydantic) were integrated from scratch, swept, and
+adjudicated commit by commit, each report then re-run by an independent
+verifier. `docs/integrations.md` is the whole thing.
+
+**667 commits, 15 blocks, 11 false positives — 1.65%**, against the 1.11%
+measured on the six repositories the detectors were built against. Block rate
+2.25% against a published 1.94%. Zero engine errors in 667 commits, on a
+codebase with a Rust core and 7000-line test modules. It also caught a dead
+assertion psf/requests shipped for 497 days — a rewritten loop body that was a
+bare comparison expression, evaluated and discarded, which a human eventually
+found by opening an issue.
+
+The gap between 1.11% and 1.65% is the number to carry. It is not large and it
+is in the direction anyone would predict, which is the point: a precision
+figure measured by the people who wrote the detectors, on the corpus they
+tuned against, is optimistic by roughly half a percentage point here.
+
+**Eleven defects came out of it, and they are not fixed.** The load-bearing
+ones, each reproduced minimally:
+
+- **E6 scans added lines, not both sides.** Deleting `setup.cfg` and adding
+  `pyproject.toml` with the identical `testpaths` reports "test command
+  weakened" at high — as does *adding pytest configuration for the first
+  time*. Every PEP 621 migration in the ecosystem trips this. The same
+  one-sidedness means any later edit to a line already carrying a documented
+  `-k "not ..."` blocks forever.
+- **A test file split into thirty produces 130 high findings.** Relocation
+  credit needs byte-identical assertions; pydantic's split modernised the
+  bodies while keeping every test name, so nothing was lost and everything
+  escalated. Test-only diffs make `NO_PROD_CHANGE_IN_DIFF` fire on all of it.
+- **The README's own integration order self-blocks.** `hook install --agent
+  claude-code` writes `.claude/settings.json`; greenwash then rates that file
+  GUARDRAIL_TOUCHED at critical. Following the documented steps in the
+  documented order produces a blocking verdict on the tool's own artefact.
+- **The remediation printed on every finding does not work as printed.**
+  `greenwash allow <fp>` writes to the worktree; the allowlist is read from
+  the base side, so the next run blocks identically with no hint that the file
+  must be committed first.
+- **"Sub-second" does not survive contact.** 16-19 s on pydantic's largest
+  commits, ~0.7 s/commit sweeping. The perf gate calls `analyze()` with
+  in-memory changes and never touches git, so it cannot see 278 unbatched
+  `git cat-file` subprocesses — it is unrepresentative on both file size and
+  I/O.
+- **The opaque blanket is 20.3% on pydantic**, against 1.78% published. That
+  figure is a property of six pure-Python projects, not of the tool, and a
+  reader will carry it over. pydantic has a Rust core.
+
+Read that list next to the one from this morning. Every defect this project
+has found in itself in two days came from pointing something adversarial at
+it — an agent, an audit, or a stranger's repository. None came from re-reading
+the code.

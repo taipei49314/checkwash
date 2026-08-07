@@ -43,6 +43,14 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   production change in the same diff, judged at symbol level), so `fail_on =
   high` can gate merges without alert fatigue. Precision is measured against
   a public human-commit corpus and adjudicated commit by commit, not asserted.
+- **Out of sample, it does worse — and that is published too.** Three projects
+  that were never in the tuning corpus (requests, jinja, pydantic) were
+  integrated from scratch and adjudicated commit by commit: **667 commits, 15
+  blocks, 11 of them false positives — 1.65%, against the 1.11% measured on
+  the corpus the detectors were built against.** Zero engine errors. It also
+  caught a dead assertion requests had shipped for 497 days. The whole report,
+  including eleven defects it turned up in the tool and its own docs, is
+  [docs/integrations.md](docs/integrations.md).
 - Honest by design: what it cannot catch is documented in
   [THREATMODEL.md](THREATMODEL.md), not discovered by commenters — and
   [benchmarks/FAILURES.md](benchmarks/FAILURES.md) collects every known
