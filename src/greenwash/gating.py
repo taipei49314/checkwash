@@ -604,7 +604,18 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     if condition is None:
         return False
     searched = " ".join([m.text, m.guard or "", *_expansion_texts(condition, raw)])
-    if not any(tok in searched for tok in _COMPAT_TOKENS):
+    # The compat-token filter keeps the credit from becoming general skip
+    # amnesty for individual tests. A *suite-level collection control* is a
+    # different object: its guard is the whole justification, and the
+    # alternative to trusting a discriminating one is blocking every
+    # optional-dependency gate a project writes — `if find_spec("redis") is
+    # None: collect_ignore.append(...)` names no interpreter and no OS, and an
+    # adversarial audit caught this build blocking exactly that, on a PR that
+    # *added* the tests it was guarding. Still has to discriminate: an
+    # always-true guard is a disable wearing a condition.
+    if canonical != "conftest.collect_ignore" and not any(
+        tok in searched for tok in _COMPAT_TOKENS
+    ):
         return False
     # always true, or unverifiable: not a gate, a disable
     return _discriminates(condition, consts)
@@ -869,10 +880,24 @@ def apply_gates(
         # an unreadable prod file grants this credit diff-globally
         # (THREATMODEL row 68). A compatibility gate does explain it, and
         # still does: that branch is untouched below.
+        #
+        # Only when the control is **unguarded**. The first cut of this rule
+        # asked nothing about the guard and blocked a PR that added a backend,
+        # added its own tests, and gated them on `find_spec("redis")` — net
+        # tests disabled: zero, production changed in three files, verdict
+        # high (adversarial audit 2026-08-07, same day it shipped). A guard is
+        # the difference between "these tests cannot run here" and "these
+        # tests do not run any more".
+        added_markers = set(unit.delta.markers_added) if unit is not None and unit.delta else set()
+        after_markers = unit.after.markers if unit is not None and unit.after is not None else []
+        unguarded_control = any(
+            m.guard is None for m in after_markers if m.name in added_markers
+        )
         suite_control = (
             f.rule == "TEST_DISABLED"
             and roles.get(f.path) == "conftest"
             and (f.unit or "") == "<suite>"
+            and unguarded_control
         )
         if has_evidence and not suite_control:
             f.deescalators.append("REPAIR_EVIDENCE")
@@ -886,7 +911,15 @@ def apply_gates(
             f.deescalators.append("MILD_WEAKENING")
         else:
             f.severity = "high"
-            f.escalators.append("NO_PROD_CHANGE_IN_DIFF")
+            # Say the true reason. Refusing repair evidence and then printing
+            # "no production change in this diff" over a diff full of them is
+            # a false statement in a blocking message, which is the class of
+            # defect this project exists to catch (audit 2026-08-07).
+            f.escalators.append(
+                "COLLECTION_CONTROL_UNEXPLAINED"
+                if suite_control and has_evidence
+                else "NO_PROD_CHANGE_IN_DIFF"
+            )
 
         # E2 ORACLE_FREEZE
         if contract.oracle_freeze:

@@ -154,3 +154,31 @@ def test_undated_sections_carry_no_stale_numbers():
         "undated sections state numbers that are no longer true — date the heading if the "
         "paragraph is history, or fix the number:\n" + "\n".join(stale)
     )
+
+
+def test_readme_headline_numbers_match_the_harnesses():
+    """The README is the document most people read, so it gets the same pin.
+
+    STATE.md's table has been machine-checked since 2026-08-04; the README's
+    four headline numbers were still kept in step by hand, which is the
+    process that produced every drift this project has caught. Each is
+    recomputed from the sweeps and the adjudication, not compared to a stored
+    copy of itself.
+    """
+    total, blocked, opaque = _sweeps()
+    adj = json.loads(
+        (ROOT / "benchmarks" / "adjudication-2026-08-03.json").read_text(encoding="utf-8")
+    )
+    fp = sum(1 for v in adj["verdicts"] if v["category"] == "false_positive")
+    sc = sum(1 for v in adj["verdicts"] if v["category"] == "spec_correct")
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    expected = {
+        "block rate": f"{blocked} / {total} = {blocked / total:.2%}",
+        "false positives": f"**{fp} false positives ({fp / total:.2%})**",
+        "policy blocks": f"{sc} legitimate\n  policy blocks ({sc / total:.2%})",
+        "opaque share": f"**{opaque / total:.2%} of the corpus ({opaque}/{total}) never got a real analysis**",
+    }
+    missing = [f"{name}: expected README to contain {want!r}" for name, want in expected.items()
+               if want not in text]
+    assert not missing, "README numbers drifted from the harnesses:\n" + "\n".join(missing)

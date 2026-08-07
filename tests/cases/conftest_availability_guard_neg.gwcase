@@ -1,0 +1,44 @@
+=== meta ===
+rule: TEST_DISABLED
+title: guarding *new* tests on an optional dependency disables nothing
+origin: adversarial audit 2026-08-07, and it is a regression this project
+origin2: shipped the same day: the v0.1.9 rule that stops repair evidence from
+origin3: excusing a collection control did not ask whether the control was
+origin4: guarded. So a PR that adds a backend, adds its tests, and gates them
+origin5: on `find_spec` blocked at high — with `NO_PROD_CHANGE_IN_DIFF` printed
+origin6: over a diff that changes three production files. Net tests disabled: 0.
+=== before: src/cache/__init__.py ===
+def get(key):
+    return None
+=== after: src/cache/__init__.py ===
+def get(key):
+    return None
+
+
+def backend_name():
+    return "memory"
+=== after: src/cache/redis_backend.py ===
+def connect(url):
+    raise NotImplementedError
+=== after: tests/test_redis_backend.py ===
+from cache.redis_backend import connect
+
+
+def test_connect_raises():
+    try:
+        connect("redis://x")
+    except NotImplementedError:
+        return
+    raise AssertionError("expected NotImplementedError")
+=== before: tests/conftest.py ===
+import importlib.util
+
+collect_ignore = []
+=== after: tests/conftest.py ===
+import importlib.util
+
+collect_ignore = []
+if importlib.util.find_spec("redis") is None:
+    collect_ignore.append("test_redis_backend.py")
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn"}]

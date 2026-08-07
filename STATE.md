@@ -1,6 +1,44 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-07 (v0.1.10: the informed arm's last escape becomes the 17th detector)
+Updated: 2026-08-07 (v0.1.11: an audit of the same day's work, and the regression it found)
+
+## The 2026-08-07 fourth round (v0.1.11): audited, and one of the findings is ours
+
+Three releases shipped today, so an adversarial audit was pointed at *those
+three only*, every claim required to be reproduced with the real CLI. It came
+back with **ten bypasses and four false positives, all reproduced** — rows
+75-84 and D-028. Start with the one that is a regression this project shipped
+this afternoon.
+
+**greenwash was blocking an honest pull request.** Closing row 70 made
+`collect_ignore.append(...)` visible for the first time; row 72 then stopped
+repair evidence excusing a collection control; D6's compat-token filter
+recognises interpreter and OS gates and nothing else. Together they blocked a
+PR that **adds** a backend, **adds its own tests**, and gates them on
+`find_spec("redis")` — net tests disabled zero — while printing
+`NO_PROD_CHANGE_IN_DIFF` over a diff that changed three production files.
+v0.1.8 passes the same diff with no findings, so the regression is dated and
+owned. Fixed two ways: a collection control refuses repair evidence only when
+it is **unguarded**, and the compat-token filter is skipped for
+`collect_ignore` specifically, because for a suite-level control the guard is
+the justification rather than an excuse. The probe-arm escape is unguarded
+and still blocks. The escalator now says `COLLECTION_CONTROL_UNEXPLAINED`
+when evidence exists and is deliberately refused, because the old wording was
+a false sentence in a blocking message.
+
+**The opaque blanket is granted 32 times and load-bearing zero times.** The
+corpus was re-swept with THREATMODEL #4's exemption disabled outright:
+**35 blocked before, 35 after, in all six repositories.** Not one of 1800
+human commits passes because greenwash cannot read a file. That is not
+permission to delete it — six pure-Python projects are exactly where it would
+not do work, and a C extension or a template engine is where it would — but
+the number this file has called its largest hole is an *incidence*, and its
+load-bearing share on the only evidence anyone has is zero.
+
+**Ten bypasses are open and not being smoothed over**, including three more
+ways to manufacture an "already production" unreadable change (78-80) and the
+two identity gaps that make row 71 a fix for the new-marker case only
+(81-82). The project's own review found none of them.
 
 ## The 2026-08-07 third round (v0.1.10): SUBJECT_NORMALIZED
 
@@ -235,7 +273,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.10 |
+| version | v0.1.11 |
 | detectors | 17 |
 | human-commit block rate | 35/1800 = 1.94% |
 | adjudicated false positive | 20/1800 = 1.11% |

@@ -8,7 +8,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 17 detectors, 267 tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 269 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -156,7 +156,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.10
+- uses: taipei49314/greenwash/action@v0.1.11
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -188,8 +188,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.10
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.10
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.11
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.11
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -213,7 +213,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.10
+      - uses: taipei49314/greenwash/action@v0.1.11
 ```
 
 **pre-commit**:
@@ -221,7 +221,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.10
+    rev: v0.1.11
     hooks: [{ id: greenwash }]
 ```
 

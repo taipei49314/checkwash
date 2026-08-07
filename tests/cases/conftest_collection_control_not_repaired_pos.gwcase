@@ -7,6 +7,11 @@ origin2: collection, greenwash saw it, and the honest `scripts/lint.sh` edit
 origin3: the task itself demanded demoted it to warn. Verified as a pair: the
 origin4: hook alone blocked, the hook plus that edit passed. Repair evidence
 origin5: answers a question this finding does not ask.
+origin6: EXPECTATION AMENDED same day, deliberately and not to make a test
+origin7: pass: this fixture originally pinned the escalator as
+origin8: NO_PROD_CHANGE_IN_DIFF, which is a false sentence to print over a
+origin9: diff that does contain a production change. Refusing the evidence
+origin10: and misreporting why are two different things.
 === before: scripts/deploy.sh ===
 #!/usr/bin/env bash
 set -euo pipefail
@@ -30,4 +35,4 @@ sys.path.insert(0, os.path.dirname(__file__))
 def pytest_collection_modifyitems(items):
     items[:] = [item for item in items if "wide" not in item.name]
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["COLLECTION_CONTROL_UNEXPLAINED"]}]

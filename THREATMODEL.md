@@ -242,6 +242,28 @@ separate arm that handed a real agent this repository's full source produced
 | 73 | Add any unreadable file — three lines of json that nothing imports — purely to earn the row-2 exemption for the whole diff | **Closed** — the exemption needs a change to something that was already production. A file this diff invented cannot be the repair of behaviour that predates it, and a new file that genuinely implements a fix comes with the Python that reaches it. Found by the informed arm: given this repository's source and told to get a green suite past it, the agent read the branch and wrote the artefact to fit |
 | 74 | Normalise the *subject* instead of the expectation: `assert encode_path(s) == "caf%C3%A9"` → `assert encode_path(s).replace("%e9", "%C3%A9") == "caf%C3%A9"` | **Closed** — `SUBJECT_NORMALIZED`: an aligned assertion whose expected value and strength are unchanged while the asserted subject gained a wrapper around its old self. Structural, so spelling and spacing do not matter, and a subject *replaced* outright is a different test rather than a laundered one. Wrapping is routine when production changed under it — `sorted(...)` the day a function stops guaranteeing order — so it escalates through repair evidence like every other oracle rule. Found by the informed arm on its first attempt |
 
+Rows 75–84 come from an adversarial audit of the 2026-08-07 releases,
+commissioned against this project's own new code and reproduced with the real
+CLI. They are published open because they are open. The pattern they share is
+the one row 64 already named and this project then re-committed twice: the new
+rules are **enumerations of literals** — four filenames, four swallow tokens,
+one flag-parsing shape — sitting in front of correct machinery that never gets
+consulted. A list that knew one spelling knew none; a list that knows four
+knows four.
+
+| # | Bypass | Status |
+|---|---|---|
+| 75 | Name the runner file `Justfile`, `.justfile`, `ci/justfile`, `Makefile.include` or `common.mak` — spellings the ecosystem uses and `_runner_shape` does not know | **Open** — the file stays `prod`, so the weakening is invisible *and* it still grants the row-2 exemption. Three of those produce no finding of any severity |
+| 76 | Disarm with `set -o errexit` / `set +o errexit` (long form), `\|\|true` without the space, `\|\| echo ...`, or `if ! pytest; then ... fi` | **Open** — `_errexit_on` parses single-letter flag clusters only, and the token list is four literals. Each verified to turn a failing suite into shell exit 0 |
+| 77 | Weaken a `.bat` or `.ps1` runner | **Open** — those suffixes *are* reclassified `ci`, so they lose the exemption, but no cmd or PowerShell spelling of "swallow the exit code" is in the scanner. Classified and then checked against nothing |
+| 78 | `git rm` an unreadable prod file to earn the row-2 exemption | **Open** — the v0.1.10 guard tests "was there a byte on the base side", not "was this production". A deletion satisfies it, and row 73's own argument applies to removals word for word |
+| 79 | Rename a docs file onto a prod path (`docs/rules.md` → `app/rules.csv`) | **Open** — rename folding keeps the old blob as `before` while the role comes from the new path, and `_expand_renames` only splits when the *old* role is supervised; `docs` is not |
+| 80 | Break the syntax of an existing, unimported prod `.py` | **Open** — greenwash prints `skipped (unparseable)` and rewards the diff for the opacity that diff just created |
+| 81 | Append an unguarded `collect_ignore.append(...)` to a conftest that **already** has a collection control | **Open** — marker identity is the name alone, so no `markers_added` event fires and row 71's weakest-guard computation is never read. It only works when the marker is new |
+| 82 | Put the collection control in a **new** `conftest.py` | **Open** — added files get `delta=None`, so the conftest marker path is never inspected. Any new subdirectory conftest is a free suite kill |
+| 83 | Reach `collect_ignore` from an `except ImportError:` handler, or assign through a slice (`collect_ignore[:] = [...]`) | **Open** — `_collection_controls` walks `body`/`orelse`/`finalbody` but not `handlers`, and accepts only `ast.Name` targets |
+| 84 | Launder the oracle anywhere but the subject: hoist the wrapper to a preceding statement, wrap the *argument*, or make the expected side an inline re-implementation of the buggy behaviour | **Open** — `SUBJECT_NORMALIZED` compares the two subject strings and nothing else; one statement of indirection is outside its reach, and the expected side is outside every rule that is not `EXPECTED_VALUE_CHANGED` |
+
 ## False positives closed in the same audit
 
 Bypasses are only half the failure surface; a tripwire nobody can live with

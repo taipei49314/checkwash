@@ -658,3 +658,62 @@ that hides the bug is the same cheat with an extra indirection, and it is
 caught only because the subject is still wrapped — swap the subject for a
 call that never mentions `f(x)` and this rule sees nothing, which is
 THREATMODEL #7 again. Every rule in this project is a tripwire, not a proof.
+
+## D-028 (2026-08-07): the audit of the same day's work, and the regression it found
+
+Three releases shipped on 2026-08-07. An adversarial audit was then run
+against *those three releases only*, with every claim required to be
+reproduced through the real CLI. It came back with ten bypasses and four
+false positives, all reproduced (THREATMODEL 75–84). Two conclusions, and
+the order matters.
+
+**First, a regression this project shipped and then caught.** Closing row 70
+made `collect_ignore.append(...)` visible for the first time. Row 72 then
+stopped repair evidence from excusing a collection control. Together, and
+with D6's compat-token filter refusing to recognise anything that is not an
+interpreter or OS gate, greenwash began **blocking a pull request that adds a
+backend, adds its own tests, and gates them on `find_spec("redis")`** — net
+tests disabled: zero — and printing `NO_PROD_CHANGE_IN_DIFF` over a diff that
+changed three production files. Verified against v0.1.8, which passes the
+same diff with no findings at all: the regression is this project's, from
+this afternoon.
+
+Two fixes, both narrow:
+
+- A suite-level collection control refuses repair evidence only when it is
+  **unguarded**. A guard is the difference between "these tests cannot run
+  here" and "these tests do not run any more". The probe-arm escape is an
+  unguarded `pytest_collection_modifyitems` and still blocks.
+- The compat-token filter is skipped for `conftest.collect_ignore`
+  specifically. For an individual test's skip marker the filter stops the
+  credit becoming general amnesty; for a suite-level control the guard *is*
+  the justification, and the alternative is blocking every
+  optional-dependency gate a project writes. It must still discriminate — an
+  always-true guard is a disable wearing a condition.
+
+And the escalator now says the true thing. `NO_PROD_CHANGE_IN_DIFF` printed
+over a diff full of production changes is a false sentence in a blocking
+message; refusing the evidence and misreporting why are two different
+failures. Where evidence exists and is deliberately refused, the escalator is
+`COLLECTION_CONTROL_UNEXPLAINED`. The fixture that pinned the old wording was
+amended, deliberately, with the reason written into its header — not to make
+a test pass.
+
+**Second, the opaque blanket is granted 32 times and load-bearing zero
+times.** The whole corpus was re-swept with THREATMODEL #4's exemption
+disabled outright. Block set: **35 before, 35 after, in every one of the six
+repositories.** Not one of 1800 human commits passes because greenwash cannot
+read a file; every exemption it grants goes to a commit that passes on its
+own merits. That does not mean the blanket is safe to delete — these are six
+pure-Python projects, and a repository with a C extension or a template
+engine is exactly where it would start doing work. It means the number this
+project has published as its largest hole is an *incidence*, and the
+load-bearing share of it, on the only evidence anyone has, is zero.
+
+The audit's remaining findings are not fixed here and are not being smoothed
+over. Ten bypasses stand open in the table, including three more ways to
+manufacture an "already production" unreadable change (78–80) and the two
+identity gaps that make row 71 a fix for the new-marker case only (81–82).
+Whoever takes this next should start there, and should notice that the
+project's own review found none of them — the same sentence STATE has been
+carrying since 2026-08-02, now with two more data points.
