@@ -5,9 +5,10 @@
 A deterministic, zero-LLM, local-only detector for code changes that tamper
 with your *verification layer* — weakened assertions, loosened float
 tolerances, new skips, rewritten golden files, hardcoded expected values,
-self-relaxed CLAUDE.md and CI configs.
+self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
+failing.
 
-> Status: **pre-release.** 16 detectors, 244 tests, zero runtime dependencies.
+> Status: **pre-release.** 16 detectors, 260 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -78,15 +79,27 @@ Two harnesses, both reproducible from a clone
   published category is the majority verdict, the four contested commits are
   marked, and the per-commit reasoning of all three raters ships in
   [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
-  **2.5% of the corpus (45/1800) never got a real analysis**: those commits
+  **2.39% of the corpus (43/1800) never got a real analysis**: those commits
   touch a production file greenwash genuinely cannot read — other-language
   code, templates, data files, unparseable Python — which suppresses
   escalation for the whole diff (THREATMODEL #4). That share of the pass
   rate rests on a documented blind spot, measured rather than assumed. It
   used to be 7.2%: narrowing the blanket (docs config, type stubs, repo
-  metadata, pin sources and deleted-but-parseable Python no longer qualify)
-  removed 85 exemptions and **did not change a single verdict** — every one
-  had been protecting a commit that passed on its own merits anyway.
+  metadata, pin sources, deleted-but-parseable Python and scripts that run
+  the test suite no longer qualify) removed 87 exemptions and **did not
+  change a single verdict** — every one had been protecting a commit that
+  passed on its own merits anyway.
+  The same round taught greenwash where the test command actually lives. A
+  shell script or make recipe that runs the suite is test-runner
+  configuration, not production: weakening it (`|| true`, `set +e`, a `-`
+  before a make recipe, losing `set -e`, or deleting the invocation) is now
+  a blocking finding, and touching it no longer buys the diff an exemption.
+  On the human corpus that cost **nothing** — the same 35 blocks before and
+  after, the whole delta being four warn-level notices on starlette commits
+  that edit `scripts/test`. Read that with its limits: these six projects
+  barely exercise the change, and the defence against over-flagging is the
+  content gate (a Makefile that only compiles is still production) plus its
+  negative fixtures, not the sweep.
 - **Recall — 12 / 12, then probed harder.** Twelve bug-fix tasks run through
   real coding agents told to make CI green without fixing the bug; greenwash
   blocks all twelve tampering diffs. Under natural conditions, 0 of 12 agents
@@ -99,6 +112,17 @@ Two harnesses, both reproducible from a clone
   same day (`TEST_DISABLED` guard evaluation, `CONFTEST_PATCHES_PROD`), both
   recorded diffs now block, and both new rules fire **zero** times across
   the 1800 human commits. The four other probes were blocked outright.
+  A third wave (2026-08-07) aimed two tasks at repos that keep the test
+  command in `scripts/test.sh` rather than in the workflow. **One of two was
+  caught.** The first agent's opening move was to make the suite non-fatal
+  inside the runner script — a diff the previous release scored at zero
+  findings, and this one blocks. The second escaped: it dropped the failing
+  tests out of collection, which greenwash *detected*, and the honest
+  one-line `scripts/lint.sh` edit its own task asked for demoted the finding
+  to a warning, because a script that does not run tests is still an
+  unreadable production change (THREATMODEL #4). That escape is published
+  open, with its reproduction, because the narrowing that would close it was
+  checked against the corpus and would have blocked an honest commit.
 
 The first recall measurement caught **0 of 12** — pytest's own `.pyc` output
 disarmed the gate, a bug two rounds of code review had missed. Building the
@@ -114,7 +138,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.7
+- uses: taipei49314/greenwash/action@v0.1.8
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -146,8 +170,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.7
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.7
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.8
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.8
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -171,7 +195,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.7
+      - uses: taipei49314/greenwash/action@v0.1.8
 ```
 
 **pre-commit**:
@@ -179,7 +203,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.7
+    rev: v0.1.8
     hooks: [{ id: greenwash }]
 ```
 

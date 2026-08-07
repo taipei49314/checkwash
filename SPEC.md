@@ -25,14 +25,35 @@ Paths are normalized to forward slashes before matching. Default role globs
 | conftest  | `**/conftest.py` |
 | test      | `tests/**`, `**/test_*.py`, `**/*_test.py` |
 | guardrail | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.claude/**`, `.greenwash/**` |
-| ci        | `.github/workflows/**`, `.gitlab-ci.yml`, `.pre-commit-config.yaml` |
+| ci        | `.github/workflows/**`, `.gitlab-ci.yml`, `.pre-commit-config.yaml`, `pytest.ini`, `tox.ini`, `setup.cfg`, `**/pyproject.toml`, `.circleci/**`, `.buildkite/**`, `**/Jenkinsfile`, `.travis.yml`, `.drone.yml`, `appveyor.yml`, `azure-pipelines.yml`, `bitbucket-pipelines.yml`, `noxfile.py`, `justfile` |
 | snapshot  | `**/__snapshots__/**`, `**/golden/**`, `**/*.golden`, `**/*.snap` |
-| lockfile  | `poetry.lock`, `uv.lock`, `package-lock.json`, `pnpm-lock.yaml`, `requirements*.txt` |
-| docs      | `**/*.md`, `**/*.rst` (that are not guardrail) |
+| lockfile  | `poetry.lock`, `uv.lock`, `package-lock.json`, `pnpm-lock.yaml`, `requirements*.txt`, `requirements*.in` |
+| docs      | `**/*.md`, `**/*.rst`, `**/README` |
 | prod      | everything else |
 
-Note: `Makefile` is deliberately **not** classified as `ci` by default
-(false-positive control; teams can opt in via config).
+Roles are resolved in the order guardrail → ci → snapshot → lockfile →
+conftest → test → docs, so an earlier role wins: `.claude/settings.json` is
+guardrail, not prod. A `.md` file that is also a guardrail path is guardrail.
+This table is the whole default set, and `tests/test_spec_roles_pinned.py`
+fails if it drifts from `config.DEFAULT_ROLES` — it had, silently, between
+2026-08-02 and 2026-08-07: the pytest-configuration globs were added to the
+code and never to this table.
+
+**One role is decided by content, not by path.** A `prod` file is
+reclassified `ci` when it is *shaped* like a runner script — a `.sh`, `.bash`,
+`.zsh`, `.ps1`, `.bat`, `.cmd` or `.mk` suffix, a `Makefile`/`makefile`/
+`GNUmakefile` basename, or a shell shebang (`sh`, `bash`, `zsh`, `dash`,
+`ksh`, `ash`, including via `env`) — **and** either side of the diff actually
+invokes a test runner. Python files are never reclassified this way;
+`noxfile.py` is covered by path instead.
+
+The discriminator has to be content because the filename cannot separate the
+two cases: a Makefile whose `test:` recipe runs pytest *is* the test command,
+while a Makefile that compiles an extension is production code whose edit is
+real repair evidence. Classifying by name in either direction is a measured
+error — as `prod`, weakening the runner was invisible and touching it granted
+the diff the §THREATMODEL-4 opaque exemption (rows 61–67); as `ci`, every
+build Makefile would stop being repair evidence.
 
 ## 2b. Collection semantics
 
@@ -117,7 +138,7 @@ detectors can only be disabled whole.
 | `EXPECTED_VALUE_CHANGED` | an aligned assertion keeps its form and strength but its expected literal was rewritten |
 | `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` (JS forms in v0.2) added |
-| `CI_WORKFLOW_TOUCHED` | ci-role file changed (CI workflows **and** pytest configuration — `pytest.ini`, `tox.ini`, `setup.cfg`, `pyproject.toml`); test command weakened → high. Deleting a workflow counts as weakening only if that workflow ran tests |
+| `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `tox.ini`, `setup.cfg`, `pyproject.toml`) and content-classified runner scripts (§2); test command weakened → high. Weakening covers added lines carrying a swallow token (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`, pytest collection knobs), a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests; deleting a runner script or a config file does not — that is consolidation until proven otherwise |
 | `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions) |
 | `IMPORT_UNRESOLVED` | new import fails to resolve against lockfile / site-packages |
 | `SCOPE_DRIFT` | changed file outside contract globs (disabled without a manifest) |

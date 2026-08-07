@@ -1,0 +1,17 @@
+=== meta ===
+bypass: 64
+rule: CI_WORKFLOW_TOUCHED
+title: `set +e` above the suite is the same move as `|| true` after it
+origin: probe 2026-08-07 — the shell has more than one spelling for "ignore
+origin2: the exit code", and a token list that knows one of them knows none
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -e
+pytest -q
+=== after: scripts/test.sh ===
+#!/usr/bin/env bash
+set -e
+set +e
+pytest -q
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

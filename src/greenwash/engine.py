@@ -233,6 +233,11 @@ _TEST_RUNNER_TOKENS = (
 _CI_WEAKENING_TOKENS = (
     "continue-on-error: true",
     "|| true",
+    # The shell has more than one spelling for "ignore the exit code", and a
+    # list that knows one of them knows none of them (probe 2026-08-07).
+    "|| :",
+    "|| exit 0",
+    "set +e",
     "--ignore=",
     "--ignore ",
     "--deselect",
@@ -319,11 +324,134 @@ def _runs_tests(data: bytes | None) -> bool:
     return any(token in text for token in _TEST_RUNNER_TOKENS)
 
 
+_RUNNER_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd", ".mk")
+_RUNNER_SCRIPT_BASENAMES = frozenset({"Makefile", "makefile", "GNUmakefile"})
+_SHELL_INTERPRETERS = frozenset({"sh", "bash", "zsh", "dash", "ksh", "ash"})
+
+
+def _shell_shebang(data: bytes | None) -> bool:
+    """Does this file start with a shell shebang?
+
+    The two corpus projects that keep their suite in a script (httpx,
+    starlette) both call it `scripts/test` with no extension, so the shebang
+    is the only shape available. A python shebang does not count: a prod
+    module that imports pytest is production code, not runner config.
+    """
+    if not data or not data.startswith(b"#!"):
+        return False
+    # First 200 bytes only: a shebang is short, and an unsplit binary blob
+    # should not be decoded whole to answer this (perf gate, SPEC §10).
+    words = data[:200].split(b"\n", 1)[0].decode("utf-8", errors="replace")[2:].strip().split()
+    if not words:
+        return False
+    interp = words[0].rsplit("/", 1)[-1]
+    if interp == "env" and len(words) > 1:
+        interp = words[1].rsplit("/", 1)[-1]
+    return interp in _SHELL_INTERPRETERS
+
+
+def _runner_shape(path: str, before: bytes | None, after: bytes | None) -> bool:
+    """Is this file shaped like a shell script or a make recipe file?
+
+    Shape alone decides nothing — `_is_runner_script` adds the content gate —
+    but it is what scopes the shell-specific weakenings (errexit, "the suite
+    is gone") away from yaml and ini files, where they mean nothing.
+    """
+    if path.endswith(".py"):
+        return False
+    base = path.rsplit("/", 1)[-1]
+    return (
+        path.endswith(_RUNNER_SCRIPT_SUFFIXES)
+        or base in _RUNNER_SCRIPT_BASENAMES
+        or _shell_shebang(before)
+        or _shell_shebang(after)
+    )
+
+
+def _is_runner_script(path: str, before: bytes | None, after: bytes | None) -> bool:
+    """Is this multi-purpose file the project's test command?
+
+    Classified by *content*, not by name. A Makefile that runs pytest is
+    test-runner configuration and weakening it is tampering; a Makefile that
+    compiles a C extension is production, and its edit is genuine repair
+    evidence for a test that changed with it. Filename alone cannot tell
+    those apart, and guessing by filename would have invented false
+    positives in every extension project.
+
+    Python is excluded outright (`noxfile.py` is covered by path instead):
+    a first-party pytest plugin lives in `src/` and mentions every runner
+    token there is.
+    """
+    # `before` too: a script that stops running the suite in this very diff
+    # is the interesting case, not an excluded one.
+    return _runner_shape(path, before, after) and (_runs_tests(before) or _runs_tests(after))
+
+
+def _errexit_on(data: bytes | None) -> bool:
+    """Would a failing command abort this script?
+
+    Tracks `set -e` / `set +e` and the flags on the shebang itself
+    (`#!/bin/sh -e`, which is how httpx and starlette arm theirs). Last
+    setting wins, exactly as the shell reads it.
+    """
+    if not data or len(data) > 1_000_000:
+        return False
+    state = False
+    for line in data.decode("utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        words = stripped.split()
+        if stripped.startswith("#!"):
+            flags = words[1:]
+        elif words[:1] == ["set"]:
+            flags = words[1:]
+        else:
+            continue
+        for word in flags:
+            if word.startswith("-") and "e" in word.lstrip("-"):
+                state = True
+            elif word.startswith("+") and "e" in word.lstrip("+"):
+                state = False
+    return state
+
+
+def _make_ignores_error(line: str) -> bool:
+    """A make recipe prefixed with `-` reports success whatever it does.
+
+    Recipes are tab-indented — YAML forbids tabs for indentation — so the tab
+    is what keeps this from firing on every `- run: pytest` step in a
+    workflow. `@-` and `-@` are both valid orderings.
+    """
+    if not line.startswith("\t"):
+        return False
+    body = line[1:].lstrip("@")
+    return body.startswith("-") and not body[1:2].isspace() and body[1:2] != ""
+
+
 def _scan_ci_weakening(g: DiffGlobals, path: str, before: bytes | None, after: bytes | None) -> None:
     for line in _added_lines(before, after):
         lowered = line.lower()
-        if any(token in lowered for token in _CI_WEAKENING_TOKENS):
+        if any(token in lowered for token in _CI_WEAKENING_TOKENS) or (
+            _make_ignores_error(line) and any(t in lowered for t in _TEST_RUNNER_TOKENS)
+        ):
             g.ci_weakening_lines.append((path, line.strip()[:200]))
+    # The two weakenings that a scan of *added* lines can never see, both
+    # meaningful only in a shell script — so a yaml or ini file, where
+    # neither idea applies, is not judged on them. `after` truthy, not just
+    # non-None: a deleted or emptied script has no commands left to be
+    # lenient about, and removal is the consolidation case this project
+    # deliberately does not escalate.
+    if not (after and _runner_shape(path, before, after)):
+        return
+    if _errexit_on(before) and not _errexit_on(after):
+        # `#!/bin/sh -e` -> `#!/bin/sh` removes the only reason a failing
+        # pytest fails the script, and adds no line worth scanning.
+        g.ci_weakening_lines.append((path, "errexit removed: a failing command no longer fails the script"))
+    if _runs_tests(before) and not _runs_tests(after):
+        # Deleting the invocation is the same gate removal as weakening it,
+        # and quieter: the pipeline still calls a script that still exits 0.
+        # Swapping one runner for another (pytest -> nox) keeps the token and
+        # earns nothing, which is the consolidation this must not punish.
+        g.ci_weakening_lines.append((path, "the test suite is no longer invoked by this script"))
 
 
 def _classify_allowlist_change(before: bytes | None, after: bytes | None) -> list[str] | None:
@@ -376,6 +504,13 @@ def build_ir(
         if is_artifact(path):
             continue  # generated output is not evidence of anything
         role = config.role_of(path)
+        if role == "prod" and _is_runner_script(path, change.before, change.after):
+            # The test command lives wherever the project keeps it. As prod
+            # this file was unreadable, which meant editing it both hid a
+            # weakened command *and* granted the whole diff the THREATMODEL #4
+            # opaque exemption — one line of `scripts/test.sh` turned a
+            # blocking assertion weakening into a warn (probe 2026-08-07).
+            role = "ci"
         is_python = path.endswith(".py")
 
         before_parsed: ParsedFile | None = None

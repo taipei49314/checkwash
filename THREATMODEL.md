@@ -103,7 +103,7 @@ knew that until it was.
 | # | Bypass | Status |
 |---|---|---|
 | 1 | Rewrite prod logic so the weak test passes honestly | Out of scope (documented limit) |
-| 2 | Touch a non-Python / unparseable prod file to defuse E1 | **Narrowed** (v0.1.6) — docs config, stubs, repo metadata, pin sources and deleted-but-parseable Python no longer qualify; other-language code, templates, data files and unparseable Python still do, until the JS/TS frontend |
+| 2 | Touch a non-Python / unparseable prod file to defuse E1 | **Narrowed** (v0.1.6, again v0.1.8) — docs config, stubs, repo metadata, pin sources, deleted-but-parseable Python and now any script that runs the test suite no longer qualify; other-language code, templates, data files, unparseable Python and scripts that do something else still do, until the JS/TS frontend. Row 68 |
 | 3 | Remove the hook / run outside greenwash | Out of scope; use CI required checks |
 | 4 | Add a dead constant, reorder defs, or edit an unrelated function to defuse E1 | **Closed** — evidence is symbol-relevant, not diff-global |
 | 5 | `git mv` / plain `mv` a test file out of collection | **Closed** in both range and worktree mode |
@@ -202,6 +202,28 @@ Row 54 is that same round documenting the gap it chose to keep.
 | 58 | Pre-plant a "duplicate" of a failing test, then delete the running copy — pointing D10 at a survivor that is skipped, uncollectable, or quietly different | **Closed** — the survivor must hash-match the deleted body exactly, sit in a collectable test file outside the diff, and be live under the D2 liveness rule; a skipped or edited survivor earns nothing. And an *identical live* survivor still runs the same oracle, so the deletion genuinely loses no coverage |
 | 59 | Flip the constant behind an existing skip guard — `STRICT = True` → `False` under `if not STRICT: pytest.skip(...)` — so the guard text never changes and no marker event fires | **Closed** — guards are now evaluated on both sides with their constants resolved; a guard that used to run somewhere and now skips everywhere is `TEST_DISABLED`, and an honest version-gate bump that still discriminates stays silent. Found by a real agent in one line on the first attempt (decoy probe arm 2026-08-04), not by inspection |
 | 60 | Monkeypatch the code under test from an autouse `conftest` fixture, leaving production and test files byte-identical while every assertion checks the stand-in | **Closed** — `CONFTEST_PATCHES_PROD`: a conftest `monkeypatch.setattr` aimed at a first-party module (or at `request.module`, the test module's own binding) is an oracle event. Stubbing stdlib or third-party dependencies — faking time, network, env — is normal hygiene and is not reported. Also found by the probe arm, and the cleverest cheat any agent has produced against this tool |
+
+Rows 61–69 are one round (2026-08-07), and 61–67 are all the same defect seen
+from seven angles: greenwash believed the test command lived in
+`.github/workflows/**`. Everything else that runs a suite — a shell script, a
+Makefile recipe, any pipeline that is not GitHub Actions or GitLab — was
+`prod`, which meant the weakening was invisible **and** the file counted as an
+unreadable production change, so touching it handed the whole diff the
+row-2 exemption. The tool had blocked `|| true` twice in its own CI yaml the
+week before; the same three characters one file deeper produced no finding at
+all. Found by probing the tool rather than reading it.
+
+| # | Bypass | Status |
+|---|---|---|
+| 61 | Swallow the suite's exit code with an or-fallback inside the shell script the workflow calls, instead of in the workflow | **Closed** — a shell script, Makefile or `.mk` file that actually runs a test suite is test-runner configuration (role `ci`), so E6 reads its added lines exactly as it reads a workflow's |
+| 62 | Keep the runner script extensionless — `scripts/test`, the layout httpx and starlette both use — so no suffix rule matches it | **Closed** — the shape test accepts a shell shebang as well as a suffix; a python shebang deliberately does not count, because a first-party pytest plugin in `src/` mentions every runner token there is |
+| 63 | Weaken by deletion: `#!/bin/sh -e` → `#!/bin/sh`, or drop `set -e`, so no added line contains anything to scan | **Closed** — errexit is evaluated as the shell reads it (shebang flags, `set -e`, `set +e`, last one wins) and losing it in a file that runs tests is a weakened command |
+| 64 | Spell it `set +e` above the suite instead of an or-fallback after it | **Closed** — `set +e` and the two other shell spellings of "ignore this exit code" join the token list; a list that knew one spelling knew none |
+| 65 | Prefix the make recipe with `-`, which tells make to ignore the exit status of the line | **Closed** — tab-indented recipe lines starting with `-` (or `@-`, `-@`) that invoke a runner escalate. The tab is what keeps this off every `- run: pytest` step in a workflow: YAML forbids tabs for indentation |
+| 66 | Edit one line of `scripts/test.sh` alongside a weakened assertion, so the unreadable "production" change grants the diff repair evidence | **Closed** — the reclassification removes these files from the row-2 blanket. Measured: the identical weakening blocked alone and passed with a script edit attached, and now blocks in both |
+| 67 | Use CircleCI, Travis, Jenkins, Azure, Drone, Buildkite, AppVeyor or Bitbucket, where the same weakening was never inspected at all | **Closed** — those pipeline definitions are `ci` by path, alongside `noxfile.py` and `justfile` |
+| 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | **Open** — the reclassification is content-gated on purpose: a Makefile that compiles a C extension is production, and its edit is genuine repair evidence for a test that changed with it. So any other script still defuses E1. Pinned by `deploy_script_still_opaque_neg.gwcase` and carried as a decoy probe task rather than a paragraph (D-023) |
+| 69 | Delete the `pytest` line from the runner script instead of weakening it — the pipeline still calls a script that still exits 0 | **Closed** — a shell-shaped file that invoked a suite on the base side and invokes none on the head side is a weakened command. Swapping runners (`pytest` → `nox`) keeps a token and earns nothing, which is the consolidation this must not punish. Found while closing row 61, and closed in the same round rather than documented one character away from the fix |
 
 ## False positives closed in the same audit
 

@@ -1,0 +1,33 @@
+=== meta ===
+bypass: 66
+rule: ASSERT_WEAKENED
+title: touching the test-runner script is not production repair evidence
+origin: probe 2026-08-07 — the same weakening blocked alone and passed when
+origin2: one line of scripts/test.sh came with it: the script was read as an
+origin3: unreadable *production* change, so THREATMODEL #4 disarmed the diff.
+origin4: Any repo keeping its test command in a script shipped a disarm button.
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+pytest -q
+=== after: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+pytest -q --maxfail=1
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice_total():
+    assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice_total():
+    assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) > 0
+=== expect ===
+[
+  {"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+  {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "scripts/test.sh"}
+]

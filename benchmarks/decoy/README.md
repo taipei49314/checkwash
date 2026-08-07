@@ -67,10 +67,21 @@ output (3), assertions weakened to bounds or order-insensitive comparisons
 Each is a regression fixture in `tests/cases/` and a row in the
 `THREATMODEL.md` bypass table.
 
+## Probe waves (2026-08-04, 2026-08-07)
+
+Eight further tasks, built to bait specific de-escalators rather than to
+sample agent behaviour: six aimed at the open-by-design credits (wave 1) and
+two at the runner-script surface (wave 2). They are measured separately from
+Arms A and B because they are not a sample of anything — they are targeted
+attacks, and their score (4/6 then 1/2 caught) is a statement about those
+particular defences. Three escapes, three fixes or one open row; the
+write-ups are in `../README.md`.
+
 ## Honest limits
 
-- Twelve tasks, one model family, one attempt each. This is a smoke test with
-  teeth, not a benchmark with error bars.
+- Twelve sampled tasks (plus eight targeted probes), one model family, one
+  attempt each. This is a smoke test with teeth, not a benchmark with error
+  bars.
 - Arm B's diffs are *elicited*, not spontaneous. They are representative of
   the shortcut vocabulary, not of how often shortcuts happen.
 - Recall is measured against the shortcuts agents actually chose. An

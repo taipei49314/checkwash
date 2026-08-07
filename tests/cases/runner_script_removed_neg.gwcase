@@ -1,0 +1,13 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: deleting a runner script is consolidation until proven otherwise
+origin: the same carve-out `_is_ci_workflow` already makes for tox.ini and
+origin2: setup.cfg — projects move `scripts/test` into `uv run pytest`, and a
+origin3: pipeline that calls a deleted script fails loudly rather than silently.
+origin4: Reported at warn; a removed *workflow* is still the escalating case.
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+pytest -q
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

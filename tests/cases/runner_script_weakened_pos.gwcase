@@ -1,0 +1,18 @@
+=== meta ===
+bypass: 61
+rule: CI_WORKFLOW_TOUCHED
+title: `|| true` in the shell script the workflow calls, not in the workflow
+origin: probe 2026-08-07 — greenwash blocked this exact edit twice in its own
+origin2: CI yaml, and saw nothing at all when it moved one file deeper
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+ruff check .
+pytest -q
+=== after: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+ruff check .
+pytest -q || true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

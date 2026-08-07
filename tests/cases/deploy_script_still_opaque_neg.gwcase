@@ -1,0 +1,28 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a shell script that does not run tests is still an unreadable prod change
+origin: the honest residual of the 2026-08-07 round, pinned rather than
+origin2: described: only scripts that run the suite were reclassified, so any
+origin3: other script still grants THREATMODEL #4. Open row, with a probe task.
+=== before: scripts/deploy.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+rsync -a build/ prod:/srv/app/
+=== after: scripts/deploy.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+rsync -a --delete build/ prod:/srv/app/
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice_total():
+    assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice_total():
+    assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

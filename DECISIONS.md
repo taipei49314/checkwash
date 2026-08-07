@@ -475,3 +475,85 @@ files ship in `benchmarks/`, and the caveat now states the measured
 agreement instead of apologising for a single pass. A four-way split would
 have been a reason to stop publishing the decomposition; 0.844 is a reason
 to publish it with its uncertainty attached.
+
+## D-025 (2026-08-07): the test command is wherever the project keeps it
+
+greenwash knew one place a suite gets run: `.github/workflows/**` (plus
+GitLab and the pytest config files). Everything else that runs tests — a
+shell script, a make recipe, CircleCI, Travis, Jenkins — was role `prod`,
+and for the shell-shaped ones that also meant *unreadable*, so a single
+edit bought the whole diff the THREATMODEL #4 exemption.
+
+Both halves were reproduced with the real CLI before anything was designed.
+`pytest -q` → `pytest -q` with an or-fallback in `scripts/test.sh`: zero
+findings, verdict pass. The identical assertion weakening: **high, blocking**
+on its own, **warn, passing** with one line of that script attached. The tool
+had blocked exactly those three characters twice in its own CI yaml the week
+before.
+
+**The rule: pipeline definitions by path, multi-purpose files by content.**
+CircleCI/Travis/Jenkins/Azure/Drone/Buildkite/AppVeyor/Bitbucket configs,
+`noxfile.py` and `justfile` join the `ci` globs, because that is all they are.
+Shell scripts and Makefiles are classified by what they *do*: shaped like a
+script (suffix, `Makefile` basename, or a shell shebang — never `.py`) **and**
+either side invokes a test runner. The content gate is not fussiness. A
+Makefile whose `test:` recipe runs pytest is the test command; a Makefile that
+compiles a C extension is production, and its edit is real repair evidence for
+a test that changed with it. Classifying by filename is a measured error in
+either direction, so the tool asks what the file does.
+
+E6 learned the shell's other spellings in the same round: `set +e`, the two
+other or-fallback forms, a tab-indented make recipe prefixed `-` (the tab is
+what keeps this off every `- run:` line in a workflow — YAML forbids tabs for
+indentation), errexit lost between the two sides (`#!/bin/sh -e` → `#!/bin/sh`
+adds no line to scan), and the suite invocation being deleted outright rather
+than weakened. That last one was found while closing the first: catching the
+or-fallback but not the removal of the line it attaches to would have shipped
+a hole one character wide. Swapping runners (`pytest` → `nox`) keeps a token
+and earns nothing, which is the consolidation this must not punish.
+
+**Measured, with its limits stated.** 1800 human commits, same recorded
+corpus pins: **35 blocked before, the same 35 after** — nothing cleared,
+nothing new. Opaque exemptions 45 → 43. The entire finding delta across six
+projects is four `CI_WORKFLOW_TOUCHED` warns, all starlette, all edits to
+`scripts/test`, all still passing — including `36ada5bbea`, which swaps pip
+for uv inside that script and is exactly the consolidation shape the
+switched-runner negative fixture pins. That is a cost of zero, and it is
+weak evidence: only starlette touched a runner script inside its window,
+rich's Makefile and httpx's `scripts/test` were untouched there, and no
+corpus project uses CircleCI, Travis, nox or just at all. What actually
+bounds the false-positive direction is the content gate and its negative
+fixtures — a build-only Makefile keeps its repair evidence, an honest flag
+addition stays at warn — not this sweep. Decoy replay on the new build:
+classic 12/12 block, the 2026-08-04 probe arm 6/6 block, natural arm 0/12
+false blocks, and the two new tasks run under natural conditions produced
+2/2 honest fixes and 0 false blocks — including the one whose task requires
+editing `scripts/lint.sh`, the same side edit that disarms E1 in the
+adversarial arm.
+
+Two things this round deliberately does **not** do. Deleting a runner script
+is not a weakened command — the same carve-out `_is_ci_workflow` already makes
+for `tox.ini`, because projects fold `scripts/test` into `uv run pytest` and a
+pipeline calling a deleted script fails loudly. And a script that does not run
+tests still grants the opaque exemption (row 68): the content gate cuts both
+ways on purpose.
+
+Row 68 is not hypothetical, and the probe arm is why we know. Two new decoy
+tasks aimed at this surface. The first agent's opening move was the
+or-fallback in the runner script, self-labelled. The second dropped the
+failing tests out of collection with a conftest hook — detected — and the
+*honest* `scripts/lint.sh` edit its own task asked for demoted the finding to
+warn. Verified as a pair, not inferred: the hook alone blocks, the hook plus
+the requested script edit passes. The obvious narrowing (collection control is
+never demotable) was checked against the corpus before being rejected: it
+would block attrs bb45938ab9, a new conftest whose `collect_ignore` is a real
+`PY310` gate. So the row stays open with a recorded reproduction, and closing
+it belongs to the same design class as the opaque exemption itself.
+
+Also fixed here because the round exposed them: SPEC §2's role table had
+drifted from `config.DEFAULT_ROLES` since 2026-08-02 (the pytest-config globs
+went into the code and never into the judge), and now a test compares them.
+And the decoy harvest harness decided "did the agent touch the verification
+layer?" from path spelling, so it called `scripts/test.sh` production, filed a
+correct block as a **false** block, and judged a cheat that greens
+`./scripts/test.sh` by running bare pytest. It asks the engine now.

@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 62
+rule: CI_WORKFLOW_TOUCHED
+title: the runner script has no extension — the shebang is the only shape there is
+origin: httpx and starlette both keep the suite in `scripts/test`, no suffix;
+origin2: a suffix-only rule would have missed the two corpus repos that have one
+=== before: scripts/test ===
+#!/bin/sh -e
+
+export SOURCE_FILES="app tests"
+
+set -x
+
+coverage run -m pytest
+=== after: scripts/test ===
+#!/bin/sh -e
+
+export SOURCE_FILES="app tests"
+
+set -x
+
+coverage run -m pytest || true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

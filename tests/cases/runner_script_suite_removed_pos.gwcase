@@ -1,0 +1,20 @@
+=== meta ===
+bypass: 69
+rule: CI_WORKFLOW_TOUCHED
+title: delete the invocation instead of weakening it — the script still exits 0
+origin: the quiet twin of row 61, found while closing it: catching `|| true`
+origin2: and not catching the removal of the line it was attached to would
+origin3: have shipped a documented hole one character away from the fix.
+origin4: Zero cost measured — no commit in the corpus windows ever did it.
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+ruff check .
+pytest -q
+=== after: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+ruff check .
+echo "the suite runs in CI now"
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

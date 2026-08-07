@@ -1,0 +1,16 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: swapping one runner for another is not removing the gate
+origin: the bound on row 69 — the script still runs a suite, so it keeps the
+origin2: token and earns no escalation. starlette's move to `uv run` is this
+origin3: exact shape and must stay a warn.
+=== before: scripts/test.sh ===
+#!/bin/sh -e
+
+coverage run -m pytest
+=== after: scripts/test.sh ===
+#!/bin/sh -e
+
+uv run nox -s tests
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

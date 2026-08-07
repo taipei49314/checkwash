@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 65
+rule: CI_WORKFLOW_TOUCHED
+title: make's `-` recipe prefix ignores the exit status of the line it precedes
+origin: probe 2026-08-07 — one dash in front of the test recipe, and `make
+origin2: test` reports success forever; rich keeps its whole suite in a Makefile
+=== before: Makefile ===
+.PHONY: test
+test:
+	TERM=unknown pytest --cov=app tests/ -vv
+
+lint:
+	ruff check .
+=== after: Makefile ===
+.PHONY: test
+test:
+	-TERM=unknown pytest --cov=app tests/ -vv
+
+lint:
+	ruff check .
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

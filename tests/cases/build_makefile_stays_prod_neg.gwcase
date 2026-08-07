@@ -1,0 +1,30 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a Makefile that builds is production; a Makefile that runs the suite is not
+origin: the discriminator is content, not the filename — a C build recipe is
+origin2: real repair evidence for a test that changed with it, and demoting it
+origin3: to ci would have invented false positives in every extension project.
+=== before: Makefile ===
+CFLAGS = -O1
+
+_speedups.so: _speedups.c
+	$(CC) $(CFLAGS) -shared -o $@ $<
+=== after: Makefile ===
+CFLAGS = -O2
+
+_speedups.so: _speedups.c
+	$(CC) $(CFLAGS) -shared -o $@ $<
+=== before: tests/test_speed.py ===
+from app import fast_add
+
+
+def test_fast_add():
+    assert fast_add(3, 4) == 7
+=== after: tests/test_speed.py ===
+from app import fast_add
+
+
+def test_fast_add():
+    assert fast_add(3, 4) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

@@ -1,0 +1,18 @@
+=== meta ===
+bypass: 63
+rule: CI_WORKFLOW_TOUCHED
+title: dropping `-e` from the shebang makes every failing command non-fatal
+origin: the weakening is a *deletion*, so scanning added lines for tokens
+origin2: could never see it; `#!/bin/sh -e` -> `#!/bin/sh` reads as cleanup
+=== before: scripts/test ===
+#!/bin/sh -e
+
+coverage run -m pytest
+coverage report --fail-under=100
+=== after: scripts/test ===
+#!/bin/sh
+
+coverage run -m pytest
+coverage report --fail-under=100
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

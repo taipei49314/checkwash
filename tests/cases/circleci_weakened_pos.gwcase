@@ -1,0 +1,21 @@
+=== meta ===
+bypass: 67
+rule: CI_WORKFLOW_TOUCHED
+title: GitHub Actions is not the only pipeline that has a test step
+origin: the ci role knew `.github/workflows/**` and `.gitlab-ci.yml` and
+origin2: nothing else, so the same edit was blocking or invisible depending on
+origin3: which CI the project happened to use.
+=== before: .circleci/config.yml ===
+version: 2.1
+jobs:
+  test:
+    steps:
+      - run: pytest -q
+=== after: .circleci/config.yml ===
+version: 2.1
+jobs:
+  test:
+    steps:
+      - run: pytest -q || true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

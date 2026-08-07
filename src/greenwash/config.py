@@ -39,6 +39,24 @@ DEFAULT_ROLES: dict[str, list[str]] = {
         # still packaging/test-runner config, and as prod it fed the opaque
         # exemption (13 flask commits in the FP corpus).
         "**/pyproject.toml",
+        # Other pipelines run tests too. Knowing only GitHub Actions and
+        # GitLab meant the identical weakening blocked or passed depending on
+        # which CI the project happened to use (probe 2026-08-07).
+        ".circleci/**",
+        ".buildkite/**",
+        "**/Jenkinsfile",
+        ".travis.yml",
+        ".drone.yml",
+        "appveyor.yml",
+        "azure-pipelines.yml",
+        "bitbucket-pipelines.yml",
+        # Task runners whose entire purpose is running sessions/recipes.
+        # Multi-purpose runners (Makefile, shell scripts) are NOT here: they
+        # are classified by content in the engine, because a Makefile that
+        # builds a C extension is production and its edit is real repair
+        # evidence. See engine._is_runner_script.
+        "noxfile.py",
+        "justfile",
     ],
     "snapshot": ["**/__snapshots__/**", "**/golden/**", "**/*.golden", "**/*.snap"],
     "lockfile": [

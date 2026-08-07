@@ -112,3 +112,45 @@ def test_threatmodel_floor_matches_adjudicated_rate():
     assert m.group(1) == want, (
         f"THREATMODEL.md states the floor as {m.group(1)}, the adjudication says {want}"
     )
+
+
+def test_undated_sections_carry_no_stale_numbers():
+    """A section that does not say when it was written must be current.
+
+    The 2026-08-04 fix gave STATE.md one authoritative table and a test for
+    it, and that was not enough: `## Known and unfixed, top of the next
+    round` went on saying "still unfixed and still measured: 7.2%" three
+    rounds after it became 2.5%, and `## Later` still listed the inter-rater
+    adjudication as to-do a day after it shipped. Both were undated,
+    present-tense, and wrong.
+
+    So the file's own rule — narrate history under a dated heading, state the
+    present only in the table — is now enforced rather than requested. A
+    heading with a date may say anything; an undated one may only use numbers
+    that are still true.
+    """
+    total, blocked, opaque = _sweeps()
+    live = {f"{blocked / total:.2%}", f"{opaque / total:.2%}", f"{opaque / total:.1%}"}
+    adj = json.loads(
+        (ROOT / "benchmarks" / "adjudication-2026-08-03.json").read_text(encoding="utf-8")
+    )
+    for cat in ("false_positive", "spec_correct"):
+        n = sum(1 for v in adj["verdicts"] if v["category"] == cat)
+        live.add(f"{n / total:.2%}")
+
+    text = (ROOT / "STATE.md").read_text(encoding="utf-8")
+    heading, dated, stale = "(top of file)", True, []
+    for lineno, line in enumerate(text.split("\n"), 1):
+        if line.startswith("#"):
+            heading = line
+            dated = bool(re.search(r"20\d\d-\d\d-\d\d", line)) or "authoritative" in line
+            continue
+        if dated:
+            continue
+        for pct in re.findall(r"\d+\.\d+%", line):
+            if pct not in live:
+                stale.append(f"  STATE.md:{lineno} under `{heading.strip('# ')}` says {pct}")
+    assert not stale, (
+        "undated sections state numbers that are no longer true — date the heading if the "
+        "paragraph is history, or fix the number:\n" + "\n".join(stale)
+    )

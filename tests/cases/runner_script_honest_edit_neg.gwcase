@@ -1,0 +1,15 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: adding a flag to the runner script is visible, not blocking
+origin: the ci role reports every edit at warn; only a weakened command
+origin2: escalates. Reclassifying these files must not make routine edits block.
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+pytest -q
+=== after: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+pytest -q -vv --tb=short
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]
