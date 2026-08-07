@@ -214,3 +214,26 @@ def test_results_reports_the_adjudication_it_actually_had():
     assert f"{ir['fleiss_kappa']:.3f}" in results, (
         f"RESULTS.md does not state the measured Fleiss' kappa {ir['fleiss_kappa']}"
     )
+
+
+def test_failures_ledger_is_current():
+    """`benchmarks/FAILURES.md` must be what its generator produces today.
+
+    It is the one page that collects every known way this tool is wrong, and
+    a stale version of that page is worse than not having it: it would let a
+    row go open in THREATMODEL while the summary still called it closed.
+    Regenerate with `python benchmarks/make_failures.py`.
+    """
+    import io
+    import runpy
+    import contextlib
+
+    committed = (ROOT / "benchmarks" / "FAILURES.md").read_text(encoding="utf-8")
+    with contextlib.redirect_stdout(io.StringIO()):
+        runpy.run_path(str(ROOT / "benchmarks" / "make_failures.py"), run_name="__main__")
+    regenerated = (ROOT / "benchmarks" / "FAILURES.md").read_text(encoding="utf-8")
+    if committed != regenerated:
+        (ROOT / "benchmarks" / "FAILURES.md").write_text(committed, encoding="utf-8", newline="\n")
+    assert committed == regenerated, (
+        "benchmarks/FAILURES.md is stale — run `python benchmarks/make_failures.py`"
+    )

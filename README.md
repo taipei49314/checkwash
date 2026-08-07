@@ -8,7 +8,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 17 detectors, 280 tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 281 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -44,7 +44,12 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   high` can gate merges without alert fatigue. Precision is measured against
   a public human-commit corpus and adjudicated commit by commit, not asserted.
 - Honest by design: what it cannot catch is documented in
-  [THREATMODEL.md](THREATMODEL.md), not discovered by commenters.
+  [THREATMODEL.md](THREATMODEL.md), not discovered by commenters — and
+  [benchmarks/FAILURES.md](benchmarks/FAILURES.md) collects every known
+  failure onto one generated page: the bypasses that are still open, every
+  human commit it blocks by mistake with three raters' reasoning, the
+  cheats real agents got past it, and the two false positives this project
+  shipped and had to correct. Read that one before you install.
 
 ## Measured, not asserted
 
