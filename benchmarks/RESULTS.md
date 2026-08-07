@@ -65,17 +65,21 @@ Raw per-commit verdicts and reasoning: `adjudication-2026-08-03.json`.
 
 How they were judged: each of the 45 blocked commits of the v0.1.2 build adjudicated against the real diff; 40 by independent agents (nine batches, five each), 5 by the maintainer after one batch hit a session limit - noted because it is a weaker form of independence for those five. v0.1.3 stopped blocking two (attrs 7373d88, click b761eda), v0.1.4 seven more (attrs 74007f67d2, click 700798252a, httpx 59914c7690, starlette 100f05a66b/5ccbc62175/856c904a6d/b133ab45ad), v0.1.5 one more (click 1103c5cac2, deleted duplicate with a live survivor outside the diff) - all ten false_positive. One verdict was re-categorised on evidence: click a391797d00 false_positive -> spec_correct, because its reason claimed every deleted unit reappears in the same diff and `git grep` at that head proves test_prompt_cast_default reappears nowhere; the re-check that found this is recorded in the verdict itself. No commit is newly blocked; every other verdict is unchanged from the v0.1.2 adjudication. v0.1.6 narrowed the opaque exemption (docs config, stubs, metadata, pin sources, deleted-parseable Python no longer qualify): opaque commits 130 -> 45, and the blocked set did not change by a single commit - every exemption removed had been protecting nothing.
 
-**How much to trust the split.** Each commit was judged once, with no
-second opinion and no inter-rater agreement measured. The block rate is
-a machine count and is exact; the split between *false positive* and
-*legitimate policy block* is a judgement call on 35 diffs, and the
-boundary is genuinely arguable on some of them (a
-test deleted because its coverage moved upstream is invisible to any
-diff analyser — called spec-correct here, another reviewer might say
-the tool should not have blocked). Read the per-commit reasoning and
-disagree; the file exists so you can. What would make the split solid
-is two or three independent passes with agreement reported, which has
-not been done.
+**How much to trust the split.** The block rate is a machine count and
+is exact; the split between *false positive* and *legitimate policy
+block* is a judgement call on 35 diffs, and the boundary is genuinely
+arguable on some of them (a test deleted because its coverage moved
+upstream is invisible to any diff analyser — called spec-correct here,
+another reviewer might say the tool should not have blocked). Read the
+per-commit reasoning and disagree; the file exists so you can.
+
+It has been judged 3 times. rater A = original per-commit adjudication; raters B and C = independent blind passes over the same 35 diffs, with no access to prior verdicts
+
+- pairwise agreement: A-B 94.3%, A-C 91.4%, B-C 91.4%
+- Cohen's kappa: A-B 0.88, A-C 0.83, B-C 0.82
+- Fleiss' kappa across all 3: **0.844**
+- commits with any disagreement: 4 of 35
+- reconciliation: published category = majority of the three; a 3-way split would become unclear (none occurred)
 
 ## Where the earlier rounds' blocks came from
 

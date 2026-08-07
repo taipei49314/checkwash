@@ -8,7 +8,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 17 detectors, 275 tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 276 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -86,7 +86,7 @@ Two harnesses, both reproducible from a clone
   rate rests on a documented blind spot, measured rather than assumed. It
   used to be 7.2%: narrowing the blanket (docs config, type stubs, repo
   metadata, pin sources, deleted-but-parseable Python and scripts that run
-  the test suite no longer qualify) removed 87 exemptions and **did not
+  the test suite no longer qualify) removed 98 exemptions and **did not
   change a single verdict** — every one had been protecting a commit that
   passed on its own merits anyway.
   The same round taught greenwash where the test command actually lives. A
@@ -121,7 +121,8 @@ Two harnesses, both reproducible from a clone
   one-line `scripts/lint.sh` edit its own task asked for demoted the finding
   to a warning, because a script that does not run tests is still an
   unreadable production change (THREATMODEL #4). That escape is published
-  open, with its reproduction — and closed the next day, once the reason
+  open, with its reproduction — and closed in the next release the same
+  day, once the reason
   given for leaving it open turned out to be a citation that did not hold
   (DECISIONS D-026; the correction is in the repository because publishing it
   is the point).

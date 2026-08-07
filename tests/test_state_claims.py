@@ -182,3 +182,35 @@ def test_readme_headline_numbers_match_the_harnesses():
     missing = [f"{name}: expected README to contain {want!r}" for name, want in expected.items()
                if want not in text]
     assert not missing, "README numbers drifted from the harnesses:\n" + "\n".join(missing)
+
+
+def test_results_reports_the_adjudication_it_actually_had():
+    """RESULTS.md must not disagree with the adjudication file it summarises.
+
+    It did, for four days and five releases. The paragraph asserting "judged
+    once, with no second opinion and no inter-rater agreement measured" was a
+    fixed string inside `make_results.py`, so regenerating the document —
+    the whole point of generating it — re-emitted the contradiction, while
+    README, benchmarks/README and STATE all published three raters and a
+    Fleiss' kappa. STATE went further and claimed this paragraph had already
+    been corrected: a false claim about having fixed a false claim.
+
+    A document generated so it cannot drift is worth nothing when the
+    generator is where the drift lives.
+    """
+    adj = json.loads(
+        (ROOT / "benchmarks" / "adjudication-2026-08-03.json").read_text(encoding="utf-8")
+    )
+    results = (ROOT / "benchmarks" / "RESULTS.md").read_text(encoding="utf-8")
+    ir = adj.get("inter_rater")
+    if not (isinstance(ir, dict) and ir.get("raters", 1) > 1):
+        assert "no inter-rater agreement measured" in results
+        return
+    assert "no inter-rater agreement measured" not in results, (
+        "RESULTS.md still apologises for a single-pass adjudication that the "
+        "adjudication file says had %d raters" % ir["raters"]
+    )
+    assert f"judged {ir['raters']} times" in results
+    assert f"{ir['fleiss_kappa']:.3f}" in results, (
+        f"RESULTS.md does not state the measured Fleiss' kappa {ir['fleiss_kappa']}"
+    )

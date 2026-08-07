@@ -168,18 +168,45 @@ def main() -> None:
         w("")
         w(f"How they were judged: {adj.get('method', 'unrecorded')}.")
         w("")
-        w("**How much to trust the split.** Each commit was judged once, with no")
-        w("second opinion and no inter-rater agreement measured. The block rate is")
-        w("a machine count and is exact; the split between *false positive* and")
-        w(f"*legitimate policy block* is a judgement call on {n} diffs, and the")
-        w("boundary is genuinely arguable on some of them (a")
-        w("test deleted because its coverage moved upstream is invisible to any")
-        w("diff analyser — called spec-correct here, another reviewer might say")
-        w("the tool should not have blocked). Read the per-commit reasoning and")
-        w("disagree; the file exists so you can. What would make the split solid")
-        w("is two or three independent passes with agreement reported, which has")
-        w("not been done.")
+        # Derived from the adjudication file, never hardcoded. This paragraph
+        # used to assert "judged once, with no second opinion and no
+        # inter-rater agreement measured" as a fixed string, and went on
+        # asserting it after three raters and a Fleiss' kappa had shipped —
+        # while STATE.md separately claimed this very paragraph had been
+        # corrected. A document generated so it cannot drift is worth nothing
+        # if the generator is where the drift lives.
+        ir = adj.get("inter_rater")
+        w("**How much to trust the split.** The block rate is a machine count and")
+        w("is exact; the split between *false positive* and *legitimate policy")
+        w(f"block* is a judgement call on {n} diffs, and the boundary is genuinely")
+        w("arguable on some of them (a test deleted because its coverage moved")
+        w("upstream is invisible to any diff analyser — called spec-correct here,")
+        w("another reviewer might say the tool should not have blocked). Read the")
+        w("per-commit reasoning and disagree; the file exists so you can.")
         w("")
+        if isinstance(ir, dict) and ir.get("raters", 1) > 1:
+            pair = ir.get("pairwise_agreement") or {}
+            agree = ", ".join(f"{k} {v:.1%}" for k, v in sorted(pair.items()))
+            cohen = ir.get("cohen_kappa") or {}
+            ck = ", ".join(f"{k} {v:.2f}" for k, v in sorted(cohen.items()))
+            w(f"It has been judged {ir['raters']} times. {ir.get('method', '')}".rstrip())
+            w("")
+            w(f"- pairwise agreement: {agree}")
+            if ck:
+                w(f"- Cohen's kappa: {ck}")
+            if ir.get("fleiss_kappa") is not None:
+                w(f"- Fleiss' kappa across all {ir['raters']}: **{ir['fleiss_kappa']:.3f}**")
+            if ir.get("items_with_any_disagreement") is not None:
+                w(f"- commits with any disagreement: {ir['items_with_any_disagreement']} of {n}")
+            if ir.get("reconciliation"):
+                w(f"- reconciliation: {ir['reconciliation']}")
+            w("")
+        else:
+            w("Each commit was judged once, with no second opinion and no")
+            w("inter-rater agreement measured. What would make the split solid is")
+            w("two or three independent passes with agreement reported, which the")
+            w("adjudication file records no trace of.")
+            w("")
 
     w("## Where the earlier rounds' blocks came from")
     w("")
