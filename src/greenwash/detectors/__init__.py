@@ -11,6 +11,7 @@ from greenwash.detectors import (
     expected_changed,
     expected_hardcoded,
     globals_rules,
+    subject_normalized,
     test_disabled,
     tolerance_loosened,
 )
@@ -22,6 +23,7 @@ REGISTRY = {
     "TOLERANCE_LOOSENED": tolerance_loosened.detect,
     "EXPECTED_VALUE_HARDCODED": expected_hardcoded.detect,
     "EXPECTED_VALUE_CHANGED": expected_changed.detect,
+    "SUBJECT_NORMALIZED": subject_normalized.detect,
     "SNAPSHOT_CODE_COCHANGE": globals_rules.detect_snapshot_cochange,
     "BROAD_EXCEPT_ADDED": globals_rules.detect_broad_except,
     "SUPPRESSION_ADDED": globals_rules.detect_suppression,

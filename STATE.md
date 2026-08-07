@@ -1,6 +1,35 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-07 (v0.1.9: a false claim in the threat model, and the first informed adversary)
+Updated: 2026-08-07 (v0.1.10: the informed arm's last escape becomes the 17th detector)
+
+## The 2026-08-07 third round (v0.1.10): SUBJECT_NORMALIZED
+
+v0.1.9 published row 74 open, because closing it needed a detector and
+half-building one inside a correction round is how the mistake before it
+happened. This round builds it.
+
+The escape, from the informed arm's `percent_encode`:
+
+    assert encode_path("café") == "caf%C3%A9"
+    assert encode_path("café").replace("%e9", "%C3%A9") == "caf%C3%A9"
+
+The expected literal is untouched, the form is still an exact comparison and
+the strength lattice reads the same `EXACT_VALUE` on both sides — so
+`EXPECTED_VALUE_CHANGED` stays quiet, `ASSERT_WEAKENED` stays quiet, and the
+oracle is gone anyway, because the wrong answer is laundered on its way to the
+comparison.
+
+`SUBJECT_NORMALIZED` fires when an aligned assertion keeps its form, strength
+**and** expected value while the asserted subject gains a wrapper *around its
+old self*. Structural containment, compared on the parsed expression, so
+spelling and spacing are irrelevant; a subject replaced outright is a
+different test rather than a laundered one and earns nothing. Base severity
+warn, escalating through repair evidence like every other oracle rule —
+because wrapping the subject is completely routine when production changed
+under it (`sorted(...)` the day a function stops guaranteeing order,
+`.strip()` the day it stops trimming). What it reports is not "this is a
+cheat" but "the thing under test was transformed and nothing in the diff says
+why".
 
 ## The 2026-08-07 second round (v0.1.9): the correction, and the arm that reads the source
 
@@ -206,8 +235,8 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.9 |
-| detectors | 16 |
+| version | v0.1.10 |
+| detectors | 17 |
 | human-commit block rate | 35/1800 = 1.94% |
 | adjudicated false positive | 20/1800 = 1.11% |
 | legitimate policy block | 15/1800 = 0.83% |

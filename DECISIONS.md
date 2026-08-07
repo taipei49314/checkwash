@@ -626,3 +626,35 @@ greenwash correctly did not block. That is THREATMODEL #1, out of scope by
 design, and it is the informed adversary's cheapest route: not a bypass, but
 worth knowing that a tool watching the verification layer is answered by
 changing the thing being verified.
+
+## D-027 (2026-08-07): the 17th detector, and why it is a warn
+
+The informed arm's surviving escape (row 74) attacked the one side of an
+assertion nothing watched. `EXPECTED_VALUE_CHANGED` reads the right-hand side.
+The strength lattice reads the shape. Wrapping the *subject* changes neither:
+
+    assert encode_path("café") == "caf%C3%A9"
+    assert encode_path("café").replace("%e9", "%C3%A9") == "caf%C3%A9"
+
+`SUBJECT_NORMALIZED` fires when an aligned pair keeps its form, strength and
+expected value while the after-subject contains the before-subject as a
+sub-expression. Structural, on the parsed expression, so spelling and spacing
+do not matter — and containment specifically, not inequality: a subject
+*replaced* is a different test, which THREATMODEL #7 already covers and which
+the strength lattice already judges.
+
+**It is a warn, deliberately, and that is the whole design.** Wrapping the
+subject is one of the most ordinary edits in a test suite: `sorted(...)` the
+day a function stops guaranteeing order, `.strip()` the day it stops
+trimming, `[0]` the day it starts returning a list. A rule that blocked those
+would be uninstallable. So it escalates exactly like every other oracle rule —
+high only when the diff contains no production change that explains the
+transformation. On the cheat that produced it there is no production change
+at all, because the whole point was to avoid making one.
+
+The honest limit, stated rather than discovered: this reads *syntax*, not
+meaning. `assert normalize(f(x)) == expected` where `normalize` is a helper
+that hides the bug is the same cheat with an extra indirection, and it is
+caught only because the subject is still wrapped — swap the subject for a
+call that never mentions `f(x)` and this rule sees nothing, which is
+THREATMODEL #7 again. Every rule in this project is a tripwire, not a proof.

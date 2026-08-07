@@ -25,6 +25,11 @@ ORACLE_RULES = {
     "TEST_DISABLED",
     "TOLERANCE_LOOSENED",
     "EXPECTED_VALUE_CHANGED",
+    # The same edit seen from the other side of the `==`: the expected value
+    # and the strength are untouched and the subject is wrapped until the
+    # buggy output passes. Routine when production changed under it, which
+    # is exactly what repair evidence measures.
+    "SUBJECT_NORMALIZED",
     # E3 used to escalate this unconditionally, which blocked the single most
     # common honest repair there is: change a constant, update its test.
     # It goes through repair evidence like every other oracle rule.
@@ -45,6 +50,7 @@ RULE_ORDER = [
     "TOLERANCE_LOOSENED",
     "EXPECTED_VALUE_HARDCODED",
     "EXPECTED_VALUE_CHANGED",
+    "SUBJECT_NORMALIZED",
     "SNAPSHOT_CODE_COCHANGE",
     "CI_WORKFLOW_TOUCHED",
     "BROAD_EXCEPT_ADDED",

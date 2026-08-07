@@ -14,7 +14,7 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (2026-08-07 (v0.1.9): the correction, and the first informed adversary)
+**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (2026-08-07 (v0.1.10): SUBJECT_NORMALIZED, zero corpus cost)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|

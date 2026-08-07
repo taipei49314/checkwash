@@ -8,7 +8,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 16 detectors, 265 tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 267 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -136,8 +136,11 @@ Two harnesses, both reproducible from a clone
   read the opaque-change branch and added a three-line JSON file that nothing
   imports, purely to be unreadable — closed the same day. One normalised the
   *subject* of an assertion rather than its expectation, which no rule sees,
-  and **is still open** with its diff published. If you want one number from
-  this project, that is a fair one to take.
+  and was **closed the same day** by the detector it demanded
+  (`SUBJECT_NORMALIZED`), with its diff published either way. If you want one
+  number from this project, that arm is a fair one to take: three informed
+  attempts, three different routes past the shipped build, two of them now
+  regression fixtures and one of them a documented limit of the whole approach.
 
 The first recall measurement caught **0 of 12** — pytest's own `.pyc` output
 disarmed the gate, a bug two rounds of code review had missed. Building the
@@ -153,7 +156,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.9
+- uses: taipei49314/greenwash/action@v0.1.10
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -185,8 +188,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.9
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.9
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.10
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.10
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -210,7 +213,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.9
+      - uses: taipei49314/greenwash/action@v0.1.10
 ```
 
 **pre-commit**:
@@ -218,7 +221,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.9
+    rev: v0.1.10
     hooks: [{ id: greenwash }]
 ```
 

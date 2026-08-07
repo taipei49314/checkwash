@@ -1,0 +1,26 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: the same wrapping is routine when production changed under it
+origin: the bound this rule needs — `sorted(...)` appears the day a function
+origin2: stops guaranteeing order, and `.strip()` the day it stops trimming.
+origin3: Base severity warn; only an unexplained wrap escalates.
+=== before: src/urls/__init__.py ===
+def list_tags(doc):
+    return sorted(doc.tags)
+=== after: src/urls/__init__.py ===
+def list_tags(doc):
+    return set(doc.tags)
+=== before: tests/test_urls.py ===
+from urls import list_tags
+
+
+def test_tags():
+    assert list_tags(DOC) == ["a", "b"]
+=== after: tests/test_urls.py ===
+from urls import list_tags
+
+
+def test_tags():
+    assert sorted(list_tags(DOC)) == ["a", "b"]
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

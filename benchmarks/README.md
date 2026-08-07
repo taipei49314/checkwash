@@ -109,7 +109,8 @@ Each row is a full re-run of the same harness over the same 1800 commits.
 | 2.00% | relocation liveness through compat gates + whole-unit move credit; `PROD_SYMBOL_REMOVED` (deleted-scope symbols only, after the locals version cleared two spec-correct blocks and was tightened); `DEPENDENCY_DRIFT` for expectation literals tracking manifest bumps |
 | 1.94% | `DUPLICATE_REMAINS`: a deleted unit whose identical live copy survives at head outside the diff is dedup — and the same search overturned one FP verdict (a391797d00) by proving the "relocated" unit reappears nowhere |
 | 1.94% | test-runner scripts and non-GitHub pipelines become `ci` (v0.1.8). The block set did not move by one commit in either direction; opaque exemptions 45 → 43, and the entire finding delta is four warn-level notices on starlette commits editing `scripts/test`. A recall round that cost no precision here — on a corpus that, honestly, barely exercises it |
-| **1.94%** | v0.1.9: `collect_ignore` counted in every spelling it has, a collection control no longer excused by repair evidence, and an *added* unreadable file no longer granting the opaque exemption. Block set unchanged again, in either direction; opaque exemptions 43 → 32, because the added-file share was pure fat and removing it changed no verdict |
+| 1.94% | v0.1.9: `collect_ignore` counted in every spelling it has, a collection control no longer excused by repair evidence, and an *added* unreadable file no longer granting the opaque exemption. Block set unchanged again, in either direction; opaque exemptions 43 → 32, because the added-file share was pure fat and removing it changed no verdict |
+| **1.94%** | v0.1.10: `SUBJECT_NORMALIZED`, the 17th detector — an aligned assertion whose form, strength and expected value are unchanged while the subject gained a wrapper around its old self. Added for recall and it fires **zero** times across the 1800 commits: block set, opaque count and per-rule finding distributions all byte-identical to the previous row |
 
 The 3.00% row is the honest shape of the trade-off: closing a recall hole
 raised the false-positive rate, and only measurement showed by how much.
@@ -263,15 +264,19 @@ by three different routes:
   expectations to a pass. The exemption now requires a change to something
   that was already production, and the recorded diff blocks with two high
   findings.
-- `percent_encode` — **still escapes (row 74, open).** It normalised the
+- `percent_encode` — **closed the next round (row 74).** It normalised the
   *subject* rather than the expectation:
   `assert encode_path(s) == "caf%C3%A9"` became
   `assert encode_path(s).replace("%e9", "%C3%A9") == "caf%C3%A9"`. The
   expected literal is untouched and the strength lattice still reads
-  `EXACT_VALUE`, so no rule fires — and the oracle is gone, because the wrong
-  answer is laundered before the comparison. Closing it needs a detector for
-  subject-side transformation introduced without a production change. It is
-  published open with its diff rather than half-built.
+  `EXACT_VALUE`, so no rule fired — and the oracle was gone, because the wrong
+  answer is laundered before the comparison. It was published open with its
+  diff for one release rather than half-built, then became
+  `SUBJECT_NORMALIZED` (v0.1.10, D-027): an aligned assertion whose form,
+  strength and expected value are unchanged while the subject gained a wrapper
+  around its old self. A warn by design — `sorted(...)` appears the day a
+  function stops guaranteeing order — escalating only when no production
+  change explains the transformation, which on this diff is the whole point.
 
 Recorded in `decoy/arm-informed-2026-08-07.json`.
 
