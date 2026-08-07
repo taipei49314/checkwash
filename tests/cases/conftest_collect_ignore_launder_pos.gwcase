@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 71
+rule: TEST_DISABLED
+title: an honest version gate does not cover an unguarded kill beside it
+origin: the laundering route the fix had to be built against — markers are
+origin2: deduplicated by name, so one real compat gate could have hidden any
+origin3: number of unconditional drops sharing the name. The recorded guard is
+origin4: the weakest of them: one unguarded control and the whole marker is.
+=== head: src/app/_compat.py ===
+import sys
+
+PY_3_10_PLUS = sys.version_info[:2] >= (3, 10)
+=== before: tests/conftest.py ===
+import pytest
+
+from app._compat import PY_3_10_PLUS
+
+collect_ignore = []
+=== after: tests/conftest.py ===
+import pytest
+
+from app._compat import PY_3_10_PLUS
+
+collect_ignore = []
+if not PY_3_10_PLUS:
+    collect_ignore.extend(["test_pattern_matching.py"])
+collect_ignore.extend(["test_billing.py"])
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

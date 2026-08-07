@@ -1129,17 +1129,83 @@ def _collect_unit(
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
 
+def _collection_controls(tree: ast.Module, text) -> list[tuple[ast.AST, str | None]]:
+    """(statement, enclosing-`if` conjunction) for everything that puts a path
+    into `collect_ignore`.
+
+    Only the assignment form used to count, so the idiomatic spelling — set an
+    empty list, then `extend` it, which is how attrs writes it — dropped whole
+    test files silently (bypass 70). An *empty* assignment is an initialiser
+    and not a control: recording it would make attrs' honest version gate look
+    like an unconditional kill.
+    """
+    found: list[tuple[ast.AST, str | None]] = []
+
+    def control(stmt: ast.stmt) -> ast.AST | None:
+        if isinstance(stmt, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id in _CONFTEST_NAMES for t in stmt.targets
+        ):
+            value = stmt.value
+            if isinstance(value, (ast.List, ast.Tuple, ast.Set)) and not value.elts:
+                return None
+            return stmt
+        if (
+            isinstance(stmt, ast.AugAssign)
+            and isinstance(stmt.target, ast.Name)
+            and stmt.target.id in _CONFTEST_NAMES
+        ):
+            return stmt
+        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+            head, _, attr = (_dotted(stmt.value.func) or "").rpartition(".")
+            if head in _CONFTEST_NAMES and attr in ("extend", "append", "insert"):
+                return stmt
+        return None
+
+    def record(stmts: list[ast.stmt], conds: tuple[str, ...]) -> None:
+        for stmt in stmts:
+            if isinstance(stmt, ast.If):
+                t = text.seg(stmt.test) or ""
+                record(stmt.body, conds + ((t,) if t else ()))
+                record(stmt.orelse, conds + ((f"not ({t})",) if t else ()))
+                continue
+            node = control(stmt)
+            if node is not None:
+                found.append((node, " and ".join(conds) if conds else None))
+            for fname in _STMT_BODY_FIELDS:
+                sub = getattr(stmt, fname, None)
+                if isinstance(sub, list) and any(isinstance(s, ast.stmt) for s in sub):
+                    record([s for s in sub if isinstance(s, ast.stmt)], conds)
+
+    record(tree.body, ())
+    return found
+
+
 def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
     """Suite-level collection controls in a conftest, as one synthetic unit."""
     markers: list[Marker] = _pytestmark_markers(tree, text, off)
+
+    controls = _collection_controls(tree, text)
+    if controls:
+        node, _ = controls[0]
+        guards = [g for _, g in controls]
+        # The weakest guard wins. Markers are deduplicated by name, so without
+        # this one honest version gate would have covered any number of
+        # unconditional drops sharing the name (bypass 71). A disjunction is
+        # the true reading anyway: the files are ignored if *any* branch fires.
+        combined = (
+            None
+            if any(g is None for g in guards)
+            else " or ".join(f"({g})" for g in guards)
+        )
+        seg = (text.seg(node) or "conftest.collect_ignore").split("\n")[0]
+        markers.append(
+            Marker(name="conftest.collect_ignore", text=seg, span=off.span(node), guard=combined)
+        )
+
     for node in ast.walk(tree):
         name = None
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in _CONFTEST_HOOKS:
             name = f"conftest.{node.name}"
-        elif isinstance(node, ast.Assign) and any(
-            isinstance(t, ast.Name) and t.id in _CONFTEST_NAMES for t in node.targets
-        ):
-            name = "conftest.collect_ignore"
         elif isinstance(node, ast.Call) and (_dotted(node.func) or "").endswith("add_marker"):
             arg = _dotted(node.args[0].func) if node.args and isinstance(node.args[0], ast.Call) else (
                 _dotted(node.args[0]) if node.args else None

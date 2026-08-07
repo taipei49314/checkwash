@@ -30,9 +30,9 @@
   "commits_blocked": 2,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 65,
-  "commits_with_opaque_prod_change": 12,
+  "commits_with_opaque_prod_change": 6,
   "corpus": {
-    "greenwash_version": "0.1.8",
+    "greenwash_version": "0.1.9",
     "newest_commit": "92e12eae712ef88c1a7e322cc51b7cd9e271aa3c",
     "oldest_commit": "0a09c1aa2cde5816f4a9f5558fdd1ce792e7076e"
   },

@@ -87,7 +87,19 @@ between the two is a laundering route (all confirmed by reproduction):
   test command
 - `conftest.py` is analysed for suite-level collection controls
   (`pytest_collection_modifyitems`, `pytest_ignore_collect`,
-  `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`, `pytestmark`)
+  `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`, `pytestmark`).
+  For `collect_ignore` this means *every statement that puts a path into it* —
+  assignment, `+=`, `extend`/`append`/`insert` — because only the assignment
+  form used to count and the idiomatic spelling therefore dropped whole files
+  in silence (row 70). An assignment of an **empty** list is an initialiser,
+  not a control. Each control carries its enclosing `if` as a guard, so
+  `if not PY_3_14_PLUS: collect_ignore.extend([...])` is judged as the compat
+  gate it is; the recorded guard is the **weakest** across all controls in the
+  file, so one unguarded drop cannot hide behind an honest gate beside it
+- a suite-level collection control is **not** de-escalated by repair evidence.
+  A production change explains a rewritten expectation; nothing about it makes
+  it correct to stop *collecting* tests. A qualified compatibility gate (§D6)
+  does explain it and still de-escalates
 - module-level `pytest.skip(..., allow_module_level=True)` and
   `importorskip` disable the whole file
 - a skip marker's identity includes its **condition**, so
@@ -260,8 +272,13 @@ exactly one of them applies to every oracle finding. Evidence exists when:
 2. a symbol the test calls itself calls a changed symbol (one hop — a test
    going through `format_invoice` is legitimately updated when the
    `compute_total` it calls changes), or
-3. the diff contains a prod change greenwash cannot analyse (non-Python,
-   deleted, or unparseable file) — conservative, see THREATMODEL #4.
+3. the diff **changes** a prod file greenwash cannot analyse (non-Python,
+   deleted, or unparseable) — conservative, see THREATMODEL #4. A file the
+   diff *adds* does not count: it cannot be the repair of behaviour that
+   predates it, and a genuinely new implementation arrives with the Python
+   that reaches it. Told to defeat this tool and handed its source, an agent
+   wrote a three-line json file nothing imports, purely to satisfy this
+   clause (row 73).
 
 `EXPECTED_VALUE_CHANGED` additionally accepts **package-level** evidence
 (`PACKAGE_REPAIR`): the test file imports a package in which the diff changed

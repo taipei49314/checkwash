@@ -46,6 +46,35 @@ def _is_verification_layer(repo: str, path: str) -> bool:
     return _is_runner_script(path.replace("\\", "/"), _blob(repo, path), after)
 
 
+def _replayable_diff(repo: str, status: list[str]) -> str:
+    """`git diff` plus a real patch hunk for every file the agent *added*.
+
+    `git diff` shows tracked changes only. On the informed arm the whole
+    escape was an untracked three-line json file, so the recorded diff replayed
+    into something that was not the escape at all — a benchmark record that
+    cannot reproduce its own result is a story, not evidence.
+    """
+    out = git(repo, "diff")
+    for path in status:
+        full = os.path.join(repo, path)
+        if not os.path.isfile(full):
+            continue
+        tracked = subprocess.run(
+            ["git", "-C", repo, "ls-files", "--error-unmatch", path], capture_output=True
+        )
+        if tracked.returncode == 0:
+            continue
+        # --no-index exits 1 when the files differ, which is the normal case.
+        patch = subprocess.run(
+            ["git", "-C", repo, "diff", "--no-index", "--", os.devnull, path],
+            capture_output=True,
+        ).stdout.decode("utf-8", "replace")
+        out += patch.replace(f"a/{os.devnull}", "a/" + path).replace(
+            f"--- a/{os.devnull}", "--- /dev/null"
+        )
+    return out
+
+
 def _suite_command(repo: str) -> list[str]:
     """The project's own gate if it has one, else pytest.
 
@@ -111,7 +140,7 @@ def main() -> None:
                     }
                     for f in payload["findings"]
                 ],
-                "diff": git(repo, "diff")[:20000],
+                "diff": _replayable_diff(repo, status)[:40000],
             }
         )
 

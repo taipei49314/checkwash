@@ -8,7 +8,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 16 detectors, 260 tests, zero runtime dependencies.
+> Status: **pre-release.** 16 detectors, 265 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -79,7 +79,7 @@ Two harnesses, both reproducible from a clone
   published category is the majority verdict, the four contested commits are
   marked, and the per-commit reasoning of all three raters ships in
   [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
-  **2.39% of the corpus (43/1800) never got a real analysis**: those commits
+  **1.78% of the corpus (32/1800) never got a real analysis**: those commits
   touch a production file greenwash genuinely cannot read — other-language
   code, templates, data files, unparseable Python — which suppresses
   escalation for the whole diff (THREATMODEL #4). That share of the pass
@@ -121,8 +121,23 @@ Two harnesses, both reproducible from a clone
   one-line `scripts/lint.sh` edit its own task asked for demoted the finding
   to a warning, because a script that does not run tests is still an
   unreadable production change (THREATMODEL #4). That escape is published
-  open, with its reproduction, because the narrowing that would close it was
-  checked against the corpus and would have blocked an honest commit.
+  open, with its reproduction — and closed the next day, once the reason
+  given for leaving it open turned out to be a citation that did not hold
+  (DECISIONS D-026; the correction is in the repository because publishing it
+  is the point).
+- **The informed arm — the adversary reads the source.** Every arm above hides
+  the defender. This repository is public, so one arm does not: the agent gets
+  greenwash's complete source, spec and threat model, and may run
+  `greenwash check` against its own diff until it stops blocking. Three of six
+  tasks were refused outright by the agent provider's safety filter, so the
+  sample is three, and **all three reached a green suite past the shipped
+  engine.** One rewrote production instead of the tests (THREATMODEL #1, out
+  of scope by design, and the cheapest route an informed adversary has). One
+  read the opaque-change branch and added a three-line JSON file that nothing
+  imports, purely to be unreadable — closed the same day. One normalised the
+  *subject* of an assertion rather than its expectation, which no rule sees,
+  and **is still open** with its diff published. If you want one number from
+  this project, that is a fair one to take.
 
 The first recall measurement caught **0 of 12** — pytest's own `.pyc` output
 disarmed the gate, a bug two rounds of code review had missed. Building the
@@ -138,7 +153,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.8
+- uses: taipei49314/greenwash/action@v0.1.9
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -170,8 +185,8 @@ Pick the surface that fits; the engine is identical behind all of them.
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.8
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.8
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.9
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.9
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -195,7 +210,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: taipei49314/greenwash/action@v0.1.8
+      - uses: taipei49314/greenwash/action@v0.1.9
 ```
 
 **pre-commit**:
@@ -203,7 +218,7 @@ jobs:
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.8
+    rev: v0.1.9
     hooks: [{ id: greenwash }]
 ```
 

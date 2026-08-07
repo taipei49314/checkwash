@@ -557,7 +557,15 @@ def _discriminates(condition: ast.AST, consts: dict[str, ast.AST] | None) -> boo
 # credit should not outrun the corpus.
 _GATE_DECORATORS = ("pytest.mark.skipif", "pytest.mark.xfail")
 # Imperative skips whose recorded guard plays the role of the condition.
-_GATE_CALLS = ("pytest.skip", "pytest.xfail", "self.skipTest")
+_GATE_CALLS = (
+    "pytest.skip",
+    "pytest.xfail",
+    "self.skipTest",
+    # Same shape one level up: `if not PY_3_14_PLUS: collect_ignore.extend(...)`
+    # is a compatibility gate over a whole file, and its recorded guard is the
+    # condition (attrs 61e8179545). Unguarded, it earns nothing.
+    "conftest.collect_ignore",
+)
 
 
 def _parse_constants(raw: dict[str, str]) -> dict[str, ast.AST]:
@@ -846,7 +854,21 @@ def apply_gates(
             and f.rule == "EXPECTED_VALUE_CHANGED"
             and ir.globals.dependency_manifest_changed
         )
-        if has_evidence:
+        # A production change never makes it correct to stop *collecting*
+        # tests. Repair evidence answers "did production change, so this
+        # expectation legitimately changed?" — a question a suite-level
+        # collection control does not raise. On the 2026-08-07 probe arm an
+        # agent dropped the failing tests out of collection and the honest
+        # `scripts/lint.sh` edit its own task demanded paid for it, because
+        # an unreadable prod file grants this credit diff-globally
+        # (THREATMODEL row 68). A compatibility gate does explain it, and
+        # still does: that branch is untouched below.
+        suite_control = (
+            f.rule == "TEST_DISABLED"
+            and roles.get(f.path) == "conftest"
+            and (f.unit or "") == "<suite>"
+        )
+        if has_evidence and not suite_control:
             f.deescalators.append("REPAIR_EVIDENCE")
         elif package_only:
             f.deescalators.append("PACKAGE_REPAIR")

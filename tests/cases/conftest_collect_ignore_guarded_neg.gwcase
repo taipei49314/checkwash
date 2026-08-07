@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: the same line under a version gate is a compat gate, not a kill
+origin: attrs 61e8179545 in the FP corpus — `collect_ignore.extend([...])`
+origin2: under `if not PY_3_14_PLUS`, shipped with the production change that
+origin3: made the new tests possible. The constant is imported from a file the
+origin4: diff never touches, so it is resolved from the head snapshot.
+=== head: src/app/_compat.py ===
+import sys
+
+PY_3_14_PLUS = sys.version_info[:2] >= (3, 14)
+=== before: tests/conftest.py ===
+import pytest
+
+from app._compat import PY_3_14_PLUS
+
+collect_ignore = []
+=== after: tests/conftest.py ===
+import pytest
+
+from app._compat import PY_3_14_PLUS
+
+collect_ignore = []
+if not PY_3_14_PLUS:
+    collect_ignore.extend(["test_forward_references.py"])
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

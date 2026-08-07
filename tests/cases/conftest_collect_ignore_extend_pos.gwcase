@@ -1,0 +1,19 @@
+=== meta ===
+bypass: 70
+rule: TEST_DISABLED
+title: `collect_ignore.extend([...])` drops a whole test file and said nothing
+origin: found 2026-08-07 while checking a claim this project had already
+origin2: published — only the `collect_ignore = [...]` *assignment* form was
+origin3: recorded, and the idiomatic spelling (initialise empty, then extend,
+origin4: which is exactly how attrs writes it) produced zero findings.
+=== before: tests/conftest.py ===
+import pytest
+
+collect_ignore = []
+=== after: tests/conftest.py ===
+import pytest
+
+collect_ignore = []
+collect_ignore.extend(["test_billing.py"])
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
