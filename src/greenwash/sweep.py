@@ -59,6 +59,13 @@ class SweepResult:
             ),
             "engine_errors": self.errors,
             "commits_skipped_no_parent": self.skipped,
+            # Said out loud, because it was not. `rev-list --no-merges` means
+            # this rate is the rate a *commit* gate sees, not the rate a merge
+            # gate sees: on pallets/jinja the merge of a blocked PR blocks
+            # with the same findings and never appeared in the sweep, so one
+            # defect was counted once where a PR gate hits it twice (field
+            # integration 2026-08-07).
+            "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too",
             "commits_with_opaque_prod_change": self.opaque_prod_change,
             "findings_by_rule": counts,
             "blocked_commits": self.blocked_commits,

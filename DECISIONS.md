@@ -778,3 +778,67 @@ in all six repositories, so no subset of it can cost more. Zero of the 1800
 commits add a `conftest.py`; zero contain `set -o errexit`; zero touch any of
 the runner filenames added. A fifteen-minute sweep would have answered a
 question four one-minute greps already answered exactly.
+
+## D-030 (2026-08-07): the field report's four cheapest defects, and a gate that could not see the cost
+
+`docs/integrations.md` listed eleven defects and fixed none of them, on purpose
+— fixing them inside the commit that reports them is how a report stops being
+trustworthy. This is the round that fixes four, each reproduced by hand first.
+
+**E6 was a one-sided scan, and it blocked the ecosystem's most ordinary
+commit.** The weakening tokens were one list, checked against added lines.
+Every line of a newly added file is an added line, so deleting `setup.cfg` and
+adding `pyproject.toml` with a byte-identical `testpaths` reported "test
+command weakened" at high — and so did configuring pytest for the first time
+in a repository that had none. Reproduced on psf/requests 2a6f290b,
+pallets/jinja 20477c63 and pydantic 0c27c49d, where the only delta on the
+flagged line was a trailing path added beside a `-k` deselection that had been
+there for years with an explanatory comment above it.
+
+The fix is a distinction the list did not make. A **swallow** discards an exit
+code — `|| true`, `set +e`, `continue-on-error` — and introducing one anywhere
+is a weakened command, because a second swallow is not made harmless by the
+first. A **narrowing** restricts which tests run — `testpaths`, `-k`,
+`--deselect`, `python_files` — and restating one narrows nothing. Narrowings
+now count only when the diff introduces them: the token must be absent from
+the base side of every ci-role file in the diff, and the file carrying it must
+have existed at base. The residual is stated rather than hidden: a migration
+that also narrows, in the same commit, is warn instead of high. That is the
+right trade against blocking every PEP 621 migration in the language.
+
+**Creating a guardrail file is not relaxing one.** `greenwash hook install
+--agent claude-code` writes `.claude/settings.json`; greenwash then rated that
+file critical. Doing the two things the README says, in the order it says
+them, produced a blocking verdict on greenwash's own installer output. A
+constraint that did not exist has not been weakened. Created guardrail files
+are reported at warn — a new `.cursorrules` is worth seeing — and relaxing one
+that existed stays critical.
+
+**The remediation printed on every finding did not work as printed.** Every
+blocking report ends with `greenwash allow "<fingerprint>"`. Run it, re-run
+check, and the identical block comes back, because the allowlist is read from
+the base side so that an agent cannot exempt itself inside the diff under
+review. The design is right and the instruction was half a sentence long. It
+now says the file has to be committed. Evidence lines are bounded to 160
+characters in the same change: `SUPPRESSION_ADDED` on a generated module
+printed a ~1400-character regex twice and buried every other finding.
+
+**A perf gate that goes through git.** `tests/gates/test_perf.py` calls
+`analyze()` with in-memory `FileChange` objects, so it measures the engine and
+nothing else — and a range diff was spawning two `git show` processes per
+modified file. On pydantic that was 241 subprocesses and 9.1 s, 58% of wall
+clock, entirely invisible to the budget. Blobs are now read in one
+`git cat-file --batch`, and `tests/test_perf_git.py` measures the real path:
+150 files changed on both sides, through the CLI, counting processes as well
+as seconds.
+
+Measured, both directions. Speed: a 120-file pydantic commit went 15.81 s →
+5.91 s and 244 git processes → 11; a 34-file commit 3.68 s → 2.17 s. Identity:
+60 consecutive jinja commits produce byte-identical JSON under the per-blob
+and batched readers, so this is I/O and not judgement. And the new gate was
+checked the only way a gate is worth anything — it fails on the old code, with
+"601 git processes for 300 changed files". The first version of that check
+passed on both, because a src-layout editable install had quietly resolved the
+old worktree's import to the new code. Green because it did not run is the
+failure this project keeps repeating; it got caught this time before it was
+written down.

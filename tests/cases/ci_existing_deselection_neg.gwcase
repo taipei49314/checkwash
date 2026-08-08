@@ -1,0 +1,21 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: editing a line that already carried a deselection is not adding one
+origin: field integration 2026-08-07 — pydantic 0c27c49d scopes an existing
+origin2: pytest invocation to `tests/`, and the `-k 'not ...'` on that line is
+origin3: pre-existing and carries its own explanatory comment. A one-sided scan
+origin4: blocks every future edit to a line that documents a known-bad test.
+=== before: .github/workflows/ci.yml ===
+jobs:
+  test:
+    steps:
+      # Disabled upstream, see issue #512
+      - run: pytest -k "not test_flaky_upstream"
+=== after: .github/workflows/ci.yml ===
+jobs:
+  test:
+    steps:
+      # Disabled upstream, see issue #512
+      - run: pytest -k "not test_flaky_upstream" tests/
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

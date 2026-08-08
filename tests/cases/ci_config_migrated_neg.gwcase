@@ -1,0 +1,28 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: moving pytest configuration between files narrows nothing
+origin: field integration 2026-08-07 — psf/requests 2a6f290b and pallets/jinja
+origin2: 20477c63 are both the setuptools-to-PEP-621 migration, and both blocked
+origin3: at high on `testpaths` in the *added* file while the identical setting
+origin4: sat in the file the same commit deleted. E6 scanned added lines and had
+origin5: no view of the base side at all. Most of the ecosystem has done this.
+=== before: setup.cfg ===
+[tool:pytest]
+testpaths = tests
+addopts = --strict-markers
+=== after: pyproject.toml ===
+[build-system]
+requires = ["hatchling"]
+
+[project]
+name = "app"
+version = "1.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+=== expect ===
+[
+  {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "setup.cfg"},
+  {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "pyproject.toml"}
+]

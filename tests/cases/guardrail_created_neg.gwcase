@@ -1,0 +1,16 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+title: a guardrail file that did not exist has relaxed nothing
+origin: field integration 2026-08-07 — `greenwash hook install --agent
+origin2: claude-code` writes .claude/settings.json, and greenwash then rated its
+origin3: own installer's output critical. Doing the two things the README says,
+origin4: in the order it says, produced a blocking verdict. Creating agent
+origin5: instructions is reported at warn; relaxing existing ones stays critical.
+=== after: .claude/settings.json ===
+{
+  "hooks": {
+    "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "greenwash check --format hook-json"}]}]
+  }
+}
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "warn"}]

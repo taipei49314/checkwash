@@ -1,6 +1,66 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-07 (v0.1.12: five of the audit's rows closed, and a second shipped false positive)
+Updated: 2026-08-07 (v0.1.13: four defects from the field report, and a gate that could not see the cost)
+
+## The 2026-08-07 sixth round (v0.1.13): fixing what the field found
+
+`docs/integrations.md` listed eleven defects and fixed none — fixing them
+inside the commit that reports them is how a report stops being trustworthy.
+This round fixes four, each reproduced by hand before anything was designed.
+
+**E6 was a one-sided scan and it blocked the ecosystem's most ordinary
+commit.** Deleting `setup.cfg` and adding `pyproject.toml` with a
+byte-identical `testpaths` reported "test command weakened" at **high** — and
+so did configuring pytest for the first time in a repository that had none.
+Every line of a newly added file is an added line, and the scan had no view of
+the base side at all. The fix is a distinction the token list never made: a
+**swallow** discards an exit code and introducing one anywhere is a weakening;
+a **narrowing** restricts which tests run, and restating one narrows nothing.
+Narrowings now count only when the diff introduces them — absent from the
+base-side ci surface, in a file that existed. Residual, stated rather than
+hidden: a migration that also narrows, in one commit, is warn instead of high.
+
+**Creating a guardrail file is not relaxing one.** Running `greenwash hook
+install --agent claude-code` and committing the result produced a **critical**
+block on greenwash's own installer output. Created guardrail files are warn;
+relaxing one that existed stays critical.
+
+**The remediation printed on every finding did not work as printed.** Run
+`greenwash allow`, re-run check, get the identical block — because the
+allowlist is read base-side so an agent cannot exempt itself mid-diff. Right
+design, half a sentence. It now says the file has to be committed. Evidence
+lines are bounded at 160 characters in the same change; `SUPPRESSION_ADDED` on
+a generated module printed a 1400-character regex twice.
+
+**A perf gate that goes through git.** The old gate calls `analyze()` with
+in-memory changes, so it never saw that a range diff spawned two `git show`
+processes per modified file — 241 subprocesses and 9.1 s on one pydantic
+commit, 58% of wall clock. Blobs are read in one `git cat-file --batch` now.
+A 120-file commit went **15.81 s → 5.91 s**, 244 git processes → 11; a 34-file
+commit 3.68 s → 2.17 s. Sixty consecutive jinja commits produce byte-identical
+JSON under both readers, so this is I/O, not judgement.
+
+The new gate was checked the only way a gate is worth anything: it fails on
+the old code, at "601 git processes for 300 changed files". The first version
+of that check passed on both, because a src-layout editable install quietly
+resolved the old worktree's import to the new code. Green because it did not
+run is the failure this project keeps repeating, and this time it was caught
+before it was written down rather than after.
+
+`sweep` also now states in its own output that it excludes merge commits —
+on jinja, the merge of a blocked PR blocked identically and never appeared in
+the sweep, so one defect was counted once where a merge gate hits it twice.
+
+**Corpus: 35 blocked before, the same 35 after, in all six repositories, with
+zero finding deltas.** This is also the first *full* sweep since v0.1.10 — the
+committed JSONs were stamped 0.1.10, because v0.1.11 and v0.1.12 shipped on
+targeted checks and a bounding argument rather than fifteen minutes of
+sweeping. That argument is now measured and it held exactly: opaque exemptions
+fell 32 → 25 (1.39%), the seven that v0.1.12's row 78/79/80 tightenings should
+have removed, **and not one verdict moved** — which is what "disabling the
+exemption entirely moves the block set by zero, so no subset can cost more"
+predicted. A bound that turns out to be tight is worth more than a bound that
+was never checked.
 
 ## The 2026-08-07 fifth round (v0.1.12): closing the audit, with two designs rejected
 
@@ -330,7 +390,7 @@ drift greenwash is built to catch.
 | human-commit block rate | 35/1800 = 1.94% |
 | adjudicated false positive | 20/1800 = 1.11% |
 | legitimate policy block | 15/1800 = 0.83% |
-| opaque exemption share | 32/1800 = 1.78% |
+| opaque exemption share | 25/1800 = 1.39% |
 | classic adversarial decoys blocked | 12/12 |
 
 The split is the majority of three raters (two blind re-adjudications;

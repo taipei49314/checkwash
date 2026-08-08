@@ -50,6 +50,54 @@ def read_base_file(repo: str, base: str, path: str) -> bytes | None:
     return _read_blob(repo, base, path)
 
 
+def read_blobs(repo: str, specs: list[tuple[str, str]]) -> dict[tuple[str, str], bytes | None]:
+    """Every requested blob, in one `git cat-file --batch` process.
+
+    `_read_blob` spawns a process per blob, and a range diff needs two per
+    modified file. Measured on pydantic: a 120-file commit spent 9.1 s in 241
+    `git show` calls, 58% of its wall clock — and the perf gate could not see
+    any of it, because it calls `analyze()` with in-memory changes and never
+    touches git (field integration 2026-08-07). Batching is the same bytes in
+    one process.
+
+    The batch protocol answers requests in order, either
+    `<oid> <type> <size>\\n<content>\\n` or `<request> missing\\n`. Anything
+    unparseable falls back to the per-blob path rather than guessing, so a
+    surprising response degrades to slow rather than wrong.
+    """
+    if not specs:
+        return {}
+    uniq = sorted(set(specs))
+    stdin = b"".join(f"{rev}:{path}\n".encode("utf-8") for rev, path in uniq)
+    try:
+        proc = subprocess.run(
+            ["git", "-C", repo, "cat-file", "--batch"],
+            input=stdin,
+            capture_output=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise GitError("git executable not found") from exc
+
+    out, pos, result = proc.stdout, 0, {}
+    for spec in uniq:
+        end = out.find(b"\n", pos)
+        if end < 0:
+            return {s: _read_blob(repo, *s) for s in uniq}
+        header = out[pos:end]
+        pos = end + 1
+        if header.endswith(b" missing") or header.endswith(b" ambiguous"):
+            result[spec] = None
+            continue
+        parts = header.rsplit(b" ", 1)
+        if len(parts) != 2 or not parts[1].isdigit():
+            return {s: _read_blob(repo, *s) for s in uniq}
+        size = int(parts[1])
+        result[spec] = out[pos : pos + size]
+        pos += size + 1  # content is followed by a newline
+    return result
+
+
 def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
     """Paths at `rev` whose content contains any needle (fixed strings).
 
@@ -74,10 +122,9 @@ def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
     return paths
 
 
-def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
-    out = _run(repo, ["diff", "--name-status", "-z", "--find-renames", base, head])
-    tokens = [t for t in out.decode("utf-8", "replace").split("\0")]
-    changes: list[FileChange] = []
+def _parse_name_status(tokens: list[str]) -> list[tuple[str, str, str | None]]:
+    """(code, path, old_path) for each entry of a -z name-status stream."""
+    entries: list[tuple[str, str, str | None]] = []
     i = 0
     while i < len(tokens):
         status = tokens[i]
@@ -86,33 +133,49 @@ def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
             continue
         code = status[0]
         if code in ("R", "C"):
-            old, new = tokens[i + 1], tokens[i + 2]
+            entries.append((code, tokens[i + 2], tokens[i + 1]))
             i += 3
-            changes.append(
-                FileChange(
-                    path=new,
-                    status="modified" if code == "R" else "added",
-                    before=_read_blob(repo, base, old) if code == "R" else None,
-                    after=_read_blob(repo, head, new),
-                    old_path=old if code == "R" else None,
-                )
-            )
         else:
-            path = tokens[i + 1]
+            entries.append((code, tokens[i + 1], None))
             i += 2
-            if code == "A":
-                changes.append(FileChange(path, "added", None, _read_blob(repo, head, path)))
-            elif code == "D":
-                changes.append(FileChange(path, "deleted", _read_blob(repo, base, path), None))
-            else:  # M, T, and anything else treated as modification
-                changes.append(
-                    FileChange(
-                        path,
-                        "modified",
-                        _read_blob(repo, base, path),
-                        _read_blob(repo, head, path),
-                    )
-                )
+    return entries
+
+
+def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
+    out = _run(repo, ["diff", "--name-status", "-z", "--find-renames", base, head])
+    entries = _parse_name_status([t for t in out.decode("utf-8", "replace").split("\0")])
+
+    # Collect every blob this diff needs, then fetch them in one process.
+    specs: list[tuple[str, str]] = []
+    for code, path, old in entries:
+        if code == "R":
+            specs += [(base, old), (head, path)]
+        elif code == "C":
+            specs.append((head, path))
+        elif code == "A":
+            specs.append((head, path))
+        elif code == "D":
+            specs.append((base, path))
+        else:
+            specs += [(base, path), (head, path)]
+    blobs = read_blobs(repo, specs)
+
+    changes: list[FileChange] = []
+    for code, path, old in entries:
+        if code == "R":
+            changes.append(
+                FileChange(path, "modified", blobs.get((base, old)), blobs.get((head, path)), old_path=old)
+            )
+        elif code == "C":
+            changes.append(FileChange(path, "added", None, blobs.get((head, path))))
+        elif code == "A":
+            changes.append(FileChange(path, "added", None, blobs.get((head, path))))
+        elif code == "D":
+            changes.append(FileChange(path, "deleted", blobs.get((base, path)), None))
+        else:  # M, T, and anything else treated as modification
+            changes.append(
+                FileChange(path, "modified", blobs.get((base, path)), blobs.get((head, path)))
+            )
     return changes
 
 

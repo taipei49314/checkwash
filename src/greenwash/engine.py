@@ -230,7 +230,10 @@ _TEST_RUNNER_TOKENS = (
     "vitest",
 )
 
-_CI_WEAKENING_TOKENS = (
+# Two families, and the difference between them is the whole of E6's
+# precision. A *swallow* discards an exit code: introducing one anywhere is a
+# weakened command, because a second one is not made harmless by the first.
+_CI_SWALLOW_TOKENS = (
     "continue-on-error: true",
     "|| true",
     # The shell has more than one spelling for "ignore the exit code", and a
@@ -238,6 +241,17 @@ _CI_WEAKENING_TOKENS = (
     "|| :",
     "|| exit 0",
     "set +e",
+)
+
+# A *narrowing* restricts which tests run. Restating one is not narrowing
+# anything, and a one-sided scan of added lines cannot tell the two apart:
+# deleting `setup.cfg` and adding `pyproject.toml` with a byte-identical
+# `testpaths` was reported as a weakened test command at high, and so was
+# configuring pytest for the first time in a repository that had no
+# configuration at all. Both are among the most ordinary commits in the
+# Python ecosystem, and both blocked (field integration 2026-08-07: psf/
+# requests 2a6f290b, pallets/jinja 20477c63, pydantic 0c27c49d).
+_CI_NARROWING_TOKENS = (
     "--ignore=",
     "--ignore ",
     "--deselect",
@@ -255,6 +269,8 @@ _CI_WEAKENING_TOKENS = (
     "collect_ignore",
     "-p no:",
 )
+
+_CI_WEAKENING_TOKENS = _CI_SWALLOW_TOKENS + _CI_NARROWING_TOKENS
 
 # Invisible / direction-control characters (SPEC: HIDDEN_UNICODE).
 _HIDDEN_CODEPOINTS = frozenset(
@@ -442,10 +458,46 @@ def _make_ignores_error(line: str) -> bool:
     return body.startswith("-") and not body[1:2].isspace() and body[1:2] != ""
 
 
-def _scan_ci_weakening(g: DiffGlobals, path: str, before: bytes | None, after: bytes | None) -> None:
+def _ci_base_surface(changes: list[FileChange], config: Config) -> str:
+    """Every ci-role file's *base* side, lowercased and concatenated.
+
+    A narrowing that already existed somewhere on this surface is not being
+    introduced by the diff, wherever in the diff it now appears. That is what
+    lets a configuration move between files — `setup.cfg` to `pyproject.toml`
+    is the migration most of the ecosystem has made — without reading as a
+    weakened test command.
+    """
+    parts: list[str] = []
+    for change in changes:
+        path = change.path.replace("\\", "/")
+        if is_artifact(path) or not change.before:
+            continue
+        role = config.role_of(path)
+        if role == "prod" and _is_runner_script(path, change.before, change.after):
+            role = "ci"
+        if role == "ci":
+            parts.append(change.before.decode("utf-8", errors="replace").lower())
+    return "\n".join(parts)
+
+
+def _scan_ci_weakening(
+    g: DiffGlobals,
+    path: str,
+    before: bytes | None,
+    after: bytes | None,
+    ci_base: str = "",
+) -> None:
+    # A file that did not exist at base cannot have *narrowed* anything —
+    # there was no test command there to narrow. It can still swallow an exit
+    # code, which is why the two families are separated.
+    existed = bool(before)
     for line in _added_lines(before, after):
         lowered = line.lower()
-        if any(token in lowered for token in _CI_WEAKENING_TOKENS) or (
+        swallowed = any(token in lowered for token in _CI_SWALLOW_TOKENS)
+        narrowed = existed and any(
+            token in lowered and token not in ci_base for token in _CI_NARROWING_TOKENS
+        )
+        if swallowed or narrowed or (
             _make_ignores_error(line) and any(t in lowered for t in _TEST_RUNNER_TOKENS)
         ):
             g.ci_weakening_lines.append((path, line.strip()[:200]))
@@ -513,6 +565,10 @@ def build_ir(
         for change in changes:
             for part in change.path.replace("\\", "/").split("/"):
                 resolvable.add(part[:-3] if part.endswith(".py") else part)
+
+    # Computed once, before anything is judged: E6 needs to know what the
+    # ci surface already said, not just what this diff added to it.
+    ci_base = _ci_base_surface(changes, config)
 
     for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
         path = change.path.replace("\\", "/")
@@ -752,6 +808,8 @@ def build_ir(
                     g.guardrail_files_changed.append(path)
             else:
                 g.guardrail_files_changed.append(path)
+            if not change.before:
+                g.guardrail_files_created.append(path)
         elif role == "ci":
             g.ci_files_changed.append(path)
             if change.status == "deleted" and _is_ci_workflow(path) and _runs_tests(change.before):
@@ -763,7 +821,7 @@ def build_ir(
                 # pinact.yml). A removed non-test workflow still surfaces as
                 # CI_WORKFLOW_TOUCHED at warn: visible, not blocking.
                 g.ci_weakening_lines.append((path, "workflow file removed"))
-            _scan_ci_weakening(g, path, change.before, change.after)
+            _scan_ci_weakening(g, path, change.before, change.after, ci_base)
         elif role == "snapshot":
             g.snapshot_files_changed.append(path)
 

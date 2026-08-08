@@ -233,17 +233,33 @@ def _cmd_check(args: argparse.Namespace) -> int:
     return 1 if verdict == "block" else 0
 
 
+# The remote form first, because it is the one that works on a machine that
+# does not already have greenwash: pre-commit builds it in its own
+# environment. This command used to print only the `repo: local` /
+# `language: system` variant, which silently requires greenwash on PATH — so
+# the CLI handed users the more fragile of the two answers while the README
+# published the other, and nothing said when to pick which (field integration
+# 2026-08-07). The rev is interpolated rather than typed, because a hardcoded
+# version in a printed snippet is a claim that drifts.
 _PRECOMMIT_SNIPPET = """\
 # .pre-commit-config.yaml
 repos:
-  - repo: local
+  - repo: https://github.com/taipei49314/greenwash
+    rev: v{version}
     hooks:
       - id: greenwash
-        name: greenwash (oracle-tampering tripwire)
-        entry: greenwash check --format term
-        language: system
-        pass_filenames: false
-        always_run: true
+
+# Alternative, if greenwash is already installed in the environment your hooks
+# run in (faster, and no network on first install; fails if it is not there):
+#
+#   - repo: local
+#     hooks:
+#       - id: greenwash
+#         name: greenwash (oracle-tampering tripwire)
+#         entry: greenwash check --format term
+#         language: system
+#         pass_filenames: false
+#         always_run: true
 """
 
 
@@ -252,7 +268,7 @@ def _cmd_hook_install(args: argparse.Namespace) -> int:
 
     if args.agent == "pre-commit":
         # Nothing to write for them — their config is theirs; print the block.
-        sys.stdout.write(_PRECOMMIT_SNIPPET)
+        sys.stdout.write(_PRECOMMIT_SNIPPET.format(version=__version__))
         return 0
 
     settings_path = os.path.join(args.repo, ".claude", "settings.json")

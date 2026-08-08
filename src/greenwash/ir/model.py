@@ -155,6 +155,11 @@ class DiffGlobals:
     # however new its latest occurrence looks (dogfood-found false positive).
     base_literals: list[str] = field(default_factory=list)
     guardrail_files_changed: list[str] = field(default_factory=list)
+    # Guardrail files this diff *created*. A constraint that did not
+    # exist has not been relaxed, and treating creation as relaxation
+    # made greenwash's own installer produce a critical block (field
+    # integration 2026-08-07).
+    guardrail_files_created: list[str] = field(default_factory=list)
     ci_files_changed: list[str] = field(default_factory=list)
     ci_weakening_lines: list[tuple[str, str]] = field(default_factory=list)  # (path, line)
     snapshot_files_changed: list[str] = field(default_factory=list)

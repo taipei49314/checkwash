@@ -32,6 +32,19 @@ def _symbols(stream) -> dict[str, str]:
     return {"pass": "✓", "block": "✗", "warn": "⚠", "dash": "—"}
 
 
+# One line of evidence, bounded. SUPPRESSION_ADDED on a generated module
+# printed a ~1400-character unicode regex twice — once in the message and
+# once as evidence — and buried every other finding on the screen.
+_EVIDENCE_WIDTH = 160
+
+
+def _evidence(text: str | None) -> str:
+    if not text:
+        return ""
+    first = text.splitlines()[0]
+    return first if len(first) <= _EVIDENCE_WIDTH else first[: _EVIDENCE_WIDTH - 1] + "…"
+
+
 def _c(code: str, text: str, color: bool) -> str:
     return f"\x1b[{code}m{text}\x1b[0m" if color else text
 
@@ -76,12 +89,19 @@ def render(
         if f.deescalators:
             lines.append(f"  context: {', '.join(f.deescalators)}")
         if f.before is not None:
-            lines.append(f"  before  {f.before.text.splitlines()[0] if f.before.text else ''}")
+            lines.append(f"  before  {_evidence(f.before.text)}")
         if f.after is not None:
-            lines.append(f"  after   {f.after.text.splitlines()[0] if f.after.text else ''}")
+            lines.append(f"  after   {_evidence(f.after.text)}")
         if f.severity in ("high", "critical"):
             lines.append("  fix the code, or record a reviewed exemption:")
             lines.append(f'    greenwash allow "{f.fingerprint}" --reason "..."')
+            # The allowlist is read from the *base* side, so an agent cannot
+            # exempt itself inside the diff under review. Correct, and it made
+            # the printed instruction look broken: run it, re-run check, get
+            # the identical block, with nothing saying why (field integration
+            # 2026-08-07). The reader of a blocking report is exactly the
+            # person who needs the second half of the sentence.
+            lines.append("    then commit .greenwash/allow.toml — it is read from the base side")
         lines.append("")
 
     for message in errors or []:

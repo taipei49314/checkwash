@@ -146,7 +146,10 @@ def detect_guardrail(ir: IR) -> list[Finding]:
         Finding(
             rule="GUARDRAIL_TOUCHED",
             severity="warn",  # gating E4 raises to critical
-            message=f"guardrail file changed ({path}) — agent constraints are part of the oracle",
+            message=(
+                f"guardrail file {'created' if path in ir.globals.guardrail_files_created else 'changed'}"
+                f" ({path}) — agent constraints are part of the oracle"
+            ),
             path=path,
             unit=None,
             fingerprint=make_fingerprint("GUARDRAIL_TOUCHED", path, None, path),

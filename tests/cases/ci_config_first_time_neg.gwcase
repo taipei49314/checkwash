@@ -1,0 +1,11 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: configuring pytest for the first time is not weakening the test command
+origin: field integration 2026-08-07 — there was no test command to weaken.
+origin2: A scope knob in a file that did not exist at base establishes a scope;
+origin3: it does not narrow one. Reported at warn, which is visible.
+=== after: pyproject.toml ===
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

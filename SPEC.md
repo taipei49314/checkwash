@@ -82,9 +82,9 @@ between the two is a laundering route (all confirmed by reproduction):
   and so does marking them `pytest.param(..., marks=pytest.mark.skip)`, because
   a row is an item only if it runs
 - pytest's own configuration decides collection, so `pytest.ini`, `tox.ini`,
-  `setup.cfg` and `pyproject.toml` are test-runner config: narrowing
-  `python_files`/`testpaths`, or adding a filtering `addopts`, is a weakened
-  test command
+  `setup.cfg` and `pyproject.toml` are test-runner config: *introducing* a
+  narrowed `python_files`/`testpaths`, or a filtering `addopts`, is a weakened
+  test command. Moving one between files is not — see §5's two token families
 - `conftest.py` is analysed for suite-level collection controls
   (`pytest_collection_modifyitems`, `pytest_ignore_collect`,
   `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`, `pytestmark`).
@@ -151,8 +151,8 @@ detectors can only be disabled whole.
 | `SUBJECT_NORMALIZED` | an aligned assertion keeps its form, strength **and** expected literal, and the asserted subject now wraps its old self — `f(x)` became `f(x).replace(...)`, `sorted(f(x))`, `f(x)[0]`. Structural containment, so spelling does not matter; a subject replaced outright is a different test, not a laundered one. Escalates through repair evidence like every oracle rule, because wrapping is routine when production changed under it |
 | `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` (JS forms in v0.2) added |
-| `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `tox.ini`, `setup.cfg`, `pyproject.toml`) and content-classified runner scripts (§2); test command weakened → high. Weakening covers added lines carrying a swallow token (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`, pytest collection knobs), a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests; deleting a runner script or a config file does not — that is consolidation until proven otherwise |
-| `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions) |
+| `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `tox.ini`, `setup.cfg`, `pyproject.toml`) and content-classified runner scripts (§2); test command weakened → high. Weakening is two families, and the difference is the rule's precision. A **swallow** discards an exit code (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`): introducing one anywhere is a weakened command. A **narrowing** restricts which tests run (`--ignore`, `--deselect`, `-k`, `python_files`, `python_classes`, `python_functions`, `testpaths`, `norecursedirs`, `collect_ignore`, `-p no:`): it counts only when the diff *introduces* it — the token must be absent from the base side of every ci-role file in the diff, and the file carrying it must have existed at base. Restating a setting is not narrowing it, and a file that did not exist had no test command to narrow. Also weakening: a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests; deleting a runner script or a config file does not — that is consolidation until proven otherwise |
+| `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions). A guardrail file the diff **created** is reported at warn instead: a constraint that did not exist has not been relaxed, and rating creation critical meant `greenwash hook install --agent claude-code` produced a blocking verdict on greenwash's own artefact |
 | `IMPORT_UNRESOLVED` | new import fails to resolve against lockfile / site-packages |
 | `SCOPE_DRIFT` | changed file outside contract globs (disabled without a manifest) |
 | `HIDDEN_UNICODE` | zero-width / bidi control characters in changed lines → high |

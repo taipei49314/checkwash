@@ -37,9 +37,9 @@
   "commits_blocked": 2,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 92,
-  "commits_with_opaque_prod_change": 11,
+  "commits_with_opaque_prod_change": 8,
   "corpus": {
-    "greenwash_version": "0.1.10",
+    "greenwash_version": "0.1.13",
     "newest_commit": "5174d4c8358a6f06aa8056bafd14c2272dab8dd1",
     "oldest_commit": "c78c9aac17a4d68e0647252310044502f1b7da71"
   },
@@ -67,5 +67,6 @@
       "high": 2,
       "warn": 21
     }
-  }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
 }

@@ -1,0 +1,18 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: a deselection that was not there before is still a weakened command
+origin: the bound on the three negatives beside it. The base side of this
+origin2: diff's ci surface carries no deselection; the head side does, on a
+origin3: file that existed. That is the shape the rule exists for.
+=== before: .github/workflows/ci.yml ===
+jobs:
+  test:
+    steps:
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+jobs:
+  test:
+    steps:
+      - run: pytest -k "not test_billing"
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

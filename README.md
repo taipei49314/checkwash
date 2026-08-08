@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 17 detectors, 281 tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 288 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -32,11 +32,15 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 **In short**
 
 - **0 LLM / 0 network / 0 runtime deps** — pure-stdlib Python; deterministic verdicts on 3.11–3.13
-- **Sub-second** on real diffs; analyses the *diff*, never executes code under review
+- **Fast enough for a stop-hook, measured through the path you run** — 0.2 s engine on a 3000-line
+  test diff, 1.6 s end to end for 300 changed files; analyses the *diff*, never executes code under review
 - **Blockable by default** on composite high-severity evidence (see [SPEC.md](SPEC.md))
 - **Measured, not asserted** — public corpora + published failures: [benchmarks/](benchmarks/README.md), [THREATMODEL.md](THREATMODEL.md), [benchmarks/FAILURES.md](benchmarks/FAILURES.md)
+- **Out of sample it does worse, and that is published too** — three projects never in the tuning
+  corpus: 667 commits, 15 blocks, **11 false positives (1.65%)** against the 1.11% measured on the
+  corpus the detectors were built against. Zero engine errors. [docs/integrations.md](docs/integrations.md)
 
-> Status: **pre-release.** 17 detectors, 281 tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 288 tests, zero runtime dependencies.
 > Every headline number comes from a reproducible harness — nothing ships that a
 > harness has not produced on a clean checkout.
 
@@ -85,14 +89,26 @@ engine `check` runs.
 ```yaml
 # .github/workflows/greenwash.yml
 on: [pull_request]
+
+permissions:
+  contents: read
+
 jobs:
   greenwash:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: taipei49314/greenwash/action@v0.1.13
 ```
+
+The `permissions` block and `persist-credentials: false` are there because
+pydantic runs [zizmor](https://github.com/woodruffw/zizmor) in pre-commit, and
+without them this snippet scored two high findings — a workflow a
+security-conscious project cannot merge is not an integration
+([docs/integrations.md](docs/integrations.md)).
 
 **pre-commit**:
 

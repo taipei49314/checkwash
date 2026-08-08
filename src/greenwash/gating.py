@@ -738,8 +738,18 @@ def apply_gates(
         if not is_oracle:
             # Non-oracle escalations from the SPEC §5 table.
             if f.rule == "GUARDRAIL_TOUCHED":
-                f.severity = "critical"
-                f.escalators.append("META")  # E4
+                # E4, but only for a constraint that existed. Creating one has
+                # relaxed nothing, and rating creation critical meant that
+                # running `greenwash hook install --agent claude-code` and
+                # committing the result — the two steps the README gives, in
+                # the order it gives them — produced a blocking verdict on the
+                # tool's own artefact (field integration 2026-08-07). Still
+                # reported, at warn: a new `.cursorrules` is worth seeing.
+                if f.path in ir.globals.guardrail_files_created:
+                    f.escalators.append("GUARDRAIL_CREATED")
+                else:
+                    f.severity = "critical"
+                    f.escalators.append("META")
             elif f.rule == "HIDDEN_UNICODE":
                 f.severity = "high"
                 f.escalators.append("HIDDEN_CONTROL_CHARS")
