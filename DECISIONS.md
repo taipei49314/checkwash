@@ -899,3 +899,39 @@ tampering pattern detected*. That is THREATMODEL row 84's third shape — found
 by the informed adversarial arm four days ago, published open — arriving
 unprompted in this repository's own gate file. It is row 84a now, and it is
 the first item of the next round.
+
+## D-032 (2026-08-08): a gate I documented twice and never ran once
+
+The v0.1.13 release workflow published all three assets correctly and then
+failed, on a `pypi` job that was never supposed to execute.
+
+`release.yml` gated it with `environment: pypi` and a comment stating the job
+"cannot run until a human creates a `pypi` environment on this repository".
+`docs/RELEASING.md` repeated it: "until both exist the job is skipped".
+Neither is true. **GitHub creates an environment automatically the first time
+a workflow job references one.** The gate was open from the moment it was
+written, and the job would have run on the first release regardless.
+
+It survived being written down twice because the release workflow had never
+executed: it was added in v0.1.12, whose release predated it, so v0.1.13 was
+the first run in the project's history. The claim was never checked against a
+run because there was no run to check it against.
+
+That is the fourth appearance of one root cause, and worth naming as a class
+rather than as four incidents. A dogfood job gated to pull requests in a
+repository with none; a determinism check that varied three Pythons and one
+OS; a perf gate that called `analyze()` and never touched git; and now a
+publish gate whose closed-ness was asserted rather than observed. Each time
+the mechanism was described accurately and its *reachability* was assumed.
+Four of the five gates this project has been most proud of failed on
+reachability, not on logic.
+
+The fix gates on `vars.PYPI_ENABLED`, because nothing auto-creates a
+repository variable. `test_pypi_job_is_gated_on_something_that_is_not_auto_created`
+fails if the condition ever goes back to consulting only `environment:`, and
+it was checked red against the old workflow before being trusted.
+
+The `pypi` environment itself is left alone: it is the maintainer's to delete
+or to attach protection rules to, and with the variable gate closed it is
+inert either way. Deleting it would also destroy the evidence that GitHub
+created it.

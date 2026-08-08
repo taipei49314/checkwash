@@ -89,14 +89,25 @@ jobs:
         run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
 
   pypi:
-    # Deliberately gated. This job cannot run until a human creates a `pypi`
-    # environment on this repository AND configures greenwash as a trusted
-    # publisher on PyPI. No token is stored anywhere, by anyone; trusted
-    # publishing exchanges a short-lived OIDC identity instead. Until both
-    # exist, this job is skipped and the release is GitHub-only — which is
-    # what the README currently promises.
+    # Deliberately gated, on a repository *variable* rather than on the
+    # environment. The first version of this job was gated only by
+    # `environment: pypi` and a comment claiming it would be skipped until a
+    # human created that environment. That claim was false: GitHub creates an
+    # environment automatically the first time a job references one, so on the
+    # v0.1.13 release the job ran, found no trusted publisher registered on
+    # PyPI, and failed a release that was otherwise entirely fine (D-032).
+    #
+    # `vars.PYPI_ENABLED` is not auto-created by anything, so this is a gate
+    # that is actually closed. Publishing needs all three, in this order:
+    #   1. register greenwash as a trusted publisher on PyPI, for this
+    #      repository and this workflow;
+    #   2. set the repository variable PYPI_ENABLED to `true`;
+    #   3. keep the `pypi` environment for its deployment protection rules.
+    # No token is stored anywhere by anyone; trusted publishing exchanges a
+    # short-lived OIDC identity instead. Until (2), this job is skipped and
+    # the release is GitHub-only, which is what the README promises.
     needs: build
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' && vars.PYPI_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:

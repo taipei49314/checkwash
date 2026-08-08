@@ -161,3 +161,38 @@ def test_dogfood_job_actually_runs():
         "the dogfood job must invoke the composite action itself, not just the "
         "CLI, or action/action.yml ships untested."
     )
+
+
+def test_pypi_job_is_gated_on_something_that_is_not_auto_created():
+    """The publish job must be closed by default, and `environment:` is not.
+
+    The first version of this job was gated only by `environment: pypi`, with a
+    comment stating it would be skipped until a human created that environment.
+    GitHub creates an environment automatically the first time a job references
+    one, so the gate was open from the start: on the v0.1.13 release the job
+    ran, found no trusted publisher registered on PyPI, and turned an otherwise
+    clean release red (D-032). The release workflow had never executed before,
+    which is how a false claim about it survived being written down twice.
+
+    A repository variable is not auto-created by anything, so it is a gate that
+    is actually closed. This pins that the condition consults one.
+    """
+    release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    assert "pypi:" in release, "the pypi job disappeared"
+    body = release.split("\n  pypi:", 1)[1]
+    body = re.split(r"\n  [A-Za-z0-9_-]+:", body, maxsplit=1)[0]
+    conditions = [
+        line.strip()[len("if:"):].strip()
+        for line in body.split("\n")
+        if line.strip().startswith("if:")
+    ]
+    assert conditions, (
+        "the pypi job has no `if:` at all — it publishes on every release. "
+        "Publishing is opt-in; gate it on a repository variable."
+    )
+    assert any("vars." in c for c in conditions), (
+        f"the pypi job is gated only by {conditions}. `environment:` does not "
+        "gate anything — GitHub auto-creates a referenced environment, which is "
+        "exactly how this failed on v0.1.13. Gate on `vars.<NAME>`, which "
+        "nothing creates for you."
+    )

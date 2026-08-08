@@ -60,17 +60,31 @@ build if the version and the tag disagree:
 
 ## PyPI
 
-Not automated by default, on purpose. The `pypi` job is gated behind a
-repository environment named `pypi` that does not exist until a human creates
-it, and it publishes through trusted publishing, so no token is stored
-anywhere by anyone. Two steps, both the maintainer's:
+Not automated by default, on purpose. The `pypi` job publishes through trusted
+publishing, so no token is stored anywhere by anyone. Three steps, all the
+maintainer's:
 
 1. Register greenwash as a trusted publisher on PyPI for this repository and
    the `release` workflow.
-2. Create the `pypi` environment on the repository.
+2. Set the repository variable `PYPI_ENABLED` to `true`.
+3. Keep the `pypi` environment for its deployment protection rules.
 
-Until both exist the job is skipped and releases are GitHub-only, which is
-what the README currently promises.
+Until (2), the job is skipped and releases are GitHub-only, which is what the
+README promises.
+
+**This paragraph used to say something false, and it is worth knowing why.**
+It claimed the job was gated behind an environment "that does not exist until
+a human creates it". GitHub creates an environment automatically the first
+time a job references one, so the gate was open from the moment it was
+written. Nobody noticed because the release workflow had never run: it was
+added in v0.1.12, whose release predated it. On v0.1.13 it ran for the first
+time, published all three assets correctly, and then failed on a trusted
+publisher that does not exist — turning a clean release red.
+
+The gate is a repository variable now, because nothing auto-creates one, and
+`tests/test_packaging.py::test_pypi_job_is_gated_on_something_that_is_not_auto_created`
+fails if it ever goes back to being gated by `environment:` alone. D-032 has
+the full account.
 
 ## After the release
 
