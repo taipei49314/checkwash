@@ -1,6 +1,6 @@
 """greenwash: a deterministic, zero-LLM detector for diffs that tamper with the verification layer."""
 
-__version__ = "0.1.12"
+__version__ = "0.1.13"
 
 IR_VERSION = 1
 FINDINGS_VERSION = 1
