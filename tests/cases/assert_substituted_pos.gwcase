@@ -1,0 +1,27 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: A different assertion takes the deleted one's slot
+origin: the 2026-08-08 incident diff, reduced — greenwash passed the original (D-031)
+=== before: tests/test_release.py ===
+import subprocess
+
+from release import readme_pins
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    exists = subprocess.run(["git", "rev-parse", tag])
+    assert exists.returncode == 0
+=== after: tests/test_release.py ===
+import subprocess
+
+from release import readme_pins
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    exists = subprocess.run(["git", "rev-parse", tag])
+    pinned = readme_pins()
+    assert pinned == {tag}
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

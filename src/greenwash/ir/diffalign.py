@@ -41,7 +41,7 @@ def _jaccard(a: frozenset, b: frozenset) -> float:
 def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
     b_asserts = list(before.side.assertions)
     a_asserts = list(after.side.assertions)
-    pairs: list[tuple] = []
+    pairs: list[tuple] = []  # (before, after, from_order_fallback)
 
     # 1. exact normalized-text matches (multiset)
     a_by_text: dict[str, list] = {}
@@ -51,7 +51,7 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
     for b in b_asserts:
         bucket = a_by_text.get(normalize_text(b.text))
         if bucket:
-            pairs.append((b, bucket.pop(0)))
+            pairs.append((b, bucket.pop(0), False))
         else:
             b_rest.append(b)
     a_rest = [a for bucket in a_by_text.values() for a in bucket]
@@ -65,7 +65,7 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
     for b in b_rest:
         bucket = a_by_key.get((b.form, normalize_text(b.left or "")))
         if bucket:
-            pairs.append((b, bucket.pop(0)))
+            pairs.append((b, bucket.pop(0), False))
         else:
             b_rest2.append(b)
     a_rest2 = [a for bucket in a_by_key.values() for a in bucket]
@@ -91,18 +91,20 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
             removed.append(b)
         else:
             used[idx] = True
-            pairs.append((b, a_rest2[idx]))
+            pairs.append((b, a_rest2[idx], True))
     added = [a for j, a in enumerate(a_rest2) if not used[j]]
 
     pairs.sort(key=lambda p: p[0].span)
     assertion_pairs = []
     tolerance_changes: list[tuple[str, str]] = []
-    for b, a in pairs:
+    for b, a, fallback in pairs:
         change = None
         if b.strength is not None and a.strength is not None:
             change = a.strength - b.strength
         assertion_pairs.append(
-            AssertionPair(before_id=b.id, after_id=a.id, strength_change=change)
+            AssertionPair(
+                before_id=b.id, after_id=a.id, strength_change=change, fallback=fallback
+            )
         )
         if b.epsilon is not None and a.epsilon is not None and b.epsilon != a.epsilon:
             kind = a.epsilon_kind or b.epsilon_kind or "abs"

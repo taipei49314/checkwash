@@ -356,6 +356,10 @@ class _Classified:
     epsilon: str | None = None
     epsilon_kind: str | None = None
     positive: bool = True
+    # Raw name references on each side, before local bindings are followed.
+    # _collect_unit resolves right_names into Assertion.right_depends_on.
+    left_names: tuple[str, ...] = ()
+    right_names: tuple[str, ...] = ()
 
 
 _NEGATED_UNITTEST = frozenset(
@@ -493,36 +497,23 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         right_lit = _literal_repr(expect_node, text) if expect_node is not None else None
         right_val = _literal_value(expect_node) if expect_node is not None else None
         pos = not isinstance(op, (ast.NotEq, ast.IsNot, ast.NotIn))
-        if isinstance(op, (ast.Eq, ast.NotEq)):
-            # Self-comparison (`assert f(x) == f(x)`) can never fail: the
-            # oracle is gone even though the form still looks exact. Strip
-            # identity ops (+0, -0, *1, /1) from both sides first, so
-            # `f(x) == f(x) + 0` is caught too (confirmed red-team finding).
-            if comparators and _norm(_strip_identity(left, text)) == _norm(
-                _strip_identity(comparators[0], text)
-            ):
-                return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
-            if isinstance(left, ast.Call) and _dotted(left.func) == "len":
-                return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
-            if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
-                return _Classified("compare_eq", S.EXACT_STRUCT, left_text, right_lit, right_val, positive=pos)
-            return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val, positive=pos)
-        if isinstance(op, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)):
-            return _Classified("compare_ord", S.BOUND, left_text, right_lit, right_val, positive=pos)
-        if isinstance(op, (ast.In, ast.NotIn)):
-            return _Classified("membership", S.PATTERN, left_text, right_lit, right_val, positive=pos)
-        if isinstance(op, (ast.Is, ast.IsNot)):
-            comp = comparators[0]
-            if isinstance(comp, ast.Constant) and comp.value is None:
-                return _Classified("non_null", S.NON_NULL, left_text, positive=pos)
-            return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val, positive=pos)
-        return _Classified("unknown", None, left_text)
+        c = _classify_compare_op(
+            op, left, comparators, text, left_text, right_lit, right_val, pos
+        )
+        # Which side is the subject and which the expectation was decided
+        # above, including the `assert 3 == calc()` flip, so the name sets come
+        # from those nodes rather than being re-derived. EXPECTED_VALUE_DERIVED
+        # needs them to tell a renamed constant from a recomputed expectation.
+        c.left_names = _referenced_names(subject_node)
+        c.right_names = _referenced_names(expect_node)
+        return c
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
         # `assert not x` is the negated form of `assert x`.
         inner = _classify_assert_expr(test.operand, text)
         return _Classified(
             inner.form, inner.strength, inner.left, inner.right_literal,
             inner.right_value, inner.epsilon, inner.epsilon_kind, not inner.positive,
+            inner.left_names, inner.right_names,
         )
     if isinstance(test, ast.Call):
         name = _dotted(test.func)
@@ -535,6 +526,103 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
     if _is_literal(test):
         return _Classified("tautology", S.TAUTOLOGY)
     return _Classified("truthy", S.TRUTHY)
+
+
+def _local_bindings(func) -> dict[str, tuple[str, ...]]:
+    """In-body `name = <expr>` bindings, name -> names referenced by the RHS.
+
+    Only assignments written inside the unit count. Function parameters are
+    deliberately excluded, which is what keeps a parametrized test off
+    EXPECTED_VALUE_DERIVED: `@parametrize("items,expected", ...)` binds
+    `expected` as an argument, so it resolves to itself and shares no name
+    with the subject. A name rebound more than once maps to the union of its
+    right-hand sides, because greenwash cannot order them without evaluating.
+    """
+    out: dict[str, set[str]] = {}
+    for node in ast.walk(func):
+        targets = []
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+            targets = [node.target]
+        else:
+            continue
+        if node.value is None:
+            continue
+        refs = set(_referenced_names(node.value))
+        for target in targets:
+            if isinstance(target, ast.Name):
+                out.setdefault(target.id, set()).update(refs)
+    return {k: tuple(sorted(v)) for k, v in out.items()}
+
+
+def _resolve_through(names: tuple[str, ...], bindings: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
+    """Follow local bindings to the names an expression really depends on.
+
+    `expected = sum(items)` then `== expected` depends on `items`, which is
+    what makes it a recomputation of the subject's own input rather than an
+    independent expectation. Unbound names resolve to themselves so a module
+    constant or a fixture argument stays distinguishable from a local
+    computation. Cycles terminate on the `seen` set.
+
+    Every name walked through is kept, not just the leaves. `items = [50.0,
+    50.0]` binds a literal with no name references of its own, so dropping
+    intermediates made `items` disappear from the closure — and `items` is
+    exactly the name the subject shares. The link being looked for is between
+    names as written on both sides, not between root values.
+    """
+    seen: set[str] = set()
+    queue = list(names)
+    while queue:
+        name = queue.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        queue.extend(bindings.get(name, ()))
+    return tuple(sorted(seen))
+
+
+def _referenced_names(node) -> tuple[str, ...]:
+    """Every `Name` id in a subtree, sorted and unique.
+
+    Sorted rather than set-ordered because this reaches the IR, and no set
+    iteration order is allowed to leak into output (SPEC §8).
+    """
+    if node is None:
+        return ()
+    return tuple(sorted({n.id for n in ast.walk(node) if isinstance(n, ast.Name)}))
+
+
+def _classify_compare_op(
+    op, left, comparators, text, left_text, right_lit, right_val, pos
+) -> _Classified:
+    """The comparison-operator chain, split out so the caller can attach name
+    sets to whichever `_Classified` comes back without repeating them at nine
+    return sites."""
+    if isinstance(op, (ast.Eq, ast.NotEq)):
+        # Self-comparison (`assert f(x) == f(x)`) can never fail: the
+        # oracle is gone even though the form still looks exact. Strip
+        # identity ops (+0, -0, *1, /1) from both sides first, so
+        # `f(x) == f(x) + 0` is caught too (confirmed red-team finding).
+        if comparators and _norm(_strip_identity(left, text)) == _norm(
+            _strip_identity(comparators[0], text)
+        ):
+            return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        if isinstance(left, ast.Call) and _dotted(left.func) == "len":
+            return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
+        if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
+            return _Classified("compare_eq", S.EXACT_STRUCT, left_text, right_lit, right_val, positive=pos)
+        return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val, positive=pos)
+    if isinstance(op, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)):
+        return _Classified("compare_ord", S.BOUND, left_text, right_lit, right_val, positive=pos)
+    if isinstance(op, (ast.In, ast.NotIn)):
+        return _Classified("membership", S.PATTERN, left_text, right_lit, right_val, positive=pos)
+    if isinstance(op, (ast.Is, ast.IsNot)):
+        comp = comparators[0]
+        if isinstance(comp, ast.Constant) and comp.value is None:
+            return _Classified("non_null", S.NON_NULL, left_text, positive=pos)
+        return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val, positive=pos)
+    return _Classified("unknown", None, left_text)
 
 
 def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
@@ -1031,6 +1119,7 @@ def _collect_unit(
     counter = 0
     dead = _unreachable_ids(func)
     guards = _skip_call_guards(func, text)
+    bindings = _local_bindings(func)
 
     for node in ast.walk(func):
         if id(node) in dead:
@@ -1052,6 +1141,8 @@ def _collect_unit(
                     epsilon_kind=c.epsilon_kind,
                     trivial=_is_trivial_subject(node.test),
                     positive=c.positive,
+                    left_names=c.left_names,
+                    right_depends_on=_resolve_through(c.right_names, bindings),
                 )
             )
             counter += 1

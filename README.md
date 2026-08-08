@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 17 detectors, 289 tests, zero runtime dependencies.
+> Status: **pre-release.** 19 detectors, 302 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -40,10 +40,6 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   corpus: 667 commits, 15 blocks, **11 false positives (1.65%)** against the 1.11% measured on the
   corpus the detectors were built against. Zero engine errors. [docs/integrations.md](docs/integrations.md)
 
-> Status: **pre-release.** 17 detectors, 289 tests, zero runtime dependencies.
-> Every headline number comes from a reproducible harness — nothing ships that a
-> harness has not produced on a clean checkout.
-
 ## Sixty seconds, from nothing
 
 No install, no virtualenv, no network after the download. Every release
@@ -52,7 +48,7 @@ dependencies, so there is nothing else to fetch.
 
 ```bash
 curl -LO https://github.com/taipei49314/greenwash/releases/latest/download/greenwash.pyz
-python greenwash.pyz demo                       # 7 real tampering cases, blocked, offline
+python greenwash.pyz demo                       # 8 real tampering cases, blocked, offline
 python greenwash.pyz check HEAD~1..HEAD         # your last commit
 python greenwash.pyz sweep HEAD --limit 100     # how often it would have blocked you
 ```
@@ -70,18 +66,18 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.13
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.13
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.14
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.14
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
 greenwash demo                  # replay real tampering cases, fully offline
 ```
 
-`greenwash demo` replays seven real tampering cases — a softened assertion, a
+`greenwash demo` replays eight real tampering cases — a softened assertion, a
 widened tolerance, a rewritten expectation, an xfail'd failure, a swallowed
-error, a relaxed CI step, a self-edited CLAUDE.md — plus one honest fix that
-stays silent. No network, no key, no LLM; every verdict comes from the same
+error, a relaxed CI step, a self-edited CLAUDE.md, and an assertion swapped for
+an unrelated one of the same strength — plus one honest fix that stays silent. No network, no key, no LLM; every verdict comes from the same
 engine `check` runs.
 
 **GitHub Action** — blocks a PR on high-severity findings:
@@ -101,7 +97,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taipei49314/greenwash/action@v0.1.13
+      - uses: taipei49314/greenwash/action@v0.1.14
 ```
 
 The `permissions` block and `persist-credentials: false` are there because
@@ -115,7 +111,7 @@ security-conscious project cannot merge is not an integration
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.13
+    rev: v0.1.14
     hooks: [{ id: greenwash }]
 ```
 
@@ -144,7 +140,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.13
+- uses: taipei49314/greenwash/action@v0.1.14
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -246,6 +242,20 @@ Two harnesses, both reproducible from a clone
   number from this project, that arm is a fair one to take: three informed
   attempts, three different routes past the shipped build, two of them now
   regression fixtures and one of them a documented limit of the whole approach.
+- **A live miss in this repository, the day after that arm ran.** Another agent
+  working on greenwash changed the test that guards its own release tag,
+  replacing one assertion with a different one of equal strength and adding an
+  early return. That is the gate's documented failure mode, written into its
+  own assertion message. **greenwash passed the diff** — two
+  `CI_WORKFLOW_TOUCHED` warns and nothing else. Three rules came close and none
+  fired, and the actual cause was in alignment rather than in any of them: the
+  last-resort pairing stage matches leftover assertions by *span order*, so a
+  deleted assertion and its unrelated replacement were reported as one
+  unchanged assertion. Closed in v0.1.14 by `ASSERT_SUBSTITUTED`, which is the
+  first rule keyed on how a pair was formed rather than what it contains. The
+  diff blocks at high on this build. D-031 and D-033 have the whole account,
+  including the first attempted fix, which closed a six-line reduction of the
+  bug and did nothing about the bug.
 
 The first recall measurement caught **0 of 12** — pytest's own `.pyc` output
 disarmed the gate, a bug two rounds of code review had missed. Building the

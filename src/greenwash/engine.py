@@ -7,6 +7,7 @@ so fixtures exercise the exact same pipeline the CLI runs.
 from __future__ import annotations
 
 import datetime
+import re
 from collections import Counter
 from dataclasses import dataclass
 
@@ -480,6 +481,30 @@ def _ci_base_surface(changes: list[FileChange], config: Config) -> str:
     return "\n".join(parts)
 
 
+_OWN_VERSION_LINE = re.compile(rb"^\s*(?:__)?version(?:__)?\s*=.*$", re.MULTILINE)
+
+
+def _deps_differ(before: bytes | None, after: bytes | None) -> bool:
+    """Did a manifest's *dependencies* change, or only its own version line?
+
+    D9 `DEPENDENCY_DRIFT` credits an expectation that moved because a pinned
+    dependency's behaviour moved. Any edit to a manifest used to satisfy it,
+    which meant **a project bumping its own version bought the credit** — and
+    almost every release commit does exactly that. That is far too cheap for a
+    rule like `ASSERT_SUBSTITUTED`: the diff that motivated it bumps
+    `version = "0.1.13"` in `pyproject.toml` and would have been de-escalated
+    to warn by its own release bump.
+
+    A project's own version declaration is not a dependency. Dependency pins
+    live inside arrays and requirement lines (`"werkzeug>=2.3.7"`), never on a
+    bare `version =` line, so dropping those lines from the comparison is
+    precise rather than approximate.
+    """
+    b = _OWN_VERSION_LINE.sub(b"", before or b"")
+    a = _OWN_VERSION_LINE.sub(b"", after or b"")
+    return b != a
+
+
 def _scan_ci_weakening(
     g: DiffGlobals,
     path: str,
@@ -665,7 +690,7 @@ def build_ir(
         if role in ("test", "conftest", "prod", "ci", "guardrail"):
             _scan_hidden_unicode(g, path, change.before, change.after)
 
-        if path in MANIFESTS and (change.before or b"") != (change.after or b""):
+        if path in MANIFESTS and _deps_differ(change.before, change.after):
             g.dependency_manifest_changed = True
 
         if role == "conftest" and change.after is not None:

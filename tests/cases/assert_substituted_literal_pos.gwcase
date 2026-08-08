@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: Substitution between two literals is reported twice, on purpose
+origin: overlap with EXPECTED_VALUE_CHANGED, recorded rather than suppressed
+=== before: tests/test_release.py ===
+import subprocess
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    exists = subprocess.run(["git", "rev-parse", tag])
+    assert exists.returncode == 0
+=== after: tests/test_release.py ===
+import subprocess
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    exists = subprocess.run(["git", "rev-parse", tag])
+    assert tag == "v1.2.3"
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

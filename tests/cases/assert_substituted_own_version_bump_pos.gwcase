@@ -1,0 +1,37 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: A project's own version bump does not buy dependency-drift credit
+origin: D-034 — widening D9 de-escalated the very diff this rule was built to block, because it bumps its own version
+=== before: pyproject.toml ===
+[project]
+name = "demo"
+version = "0.1.13"
+dependencies = ["werkzeug>=2.3.7"]
+=== after: pyproject.toml ===
+[project]
+name = "demo"
+version = "0.1.14"
+dependencies = ["werkzeug>=2.3.7"]
+=== before: tests/test_release.py ===
+import subprocess
+
+from release import readme_pins
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    exists = subprocess.run(["git", "rev-parse", tag])
+    assert exists.returncode == 0
+=== after: tests/test_release.py ===
+import subprocess
+
+from release import readme_pins
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    exists = subprocess.run(["git", "rev-parse", tag])
+    pinned = readme_pins()
+    assert pinned == {tag}
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

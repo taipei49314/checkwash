@@ -1,5 +1,12 @@
 # OWNER_ACTIONS — greenwash v0.1.13 release candidate
 
+> **Superseded — v0.1.13 shipped on 2026-08-08.** The tag exists, CI was green
+> on all 12 jobs, and the GitHub Release is published with all three assets.
+> This document is kept as the record of what was proposed, not as a list of
+> things still to do. The release order it was working around is written down
+> properly in [RELEASING.md](RELEASING.md); the merge that resolved this
+> branch against `main` is D-031.
+
 Branch: `closure/greenwash-20260807`  
 Cursor must **not** merge, force-push, delete/rewrite tags, or publish the GitHub Release.
 

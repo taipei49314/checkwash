@@ -49,11 +49,27 @@ def test_zipapp_builds_and_reports_its_version(tmp_path):
 
 def test_zipapp_demo_reads_its_packaged_cases(tmp_path):
     """The demo loads its cases through importlib.resources; inside a zip
-    there is no filesystem path to fall back to."""
+    there is no filesystem path to fall back to.
+
+    The expected count is derived from the packaged cases rather than written
+    here as a literal. A hardcoded "7/7" needs hand-editing every time a demo
+    case is added, and — more to the point — it passes just as happily if the
+    zip silently ships fewer cases than the source tree has, which is exactly
+    the failure this test exists to catch. Counting the cases independently
+    and requiring the demo to block all of them fails in that case.
+    """
+    from greenwash.cases import parse_case
+    from greenwash.demo import _load_cases
+
+    # The floor on how many cases must exist is asserted next door in
+    # test_demo_command.py; repeating it here would be a second place to
+    # update and buys nothing.
+    tampering = [name for name, text in _load_cases() if parse_case(text).expect]
+
     proc = _run(_build(tmp_path), "demo")
     out = proc.stdout.decode("utf-8", "replace")
     assert proc.returncode == 0, out + proc.stderr.decode("utf-8", "replace")
-    assert "7/7 tampering cases blocked" in out, out
+    assert f"{len(tampering)}/{len(tampering)} tampering cases blocked" in out, out
 
 
 def test_zipapp_checks_a_real_repository(tmp_path):

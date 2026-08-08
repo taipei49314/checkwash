@@ -21,10 +21,18 @@ from greenwash.ir.model import IR, Unit, normalize_text
 
 ORACLE_RULES = {
     "ASSERT_REMOVED",
+    # A different assertion in a deleted one's slot. The lattice reports it
+    # as unchanged because the order fallback paired them (THREATMODEL 84b).
+    "ASSERT_SUBSTITUTED",
     "ASSERT_WEAKENED",
     "TEST_DISABLED",
     "TOLERANCE_LOOSENED",
     "EXPECTED_VALUE_CHANGED",
+    # The expectation replaced by a recomputation of the subject's own inputs.
+    # Same family as EXPECTED_VALUE_CHANGED and legitimate for the same reason
+    # — production may genuinely have changed under it — so it takes the same
+    # repair-evidence path rather than escalating on its own (THREATMODEL 84a).
+    "EXPECTED_VALUE_DERIVED",
     # The same edit seen from the other side of the `==`: the expected value
     # and the strength are untouched and the subject is wrapped until the
     # buggy output passes. Routine when production changed under it, which
@@ -45,11 +53,13 @@ RULE_ORDER = [
     "GUARDRAIL_TOUCHED",
     "HIDDEN_UNICODE",
     "ASSERT_REMOVED",
+    "ASSERT_SUBSTITUTED",
     "ASSERT_WEAKENED",
     "TEST_DISABLED",
     "TOLERANCE_LOOSENED",
     "EXPECTED_VALUE_HARDCODED",
     "EXPECTED_VALUE_CHANGED",
+    "EXPECTED_VALUE_DERIVED",
     "SUBJECT_NORMALIZED",
     "SNAPSHOT_CODE_COCHANGE",
     "CI_WORKFLOW_TOUCHED",
@@ -872,13 +882,25 @@ def apply_gates(
         )
         # An expectation literal tracking a dependency change: httpx 0.28
         # switched to compact JSON separators and every exact literal in the
-        # corpus followed it (starlette 5ccbc62175, 100f05a66b). Scoped to
-        # EXPECTED_VALUE_CHANGED exactly like PACKAGE_REPAIR: a manifest bump
-        # buys nothing for a weakened or deleted oracle.
+        # corpus followed it (starlette 5ccbc62175, 100f05a66b).
+        #
+        # ASSERT_SUBSTITUTED joins it on corpus evidence: flask's two "bump
+        # werkzeug 2.3.7" commits (5bb30270d2, 9f9550247a) rewrote
+        # `assert rv.data == b"127.0.0.1"` into
+        # `assert flask.g.remote_addr == "127.0.0.1"` because the dependency's
+        # API moved under them. A version bump that changes behaviour changes
+        # *how you reach* the value as often as it changes the value, so
+        # crediting only the literal left the shape dependency bumps actually
+        # produce blocking at high. The oracle is intact in both.
+        #
+        # Still scoped, exactly like PACKAGE_REPAIR: a manifest bump buys
+        # nothing for a weakened or a deleted oracle, and both rules here
+        # require unweakened strength. Residual: a substitution smuggled into
+        # a genuine dependency bump gets the same credit — THREATMODEL 84c.
         dep_drift = (
             not has_evidence
             and not package_only
-            and f.rule == "EXPECTED_VALUE_CHANGED"
+            and f.rule in ("EXPECTED_VALUE_CHANGED", "ASSERT_SUBSTITUTED")
             and ir.globals.dependency_manifest_changed
         )
         # A production change never makes it correct to stop *collecting*

@@ -1,0 +1,21 @@
+=== meta ===
+rule: EXPECTED_VALUE_DERIVED
+title: Expectation read from a fixture shares no input with the subject
+origin: FP guard — golden-file expectations are computed but not from the subject's own arguments
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax(golden):
+    items = [50.0, 50.0]
+    assert invoice_total(items, 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax(golden):
+    items = [50.0, 50.0]
+    expected = golden["invoice_with_tax"]
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

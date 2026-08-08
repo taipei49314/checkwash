@@ -14,7 +14,7 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (2026-08-07 (v0.1.13): first full sweep since v0.1.10)
+**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (final)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
@@ -37,6 +37,7 @@ Blocking findings by rule (commits containing at least one):
 | `TEST_DISABLED` | 16 |
 | `ASSERT_WEAKENED` | 11 |
 | `EXPECTED_VALUE_CHANGED` | 6 |
+| `ASSERT_SUBSTITUTED` | 3 |
 | `EXPECTED_VALUE_HARDCODED` | 1 |
 | `CI_WORKFLOW_TOUCHED` | 1 |
 | `ASSERT_REMOVED` | 1 |

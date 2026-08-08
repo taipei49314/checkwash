@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **84 bypasses** are documented, of which **11 are not closed**.
+- **85 bypasses** are documented, of which **12 are not closed**.
 - **20 of 1800** human-written commits are blocked by mistake (1.11%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -137,11 +137,12 @@ behind it* unshippable.
 | 80 | Break the syntax of an existing, unimported prod `.py` | `unparseable_self_inflicted_pos.gwcase` |
 | 82 | Put the collection control in a **new** `conftest.py` | `conftest_added_file_kills_suite_pos.gwcase` |
 
-## Unclassified (1)
+## Unclassified (2)
 
 | # | shape | pinned by |
 |---|---|---|
 | 2 | Touch a non-Python / unparseable prod file to defuse E1 | — |
+| 85 | Replace one assertion with two — a weak precondition and the real oracle — so the order fallback pairs the old strong assertion with the new weak one and reports `ASSERT_WEAKENED` | — |
 
 ## False positives on human-written commits
 

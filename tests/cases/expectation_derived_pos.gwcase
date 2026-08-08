@@ -1,0 +1,21 @@
+=== meta ===
+rule: EXPECTED_VALUE_DERIVED
+title: Expectation replaced by a recomputation of the inputs
+origin: THREATMODEL 84a — found in greenwash's own gate file 2026-08-08 (D-031)
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = sum(items)
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTED_VALUE_DERIVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

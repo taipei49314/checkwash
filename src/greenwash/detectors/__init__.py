@@ -7,6 +7,7 @@ here AND ship pos/neg `.gwcase` fixtures in the same PR.
 
 from greenwash.detectors import (
     assert_removed,
+    assert_substituted,
     assert_weakened,
     expected_changed,
     expected_hardcoded,
@@ -18,11 +19,13 @@ from greenwash.detectors import (
 
 REGISTRY = {
     "ASSERT_REMOVED": assert_removed.detect,
+    "ASSERT_SUBSTITUTED": assert_substituted.detect,
     "ASSERT_WEAKENED": assert_weakened.detect,
     "TEST_DISABLED": test_disabled.detect,
     "TOLERANCE_LOOSENED": tolerance_loosened.detect,
     "EXPECTED_VALUE_HARDCODED": expected_hardcoded.detect,
     "EXPECTED_VALUE_CHANGED": expected_changed.detect,
+    "EXPECTED_VALUE_DERIVED": expected_changed.detect_derived,
     "SUBJECT_NORMALIZED": subject_normalized.detect,
     "SNAPSHOT_CODE_COCHANGE": globals_rules.detect_snapshot_cochange,
     "BROAD_EXCEPT_ADDED": globals_rules.detect_broad_except,

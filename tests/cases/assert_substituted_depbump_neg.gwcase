@@ -1,0 +1,29 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: A dependency bump moves the subject, not just the literal
+origin: flask 5bb30270d2 and 9f9550247a, "bump werkzeug 2.3.7" — both blocked at high before D9 was widened
+=== before: pyproject.toml ===
+[project]
+dependencies = ["werkzeug>=2.3.0"]
+=== after: pyproject.toml ===
+[project]
+dependencies = ["werkzeug>=2.3.7"]
+=== before: tests/test_testing.py ===
+import flask
+
+
+def test_environ_base_default(app, client):
+    rv = client.get("/")
+    assert rv.data == b"127.0.0.1"
+=== after: tests/test_testing.py ===
+import flask
+
+
+def test_environ_base_default(app, client):
+    with client:
+        client.get("/")
+        assert flask.g.remote_addr == "127.0.0.1"
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "warn", "deescalators": ["DEPENDENCY_DRIFT"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["DEPENDENCY_DRIFT"]},
+ {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

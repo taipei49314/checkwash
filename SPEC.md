@@ -146,8 +146,10 @@ detectors can only be disabled whole.
 | `TEST_DISABLED` | skip/xfail marker added (on the function, its class, the module's `pytestmark`, `self.skipTest`, or a conftest suite control), a whole test unit disappeared (including out of collection, per §2b), or parametrized cases deleted |
 | `TOLERANCE_LOOSENED` | any individual tolerance on the call got wider (each `rel`/`abs`/`places` compared separately, via Decimal) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
+| `ASSERT_SUBSTITUTED` | an aligned pair produced by the **order fallback** — position, not text or subject — where both halves moved: the subject differs structurally and so does the expectation. The old assertion is gone and a different one holds its slot, while `strength_change` reads 0 and `assertions_removed` is empty. Requires a subject on both sides, so folding an excinfo assert into `pytest.raises(match=)` is untouched; a *wrapped* subject is `SUBJECT_NORMALIZED`'s, and a rename that keeps the expectation is neither |
 | `EXPECTED_VALUE_HARDCODED` | new assertion literal equals a constant newly introduced in prod in the same diff |
 | `EXPECTED_VALUE_CHANGED` | an aligned assertion keeps its form and strength but its expected literal was rewritten |
+| `EXPECTED_VALUE_DERIVED` | an aligned assertion keeps its subject and its strength, but its expected side stopped being a literal and now resolves — through the unit's own assignments — to a name the subject also uses. `== 105.0` became `expected = sum(items)` / `== expected`. The transition is the signal: an expectation that was already computed before the diff is how the test was written. A literal replaced by a *named constant* or a parametrize argument shares no name with the subject and does not fire; a literal replaced by an expression over the subject's own inputs is the test computing the answer from the data it feeds the code. Escalates through repair evidence like every oracle rule |
 | `SUBJECT_NORMALIZED` | an aligned assertion keeps its form, strength **and** expected literal, and the asserted subject now wraps its old self — `f(x)` became `f(x).replace(...)`, `sorted(f(x))`, `f(x)[0]`. Structural containment, so spelling does not matter; a subject replaced outright is a different test, not a laundered one. Escalates through repair evidence like every oracle rule, because wrapping is routine when production changed under it |
 | `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` (JS forms in v0.2) added |
@@ -187,6 +189,21 @@ notes:
   assertion's shape alone and edit the expected literal to whatever the buggy
   code returns. It is an oracle rule, so it escalates only when no production
   change explains the edit — legitimate expectation updates travel with one.
+- `ASSERT_SUBSTITUTED` exists because assertion identity is positional at the
+  last resort. The fallback stage pairs leftovers of compatible strength by
+  span order, which is right often enough to be worth keeping and wrong in a
+  specific way: two unrelated assertions pair up and the delta describes a
+  deletion as an unchanged assertion. It is the only rule keyed on *how* a
+  pair was formed rather than on what the pair contains.
+- `EXPECTED_VALUE_DERIVED` covers the cheat that survives all three of the
+  rules above. Replace the assertion with a *different* one of the same
+  strength whose expected side is not a literal: the lattice sees
+  `EXACT_VALUE` on both sides so nothing looks weaker, `EXPECTED_VALUE_CHANGED`
+  needs both expected sides to be literals, and `SUBJECT_NORMALIZED` needs the
+  new subject to contain the old — but the subject never moved. What separates
+  it from a refactor is where the new expectation comes from, so the rule
+  fires only when the resolved dependencies of the expectation intersect the
+  names in the subject.
 - `BROAD_EXCEPT_ADDED` is treated as an **oracle** rule when it lands in a
   test-role file: a broad `except` around an assertion is tampering there,
   whatever it means in production code.
@@ -230,7 +247,7 @@ Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
 | D6 `COMPAT_GATE` | the added skip is a `skipif`, a non-strict `xfail`, or an imperative skip call (`pytest.skip` / `pytest.xfail` / `self.skipTest`) under recorded `if` guards. Its condition — with module constants resolved from the test file, from files in the diff, or from the head snapshot — must reference the interpreter/OS environment (`sys.version_info` / `sys.platform` / `platform.` / `os.name`, in the condition text or in a resolved constant), and, **evaluated** over a matrix of supported Python versions and platforms, must not be provably true everywhere. "True" means truthy: a condition that is always truthy is an unconditional kill in a compat costume. Sub-expressions that cannot be resolved stay unknown, and credit is denied only when the condition is true under every assignment of the unknowns; `strict=True` xfail earns nothing (it inverts the oracle instead of skipping it) | hold at warn |
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ PATTERN | hold at warn |
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
-| D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED` — that rule only, exactly like PACKAGE_REPAIR — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A pinned dependency's behaviour change is the honest cause of expectation drift; a manifest bump buys nothing for a weakened or deleted oracle | hold at warn |
+| D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED` or an `ASSERT_SUBSTITUTED` — those two only, exactly like PACKAGE_REPAIR — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A manifest counts only when its **dependencies** differ: a project's own `version =` line is dropped before the comparison, because otherwise every release commit buys the credit with its own version bump — the diff that motivated `ASSERT_SUBSTITUTED` bumps `version` in `pyproject.toml` and was de-escalated to warn by it. A pinned dependency's behaviour change is the honest cause of expectation drift, and it moves *how you reach* a value as often as the value itself — flask's `bump werkzeug 2.3.7` commits rewrote `rv.data == b"127.0.0.1"` into `flask.g.remote_addr == "127.0.0.1"` with the oracle intact. A manifest bump buys nothing for a weakened or deleted oracle, and both credited rules require unweakened strength | hold at warn |
 | D10 `DUPLICATE_REMAINS` | a disappeared unit whose identical normalized body still exists at head as a **live**, collectable unit in a file the diff never touched (deleting one of two identical copies leaves the oracle running). Found by a bounded needle search — one batched `git grep` at head, at most eight candidate files parsed — with liveness as in D2. Not spent: one survivor covers any number of identical deletions, because it keeps running either way | → info |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history

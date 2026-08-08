@@ -1,0 +1,25 @@
+=== meta ===
+rule: EXPECTED_VALUE_DERIVED
+title: Literal moved into a parametrize case is still a literal
+origin: FP guard — the expectation moved to the decorator, it was not recomputed
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, 0.05) == 105.0
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([50.0, 50.0], 105.0), ([10.0], 10.5)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

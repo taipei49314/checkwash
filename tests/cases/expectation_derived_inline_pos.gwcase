@@ -1,0 +1,20 @@
+=== meta ===
+rule: EXPECTED_VALUE_DERIVED
+title: Same substitution without the intermediate variable
+origin: THREATMODEL 84a, direct spelling — the binding is not what makes it tampering
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, 0.05) == sum(items)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_DERIVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

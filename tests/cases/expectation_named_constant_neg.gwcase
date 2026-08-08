@@ -1,0 +1,22 @@
+=== meta ===
+rule: EXPECTED_VALUE_DERIVED
+title: Magic number given a name is a refactor, not a substitution
+origin: FP guard — the expectation is still stated independently of the inputs
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+TOTAL_WITH_TAX = 105.0
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, 0.05) == TOTAL_WITH_TAX
+=== expect ===
+[]

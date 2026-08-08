@@ -1,0 +1,40 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: Parametrizing a literal moves it off the comparison, it does not replace the assertion
+origin: click 0480a56579 — one case became six, and the rule read the reorientation as a substitution
+=== before: tests/test_defaults.py ===
+import click
+
+
+def test_basic_defaults(runner):
+    @click.command()
+    @click.option("--foo", default=42, type=click.FLOAT)
+    def cli(foo):
+        click.echo(f"FOO:[{foo}]")
+
+    result = runner.invoke(cli, [])
+    assert "FOO:[42.0]" in result.output
+=== after: tests/test_defaults.py ===
+import pytest
+
+import click
+
+
+@pytest.mark.parametrize(
+    ("default", "type", "expected_output"),
+    [
+        (42, click.FLOAT, "42.0"),
+        ("42", click.INT, "42"),
+        ("true", click.BOOL, "True"),
+    ],
+)
+def test_basic_defaults(runner, default, type, expected_output):
+    @click.command()
+    @click.option("--foo", default=default, type=type)
+    def cli(foo):
+        click.echo(f"FOO:[{foo}]")
+
+    result = runner.invoke(cli, [])
+    assert f"FOO:[{expected_output}]" in result.output
+=== expect ===
+[]

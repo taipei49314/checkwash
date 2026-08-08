@@ -33,6 +33,17 @@ class Assertion:
     # Flipping polarity inverts what the test proves while leaving form and
     # strength identical, so it needs to be part of the assertion's identity.
     positive: bool = True
+    # Names appearing in the asserted subject's own expression, and the names
+    # the expectation transitively depends on after in-body assignments are
+    # followed (`expected = sum(items)` -> ("items", "sum")). Both sorted.
+    #
+    # These exist for EXPECTED_VALUE_DERIVED, which needs to tell a rewritten
+    # expectation apart from a *recomputed* one. A literal replaced by a named
+    # constant shares nothing with the subject; a literal replaced by an
+    # expression over the subject's own arguments is the test re-implementing
+    # the code it is supposed to be checking (THREATMODEL 84a).
+    left_names: tuple[str, ...] = ()
+    right_depends_on: tuple[str, ...] = ()
 
 
 @dataclass
@@ -80,6 +91,13 @@ class AssertionPair:
     before_id: str
     after_id: str
     strength_change: int | None  # None when either side is unclassifiable
+    # True when the pair came from the order fallback rather than from
+    # matching text or matching (form, subject). A fallback pair is a guess:
+    # two leftover assertions of compatible strength, paired by position and
+    # nothing else. ASSERT_SUBSTITUTED exists because that guess reported
+    # `strength_change: 0` for a deleted assertion whose slot a different one
+    # had taken (THREATMODEL 84b).
+    fallback: bool = False
 
 
 @dataclass

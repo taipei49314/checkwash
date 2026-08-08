@@ -62,6 +62,101 @@ exemption entirely moves the block set by zero, so no subset can cost more"
 predicted. A bound that turns out to be tight is worth more than a bound that
 was never checked.
 
+## v0.1.14 — closing the escape, and finding out the first fix was the wrong one
+
+The round started from the finding at the end of the previous section: an
+assertion replaced by a different one of equal strength, greenwash silent.
+It produced two rules, and the gap between them is the part worth keeping.
+
+`EXPECTED_VALUE_DERIVED` came first, built from the six-line reduction. It
+fires when an expectation stops being a literal and starts resolving —
+through the unit's own assignments — to a name the subject also uses.
+`expected = sum(items)` against `invoice_total(items, 0.05)` shares `items`,
+so the test is computing the answer from the data it feeds the code. A
+literal replaced by a *named constant*, or moved into a `parametrize` case,
+shares nothing and stays quiet. That distinction is the entire rule; without
+it the shape is indistinguishable from an ordinary cleanup.
+
+**Then it was run against the actual incident diff and did not fire.** The
+reduction had simplified away the thing that made the original invisible: in
+the real diff the subject changed too, and `EXPECTED_VALUE_DERIVED`
+deliberately defers a changed subject to `SUBJECT_NORMALIZED`, which requires
+containment and declines. Closing a threat-model row against a reduction and
+never re-checking the original would have shipped a rule that closed nothing.
+
+The real mechanism turned out to be in alignment, not in any detector.
+Assertions pair in three stages — identical text, then (form, subject), then
+**span order** for the leftovers. The fallback paired
+`assert exists.returncode == 0` with `assert pinned == {tag}` because both
+were leftovers of compatible strength, and the delta reported
+`strength_change: 0` with an empty `assertions_removed`. An assertion was
+deleted and the IR said nothing changed; every oracle rule read that and
+correctly declined. `ASSERT_SUBSTITUTED` is the first rule keyed on *how a
+pair was formed* rather than on what it contains — `AssertionPair` now records
+whether it came from the guess.
+
+The fallback stage stays. It carries its own scar (pairing a classifiable
+assertion with an unclassifiable one used to suppress `ASSERT_REMOVED`
+outright) and it is right often enough to keep. It is simply a guess, and now
+it is labelled as one.
+
+Four false positives were caught before release, none of them by review.
+
+The existing `raises_match_fold_neg` fixture went red immediately: folding an
+excinfo substring assert into `pytest.raises(match=)` has no subject on the
+`match=` side, and blocking a *preserved* oracle at high was the new rule's
+first mistake. Both sides must carry a subject now.
+
+The corpus found the rest. flask's two `bump werkzeug 2.3.7` commits rewrote
+`rv.data == b"127.0.0.1"` into `flask.g.remote_addr == "127.0.0.1"` because
+the dependency's API moved under them; D9 `DEPENDENCY_DRIFT` credited only the
+rewritten literal, so the same edit was warn under one rule and high under the
+other, and D9 now covers both (row 84c).
+
+Then the full sweep moved exactly two verdicts, both new blocks, both false
+positives, and they turned out to be the same one. attrs `31e02869da` put an
+expected message behind a `sys.version_info` branch; click `0480a56579`
+parametrized `assert "FOO:[42.0]" in result.output` into six cases. In each an
+expected **literal** became a non-literal — and that is what decides which
+side is the subject, because `assert 3 == calc()` puts the expectation on the
+left. The two sides swapped roles, and a rule looking for "both halves
+changed" found both halves changed. The guard is that the new expectation
+depends on a name from the old subject; residual as row 84d, deliberately
+loose in the attacker's favour rather than blocking every compat gate in the
+ecosystem.
+
+**And the D9 widening was still too cheap, which the same check caught.** With
+`ASSERT_SUBSTITUTED` credited by `DEPENDENCY_DRIFT`, the incident diff that
+motivated this whole round dropped from high to warn — it bumps
+`version = "0.1.13"` in `pyproject.toml`, and the manifest signal was true for
+*any* edit to a manifest. Nearly every release commit contains one. A project's
+own version declaration is not a dependency, so it is now dropped from the
+comparison, and a fixture pins it (D-034). The lesson is cheap to state and
+was not cheap to find: **the regression check for a round is the thing that
+motivated the round**, re-run after every change, not once at the end.
+
+Verification: the incident diff that v0.1.13 passed blocks at high on this
+build, naming the substitution. All recorded arms replay unchanged — classic
+12/12 blocked and 0/12 false blocks, probe waves 6/6 and 2/2 with 0 false
+blocks, informed arm 2 blocked and 1 out-of-scope pass.
+
+**Corpus cost: 35 blocks → 35 blocks. No verdict moved in either direction**,
+opaque exemption unchanged at 25/1800, zero engine errors. What did change is
+the finding count on commits that were already blocked: `ASSERT_SUBSTITUTED`
+contributes 4 warns on flask, 1 on attrs, and 28 high plus 5 warn on httpx.
+
+Those 28 deserve naming rather than hiding behind an unchanged block rate.
+They land on three httpx commits that were **already blocked and already
+adjudicated false positives** — the "drop private imports, rewrite the tests
+onto the public API" cluster that dominates httpx's FP list. So the rule costs
+nothing in verdicts, and it is at the same time most likely to fire on exactly
+the family that already produces this corpus's false positives. That is a
+property worth watching, not a result to celebrate.
+
+`EXPECTED_VALUE_DERIVED` fires **zero times across all 1800 commits** — the
+same profile `SUBJECT_NORMALIZED` had when it shipped. It closes a shape the
+informed arm produced and human history does not contain.
+
 ## Concurrent agents, 2026-08-08 — and a gate that got quieter
 
 Another agent pushed to `main` while this release was being prepared: a README
@@ -417,8 +512,8 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.13 |
-| detectors | 17 |
+| version | v0.1.14 |
+| detectors | 19 |
 | human-commit block rate | 35/1800 = 1.94% |
 | adjudicated false positive | 20/1800 = 1.11% |
 | legitimate policy block | 15/1800 = 0.83% |

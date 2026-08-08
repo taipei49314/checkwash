@@ -84,6 +84,69 @@
       "commit": "cca62060cb958e89078279e625a752aa0d02c40c",
       "findings": [
         {
+          "message": "test_line_decoder_cr: an assertion was replaced by an unrelated one of the same strength (decoder.flush() -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_cr"
+        },
+        {
+          "message": "test_line_decoder_cr: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"a\\r\\rb\\rc\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_cr"
+        },
+        {
+          "message": "test_line_decoder_cr: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_cr"
+        },
+        {
+          "message": "test_line_decoder_crnl: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"a\\r\\n\\r\\nb\\r\\nc\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_crnl"
+        },
+        {
+          "message": "test_line_decoder_crnl: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_crnl"
+        },
+        {
+          "message": "test_line_decoder_crnl: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_crnl"
+        },
+        {
+          "message": "test_line_decoder_crnl: an assertion was replaced by an unrelated one of the same strength (decoder.flush() -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_crnl"
+        },
+        {
+          "message": "test_line_decoder_nl: an assertion was replaced by an unrelated one of the same strength (decoder.flush() -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_nl"
+        },
+        {
+          "message": "test_line_decoder_nl: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"a\\n\\nb\\nc\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_decoders.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_line_decoder_nl"
+        },
+        {
           "message": "test_byte_chunker: test unit disappeared",
           "path": "tests/test_decoders.py",
           "rule": "TEST_DISABLED",
@@ -178,6 +241,13 @@
       "commit": "7947b56076db933079ec0c33d1f81406e33008e7",
       "findings": [
         {
+          "message": "test_multipart_encode_unicode_file_contents: an assertion was replaced by an unrelated one of the same strength (headers -> request.content); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_multipart.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_multipart_encode_unicode_file_contents"
+        },
+        {
           "message": "test_multipart_encode_non_seekable_filelike: assertion strength EXACT_STRUCT(100) -> EXACT_VALUE(90)",
           "path": "tests/test_multipart.py",
           "rule": "ASSERT_WEAKENED",
@@ -201,6 +271,132 @@
     {
       "commit": "71a1589928e4d75a5d0d8201e32b5bc7963fb5f8",
       "findings": [
+        {
+          "message": "test_aiterator_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_aiterator_content"
+        },
+        {
+          "message": "test_aiterator_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_aiterator_content"
+        },
+        {
+          "message": "test_async_bytesio_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_async_bytesio_content"
+        },
+        {
+          "message": "test_bytes_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_bytes_content"
+        },
+        {
+          "message": "test_bytes_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_bytes_content"
+        },
+        {
+          "message": "test_bytesio_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_bytesio_content"
+        },
+        {
+          "message": "test_empty_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_empty_content"
+        },
+        {
+          "message": "test_empty_request: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_empty_request"
+        },
+        {
+          "message": "test_iterator_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_iterator_content"
+        },
+        {
+          "message": "test_iterator_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_iterator_content"
+        },
+        {
+          "message": "test_json_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_json_content"
+        },
+        {
+          "message": "test_multipart_data_and_files_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_multipart_data_and_files_content"
+        },
+        {
+          "message": "test_multipart_files_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_multipart_files_content"
+        },
+        {
+          "message": "test_multipart_multiple_files_single_input_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_multipart_multiple_files_single_input_content"
+        },
+        {
+          "message": "test_urlencoded_boolean: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_urlencoded_boolean"
+        },
+        {
+          "message": "test_urlencoded_content: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_urlencoded_content"
+        },
+        {
+          "message": "test_urlencoded_list: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_urlencoded_list"
+        },
+        {
+          "message": "test_urlencoded_none: an assertion was replaced by an unrelated one of the same strength (headers -> request.headers); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_content.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_urlencoded_none"
+        },
         {
           "message": "test_aiterator_content: expected value rewritten {'Transfer-Encoding': 'chunked'} -> {'Host': 'www.example.com', 'Transfer-Encoding': 'chunked'} with no change in assertion strength",
           "path": "tests/test_content.py",
@@ -336,7 +532,7 @@
   "commits_touching_tests": 92,
   "commits_with_opaque_prod_change": 5,
   "corpus": {
-    "greenwash_version": "0.1.13",
+    "greenwash_version": "0.1.14",
     "newest_commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
     "oldest_commit": "69e13cbc393ee13624d0e4aa4b6f861a95e3f91c"
   },
@@ -344,6 +540,10 @@
   "findings_by_rule": {
     "ASSERT_REMOVED": {
       "warn": 65
+    },
+    "ASSERT_SUBSTITUTED": {
+      "high": 28,
+      "warn": 5
     },
     "ASSERT_WEAKENED": {
       "high": 5,

@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: Reordering assertions is not substituting them
+origin: FP guard — positional pairing makes a swap look like two substitutions
+=== before: tests/test_shape.py ===
+from shape import area, perimeter
+
+
+def test_square():
+    assert area(2) == 4
+    assert perimeter(2) == 8
+=== after: tests/test_shape.py ===
+from shape import area, perimeter
+
+
+def test_square():
+    assert perimeter(2) == 8
+    assert area(2) == 4
+=== expect ===
+[]

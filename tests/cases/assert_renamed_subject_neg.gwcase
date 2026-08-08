@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: Renaming the variable under assertion is not substitution
+origin: FP guard — the expectation is untouched, only the local name moved
+=== before: tests/test_shape.py ===
+from shape import area
+
+
+def test_square():
+    result = area(2)
+    assert result == 4
+=== after: tests/test_shape.py ===
+from shape import area
+
+
+def test_square():
+    computed = area(2)
+    assert computed == 4
+=== expect ===
+[]

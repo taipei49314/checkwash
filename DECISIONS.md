@@ -935,3 +935,108 @@ The `pypi` environment itself is left alone: it is the maintainer's to delete
 or to attach protection rules to, and with the variable gate closed it is
 inert either way. Deleting it would also destroy the evidence that GitHub
 created it.
+
+## D-033 (2026-08-08): two rules, because the first one did not close the incident
+
+THREATMODEL 84a was written the same day it was found, from a six-line
+reduction of a change another agent made to this project's release gate. The
+reduction was faithful to what the informed arm had described a day earlier:
+an assertion replaced by a different one of equal strength whose expected side
+is not a literal.
+
+`EXPECTED_VALUE_DERIVED` closes that. It fires when an expectation stops being
+a literal and starts resolving — through the unit's own assignments — to a
+name the subject also uses. `expected = sum(items)` against
+`invoice_total(items, 0.05)` shares `items`, which is the test computing the
+answer from the data it feeds the code. A literal replaced by a *named
+constant*, or moved into a `parametrize` case, shares nothing and stays quiet.
+That distinction is the whole rule; without it the shape is indistinguishable
+from a routine cleanup.
+
+**Then it was run against the actual incident diff and did not fire.**
+
+That check was the point of running it, and it is worth stating plainly: the
+rule built for 84a does not catch the thing that produced 84a. In the real
+diff the *subject* changed too — `exists.returncode` became `pinned` — and
+`EXPECTED_VALUE_DERIVED` deliberately skips a changed subject, because a
+changed subject is `SUBJECT_NORMALIZED`'s business. `SUBJECT_NORMALIZED`
+requires the new subject to contain the old, by an explicit design decision
+("a subject replaced outright is a different test, not a laundered one"), so
+it declines as well. The reduction had quietly simplified away the thing that
+made the original invisible.
+
+The real mechanism is in alignment, not in any detector. Assertions pair in
+three stages — identical text, then (form, subject), then **span order** for
+whatever is left. The fallback stage paired `assert exists.returncode == 0`
+with `assert pinned == {tag}` because both were leftovers of compatible
+strength, and the delta then reported `strength_change: 0` with an empty
+`assertions_removed`. An assertion was deleted and the IR said nothing had
+changed. Every oracle rule read that delta and correctly declined.
+
+`ASSERT_SUBSTITUTED` keys on *how the pair was formed* rather than on what it
+contains: `AssertionPair` now records whether it came from the order fallback,
+which is the only place a pair is a guess rather than evidence. A fallback
+pair where the subject differs structurally and the expectation differs too is
+a substitution. Both halves are required, because a rename moves the subject
+and leaves the expectation alone. Both sides must have a subject at all, which
+is what keeps folding an excinfo assert into `pytest.raises(match=)` out — that
+was the rule's first false positive, caught by an existing fixture, and it is
+a *preserved* oracle that triage had already found humans doing.
+
+The fallback stage is not a mistake and is not being removed. It carries its
+own red-team scar: pairing a classifiable assertion with an unclassifiable one
+used to yield `strength_change: None` and suppress `ASSERT_REMOVED` entirely.
+It is right often enough to keep. It is simply a guess, and now it is labelled
+as one.
+
+Residuals, stated rather than hidden: a substitution that keeps the expectation
+is read as a rename and stays silent; an expectation recomputed from names the
+subject does not mention still passes. Rows 84 and 84b carry both.
+
+Cost, measured rather than assumed: the corpus sweep is in STATE, and the
+recorded arms replay unchanged on this build — classic 12/12 blocked and 0/12
+false blocks, probe waves 6/6 and 2/2 with 0 false blocks, informed arm 2
+blocked and 1 out-of-scope pass.
+
+## D-034 (2026-08-09): the corpus found both of ASSERT_SUBSTITUTED's false positives, and they were the same one
+
+The v0.1.14 sweep moved exactly two verdicts, both new blocks, both false
+positives — attrs `31e02869da` and click `0480a56579`. They looked unrelated
+and were not.
+
+attrs put an expected error message behind a `sys.version_info` branch for
+Python 3.15a7. click parametrized `assert "FOO:[42.0]" in result.output` into
+six cases. In each, an expected **literal** became a non-literal, and that is
+what decides which side of a comparison greenwash treats as the subject:
+`assert 3 == calc()` puts the expectation on the left, so the classifier
+prefers whichever side is the literal. The moment the literal stops being one,
+subject and expectation swap roles — and a rule looking for "both halves
+changed" sees both halves changed.
+
+The guard is that the new expectation depends on a name from the old subject.
+In both commits the new expectation *is* the old subject (`ei.value.args[0]`,
+`result.output`). It is loose in the attacker's favour — reorienting a
+comparison and replacing the subject in one edit gets the same pass, recorded
+as row 84d — and that is the right side to be loose on, because the
+alternative blocks every compat gate and every parametrization in the
+ecosystem.
+
+**And the D9 widening in D-033 was too cheap, which the same check caught.**
+With `ASSERT_SUBSTITUTED` credited by `DEPENDENCY_DRIFT`, the incident diff
+that motivated this entire round dropped from high to warn — because it bumps
+`version = "0.1.13"` in `pyproject.toml`, and `dependency_manifest_changed`
+was true for *any* edit to a manifest. Nearly every release commit contains
+one. A rule built to catch a demonstrated attack would have been de-escalated
+by the attacker's own version bump.
+
+A project's own version declaration is not a dependency. `_deps_differ` now
+drops `version =` lines from both sides before comparing, which is precise
+rather than approximate: dependency pins live inside arrays and requirement
+lines (`"werkzeug>=2.3.7"`), never on a bare `version =` line. This tightens
+`EXPECTED_VALUE_CHANGED` too, and it is the correct behaviour for both.
+
+Worth naming as a pattern: the widening in D-033 was justified by real corpus
+evidence and was still too broad, and nothing about reading it would have
+shown that. It was caught by re-running the one diff the round existed to
+block, after every change. **The regression check for a round is the thing
+that motivated the round.**

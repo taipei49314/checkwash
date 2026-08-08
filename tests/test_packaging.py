@@ -61,19 +61,52 @@ def test_documented_test_count_is_accurate():
     # detectors,  tests" and this test passed on the result (2026-08-08).
     # Checking a value when present and saying nothing when it is gone is the
     # same absence-blindness as a gate that skips when its subject is missing.
-    status_lines = [
-        ln
-        for ln in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
-        if "detectors," in ln and "pre-release" in ln
-    ]
-    assert status_lines, "README lost its status line entirely"
-    for ln in status_lines:
-        assert re.search(r"\d+ detectors, \d+ tests", ln), (
-            f"README status line has lost a number: {ln.strip()!r}. "
+    from greenwash.detectors import REGISTRY
+
+    # Only greenwash's own status lines: docs/launch.md also describes other
+    # tools ("a PR audit suite (11 detectors, ...)") and those are their
+    # numbers, not ours.
+    status_lines = []
+    for doc, marker in (("README.md", "pre-release"), ("docs/launch.md", "Apache-2.0")):
+        for ln in (ROOT / doc).read_text(encoding="utf-8").splitlines():
+            if "detectors," in ln and marker in ln:
+                status_lines.append((doc, ln))
+    assert status_lines, "no status line found in README.md or docs/launch.md"
+    for doc, ln in status_lines:
+        m = re.search(r"(\d+) detectors, (\d+) tests", ln)
+        assert m, (
+            f"{doc} status line has lost a number: {ln.strip()!r}. "
             "An empty count reads as prose and slips past a value check."
         )
+        assert int(m.group(1)) == len(REGISTRY), (
+            f"{doc} claims {m.group(1)} detectors, the registry has {len(REGISTRY)}"
+        )
+        assert int(m.group(2)) == actual, (
+            f"{doc} claims {m.group(2)} tests, suite collects {actual}"
+        )
 
-    for doc in ("README.md", "CONTRIBUTING.md"):
+    # docs/launch.md joined the list after drifting three versions behind
+    # unnoticed ("v0.1.12, 17 detectors, 275 tests") — it is copy meant for
+    # posting, so a stale number there is a claim made in public.
+    # The README also states how many tampering cases `demo` replays, in two
+    # places and in two spellings. Both are hand-typed claims about packaged
+    # data, which is the definition of something that drifts.
+    from greenwash.cases import parse_case
+    from greenwash.demo import _load_cases
+
+    n_demo = len([1 for _n, text in _load_cases() if parse_case(text).expect])
+    words = {
+        7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve",
+    }
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert f"# {n_demo} real tampering cases" in readme, (
+        f"README's demo comment does not say {n_demo} tampering cases"
+    )
+    assert f"replays {words.get(n_demo, n_demo)} real tampering cases" in readme, (
+        f"README's demo prose does not say {words.get(n_demo, n_demo)} tampering cases"
+    )
+
+    for doc in ("README.md", "CONTRIBUTING.md", "docs/launch.md"):
         text = (ROOT / doc).read_text(encoding="utf-8")
         for claimed in re.findall(r"(\d+) tests\b", text):
             assert int(claimed) == actual, (

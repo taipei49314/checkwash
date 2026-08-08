@@ -1,0 +1,36 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: A version-guarded expected message is not a substitution
+origin: attrs 31e02869da, "Update test_validators.py for Python 3.15a7 (#1530)" — blocked at high before the reorientation guard
+=== before: tests/test_validators.py ===
+import pytest
+
+from attr.validators import matches_re
+
+
+class TestMatchesRe:
+    def test_bad_func(self):
+        with pytest.raises(ValueError) as ei:
+            matches_re("a", 0, lambda: None)
+
+        assert "'func' must be one of None, fullmatch, match, search." == ei.value.args[0]
+=== after: tests/test_validators.py ===
+import sys
+
+import pytest
+
+from attr.validators import matches_re
+
+
+class TestMatchesRe:
+    def test_bad_func(self):
+        with pytest.raises(ValueError) as ei:
+            matches_re("a", 0, lambda: None)
+
+        if sys.version_info >= (3, 15):
+            errmsg = "'func' must be one of None, fullmatch, prefixmatch, search."
+        else:
+            errmsg = "'func' must be one of None, fullmatch, match, search."
+        assert errmsg == ei.value.args[0]
+=== expect ===
+[]
