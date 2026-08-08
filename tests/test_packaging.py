@@ -141,7 +141,9 @@ def test_dogfood_job_actually_runs():
     """
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "dogfood:" in ci, "the dogfood job disappeared"
-    body = ci.split("dogfood:", 1)[1].split("\n  byte-compare:", 1)[0]
+    # Only the dogfood job body — stop at the next top-level job key.
+    body = ci.split("dogfood:", 1)[1]
+    body = re.split(r"\n  [A-Za-z0-9_-]+:", body, maxsplit=1)[0]
     conditions = [
         line.strip()
         for line in body.split("\n")
