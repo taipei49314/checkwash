@@ -55,6 +55,24 @@ def test_documented_test_count_is_accurate():
     )
     assert actual > 0, f"could not determine collected test count:\n{out[-400:]}"
 
+    # A count that is *absent* has to fail too. This loop used to check only
+    # the numbers it found, so deleting one silenced the gate instead of
+    # tripping it: a bad `sed` blanked both README status lines to "17
+    # detectors,  tests" and this test passed on the result (2026-08-08).
+    # Checking a value when present and saying nothing when it is gone is the
+    # same absence-blindness as a gate that skips when its subject is missing.
+    status_lines = [
+        ln
+        for ln in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
+        if "detectors," in ln and "pre-release" in ln
+    ]
+    assert status_lines, "README lost its status line entirely"
+    for ln in status_lines:
+        assert re.search(r"\d+ detectors, \d+ tests", ln), (
+            f"README status line has lost a number: {ln.strip()!r}. "
+            "An empty count reads as prose and slips past a value check."
+        )
+
     for doc in ("README.md", "CONTRIBUTING.md"):
         text = (ROOT / doc).read_text(encoding="utf-8")
         for claimed in re.findall(r"(\d+) tests\b", text):

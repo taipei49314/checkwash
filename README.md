@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 17 detectors,  tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 289 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -40,7 +40,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   corpus: 667 commits, 15 blocks, **11 false positives (1.65%)** against the 1.11% measured on the
   corpus the detectors were built against. Zero engine errors. [docs/integrations.md](docs/integrations.md)
 
-> Status: **pre-release.** 17 detectors,  tests, zero runtime dependencies.
+> Status: **pre-release.** 17 detectors, 289 tests, zero runtime dependencies.
 > Every headline number comes from a reproducible harness — nothing ships that a
 > harness has not produced on a clean checkout.
 
