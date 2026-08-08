@@ -62,6 +62,38 @@ exemption entirely moves the block set by zero, so no subset can cost more"
 predicted. A bound that turns out to be tight is worth more than a bound that
 was never checked.
 
+## Concurrent agents, 2026-08-08 — and a gate that got quieter
+
+Another agent pushed to `main` while this release was being prepared: a README
+restructure, a version bump to the same 0.1.13, a `closure/` branch and two
+release-candidate documents. The merge kept their work — the above-the-fold
+rewrite is what ships, and their fix to the dogfood-job check (split on the
+next top-level key rather than a hardcoded job name) is a real improvement.
+
+One change was reverted. `test_pinned_tag_ships_the_current_source` had gained
+a pre-tag escape hatch: when the advertised tag does not exist, check
+something weaker and *return*. Its own assertion message says why that is not
+allowed — "bumping the version used to make this gate return early and pass,
+which is the same 'green because it did not run' failure the gate exists to
+prevent". The circularity is an ordering property, not a gate property, so
+`docs/RELEASING.md` now writes the order down: bump, commit, **tag**, verify,
+push. See D-031.
+
+**greenwash passed that diff**, and that is the part worth carrying forward.
+Two `CI_WORKFLOW_TOUCHED` warns and nothing else — the gate weakening produced
+no finding of any severity. The removed assertion was *paired* with the added
+one; both are `EXACT_VALUE`, so the lattice saw no weakening;
+`EXPECTED_VALUE_CHANGED` needs both expected sides to be literals and the new
+one is not; `SUBJECT_NORMALIZED` needs containment and this replaced the
+subject outright. Reduced to six lines, the shape takes a suite from
+`1 failed` to `1 passed` with the expectation rewritten as an inline copy of
+the bug, and greenwash says *no known tampering pattern detected*.
+
+That is THREATMODEL row 84's third shape, found by the informed arm on
+2026-08-07 and published open, arriving unprompted in this repository's own
+gate file the next day. It is row 84a, and it is the first item of the next
+round.
+
 ## The 2026-08-07 fifth round (v0.1.12): closing the audit, with two designs rejected
 
 The v0.1.11 audit left ten bypasses open. Five are closed here; the rest are

@@ -842,3 +842,60 @@ passed on both, because a src-layout editable install had quietly resolved the
 old worktree's import to the new code. Green because it did not run is the
 failure this project keeps repeating; it got caught this time before it was
 written down.
+
+## D-031 (2026-08-08): two agents, one repository, and a gate that got quieter
+
+While this release was being prepared, another agent pushed two commits to
+`main` and opened a `closure/` branch. Both had bumped to 0.1.13
+independently. The resolution is recorded because the shape will recur, and
+because greenwash had an opinion about it that turned out to be wrong.
+
+**What was kept.** Their README restructure is better above the fold, and it
+is what ships. Their fix to `test_dogfood_job_actually_runs` — splitting the
+job body on the next top-level key instead of a hardcoded `byte-compare:` —
+is a genuine improvement and stays: it survives job reordering, which the old
+form did not.
+
+**What was reverted, and why.** `test_pinned_tag_ships_the_current_source`
+had a pre-tag escape hatch added: when the advertised tag does not exist, the
+test now checked README pin consistency and *returned*. The assertion it
+replaced carries its own history in its failure message — *"bumping the
+version used to make this gate return early and pass, which is the same
+'green because it did not run' failure the gate exists to prevent"* — and the
+escape hatch reproduces exactly that. The circularity it was solving is a
+property of the release order, not of the gate: bump, commit, **tag**,
+verify, push, and the tag exists before anything checks it. `docs/RELEASING.md`
+now writes that order down, so the next person hits documentation instead of
+a locked door. A candidate branch whose CI is red between the bump and the
+tag is the gate working.
+
+Reverting another agent's considered change is not free, and it is not done
+on authority. It is done because the file states the reason in its own
+assertion message, and because "green because it did not run" has now bitten
+this project in four places: a dogfood job gated to pull requests in a repo
+with none, a determinism check that varied three Pythons and one OS, a perf
+gate that never touched git, and — caught earlier today, before it was written
+down — a new gate that passed on both old and new code because a src-layout
+editable install resolved the wrong import.
+
+**And the part that is greenwash's fault.** Their diff was run through
+greenwash before any of this was decided. It passed: two `CI_WORKFLOW_TOUCHED`
+warns, nothing else. The gate weakening produced **no finding of any
+severity** — not a demotion, nothing.
+
+The reason is worth writing down. The removed assertion,
+`assert exists.returncode == 0`, was *paired* with the added
+`assert pinned == {tag}`. Both are `EXACT_VALUE(90)`, so the strength lattice
+saw no weakening. `EXPECTED_VALUE_CHANGED` requires both expected sides to be
+literals and `{tag}` is not one. `SUBJECT_NORMALIZED` requires the new subject
+to contain the old, and this one replaced it outright. Three rules, three near
+misses, and the diff walked through.
+
+Reduced to six lines and reproduced: `assert invoice_total(items, 0.05) ==
+105.0` becoming `expected = sum(items)` / `assert invoice_total(items, 0.05)
+== expected` takes a suite from `1 failed` to `1 passed`, with the expectation
+now an inline re-implementation of the bug, and greenwash reports *no known
+tampering pattern detected*. That is THREATMODEL row 84's third shape — found
+by the informed adversarial arm four days ago, published open — arriving
+unprompted in this repository's own gate file. It is row 84a now, and it is
+the first item of the next round.

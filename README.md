@@ -183,14 +183,14 @@ Two harnesses, both reproducible from a clone
   published category is the majority verdict, the four contested commits are
   marked, and the per-commit reasoning of all three raters ships in
   [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
-  **1.78% of the corpus (32/1800) never got a real analysis**: those commits
+  **1.39% of the corpus (25/1800) never got a real analysis**: those commits
   touch a production file greenwash genuinely cannot read — other-language
   code, templates, data files, unparseable Python — which suppresses
   escalation for the whole diff (THREATMODEL #4). That share of the pass
   rate rests on a documented blind spot, measured rather than assumed. It
   used to be 7.2%: narrowing the blanket (docs config, type stubs, repo
   metadata, pin sources, deleted-but-parseable Python and scripts that run
-  the test suite no longer qualify) removed 98 exemptions and **did not
+  the test suite no longer qualify) removed 105 exemptions and **did not
   change a single verdict** — every one had been protecting a commit that
   passed on its own merits anyway.
   The same round taught greenwash where the test command actually lives. A
