@@ -1,4 +1,5 @@
 === meta ===
+bypass: 84b
 rule: ASSERT_SUBSTITUTED
 title: A project's own version bump does not buy dependency-drift credit
 origin: D-034 — widening D9 de-escalated the very diff this rule was built to block, because it bumps its own version

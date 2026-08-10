@@ -43,8 +43,8 @@ commit by commit, and `RESULTS.md` publishes the decomposition:
 
 | measure | current build |
 |---|---:|
-| historical human-commit block rate | 1.94% |
-| adjudicated **false positive** | **1.11%** |
+| human-commit block rate | 2.00% |
+| adjudicated **false positive** | **1.17%** |
 | legitimate policy block | 0.83% |
 | unclear | 0.00% |
 
@@ -161,7 +161,7 @@ The pattern across all three: the same *syntactic* shape appears on both
 sides of the adjudication, and what separates them is whether the rewrite is
 semantically equivalent — the judgement THREATMODEL #1 and #7 deliberately
 exclude from a zero-LLM, zero-execution differ. On this corpus the
-adjudicated false-positive floor of that design is **~1.11%** (majority of
+adjudicated false-positive floor of that design is **~1.17%** (majority of
 three raters), and each of the residuals names its cluster in the adjudication file: API-migration
 rewrites (httpx 71a1589928 / 7947b56076 / cca62060cb / 9fd6f0ca66), unit-
 internal co-changes (click bd131e1ab6 / e3c0898975 / bbe1eb6d41), equivalent

@@ -20,7 +20,7 @@
 
 ## 2. The one-paragraph pitch
 
-Agents make CI green two ways: by fixing the bug, or by deleting the failing test, widening a float tolerance, rewriting the expected value to whatever the broken code returns, or dropping `|| true` into the script that runs the suite. greenwash is a deterministic, zero-LLM, local-only checker that reads the *diff* — a two-sided AST comparison against an assertion-strength lattice — and blocks the second kind. It never executes the code under review, has zero runtime dependencies, and takes 0.2 s on a 3000-line test diff. The pitch is the harness, not the adjective: on 1800 human-reviewed commits from six OSS projects it blocks 35, a 1.94% block rate; all 35 were adjudicated commit by commit against the real diff by three raters (two blind re-adjudications, Fleiss' kappa 0.844), landing at 20 false positives (1.11%) and 15 legitimate policy blocks (0.83%); 32 commits (1.78%) never got a real analysis because they touch a file greenwash cannot read, and that blind spot is counted and published. The uncomfortable half ships too: the public bypass table has six rows marked Open outright and four more open-by-design or open-in-part, an arm that handed a real agent the tool's complete source saw all three runnable tasks reach a green suite past the then-shipped build, and two false positives were shipped and corrected inside one day. It is a tripwire that raises the cost of cheating, not a guarantee — the report never says "no cheating", it says "no known tampering pattern detected".
+Agents make CI green two ways: by fixing the bug, or by deleting the failing test, widening a float tolerance, rewriting the expected value to whatever the broken code returns, or dropping `|| true` into the script that runs the suite. greenwash is a deterministic, zero-LLM, local-only checker that reads the *diff* — a two-sided AST comparison against an assertion-strength lattice — and blocks the second kind. It never executes the code under review, has zero runtime dependencies, and takes 0.2 s on a 3000-line test diff. The pitch is the harness, not the adjective: on 1800 human-reviewed commits from six OSS projects it blocks 36, a 2.00% block rate; all 35 were adjudicated commit by commit against the real diff by three raters (two blind re-adjudications, Fleiss' kappa 0.844), landing at 21 false positives (1.17%) and 15 legitimate policy blocks (0.83%); 25 commits (1.39%) never got a real analysis because they touch a file greenwash cannot read, and that blind spot is counted and published. The uncomfortable half ships too: the public bypass table has six rows marked Open outright and four more open-by-design or open-in-part, an arm that handed a real agent the tool's complete source saw all three runnable tasks reach a green suite past the then-shipped build, and two false positives were shipped and corrected inside one day. It is a tripwire that raises the cost of cheating, not a guarantee — the report never says "no cheating", it says "no known tampering pattern detected".
 
 ---
 
@@ -55,7 +55,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   after   assert total > 0
 ```
 
-Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. v0.1.14, 19 detectors, 302 tests, Apache-2.0.
+Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. v0.1.15, 19 detectors, 308 tests, Apache-2.0.
 
 When nothing fires, the report says **`no known tampering pattern detected`**. Not "no cheating". That wording is fixed in the source, because the second sentence is one a diff-layer tool cannot support.
 
@@ -115,7 +115,7 @@ All 35 were read commit by commit against the real diff and sorted into *false p
 | measure | count | rate over 1800 |
 |---|---:|---:|
 | block rate | 35 | **1.94%** |
-| adjudicated **false positive** | 20 | **1.11%** |
+| adjudicated **false positive** | 21 | **1.17%** |
 | legitimate policy block | 15 | 0.83% |
 | unclear | 0 | 0.00% |
 
@@ -253,7 +253,7 @@ Apache-2.0. https://github.com/taipei49314/greenwash
 >
 > greenwash reads the diff and blocks that: two-sided AST comparison on an assertion-strength lattice. No LLM, no network, no runtime deps, never runs your code, 0.2s.
 >
-> 1800 human commits from 6 OSS repos: blocks 1.94%, of which 1.11% adjudicated wrong by 3 raters (Fleiss' κ 0.844). 12/12 on recorded agent tampering diffs, 0/12 false blocks on honest fixes.
+> 1800 human commits from 6 OSS repos: blocks 2.00%, of which 1.17% adjudicated wrong (35 of the 36 by 3 raters (Fleiss' κ 0.844). 12/12 on recorded agent tampering diffs, 0/12 false blocks on honest fixes.
 >
 > The bypass table is public and six rows say Open. An agent handed the full source got past the shipped build 3 times in 3 tries. Two false positives shipped and were fixed the same day. It's a tripwire that raises the cost of cheating, not a guarantee — the report says "no known tampering pattern detected", never "no cheating".
 >
@@ -265,7 +265,7 @@ Apache-2.0. https://github.com/taipei49314/greenwash
 
 Agents make CI green two ways: by fixing the bug, or by deleting the failing test, widening a tolerance, rewriting the expected value to whatever the broken code returns, or dropping `|| true` into `scripts/test.sh`. greenwash reads the *diff* and blocks the second kind — alignment, then a two-sided AST comparison against an assertion-strength lattice, so `assert total == 105.3` → `assert total > 0` is a finding and a genuine refactor is not.
 
-Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. v0.1.14, 19 detectors, 302 tests, Apache-2.0.
+Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. v0.1.15, 19 detectors, 308 tests, Apache-2.0.
 
 What is measured, all from a harness in `benchmarks/`:
 

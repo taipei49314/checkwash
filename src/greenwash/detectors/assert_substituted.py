@@ -104,7 +104,23 @@ def detect(ir: IR) -> list[Finding]:
                     continue
                 # Both halves must have moved. A renamed local changes the
                 # subject and keeps the expectation, and that is a rename.
-                if b.right_literal == a.right_literal and b.right_value == a.right_value:
+                #
+                # `right_literal` and `right_value` are None for *any*
+                # non-literal expectation, so comparing only those read
+                # `None == None` and concluded "unchanged" whenever neither
+                # side was a literal — which let the whole attack this rule
+                # exists for through, as soon as the compared values were bound
+                # to locals first. Had the 2026-08-08 incident diff written
+                # `success = 0` on its own line, v0.1.14 would have passed it
+                # (THREATMODEL 86c, found by adversarial verification the day
+                # after release). The resolved dependency sets are what
+                # distinguish "the expectation is unchanged" from "the
+                # expectation is unrecorded": a rename keeps them identical.
+                if (
+                    b.right_literal == a.right_literal
+                    and b.right_value == a.right_value
+                    and b.right_depends_on == a.right_depends_on
+                ):
                     continue
                 # The comparison was reoriented, not replaced.
                 #

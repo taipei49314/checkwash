@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: Renaming both locals is still a rename, not a substitution
+origin: FP guard for THREATMODEL 86c's fix — the dependency sets must move for the right reason
+=== before: tests/test_shape.py ===
+from shape import area
+
+
+def test_square():
+    result = area(2)
+    wanted = 4
+    assert result == wanted
+=== after: tests/test_shape.py ===
+from shape import area
+
+
+def test_square():
+    computed = area(2)
+    wanted = 4
+    assert computed == wanted
+=== expect ===
+[]

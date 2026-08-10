@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: A plain class not named Test* is genuinely not collected
+origin: FP guard — the Test* rule is still correct for non-unittest classes
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+class BillingHelpers:
+    def test_applies_tax(self):
+        assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+class BillingHelpers:
+    def test_applies_tax(self):
+        assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[]

@@ -322,6 +322,13 @@
       "rater_a": "false_positive",
       "rater_b": "false_positive",
       "rater_c": "false_positive"
+    },
+    {
+      "repo": "httpx",
+      "commit": "e4241c6155c8a85789566b8fe10fa2291eea20f4",
+      "category": "false_positive",
+      "reason": "\"Drop private imports from test_proxies.py (#2850)\" replaces `pattern = URLPattern(proxy_key); assert pattern in client._mounts` with `assert proxy_key in client_patterns`, where client_patterns is derived from client._mounts in the same unit. Same membership check, same strength, expressed without the private import; no oracle coverage is lost. Newly blocked in v0.1.15 by ASSERT_SUBSTITUTED, which cannot tell this re-expression from a replacement because both the subject and the expectation move. It belongs to the same rewrite-onto-the-public-API cluster as the already-adjudicated false positives cca62060cb, 7947b56076 and 71a1589928.",
+      "adjudicated_by": "single adjudicator (2026-08-09 verification round), NOT the three-rater panel that decided the other 35 — the inter-rater agreement figure below does not cover this row"
     }
   ],
   "inter_rater": {

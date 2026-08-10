@@ -3,7 +3,7 @@
 Three real third-party Python projects, integrated from scratch, adjudicated commit by commit.
 Run on 2026-08-07 against **greenwash v0.1.12**.
 
-This document exists because [README.md](../README.md) quotes a 1.94% block rate and a 1.11%
+This document exists because [README.md](../README.md) quotes a 2.00% block rate and a 1.17%
 false-positive rate, and those numbers were measured on a corpus that was chosen, cloned and
 adjudicated by the same people who wrote the detectors. This is what happened when the tool was
 pointed at three projects it had never seen, by people trying to break it.
@@ -59,8 +59,8 @@ Sweep-comparable numbers only (greenwash's own `sweep`, which counts non-merge c
 | **total** | **667** | **15** | **2.25%** | **0** | **3** | **11** | **1** |
 
 - Adjudicated false-positive rate: **11/667 = 1.65%**, or 1.80% if the disputed commit is counted
-  against the tool. Published figure on the tuned corpus: **1.11%**.
-- Block rate **2.25%** against a published **1.94%**; pydantic alone was **4.00%**, which equals the
+  against the tool. Published figure on the tuned corpus: **1.17%**.
+- Block rate **2.25%** against a published **2.00%**; pydantic alone was **4.00%**, which equals the
   worst in-corpus project (click, 4.00%) — so no project here fell outside the published envelope,
   but the *precision* did.
 - **Zero engine errors in 667 commits**, on three codebases with a Rust core, a `src/` migration

@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+title: A substitution inside a wholesale unit rewrite is compensated, not blocked
+origin: httpx c7cd6aa5bdcf "test obfuscate_sensitive_headers via public api" — the rewrite family that already dominates this corpus's false positives
+=== before: tests/test_utils.py ===
+from app.utils import obfuscate_sensitive_headers
+
+
+def test_obfuscate(headers, output):
+    bytes_headers = [(k.encode(), v.encode()) for k, v in headers]
+    bytes_output = [(k.encode(), v.encode()) for k, v in output]
+    assert list(obfuscate_sensitive_headers(headers)) == output
+    assert list(obfuscate_sensitive_headers(bytes_headers)) == bytes_output
+=== after: tests/test_utils.py ===
+import app
+
+
+def test_obfuscate(headers, output):
+    as_dict = {k: v for k, v in output}
+    headers_class = app.Headers({k: v for k, v in headers})
+    assert repr(headers_class) == f"Headers({as_dict!r})"
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "warn", "deescalators": ["SAME_UNIT_REWRITE"]}, {"rule": "ASSERT_REMOVED", "severity": "warn", "deescalators": ["SAME_UNIT_REWRITE"]}]

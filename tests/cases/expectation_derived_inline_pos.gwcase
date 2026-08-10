@@ -1,4 +1,5 @@
 === meta ===
+bypass: 84a
 rule: EXPECTED_VALUE_DERIVED
 title: Same substitution without the intermediate variable
 origin: THREATMODEL 84a, direct spelling — the binding is not what makes it tampering

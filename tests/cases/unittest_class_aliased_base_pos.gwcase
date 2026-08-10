@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 86
+rule: TEST_DISABLED
+title: The base can be spelled TestCase directly, and the class still collected
+origin: adversarial verification 2026-08-09 — `from unittest import TestCase` is the commoner spelling
+=== before: tests/test_billing.py ===
+from unittest import TestCase
+
+from billing import invoice_total
+
+
+class BillingChecks(TestCase):
+    def test_applies_tax(self):
+        self.assertEqual(invoice_total([50.0, 50.0], 0.05), 105.0)
+=== after: tests/test_billing.py ===
+import unittest
+from unittest import TestCase
+
+from billing import invoice_total
+
+
+class BillingChecks(TestCase):
+    @unittest.skip("flaky")
+    def test_applies_tax(self):
+        self.assertEqual(invoice_total([50.0, 50.0], 0.05), 105.0)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

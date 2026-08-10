@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.0367,
+  "block_rate": 0.04,
   "blocked_commits": [
     {
       "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
@@ -81,71 +81,20 @@
       ]
     },
     {
-      "commit": "cca62060cb958e89078279e625a752aa0d02c40c",
+      "commit": "e4241c6155c8a85789566b8fe10fa2291eea20f4",
       "findings": [
         {
-          "message": "test_line_decoder_cr: an assertion was replaced by an unrelated one of the same strength (decoder.flush() -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
+          "message": "test_proxies_parameter: an assertion was replaced by an unrelated one of the same strength (pattern -> proxy_key); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/client/test_proxies.py",
           "rule": "ASSERT_SUBSTITUTED",
           "severity": "high",
-          "unit": "test_line_decoder_cr"
-        },
-        {
-          "message": "test_line_decoder_cr: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"a\\r\\rb\\rc\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_line_decoder_cr"
-        },
-        {
-          "message": "test_line_decoder_cr: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_line_decoder_cr"
-        },
-        {
-          "message": "test_line_decoder_crnl: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"a\\r\\n\\r\\nb\\r\\nc\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_line_decoder_crnl"
-        },
-        {
-          "message": "test_line_decoder_crnl: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_line_decoder_crnl"
-        },
-        {
-          "message": "test_line_decoder_crnl: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_line_decoder_crnl"
-        },
-        {
-          "message": "test_line_decoder_crnl: an assertion was replaced by an unrelated one of the same strength (decoder.flush() -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_line_decoder_crnl"
-        },
-        {
-          "message": "test_line_decoder_nl: an assertion was replaced by an unrelated one of the same strength (decoder.flush() -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_line_decoder_nl"
-        },
-        {
-          "message": "test_line_decoder_nl: an assertion was replaced by an unrelated one of the same strength (decoder.decode(\"a\\n\\nb\\nc\") -> list(response.iter_lines())); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_decoders.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_line_decoder_nl"
-        },
+          "unit": "test_proxies_parameter"
+        }
+      ]
+    },
+    {
+      "commit": "cca62060cb958e89078279e625a752aa0d02c40c",
+      "findings": [
         {
           "message": "test_byte_chunker: test unit disappeared",
           "path": "tests/test_decoders.py",
@@ -240,13 +189,6 @@
     {
       "commit": "7947b56076db933079ec0c33d1f81406e33008e7",
       "findings": [
-        {
-          "message": "test_multipart_encode_unicode_file_contents: an assertion was replaced by an unrelated one of the same strength (headers -> request.content); the original assertion is gone and the strength lattice cannot see it",
-          "path": "tests/test_multipart.py",
-          "rule": "ASSERT_SUBSTITUTED",
-          "severity": "high",
-          "unit": "test_multipart_encode_unicode_file_contents"
-        },
         {
           "message": "test_multipart_encode_non_seekable_filelike: assertion strength EXACT_STRUCT(100) -> EXACT_VALUE(90)",
           "path": "tests/test_multipart.py",
@@ -527,12 +469,12 @@
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 11,
+  "commits_blocked": 12,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 92,
   "commits_with_opaque_prod_change": 5,
   "corpus": {
-    "greenwash_version": "0.1.14",
+    "greenwash_version": "0.1.15",
     "newest_commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
     "oldest_commit": "69e13cbc393ee13624d0e4aa4b6f861a95e3f91c"
   },
@@ -542,8 +484,8 @@
       "warn": 65
     },
     "ASSERT_SUBSTITUTED": {
-      "high": 28,
-      "warn": 5
+      "high": 19,
+      "warn": 23
     },
     "ASSERT_WEAKENED": {
       "high": 5,

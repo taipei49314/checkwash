@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 86c
+rule: ASSERT_SUBSTITUTED
+title: Substitution where neither expectation is a literal
+origin: adversarial verification 2026-08-09 — the incident attack with the values bound to locals first (THREATMODEL 86c)
+=== before: tests/test_release.py ===
+from release import readme_pins, tag_ok
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    ok = tag_ok(tag)
+    success = 0
+    assert ok == success
+=== after: tests/test_release.py ===
+from release import readme_pins, tag_ok
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    ok = tag_ok(tag)
+    pinned = readme_pins()
+    wanted = {tag}
+    assert pinned == wanted
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

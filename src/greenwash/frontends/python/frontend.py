@@ -1357,14 +1357,35 @@ def _is_test_name(name: str) -> bool:
     return name.startswith("test")
 
 
-def _is_test_class(name: str) -> bool:
-    """pytest's default python_classes = Test*.
+def _is_test_class(node: ast.ClassDef) -> bool:
+    """pytest's default `python_classes = Test*`, **plus unittest subclasses**.
 
-    Methods of a class that does not match are never collected, so renaming
-    `TestBilling` to `BillingTests` silently deletes every test in it
-    (confirmed red-team finding).
+    Renaming `TestBilling` to `BillingTests` silently deletes every test in a
+    plain class, so the `Test*` half stays (confirmed red-team finding).
+
+    But `python_classes` does not gate unittest collection: pytest collects any
+    `unittest.TestCase` subclass whatever it is called. This function used to
+    take only the name and return `name.startswith("Test")`, so
+    `class BillingTests(unittest.TestCase)` produced **zero units** and all
+    nineteen detectors were inert on the file — `assertEqual(total, 105.0)`
+    becoming `assertTrue(total > 0)` passed clean while pytest ran the test and
+    the suite went from `1 failed` to `1 passed`. SPEC §2 asserted the opposite
+    of pytest's real behaviour and the implementation was built on it
+    (THREATMODEL 86, adversarial verification 2026-08-09).
+
+    Base detection is syntactic and deliberately generous: anything whose base
+    is spelled `TestCase`, or is an attribute access ending in `TestCase`
+    (`unittest.TestCase`, `unittest.IsolatedAsyncioTestCase`, `django.test.TestCase`),
+    counts. A project-local subclass used as a base (`class Foo(BaseTest)`) is
+    not resolved — that is a residual, not a claim.
     """
-    return name.startswith("Test")
+    if node.name.startswith("Test"):
+        return True
+    for base in node.bases:
+        dotted = _dotted(base)
+        if dotted and dotted.split(".")[-1].endswith("TestCase"):
+            return True
+    return False
 
 
 def _callees(node: ast.AST) -> tuple[str, ...]:
@@ -1431,7 +1452,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     qual + ".",
                     inherited + class_markers,
                     collectible
-                    and _is_test_class(child.name)
+                    and _is_test_class(child)
                     and not _test_attr_disabled(child.body),
                 )
             elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):

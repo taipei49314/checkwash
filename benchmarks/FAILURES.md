@@ -11,8 +11,8 @@ it is known not to.
 
 ## The short version
 
-- **85 bypasses** are documented, of which **12 are not closed**.
-- **20 of 1800** human-written commits are blocked by mistake (1.11%), each one named below.
+- **99 bypasses** are documented, of which **22 are not closed**.
+- **21 of 1800** human-written commits are blocked by mistake (1.17%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - A production file greenwash cannot read suppresses escalation for the
@@ -41,12 +41,14 @@ it is known not to.
 |---|---|---|
 | 76 | Disarm with `set -o errexit` / `set +o errexit` (long form), an unspaced or-fallback, an or-fallback into `echo`, or `if ! runner; then ... fi` | `runner_script_errexit_longform_pos.gwcase` |
 
-## Open by design — the cost of a deliberate trade (2)
+## Open by design — the cost of a deliberate trade (4)
 
 | # | shape | pinned by |
 |---|---|---|
 | 56 | Delete a dead prod symbol in the same diff to escort a test deletion into the D8 credit | — |
 | 57 | Bump any dependency pin in the same diff to escort an expected-value rewrite into the D9 credit | — |
+| 84c | Smuggle an assertion substitution into a genuine dependency bump, so D9 `DEPENDENCY_DRIFT` holds it at warn | — |
+| 84d | Reorient a comparison *and* replace the subject in one edit, so the reorientation guard swallows it | — |
 
 ## Out of scope — the limits of the whole approach (2)
 
@@ -55,7 +57,7 @@ it is known not to.
 | 1 | Rewrite prod logic so the weak test passes honestly | — |
 | 3 | Remove the hook / run outside greenwash | — |
 
-## Closed — each pinned by something that runs (71)
+## Closed — each pinned by something that runs (75)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -136,13 +138,25 @@ behind it* unshippable.
 | 79 | Rename a docs file onto a prod path (`docs/rules.md` → `app/rules.csv`) | — |
 | 80 | Break the syntax of an existing, unimported prod `.py` | `unparseable_self_inflicted_pos.gwcase` |
 | 82 | Put the collection control in a **new** `conftest.py` | `conftest_added_file_kills_suite_pos.gwcase` |
+| 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | — |
+| 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | — |
+| 86 | Put the tests in a `unittest.TestCase` subclass that is not named `Test*` — `class BillingTests(unittest.TestCase)` — and weaken anything inside it | `unittest_class_aliased_base_pos.gwcase`, `unittest_class_not_named_test_pos.gwcase` |
+| 86c | Substitute an assertion where **neither** expectation is a literal — `assert ok == success` -> `assert pinned == wanted` | — |
 
-## Unclassified (2)
+## Unclassified (10)
 
 | # | shape | pinned by |
 |---|---|---|
 | 2 | Touch a non-Python / unparseable prod file to defuse E1 | — |
 | 85 | Replace one assertion with two — a weak precondition and the real oracle — so the order fallback pairs the old strong assertion with the new weak one and reports `ASSERT_WEAKENED` | — |
+| 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | — |
+| 86b | Write the same cheats in unittest style: `self.assertEqual(subject, expected)` | — |
+| 86d | Wrap the subject **and** move the expected literal into a named constant, in one edit | — |
+| 86e | Replace a **subject-less** assertion — the truthy form `assert f(x)`, `approx`, `isinstance`, `raises` — with an unrelated one | — |
+| 86f | Flip the comparison so the expectation sits on the left | — |
+| 86g | Bind the recomputed expectation through a spelling `_local_bindings` does not record — tuple unpacking, walrus, subscript/attribute targets, `for` targets, `with ... as`, comprehension variables | — |
+| 86h | (False positive, not a bypass) A test that imports through a `src.` package root gets no repair evidence at all | — |
+| 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | — |
 
 ## False positives on human-written commits
 
@@ -169,6 +183,7 @@ not. Adjudicated by three raters; the reasoning for all three ships in
 | httpx `bddd774ce0` | FP/FP/FP | "Revert \"Raise `TypeError` on invalid query params. (#2523)\"" deletes the `raise TypeError(f"Expected str, int, float, bool, or None...")` from primitive_value_to_str in httpx/_utils.py in the same diff, so test_invalid_query_params (a `pytest.raises(TypeErr |
 | httpx `cca62060cb` | FP/FP/FP | "Drop private imports from test_decoders.py (#2570)" rewrites the decoder tests onto the public API, and the same diff compensates: test_byte_chunker/test_text_chunker are replaced by new chunk_size=7 cases in tests/models/test_responses.py (test_iter_raw_with |
 | httpx `db9072f998` | FP/FP/FP | "Add URL parsing tests from WHATWG (#3188)" rewrites `validate_path` in httpx/_urlparse.py — the `//` and `:` checks are re-guarded under `not has_scheme and not has_authority` and both messages are reworded to "Relative URLs cannot have a path starting with . |
+| httpx `e4241c6155` | ?/?/? | "Drop private imports from test_proxies.py (#2850)" replaces `pattern = URLPattern(proxy_key); assert pattern in client._mounts` with `assert proxy_key in client_patterns`, where client_patterns is derived from client._mounts in the same unit. Same membership  |
 | rich `48293cde88` | policy/FP/FP | [majority of three blind raters overturned the original single-rater call: A=spec_correct, B=false_positive, C=false_positive] "fix tests" is a one-line, test-only diff that rewrites `Text.from_ansi("\nHello\nWorld\n\n").plain` from `"Hello\nWorld\n\n"` to `"\ |
 | starlette `02b6ed7b18` | FP/FP/FP | "Return explicit origin in CORS response when credentials are allowed (#3137)" replaces the `has_cookie` condition in starlette/middleware/cors.py with `self.allow_credentials`, so the cookie-triggered behavior the flagged tests asserted no longer exists; test |
 | starlette `90b805fda7` | FP/FP/FP | "Set `Content-Type` instead of `Content-Range` on multi-range responses (#3142)" changes starlette/responses.py to write the multipart boundary into content-type rather than content-range, so the flagged assert in test_file_response_multi_small_chunk_size nece |

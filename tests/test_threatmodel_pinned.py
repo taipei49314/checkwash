@@ -36,11 +36,27 @@ def _closed_rows() -> dict[str, str]:
         if not line.startswith("| ") or "|" not in line[2:]:
             continue
         parts = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(parts) < 3 or not parts[0].isdigit():
+        # Lettered rows (84a, 86c) are rows. `isdigit()` skipped every one, so
+        # the two rows v0.1.14 was written to close were never required to have
+        # a fixture at all — the gate that exists to make "Closed with nothing
+        # behind it" impossible could not see them (found 2026-08-09).
+        if len(parts) < 3 or not re.fullmatch(r"\d+[a-z]*", parts[0]):
             continue
-        if "Closed" in parts[2]:
+        # The verdict is the leading bolded run of the status cell; the prose
+        # after it routinely mentions other rows being closed, so matching the
+        # whole cell pulls in rows whose verdict is "Narrowed, still open".
+        # "Partly closed" is a closure claim and needs the same evidence as
+        # "Closed".
+        verdict = re.match(r"\*\*(.+?)\*\*", parts[2])
+        verdict = verdict.group(1).lower() if verdict else parts[2].lower()
+        if "closed" in verdict and "open" not in verdict:
             rows[parts[0]] = parts[1]
     return rows
+
+
+def _row_sort_key(row: str) -> tuple[int, str]:
+    m = re.fullmatch(r"(\d+)([a-z]*)", row)
+    return (int(m.group(1)), m.group(2))
 
 
 def _claimed_rows() -> dict[str, list[str]]:
@@ -59,7 +75,7 @@ def test_every_closed_bypass_is_pinned():
     claimed = _claimed_rows()
     unpinned = sorted(
         (row for row in closed if row not in claimed and row not in E2E_PINNED),
-        key=int,
+        key=_row_sort_key,
     )
     assert not unpinned, (
         "THREATMODEL rows marked Closed with nothing pinning them: "
@@ -73,7 +89,7 @@ def test_no_fixture_claims_a_row_that_does_not_exist():
     closed = _closed_rows()
     stray = sorted(
         (row for row in _claimed_rows() if row not in closed),
-        key=int,
+        key=_row_sort_key,
     )
     assert not stray, (
         f"fixtures claim THREATMODEL rows that are not marked Closed: {stray}. "

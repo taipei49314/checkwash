@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 19 detectors, 302 tests, zero runtime dependencies.
+> Status: **pre-release.** 19 detectors, 308 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -37,7 +37,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 - **Blockable by default** on composite high-severity evidence (see [SPEC.md](SPEC.md))
 - **Measured, not asserted** — public corpora + published failures: [benchmarks/](benchmarks/README.md), [THREATMODEL.md](THREATMODEL.md), [benchmarks/FAILURES.md](benchmarks/FAILURES.md)
 - **Out of sample it does worse, and that is published too** — three projects never in the tuning
-  corpus: 667 commits, 15 blocks, **11 false positives (1.65%)** against the 1.11% measured on the
+  corpus: 667 commits, 15 blocks, **11 false positives (1.65%)** against the 1.17% measured on the
   corpus the detectors were built against. Zero engine errors. [docs/integrations.md](docs/integrations.md)
 
 ## Sixty seconds, from nothing
@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.14
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.14
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.15
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.15
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -97,7 +97,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taipei49314/greenwash/action@v0.1.14
+      - uses: taipei49314/greenwash/action@v0.1.15
 ```
 
 The `permissions` block and `persist-credentials: false` are there because
@@ -111,7 +111,7 @@ security-conscious project cannot merge is not an integration
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.14
+    rev: v0.1.15
     hooks: [{ id: greenwash }]
 ```
 
@@ -140,7 +140,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.14
+- uses: taipei49314/greenwash/action@v0.1.15
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -151,14 +151,14 @@ so PR diffs never include base-branch commits.
 Two harnesses, both reproducible from a clone
 ([benchmarks/](benchmarks/README.md)):
 
-- **Human-commit block rate — 35 / 1800 = 1.94%.** Six active OSS projects
+- **Human-commit block rate — 36 / 1800 = 2.00%.** Six active OSS projects
   (flask, httpx, attrs, click, rich, starlette), 300 consecutive
   human-reviewed commits each, none seen during development. That is how
   often greenwash would fail CI on a commit a human wrote. Every repo is
   at or under 4%; the progression from an initial 8.6%, and what moved each
   step, is in the benchmarks README.
   A block is not automatically a mistake. All 35 were adjudicated commit by
-  commit against the real diff: **20 false positives (1.11%)**, 15 legitimate
+  commit against the real diff: **21 false positives (1.17%)**, 15 legitimate
   policy blocks (0.83%) where the commit really does drop oracle coverage
   with nothing visible replacing it, 0 unclear. Three precision rounds
   brought this down from 2.50% / 1.67%: skip conditions are *read* (constants
@@ -251,7 +251,7 @@ Two harnesses, both reproducible from a clone
   fired, and the actual cause was in alignment rather than in any of them: the
   last-resort pairing stage matches leftover assertions by *span order*, so a
   deleted assertion and its unrelated replacement were reported as one
-  unchanged assertion. Closed in v0.1.14 by `ASSERT_SUBSTITUTED`, which is the
+  unchanged assertion. Closed in v0.1.15 by `ASSERT_SUBSTITUTED`, which is the
   first rule keyed on how a pair was formed rather than what it contains. The
   diff blocks at high on this build. D-031 and D-033 have the whole account,
   including the first attempted fix, which closed a six-line reduction of the

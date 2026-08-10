@@ -14,17 +14,17 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 35/1800 = 1.94%** (final)
+**Blocked (would fail CI at the default `fail_on = high`): 36/1800 = 2.00%** (final)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
 | flask | 300 | 37 | 6 | 2.00% |
-| httpx | 300 | 92 | 11 | 3.67% |
+| httpx | 300 | 92 | 12 | 4.00% |
 | attrs | 300 | 65 | 2 | 0.67% |
 | click | 300 | 109 | 12 | 4.00% |
 | rich | 300 | 71 | 2 | 0.67% |
 | starlette | 300 | 92 | 2 | 0.67% |
-| **total** | **1800** | **466** | **35** | **1.94%** |
+| **total** | **1800** | **466** | **36** | **2.00%** |
 
 Engine errors: 0.
 
@@ -37,7 +37,7 @@ Blocking findings by rule (commits containing at least one):
 | `TEST_DISABLED` | 16 |
 | `ASSERT_WEAKENED` | 11 |
 | `EXPECTED_VALUE_CHANGED` | 6 |
-| `ASSERT_SUBSTITUTED` | 3 |
+| `ASSERT_SUBSTITUTED` | 2 |
 | `EXPECTED_VALUE_HARDCODED` | 1 |
 | `CI_WORKFLOW_TOUCHED` | 1 |
 | `ASSERT_REMOVED` | 1 |
@@ -45,7 +45,7 @@ Blocking findings by rule (commits containing at least one):
 ## Decomposed: what those blocks are
 
 A block is not automatically a false positive. Every one of the
-35 blocks above was adjudicated against the real diff, into
+36 blocks above was adjudicated against the real diff, into
 *false positive* (blocking was wrong), *spec-correct*
 (the diff really does drop oracle coverage with no visible
 compensation — the tool doing its documented job, allowlist it), or
@@ -53,8 +53,8 @@ compensation — the tool doing its documented job, allowlist it), or
 
 | measure | count | rate over 1800 commits |
 |---|---:|---:|
-| historical human-commit **block rate** | 35 | **1.94%** |
-| adjudicated **false positive** | 20 | **1.11%** |
+| historical human-commit **block rate** | 36 | **2.00%** |
+| adjudicated **false positive** | 21 | **1.17%** |
 | **legitimate policy block** (spec-correct) | 15 | 0.83% |
 | **unclear** | 0 | 0.00% |
 
@@ -68,7 +68,7 @@ How they were judged: each of the 45 blocked commits of the v0.1.2 build adjudic
 
 **How much to trust the split.** The block rate is a machine count and
 is exact; the split between *false positive* and *legitimate policy
-block* is a judgement call on 35 diffs, and the boundary is genuinely
+block* is a judgement call on 36 diffs, and the boundary is genuinely
 arguable on some of them (a test deleted because its coverage moved
 upstream is invisible to any diff analyser — called spec-correct here,
 another reviewer might say the tool should not have blocked). Read the
@@ -79,7 +79,7 @@ It has been judged 3 times. rater A = original per-commit adjudication; raters B
 - pairwise agreement: A-B 94.3%, A-C 91.4%, B-C 91.4%
 - Cohen's kappa: A-B 0.88, A-C 0.83, B-C 0.82
 - Fleiss' kappa across all 3: **0.844**
-- commits with any disagreement: 4 of 35
+- commits with any disagreement: 4 of 36
 - reconciliation: published category = majority of the three; a 3-way split would become unclear (none occurred)
 
 ## Where the earlier rounds' blocks came from

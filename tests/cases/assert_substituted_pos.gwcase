@@ -1,4 +1,5 @@
 === meta ===
+bypass: 84b
 rule: ASSERT_SUBSTITUTED
 title: A different assertion takes the deleted one's slot
 origin: the 2026-08-08 incident diff, reduced — greenwash passed the original (D-031)

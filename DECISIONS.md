@@ -1040,3 +1040,61 @@ evidence and was still too broad, and nothing about reading it would have
 shown that. It was caught by re-running the one diff the round existed to
 block, after every change. **The regression check for a round is the thing
 that motivated the round.**
+
+## D-035 (2026-08-09): verifying v0.1.14, and what it did not close
+
+v0.1.14 shipped and was then put through adversarial verification: seven
+independent read-only probes, each required to reproduce with the real CLI,
+each finding handed to a separate agent whose job was to refute it. 32
+candidates, 23 surviving refutation, 8 rejected. Two agents did not finish, so
+**the list is not known to be exhaustive** — the "what did we not test"
+question has no answer, and that is recorded rather than smoothed over.
+
+**What held.** The extraction of the comparison-operator chain into
+`_classify_compare_op` was the change most likely to break something silently:
+the first attempt at it was mangled and reverted. A differential test across
+the corpus's test files, running v0.1.13 and v0.1.14 side by side under
+isolated `PYTHONPATH`, found no divergence in form, strength, subject,
+expectation, tolerance or polarity. Determinism and zero-dependency held.
+Fingerprint stability held across 240 real commits, so recorded allowlist
+entries still match — checked because `docs/stability.md` promises it, not
+because `make_fingerprint` looked fine.
+
+**What did not.** Three things, fixed here.
+
+*The rule did not close what the release said it closed.* Move the compared
+values into locals and the 2026-08-08 attack passes: `right_literal` and
+`right_value` are `None` for every non-literal expectation, so
+`ASSERT_SUBSTITUTED`'s "both halves must have moved" test read `None == None`
+and skipped. Had the incident diff written `success = 0` on its own line,
+v0.1.14 would have passed it too. The dependency sets distinguish "unchanged"
+from "unrecorded"; comparing those as well closes it, and a rename still keeps
+them identical. Row 84b was downgraded to *partly closed* before the fix
+existed, and the published release notes were amended rather than quietly
+corrected — a release that overclaims is exactly the defect this project
+exists to catch, and it does not become acceptable when the author is the one
+who shipped it.
+
+*A blind spot older and larger than anything v0.1.14 fixed.* A
+`unittest.TestCase` subclass not named `Test*` produced **zero units**, so all
+nineteen detectors were inert on it, while pytest collected and ran the tests.
+`assertEqual(total, 105.0)` becoming `assertTrue(total > 0)` passed clean.
+SPEC §2 stated that pytest never collects such classes. That is false —
+`python_classes` does not gate unittest collection — and `_is_test_class` was
+built on the false statement. Base detection is syntactic and generous now;
+a project-local base class is still unresolved and is recorded as a residual
+rather than claimed.
+
+*Two of the project's own ledgers were blind to their newest entries.*
+`benchmarks/FAILURES.md` and the "every Closed row is pinned" gate both parsed
+row numbers with `isdigit()`, which silently dropped every lettered row —
+including 84a and 84b, the two rows v0.1.14 exists for. Fixing the parser
+immediately proved the second half of the point: neither row had a fixture
+pinning it. Thirteen rows were missing from the public failures page. A ledger
+that quietly excludes rows reads as coverage and is worse than no ledger.
+
+The pattern under all three is one this project already has a name for and
+still keeps repeating: **a check that cannot see its subject reports success.**
+The pypi gate could not run, the count gate passed on a missing number, the
+row parser could not see lettered rows, and the collection rule could not see
+unittest classes. Four instances in two days, all of them shipped.

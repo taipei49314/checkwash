@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-07 (v0.1.13: four defects from the field report, and a gate that could not see the cost)
+Updated: 2026-08-09 (v0.1.15: what the adversarial verification of v0.1.14 found)
 
 ## The 2026-08-07 sixth round (v0.1.13): fixing what the field found
 
@@ -61,6 +61,52 @@ have removed, **and not one verdict moved** — which is what "disabling the
 exemption entirely moves the block set by zero, so no subset can cost more"
 predicted. A bound that turns out to be tight is worth more than a bound that
 was never checked.
+
+## 2026-08-09 — verifying v0.1.14, and finding it closes less than it says
+
+v0.1.14 was released and then put through an adversarial verification pass:
+seven independent read-only probes, each required to reproduce with the real
+CLI, each finding then handed to a separate agent whose job was to *refute* it.
+32 candidate findings, 23 surviving refutation, 8 rejected. Two probes did not
+complete (a verifier and the completeness critic hit a quota limit), so **this
+list is not known to be exhaustive** — the "what did we not test" question has
+no answer yet.
+
+Three results matter more than the count.
+
+**The classifier refactor was clean.** The extraction of the comparison-operator
+chain into `_classify_compare_op` was the change most likely to have broken
+something silently — the first attempt at it was mangled and reverted. A
+differential test over the corpus's test files, running v0.1.13 and v0.1.14
+side by side under isolated `PYTHONPATH`, found **no divergence** in form,
+strength, subject, expectation, tolerance or polarity. Determinism and the
+zero-dependency claim also survived, and fingerprint stability held across 240
+real commits, so recorded allowlist entries still match.
+
+**`ASSERT_SUBSTITUTED` closes less than v0.1.14 claimed.** Move the compared
+values into locals and the same attack passes: `right_literal` and
+`right_value` are `None` for every non-literal expectation, so the rule's "both
+halves must have moved" test reads `None == None` and skips. Had the
+2026-08-08 incident diff bound `0` to a local first, v0.1.14 would have passed
+it too. Row 84b is downgraded to *partly closed*; row 86c has the shape. The
+published release notes were amended rather than quietly corrected.
+
+**And a blind spot older and larger than anything v0.1.14 fixed.** A
+`unittest.TestCase` subclass not named `Test*` — `class BillingTests(...)` — is
+collected and run by pytest but produces **zero IR units**, so all 19 detectors
+are inert on it. `assertEqual(total, 105.0)` becoming `assertTrue(total > 0)`
+passes clean. SPEC §2 stated that pytest never collects such classes; that is
+false, and the implementation was built on it. Row 86.
+
+Two of the project's own ledgers were also blind to their newest entries:
+`benchmarks/FAILURES.md` and the "every Closed row is pinned" gate both parsed
+row numbers with `isdigit()`, which silently dropped every lettered row —
+including 84a and 84b, the two rows v0.1.14 exists for. Fixing the parser
+immediately proved the second point: neither row had a fixture pinning it at
+all. A ledger that quietly excludes rows is worse than no ledger.
+
+The full list of 23 is in THREATMODEL rows 86–86i plus the rows already there;
+what got fixed in this round is below.
 
 ## v0.1.14 — closing the escape, and finding out the first fix was the wrong one
 
@@ -512,10 +558,10 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.14 |
+| version | v0.1.15 |
 | detectors | 19 |
-| human-commit block rate | 35/1800 = 1.94% |
-| adjudicated false positive | 20/1800 = 1.11% |
+| human-commit block rate | 36/1800 = 2.00% |
+| adjudicated false positive | 21/1800 = 1.17% |
 | legitimate policy block | 15/1800 = 0.83% |
 | opaque exemption share | 25/1800 = 1.39% |
 | classic adversarial decoys blocked | 12/12 |

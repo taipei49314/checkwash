@@ -845,7 +845,22 @@ def apply_gates(
         # Compensation evidence from the triage clusters: all of these hold
         # the finding at warn (visible, allowlistable) instead of blocking.
         compensation = None
-        if f.rule == "ASSERT_REMOVED" and _same_unit_rewrite(unit):
+        # ASSERT_SUBSTITUTED joins ASSERT_REMOVED here on the same argument: a
+        # unit that *deleted* an assertion and *wrote a new strong one* is
+        # being rewritten wholesale, which is the documented triage cluster
+        # (private-API asserts rewritten against the public API). Crediting the
+        # removal at warn and blocking the substitution at high described one
+        # edit two ways — httpx c7cd6aa5bdcf, "test obfuscate_sensitive_headers
+        # via public api", was the measured case.
+        #
+        # It does not weaken what this rule was built for: `_same_unit_rewrite`
+        # requires `assertions_removed` to be non-empty, and a pure substitution
+        # removes nothing — the 2026-08-08 incident diff has
+        # `assertions_removed: []` and stays high. Residual, stated: deleting an
+        # assertion *and* substituting another *and* adding a plausible strong
+        # one buys warn for all of it, which is the trade ASSERT_REMOVED has
+        # carried since this compensation existed.
+        if f.rule in ("ASSERT_REMOVED", "ASSERT_SUBSTITUTED") and _same_unit_rewrite(unit):
             compensation = "SAME_UNIT_REWRITE"
         elif (
             f.rule == "TEST_DISABLED"

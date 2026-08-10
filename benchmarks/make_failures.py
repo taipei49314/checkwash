@@ -40,7 +40,11 @@ def bypass_rows() -> list[tuple[str, str, str]]:
         if not line.startswith("| "):
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) < 3 or not cells[0].isdigit():
+        # Lettered rows (84a, 86c) are rows. `isdigit()` dropped every one of
+        # them, so the published failures page silently omitted the newest
+        # entries — including both shapes v0.1.14 was written for. A ledger
+        # that quietly excludes rows is worse than no ledger (found 2026-08-09).
+        if len(cells) < 3 or not re.fullmatch(r"\d+[a-z]*", cells[0]):
             continue
         rows.append((cells[0], cells[1], cells[2]))
     return rows

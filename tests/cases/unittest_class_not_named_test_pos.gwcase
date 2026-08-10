@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 86
+rule: ASSERT_WEAKENED
+title: A unittest.TestCase subclass not named Test* is still collected by pytest
+origin: adversarial verification of v0.1.14, 2026-08-09 — the file produced zero units and every detector was inert
+=== before: tests/test_billing.py ===
+import unittest
+
+from billing import invoice_total
+
+
+class BillingTests(unittest.TestCase):
+    def test_applies_tax(self):
+        self.assertEqual(invoice_total([50.0, 50.0], 0.05), 105.0)
+=== after: tests/test_billing.py ===
+import unittest
+
+from billing import invoice_total
+
+
+class BillingTests(unittest.TestCase):
+    def test_applies_tax(self):
+        self.assertTrue(invoice_total([50.0, 50.0], 0.05) > 0)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

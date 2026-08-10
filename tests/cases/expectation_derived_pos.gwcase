@@ -1,4 +1,5 @@
 === meta ===
+bypass: 84a
 rule: EXPECTED_VALUE_DERIVED
 title: Expectation replaced by a recomputation of the inputs
 origin: THREATMODEL 84a — found in greenwash's own gate file 2026-08-08 (D-031)
