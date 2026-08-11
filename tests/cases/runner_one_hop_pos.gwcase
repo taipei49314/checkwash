@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 89
+rule: CI_WORKFLOW_TOUCHED
+title: The entry script only calls the test script, and swallows its exit code
+origin: T1.5 — reproduced 2026-08-12: verdict pass, and the assertion weakening was de-escalated too
+=== head: scripts/run-tests.sh ===
+#!/bin/sh -e
+pytest
+=== before: scripts/ci.sh ===
+#!/bin/sh -e
+./scripts/run-tests.sh
+=== after: scripts/ci.sh ===
+#!/bin/sh -e
+./scripts/run-tests.sh || true
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "high"}]

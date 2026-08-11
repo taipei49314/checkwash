@@ -1,0 +1,27 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: A script that builds, called from the same place, is still production
+origin: FP guard — one hop must terminate in a test runner, or every build script becomes ci
+=== head: scripts/compile.sh ===
+#!/bin/sh -e
+cc -O2 -shared -o libfast.so fast.c
+=== before: scripts/ci.sh ===
+#!/bin/sh -e
+./scripts/compile.sh
+=== after: scripts/ci.sh ===
+#!/bin/sh -e
+./scripts/compile.sh || true
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn"}]

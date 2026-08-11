@@ -1263,3 +1263,47 @@ was already settled by evidence and does not get re-litigated per feature.
 Conftest fixtures are out of scope and recorded as row 86j rather than
 half-implemented: resolving a fixture defined in another module is
 cross-file resolution, which is a design change, not a widening.
+
+## D-040 (2026-08-12): one hop, and it has to end at a test runner
+
+T1.5. A CI entry script that only calls another script holds no runner token,
+so the content gate left it as production:
+
+    # scripts/ci.sh
+    -  ./scripts/run-tests.sh
+    +  ./scripts/run-tests.sh || true
+
+Measured on v0.1.21: **verdict pass** — and, as with row 87, worse than a
+missed CI finding. Being production, the edit also counted as a changed
+production file and de-escalated the `ASSERT_WEAKENED` sitting beside it in the
+same diff. Row 87's double effect, one hop further out, found the same way:
+by building the shape and running the real CLI rather than reasoning about it.
+
+Resolution follows a reference **one hop**, reading the target from the diff or
+from the head snapshot, and promotes only when that hop terminates in a real
+test runner. `scripts/ci.sh` calling `scripts/compile.sh` stays production —
+the same line the content gate has drawn since v0.1.8, and the reason a
+Makefile that builds a C extension is still repair evidence.
+`runner_one_hop_build_neg` pins that from the other side.
+
+Bounded deliberately: one hop, a cap on head-snapshot reads, and a syntactic
+reference scan. This is not a shell model. The 700-line bounded shell parser
+was designed and killed in v0.1.12 because its give-up set was attacker-chosen
+and published; the same reasoning applies to chasing arbitrary indirection.
+Two hops and a path built from a variable are recorded as residuals on row 89.
+
+**Two parser bugs surfaced while writing this, both mine, both in gates.**
+
+The reference regex lost a backslash in transit (`\.?` became `.?`), so
+`bash scripts/inner.bash` resolved to `cripts/inner.bash`. Caught by running
+the extractor on four inputs before wiring it in, which took a minute and
+would otherwise have shipped a rule that silently matched the wrong file.
+
+And row 89's own text broke the ledger. It describes a shell `||`, written
+`\|\|` so the table renders — and both `test_threatmodel_pinned.py` and
+`make_failures.py` split rows on raw `|`, so every cell after it shifted and
+the status column landed somewhere else. The row read as not-closed. Rows about
+shell operators are exactly the rows this ledger most needs to parse, and
+fixing the split moved the published failure count from 99 to 104: five rows
+had been silently mis-parsed. That is the third time a ledger in this project
+has quietly dropped entries it could not parse.

@@ -410,6 +410,80 @@ def _mentions_test_runner(change) -> bool:
     return _runs_tests(change.before) or _runs_tests(change.after)
 
 
+_SCRIPT_REF = re.compile(
+    rb"(?:^|[\s;&|(=\"'])\.?/?((?:[\w.-]+/)*[\w.-]+\.(?:sh|bash|zsh|ps1|bat|cmd))",
+    re.MULTILINE,
+)
+_MAX_ONE_HOP_READS = 32
+
+
+def _referenced_scripts(data: bytes | None) -> list[str]:
+    """Script paths this file invokes, as written.
+
+    Deliberately syntactic and deliberately shallow: this exists to follow one
+    hop, not to model a shell.
+    """
+    if not data or len(data) > 1_000_000:
+        return []
+    out = []
+    for m in _SCRIPT_REF.finditer(data):
+        ref = m.group(1).decode("utf-8", errors="replace").lstrip("./")
+        if ref not in out:
+            out.append(ref)
+    return out
+
+
+def _one_hop_runners(
+    changes: list[FileChange], config: Config, head_reader
+) -> set[str]:
+    """Changed scripts that run the suite *through* another script.
+
+    `scripts/ci.sh` containing only `./scripts/run-tests.sh` holds no runner
+    token, so the content gate left it as production. Adding `|| true` to that
+    line therefore hid its own weakening **and** bought the changed-production
+    credit that de-escalated the assertion weakening beside it — row 87's
+    double effect, one hop further out, and measured the same way: the diff
+    passed (THREATMODEL 89).
+
+    Bounded at one hop, and the hop must terminate in a real test runner. A
+    `scripts/ci.sh` that calls `scripts/compile.sh` is still production, which
+    is the same line the content gate has drawn since v0.1.8 and what keeps a
+    build script from becoming CI config.
+    """
+    after_by_path = {c.path.replace("\\", "/"): c.after for c in changes}
+    reads = 0
+
+    def content(ref: str) -> bytes | None:
+        nonlocal reads
+        if ref in after_by_path:
+            return after_by_path[ref]
+        if head_reader is None or reads >= _MAX_ONE_HOP_READS:
+            return None
+        reads += 1
+        try:
+            return head_reader(ref)
+        except Exception:  # pragma: no cover - a missing path is not an error
+            return None
+
+    promoted: set[str] = set()
+    for change in changes:
+        path = change.path.replace("\\", "/")
+        if is_artifact(path) or config.role_of(path) != "prod":
+            continue
+        if not _runner_shape(path, change.before, change.after):
+            continue
+        if _runs_tests(change.before) or _runs_tests(change.after):
+            continue  # already a runner script on its own content
+        for side in (change.after, change.before):
+            for ref in _referenced_scripts(side):
+                if _runs_tests(content(ref)):
+                    promoted.add(path)
+                    break
+            if path in promoted:
+                break
+    return promoted
+
+
 def _is_runner_script(path: str, before: bytes | None, after: bytes | None) -> bool:
     """Is this multi-purpose file the project's test command?
 
@@ -484,7 +558,7 @@ def _make_ignores_error(line: str) -> bool:
     return body.startswith("-") and not body[1:2].isspace() and body[1:2] != ""
 
 
-def _ci_base_surface(changes: list[FileChange], config: Config) -> str:
+def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str] | None = None) -> str:
     """Every ci-role file's *base* side, lowercased and concatenated.
 
     A narrowing that already existed somewhere on this surface is not being
@@ -499,7 +573,9 @@ def _ci_base_surface(changes: list[FileChange], config: Config) -> str:
         if is_artifact(path) or not change.before:
             continue
         role = config.role_of(path)
-        if role == "prod" and _is_runner_script(path, change.before, change.after):
+        if role == "prod" and (
+            _is_runner_script(path, change.before, change.after) or path in (one_hop or ())
+        ):
             role = "ci"
         if role == "ci":
             parts.append(change.before.decode("utf-8", errors="replace").lower())
@@ -684,14 +760,17 @@ def build_ir(
 
     # Computed once, before anything is judged: E6 needs to know what the
     # ci surface already said, not just what this diff added to it.
-    ci_base = _ci_base_surface(changes, config)
+    one_hop = _one_hop_runners(changes, config, head_reader)
+    ci_base = _ci_base_surface(changes, config, one_hop)
 
     for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
         path = change.path.replace("\\", "/")
         if is_artifact(path):
             continue  # generated output is not evidence of anything
         role = config.role_of(path)
-        if role == "prod" and _is_runner_script(path, change.before, change.after):
+        if role == "prod" and (
+            _is_runner_script(path, change.before, change.after) or path in one_hop
+        ):
             # The test command lives wherever the project keeps it. As prod
             # this file was unreadable, which meant editing it both hid a
             # weakened command *and* granted the whole diff the THREATMODEL #4

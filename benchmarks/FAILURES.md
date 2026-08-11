@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **103 bypasses** are documented, of which **24 are not closed**.
+- **104 bypasses** are documented, of which **24 are not closed**.
 - **21 of 1800** human-written commits are blocked by mistake (1.17%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -58,7 +58,7 @@ it is known not to.
 | 1 | Rewrite prod logic so the weak test passes honestly | — |
 | 3 | Remove the hook / run outside greenwash | — |
 
-## Closed — each pinned by something that runs (77)
+## Closed — each pinned by something that runs (78)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -145,6 +145,7 @@ behind it* unshippable.
 | 86c | Substitute an assertion where **neither** expectation is a literal — `assert ok == success` -> `assert pinned == wanted` | — |
 | 87 | An **unrecognised runner file** does not merely hide its own weakening — it *buys* the opaque exemption. Weaken an assertion and weaken the test command in `common.mak`, `Makefile.include`, `Justfile` (capital J) or `ci/justfile`, with no production change | `runner_common_mak_pos.gwcase`, `runner_justfile_capital_pos.gwcase`, `runner_justfile_nested_pos.gwcase`, `runner_makefile_include_pos.gwcase` |
 | 87a | Weaken a **PowerShell or cmd** runner: `$ErrorActionPreference = "Continue"` plus `exit 0`, or `exit /b 0` replacing `if errorlevel 1` | — |
+| 89 | Weaken the suite in an **intermediate** script: the CI entry only calls another script, so it holds no runner token of its own — `./scripts/run-tests.sh` becoming `./scripts/run-tests.sh \|\| true` | `runner_one_hop_pos.gwcase` |
 
 ## Unclassified (11)
 

@@ -15,6 +15,13 @@ attack the fixture instead of taking the table on trust.
 import pathlib
 import re
 
+# Split on unescaped pipes only. A row describing a shell `||` writes it
+# as `\|\|` so the table renders, and splitting on raw "|" shifted every
+# cell after it — the status column landed somewhere else and the row read
+# as not-closed. Rows about shell operators are exactly the rows this
+# ledger most needs to parse (found 2026-08-12).
+_ROW_CELLS = re.compile(r"(?<!\\)\|")
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CASES = ROOT / "tests" / "cases"
 
@@ -35,7 +42,7 @@ def _closed_rows() -> dict[str, str]:
     for line in text.split("\n"):
         if not line.startswith("| ") or "|" not in line[2:]:
             continue
-        parts = [c.strip() for c in line.strip().strip("|").split("|")]
+        parts = [c.strip() for c in _ROW_CELLS.split(line.strip().strip("|"))]
         # Lettered rows (84a, 86c) are rows. `isdigit()` skipped every one, so
         # the two rows v0.1.14 was written to close were never required to have
         # a fixture at all — the gate that exists to make "Closed with nothing

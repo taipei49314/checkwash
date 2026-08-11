@@ -20,7 +20,13 @@ from __future__ import annotations
 import json
 import os
 import re
-import sys
+
+# Split on unescaped pipes only. A row describing a shell `||` writes it
+# as `\|\|` so the table renders, and splitting on raw "|" shifted every
+# cell after it — the status column landed somewhere else and the row read
+# as not-closed. Rows about shell operators are exactly the rows this
+# ledger most needs to parse (found 2026-08-12).
+_ROW_CELLS = re.compile(r"(?<!\\)\|")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -39,7 +45,7 @@ def bypass_rows() -> list[tuple[str, str, str]]:
     for line in text.split("\n"):
         if not line.startswith("| "):
             continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = [c.strip() for c in _ROW_CELLS.split(line.strip().strip("|"))]
         # Lettered rows (84a, 86c) are rows. `isdigit()` dropped every one of
         # them, so the published failures page silently omitted the newest
         # entries — including both shapes v0.1.14 was written for. A ledger
