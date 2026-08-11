@@ -1,0 +1,30 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Changing the input column is not changing the oracle
+origin: FP guard — only columns the expectation actually consumes count
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([50.0, 50.0], 105.0)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([60.0, 45.0], 105.0)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

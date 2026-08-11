@@ -1219,3 +1219,47 @@ The rule the IR field serves is `info`-only and nothing else reads `bindings`,
 so no verdict was ever affected on any version. That bounds the blast radius;
 it does not excuse it, because the contract this broke is about output bytes,
 not about verdicts.
+
+## D-039 (2026-08-12): the expectation has three homes, and none of them is the assertion
+
+T1.2 extends `EXPECTATION_DEFINITION_CHANGED` rather than adding a rule,
+because it is the same event seen one level further out: the assertion does not
+move and its meaning does. The expectation can live in a unit-local binding
+(v0.1.19), a `parametrize` column, or a same-file `@pytest.fixture`.
+
+**Which parametrize column is the expectation is decided by consumption.** Not
+by position, and not by being called `expected`. The detector already knows
+which names the expectation side reaches (`right_depends_on`), so the column
+that feeds it is the oracle and the column that feeds the subject is input. A
+name heuristic would have reported every edit to a test's inputs as an oracle
+change, and `expectation_parametrize_input_neg` pins that it does not.
+
+Two existing fixtures went red on the first implementation, and both were
+right to:
+
+- `parametrize_rows_pos` **deletes** rows. That changes the column text, but
+  the event is row deletion and `TEST_DISABLED` already reports it at high. Two
+  findings for one edit is how a report stops being read. Columns are now
+  compared only at equal row count.
+- `param_marks_skip_pos` turns `[1, 2, 3]` into
+  `[pytest.param(1, marks=pytest.mark.skip), ...]`. Same rows, same values,
+  every one disabled — again `TEST_DISABLED`'s event. Cells are read through
+  `pytest.param(...)` now, so wrapping a row is not an expectation edit.
+
+Both were caught by the existing suite rather than by review, which is the
+argument for keeping positives around after the bug they were written for is
+long closed.
+
+**Cost: none, and that was known in advance.** The rule reports at `info` and
+is outside `ORACLE_RULES` (D-037), so no extension of it can change a verdict.
+The sweep confirms rather than assumes: 36 → 36 blocks, no verdict moved,
+opaque unchanged, zero engine errors. It found 16 more expectation edits
+across the corpus (click 5 → 19, rich 16 → 18) — all visible, none gating.
+
+That is the second dividend from demoting the rule on measurement instead of
+arguing with the number: extending it is cheap, because the severity question
+was already settled by evidence and does not get re-litigated per feature.
+
+Conftest fixtures are out of scope and recorded as row 86j rather than
+half-implemented: resolving a fixture defined in another module is
+cross-file resolution, which is a design change, not a widening.

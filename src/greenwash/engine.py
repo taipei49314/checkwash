@@ -1007,9 +1007,11 @@ def build_ir(
         parsed = after_by_path.get(file.path)
         if file.role in ("test", "conftest") and parsed is not None:
             file.constants = _gate_constants(parsed, after_by_path, head_reader)
+            file.fixture_defs = dict(parsed.fixture_defs)
             before = before_by_path.get(file.path)
             if before is not None:
                 file.constants_before = _gate_constants(before, before_by_path, None)
+                file.fixture_defs_before = dict(before.fixture_defs)
                 _mark_weakened_guards(file)
 
     # Move credits, counted after the constant environments exist because

@@ -1,0 +1,30 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: The expected column of a parametrize table is edited; the assertion is untouched
+origin: T1.2 / redteam-residual-after-p0 L1.2 — the expectation lives in the decorator
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([50.0, 50.0], 105.0), ([10.0], 10.5)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([50.0, 50.0], 100.0), ([10.0], 10.0)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]

@@ -110,6 +110,8 @@ class ParsedFile:
     # (inside if/try) are deliberately absent: a name greenwash cannot pin
     # to one expression stays unevaluable.
     constants: dict[str, str] = field(default_factory=dict)
+    # Same-file `@pytest.fixture` name -> canonical text of what it produces.
+    fixture_defs: dict[str, str] = field(default_factory=dict)
     # Top-level absolute `from M import a as b` bindings, local -> (module,
     # original). Relative and star imports are not recorded.
     from_imports: dict[str, tuple[str, str]] = field(default_factory=dict)
@@ -1075,6 +1077,94 @@ def _xfail_is_strict(mark: ast.AST) -> bool:
     return False
 
 
+_PARAMETRIZE = ("pytest.mark.parametrize", "mark.parametrize", "parametrize")
+
+
+def _param_cell_value(cell):
+    """The value inside a parametrize cell, seen through `pytest.param`.
+
+    `[1, 2, 3]` becoming `[pytest.param(1, marks=pytest.mark.skip), ...]` keeps
+    every value and every row, and disables the lot. That is `TEST_DISABLED`'s
+    event and it is already reported at high; reading the wrapper as part of
+    the value made this rule fire on it as well, which is two findings for one
+    edit.
+    """
+    if isinstance(cell, ast.Call) and _dotted(cell.func) in ("pytest.param", "param") and cell.args:
+        return cell.args[0]
+    return cell
+
+
+def _param_columns(func) -> dict[str, str]:
+    """parametrize argname -> canonical text of that column, row by row.
+
+    The expectation of a parametrized test does not live in the test at all; it
+    lives in a column of the decorator's table. Editing that column moves the
+    oracle while the assertion stays byte-identical, which is the same shape as
+    editing a local binding (THREATMODEL 86a) one level out.
+
+    Only argnames are recorded here. Which of them is the *expectation* is not
+    decided by position or by being called `expected` — it is whichever column
+    the assertion's expectation side actually consumes, which the detector
+    reads off `right_depends_on`. Changing the input column is not changing the
+    oracle, and a heuristic on the name would get that wrong.
+    """
+    out: dict[str, list[str]] = {}
+    for dec in func.decorator_list:
+        if not isinstance(dec, ast.Call) or _dotted(dec.func) not in _PARAMETRIZE:
+            continue
+        if len(dec.args) < 2 or not isinstance(dec.args[1], (ast.List, ast.Tuple)):
+            continue
+        names_node = dec.args[0]
+        if isinstance(names_node, ast.Constant) and isinstance(names_node.value, str):
+            names = [n.strip() for n in names_node.value.split(",") if n.strip()]
+        elif isinstance(names_node, (ast.List, ast.Tuple)):
+            names = [
+                e.value for e in names_node.elts
+                if isinstance(e, ast.Constant) and isinstance(e.value, str)
+            ]
+        else:
+            continue
+        for row in dec.args[1].elts:
+            cells = row.elts if isinstance(row, (ast.List, ast.Tuple)) else [row]
+            if len(names) == 1 and not isinstance(row, (ast.List, ast.Tuple)):
+                cells = [row]
+            for name, cell in zip(names, cells):
+                try:
+                    out.setdefault(name, []).append(ast.unparse(_param_cell_value(cell)))
+                except (AttributeError, ValueError):  # pragma: no cover - defensive
+                    out.setdefault(name, []).append("")
+    return {name: "".join(vals) for name, vals in sorted(out.items())}
+
+
+def _fixture_definitions(tree: ast.Module) -> dict[str, str]:
+    """Same-file `@pytest.fixture` name -> canonical text of what it produces.
+
+    A fixture is not a collected unit, so nothing in the IR saw its body. An
+    expectation supplied by one could be edited with the assertion untouched
+    and every rule silent. Conftest fixtures are deliberately out of scope and
+    recorded as a residual rather than half-implemented.
+    """
+    out: dict[str, str] = {}
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not any(
+            _dotted(d.func if isinstance(d, ast.Call) else d) in ("pytest.fixture", "fixture")
+            for d in node.decorator_list
+        ):
+            continue
+        produced = []
+        for sub in ast.walk(node):
+            if isinstance(sub, (ast.Return, ast.Yield)) and sub.value is not None:
+                try:
+                    produced.append(ast.unparse(sub.value))
+                except (AttributeError, ValueError):  # pragma: no cover - defensive
+                    produced.append("")
+        if produced:
+            out[node.name] = "|".join(produced)
+    return dict(sorted(out.items()))
+
+
 def _param_case_count(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None:
     """pytest test-item count contributed by @pytest.mark.parametrize rows.
 
@@ -1256,6 +1346,7 @@ def _collect_unit(
         param_cases=_param_case_count(func),
         body_hash=body_hash,
         bindings=_binding_definitions(func),
+        param_columns=_param_columns(func),
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
@@ -1574,6 +1665,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         swallowing_handlers=tuple(swallowing),
         constants=_top_level_constants(tree, text),
         from_imports=_top_level_from_imports(tree),
+        fixture_defs=_fixture_definitions(tree) if collect_tests else {},
     )
 
 

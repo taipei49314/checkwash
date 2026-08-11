@@ -166,7 +166,7 @@
   "commits_touching_tests": 109,
   "commits_with_opaque_prod_change": 0,
   "corpus": {
-    "greenwash_version": "0.1.19",
+    "greenwash_version": "0.1.21",
     "newest_commit": "0f4738df88e3ea47c40a4a442103596a61cfee79",
     "oldest_commit": "bd9d4f8db2744d95f75ae171c7aacc4b66558945"
   },
@@ -186,7 +186,7 @@
       "warn": 64
     },
     "EXPECTATION_DEFINITION_CHANGED": {
-      "info": 5
+      "info": 19
     },
     "EXPECTED_VALUE_CHANGED": {
       "high": 4,

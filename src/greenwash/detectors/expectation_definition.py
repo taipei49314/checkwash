@@ -57,6 +57,19 @@ from greenwash.findings import Evidence, Finding, make_fingerprint
 from greenwash.ir.model import IR, normalize_text
 
 
+def _column_values_edited(before: str, after: str) -> bool:
+    """Did a parametrize column's *values* change, as opposed to its rows?
+
+    Adding or deleting rows changes the column text too, and that event already
+    has an owner: `TEST_DISABLED` reports deleted rows at high, because in
+    pytest's model each row is a test item. Reporting the same edit again here
+    is two findings for one change, which is how a report stops being read.
+    Only a same-length column with different cells is an expectation edit.
+    """
+    b, a = before.split(""), after.split("")
+    return len(b) == len(a) and b != a
+
+
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
@@ -78,11 +91,35 @@ def detect(ir: IR) -> list[Finding]:
                     continue
                 if normalize_text(b.text) != normalize_text(a.text):
                     continue
+                # Three places an expectation can live, all of them outside
+                # the assertion line: a local binding, a parametrize column, or
+                # a same-file fixture. Which parametrize column is the
+                # *expectation* is not decided by position or by being named
+                # `expected` — it is whichever column the expectation side
+                # actually consumes. Editing the input column is not editing
+                # the oracle, and a name heuristic would get that wrong.
+                consumed = set(a.right_depends_on)
                 moved = sorted(
-                    name
-                    for name in set(a.right_depends_on) & set(unit.after.bindings)
-                    if name in unit.before.bindings
-                    and unit.before.bindings[name] != unit.after.bindings[name]
+                    {
+                        name
+                        for name in consumed & set(unit.after.bindings)
+                        if name in unit.before.bindings
+                        and unit.before.bindings[name] != unit.after.bindings[name]
+                    }
+                    | {
+                        name
+                        for name in consumed & set(unit.after.param_columns)
+                        if name in unit.before.param_columns
+                        and _column_values_edited(
+                            unit.before.param_columns[name], unit.after.param_columns[name]
+                        )
+                    }
+                    | {
+                        name
+                        for name in consumed & set(file.fixture_defs)
+                        if name in file.fixture_defs_before
+                        and file.fixture_defs_before[name] != file.fixture_defs[name]
+                    }
                 )
                 if not moved:
                     continue

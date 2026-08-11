@@ -91,6 +91,10 @@ class UnitSide:
     # parsed expression, so reformatting is not a change and a rename inside it
     # is. Keys inserted in sorted order (SPEC §8).
     bindings: dict[str, str] = field(default_factory=dict)
+    # parametrize argname -> canonical text of that column across all rows.
+    # A parametrized test's expectation lives in the decorator, not the body,
+    # so editing it moves the oracle with the assertion untouched.
+    param_columns: dict[str, str] = field(default_factory=dict)
 
     @property
     def disabled(self) -> bool:
@@ -156,6 +160,11 @@ class FileIR:
     # The same environment resolved against this file's BASE side, so a
     # constant edit under an unchanged guard can be compared (GUARD_WEAKENED).
     constants_before: dict[str, str] = field(default_factory=dict)
+    # Same-file `@pytest.fixture` name -> canonical text of what it returns or
+    # yields. A fixture is not a collected unit, so without this an expectation
+    # supplied by one is invisible. Conftest fixtures are out of scope.
+    fixture_defs: dict[str, str] = field(default_factory=dict)
+    fixture_defs_before: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

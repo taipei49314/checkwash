@@ -1,0 +1,32 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: A same-file fixture supplying the expectation is edited
+origin: T1.2 — the expectation lives in a fixture, the assertion line never moves
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.fixture
+def expected_total():
+    return 105.0
+
+
+def test_invoice_total_applies_tax(expected_total):
+    assert invoice_total([50.0, 50.0], 0.05) == expected_total
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.fixture
+def expected_total():
+    return 100.0
+
+
+def test_invoice_total_applies_tax(expected_total):
+    assert invoice_total([50.0, 50.0], 0.05) == expected_total
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]
