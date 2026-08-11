@@ -1141,3 +1141,42 @@ invisible. The tokens are suffix-keyed now, and the load-bearing part is the
 two-sided check — `$LASTEXITCODE` or `errorlevel` inspected at base and not at
 head — modelled on the existing errexit check, because a check that only looks
 at added lines cannot see a guard being deleted.
+
+## D-037 (2026-08-11): the rule that shipped at `info` because the number said so
+
+THREATMODEL 86a — editing `expected = <expr>` while the assertion line stays
+byte-identical — is closed by `EXPECTATION_DEFINITION_CHANGED`, at `info`.
+
+`docs/defence-design.md` §A1 was written before the rule existed and fixed the
+threshold in advance: *"the one design in this document I expect the corpus to
+punish… if this adds more than a handful of blocks it does not ship as a
+blocking rule."* The sweep added **twelve**: 36 blocks to 48 across 1800 human
+commits, 2.00% to 2.67%, every one from this rule.
+
+Two sampled false positives, both with credits sitting right there:
+
+- rich `1c5e03eb32`, "fix for padding width", genuinely fixes production and
+  updates the golden string to match. It blocked at high printing
+  `NO_PROD_CHANGE_IN_DIFF` over a diff full of production changes, because the
+  test calls a local `render()` helper and symbol-level repair evidence cannot
+  see through it.
+- starlette `100f05a66b` moved an expectation because a dependency changed —
+  precisely what D9 `DEPENDENCY_DRIFT` is for, and D9 is scoped to
+  `EXPECTED_VALUE_CHANGED` and `ASSERT_SUBSTITUTED`.
+
+Extending package-level repair evidence and widening D9 would both be
+defensible on their own terms, and doing them *here* would not be. It would be
+choosing credits by whether they bring a number down on twelve known commits,
+which is how a published false-positive rate quietly stops describing anything.
+The corpus is not a test set you get to fit to; it is the only honest estimate
+this project has, and it survives exactly as long as nobody tunes against it.
+
+So the rule ships visible and non-blocking, the twelve are named, and the two
+credits get their own round with their own evidence. If that round lands, the
+severity is a one-line change and the sweep decides again.
+
+The pre-commitment is the part worth keeping. Writing "this will not ship as a
+blocking rule if it costs more than a handful" while the outcome was still
+unknown is what made an unwelcome measurement easy to act on. Deciding the
+threshold after seeing 12 would have been an argument with myself, and I know
+which way that argument goes.

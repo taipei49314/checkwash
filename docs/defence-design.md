@@ -188,6 +188,15 @@ still a compat gate.
 ## Group A: leaving the visible oracle
 
 ### A1. The expectation's *definition* changed (#86a) (P0)
+> **Shipped v0.1.19, at `info`.** The threshold in the falsification line
+> below was met and acted on: the sweep added **12 blocks** (36→48,
+> 2.00%→2.67%), so it does not gate. Two sampled false positives had
+> obvious credits — repair evidence reaching through a local helper (rich
+> `1c5e03eb32`), and D9 `DEPENDENCY_DRIFT` (starlette `100f05a66b`) —
+> and adding them until the count looked acceptable would have been
+> fitting the rule to twelve known commits. They get their own round.
+> Re-swept at `info`: 36→36, no verdict moved, 24 info findings. D-037.
+
 
 The highest-value item in the report and in my own verification, because it
 looks exactly like a refactor and the assertion line is byte-identical:

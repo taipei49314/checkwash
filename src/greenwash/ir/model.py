@@ -80,6 +80,17 @@ class UnitSide:
     # whole-unit relocation credit: an assertion-less smoke test that moves
     # files verbatim has nothing in the D2 multiset to prove it moved.
     body_hash: str = ""
+    # Locally bound name -> a structural key for its defining expression.
+    #
+    # `right_depends_on` records which names an expectation reaches; this
+    # records what those names are *defined as*. Without it, editing
+    # `expected = round(sum(items) * (1 + TAX), 2)` into
+    # `round(sum(items), 2)` leaves the assertion line byte-identical and every
+    # rule silent — THREATMODEL 86a, the shape an expectation that was already
+    # a name has always been able to hide in. The key is `ast.dump` of the
+    # parsed expression, so reformatting is not a change and a rename inside it
+    # is. Keys inserted in sorted order (SPEC §8).
+    bindings: dict[str, str] = field(default_factory=dict)
 
     @property
     def disabled(self) -> bool:

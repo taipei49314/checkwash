@@ -1,0 +1,29 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Reformatting the defining expression changes nothing
+origin: FP guard — the comparison must be structural, not source text
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(sum(items) * (1 + TAX), 2)
+    assert invoice_total(items, TAX) == expected
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(
+        sum(items) * (1 + TAX),
+        2,
+    )
+    assert invoice_total(items, TAX) == expected
+=== expect ===
+[]

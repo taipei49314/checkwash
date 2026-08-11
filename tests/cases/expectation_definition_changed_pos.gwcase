@@ -1,0 +1,26 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: The expectation's definition is edited while the assertion line stays byte-identical
+origin: THREATMODEL 86a — reproduced 2026-08-09, the shape v0.1.14's EXPECTED_VALUE_DERIVED could not see
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(sum(items) * (1 + TAX), 2)
+    assert invoice_total(items, TAX) == expected
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(sum(items), 2)
+    assert invoice_total(items, TAX) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]

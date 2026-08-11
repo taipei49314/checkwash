@@ -604,8 +604,8 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.18 |
-| detectors | 19 |
+| version | v0.1.19 |
+| detectors | 20 |
 | human-commit block rate | 36/1800 = 2.00% |
 | adjudicated false positive | 21/1800 = 1.17% |
 | legitimate policy block | 15/1800 = 0.83% |

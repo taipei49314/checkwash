@@ -528,6 +528,32 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
     return _Classified("truthy", S.TRUTHY)
 
 
+def _binding_definitions(func) -> dict[str, str]:
+    """Locally bound name -> structural key of its defining expression.
+
+    Structural (`ast.dump`) rather than source text so that reformatting the
+    expression is not a change, which is the first false positive this would
+    otherwise invent. A name bound more than once takes the joined keys of
+    every right-hand side, in source order, because greenwash cannot tell which
+    one reaches the assertion without evaluating.
+    """
+    out: dict[str, list[str]] = {}
+    for node in ast.walk(func):
+        if isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+            targets, value = [node.target], node.value
+        else:
+            continue
+        if value is None:
+            continue
+        key = ast.dump(value)
+        for target in targets:
+            if isinstance(target, ast.Name):
+                out.setdefault(target.id, []).append(key)
+    return {name: "|".join(keys) for name, keys in sorted(out.items())}
+
+
 def _local_bindings(func) -> dict[str, tuple[str, ...]]:
     """In-body `name = <expr>` bindings, name -> names referenced by the RHS.
 
@@ -1216,6 +1242,7 @@ def _collect_unit(
         handlers=sorted(handlers, key=lambda h: h.span),
         param_cases=_param_case_count(func),
         body_hash=body_hash,
+        bindings=_binding_definitions(func),
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 

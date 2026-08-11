@@ -1,0 +1,36 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: An expectation that moved because production moved is repair, not tampering
+origin: FP guard — this rule routes through repair evidence like every oracle rule
+=== before: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== after: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax) + shipping_fee(items), 2)
+
+
+def shipping_fee(items):
+    return 5.0
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(sum(items) * (1 + TAX), 2)
+    assert invoice_total(items, TAX) == expected
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(sum(items) * (1 + TAX) + 5.0, 2)
+    assert invoice_total(items, TAX) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]
