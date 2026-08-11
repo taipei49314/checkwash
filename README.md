@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 19 detectors, 308 tests, zero runtime dependencies.
+> Status: **pre-release.** 19 detectors, 317 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.15
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.15
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.16
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.16
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -97,7 +97,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taipei49314/greenwash/action@v0.1.15
+      - uses: taipei49314/greenwash/action@v0.1.16
 ```
 
 The `permissions` block and `persist-credentials: false` are there because
@@ -111,7 +111,7 @@ security-conscious project cannot merge is not an integration
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.15
+    rev: v0.1.16
     hooks: [{ id: greenwash }]
 ```
 
@@ -140,7 +140,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.15
+- uses: taipei49314/greenwash/action@v0.1.16
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -157,7 +157,7 @@ Two harnesses, both reproducible from a clone
   often greenwash would fail CI on a commit a human wrote. Every repo is
   at or under 4%; the progression from an initial 8.6%, and what moved each
   step, is in the benchmarks README.
-  A block is not automatically a mistake. All 35 were adjudicated commit by
+  A block is not automatically a mistake. All 36 were adjudicated commit by
   commit against the real diff: **21 false positives (1.17%)**, 15 legitimate
   policy blocks (0.83%) where the commit really does drop oracle coverage
   with nothing visible replacing it, 0 unclear. Three precision rounds
@@ -179,7 +179,7 @@ Two harnesses, both reproducible from a clone
   published category is the majority verdict, the four contested commits are
   marked, and the per-commit reasoning of all three raters ships in
   [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
-  **1.39% of the corpus (25/1800) never got a real analysis**: those commits
+  **1.33% of the corpus (24/1800) never got a real analysis**: those commits
   touch a production file greenwash genuinely cannot read — other-language
   code, templates, data files, unparseable Python — which suppresses
   escalation for the whole diff (THREATMODEL #4). That share of the pass
@@ -251,7 +251,7 @@ Two harnesses, both reproducible from a clone
   fired, and the actual cause was in alignment rather than in any of them: the
   last-resort pairing stage matches leftover assertions by *span order*, so a
   deleted assertion and its unrelated replacement were reported as one
-  unchanged assertion. Closed in v0.1.15 by `ASSERT_SUBSTITUTED`, which is the
+  unchanged assertion. Closed in v0.1.16 by `ASSERT_SUBSTITUTED`, which is the
   first rule keyed on how a pair was formed rather than what it contains. The
   diff blocks at high on this build. D-031 and D-033 have the whole account,
   including the first attempted fix, which closed a six-line reduction of the

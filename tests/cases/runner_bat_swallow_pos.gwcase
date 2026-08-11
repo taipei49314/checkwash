@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 87a
+rule: CI_WORKFLOW_TOUCHED
+title: cmd runner replaces its errorlevel check with exit /b 0
+origin: red-team report 2026-08-11 section 6, measured against v0.1.15
+=== before: scripts/test.bat ===
+pytest
+if errorlevel 1 exit /b 1
+=== after: scripts/test.bat ===
+pytest
+exit /b 0
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "high"}]

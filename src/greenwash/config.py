@@ -56,7 +56,15 @@ DEFAULT_ROLES: dict[str, list[str]] = {
         # builds a C extension is production and its edit is real repair
         # evidence. See engine._is_runner_script.
         "noxfile.py",
-        "justfile",
+        # Every spelling explicitly, because `_match` uses fnmatchcase on
+        # purpose (fnmatch folds case on Windows and broke the byte-identical
+        # guarantee), and because a plain "justfile" pattern matched neither
+        # `Justfile` nor `ci/justfile` — both measured as complete bypasses on
+        # 2026-08-11 (THREATMODEL 87).
+        "**/justfile",
+        "**/Justfile",
+        "**/.justfile",
+        "**/JUSTFILE",
     ],
     "snapshot": ["**/__snapshots__/**", "**/golden/**", "**/*.golden", "**/*.snap"],
     "lockfile": [

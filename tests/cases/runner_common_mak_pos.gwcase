@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 87
+rule: CI_WORKFLOW_TOUCHED
+title: An unrecognised .mak recipe hides its weakening and buys the opaque exemption
+origin: red-team report 2026-08-11 section 6, measured against v0.1.15
+=== before: common.mak ===
+test:
+	pytest
+=== after: common.mak ===
+test:
+	pytest || true
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "high"}]

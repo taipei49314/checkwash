@@ -474,7 +474,7 @@
   "commits_touching_tests": 92,
   "commits_with_opaque_prod_change": 5,
   "corpus": {
-    "greenwash_version": "0.1.15",
+    "greenwash_version": "0.1.16",
     "newest_commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
     "oldest_commit": "69e13cbc393ee13624d0e4aa4b6f861a95e3f91c"
   },

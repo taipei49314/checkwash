@@ -341,8 +341,15 @@ def _runs_tests(data: bytes | None) -> bool:
     return any(token in text for token in _TEST_RUNNER_TOKENS)
 
 
-_RUNNER_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd", ".mk")
-_RUNNER_SCRIPT_BASENAMES = frozenset({"Makefile", "makefile", "GNUmakefile"})
+_RUNNER_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd", ".mk", ".mak")
+# Prefixes, not exact names: `Makefile.include`, `Makefile.common` and
+# `common.mak` are all make recipe files, and the exact-name set knew three
+# spellings out of an open set. Measured 2026-08-11: `common.mak` and
+# `Makefile.include` did not merely hide their own weakening, they were
+# classified `prod`, could not be parsed, and therefore bought the opaque
+# exemption that demoted the assertion weakening beside them from high to warn
+# (THREATMODEL 87).
+_RUNNER_SCRIPT_BASE_PREFIXES = ("Makefile", "makefile", "GNUmakefile")
 _SHELL_INTERPRETERS = frozenset({"sh", "bash", "zsh", "dash", "ksh", "ash"})
 
 
@@ -379,10 +386,28 @@ def _runner_shape(path: str, before: bytes | None, after: bytes | None) -> bool:
     base = path.rsplit("/", 1)[-1]
     return (
         path.endswith(_RUNNER_SCRIPT_SUFFIXES)
-        or base in _RUNNER_SCRIPT_BASENAMES
+        or base.startswith(_RUNNER_SCRIPT_BASE_PREFIXES)
         or _shell_shebang(before)
         or _shell_shebang(after)
     )
+
+
+def _mentions_test_runner(change) -> bool:
+    """Does either side of this file invoke a test runner?
+
+    The durable half of the 2026-08-11 fix, and the half that does not depend
+    on knowing filenames. Widening the shape list closes the four spellings
+    that were measured; it cannot close the next four. What can is refusing to
+    call a file *unreadable production code* when the file's own content runs
+    the test suite.
+
+    Deliberately independent of `_runner_shape`: a file whose name greenwash
+    does not recognise still loses the opaque exemption if it runs the tests.
+    It does **not** become `ci` — a Makefile that builds a C extension has no
+    runner token, stays production, and keeps its full repair-evidence weight
+    (`runner_build_makefile_neg`).
+    """
+    return _runs_tests(change.before) or _runs_tests(change.after)
 
 
 def _is_runner_script(path: str, before: bytes | None, after: bytes | None) -> bool:
@@ -505,6 +530,54 @@ def _deps_differ(before: bytes | None, after: bytes | None) -> bool:
     return b != a
 
 
+# Swallow spellings that only mean something in one dialect, keyed on suffix so
+# PowerShell idioms are not hunted in sh and vice versa. `.ps1`/`.bat`/`.cmd`
+# were already reclassified to `ci` — so they never bought the opaque exemption
+# — but the token table was shell/YAML-shaped, so their weakening was simply
+# invisible (THREATMODEL 87a, measured 2026-08-11).
+_DIALECT_SWALLOW_TOKENS: dict[tuple[str, ...], tuple[str, ...]] = {
+    (".ps1",): (
+        "$erroractionpreference = 'continue'",
+        '$erroractionpreference = "continue"',
+        "$erroractionpreference = 'silentlycontinue'",
+        '$erroractionpreference = "silentlycontinue"',
+        "$erroractionpreference = 'ignore'",
+        '$erroractionpreference = "ignore"',
+        "-erroraction silentlycontinue",
+        "-erroraction ignore",
+    ),
+    (".bat", ".cmd"): ("exit /b 0",),
+    (".sh", ".bash", ".zsh"): ("|| echo", "|| printf", "; true"),
+}
+
+# `if ! pytest; then :; fi` — the runner's failure is caught by a no-op branch.
+# Requires a runner token on the same line, so a bare `then :` elsewhere in a
+# script is not matched.
+_NOOP_BRANCH = re.compile(r"then\s*:\s*(;|$)")
+
+
+def _dialect_swallow_tokens(path: str) -> tuple[str, ...]:
+    for suffixes, tokens in _DIALECT_SWALLOW_TOKENS.items():
+        if path.endswith(suffixes):
+            return tokens
+    # A shell shebang with no extension (httpx and starlette both ship
+    # `scripts/test`) still gets the sh spellings.
+    return _DIALECT_SWALLOW_TOKENS[(".sh", ".bash", ".zsh")]
+
+
+def _exit_code_checked(data: bytes | None, needle: str) -> bool:
+    """Does this script inspect the runner's exit status at all?
+
+    The two-sided counterpart of `_errexit_on`, for dialects that have no
+    `set -e`: PowerShell scripts gate on `$LASTEXITCODE`, cmd scripts on
+    `if errorlevel`. Losing the check is exactly as permissive as losing
+    errexit, and produces no added line for the scan above to see.
+    """
+    if not data or len(data) > 1_000_000:
+        return False
+    return needle in data.decode("utf-8", errors="replace").lower()
+
+
 def _scan_ci_weakening(
     g: DiffGlobals,
     path: str,
@@ -516,9 +589,15 @@ def _scan_ci_weakening(
     # there was no test command there to narrow. It can still swallow an exit
     # code, which is why the two families are separated.
     existed = bool(before)
+    dialect = _dialect_swallow_tokens(path) if _runner_shape(path, before, after) else ()
     for line in _added_lines(before, after):
         lowered = line.lower()
-        swallowed = any(token in lowered for token in _CI_SWALLOW_TOKENS)
+        swallowed = any(token in lowered for token in _CI_SWALLOW_TOKENS) or (
+            any(token in lowered for token in dialect)
+        ) or (
+            bool(_NOOP_BRANCH.search(lowered))
+            and any(tok in lowered for tok in _TEST_RUNNER_TOKENS)
+        )
         narrowed = existed and any(
             token in lowered and token not in ci_base for token in _CI_NARROWING_TOKENS
         )
@@ -538,6 +617,18 @@ def _scan_ci_weakening(
         # `#!/bin/sh -e` -> `#!/bin/sh` removes the only reason a failing
         # pytest fails the script, and adds no line worth scanning.
         g.ci_weakening_lines.append((path, "errexit removed: a failing command no longer fails the script"))
+    if path.endswith(".ps1") and _exit_code_checked(before, "$lastexitcode") and not _exit_code_checked(
+        after, "$lastexitcode"
+    ):
+        g.ci_weakening_lines.append(
+            (path, "$LASTEXITCODE is no longer checked: a failing command no longer fails the script")
+        )
+    if path.endswith((".bat", ".cmd")) and _exit_code_checked(
+        before, "errorlevel"
+    ) and not _exit_code_checked(after, "errorlevel"):
+        g.ci_weakening_lines.append(
+            (path, "errorlevel is no longer checked: a failing command no longer fails the script")
+        )
     if _runs_tests(before) and not _runs_tests(after):
         # Deleting the invocation is the same gate removal as weakening it,
         # and quieter: the pipeline still calls a script that still exits 0.
@@ -822,6 +913,13 @@ def build_ir(
                     and change.before != change.after
                     and config.role_of(old_path) == "prod"
                     and not self_inflicted
+                    # 4. A file that runs the test suite is not unreadable
+                    #    production code, whatever it is called. Without this,
+                    #    an unrecognised runner filename was strictly better
+                    #    for an attacker than a recognised one: it hid its own
+                    #    weakening *and* disarmed every oracle rule in the diff
+                    #    (THREATMODEL 87, measured 2026-08-11).
+                    and not _mentions_test_runner(change)
                 ):
                     g.prod_opaque_change = True
         elif role == "guardrail":

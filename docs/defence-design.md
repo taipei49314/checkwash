@@ -1,6 +1,9 @@
 # Defence design against the 2026-08-11 red-team report
 
-> **Status: proposed. Nothing in this document is implemented.**
+> **Status: C1 and C2 shipped in v0.1.16. Everything else is still proposed.**
+> The two shipped sections keep their original text so the design can be read
+> against what it actually became; each carries a **Shipped** note with the
+> measured result. Nothing else here is implemented.
 > Every section states what would have to be *measured* before it ships. A
 > design that has not been run against the corpus and the decoy arms is a
 > hypothesis, and this project has a long record of hypotheses about its own
@@ -62,6 +65,14 @@ fix generalises.
 
 ### C1. Stop enumeration misses from *buying* anything (P0)
 
+> **Shipped v0.1.16.** Both layers, as designed. Layer 2 became simpler and
+> stronger than written here: the test is not "recipe-shaped and unparseable"
+> but simply *does this file's content invoke a test runner* — no shape check
+> at all, so it does not inherit the enumeration it exists to backstop. All
+> eleven measured cases now block; the two over-reach guards
+> (`runner_build_makefile_neg`, `runner_opaque_native_neg`) stay green.
+
+
 Widening the list is the obvious move and it is the weaker half. The list will
 always be four spellings behind the ecosystem; what must change is the
 consequence of missing one.
@@ -96,6 +107,12 @@ missed CI finding instead of a free pass on every oracle rule in the diff.
   the only corpus member with a genuinely opaque production build.
 
 ### C2. Per-dialect weakening tokens (P0, same round as C1)
+
+> **Shipped v0.1.16.** Suffix-keyed swallow tokens plus two-sided checks for
+> the dialects with no `set -e`: `$LASTEXITCODE` and `errorlevel` no longer
+> inspected, modelled on the existing errexit check — which is the robust half,
+> since it does not depend on spotting an added token.
+
 
 `.ps1` and `.bat` are already reclassified to `ci`; the token table is
 shell/YAML-shaped, so their weakening is invisible.

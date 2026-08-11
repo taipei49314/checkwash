@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-09 (v0.1.15: what the adversarial verification of v0.1.14 found)
+Updated: 2026-08-11 (v0.1.16: the maintainer's red-team report, verified and answered)
 
 ## The 2026-08-07 sixth round (v0.1.13): fixing what the field found
 
@@ -61,6 +61,52 @@ have removed, **and not one verdict moved** — which is what "disabling the
 exemption entirely moves the block set by zero, so no subset can cost more"
 predicted. A bound that turns out to be tight is worth more than a bound that
 was never checked.
+
+## v0.1.16 — a file that runs the tests is not unreadable production code
+
+The maintainer supplied an informed-adversary report against v0.1.15. Eight of
+its ten items were already recorded here; what it added was a taxonomy —
+*leave the visible oracle, buy `warn`, hit an identity or enumeration
+boundary* — which is adopted in `docs/defence-design.md` because it predicts
+where the next hole will be. The report is vendored verbatim under
+`docs/redteam/`.
+
+Its section 6 was tested rather than believed. Eleven cases, each weakening a
+real assertion **and** the test runner with no production change. **Four
+passed**: `common.mak`, `Makefile.include`, `Justfile`, `ci/justfile`.
+
+The report rates that P2. It is P0, and the reason is the part neither the
+report nor the previous rounds had measured: an unrecognised runner file is
+not merely invisible. It is classified `prod`, cannot be parsed, sets
+`prod_opaque_change`, and the `ASSERT_WEAKENED` beside it drops from high to
+warn. **The file whose entire purpose is running the tests bought the
+exemption meant for production code greenwash cannot read** — an unrecognised
+runner filename was strictly better for an attacker than a recognised one.
+
+Fixed in two layers, and the second is the one that matters. Widening the
+shape list (`.mak`, `Makefile*` prefixes, every justfile spelling — the role
+globs use `fnmatchcase` on purpose, so case variants are listed rather than
+folded) closes the four measured spellings and will always be four spellings
+behind the ecosystem. So: **a changed file whose own content invokes a test
+runner no longer grants the opaque exemption at all**, whatever it is called.
+No shape check, so it does not inherit the enumeration it exists to backstop.
+A Makefile that builds a C extension has no runner token, stays production and
+keeps its full repair-evidence weight; two negative fixtures pin that.
+
+`.ps1`/`.bat`/`.cmd` were already reclassified to `ci`, so they bought nothing
+— but the token table was shell/YAML-shaped and their weakening was simply
+invisible. Suffix-keyed swallow tokens now cover them, plus two-sided checks
+for the dialects with no `set -e`: `$LASTEXITCODE` and `errorlevel` no longer
+inspected. Those two are the robust half, because they do not depend on
+spotting an added token. `|| echo`, `|| printf`, `; true` and
+`if ! CMD; then :; fi` join the sh table.
+
+All eleven cases block. Corpus: **36 → 36 blocks, no verdict moved in either
+direction**, zero engine errors, and the opaque exemption fell 25 → 24 — one
+commit lost a blanket it did not need, which is the same result every opaque
+narrowing has produced here and for the same reason: on six pure-Python
+repositories the blanket is granted often and load-bearing never. Recall
+unchanged across every arm.
 
 ## 2026-08-09 — verifying v0.1.14, and finding it closes less than it says
 
@@ -558,12 +604,12 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.15 |
+| version | v0.1.16 |
 | detectors | 19 |
 | human-commit block rate | 36/1800 = 2.00% |
 | adjudicated false positive | 21/1800 = 1.17% |
 | legitimate policy block | 15/1800 = 0.83% |
-| opaque exemption share | 25/1800 = 1.39% |
+| opaque exemption share | 24/1800 = 1.33% |
 | classic adversarial decoys blocked | 12/12 |
 
 The split is the majority of three raters (two blind re-adjudications;

@@ -1098,3 +1098,46 @@ still keeps repeating: **a check that cannot see its subject reports success.**
 The pypi gate could not run, the count gate passed on a missing number, the
 row parser could not see lettered rows, and the collection rule could not see
 unittest classes. Four instances in two days, all of them shipped.
+
+## D-036 (2026-08-11): the enumeration was not the bug, the reward was
+
+The maintainer's red-team report listed runner-filename gaps at P2. Testing
+section 6 rather than believing it moved the item to P0, and the reason is
+worth separating from the fix.
+
+`common.mak`, `Makefile.include`, `Justfile` and `ci/justfile` do not merely
+hide their own weakening. An unrecognised runner file is classified `prod`;
+greenwash cannot parse it; `prod_opaque_change` is set; and every oracle
+finding in the diff drops from high to warn. **An unrecognised runner filename
+was strictly better for an attacker than a recognised one** — it bought the
+exemption written for production code the engine cannot read, using the file
+whose entire purpose is running the tests.
+
+Widening the shape list is the obvious fix and the weaker half. `.mak` joined
+`.mk`; the exact-name set `{Makefile, makefile, GNUmakefile}` became a prefix
+test; the justfile role glob gained `**/` and its case variants, listed rather
+than folded because `_match` uses `fnmatchcase` deliberately — folding case
+would reintroduce the cross-OS divergence that broke the byte-identical
+guarantee once already.
+
+The durable half is that **a changed file whose content invokes a test runner
+no longer grants the opaque exemption**, whatever it is called. Deliberately
+independent of the shape list: a backstop that consults the enumeration it
+backstops is not a backstop. It does *not* make the file `ci` — a Makefile
+that compiles a C extension has no runner token, stays production and keeps
+full repair-evidence weight, which `runner_build_makefile_neg` and
+`runner_opaque_native_neg` pin from both sides.
+
+The measured cost is the same shape every opaque narrowing has had: block set
+36 → 36, no verdict moved, opaque 25 → 24. That is now four consecutive
+rounds in which tightening this blanket changed no verdict, and the honest
+reading has not changed either — six pure-Python repositories are exactly
+where it does nothing, so the corpus can bound the cost and cannot validate
+the value.
+
+`.ps1`/`.bat`/`.cmd` were a different failure: already `ci`, so they bought
+nothing, but the token table was shell-shaped so their weakening was
+invisible. The tokens are suffix-keyed now, and the load-bearing part is the
+two-sided check — `$LASTEXITCODE` or `errorlevel` inspected at base and not at
+head — modelled on the existing errexit check, because a check that only looks
+at added lines cannot see a guard being deleted.

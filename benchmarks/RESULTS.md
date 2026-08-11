@@ -28,7 +28,7 @@ greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 
 Engine errors: 0.
 
-**Commits that received the blanket opaque-change exemption: 25/1800 = 1.4%.** A prod file greenwash cannot read — non-Python, deleted, unparseable — suppresses E1 for the whole diff (THREATMODEL #4). That is a documented blind spot, not analysis, and this is how often it is load-bearing on this corpus. Read the pass rate with it in mind.
+**Commits that received the blanket opaque-change exemption: 24/1800 = 1.3%.** A prod file greenwash cannot read — non-Python, deleted, unparseable — suppresses E1 for the whole diff (THREATMODEL #4). That is a documented blind spot, not analysis, and this is how often it is load-bearing on this corpus. Read the pass rate with it in mind.
 
 Blocking findings by rule (commits containing at least one):
 

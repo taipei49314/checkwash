@@ -1,0 +1,26 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: A genuinely unreadable production file still grants the opaque exemption
+origin: FP guard — the 2026-08-11 widening must not turn every unreadable prod change into a block
+=== before: src/core.rs ===
+pub fn invoice_total(items: &[f64], tax: f64) -> f64 {
+    items.iter().sum::<f64>()
+}
+=== after: src/core.rs ===
+pub fn invoice_total(items: &[f64], tax: f64) -> f64 {
+    items.iter().sum::<f64>() * (1.0 + tax)
+}
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn"}]
