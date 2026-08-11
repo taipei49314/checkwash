@@ -55,7 +55,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   after   assert total > 0
 ```
 
-Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. v0.1.16, 19 detectors, 318 tests, Apache-2.0.
+Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. v0.1.17, 19 detectors, 328 tests, Apache-2.0.
 
 When nothing fires, the report says **`no known tampering pattern detected`**. Not "no cheating". That wording is fixed in the source, because the second sentence is one a diff-layer tool cannot support.
 
@@ -265,7 +265,7 @@ Apache-2.0. https://github.com/taipei49314/greenwash
 
 Agents make CI green two ways: by fixing the bug, or by deleting the failing test, widening a tolerance, rewriting the expected value to whatever the broken code returns, or dropping `|| true` into `scripts/test.sh`. greenwash reads the *diff* and blocks the second kind — alignment, then a two-sided AST comparison against an assertion-strength lattice, so `assert total == 105.3` → `assert total > 0` is a finding and a genuine refactor is not.
 
-Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. v0.1.16, 19 detectors, 318 tests, Apache-2.0.
+Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. v0.1.17, 19 detectors, 328 tests, Apache-2.0.
 
 What is measured, all from a harness in `benchmarks/`:
 

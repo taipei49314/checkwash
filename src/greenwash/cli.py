@@ -381,6 +381,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("demo", help="replay real tampering cases offline")
 
+    doctor = sub.add_parser(
+        "doctor", help="is this installation able to block anything?"
+    )
+    doctor.add_argument("--repo", default=".")
+
     allow = sub.add_parser("allow", help="record a reviewed exemption")
     allow.add_argument("fingerprint")
     allow.add_argument("--reason", required=True)
@@ -394,7 +399,12 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
         argv = ["check"]
-    elif argv[0] not in ("check", "allow", "sweep", "hook", "demo", "-h", "--help", "--version"):
+    # Every subcommand must be listed here as well as in the parser: an
+    # unlisted name is silently reinterpreted as a `check` range, so a typo'd
+    # or newly added command reports a verdict instead of an error.
+    elif argv[0] not in (
+        "check", "allow", "sweep", "hook", "demo", "doctor", "-h", "--help", "--version"
+    ):
         argv = ["check", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -416,6 +426,10 @@ def main(argv: list[str] | None = None) -> int:
             from greenwash.demo import run as run_demo
 
             return run_demo()
+        if args.command == "doctor":
+            from greenwash.doctor import run as run_doctor
+
+            return run_doctor(args.repo)
         parser.print_help()
         return 2
     except (GitError, OSError, RecursionError) as exc:

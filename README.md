@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 19 detectors, 318 tests, zero runtime dependencies.
+> Status: **pre-release.** 19 detectors, 328 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.16
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.16
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.17
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.17
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -79,6 +79,32 @@ widened tolerance, a rewritten expectation, an xfail'd failure, a swallowed
 error, a relaxed CI step, a self-edited CLAUDE.md, and an assertion swapped for
 an unrelated one of the same strength — plus one honest fix that stays silent. No network, no key, no LLM; every verdict comes from the same
 engine `check` runs.
+
+### Required check — the only configuration that blocks a merge
+
+greenwash installed is not greenwash enforcing. A green job that is not a
+**required status check** does not stop anyone merging, and a local stop-hook
+is an author-side convenience: it is skipped by `--no-verify` and is simply not
+present when someone else pushes. Three steps, in this order.
+
+**1. Add the workflow** (below). Note the job name — it becomes the status
+check's name.
+
+**2. Make that status check required.** Settings → Branches → branch protection
+rule for your default branch → *Require status checks to pass before merging* →
+select the check whose name matches the job. Without this step the workflow
+runs, reports, and blocks nothing.
+
+**3. Verify.** `greenwash doctor` reads your workflows and says whether a gate
+exists and whether it is unconditional — a job gated behind an `if:` that is
+never true is the failure this project shipped itself. `doctor` cannot see
+branch protection (that needs API token scopes greenwash does not ask for), and
+it says so rather than implying otherwise: step 2 is the one a human must
+confirm.
+
+```bash
+greenwash doctor        # exit 0 = no problems found; 1 = problems or warnings
+```
 
 **GitHub Action** — blocks a PR on high-severity findings:
 
@@ -97,7 +123,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taipei49314/greenwash/action@v0.1.16
+      - uses: taipei49314/greenwash/action@v0.1.17
 ```
 
 The `permissions` block and `persist-credentials: false` are there because
@@ -106,12 +132,17 @@ without them this snippet scored two high findings — a workflow a
 security-conscious project cannot merge is not an integration
 ([docs/integrations.md](docs/integrations.md)).
 
-**pre-commit**:
+Do not gate this job on anything. A conditional gate is the defect this
+project shipped in its own repository: the dogfood job carried
+`if: github.event_name == 'pull_request'` in a repo that had never had a pull
+request, so it never executed once while the README told people to use it.
+
+**pre-commit** — an author-side convenience, not a merge gate:
 
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.16
+    rev: v0.1.17
     hooks: [{ id: greenwash }]
 ```
 
@@ -140,7 +171,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.16
+- uses: taipei49314/greenwash/action@v0.1.17
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -251,7 +282,7 @@ Two harnesses, both reproducible from a clone
   fired, and the actual cause was in alignment rather than in any of them: the
   last-resort pairing stage matches leftover assertions by *span order*, so a
   deleted assertion and its unrelated replacement were reported as one
-  unchanged assertion. Closed in v0.1.16 by `ASSERT_SUBSTITUTED`, which is the
+  unchanged assertion. Closed in v0.1.17 by `ASSERT_SUBSTITUTED`, which is the
   first rule keyed on how a pair was formed rather than what it contains. The
   diff blocks at high on this build. D-031 and D-033 have the whole account,
   including the first attempted fix, which closed a six-line reduction of the

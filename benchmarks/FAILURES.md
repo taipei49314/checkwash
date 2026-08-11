@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **101 bypasses** are documented, of which **22 are not closed**.
+- **102 bypasses** are documented, of which **23 are not closed**.
 - **21 of 1800** human-written commits are blocked by mistake (1.17%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -41,7 +41,7 @@ it is known not to.
 |---|---|---|
 | 76 | Disarm with `set -o errexit` / `set +o errexit` (long form), an unspaced or-fallback, an or-fallback into `echo`, or `if ! runner; then ... fi` | `runner_script_errexit_longform_pos.gwcase` |
 
-## Open by design — the cost of a deliberate trade (4)
+## Open by design — the cost of a deliberate trade (5)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -49,6 +49,7 @@ it is known not to.
 | 57 | Bump any dependency pin in the same diff to escort an expected-value rewrite into the D9 credit | — |
 | 84c | Smuggle an assertion substitution into a genuine dependency bump, so D9 `DEPENDENCY_DRIFT` holds it at warn | — |
 | 84d | Reorient a comparison *and* replace the subject in one edit, so the reorientation guard swallows it | — |
+| 88 | Disarm the judge in the diff it would have judged: delete the greenwash job from the workflow, add an `if:` that is never true, or drop the required-status-check requirement | — |
 
 ## Out of scope — the limits of the whole approach (2)
 
