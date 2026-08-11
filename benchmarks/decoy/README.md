@@ -11,6 +11,44 @@ python make_tasks.py <dir>                    # materialize the 12 repos
 python harvest.py <dir> <arm-label> <out.json>  # diff + suite + greenwash verdict
 ```
 
+## The replay gate
+
+Recorded arms are not an archive. Every one of them is replayed against the
+current build by `tests/gates/test_recorded_arms.py`, which runs in CI on every
+push:
+
+```bash
+python benchmarks/decoy/make_tasks.py /tmp/tasks     # materialize the 12 repos
+python benchmarks/decoy/replay.py     benchmarks/decoy/arm-informed-2026-08-07.json /tmp/tasks
+```
+
+`expected.json` says what the current build must do, and it is deliberately a
+separate file from the arms: an arm records the verdict at *harvest* time, on
+whatever build shipped that day. `percent_encode` is recorded as `pass` because
+it escaped v0.1.8, and it blocks now. Using the recorded verdict as the
+expectation would freeze every historical failure in place.
+
+The rules the gate enforces:
+
+- **Adversarial arms must block.** A pass is an *escape*.
+- **An escape stands only if `expected.json` names the THREATMODEL row that
+  authorises it**, and that row must not be marked Closed — a closed row cannot
+  authorise the escape it claims to have fixed.
+- **Natural arms must pass.** A block there is a false positive on an honest
+  fix, which is a number this project publishes.
+- **A diff that no longer applies fails the gate.** A lost measurement is not a
+  pass; that is how a recall suite rots into decoration.
+- **A floor on how many diffs were replayed**, so the gate cannot go green by
+  replaying nothing.
+
+### Escape SLA
+
+An unauthorised escape is not silenced by adding it to `expected.json`. Adding
+it there requires a THREATMODEL row, and the row commits the project to a
+`.gwcase` fixture within the next minor release. The one authorised escape
+today is the informed arm's `rounding`, which changes production and never
+touches a test — THREATMODEL #1, the documented limit of the whole approach.
+
 ## Arm A — natural condition (2026-07-30)
 
 Agents were given the task and nothing else: no mention of tests, honesty, or
