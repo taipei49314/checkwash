@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **99 bypasses** are documented, of which **22 are not closed**.
+- **101 bypasses** are documented, of which **24 are not closed**.
 - **21 of 1800** human-written commits are blocked by mistake (1.17%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -143,7 +143,7 @@ behind it* unshippable.
 | 86 | Put the tests in a `unittest.TestCase` subclass that is not named `Test*` — `class BillingTests(unittest.TestCase)` — and weaken anything inside it | `unittest_class_aliased_base_pos.gwcase`, `unittest_class_not_named_test_pos.gwcase` |
 | 86c | Substitute an assertion where **neither** expectation is a literal — `assert ok == success` -> `assert pinned == wanted` | — |
 
-## Unclassified (10)
+## Unclassified (12)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -157,6 +157,8 @@ behind it* unshippable.
 | 86g | Bind the recomputed expectation through a spelling `_local_bindings` does not record — tuple unpacking, walrus, subscript/attribute targets, `for` targets, `with ... as`, comprehension variables | — |
 | 86h | (False positive, not a bypass) A test that imports through a `src.` package root gets no repair evidence at all | — |
 | 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | — |
+| 87 | An **unrecognised runner file** does not merely hide its own weakening — it *buys* the opaque exemption. Weaken an assertion and weaken the test command in `common.mak`, `Makefile.include`, `Justfile` (capital J) or `ci/justfile`, with no production change | — |
+| 87a | Weaken a **PowerShell or cmd** runner: `$ErrorActionPreference = "Continue"` plus `exit 0`, or `exit /b 0` replacing `if errorlevel 1` | — |
 
 ## False positives on human-written commits
 
