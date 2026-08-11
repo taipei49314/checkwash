@@ -7,8 +7,10 @@
 > behaviour being overturned by the first measurement. Read the "How this gets
 > falsified" line in each section as the real content.
 
-Source: an informed-adversary red-team report against v0.1.15, supplied by the
-maintainer (not vendored here — that is the author's call to make). Eight of
+Source: [`redteam/2026-08-11-informed-adversary.md`](redteam/2026-08-11-informed-adversary.md)
+— the maintainer's own red-team report against v0.1.15, vendored verbatim and in
+the language it was written in, because editing someone's attack report to match
+the repository's prose is a way of softening it. Eight of
 its ten items were already recorded in `THREATMODEL.md`; the value it added is
 the **taxonomy**, which this document adopts because it predicts where the
 next hole will be:
