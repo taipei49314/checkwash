@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: An optional-dependency gate in an except handler is a compat gate, not a kill
+origin: FP guard — walking handlers without reading the exception as a guard would break attrs' idiom
+=== before: conftest.py ===
+collect_ignore = []
+=== after: conftest.py ===
+collect_ignore = []
+
+try:
+    import redis
+except ImportError:
+    collect_ignore.append("tests/test_redis.py")
+=== before: tests/test_redis.py ===
+from cache import get
+
+
+def test_cache():
+    assert get("k") == "v"
+=== after: tests/test_redis.py ===
+from cache import get
+
+
+def test_cache():
+    assert get("k") == "v"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

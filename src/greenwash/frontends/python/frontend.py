@@ -1364,18 +1364,20 @@ def _collection_controls(tree: ast.Module, text) -> list[tuple[ast.AST, str | No
     found: list[tuple[ast.AST, str | None]] = []
 
     def control(stmt: ast.stmt) -> ast.AST | None:
-        if isinstance(stmt, ast.Assign) and any(
-            isinstance(t, ast.Name) and t.id in _CONFTEST_NAMES for t in stmt.targets
-        ):
+        def _targets_control(target) -> bool:
+            # `collect_ignore[:] = [...]` and `collect_ignore[0] = ...` are
+            # Subscript, not Name, so the whole slice form was invisible
+            # (THREATMODEL 83).
+            if isinstance(target, ast.Subscript):
+                target = target.value
+            return isinstance(target, ast.Name) and target.id in _CONFTEST_NAMES
+
+        if isinstance(stmt, ast.Assign) and any(_targets_control(t) for t in stmt.targets):
             value = stmt.value
             if isinstance(value, (ast.List, ast.Tuple, ast.Set)) and not value.elts:
                 return None
             return stmt
-        if (
-            isinstance(stmt, ast.AugAssign)
-            and isinstance(stmt.target, ast.Name)
-            and stmt.target.id in _CONFTEST_NAMES
-        ):
+        if isinstance(stmt, ast.AugAssign) and _targets_control(stmt.target):
             return stmt
         if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
             head, _, attr = (_dotted(stmt.value.func) or "").rpartition(".")
@@ -1397,9 +1399,79 @@ def _collection_controls(tree: ast.Module, text) -> list[tuple[ast.AST, str | No
                 sub = getattr(stmt, fname, None)
                 if isinstance(sub, list) and any(isinstance(s, ast.stmt) for s in sub):
                     record([s for s in sub if isinstance(s, ast.stmt)], conds)
+            # `except ImportError: collect_ignore.append(...)` is what every
+            # project with an optional dependency writes, and handlers were not
+            # walked at all: an `ExceptHandler` is not an `ast.stmt`, so the
+            # loop above skipped the whole list (THREATMODEL 83).
+            #
+            # Walking them without reading the exception as a guard would have
+            # turned that idiom into a false positive. The exception type *is*
+            # the condition, so it is recorded as one and the compat-gate logic
+            # treats it as the gate it is.
+            for handler in getattr(stmt, "handlers", []) or []:
+                if not isinstance(handler, ast.ExceptHandler):
+                    continue
+                record(
+                    [s for s in handler.body if isinstance(s, ast.stmt)],
+                    conds + (_handler_guard(stmt, handler),),
+                )
 
     record(tree.body, ())
     return found
+
+
+_IMPORT_ERRORS = frozenset({"ImportError", "ModuleNotFoundError"})
+
+
+def _handler_guard(try_stmt, handler: ast.ExceptHandler) -> str:
+    """The condition an `except` block actually expresses.
+
+    `try: import redis / except ImportError: collect_ignore.append(...)` is the
+    optional-dependency gate every such project writes, and its condition is
+    exactly "redis is not installed". Recorded as `find_spec("redis") is None`,
+    which is the spelling the compat-gate logic already recognises and the one
+    an adversarial audit cited when this build blocked a PR that *added* the
+    tests it was guarding.
+
+    Anything else — a bare `except`, a different exception, a try body that is
+    not a plain import — records the exception text, which does not parse as a
+    condition and therefore earns no credit. That is deliberate: an
+    unconditional control hidden inside a `try` should still fire.
+    """
+    caught = _dotted(handler.type) if handler.type is not None else None
+    body = [s for s in getattr(try_stmt, "body", []) if isinstance(s, ast.stmt)]
+    if caught in _IMPORT_ERRORS and body and all(
+        isinstance(s, (ast.Import, ast.ImportFrom)) for s in body
+    ):
+        first = body[0]
+        module = (
+            first.names[0].name
+            if isinstance(first, ast.Import) and first.names
+            else (first.module or "")
+        )
+        if module:
+            return f'find_spec("{module}") is None'
+    return f"except {caught}" if caught else "except"
+
+
+def _ignored_paths(controls) -> tuple[str, ...]:
+    """Every literal path these controls put into `collect_ignore`, sorted.
+
+    Markers deduplicate by name, so a conftest that *already had* a control
+    produced no event at all when a second one was appended — an entire test
+    file left collection in silence (THREATMODEL 81). Comparing the resolved
+    set of paths rather than the marker's name is what makes the second control
+    an event.
+
+    Non-literal entries are simply absent: a path this cannot resolve is not
+    evidence in either direction.
+    """
+    out: set[str] = set()
+    for node, _guard in controls:
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                out.add(sub.value)
+    return tuple(sorted(out))
 
 
 def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
@@ -1407,6 +1479,7 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
     markers: list[Marker] = _pytestmark_markers(tree, text, off)
 
     controls = _collection_controls(tree, text)
+    ignored: tuple[str, ...] = _ignored_paths(controls)
     if controls:
         node, _ = controls[0]
         guards = [g for _, g in controls]
@@ -1446,7 +1519,7 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
             continue
         seen.add(m.name)
         unique.append(m)
-    side = UnitSide(span=(0, len(text.text)), markers=unique)
+    side = UnitSide(span=(0, len(text.text)), markers=unique, collect_ignored=ignored)
     return ParsedUnit(qualname="<suite>", span=side.span, side=side, shingles=frozenset())
 
 

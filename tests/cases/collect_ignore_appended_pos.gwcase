@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 81
+rule: TEST_DISABLED
+title: Appending to a conftest that already had collection control
+origin: THREATMODEL 81 — markers dedupe by name, so a second control produced no event
+=== before: conftest.py ===
+collect_ignore = ["tests/test_legacy.py"]
+=== after: conftest.py ===
+collect_ignore = ["tests/test_legacy.py"]
+collect_ignore.append("tests/test_billing.py")
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

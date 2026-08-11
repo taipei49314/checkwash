@@ -11,22 +11,20 @@ it is known not to.
 
 ## The short version
 
-- **104 bypasses** are documented, of which **24 are not closed**.
+- **104 bypasses** are documented, of which **22 are not closed**.
 - **21 of 1800** human-written commits are blocked by mistake (1.17%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - A production file greenwash cannot read suppresses escalation for the
   whole diff. That is the largest hole and it is by design.
 
-## Open — no defence at all (6)
+## Open — no defence at all (4)
 
 | # | shape | pinned by |
 |---|---|---|
 | 54 | Edit the guard of an existing imperative skip: `if version < X: pytest.skip()` → `if True: pytest.skip()` | — |
 | 75 | Name the runner file `Justfile`, `.justfile`, `ci/justfile`, `Makefile.include` or `common.mak` — spellings the ecosystem uses and `_runner_shape` does not know | — |
 | 77 | Weaken a `.bat` or `.ps1` runner | — |
-| 81 | Append an unguarded `collect_ignore.append(...)` to a conftest that **already** has a collection control | — |
-| 83 | Reach `collect_ignore` from an `except ImportError:` handler, or assign through a slice (`collect_ignore[:] = [...]`) | — |
 | 84 | Launder the oracle anywhere but the subject: hoist the wrapper to a preceding statement, wrap the *argument*, or make the expected side an inline re-implementation of the buggy behaviour | — |
 
 ## Narrowed, still open (1)
@@ -58,7 +56,7 @@ it is known not to.
 | 1 | Rewrite prod logic so the weak test passes honestly | — |
 | 3 | Remove the hook / run outside greenwash | — |
 
-## Closed — each pinned by something that runs (78)
+## Closed — each pinned by something that runs (80)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -138,7 +136,9 @@ behind it* unshippable.
 | 78 | `git rm` an unreadable prod file to earn the row-2 exemption | `opaque_deleted_file_not_evidence_pos.gwcase` |
 | 79 | Rename a docs file onto a prod path (`docs/rules.md` → `app/rules.csv`) | — |
 | 80 | Break the syntax of an existing, unimported prod `.py` | `unparseable_self_inflicted_pos.gwcase` |
+| 81 | Append an unguarded `collect_ignore.append(...)` to a conftest that **already** has a collection control | `collect_ignore_appended_pos.gwcase` |
 | 82 | Put the collection control in a **new** `conftest.py` | `conftest_added_file_kills_suite_pos.gwcase` |
+| 83 | Reach `collect_ignore` from an `except ImportError:` handler, or assign through a slice (`collect_ignore[:] = [...]`) | `collect_ignore_slice_pos.gwcase` |
 | 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | — |
 | 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | — |
 | 86 | Put the tests in a `unittest.TestCase` subclass that is not named `Test*` — `class BillingTests(unittest.TestCase)` — and weaken anything inside it | `unittest_class_aliased_base_pos.gwcase`, `unittest_class_not_named_test_pos.gwcase` |

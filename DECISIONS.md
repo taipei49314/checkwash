@@ -1307,3 +1307,45 @@ shell operators are exactly the rows this ledger most needs to parse, and
 fixing the split moved the published failure count from 99 to 104: five rows
 had been silently mis-parsed. That is the third time a ledger in this project
 has quietly dropped entries it could not parse.
+
+## D-041 (2026-08-12): walking the handler without reading its condition would have broken the commonest idiom there is
+
+T1.6, rows 81 and 83. Three gaps, and the interesting part is that fixing one
+of them naively would have created a false positive worse than the bypass.
+
+**Slice targets** (`collect_ignore[:] = [...]`) are `ast.Subscript`, not
+`ast.Name`, so the whole form was invisible. Accepted now, for `Assign` and
+`AugAssign` alike.
+
+**`except` handlers were never walked at all.** The recursion iterated
+`_STMT_BODY_FIELDS` and required `ast.stmt` members; an `ExceptHandler` is not
+one, so the entire list was skipped silently.
+
+And here is the trap. The overwhelmingly common thing inside such a handler is
+
+    try:
+        import redis
+    except ImportError:
+        collect_ignore.append("tests/test_redis.py")
+
+Walking handlers and recording the control without a condition would have
+turned every optional-dependency gate in the ecosystem into an unconditional
+kill — the exact false positive an adversarial audit already caught this build
+committing once, on a PR that *added* the tests it was guarding. So the handler
+records the condition it actually expresses: `find_spec("redis") is None`,
+which is the spelling the compat-gate logic already recognises and cites in its
+own comment. A bare `except`, a different exception, or a try body that is not
+a plain import records text that does not parse as a condition and therefore
+earns nothing, which is the fail-toward-flagging side of the same choice.
+
+**Appending to an existing control** produced no event because markers
+deduplicate by name and the name never moved. The resolved *set of ignored
+paths* is compared now.
+
+Both extra conditions on that comparison were learned by breaking existing
+fixtures rather than by foresight: it fires only when the control is
+**unguarded** (a growing compat gate is still a gate) and only when the marker
+is **not itself newly added** (that event already exists, and reporting it
+twice is noise). The first cut had neither and turned three green fixtures red.
+That is the second time this week a positive fixture written for a long-closed
+bug caught a new rule overreaching, and the argument for never deleting them.

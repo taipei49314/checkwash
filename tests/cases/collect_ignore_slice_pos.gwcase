@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 83
+rule: TEST_DISABLED
+title: collect_ignore assigned through a slice target
+origin: THREATMODEL 83 — `collect_ignore[:]` is not an ast.Name, so the control was invisible
+=== before: conftest.py ===
+collect_ignore = []
+=== after: conftest.py ===
+collect_ignore = []
+collect_ignore[:] = ["tests/test_billing.py"]
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

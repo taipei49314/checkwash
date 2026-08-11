@@ -95,6 +95,11 @@ class UnitSide:
     # A parametrized test's expectation lives in the decorator, not the body,
     # so editing it moves the oracle with the assertion untouched.
     param_columns: dict[str, str] = field(default_factory=dict)
+    # Literal paths a conftest removes from collection, sorted. Markers
+    # deduplicate by name, so appending a second control to a conftest that
+    # already had one produced no event at all (THREATMODEL 81). The path set
+    # is what makes it one.
+    collect_ignored: tuple[str, ...] = ()
 
     @property
     def disabled(self) -> bool:

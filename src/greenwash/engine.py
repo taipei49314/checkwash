@@ -1217,6 +1217,28 @@ def _mark_weakened_guards(file) -> None:
                 old.guard, file.constants_before
             ):
                 unit.delta.guards_weakened.append(m.name)
+        # A conftest that already had a collection control produced no event at
+        # all when a second one was appended: markers deduplicate by name, so
+        # `collect_ignore.append(...)` beside an existing `collect_ignore = [...]`
+        # removed a whole test file in silence (THREATMODEL 81). The resolved
+        # path set is what makes it an event — the marker's name never moves.
+        # Two conditions, both learned by breaking existing fixtures with the
+        # first version: the marker must not be newly added (that event is
+        # already reported, and reporting it twice is noise), and the control
+        # must be unguarded — a growing optional-dependency gate is still a
+        # gate, which is the whole reason `except ImportError` is recorded as
+        # a condition rather than dropped.
+        control = next(
+            (m for m in unit.after.markers if m.name == "conftest.collect_ignore"), None
+        )
+        gained = set(unit.after.collect_ignored) - set(unit.before.collect_ignored)
+        if (
+            gained
+            and control is not None
+            and control.guard is None
+            and control.name not in unit.delta.markers_added
+        ):
+            unit.delta.guards_weakened.append("conftest.collect_ignore")
         unit.delta.guards_weakened.sort()
 
 
