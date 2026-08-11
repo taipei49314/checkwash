@@ -1180,3 +1180,42 @@ blocking rule if it costs more than a handful" while the outcome was still
 unknown is what made an unwelcome measurement easy to act on. Deciding the
 threshold after seeing 12 would have been an argument with myself, and I know
 which way that argument goes.
+
+## D-038 (2026-08-11): v0.1.19 broke byte-identical output, and the matrix caught it
+
+`docs/stability.md` freezes one guarantee above the others: identical input
+produces byte-identical output across Linux, macOS and Windows on Python
+3.11–3.13. v0.1.19 broke it, and the tag is public.
+
+`_binding_definitions` keyed each local binding on `ast.dump(value)`. That
+renders the AST's *internal field set*, which changes between Python releases,
+so 3.13 produced different IR from 3.11 and 3.12 for identical input. The
+nine-way byte-compare job went red on the release commit:
+
+    441cce69…  macos-3.11, macos-3.12, ubuntu-3.11, ubuntu-3.12, windows-3.11, windows-3.12
+    86038fa3…  macos-3.13, ubuntu-3.13, windows-3.13
+
+The split is by interpreter version and not by OS, which is the signature of
+exactly this mistake, and the job exists to make that signature legible.
+
+The key is `ast.unparse` now — canonical code rather than node internals.
+
+Two things worth stating rather than glossing.
+
+**Only the matrix could catch this.** Every local check passed: the fixtures,
+the determinism test, the full suite, the dogfood run, and the corpus sweep,
+all on one interpreter. This machine has 3.9 and 3.11 installed and no 3.13, so
+the fix could not be *verified* locally either — CI is the verification, not a
+confirmation of it. A cross-version invariant needs cross-version execution,
+and no amount of care on one interpreter substitutes for it.
+
+**v0.1.19 is tagged and stays tagged.** It is a real commit and rewriting
+published history to hide a defect is worse than the defect. No GitHub release
+was cut for it, and it should not be used: it violates the frozen guarantee on
+3.13. v0.1.20 is the fix. This is the same handling as v0.1.13's red release
+run — the tag stands, the reason is written down.
+
+The rule the IR field serves is `info`-only and nothing else reads `bindings`,
+so no verdict was ever affected on any version. That bounds the blast radius;
+it does not excuse it, because the contract this broke is about output bytes,
+not about verdicts.

@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.19
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.19
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.20
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.20
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -123,7 +123,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taipei49314/greenwash/action@v0.1.19
+      - uses: taipei49314/greenwash/action@v0.1.20
 ```
 
 The `permissions` block and `persist-credentials: false` are there because
@@ -142,7 +142,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.19
+    rev: v0.1.20
     hooks: [{ id: greenwash }]
 ```
 
@@ -171,7 +171,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.19
+- uses: taipei49314/greenwash/action@v0.1.20
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -282,7 +282,7 @@ Two harnesses, both reproducible from a clone
   fired, and the actual cause was in alignment rather than in any of them: the
   last-resort pairing stage matches leftover assertions by *span order*, so a
   deleted assertion and its unrelated replacement were reported as one
-  unchanged assertion. Closed in v0.1.19 by `ASSERT_SUBSTITUTED`, which is the
+  unchanged assertion. Closed in v0.1.20 by `ASSERT_SUBSTITUTED`, which is the
   first rule keyed on how a pair was formed rather than what it contains. The
   diff blocks at high on this build. D-031 and D-033 have the whole account,
   including the first attempted fix, which closed a six-line reduction of the

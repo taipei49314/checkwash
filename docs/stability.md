@@ -5,6 +5,13 @@ a statement about one specific thing, and everything else here is more stable
 than the version number suggests. This page says which is which, because
 "pre-release" on its own tells you nothing you can plan around.
 
+
+> **Known break: v0.1.19 violates this guarantee on Python 3.13** and no
+> release was cut for it. `ast.dump` was used as a structural key and its
+> output tracks the AST's internal field set, which changes between Python
+> releases. Fixed in v0.1.20 (D-038). Only the nine-way matrix could see it;
+> every single-interpreter check passed.
+
 ## Frozen: change here is a breaking change
 
 These are contracts. If one of them changes, the version's minor number

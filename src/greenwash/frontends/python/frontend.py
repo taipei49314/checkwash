@@ -531,11 +531,21 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
 def _binding_definitions(func) -> dict[str, str]:
     """Locally bound name -> structural key of its defining expression.
 
-    Structural (`ast.dump`) rather than source text so that reformatting the
-    expression is not a change, which is the first false positive this would
-    otherwise invent. A name bound more than once takes the joined keys of
-    every right-hand side, in source order, because greenwash cannot tell which
-    one reaches the assertion without evaluating.
+    Canonical source (`ast.unparse`) rather than raw text, so reformatting the
+    expression is not a change — the first false positive this would otherwise
+    invent. A name bound more than once takes the joined keys of every
+    right-hand side, in source order, because greenwash cannot tell which one
+    reaches the assertion without evaluating.
+
+    **Not `ast.dump`.** The first version used it and broke the byte-identical
+    guarantee: `ast.dump` renders the AST's internal field set, which changes
+    between Python releases, so 3.13 produced different IR from 3.11 and 3.12
+    for identical input. The nine-way byte-compare job caught it on the release
+    commit — the split was by interpreter version, not by OS, which is the
+    signature. `ast.unparse` emits code, not node internals.
+
+    This cannot be verified on a single interpreter: only the matrix can see a
+    cross-version divergence, which is precisely why that job exists.
     """
     out: dict[str, list[str]] = {}
     for node in ast.walk(func):
@@ -547,7 +557,10 @@ def _binding_definitions(func) -> dict[str, str]:
             continue
         if value is None:
             continue
-        key = ast.dump(value)
+        try:
+            key = ast.unparse(value)
+        except (AttributeError, ValueError):  # pragma: no cover - defensive
+            key = ""
         for target in targets:
             if isinstance(target, ast.Name):
                 out.setdefault(target.id, []).append(key)
