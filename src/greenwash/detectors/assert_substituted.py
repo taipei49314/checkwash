@@ -38,33 +38,9 @@ replacing an assertion is routine when production changed under it (SPEC §5 E1)
 
 from __future__ import annotations
 
-import ast
-
 from greenwash.findings import Evidence, Finding, make_fingerprint
-from greenwash.ir.markers import parse_expr
-from greenwash.ir.model import IR, normalize_text
-
-
-def _same_expr(before: str | None, after: str | None) -> bool:
-    """Structural equality, so spelling and spacing do not decide it."""
-    if before is None or after is None:
-        return before == after
-    if normalize_text(before) == normalize_text(after):
-        return True
-    b, a = parse_expr(before), parse_expr(after)
-    if b is None or a is None:
-        return False
-    return ast.dump(b) == ast.dump(a)
-
-
-def _wraps(before: str | None, after: str | None) -> bool:
-    if not before or not after or before == after:
-        return False
-    b, a = parse_expr(before), parse_expr(after)
-    if b is None or a is None:
-        return False
-    target = ast.dump(b)
-    return any(ast.dump(node) == target for node in ast.walk(a) if node is not a)
+from greenwash.ir.astutil import expr_wraps, same_expr
+from greenwash.ir.model import IR
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -97,10 +73,10 @@ def detect(ir: IR) -> list[Finding]:
                 # was this rule's first false positive.
                 if not b.left or not a.left:
                     continue
-                if _same_expr(b.left, a.left):
+                if same_expr(b.left, a.left):
                     continue
                 # Laundering the subject is SUBJECT_NORMALIZED's finding.
-                if _wraps(b.left, a.left):
+                if expr_wraps(b.left, a.left):
                     continue
                 # Both halves must have moved. A renamed local changes the
                 # subject and keeps the expectation, and that is a rename.

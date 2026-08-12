@@ -1,0 +1,21 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: Extracting the subject to a variable without wrapping it is a refactor
+origin: FP guard — the hoist rule must require a wrapper, not merely indirection
+=== before: tests/test_encode.py ===
+from app import encode_path
+
+
+def test_non_ascii():
+    s = "caf\u00e9"
+    assert encode_path(s) == "caf%C3%A9"
+=== after: tests/test_encode.py ===
+from app import encode_path
+
+
+def test_non_ascii():
+    s = "caf\u00e9"
+    got = encode_path(s)
+    assert got == "caf%C3%A9"
+=== expect ===
+[]

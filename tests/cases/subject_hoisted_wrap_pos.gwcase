@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 84
+rule: SUBJECT_NORMALIZED
+title: The wrapper is hoisted to the previous line
+origin: redteam-weaknesses.md §4A — one statement of indirection was outside the rule's reach
+=== before: tests/test_encode.py ===
+from app import encode_path
+
+
+def test_non_ascii():
+    s = "caf\u00e9"
+    assert encode_path(s) == "caf%C3%A9"
+=== after: tests/test_encode.py ===
+from app import encode_path
+
+
+def test_non_ascii():
+    s = "caf\u00e9"
+    got = encode_path(s).replace("%e9", "%C3%A9")
+    assert got == "caf%C3%A9"
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

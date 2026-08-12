@@ -14,6 +14,7 @@ no production change that explains it (SPEC §5 E1).
 from __future__ import annotations
 
 from greenwash.findings import Evidence, Finding, make_fingerprint
+from greenwash.ir.astutil import same_expr
 from greenwash.ir.model import IR
 
 
@@ -109,7 +110,11 @@ def detect_derived(ir: IR) -> list[Finding]:
                 if b.right_value is None or a.right_value is not None:
                     continue
                 # A subject that also moved is SUBJECT_NORMALIZED's business.
-                if b.left != a.left:
+                # Structural, not source text: reformatting the subject in the
+                # same commit used to make this rule skip rather than fire — a
+                # miss, recorded as row 84a's second residual and closed here
+                # by the shared comparison the other two rules already use.
+                if not same_expr(b.left, a.left):
                     continue
                 shared = sorted(set(a.right_depends_on) & set(a.left_names))
                 if not shared:

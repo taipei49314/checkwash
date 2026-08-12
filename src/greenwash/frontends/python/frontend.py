@@ -566,7 +566,9 @@ def _binding_definitions(func) -> dict[str, str]:
         for target in targets:
             if isinstance(target, ast.Name):
                 out.setdefault(target.id, []).append(key)
-    return {name: "|".join(keys) for name, keys in sorted(out.items())}
+    # Unit separator, not "|": a Python expression can contain a bitwise or,
+    # and `resolve_through` has to be able to tell "one binding" from "several".
+    return {name: "".join(keys) for name, keys in sorted(out.items())}
 
 
 def _local_bindings(func) -> dict[str, tuple[str, ...]]:

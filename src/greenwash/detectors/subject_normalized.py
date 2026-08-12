@@ -22,28 +22,9 @@ transformed and nothing in the diff says why".
 
 from __future__ import annotations
 
-import ast
-
 from greenwash.findings import Evidence, Finding, make_fingerprint
-from greenwash.ir.markers import parse_expr
+from greenwash.ir.astutil import argument_wraps, expr_wraps, resolve_through
 from greenwash.ir.model import IR
-
-
-def _wraps(before: str | None, after: str | None) -> bool:
-    """Does the after-subject contain the before-subject as a sub-expression?
-
-    Structural, not textual: `f(x)` inside `f(x).replace(...)` is the same
-    node however either side is spelled or spaced. A subject that was replaced
-    outright rather than wrapped is a different test, not a laundered one, and
-    earns nothing here.
-    """
-    if not before or not after or before == after:
-        return False
-    b, a = parse_expr(before), parse_expr(after)
-    if b is None or a is None:
-        return False
-    target = ast.dump(b)
-    return any(ast.dump(node) == target for node in ast.walk(a) if node is not a)
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -67,7 +48,21 @@ def detect(ir: IR) -> list[Finding]:
                     continue
                 if b.right_value != a.right_value or b.right_literal != a.right_literal:
                     continue
-                if not _wraps(b.left, a.left):
+                # One hop of indirection, and argument positions.
+                #
+                # Containment on the assertion's own subject text sees neither
+                # `got = encode(s).replace(...)` on the line above nor
+                # `encode(normalise(s))` inside the call — both launder the
+                # subject without touching it (redteam-weaknesses.md §4A/§4B).
+                # The hop is resolved through the unit's own bindings, exactly
+                # once: the k+1 hop always exists, and a stated bound is the
+                # honest answer to that.
+                after_subject = resolve_through(a.left, unit.after.bindings)
+                before_subject = resolve_through(b.left, unit.before.bindings)
+                if not (
+                    expr_wraps(before_subject, after_subject)
+                    or argument_wraps(before_subject, after_subject)
+                ):
                     continue
                 findings.append(
                     Finding(
@@ -75,7 +70,7 @@ def detect(ir: IR) -> list[Finding]:
                         severity="warn",
                         message=(
                             f"{unit.qualname}: the asserted subject was wrapped "
-                            f"({b.left} -> {a.left}) while the expected value stayed the same"
+                            f"({before_subject} -> {after_subject}) while the expected value stayed the same"
                         ),
                         path=file.path,
                         unit=unit.qualname,

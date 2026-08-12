@@ -1,0 +1,22 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: A different argument is a different test, not a laundered one
+origin: FP guard — argument containment must contain, not merely differ
+=== before: tests/test_encode.py ===
+from app import encode_path
+
+
+def test_non_ascii():
+    s = "caf\u00e9"
+    t = "na\u00efve"
+    assert encode_path(s) == "caf%C3%A9"
+=== after: tests/test_encode.py ===
+from app import encode_path
+
+
+def test_non_ascii():
+    s = "caf\u00e9"
+    t = "na\u00efve"
+    assert encode_path(t) == "caf%C3%A9"
+=== expect ===
+[]

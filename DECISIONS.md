@@ -1349,3 +1349,72 @@ is **not itself newly added** (that event already exists, and reporting it
 twice is noise). The first cut had neither and turned three green fixtures red.
 That is the second time this week a positive fixture written for a long-closed
 bug caught a new rule overreaching, and the argument for never deleting them.
+
+## D-042 (2026-08-12): two copies of a containment rule, and the two shapes they both missed
+
+T1.3, row 84. The static review's Issue 7 and the two open shapes turned out to
+be the same piece of work.
+
+`_wraps` existed **twice**, byte-identical apart from a docstring, in
+`assert_substituted.py` and `subject_normalized.py`. Two copies of a
+containment rule means the next person to widen the boundary widens one of
+them, and the two rules quietly disagree about what "the same subject" means
+with nothing failing. It is `ir/astutil.py` now — `same_expr`, `expr_wraps`,
+`argument_wraps`, `resolve_through` — and all three detectors call it.
+
+Having one place to put the boundary is what made widening it cheap:
+
+**The wrapper hoisted one line up.** `got = encode(s).replace(...)` then
+`assert got == "..."`. The subject the assertion carries is just `got`, so
+containment had nothing to compare against. Resolved through the unit's own
+bindings — the field `EXPECTATION_DEFINITION_CHANGED` added in v0.1.19 already
+carries — exactly **once**. Two hops always exist; a stated bound is the honest
+answer, and chasing k+1 is what the killed shell parser taught.
+
+**The wrapper on an argument.** `f(x)` becoming `f(normalise(x))` launders the
+subject without touching it: the old call is not a sub-expression of the new
+one, but the *arguments* are. Same callee, same arity, every argument either
+unchanged or containing its counterpart, and at least one actually wrapped. An
+argument merely *replaced* is refused — the same line `expr_wraps` draws for
+the subject, and `subject_argument_replaced_neg` pins it.
+
+Row 84's third shape — an expected side that is an inline re-implementation —
+is still only covered where `EXPECTED_VALUE_DERIVED` reaches it. Row 84 is
+*partly* closed, and says which part.
+
+One thing fell out for free. `EXPECTED_VALUE_DERIVED` compared subjects as
+source text, so reformatting the subject in the same commit made it skip rather
+than fire — recorded as row 84a's second residual since v0.1.14 and closed here
+by simply calling the shared comparison the other two rules were already using.
+That is the argument for de-duplication stated as a result rather than as
+taste: the copy that was not fixed was the one nobody was looking at.
+
+### D-042 addendum: the sweep caught a false positive the fixtures could not
+
+The first cut of the one-hop resolution blocked flask `daf1510a4b` ("use
+template_filter without parens"), and the finding read:
+
+    the asserted subject was wrapped (rv -> rv)
+
+Two defects in one line, both mine.
+
+`_binding_definitions` joins every right-hand side of a name that is assigned
+more than once. That test appends new assertions and rebinds `rv` a second
+time, so the "definition" substituted for the subject was two expressions glued
+together — not an expression at all. It happened to contain the old one, so
+containment matched.
+
+**If greenwash cannot say which binding reaches the assertion, it does not get
+to guess.** An ambiguous name resolves to itself now, and the join uses a unit
+separator rather than `|`, because a Python expression can contain a bitwise or
+and the code has to be able to tell "one binding" from "several".
+
+And the message printed the *unresolved* subjects, which is how it managed to
+say a subject was wrapped from `rv` to `rv`. A blocking message that describes
+something the reader cannot see in the diff is the defect class this project
+keeps naming; it prints the resolved expressions now.
+
+No fixture would have caught either. Both need a unit that rebinds a name after
+the assertion it is checked in, which is a shape nobody writes on purpose — the
+1800-commit sweep found it on the first run, which is the argument for sweeping
+recall-only changes that are "obviously" free.
