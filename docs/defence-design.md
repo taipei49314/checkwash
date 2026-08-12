@@ -328,16 +328,67 @@ calls it with a constant. The frontend understands bare `assert`, curated
 unittest methods and some `pytest.raises`; it does not understand hamcrest, a
 hand-written `check_eq`, or an assert inside a fixture.
 
-**Design, bounded and honest:** in-file wrapper expansion only. A function
-defined in a *test-role* file whose body is only assertions, called from a
-collected unit, contributes its assertions to that unit at the call site, to a
-depth of one. Cross-file and third-party matchers stay out of scope and stay
-documented as out of scope.
+**Design, replacing the "expansion to depth one" sketch this section used to
+carry.** `UnitSide.assertions` stops meaning *"the `assert` statements lexically
+inside this function"* and starts meaning **"the assertions this unit
+executes"**:
 
-- **Residual:** the interesting half. Once the helper lives in another module,
-  greenwash is blind again.
-- **How this gets falsified:** the helper shape must block; sweep for units
-  whose assertion count jumps, which is where the FPs would be.
+- its own direct asserts, excluding those inside nested scopes it never calls —
+  today's `ast.walk` counts an assertion in an uninvoked nested `def` as live,
+  which is the whole of case 020;
+- plus the direct asserts of same-file functions, lambdas, classes and
+  `@contextmanager`s it **invokes**, followed through the file's own call graph
+  to a stated depth.
+
+Two definitions carry the design, and both were corrected by the prototype
+rather than by argument:
+
+*Reaching means invocation, not mention.* `callable(assert_sum)`,
+`hasattr`, `inspect.getsource(f)` and `f.__name__` all name the oracle without
+running it — that is precisely the edit these attacks make. Counting a bare
+`Name` argument as a call hides case 001.
+
+*Construction is not invocation.* `partial(boom, …)` binds; the call happens
+when the partial is called. `checking(x, y)` builds a `@contextmanager`
+generator; the post-yield assert runs only under `with`. Modelling either as
+immediate invocation hides 036 and 004.
+
+- **Measured value, before writing the detector: 10 of the 28 escapes**
+  (001, 003, 004, 012, 013, 020, 022, 029, 034, 036). Not the 12–16 first
+  estimated from the taxonomy — that estimate came from the generator's
+  summaries rather than from the diffs, and prototyping it against all 40 cases
+  is what corrected it.
+- **The signal that does *not* work, recorded so it is not re-proposed:** "the
+  unit's oracle no longer reaches production". It fails on 012, 020 and 036 once
+  local bindings are resolved — in 020 the assertion still names `multiply`, it
+  simply never runs. Reachability is the right axis; production-reachability is
+  not.
+- **FP risk: the highest in this document, above A1's.** This makes *every*
+  existing oracle rule see more assertions. A helper wrongly credited to a unit
+  invents assertions that were never there, and a call graph that over-resolves
+  turns one legitimate refactor into a fleet of `ASSERT_REMOVED`s. The corpus
+  will price it, and nothing else can.
+- **Residual, stated not implied:** the helper in another module; oracles inside
+  string literals (038); and the family this cannot touch at all — a syntactic
+  `assert` whose *meaning* was subverted (`__eq__`/`__bool__`/`__contains__`
+  always true, a swallowing `__exit__`, a no-op `TestResult`), plus computed
+  zero-runs (an exhausted iterator, an unscheduled coroutine). Those need
+  execution, and mutation testing is the honest answer rather than a 22nd rule.
+- **How this gets falsified, and the severity threshold, fixed here before a
+  line of detector code exists:** the ten cases above must move from authorised
+  escape to blocked in `benchmarks/tamper/expected.json`, and no case that
+  blocks today may stop blocking. Then the 1800-commit sweep, every new block
+  reconciled by reading the diff. The budget is the roadmap's T1 DoD, the same
+  one A6 used: **ΔFP ≤ 0.3pp = 5 commits of 1800.** More than five new blocks
+  judged false and this does **not** ship as a blocking change — the reachable
+  set still ships (it is a truer IR either way, and it fixes the uninvoked-
+  nested-assert bug), but the rules that consume it stay at their current
+  severity and the difference is reported at `info` until a later round earns
+  the promotion.
+- **And the thing that is not allowed, again:** buying the count back by
+  narrowing the call graph until the number fits. Each narrowing must be
+  justified by a semantic argument — "construction is not invocation" is one —
+  not by which corpus commits it silences.
 
 ### A6. The test patches the thing it asserts about (T1.4 / #11) (P1)
 > **Shipped v0.1.25, blocking — but not for the reason the sweep number
