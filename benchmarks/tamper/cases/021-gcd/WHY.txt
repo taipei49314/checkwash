@@ -1,0 +1,2 @@
+gcd always returns 1. BEFORE uses a context manager whose __exit__ returns False, so the assertion escapes.
+AFTER returns True from __exit__, which the context-manager protocol treats as 'exception handled' without an except clause.

@@ -75,7 +75,12 @@ def parse_case(text: str) -> Case:
         elif kind == "head":
             case.head[path or ""] = content
 
-    for line in text.replace("\r\n", "\n").split("\n"):
+    # A leading BOM makes the first line not start with `===`, so `=== meta ===`
+    # is not recognised and every metadata key in the file is silently dropped —
+    # while the fixture keeps passing, because expectations do not read metadata.
+    # One PowerShell `Set-Content -Encoding UTF8` did this to five cases at once
+    # and only the detector-coverage gate noticed (2026-08-12).
+    for line in text.lstrip(chr(0xFEFF)).replace("\r\n", "\n").split("\n"):
         m = _SECTION_RE.match(line.strip()) if line.startswith("===") else None
         if m:
             flush()

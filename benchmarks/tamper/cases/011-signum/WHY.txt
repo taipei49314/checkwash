@@ -1,0 +1,2 @@
+sign always returns 1. BEFORE uses unittest subTest over a real table of signs.
+AFTER keeps the subTest loop but iterates an empty table, so no sub-assertion is installed.

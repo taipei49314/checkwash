@@ -317,6 +317,80 @@ documented as out of scope.
 - **How this gets falsified:** the helper shape must block; sweep for units
   whose assertion count jumps, which is where the FPs would be.
 
+### A6. The test patches the thing it asserts about (T1.4 / #11) (P1)
+> **Shipped v0.1.25, blocking — but not for the reason the sweep number
+> suggests.** 36 → 36 blocks, and the rule fired **zero** times on 1800
+> commits, so that is not a measured false-positive rate. The instrumented run
+> is what settled it: 735 unit-sides carry a patch, 38 of those in units the
+> diff created, and **one** newly added patch lands in a test that already
+> existed — denied at the hygiene filter. Humans write the mock *with* the
+> test. The pre-registered budget below is honoured against a measured **base
+> rate of the precondition**, ceiling 0.06pp, not against an FP count this
+> corpus cannot produce. The same probe found the rule's own hole (the subject
+> behind one local) before release. D-043, THREATMODEL 90.
+
+Ranked **#2** on the post-P0 residual list — ★★★★★ silence, and the one item
+there whose difficulty column says "假陽性極多" in my own handwriting.
+
+```python
+def test_invoice():
+    monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)
+    assert invoice_total(items, 0.05) == 105.3   # checks the stand-in
+```
+
+`CONFTEST_PATCHES_PROD` sees none of this: it only reads conftest files. Prod
+and the assertion line can both stay byte-identical.
+
+**The problem this design has to solve is not detection, it is discrimination.**
+In a conftest, patching first-party code is exceptional — one autouse fixture
+swaps the module under test for the whole suite. Inside a test function it is
+*the normal way to write a unit test*, and the corpus is six libraries that do
+it constantly. "New first-party patch target in a test unit", the acceptance
+line in the issue, taken literally, fires on every commit that adds a mock.
+
+**Design.** Three conditions, all required:
+
+1. **The unit existed before.** A brand-new test that mocks is a test that was
+   written with a mock. Only an existing unit can have a stand-in *inserted
+   under* it.
+2. **The patch is new on the after side** — same base-vs-head comparison the
+   conftest rule already does.
+3. **The patched attribute is reached by this unit's own assertions.** This is
+   the discriminator, and it is the whole design. `setattr(billing,
+   "invoice_total", …)` under `assert invoice_total(…) == 105.3` replaces the
+   subject of the oracle. `setattr(app.config, "RETRIES", 1)` under an
+   assertion about rendering makes the test fast and is not reported.
+
+Condition 3 is what separates this from the naive rule, and it is checkable
+from IR that already exists (`left_names`, and the callee names of the asserted
+subject).
+
+- **Discriminator vs. legitimate mocking:** the assertion has to be about the
+  patched name. Hygiene stubs — time, network, env, a slow internal helper — are
+  reached by the test but not by its oracle.
+- **FP risk: high, and higher than A1's.** A1 could at least claim the edited
+  binding *was* the expectation; here the corpus is full of first-party patching
+  by construction.
+- **Residual, expected to stay open:** `patch` targets built at runtime; a stub
+  installed by a fixture the unit merely requests; `respx`/`responses` and other
+  HTTP mock dialects; and the whole class where the patched name reaches the
+  assertion only through a helper. Stated, not hidden.
+- **How this gets falsified — and the severity threshold, fixed here before a
+  line of the detector exists:** the attack shape above must block; the four
+  legitimate shapes (stdlib stub, third-party stub, brand-new mocking test,
+  first-party attribute no assertion touches) must stay silent. Then the full
+  1800-commit sweep, with **every** new block reconciled by reading the diff.
+  The budget is not a fresh number invented today — it is the one the roadmap
+  already wrote down in the T1 DoD: **ΔFP ≤ 0.3pp without a written
+  justification**, which on 1800 commits is **5 commits**. So: more than five
+  new blocks that reconciliation judges false, and this **does not ship as a
+  blocking rule** — it becomes `info`, exactly as A1 did, and the honest
+  sentence goes in the release notes instead of a tuned threshold.
+- **And the thing that is not allowed:** buying the count back by adding
+  credits until it fits. A corpus commit that needs a credit gets its own round
+  with its own evidence. Fitting a rule to the handful of commits that
+  embarrass it is how a rule ends up passing exactly the diffs it was shown.
+
 ---
 
 ## Group B: buying `warn`

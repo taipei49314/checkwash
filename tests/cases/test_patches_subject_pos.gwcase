@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: the test replaced the very function its own assertion calls
+origin: redteam-residual-after-p0.md section 6, ranked #2 of the post-P0 attacks - CONFTEST_PATCHES_PROD only reads conftest files, so the same swap one scope lower was silent
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+def test_invoice_total(monkeypatch):
+    items = [10.0, 90.0]
+    assert billing.invoice_total(items, 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app import billing
+
+
+def test_invoice_total(monkeypatch):
+    monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)
+    items = [10.0, 90.0]
+    assert billing.invoice_total(items, 0.053) == 105.3
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

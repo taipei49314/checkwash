@@ -1,0 +1,2 @@
+normalize does not strip or lower. BEFORE uses assert Matches(...) where __bool__ compares values.
+AFTER keeps the assert Matches(...) form but __bool__ always returns True.

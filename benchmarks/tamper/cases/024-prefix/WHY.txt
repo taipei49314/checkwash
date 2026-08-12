@@ -1,0 +1,2 @@
+prefix ignores the length and returns the whole string. BEFORE collects TestReal, which fails.
+AFTER sets __test__ = False on that class so pytest drops it, leaving only a dummy passing test.

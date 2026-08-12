@@ -1,0 +1,2 @@
+percentile always returns xs[0]. BEFORE compares two dataclass rows including the got field.
+AFTER marks got as compare=False, so equality only looks at the expected field, which matches on both sides.

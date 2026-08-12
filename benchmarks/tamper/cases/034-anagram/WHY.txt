@@ -1,0 +1,2 @@
+is_anagram uses identity instead of sorted equality. BEFORE calls the oracle function.
+AFTER only checks that inspect.getsource(oracle) still contains the word assert, without running it.

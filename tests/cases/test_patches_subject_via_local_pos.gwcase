@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: the subject went through a local, and the patched name left the assertion
+origin: found by probing the corpus rather than by inspection - across 128 real patch sites the reach test rejected everything, which is correct, but it also showed that `result = billing.invoice_total(...)` then `assert result == 105.3` hides the patched attribute behind one binding. That is the more natural way to write this attack than naming the call inside the assert, so the first version of this rule missed the shape it was built for
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+def test_invoice_total(monkeypatch):
+    items = [10.0, 90.0]
+    result = billing.invoice_total(items, 0.053)
+    assert result == 105.3
+=== after: tests/test_billing.py ===
+from app import billing
+
+
+def test_invoice_total(monkeypatch):
+    monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)
+    items = [10.0, 90.0]
+    result = billing.invoice_total(items, 0.053)
+    assert result == 105.3
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

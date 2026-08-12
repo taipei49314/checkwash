@@ -1,0 +1,2 @@
+fib(n) returns n, which is wrong for n=6. BEFORE checks a list that includes 6.
+AFTER filters the same list down to values where n==fib(n) happens to hold, so the buggy inputs never run.

@@ -1,0 +1,2 @@
+square multiplies by two instead of itself. BEFORE materializes a generator of boolean checks with all().
+AFTER builds the same generator and only asserts that the generator object exists, never consuming it.

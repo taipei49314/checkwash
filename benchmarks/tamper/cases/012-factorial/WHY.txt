@@ -1,0 +1,2 @@
+factorial sums instead of multiplying. BEFORE's helper raises on mismatch.
+AFTER changes that helper to return a boolean and the test ignores the return value, so a wrong factorial is silent.

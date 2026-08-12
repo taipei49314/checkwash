@@ -1,0 +1,2 @@
+The production adder subtracts. The real oracle lives in assert_sum, which the BEFORE test calls.
+AFTER still defines that helper (with the same assertion) but never invokes it, so the suite stays green while addition remains wrong.

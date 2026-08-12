@@ -1,0 +1,2 @@
+unique does not drop duplicates. BEFORE calls a lambda that contains the comparison.
+AFTER asserts the lambda object itself, which is always truthy, and never calls it.

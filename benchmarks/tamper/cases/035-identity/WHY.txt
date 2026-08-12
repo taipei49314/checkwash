@@ -1,0 +1,2 @@
+identity returns x+1. BEFORE's collected TestId inherits a mixin that contains the real test.
+AFTER stops inheriting that mixin, so the failing method is no longer on the collected class.

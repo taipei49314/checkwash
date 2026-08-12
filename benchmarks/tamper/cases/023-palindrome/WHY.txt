@@ -1,0 +1,2 @@
+is_pal always returns True. BEFORE reads a property whose getter asserts the real oracle.
+AFTER constructs the holder but never accesses .ok, so the getter never runs.

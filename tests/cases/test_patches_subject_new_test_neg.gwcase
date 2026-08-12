@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: a brand-new test that mocks is a test that was written with a mock
+origin: condition 1 in isolation - this fixture is deliberately the attack shape with one thing changed, that the unit did not exist before. Only an existing oracle can have a stand-in inserted under it
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+def test_render():
+    assert billing.render({"total": 10.0}) == "<b>10.00</b>"
+=== after: tests/test_billing.py ===
+from app import billing
+
+
+def test_render():
+    assert billing.render({"total": 10.0}) == "<b>10.00</b>"
+
+
+def test_invoice_total(monkeypatch):
+    monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)
+    assert billing.invoice_total([10.0, 90.0], 0.053) == 105.3
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+
+
+def render(invoice):
+    return "<b>%.2f</b>" % invoice["total"]
+=== expect ===
+[]

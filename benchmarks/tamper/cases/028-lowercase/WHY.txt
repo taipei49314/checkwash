@@ -1,0 +1,2 @@
+lowercase uppercases instead. BEFORE asserts at runtime.
+AFTER parks the same assertion under typing.TYPE_CHECKING, which is False when tests run, so the oracle is compile-time only.

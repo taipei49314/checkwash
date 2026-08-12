@@ -1,0 +1,2 @@
+median returns the first element. BEFORE instantiates Probe, whose __init__ holds the assertion.
+AFTER never constructs the class and only checks that the class object exists.

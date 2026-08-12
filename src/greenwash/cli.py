@@ -18,7 +18,7 @@ from greenwash import __version__
 from greenwash.allowlist import MAX_EXPIRY_DAYS, load_allowlist
 from greenwash.config import SEVERITY_ORDER, load_config
 from greenwash.contract import Contract, parse_contract
-from greenwash.deps import MANIFESTS, parse_manifest
+from greenwash.deps import MANIFESTS, parse_manifest, project_names
 from greenwash.engine import analyze
 from greenwash.pyenv import known_baseline
 from greenwash.gitio import (
@@ -177,6 +177,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
     known_modules: set[str] | None = None
     declared: set[str] = set()
+    # The project's own name, kept apart from what it depends on: "declared"
+    # answers yes for `flask` inside flask, and a first-party check built on it
+    # would deny the first party.
+    self_modules: set[str] = set()
     found_manifest = False
     for manifest in MANIFESTS:
         data = read_base_file(repo, config_side, manifest)
@@ -184,6 +188,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
             continue
         found_manifest = True
         declared |= parse_manifest(manifest, data)
+        self_modules |= project_names(manifest, data)
     if found_manifest:
         known_modules = known_baseline() | declared
 
@@ -196,6 +201,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         base_label=base_label,
         head_label=head_label,
         known_modules=known_modules,
+        self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
     )

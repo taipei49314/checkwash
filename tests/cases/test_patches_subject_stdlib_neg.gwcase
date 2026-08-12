@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: freezing the clock is hygiene even when the assertion is about the clock
+origin: issue #11 acceptance, stdlib stubs stay quiet. Written so that only the stdlib check can keep it silent - the patched attribute IS reached by the subject here, so if the deny list stops working this fixture goes red
+=== before: tests/test_stamp.py ===
+import time
+
+from app import stamp
+
+
+def test_stamp_is_recent():
+    assert time.time() < 2 ** 31
+=== after: tests/test_stamp.py ===
+import time
+
+from app import stamp
+
+
+def test_stamp_is_recent(monkeypatch):
+    monkeypatch.setattr(time, "time", lambda: 1700000000.0)
+    assert time.time() < 2 ** 31
+=== head: src/app/stamp.py ===
+import time
+
+
+def stamp():
+    return int(time.time())
+=== expect ===
+[]

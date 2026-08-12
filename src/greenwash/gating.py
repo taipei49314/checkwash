@@ -45,6 +45,10 @@ ORACLE_RULES = {
     # Patching the code under test from a conftest fixture is an oracle
     # event: the assertions still run, against a stand-in.
     "CONFTEST_PATCHES_PROD",
+    # The same swap one scope lower, inserted under an assertion that already
+    # existed. Legitimate when production moved under the test, which is what
+    # repair evidence measures — so it takes the same path, not its own.
+    "TEST_PATCHES_SUBJECT",
 }
 
 # Report order: most severe rule classes first within a path.

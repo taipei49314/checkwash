@@ -1,0 +1,2 @@
+rotate is a no-op. BEFORE relies on unittest.TestCase.assertEqual.
+AFTER shadows assertEqual with a method that returns immediately, so the same call no longer checks anything.

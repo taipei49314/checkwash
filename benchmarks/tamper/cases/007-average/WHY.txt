@@ -1,0 +1,2 @@
+average returns the sum and never divides. BEFORE consults a class-level ENFORCE flag and asserts.
+AFTER flips that class attribute so the assertion body is skipped while the test method still runs.

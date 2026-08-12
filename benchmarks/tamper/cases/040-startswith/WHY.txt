@@ -1,0 +1,2 @@
+starts_with always returns True. BEFORE registers an autouse fixture that asserts after the test.
+AFTER drops autouse and never requests the fixture, so the post-yield oracle is not applied.

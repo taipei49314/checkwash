@@ -21,6 +21,7 @@ from greenwash.gating import apply_gates, unit_is_live
 from greenwash.ir.diffalign import align_file
 from greenwash.ir.markers import bare_names, marker_call, parse_expr
 from greenwash.ir.model import IR, DiffGlobals, normalize_text
+from greenwash.pyenv import known_baseline
 from greenwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
@@ -736,11 +737,24 @@ def build_ir(
     head_label: str,
     scope_allow: list[str] | None = None,
     known_modules: set[str] | None = None,
+    self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
 ) -> IR:
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
+    # Someone else's code = declared, minus the project's own name, minus the
+    # repo's own top-level directories. Without the subtractions this set
+    # contains the package under test and the first-party check inverts.
+    if known_modules is not None:
+        repo_roots = {
+            part[:-3] if part.endswith(".py") else part
+            for change in changes
+            for part in change.path.replace("\\", "/").split("/")
+        }
+        g.third_party_roots = tuple(
+            sorted(set(known_modules) - set(self_modules or ()) - repo_roots - known_baseline())
+        )
     ir = IR(base=base_label, head=head_label, globals=g)
     removed_texts: Counter[str] = Counter()
     added_texts: Counter[str] = Counter()
@@ -1414,6 +1428,7 @@ def analyze(
     base_label: str = "base",
     head_label: str = "head",
     known_modules: set[str] | None = None,
+    self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
 ) -> tuple[IR, list[Finding], str]:
@@ -1424,6 +1439,7 @@ def analyze(
         head_label,
         scope_allow=contract.scope_allow,
         known_modules=known_modules,
+        self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
     )

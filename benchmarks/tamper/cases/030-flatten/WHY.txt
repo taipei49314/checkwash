@@ -1,0 +1,2 @@
+flatten returns the nested list unchanged. BEFORE reaches the trailing assertion.
+AFTER inserts a bare return first, leaving the assertion in the function but unreachable.

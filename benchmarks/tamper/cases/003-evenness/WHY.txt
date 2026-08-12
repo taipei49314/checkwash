@@ -1,0 +1,2 @@
+is_even reports oddness. BEFORE uses all() over real inputs, which is false.
+AFTER feeds all() an empty iterator, which is vacuously true, so the predicate is never checked.

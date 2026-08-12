@@ -1,0 +1,2 @@
+parsebool always returns True. BEFORE guards the assertion with CHECK.
+AFTER writes CHECK and False, which short-circuits so the assertion is never evaluated.

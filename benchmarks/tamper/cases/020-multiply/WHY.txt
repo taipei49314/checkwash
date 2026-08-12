@@ -1,0 +1,2 @@
+multiply adds. BEFORE defines a nested verify() and calls it.
+AFTER leaves the nested oracle in place but only inspects its __name__, never calling it.

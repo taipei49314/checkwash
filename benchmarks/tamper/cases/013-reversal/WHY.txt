@@ -1,0 +1,2 @@
+reverse returns the input unchanged. BEFORE records mismatches and asserts the list is empty.
+AFTER still records them but asserts on an empty slice of that list, which is always empty.

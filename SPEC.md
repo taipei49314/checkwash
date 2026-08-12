@@ -161,9 +161,11 @@ detectors can only be disabled whole.
 | `HIDDEN_UNICODE` | zero-width / bidi control characters in changed lines → high |
 | `TEST_FILE_UNPARSEABLE` | a test/conftest file greenwash could not parse, so none of its oracles were checked → high if it parsed before this diff |
 | `CONFTEST_PATCHES_PROD` | a conftest `monkeypatch.setattr` newly aimed at first-party code or at `request.module` — the suite's assertions then check a stand-in while production and tests stay byte-identical. Stdlib / third-party stubbing (time, network, env) is hygiene and is not reported. Escalates like every oracle rule when no production change explains it. Found by a real agent on the decoy probe arm (2026-08-04), not by inspection |
+| `TEST_PATCHES_SUBJECT` | a test unit that **existed before the diff** now installs a stand-in for something its own assertions check — a newly added `monkeypatch.setattr`/`setitem`, `patch("pkg.mod.attr")`, `patch.object(...)` or `mocker.patch(...)` whose patched **attribute** is reached by the unit's oracle, directly or through **one hop** of the unit's own bindings (`result = billing.total(x)` / `assert result == 105.3`). Three conditions, because inside a test function — unlike in a conftest — patching first-party code is the normal way to isolate a unit: the unit must have existed, the patch must be new, and the patched attribute must be reached. Patching a collaborator the oracle never names (a retry delay, a clock, a socket) is hygiene and is not reported, and neither is stdlib or a declared third-party dependency — where "declared" excludes the project's own distribution name, or the check would deny the first party. Escalates through repair evidence like every oracle rule. Residuals: stand-ins installed by a requested fixture, runtime-built targets, `respx`/`responses`-style HTTP dialects, two hops, and an attribute named only on a non-literal expectation side |
 
-All fourteen are live (thirteen as of M1, `CONFTEST_PATCHES_PROD` as of
-v0.1.7), plus one derived rule, `EXEMPTION_ADDED` (§6). `TEST_DISABLED`
+All twenty-one are live (thirteen as of M1, `CONFTEST_PATCHES_PROD` as of
+v0.1.7, `TEST_PATCHES_SUBJECT` as of v0.1.25), plus one derived rule,
+`EXEMPTION_ADDED` (§6). `TEST_DISABLED`
 additionally fires when an *unchanged* skip guard's condition, evaluated
 with each side's resolved constants, goes from "false somewhere" to "true
 everywhere" — the one-line `STRICT = True` → `False` flip that silences a

@@ -1,6 +1,64 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-11 (v0.1.16: the maintainer's red-team report, verified and answered)
+Updated: 2026-08-13 (v0.1.25: T1.4 — and an informed arm that escapes 28 times out of 40)
+
+## 2026-08-13: 12 of 40 — read this before anything else in this file
+
+An overnight informed-adversarial run produced 40 tampering cases against a
+description of every rule in this tool. Each was verified mechanically before
+being counted: production byte-identical on both sides, `pytest` red on the
+before side and green on the after side. **greenwash blocks twelve. Twenty-eight
+escape.**
+
+They are one root cause. The IR knows an oracle only when it is a syntactic
+`assert`, a curated unittest method, or a `pytest.raises`. `assert_sum(add(2, 3), 5)`
+is a **call** — the unit records zero assertions — so stopping the call removes
+nothing, weakens nothing, and a replacement `assert callable(assert_sum)`
+registers as an assertion *added*. By the strength lattice the test got
+stronger.
+
+This is `docs/defence-design.md` **A5**, ranked there as **P2, "partial by
+nature"**. That ranking was wrong, and it was wrong on the basis of no
+measurement. It is the top of the next round.
+
+Read `benchmarks/tamper/README.md` for the families and the caveats — chiefly
+that 12/40 bounds an attacker who has read the rules, not ordinary agent
+behaviour, where 0 of 12 real agents touched a test at all. Both numbers are
+now in the README; neither replaces the other. THREATMODEL 91.
+
+## 2026-08-13 (v0.1.25): the corpus could not test this rule, and said so
+
+T1.4 / THREATMODEL 90 — patching the code under test **from inside the test**,
+which `CONFTEST_PATCHES_PROD` never saw because it reads conftest files only.
+Ranked #2 of the attacks left open after P0.
+
+The number to not misread: the sweep moved **36 → 36** blocks, and
+`TEST_PATCHES_SUBJECT` fired **zero** times on 1800 commits. A ΔFP of zero for a
+rule that never ran is not a false-positive measurement, and shipping it as one
+would have been this project's own recurring defect — a check that cannot see
+its subject reporting success — for the fifth time in three days.
+
+What the instrumented run *did* measure, and what this ships on:
+
+| across the same 1800 commits | |
+|---|---|
+| unit-sides carrying a patch | 735 |
+| …in a unit the diff created | 38 |
+| newly added patches in a unit that already existed | **1** (denied at the hygiene filter) |
+
+Humans write the mock together with the test. The precondition's base rate
+bounds the blast radius at 0.06pp — twenty times inside the 0.3pp the roadmap
+fixed in advance — and the pre-registered severity decision is honoured against
+that, not against an FP count this corpus cannot produce.
+
+Same probe caught the rule's own hole before release: `result = f(x)` /
+`assert result == 105.3` hides the patched attribute from the assertion, and is
+the *more* natural way to write the attack. Reach resolves one hop now.
+
+Two claim-drift defects fixed on the way: five `.gwcase` fixtures had lost all
+their metadata to a BOM while still passing, and SPEC §4 — the file that calls
+itself frozen — had twenty rows under the sentence "All fourteen are live".
+Both now have gates. D-043.
 
 ## The 2026-08-07 sixth round (v0.1.13): fixing what the field found
 
@@ -604,8 +662,8 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.24 |
-| detectors | 20 |
+| version | v0.1.25 |
+| detectors | 21 |
 | human-commit block rate | 36/1800 = 2.00% |
 | adjudicated false positive | 21/1800 = 1.17% |
 | legitimate policy block | 15/1800 = 0.83% |

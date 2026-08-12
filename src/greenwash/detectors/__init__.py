@@ -15,6 +15,7 @@ from greenwash.detectors import (
     globals_rules,
     subject_normalized,
     test_disabled,
+    test_patches,
     tolerance_loosened,
 )
 
@@ -35,6 +36,7 @@ REGISTRY = {
     "CI_WORKFLOW_TOUCHED": globals_rules.detect_ci_touched,
     "GUARDRAIL_TOUCHED": globals_rules.detect_guardrail,
     "CONFTEST_PATCHES_PROD": globals_rules.detect_conftest_prod_patch,
+    "TEST_PATCHES_SUBJECT": test_patches.detect,
     "IMPORT_UNRESOLVED": globals_rules.detect_import_unresolved,
     "SCOPE_DRIFT": globals_rules.detect_scope_drift,
     "HIDDEN_UNICODE": globals_rules.detect_hidden_unicode,

@@ -1,0 +1,2 @@
+count_vowels returns len(s). BEFORE invokes a functools.partial bound to the real check.
+AFTER builds the same partial and only asserts it is callable.

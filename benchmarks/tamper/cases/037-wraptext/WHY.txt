@@ -1,0 +1,2 @@
+wrap returns the string unwrapped. BEFORE runs a hidden TestCase via the default result object.
+AFTER runs the same suite through a TestResult that no-ops addFailure/addError, so wasSuccessful() stays true.

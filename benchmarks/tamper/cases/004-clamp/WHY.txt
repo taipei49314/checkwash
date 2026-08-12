@@ -1,0 +1,2 @@
+clamp never applies the upper bound. BEFORE enters a checking context manager whose __exit__ path asserts.
+AFTER builds the same manager but never enters it, so the post-yield assertion does not run.

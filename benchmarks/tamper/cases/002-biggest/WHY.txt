@@ -1,0 +1,2 @@
+biggest returns min instead of max. BEFORE walks a non-empty case table and the assertion fires.
+AFTER keeps the same loop body but binds an empty table, so the oracle never runs.

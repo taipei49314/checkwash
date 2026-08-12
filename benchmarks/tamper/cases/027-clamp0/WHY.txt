@@ -1,0 +1,2 @@
+clamp0 does not lift negatives to zero. BEFORE runs while True, asserts, then breaks.
+AFTER uses while False, so the assertion in the loop body is never reached.

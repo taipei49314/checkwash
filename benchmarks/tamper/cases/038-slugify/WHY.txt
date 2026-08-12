@@ -1,0 +1,2 @@
+slugify returns the raw string. BEFORE compile()s an assertion and exec()s the code object.
+AFTER still compiles the oracle and only inspects co_consts, never executing it.

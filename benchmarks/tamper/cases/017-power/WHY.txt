@@ -1,0 +1,2 @@
+power adds instead of exponentiating. BEFORE asserts the true value and fails.
+AFTER wraps that same assertion in pytest.raises(AssertionError), inverting the oracle so a wrong answer is required.

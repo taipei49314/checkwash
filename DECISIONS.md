@@ -1418,3 +1418,139 @@ No fixture would have caught either. Both need a unit that rebinds a name after
 the assertion it is checked in, which is a shape nobody writes on purpose — the
 1800-commit sweep found it on the first run, which is the argument for sweeping
 recall-only changes that are "obviously" free.
+
+## D-043 (2026-08-13): the sweep said zero cost, and zero cost was not what it measured
+
+T1.4, row 90 — patching the code under test from inside the test rather than
+from a conftest. Ranked #2 of the attacks left open after P0, and the issue
+carried its own warning: **high false-positive potential**.
+
+**The threshold was fixed before the detector existed**, in
+`docs/defence-design.md` §A6, and it is not a number invented for the occasion:
+the roadmap's T1 DoD had already written down ΔFP ≤ 0.3pp, which on 1800
+commits is five. More than five new blocks judged false and the rule ships at
+`info`, the way `EXPECTATION_DEFINITION_CHANGED` did.
+
+**The design is one condition doing all the work.** In a conftest, patching
+first-party code is exceptional — one autouse fixture swaps the module under
+test for the whole suite. Inside a test function it is *the normal way to write
+a unit test*. The acceptance line for this work, "detect new first-party
+`monkeypatch`/`patch` targets in test units", taken literally, fires on every
+commit that adds a mock. So: the unit must have existed before, the patch must
+be new, and — the discriminator — **the patched attribute must be reached by
+the unit's own oracle**. Patching `billing.RETRY_DELAY` under an assertion
+about charging makes the test fast; patching `billing.invoice_total` under
+`assert billing.invoice_total(...) == 105.3` replaces the subject of the
+oracle.
+
+### The trap in the obvious first-party check
+
+The natural way to ask "is this our code?" is "is it *not* a declared
+dependency?". `parse_manifest` folds `project.name` in with the dependencies
+deliberately, because for `IMPORT_UNRESOLVED` both resolve. Built on that set,
+the check classifies `flask` as third-party inside flask — a first-party check
+that denies the first party, silent in exactly the six repositories it would
+then be measured on. Hence `project_names()` and a `third_party_roots` set with
+the project's own name subtracted out. This was caught by reading
+`deps.py` before writing the detector, not by the corpus, which by construction
+could not have shown it.
+
+### What the sweep actually measured
+
+36 → 36 blocks, no verdict moved, zero engine errors. **And the rule fired zero
+times on 1800 commits.** Those two facts together are not a pass. A ΔFP of zero
+for a rule that never ran measures nothing about that rule, and publishing it as
+reassurance would be this project's own recurring defect — a check that cannot
+see its subject reporting success — for the fifth time in three days. The only
+reason it was not published that way is that the *next* question asked was
+whether the rule had fired at all.
+
+So the instrumented run counted survivors at each condition, across the same
+1800 commits:
+
+| | |
+|---|---|
+| unit-sides carrying a patch | 735 |
+| …in a unit the diff created (condition 1 declines) | 38 |
+| newly added patches in a unit that already existed | **1** |
+| …surviving the stdlib / third-party filter | 0 |
+
+**Humans write the mock together with the test.** Inserting a stand-in *under*
+an assertion that already existed happens once in 1800 commits, and that once
+was hygiene. That is the number this rule ships on: not a measured
+false-positive rate, which this corpus cannot produce, but a measured **base
+rate of the precondition**, which bounds the blast radius. If every such event
+were a false positive the cost is 0.06pp — twenty times inside the budget fixed
+in advance. Stated this way in SPEC §4, THREATMODEL 90 and the release notes,
+because "36 → 36" on its own reads as something it is not.
+
+The 735 sites also settled the discriminator's worth on real data rather than
+by argument: `click._compat.isatty` patched under an oracle asserting on
+`should_strip_ansi`, `rich.console.WINDOWS` under one about terminal size,
+`werkzeug.serving.run_simple` in flask rejected twice over. Every rejection
+correct, and none of them a judgement call I made.
+
+### The probe found the rule's own hole
+
+Reading those same sites showed that
+
+```python
+result = billing.invoice_total(items, 0.053)
+assert result == 105.3
+```
+
+puts the patched attribute nowhere in the assertion — and that is the *more*
+natural way to write this attack than naming the call inside the `assert`. The
+first version of the rule missed the shape it was built for. Reach now resolves
+one hop through the unit's own bindings, the bound `SUBJECT_NORMALIZED` already
+draws, refusing names bound more than once for the reason D-042 records.
+`test_patches_subject_via_local_pos` was written red before the fix.
+
+### Two BOM defects, one afternoon
+
+`Set-Content -Encoding UTF8` and `>` redirection both write a BOM in PowerShell
+5.1. It landed on five `.gwcase` fixtures, whose `=== meta ===` header then
+stopped matching — so every metadata key in them was silently dropped **while
+the fixtures kept passing**, because expectations do not read metadata. Only
+the detector-coverage gate noticed. `parse_case` strips it now and
+`test_every_fixture_carries_parsed_metadata` is the gate that would have said
+so directly. The same BOM landed on the sweep JSONs, where it is louder: the
+harnesses read them with plain `utf-8`.
+
+### The overnight arm, and the number that matters more than this round
+
+While v0.1.25 was being written up, an informed adversarial run returned 40
+tampering cases built against a description of every rule in this tool. The
+verifier takes nothing on trust: production byte-identical on both sides,
+`pytest` red before, green after, and only then a verdict. All 40 were real.
+
+**greenwash blocks 12. Twenty-eight escape** (`benchmarks/tamper/`,
+THREATMODEL 91).
+
+One root cause, and it is upstream of every detector: the IR knows an oracle
+only when it is a syntactic `assert`, a curated unittest method, or a
+`pytest.raises`. `assert_sum(add(2, 3), 5)` is a **call**. The unit records
+zero assertions, so stopping the call removes nothing and weakens nothing, and
+`assert callable(assert_sum)` in its place registers as an assertion *added* —
+by the strength lattice, the test got stronger. Everything downstream is
+working correctly on an IR that cannot see the oracle.
+
+This is A5 in `docs/defence-design.md`, ranked there **P2, "partial by
+nature"**. That ranking came from my own judgement with no measurement behind
+it, and it was wrong. It is the top of the next round, and it outranks the rest
+of T1 and all of T2.
+
+Recorded here rather than fixed here, deliberately. Fixing a finding inside the
+commit that reports it is how a report stops being trustworthy — the same rule
+that governed the v0.1.13 round. The README now carries both recall numbers,
+the informed 12/40 first and the natural-arm 12/12 second, because publishing
+only the flattering one is the claim drift this tool exists to catch.
+
+### A false count in the file that calls itself frozen
+
+SPEC §4's table had twenty rows under the sentence "All fourteen are live" —
+six rules of drift in the document that defines the rule IDs. STATE.md's
+detector count has been recomputed from the registry since 2026-08-04; the
+SPEC's never was, so the weaker claim was the one being checked.
+`test_spec_rule_table_covers_the_registry` and
+`test_spec_rule_count_prose_matches_the_table` close that.

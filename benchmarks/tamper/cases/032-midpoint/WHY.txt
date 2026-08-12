@@ -1,0 +1,2 @@
+midpoint returns the left endpoint. BEFORE uses a match case with a True guard that asserts.
+AFTER keeps a match but the only asserting case is guarded by False, so control falls into a no-op wildcard.

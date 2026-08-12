@@ -100,6 +100,15 @@ class UnitSide:
     # already had one produced no event at all (THREATMODEL 81). The path set
     # is what makes it one.
     collect_ignored: tuple[str, ...] = ()
+    # Stand-ins this unit installs: (dotted target, patched attribute), sorted.
+    # `monkeypatch.setattr`, `mock.patch`, `patch.object`, `mocker.patch` —
+    # every dialect flattened to the same pair, because a rule that knows one
+    # spelling is a rule the next agent spells around.
+    #
+    # Collected unfiltered. Whether a target is the repo's own code is a
+    # question about the *diff*, not about this file, so the judgement lives in
+    # the detector where `DiffGlobals` is in reach.
+    patches: tuple[tuple[str, str], ...] = ()
 
     @property
     def disabled(self) -> bool:
@@ -236,6 +245,16 @@ class DiffGlobals:
     # against a stand-in while prod and tests both stay byte-identical
     # (decoy probe arm 2026-08-04).
     conftest_prod_patches: list[tuple[str, str]] = field(default_factory=list)
+    # Import roots that the manifests declare as *someone else's* code, sorted.
+    #
+    # Declared dependencies minus the project's own name, and the second half
+    # of that sentence is the whole point: `parse_manifest` folds `project.name`
+    # in with the dependencies on purpose, so "declared" alone would have
+    # classified `flask` as third-party inside flask — a first-party check that
+    # denies the first party, dead in exactly the six repos it is measured on.
+    # Empty when no manifest was read, which leaves the stdlib list as the only
+    # deny and is deliberately the quieter half of the error.
+    third_party_roots: tuple[str, ...] = ()
 
 
 @dataclass

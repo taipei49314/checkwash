@@ -48,6 +48,34 @@ def _module_forms(dist: str) -> set[str]:
     return {f for f in forms if f}
 
 
+def project_names(path: str, data: bytes) -> set[str]:
+    """Import names of the project *itself*, separate from its dependencies.
+
+    `parse_manifest` folds the project's own name in with everything it
+    depends on, and for IMPORT_UNRESOLVED that is right: both resolve. Any
+    rule asking "is this someone else's code?" needs the two apart, because
+    "declared" alone answers yes for `flask` inside flask — a first-party
+    check that denies the first party, silent in exactly the repos it is
+    measured on.
+
+    Only manifests that name a project have one. Lockfiles and
+    requirements.txt list dependencies and nothing else.
+    """
+    if not path.endswith(".toml") or path == "uv.lock":
+        return set()
+    try:
+        raw = tomllib.loads(data.decode("utf-8-sig", errors="replace"))
+    except tomllib.TOMLDecodeError:
+        return set()
+    names: set[str] = set()
+    tool = raw.get("tool") if isinstance(raw.get("tool"), dict) else {}
+    for table in (raw.get("project"), tool.get("poetry")):
+        if isinstance(table, dict) and isinstance(table.get("name"), str):
+            names |= _module_forms(table["name"])
+    names.discard("python")
+    return names
+
+
 def parse_manifest(path: str, data: bytes) -> set[str]:
     text = data.decode("utf-8-sig", errors="replace")
     names: set[str] = set()

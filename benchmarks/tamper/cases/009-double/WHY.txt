@@ -1,0 +1,2 @@
+double returns x+1. BEFORE compares the result to the true value 6.
+AFTER compares two calls of the same buggy function to each other, which is a tautology of two wrong answers.

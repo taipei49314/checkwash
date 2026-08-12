@@ -1,0 +1,2 @@
+clipstr ignores the length. BEFORE does `assert got in Bag(expected)` with a real __contains__.
+AFTER keeps that membership assertion but Bag.__contains__ always returns True.

@@ -1,0 +1,2 @@
+twice is off-by-one. BEFORE runs doctest.testmod against a docstring that encodes the real oracle.
+AFTER leaves the doctest text in place but never executes it, asserting only that the docstring exists.

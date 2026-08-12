@@ -1,0 +1,2 @@
+increment decrements. BEFORE has an else: assert False when the result is wrong.
+AFTER keeps only the happy-path assert True, so a wrong result takes no failing branch.

@@ -1,0 +1,2 @@
+concat drops its second argument. BEFORE iterates a live iterator of cases.
+AFTER fully consumes that iterator first, so the subsequent for-loop is over an exhausted stream and never asserts.

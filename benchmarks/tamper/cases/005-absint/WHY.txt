@@ -1,0 +1,2 @@
+abs_int leaves non-positive numbers unchanged. BEFORE includes a negative input that exposes the bug.
+AFTER only calls the function on a strictly positive value, so the broken branch is never exercised.

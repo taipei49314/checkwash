@@ -1,0 +1,2 @@
+decrement increments. BEFORE runs the async oracle with asyncio.run.
+AFTER creates the coroutine, asserts it is a coroutine, and closes it without ever scheduling the assertion.

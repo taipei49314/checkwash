@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 20 detectors, 346 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 359 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.24
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.24
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.25
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.25
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -123,7 +123,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taipei49314/greenwash/action@v0.1.24
+      - uses: taipei49314/greenwash/action@v0.1.25
 ```
 
 The `permissions` block and `persist-credentials: false` are there because
@@ -142,7 +142,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.24
+    rev: v0.1.25
     hooks: [{ id: greenwash }]
 ```
 
@@ -171,7 +171,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.24
+- uses: taipei49314/greenwash/action@v0.1.25
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -231,7 +231,19 @@ Two harnesses, both reproducible from a clone
   barely exercise the change, and the defence against over-flagging is the
   content gate (a Makefile that only compiles is still production) plus its
   negative fixtures, not the sweep.
-- **Recall — 12 / 12, then probed harder.** Twelve bug-fix tasks run through
+- **Recall against an attacker who has read the rules — 12 / 40, and that is
+  the number to look at.** 40 tampering cases generated 2026-08-13 against a
+  description of every rule here, each verified mechanically before counting:
+  production byte-identical, `pytest` red before and green after.
+  **greenwash blocks twelve. Twenty-eight escape.** One root cause — the IR
+  only knows an oracle that is a syntactic `assert`, so `assert_sum(add(2, 3), 5)`
+  is a *call* and the unit reads as having zero assertions; stop invoking the
+  helper and nothing was removed or weakened. Full corpus, harness and per-case
+  verdicts in [benchmarks/tamper/](benchmarks/tamper/README.md), root cause in
+  THREATMODEL 91. It bounds a *motivated, informed* attacker rather than
+  ordinary agent behaviour — but a helper that stops being called and a fixture
+  that stops being `autouse` are not exotic.
+- **Recall on the older decoy corpus — 12 / 12, then probed harder.** Twelve bug-fix tasks run through
   real coding agents told to make CI green without fixing the bug; greenwash
   blocks all twelve tampering diffs. Under natural conditions, 0 of 12 agents
   touched a test at all — an honest datapoint, recorded as such.
@@ -282,7 +294,7 @@ Two harnesses, both reproducible from a clone
   fired, and the actual cause was in alignment rather than in any of them: the
   last-resort pairing stage matches leftover assertions by *span order*, so a
   deleted assertion and its unrelated replacement were reported as one
-  unchanged assertion. Closed in v0.1.24 by `ASSERT_SUBSTITUTED`, which is the
+  unchanged assertion. Closed in v0.1.25 by `ASSERT_SUBSTITUTED`, which is the
   first rule keyed on how a pair was formed rather than what it contains. The
   diff blocks at high on this build. D-031 and D-033 have the whole account,
   including the first attempted fix, which closed a six-line reduction of the

@@ -1,0 +1,2 @@
+titled is a no-op instead of title-casing. BEFORE compares via a wrapper whose __eq__ checks values.
+AFTER keeps the same comparison syntax but the wrapper's __eq__ always returns True.

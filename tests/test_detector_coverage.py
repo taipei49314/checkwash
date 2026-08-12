@@ -39,6 +39,24 @@ def _all_findings():
     return rules_fired, negatives
 
 
+def test_every_fixture_carries_parsed_metadata():
+    """A fixture whose metadata did not parse opts out of the gate below.
+
+    `test_every_detector_appears_in_a_negative_fixture` keys off `meta["rule"]`,
+    so a case whose `=== meta ===` header was not recognised is invisible to it
+    while still passing its own expectations — expectations do not read
+    metadata. A single PowerShell `Set-Content -Encoding UTF8` put a BOM on the
+    first line of five cases at once and did exactly that (2026-08-12);
+    `parse_case` now strips it, and this is the gate that would have said so.
+    """
+    silent = []
+    for case_path in CASES:
+        case = parse_case(case_path.read_text(encoding="utf-8"))
+        if "rule" not in case.meta:
+            silent.append(case_path.name)
+    assert not silent, f"fixtures whose metadata did not parse: {silent}"
+
+
 def test_every_detector_has_a_positive_fixture():
     rules_fired, _ = _all_findings()
     missing = sorted(set(REGISTRY) - rules_fired)

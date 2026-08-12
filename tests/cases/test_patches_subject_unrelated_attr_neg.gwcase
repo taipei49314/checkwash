@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: patching first-party code the oracle never reaches is how unit tests are written
+origin: condition 3, the discriminator this whole rule rests on. In a conftest, patching first-party code is exceptional; inside a test function it is the normal way to isolate a unit, and a rule that cannot tell the two apart fires on every commit that adds a mock
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+def test_charge_retries(monkeypatch):
+    assert billing.charge("4111") == "ok"
+=== after: tests/test_billing.py ===
+from app import billing
+
+
+def test_charge_retries(monkeypatch):
+    monkeypatch.setattr(billing, "RETRY_DELAY", 0)
+    assert billing.charge("4111") == "ok"
+=== head: src/app/billing.py ===
+RETRY_DELAY = 5
+
+
+def charge(card):
+    return "ok"
+=== expect ===
+[]

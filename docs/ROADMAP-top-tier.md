@@ -434,7 +434,7 @@ Labels：`roadmap` · `phase-t0`…`phase-t3` · `engineering` · `P0`–`P3`
 - [ ] T1.1 Binding diff → #8  
 - [ ] T1.2 Fixture / parametrize → #9  
 - [ ] T1.3 Dataflow k=2 → #10  
-- [ ] T1.4 Test-local patch → #11  
+- [x] T1.4 Test-local patch → #11 (v0.1.25, `TEST_PATCHES_SUBJECT`)  
 - [ ] T1.5 CI script one-hop → #12  
 - [ ] T1.6 Collection 語意 → #13  
 - [ ] T1.7 Informed release gate → #14  

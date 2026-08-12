@@ -1,0 +1,2 @@
+negate returns the input. BEFORE starts a worker thread that stores whether the result is correct and joins it.
+AFTER constructs the same Thread but never calls start(), so the assertion body never executes.

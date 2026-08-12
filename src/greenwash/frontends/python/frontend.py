@@ -1245,6 +1245,7 @@ def _collect_unit(
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
+    patches: set[tuple[str, str]] = set()
     markers = _decorator_markers(func, text, off) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
@@ -1282,6 +1283,14 @@ def _collect_unit(
             if name:
                 calls.add(name)
                 calls.add(name.rsplit(".", 1)[-1])
+                # Folded into this walk rather than given its own: a second
+                # full `ast.walk` per unit put the 500-file budget over by
+                # 0.18 s, and the dotted name is already computed here.
+                # Unreachable code is skipped above, which is right — a patch
+                # that never executes installs nothing.
+                pair = _patch_call_target(node, name)
+                if pair is not None:
+                    patches.add(pair)
                 if name in _SKIP_CALLS:
                     seg = text.seg(node) or name
                     markers.append(
@@ -1349,6 +1358,7 @@ def _collect_unit(
         body_hash=body_hash,
         bindings=_binding_definitions(func),
         param_columns=_param_columns(func),
+        patches=tuple(sorted(patches)),
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
@@ -1762,6 +1772,56 @@ def _top_level_constants(tree: ast.Module, text) -> dict[str, str]:
 
 
 _PATCH_CALLS = ("setattr", "setitem", "set_attribute")
+
+
+def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | None:
+    """One patch dialect -> (target, attribute), or None if this is not one.
+
+    Called from `_collect_unit`'s single walk, which covers the decorator list
+    too — that is where half of these live: `@mock.patch("pkg.mod.attr")` is
+    the same installation as the `monkeypatch.setattr` two lines into the body.
+
+    Accepted: `monkeypatch.setattr`/`setitem` (including through
+    `monkeypatch.context()`, whose receiver is named by the `with` clause and
+    so cannot be pinned to the fixture name), `patch(...)`, `mock.patch(...)`,
+    `mocker.patch(...)`, and `patch.object(...)` in any of those spellings.
+
+    The builtin `setattr(obj, "name", v)` is deliberately NOT one: it has no
+    receiver, and mutating an object the test owns is configuration, not the
+    installation of a stand-in. Reading it as one would fire on every fixture
+    that sets up its subject.
+    """
+    if not dotted or not node.args:
+        return None
+    parts = dotted.split(".")
+    tail = parts[-1]
+    if tail in _PATCH_CALLS:
+        if len(parts) < 2:  # the builtin, not a patcher
+            return None
+    elif tail == "object":
+        if len(parts) < 2 or parts[-2] != "patch":
+            return None
+    elif tail != "patch":
+        return None
+
+    # Which form this is depends on the first argument, not on the arity:
+    # `monkeypatch.setattr("pkg.mod.attr", v)` and
+    # `monkeypatch.setattr(mod, "attr", v)` are both three-argument calls.
+    first = node.args[0]
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        target = first.value
+        if "." not in target:
+            return None  # unqualified: neither a module nor an attribute
+        return (target, target.rsplit(".", 1)[1])
+    if len(node.args) < 2:
+        return None
+    attr = node.args[1]
+    if not (isinstance(attr, ast.Constant) and isinstance(attr.value, str)):
+        return None
+    base = _dotted(first)
+    if base is None:
+        return None
+    return (f"{base}.{attr.value}", attr.value)
 
 
 def conftest_patch_targets(data: bytes, first_party: frozenset[str]) -> list[str]:

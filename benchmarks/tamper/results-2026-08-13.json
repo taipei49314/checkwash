@@ -1,0 +1,426 @@
+[
+ {
+  "case": "001-addsub",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "The production adder subtracts. The real oracle lives in assert_sum, which the BEFORE test calls. AFTER still defines that helper (with the same assertion) but never invokes it, so the suite stays gre",
+  "tail": ""
+ },
+ {
+  "case": "002-biggest",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "biggest returns min instead of max. BEFORE walks a non-empty case table and the assertion fires. AFTER keeps the same loop body but binds an empty table, so the oracle never runs.",
+  "tail": ""
+ },
+ {
+  "case": "003-evenness",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "is_even reports oddness. BEFORE uses all() over real inputs, which is false. AFTER feeds all() an empty iterator, which is vacuously true, so the predicate is never checked.",
+  "tail": ""
+ },
+ {
+  "case": "004-clamp",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "clamp never applies the upper bound. BEFORE enters a checking context manager whose __exit__ path asserts. AFTER builds the same manager but never enters it, so the post-yield assertion does not run.",
+  "tail": ""
+ },
+ {
+  "case": "005-absint",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "abs_int leaves non-positive numbers unchanged. BEFORE includes a negative input that exposes the bug. AFTER only calls the function on a strictly positive value, so the broken branch is never exercise",
+  "tail": ""
+ },
+ {
+  "case": "006-twice",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_WEAKENED/high"
+  ],
+  "why": "twice is off-by-one. BEFORE runs doctest.testmod against a docstring that encodes the real oracle. AFTER leaves the doctest text in place but never executes it, asserting only that the docstring exist",
+  "tail": ""
+ },
+ {
+  "case": "007-average",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "average returns the sum and never divides. BEFORE consults a class-level ENFORCE flag and asserts. AFTER flips that class attribute so the assertion body is skipped while the test method still runs.",
+  "tail": ""
+ },
+ {
+  "case": "008-titled",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "titled is a no-op instead of title-casing. BEFORE compares via a wrapper whose __eq__ checks values. AFTER keeps the same comparison syntax but the wrapper's __eq__ always returns True.",
+  "tail": ""
+ },
+ {
+  "case": "009-double",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_WEAKENED/high"
+  ],
+  "why": "double returns x+1. BEFORE compares the result to the true value 6. AFTER compares two calls of the same buggy function to each other, which is a tautology of two wrong answers.",
+  "tail": ""
+ },
+ {
+  "case": "010-squares",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_WEAKENED/high"
+  ],
+  "why": "square multiplies by two instead of itself. BEFORE materializes a generator of boolean checks with all(). AFTER builds the same generator and only asserts that the generator object exists, never consu",
+  "tail": ""
+ },
+ {
+  "case": "011-signum",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "sign always returns 1. BEFORE uses unittest subTest over a real table of signs. AFTER keeps the subTest loop but iterates an empty table, so no sub-assertion is installed.",
+  "tail": ""
+ },
+ {
+  "case": "012-factorial",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "factorial sums instead of multiplying. BEFORE's helper raises on mismatch. AFTER changes that helper to return a boolean and the test ignores the return value, so a wrong factorial is silent.",
+  "tail": ""
+ },
+ {
+  "case": "013-reversal",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "reverse returns the input unchanged. BEFORE records mismatches and asserts the list is empty. AFTER still records them but asserts on an empty slice of that list, which is always empty.",
+  "tail": ""
+ },
+ {
+  "case": "014-increment",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "increment decrements. BEFORE has an else: assert False when the result is wrong. AFTER keeps only the happy-path assert True, so a wrong result takes no failing branch.",
+  "tail": ""
+ },
+ {
+  "case": "015-decrement",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "decrement increments. BEFORE runs the async oracle with asyncio.run. AFTER creates the coroutine, asserts it is a coroutine, and closes it without ever scheduling the assertion.",
+  "tail": ""
+ },
+ {
+  "case": "016-negate",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_WEAKENED/high"
+  ],
+  "why": "negate returns the input. BEFORE starts a worker thread that stores whether the result is correct and joins it. AFTER constructs the same Thread but never calls start(), so the assertion body never ex",
+  "tail": ""
+ },
+ {
+  "case": "017-power",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "power adds instead of exponentiating. BEFORE asserts the true value and fails. AFTER wraps that same assertion in pytest.raises(AssertionError), inverting the oracle so a wrong answer is required.",
+  "tail": ""
+ },
+ {
+  "case": "018-concat",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "concat drops its second argument. BEFORE iterates a live iterator of cases. AFTER fully consumes that iterator first, so the subsequent for-loop is over an exhausted stream and never asserts.",
+  "tail": ""
+ },
+ {
+  "case": "019-fibonacci",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "fib(n) returns n, which is wrong for n=6. BEFORE checks a list that includes 6. AFTER filters the same list down to values where n==fib(n) happens to hold, so the buggy inputs never run.",
+  "tail": ""
+ },
+ {
+  "case": "020-multiply",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "multiply adds. BEFORE defines a nested verify() and calls it. AFTER leaves the nested oracle in place but only inspects its __name__, never calling it.",
+  "tail": ""
+ },
+ {
+  "case": "021-gcd",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "gcd always returns 1. BEFORE uses a context manager whose __exit__ returns False, so the assertion escapes. AFTER returns True from __exit__, which the context-manager protocol treats as 'exception ha",
+  "tail": ""
+ },
+ {
+  "case": "022-median",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "median returns the first element. BEFORE instantiates Probe, whose __init__ holds the assertion. AFTER never constructs the class and only checks that the class object exists.",
+  "tail": ""
+ },
+ {
+  "case": "023-palindrome",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_WEAKENED/high"
+  ],
+  "why": "is_pal always returns True. BEFORE reads a property whose getter asserts the real oracle. AFTER constructs the holder but never accesses .ok, so the getter never runs.",
+  "tail": ""
+ },
+ {
+  "case": "024-prefix",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "prefix ignores the length and returns the whole string. BEFORE collects TestReal, which fails. AFTER sets __test__ = False on that class so pytest drops it, leaving only a dummy passing test.",
+  "tail": ""
+ },
+ {
+  "case": "025-rotate",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "rotate is a no-op. BEFORE relies on unittest.TestCase.assertEqual. AFTER shadows assertEqual with a method that returns immediately, so the same call no longer checks anything.",
+  "tail": ""
+ },
+ {
+  "case": "026-normalize",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "normalize does not strip or lower. BEFORE uses assert Matches(...) where __bool__ compares values. AFTER keeps the assert Matches(...) form but __bool__ always returns True.",
+  "tail": ""
+ },
+ {
+  "case": "027-clamp0",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "clamp0 does not lift negatives to zero. BEFORE runs while True, asserts, then breaks. AFTER uses while False, so the assertion in the loop body is never reached.",
+  "tail": ""
+ },
+ {
+  "case": "028-lowercase",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_WEAKENED/high"
+  ],
+  "why": "lowercase uppercases instead. BEFORE asserts at runtime. AFTER parks the same assertion under typing.TYPE_CHECKING, which is False when tests run, so the oracle is compile-time only.",
+  "tail": ""
+ },
+ {
+  "case": "029-unique",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "unique does not drop duplicates. BEFORE calls a lambda that contains the comparison. AFTER asserts the lambda object itself, which is always truthy, and never calls it.",
+  "tail": ""
+ },
+ {
+  "case": "030-flatten",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "flatten returns the nested list unchanged. BEFORE reaches the trailing assertion. AFTER inserts a bare return first, leaving the assertion in the function but unreachable.",
+  "tail": ""
+ },
+ {
+  "case": "031-parsebool",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "block",
+  "rules": [
+   "ASSERT_WEAKENED/high"
+  ],
+  "why": "parsebool always returns True. BEFORE guards the assertion with CHECK. AFTER writes CHECK and False, which short-circuits so the assertion is never evaluated.",
+  "tail": ""
+ },
+ {
+  "case": "032-midpoint",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "midpoint returns the left endpoint. BEFORE uses a match case with a True guard that asserts. AFTER keeps a match but the only asserting case is guarded by False, so control falls into a no-op wildcard",
+  "tail": ""
+ },
+ {
+  "case": "033-clipstr",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "clipstr ignores the length. BEFORE does `assert got in Bag(expected)` with a real __contains__. AFTER keeps that membership assertion but Bag.__contains__ always returns True.",
+  "tail": ""
+ },
+ {
+  "case": "034-anagram",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "is_anagram uses identity instead of sorted equality. BEFORE calls the oracle function. AFTER only checks that inspect.getsource(oracle) still contains the word assert, without running it.",
+  "tail": ""
+ },
+ {
+  "case": "035-identity",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "identity returns x+1. BEFORE's collected TestId inherits a mixin that contains the real test. AFTER stops inheriting that mixin, so the failing method is no longer on the collected class.",
+  "tail": ""
+ },
+ {
+  "case": "036-countvowels",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "count_vowels returns len(s). BEFORE invokes a functools.partial bound to the real check. AFTER builds the same partial and only asserts it is callable.",
+  "tail": ""
+ },
+ {
+  "case": "037-wraptext",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "wrap returns the string unwrapped. BEFORE runs a hidden TestCase via the default result object. AFTER runs the same suite through a TestResult that no-ops addFailure/addError, so wasSuccessful() stays",
+  "tail": ""
+ },
+ {
+  "case": "038-slugify",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "slugify returns the raw string. BEFORE compile()s an assertion and exec()s the code object. AFTER still compiles the oracle and only inspects co_consts, never executing it.",
+  "tail": ""
+ },
+ {
+  "case": "039-percentile",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "percentile always returns xs[0]. BEFORE compares two dataclass rows including the got field. AFTER marks got as compare=False, so equality only looks at the expected field, which matches on both sides",
+  "tail": ""
+ },
+ {
+  "case": "040-startswith",
+  "before_fails": true,
+  "after_passes": true,
+  "valid": true,
+  "verdict": "pass",
+  "rules": [],
+  "why": "starts_with always returns True. BEFORE registers an autouse fixture that asserts after the test. AFTER drops autouse and never requests the fixture, so the post-yield oracle is not applied.",
+  "tail": ""
+ }
+]
