@@ -299,7 +299,29 @@ the guard was ever justified by (the `pytest.raises(match=)` fold).
   guard should instead be narrowed to `raises`/`approx` **without** giving
   truthy a subject.
 
-### A5. Oracles behind custom helpers (P2, partial by nature)
+### A5. Oracles behind custom helpers (~~P2, partial by nature~~ → **P0**, [#37](https://github.com/taipei49314/greenwash/issues/37))
+> **The P2 ranking below was mine, it had no measurement behind it, and it was
+> wrong.** Measured 2026-08-13: of 40 informed adversarial cases, greenwash
+> blocks 12 and **28 escape**, and they are one root cause — this one
+> (`benchmarks/tamper/`, THREATMODEL 91). `assert_sum(add(2, 3), 5)` is a
+> *call*, so the unit records zero assertions; stop invoking the helper and
+> nothing was removed or weakened, while `assert callable(assert_sum)` in its
+> place registers as an assertion *added*. By the strength lattice the test got
+> stronger.
+>
+> "Partial by nature" was also half wrong. Roughly 12–16 of the 28 are
+> statically decidable — an oracle defined but no longer invoked, a mixin
+> dropped from a `TestCase`, a fixture that stops being `autouse`, a
+> `parametrize` table emptied, the real assertion wrapped in
+> `pytest.raises(AssertionError)`. The genuinely undecidable half is different
+> from what this section guessed: it is not depth, it is **subverted
+> semantics** — `__eq__`/`__bool__`/`__contains__` that always return true, an
+> `__exit__` that swallows, a no-op `TestResult`. Those need execution, and the
+> honest answer there is mutation testing, not a 22nd rule.
+>
+> The framing below — "expansion to a depth of one" — is also too small. The
+> right change is to the IR's question: not *which `assert` statements are in
+> this unit* but **which assertions can this collected test reach**. See #37.
 
 `assert_invoice_ok(total)` in `helpers.py`, then the test stops calling it or
 calls it with a constant. The frontend understands bare `assert`, curated
