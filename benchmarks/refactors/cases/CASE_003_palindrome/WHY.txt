@@ -1,0 +1,1 @@
+is_palindrome skips case folding, so 'Aba' is rejected. Both suites still check a mixed-case palindrome, a spaced phrase, and a negative. Renaming assert_pal to assert_is_palindrome does not drop any of those checks.

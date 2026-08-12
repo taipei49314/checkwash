@@ -1,0 +1,1 @@
+all_equal uses len(set(xs)) == 1, which is False for the empty list. Both suites require all_equal([]) is True and all_equal([1, 2]) is False. Direct boolean asserts become check(xs, predicate) calls.

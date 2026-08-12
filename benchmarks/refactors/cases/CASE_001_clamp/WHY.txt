@@ -1,0 +1,1 @@
+clamp swaps the low and high replacements, so values below lo return hi. Both suites assert the three regions (below, inside, above) against the same expected values. Extracting those asserts into assert_clamped only changes where the comparison lives.

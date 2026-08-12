@@ -1,0 +1,1 @@
+rotate uses xs[k:]+xs[:k], which rotates the opposite direction. Both suites expect rotate([1,2,3,4], 1) == [4,1,2,3]. The nested check function is lifted to module scope and still called.

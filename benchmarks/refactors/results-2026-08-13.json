@@ -1,0 +1,442 @@
+[
+ {
+  "case": "CASE_001_clamp",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "clamp swaps the low and high replacements, so values below lo return hi. Both suites assert the three regions (below, inside, above) against the same expected values. Extracting th"
+ },
+ {
+  "case": "CASE_002_factorial",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [],
+  "why": "factorial uses range(1, n) and so drops the last factor; factorial(5) becomes 24. Both suites compare 0!, 1!, and 5! to 1, 1, and 120. Inlining assert_fact just puts those same com"
+ },
+ {
+  "case": "CASE_003_palindrome",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [],
+  "why": "is_palindrome skips case folding, so 'Aba' is rejected. Both suites still check a mixed-case palindrome, a spaced phrase, and a negative. Renaming assert_pal to assert_is_palindrom"
+ },
+ {
+  "case": "CASE_004_unique",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [],
+  "why": "unique is implemented with set(), so first-seen order is lost. Both suites require unique([3, 1, 3, 2]) to be [3, 1, 2], which checks order and uniqueness. Splitting the old helper"
+ },
+ {
+  "case": "CASE_005_grade",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [],
+  "why": "letter_grade uses strict > so a score of 90 is not an A. Both suites include the exact boundaries 90, 80, 70 and a failing 59. Moving the table from a for-loop into @pytest.mark.pa"
+ },
+ {
+  "case": "CASE_006_fib",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "fib starts at (1, 1), so fib(0) is 1 and the sequence is shifted. Both suites check fib(0)==0, fib(1)==1, and fib(6)==8. Folding the parametrize table back into a loop still visits"
+ },
+ {
+  "case": "CASE_007_running_sum",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "running_sum appends each raw element instead of the cumulative total. Both suites require running_sum([1, 2, 3]) == [1, 3, 6]. After the refactor that comparison runs when the test"
+ },
+ {
+  "case": "CASE_008_slugify",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [],
+  "why": "slugify never lowercases, so 'Hello World' becomes 'Hello-World'. Both suites assert slugify('Hello World') == 'hello-world' plus a punctuation case. The comparison simply moves fr"
+ },
+ {
+  "case": "CASE_009_parse_ints",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "parse_ints splits only on commas, so a space-separated list raises or is wrong. Both suites require parse_ints('1 2 3') == [1, 2, 3] and still accept CSV. The expected list is chec"
+ },
+ {
+  "case": "CASE_010_median",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "median returns the upper middle element for even-length lists instead of the mean. Both suites check an odd list and [1, 2, 3, 4] == 2.5. The comparisons move onto MedianChecks and"
+ },
+ {
+  "case": "CASE_011_anagram",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high",
+   "TEST_DISABLED/warn"
+  ],
+  "why": "is_anagram compares raw characters, so Listen/Silent fails. Both suites still require that pair to be an anagram and reject a non-anagram. The if/raise checks become unittest self."
+ },
+ {
+  "case": "CASE_012_chunk",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high",
+   "IMPORT_UNRESOLVED/warn"
+  ],
+  "why": "chunk stops before the last partial group, dropping the tail of odd-length lists. Both suites require chunk([1,2,3,4,5], 2) == [[1,2],[3,4],[5]]. The comparison is provided by a co"
+ },
+ {
+  "case": "CASE_013_rotate",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [],
+  "why": "rotate uses xs[k:]+xs[:k], which rotates the opposite direction. Both suites expect rotate([1,2,3,4], 1) == [4,1,2,3]. The nested check function is lifted to module scope and still"
+ },
+ {
+  "case": "CASE_014_sign",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [],
+  "why": "sign treats 0 as positive and returns 1. The original test already asserts sign(0) == 0 through assert_sign, so both revisions fail on the bug. The after suite adds test_negative t"
+ },
+ {
+  "case": "CASE_015_gcd",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [
+   "TEST_DISABLED/info"
+  ],
+  "why": "gcd never takes abs, so gcd(-6, -9) returns -3. Both suites assert the Euclidean result is the positive 3, plus a coprime pair. Wrapping the functions in a TestCase only changes th"
+ },
+ {
+  "case": "CASE_016_digit_sum",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [
+   "TEST_DISABLED/info"
+  ],
+  "why": "digit_sum stringifies the signed integer, so int('-') raises on negatives. Both suites require digit_sum(-12) == 3. Flattening the TestCase back to module-level functions keeps tha"
+ },
+ {
+  "case": "CASE_017_cap_words",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "cap_words uses str.capitalize on the whole string, so only the first word is titled. Both suites require cap_words('hello WORLD') == 'Hello World'. The expected value is enforced b"
+ },
+ {
+  "case": "CASE_018_interleave",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "interleave iterates to min(len(a), len(b)) and drops the leftover tail. Both suites require interleave([1,2,3], ['a']) == [1, 'a', 2, 3]. Those comparisons are invoked as methods o"
+ },
+ {
+  "case": "CASE_019_normalize",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "normalize collapses spaces but never lowercases, so mixed case is preserved. Both suites require normalize('  Hello   WORLD  ') == 'hello world'. After the move, the test only call"
+ },
+ {
+  "case": "CASE_020_windows",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "windows uses range(len(xs)-n) and omits the last full window. Both suites check the first window [1,2] and the last window [3,4] of a length-2 slide. The two tests become one funct"
+ },
+ {
+  "case": "CASE_021_expand_range",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "expand_range uses range(a, b) and drops the inclusive end. Both suites require expand_range(1, 3) == [1, 2, 3] and a singleton [5]. The single test is split into two functions that"
+ },
+ {
+  "case": "CASE_022_safe_div",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "safe_div returns 0 on a zero divisor instead of None. Both suites require safe_div(1, 0) is None and safe_div(6, 3) == 2. The comparisons are expressed with operator.eq / operator."
+ },
+ {
+  "case": "CASE_023_parse_name",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "parse_name takes parts[1] as the last name, so a middle name becomes the surname. Both suites require last == 'Public' for 'John Q Public'. Named field asserts become a loop over a"
+ },
+ {
+  "case": "CASE_024_celsius",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_WEAKENED/high"
+  ],
+  "why": "c_to_f multiplies by 9/5 but forgets to add 32, so boiling water is 180. Both suites check 0 C -> 32 F and 100 C -> 212 F. Exact equality is rewritten with pytest.approx; the expec"
+ },
+ {
+  "case": "CASE_025_all_equal",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high"
+  ],
+  "why": "all_equal uses len(set(xs)) == 1, which is False for the empty list. Both suites require all_equal([]) is True and all_equal([1, 2]) is False. Direct boolean asserts become check(x"
+ },
+ {
+  "case": "CASE_026_leap",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "is_leap only tests divisibility by 4, so 1900 is treated as a leap year. Both suites include 1900 -> False and 2000 -> True. Explicit tests become one test driven by a params fixtu"
+ },
+ {
+  "case": "CASE_027_clip_index",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "clip_index uses i > n, so an index equal to the length is not clipped. Both suites require clip_index(5, 5) == 4. That boundary check moves into setUp and still runs before every t"
+ },
+ {
+  "case": "CASE_028_parse_rgb",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "pass",
+  "rules": [
+   "ASSERT_REMOVED/warn",
+   "ASSERT_SUBSTITUTED/warn"
+  ],
+  "why": "parse_hex_rgb reads one hex digit per channel, so #ffffff becomes (15, 15, 15). Both suites require (255, 255, 255) for white. Field-by-field asserts become a single namedtuple equ"
+ },
+ {
+  "case": "CASE_029_flatten",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "TEST_DISABLED/high"
+  ],
+  "why": "flatten never unwraps inner lists, so [[1, 2], 3] stays nested. Both suites require flatten([[1, 2], 3]) == [1, 2, 3]. unittest equality is rewritten as an if/raise, which is the r"
+ },
+ {
+  "case": "CASE_030_prefix",
+  "valid": true,
+  "checks": {
+   "before_good_pass": true,
+   "before_bug_fail": true,
+   "after_good_pass": true,
+   "after_bug_fail": true
+  },
+  "verdict": "block",
+  "rules": [
+   "ASSERT_REMOVED/high",
+   "IMPORT_UNRESOLVED/warn"
+  ],
+  "why": "common_prefix returns a[:i+1] and includes the first mismatching character. Both suites require common_prefix('abc', 'abd') == 'ab'. The check moves into tests/helpers.py and the t"
+ }
+]

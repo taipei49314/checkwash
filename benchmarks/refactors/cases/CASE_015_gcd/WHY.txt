@@ -1,0 +1,1 @@
+gcd never takes abs, so gcd(-6, -9) returns -3. Both suites assert the Euclidean result is the positive 3, plus a coprime pair. Wrapping the functions in a TestCase only changes the collection shape.

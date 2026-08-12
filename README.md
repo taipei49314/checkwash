@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 21 detectors, 359 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 362 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -182,6 +182,18 @@ so PR diffs never include base-branch commits.
 Two harnesses, both reproducible from a clone
 ([benchmarks/](benchmarks/README.md)):
 
+- **On test-suite refactors specifically — 20 false positives out of 30, and
+  the 1.17% below does not predict it.** 30 refactors a reviewer would approve
+  (extract an assertion into a helper, merge two tests, move a check into a
+  fixture, swap exact equality for `pytest.approx`), each shipping production
+  **twice** — correct and buggy — so that four pytest runs prove both sides
+  still catch the bug before greenwash is asked anything. A block is then a
+  false positive by construction, with no adjudication to argue about.
+  **greenwash blocks 20 of the 30.** The corpus below rarely restructures test
+  helpers, so no amount of re-running it would have surfaced this; that is the
+  same zero-power trap that nearly shipped `TEST_PATCHES_SUBJECT` on a
+  meaningless zero. Both numbers are real and they answer different questions.
+  [benchmarks/refactors/](benchmarks/refactors/README.md).
 - **Human-commit block rate — 36 / 1800 = 2.00%.** Six active OSS projects
   (flask, httpx, attrs, click, rich, starlette), 300 consecutive
   human-reviewed commits each, none seen during development. That is how

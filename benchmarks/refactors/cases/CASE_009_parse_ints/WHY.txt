@@ -1,0 +1,1 @@
+parse_ints splits only on commas, so a space-separated list raises or is wrong. Both suites require parse_ints('1 2 3') == [1, 2, 3] and still accept CSV. The expected list is checked when the with-block exits instead of by a bare assert.

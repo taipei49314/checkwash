@@ -1,0 +1,1 @@
+sign treats 0 as positive and returns 1. The original test already asserts sign(0) == 0 through assert_sign, so both revisions fail on the bug. The after suite adds test_negative that reuses the same helper.

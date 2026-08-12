@@ -1,0 +1,1 @@
+windows uses range(len(xs)-n) and omits the last full window. Both suites check the first window [1,2] and the last window [3,4] of a length-2 slide. The two tests become one function that calls check() twice.

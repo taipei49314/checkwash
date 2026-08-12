@@ -1,0 +1,1 @@
+c_to_f multiplies by 9/5 but forgets to add 32, so boiling water is 180. Both suites check 0 C -> 32 F and 100 C -> 212 F. Exact equality is rewritten with pytest.approx; the expected numbers stay the same.

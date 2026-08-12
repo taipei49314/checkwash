@@ -1,0 +1,1 @@
+fib starts at (1, 1), so fib(0) is 1 and the sequence is shifted. Both suites check fib(0)==0, fib(1)==1, and fib(6)==8. Folding the parametrize table back into a loop still visits every triple.

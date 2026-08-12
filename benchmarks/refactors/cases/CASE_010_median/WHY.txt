@@ -1,0 +1,1 @@
+median returns the upper middle element for even-length lists instead of the mean. Both suites check an odd list and [1, 2, 3, 4] == 2.5. The comparisons move onto MedianChecks and the test class inherits them.

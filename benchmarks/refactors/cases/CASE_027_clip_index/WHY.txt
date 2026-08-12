@@ -1,0 +1,1 @@
+clip_index uses i > n, so an index equal to the length is not clipped. Both suites require clip_index(5, 5) == 4. That boundary check moves into setUp and still runs before every test method.

@@ -1,0 +1,1 @@
+common_prefix returns a[:i+1] and includes the first mismatching character. Both suites require common_prefix('abc', 'abd') == 'ab'. The check moves into tests/helpers.py and the test imports it.

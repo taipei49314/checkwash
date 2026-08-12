@@ -1,0 +1,1 @@
+chunk stops before the last partial group, dropping the tail of odd-length lists. Both suites require chunk([1,2,3,4,5], 2) == [[1,2],[3,4],[5]]. The comparison is provided by a conftest fixture the test requests.

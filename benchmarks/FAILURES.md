@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **106 bypasses** are documented, of which **22 are not closed**.
+- **107 bypasses** are documented, of which **23 are not closed**.
 - **21 of 1800** human-written commits are blocked by mistake (1.17%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -148,7 +148,7 @@ behind it* unshippable.
 | 89 | Weaken the suite in an **intermediate** script: the CI entry only calls another script, so it holds no runner token of its own — `./scripts/run-tests.sh` becoming `./scripts/run-tests.sh \|\| true` | `runner_one_hop_pos.gwcase` |
 | 90 | Patch the code under test **from inside the test**, not from a conftest: `monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)` two lines above `assert billing.invoice_total(...) == 105.3`, or the same thing spelled `mock.patch(...)` / `patch.object(...)` / `mocker.patch(...)`. Production and the assertion line both stay byte-identical | `test_patches_subject_mock_patch_pos.gwcase`, `test_patches_subject_new_test_neg.gwcase`, `test_patches_subject_pos.gwcase`, `test_patches_subject_stdlib_neg.gwcase`, `test_patches_subject_unrelated_attr_neg.gwcase`, `test_patches_subject_via_local_pos.gwcase` |
 
-## Unclassified (12)
+## Unclassified (13)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -164,6 +164,7 @@ behind it* unshippable.
 | 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | — |
 | 86j | The expectation lives in a **conftest** fixture, not a same-file one | — |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | — |
+| 92 | (False positive, and the largest one) Restructure where a test's assertions live, without weakening anything: extract the check into a helper or a `conftest.py`, move it into a fixture's teardown, merge two tests into one, split one into two, drive them from a params fixture, put the comparison behind `operator.eq` or a comparison object's method, replace exact equality with `pytest.approx` and a tolerance | — |
 
 ## False positives on human-written commits
 

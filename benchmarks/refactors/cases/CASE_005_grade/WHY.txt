@@ -1,0 +1,1 @@
+letter_grade uses strict > so a score of 90 is not an A. Both suites include the exact boundaries 90, 80, 70 and a failing 59. Moving the table from a for-loop into @pytest.mark.parametrize still executes every row.

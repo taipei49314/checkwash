@@ -1,0 +1,1 @@
+safe_div returns 0 on a zero divisor instead of None. Both suites require safe_div(1, 0) is None and safe_div(6, 3) == 2. The comparisons are expressed with operator.eq / operator.is_ instead of assert ==.

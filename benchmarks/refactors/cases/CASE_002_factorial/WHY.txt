@@ -1,0 +1,1 @@
+factorial uses range(1, n) and so drops the last factor; factorial(5) becomes 24. Both suites compare 0!, 1!, and 5! to 1, 1, and 120. Inlining assert_fact just puts those same comparisons back in the test bodies.

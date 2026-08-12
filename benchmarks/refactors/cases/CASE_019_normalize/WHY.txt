@@ -1,0 +1,1 @@
+normalize collapses spaces but never lowercases, so mixed case is preserved. Both suites require normalize('  Hello   WORLD  ') == 'hello world'. After the move, the test only calls the wrapper; the fixture teardown performs the assert.

@@ -1,0 +1,1 @@
+digit_sum stringifies the signed integer, so int('-') raises on negatives. Both suites require digit_sum(-12) == 3. Flattening the TestCase back to module-level functions keeps that assertion.

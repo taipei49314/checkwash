@@ -1,8 +1,35 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-13 (v0.1.25: T1.4 — and an informed arm that escapes 28 times out of 40)
+Updated: 2026-08-13 (v0.1.25, then two corpora that priced both sides of the same blindness)
 
-## 2026-08-13: 12 of 40 — read this before anything else in this file
+## 2026-08-13: 20 of 30 honest refactors are blocked — and 1.17% never said so
+
+A second corpus, built to target one shape the sweep corpus almost never
+performs: **moving where a test's assertions live.** Extract a check into a
+helper, merge two tests, push the oracle into a fixture's teardown, swap `==`
+for `pytest.approx`.
+
+Every case ships production **twice**, correct and buggy, and four pytest runs
+must agree that both the before and after suites still catch the bug. Only then
+is greenwash asked. A block is therefore a false positive by construction —
+nothing to adjudicate, nothing to argue about.
+
+**greenwash blocks 20 of 30.**
+
+The published false-positive rate is 21/1800 = 1.17%. That number is honest
+about what it measured and it does not predict this, because those six
+libraries rarely restructure test helpers — the identical zero-power trap that
+nearly shipped `TEST_PATCHES_SUBJECT` on a meaningless zero the same day. Two
+corpora, two questions, and neither substitutes for the other.
+
+**And it is the same defect as the escapes below, seen from the other side.**
+`ASSERT_REMOVED` fires on 8 of them because the assertion moved somewhere the IR
+does not follow; 28 of 40 attacks get through for exactly that reason. A5 is
+therefore not a recall change that risks precision — it is the shared cause of
+both numbers, and `benchmarks/refactors/` is what will say whether fixing it is
+a net improvement. THREATMODEL 92.
+
+## 2026-08-13: 12 of 40 — the informed arm
 
 An overnight informed-adversarial run produced 40 tampering cases against a
 description of every rule in this tool. Each was verified mechanically before

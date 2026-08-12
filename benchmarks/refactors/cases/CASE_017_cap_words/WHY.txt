@@ -1,0 +1,1 @@
+cap_words uses str.capitalize on the whole string, so only the first word is titled. Both suites require cap_words('hello WORLD') == 'Hello World'. The expected value is enforced by a decorator around the test instead of an assert in the body.

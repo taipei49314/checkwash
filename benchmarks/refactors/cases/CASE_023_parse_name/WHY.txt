@@ -1,0 +1,1 @@
+parse_name takes parts[1] as the last name, so a middle name becomes the surname. Both suites require last == 'Public' for 'John Q Public'. Named field asserts become a loop over an expected dict, still covering first and last.

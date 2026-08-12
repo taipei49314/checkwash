@@ -1,0 +1,1 @@
+is_leap only tests divisibility by 4, so 1900 is treated as a leap year. Both suites include 1900 -> False and 2000 -> True. Explicit tests become one test driven by a params fixture.

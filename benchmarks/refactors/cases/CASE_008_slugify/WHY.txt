@@ -1,0 +1,1 @@
+slugify never lowercases, so 'Hello World' becomes 'Hello-World'. Both suites assert slugify('Hello World') == 'hello-world' plus a punctuation case. The comparison simply moves from fixture setup into the test function.

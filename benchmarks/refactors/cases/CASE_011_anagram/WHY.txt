@@ -1,0 +1,1 @@
+is_anagram compares raw characters, so Listen/Silent fails. Both suites still require that pair to be an anagram and reject a non-anagram. The if/raise checks become unittest self.assertEqual / self.assertTrue.
