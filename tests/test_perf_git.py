@@ -30,7 +30,29 @@ FILES = 150
 
 
 def _git(repo, *args):
-    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+    """Run git in the scratch repo, and say why when it fails.
+
+    `check=True, capture_output=True` reports the exit code and throws the
+    reason away. That is how `git add -A` returning 128 on the macOS 3.11 leg
+    (2026-08-13) arrived as a bare CalledProcessError with nothing to diagnose
+    — on a gate whose whole purpose is to keep a performance regression from
+    being ignored. A gate that fails without saying why gets ignored just as
+    thoroughly as one that does not run.
+
+    `safe.directory` is set because a temp directory whose owner git does not
+    recognise makes every command in it fail this way, and the runner's
+    `/private/var/folders/...` is exactly that shape.
+    """
+    proc = subprocess.run(
+        ["git", "-c", f"safe.directory={repo}", "-C", str(repo), *args],
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        raise AssertionError(
+            f"git {' '.join(args)} failed ({proc.returncode}) in {repo}\n"
+            f"stdout: {proc.stdout.decode('utf-8', 'replace')}\n"
+            f"stderr: {proc.stderr.decode('utf-8', 'replace')}"
+        )
 
 
 @pytest.fixture(scope="module")
