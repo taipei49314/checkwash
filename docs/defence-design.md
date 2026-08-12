@@ -366,8 +366,19 @@ immediate invocation hides 036 and 004.
 - **FP risk: the highest in this document, above A1's.** This makes *every*
   existing oracle rule see more assertions. A helper wrongly credited to a unit
   invents assertions that were never there, and a call graph that over-resolves
-  turns one legitimate refactor into a fleet of `ASSERT_REMOVED`s. The corpus
-  will price it, and nothing else can.
+  turns one legitimate refactor into a fleet of `ASSERT_REMOVED`s.
+- **Added 2026-08-13, still before any detector code: the baseline says this is
+  not only a recall change.** A corpus of 30 legitimate refactors — each
+  shipping production twice so four pytest runs prove both sides still catch the
+  bug — measures the *current* build at **20 false positives out of 30**
+  (`benchmarks/refactors/`, THREATMODEL 92). Eight of them are `ASSERT_REMOVED`
+  fired because the assertion moved into a helper, a `conftest.py` or a fixture
+  teardown: **the same blindness that lets 28 of 40 attacks through**. So the
+  question this round answers is not "how much precision does recall cost" but
+  "does modelling reachability improve both numbers at once". A second
+  acceptance criterion follows from that, fixed here: **the refactor corpus must
+  not get worse, and the eight `ASSERT_REMOVED` cases are the ones to watch.**
+  The sweep threshold below is unchanged.
 - **Residual, stated not implied:** the helper in another module; oracles inside
   string literals (038); and the family this cannot touch at all — a syntactic
   `assert` whose *meaning* was subverted (`__eq__`/`__bool__`/`__contains__`
