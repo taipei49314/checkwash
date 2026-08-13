@@ -1,0 +1,2 @@
+unique preserving order
+Mechanism: helper sorts both sides before comparing

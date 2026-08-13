@@ -1,6 +1,43 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-13 (v0.1.25, then two corpora that priced both sides of the same blindness)
+Updated: 2026-08-13 (v0.1.26: the IR now records the assertions a test executes)
+
+## 2026-08-13 (v0.1.26): reachable assertions — both numbers moved together
+
+The A5 round (#37). `UnitSide.assertions` stops meaning *the `assert`
+statements written inside this function* and starts meaning **the assertions
+this unit executes**: its own, minus those in nested scopes nothing invokes,
+plus those of same-file helpers it actually calls — where *calls* means
+invocation, not mention (`callable(assert_sum)` names the oracle without
+running it), and construction is not invocation (`partial` binds; a
+`@contextmanager` runs only under `with`).
+
+Four corpora, one table:
+
+| | v0.1.25 | v0.1.26 |
+|---|---|---|
+| informed attacks blocked (arm 1) | 12/40 | **19/40** |
+| disguised-extraction attacks blocked (arm 2, new) | — | **28/40** |
+| honest refactors falsely blocked (arm 1) | 20/30 | **17/30** |
+| faithful extractions falsely blocked (arm 2, new) | — | 16/30 |
+
+The acceptance test was that both sides move together, and they did. The
+disguised arm is the important control: `ASSERT_SUBSTITUTED` now declines any
+pair that crosses the unit-body boundary (extraction moves the *slot*, not the
+assertion), and the arm proves that declining gives nothing away — the
+weakening extractions still block as `ASSERT_WEAKENED`, 25 of the 28.
+
+The measured residue is named, not averaged: cross-file helpers (bounded,
+next), unit-identity changes (THREATMODEL 92's other half), semantic
+subversion and computed zero-runs (execution-only — THREATMODEL 91a, where
+every remaining escape now lives), and one refused trade — a shared assertion
+that is lattice-weaker than the concrete ones it replaced stays a finding,
+because that identical transition is what catches the disguised arm.
+
+Three of my own numbers were corrected by measurement on the way (the P2
+ranking, "12–16", then "10" — issue #37 carries all three), which is the
+round's second lesson: every estimate this project has published without a
+harness behind it has been wrong.
 
 ## 2026-08-13: 20 of 30 honest refactors are blocked — and 1.17% never said so
 
@@ -689,7 +726,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.25 |
+| version | v0.1.26 |
 | detectors | 21 |
 | human-commit block rate | 36/1800 = 2.00% |
 | adjudicated false positive | 21/1800 = 1.17% |

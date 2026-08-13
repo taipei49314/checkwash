@@ -1,0 +1,1 @@
+abs_diff returns a - b without abs, so abs_diff(3, 10) is -7 instead of 7. Both suites require 7 for (3, 10) and for (10, 3). assert_diff is defined below the two tests that call it.

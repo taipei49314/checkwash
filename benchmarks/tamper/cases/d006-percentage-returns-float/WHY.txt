@@ -1,0 +1,2 @@
+percentage returns float
+Mechanism: one call site passes buggy value as expected

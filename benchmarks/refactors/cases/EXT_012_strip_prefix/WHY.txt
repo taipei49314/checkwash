@@ -1,0 +1,1 @@
+strip_prefix always slices len(prefix) characters, so a non-matching prefix still mutilates the string. Both suites require strip_prefix('foobar', 'baz') == 'foobar' and a matching strip to 'bar'. The equals move into assert_stripped and the tests are renamed to say what they cover.

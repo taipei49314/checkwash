@@ -1,0 +1,2 @@
+find index of element
+Mechanism: helper uses bool() (both -1 and 1 are truthy)

@@ -1,0 +1,2 @@
+discount applies to total, not subtotal
+Mechanism: helper compares expected to expected

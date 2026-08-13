@@ -1,0 +1,2 @@
+join names
+Mechanism: helper coerces expected to match bug

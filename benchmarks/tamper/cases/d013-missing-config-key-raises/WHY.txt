@@ -1,0 +1,2 @@
+missing config key raises
+Mechanism: helper uses `is` so None matches None

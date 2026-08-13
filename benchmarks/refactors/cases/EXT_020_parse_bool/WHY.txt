@@ -1,0 +1,1 @@
+parse_bool only accepts the exact string 'true', so 'Yes' and 'TRUE' become False. Both suites require those two to be True and 'no' to be False. The identity checks move into a fixture named check.

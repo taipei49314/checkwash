@@ -1,0 +1,2 @@
+split on first separator
+Mechanism: helper checks length > 0 instead of value

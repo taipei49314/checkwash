@@ -1,0 +1,1 @@
+percent forgets the * 100, so percent(1, 4) is 0 instead of 25. Both suites require 25, 50, and 100 for the obvious fractions. The equals move into a fixture factory named assert_pct.

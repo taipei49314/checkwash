@@ -1,0 +1,2 @@
+password strength
+Mechanism: helper negates: `assert not func()`

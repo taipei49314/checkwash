@@ -1,0 +1,1 @@
+indent only prefixes the first line, so a second line stays flush left. Both suites require indent('a\nb', 2) == '  a\n  b' plus a one-line and a blank-line case. The three concrete equals move into assert_indented(text, n, expected) defined above the tests.

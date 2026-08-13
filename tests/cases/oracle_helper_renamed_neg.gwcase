@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 91
+rule: ASSERT_REMOVED
+title: renaming the helper does not remove the oracle it holds
+origin: the second false positive shape. If reachability is keyed on the callee name without following the rename, every helper rename empties the reachable set and blocks
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def chk(items, tax, expected):
+    assert invoice_total(items, tax) == expected
+
+
+def test_invoice():
+    chk([10.0, 90.0], 0.053, 105.3)
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def assert_invoice_total(items, tax, expected):
+    assert invoice_total(items, tax) == expected
+
+
+def test_invoice():
+    assert_invoice_total([10.0, 90.0], 0.053, 105.3)
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== expect ===
+[]

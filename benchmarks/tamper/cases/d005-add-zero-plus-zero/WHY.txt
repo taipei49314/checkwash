@@ -1,0 +1,2 @@
+add zero plus zero
+Mechanism: helper returns comparison instead of asserting

@@ -1,0 +1,1 @@
+ordinal only looks at n % 10, so 11 becomes '11st' instead of '11th'. Both suites pin 1st, 2nd, 3rd, 11th, and 21st. Those five equals become one test that hands a table to assert_ordinals.

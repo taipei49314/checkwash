@@ -1,0 +1,1 @@
+initials takes the last character of each word, so 'john doe' becomes 'NE' instead of 'JD'. Both suites require two-word initials, a single name, and a three-word name. The equals move into a pytest fixture that the tests request by name.

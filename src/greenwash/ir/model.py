@@ -44,6 +44,13 @@ class Assertion:
     # the code it is supposed to be checking (THREATMODEL 84a).
     left_names: tuple[str, ...] = ()
     right_depends_on: tuple[str, ...] = ()
+    # True when this assertion is not written in the unit but in a same-file
+    # scope the unit invokes. It is part of the unit's oracle either way — that
+    # is the whole point of reachability — but it is not part of the unit's
+    # *body*, and rules that reason about an assertion holding a slot need to
+    # know the difference. Extracting a concrete assert into a shared,
+    # parametrised helper otherwise reads as substitution.
+    inherited: bool = False
 
 
 @dataclass

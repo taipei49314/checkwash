@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 91
+rule: ASSERT_REMOVED
+title: extracting the assertion into a helper that is called is a refactor, not a removal
+origin: the false positive this whole change invites, and measured at 8 of 30 on the current build before it was written (benchmarks/refactors, THREATMODEL 92). Once a unit's assertions include the ones its helpers run, moving an assert OUT of the unit body looks exactly like deleting it - and extracting a shared check is the commonest tidy-up there is
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_small_invoice():
+    assert invoice_total([10.0], 0.0) == 10.0
+
+
+def test_large_invoice():
+    assert invoice_total([10.0, 90.0], 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def check_total(items, tax, expected):
+    assert invoice_total(items, tax) == expected
+
+
+def test_small_invoice():
+    check_total([10.0], 0.0, 10.0)
+
+
+def test_large_invoice():
+    check_total([10.0, 90.0], 0.053, 105.3)
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== expect ===
+[]

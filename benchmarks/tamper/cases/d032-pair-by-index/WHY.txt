@@ -1,0 +1,2 @@
+pair by index
+Mechanism: helper checks len and tuple arity only

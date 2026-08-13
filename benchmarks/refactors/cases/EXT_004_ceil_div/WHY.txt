@@ -1,0 +1,1 @@
+ceil_div uses floor division, so ceil_div(5, 2) is 2 instead of 3. Both suites check a non-divisible pair, an exact pair, and a numerator smaller than the divisor. assert_ceil(a, b) recomputes (a + b - 1) // b itself instead of taking an expected argument.

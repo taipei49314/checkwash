@@ -1,0 +1,1 @@
+rpad inserts the fill on the left, so rpad('hi', 5, '.') is '...hi' instead of 'hi...'. Both suites check length, that the original string is a prefix, and the exact padded value. Those three asserts per test become one call to assert_rpadded.

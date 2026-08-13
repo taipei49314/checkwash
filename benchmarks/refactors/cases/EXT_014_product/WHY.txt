@@ -1,0 +1,1 @@
+product initialises the accumulator at 0, so every product is 0, including product([]) which should be 1. Both suites check [2, 3, 4] -> 24, [] -> 1, and [7] -> 7. assert_product(xs) compares against math.prod(xs) instead of a passed-in expected.

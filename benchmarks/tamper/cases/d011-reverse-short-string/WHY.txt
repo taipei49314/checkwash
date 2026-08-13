@@ -1,0 +1,2 @@
+reverse short string
+Mechanism: helper compares got to got

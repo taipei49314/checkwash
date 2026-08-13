@@ -1,0 +1,1 @@
+common_suffix walks from the start, so common_suffix('abc', 'xbc') is '' instead of 'bc'. Both suites require that pair, a disjoint pair, and an identical pair. The check moves into tests/helpers.py and the tests import it.

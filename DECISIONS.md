@@ -1554,3 +1554,64 @@ detector count has been recomputed from the registry since 2026-08-04; the
 SPEC's never was, so the weaker claim was the one being checked.
 `test_spec_rule_table_covers_the_registry` and
 `test_spec_rule_count_prose_matches_the_table` close that.
+
+## D-044 (2026-08-13): the IR now records the assertions a test executes
+
+The A5 round (#37, THREATMODEL 91). One modelling decision replaced, no new
+rule added, and the rule set's *meaning* got smaller: `ASSERT_REMOVED` is now
+literally "the reachable set shrank".
+
+**What changed.** `_collect_unit` computes the unit's executed scopes — itself,
+plus same-file functions, lambdas, classes and `@contextmanager`s it invokes,
+through the file's call graph to depth 4. Assertions in an invoked helper join
+the unit's set flagged `inherited`; assertions in a nested def nothing calls
+leave it (that bug predates the attack that exposed it — `ast.walk` counted
+them as live since M0). Two definitions carry everything, both corrected by
+prototype rather than argument, both now docstrings in `frontend.py`:
+*reaching means invocation, not mention*, and *construction is not invocation*.
+
+**The slot rule.** `ASSERT_SUBSTITUTED` declines any fallback pair that crosses
+the body boundary (`a.inherited != b.inherited`), in both directions —
+extraction and inlining move the slot, not the assertion. The disguised-attack
+arm is why this is safe to say: 25 of its 28 blocks come from the strength drop
+(`ASSERT_WEAKENED`) that survives the decline untouched.
+
+**Numbers, all four corpora at once** (score.py exists so they cannot be
+reported separately): attacks 12/40 → 19/40, disguised arm 28/40 at first
+contact, refactor FPs 20/30 → 17/30, extraction arm 16/30. Both sides of the
+same blindness, moving together — which was the pre-registered acceptance
+criterion, alongside the sweep threshold.
+
+**The refused trade, in writing.** ~8 extraction FPs exist because the shared
+assertion is lattice-weaker than the concrete asserts it replaced. The same
+transition is the disguised arm's whole detection surface. Fixing those FPs
+costs those catches; refused, and THREATMODEL 92 says so.
+
+**Estimates corrected by measurement, third and fourth of the round:** the
+prototype's "10 reachability escapes" was a miscount (three were
+vacuous-subject edits — the assert stays, its subject becomes `for n in nums
+if False` / `mismatches[:0]` / `pred` without the call — a separate family
+with one clean syntactic signal: a called subject becoming a bare name). And a
+double-count bug (an invoked *nested* def's assert collected once by the body
+walk and again as inherited) was caught by a fixture pinning one finding and
+getting two. Every number this project has published without a harness behind
+it has been wrong; the sentence is now load-bearing.
+
+**Sweep reconciliation.** 36 → 36 blocks, zero verdict movement, and one
+sub-blocking delta, reconciled by A/B against a v0.1.25 worktree rather than
+guessed at: click `1aa2d53d63ff`, where two TEST_DISABLED findings on a
+relocated test changed de-escalator — `ASSERTION_MOVED` (info) became
+`RESTRUCTURED` (warn) — because the moved unit calls a helper, its multiset
+now carries the helper's inherited assertion text, and the destination file
+has no such helper to match it. One commit in 1800, still de-escalated, and
+the direction is toward more visible rather than less. The refinement (match
+the move credit on own-body assertions only) is a follow-up, not a
+pre-release patch to an already-measured build.
+
+**Worker provenance.** Two of the four corpora were generated overnight by
+cheap worker models from prompts that made their output mechanically
+verifiable — production shipped twice, four pytest runs, no trust required.
+One returned a generator script instead of files; the script was read before
+anything ran, and its embedded cases were re-verified by this repo's own
+harness rather than its own validator. The pattern held: quantity from the
+workers, judgement and verification here.

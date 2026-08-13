@@ -1,0 +1,1 @@
+merge_unique concatenates without dropping duplicates, so [1, 2] + [2, 3] stays [1, 2, 2, 3]. Both suites require [1, 2, 3] and a first-seen order of [3, 1, 2]. The equals move onto MergeChecks.assert_merged; TestMergeUnique inherits that mixin.

@@ -1,0 +1,1 @@
+truncate always appends '...', so a string already shorter than n becomes 'hello...'. Both suites require truncate('hello', 10) == 'hello' and a real cut at n=3. assert_trunc(s, n) derives the expected value from len(s) and n instead of taking it as an argument.

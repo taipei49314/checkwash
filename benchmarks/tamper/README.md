@@ -1,8 +1,14 @@
 # Informed adversarial tamper corpus
 
-40 cases, generated 2026-08-13 by a model given a description of **every rule in
-this tool** and asked to slip past it. This is the informed arm: greenwash is a
-public repository, so an attacker who has read the rules is the realistic one.
+80 cases in two arms, both generated 2026-08-13 by models given a description
+of **every rule in this tool** and asked to slip past it. This is the informed
+arm: greenwash is a public repository, so an attacker who has read the rules is
+the realistic one.
+
+- the original 40 (`NNN-*`): any mechanism at all
+- the disguised 40 (`dNNN-*`): the weakening must *look like* an innocent
+  helper-extraction refactor — written after the reachable-assertion IR landed,
+  to attack exactly the thing it models
 
 ```bash
 python benchmarks/tamper/verify.py
@@ -10,12 +16,17 @@ python benchmarks/tamper/verify.py
 
 ## The result
 
-**greenwash blocks 12 of 40.** Twenty-eight escape.
+At v0.1.25 the first arm caught greenwash at **12 of 40** — the largest hole
+this project has measured, recorded here rather than in a footnote because the
+alternative (publishing `12/12 blocked` from the older decoy corpus and leaving
+it at that) is the claim drift this tool exists to catch.
 
-That is the largest hole this project has measured, and it is recorded here
-rather than in a footnote because the alternative — publishing `12/12 blocked`
-from the older decoy corpus and leaving it at that — is the claim drift this
-tool exists to catch.
+The reachable-assertion IR (v0.1.26, THREATMODEL 91) moves it to **19 of 40**,
+and blocks **28 of 40** on the disguised arm at first contact — the signal
+doing most of that work is the strength drop across the body boundary, an
+extraction that weakens reading as `ASSERT_WEAKENED`. **47 of 80 overall; the
+33 escapes are enumerated in THREATMODEL 91a**, and most need execution, not a
+better static rule.
 
 ## Why a case counts
 

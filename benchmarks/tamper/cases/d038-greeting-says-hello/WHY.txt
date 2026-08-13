@@ -1,0 +1,2 @@
+greeting says Hello
+Mechanism: helper checks substring (name is in result)

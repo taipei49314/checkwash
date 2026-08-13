@@ -1,0 +1,2 @@
+integer division result
+Mechanism: helper uses abs diff < 1 (tolerance)

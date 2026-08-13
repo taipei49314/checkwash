@@ -1,0 +1,1 @@
+is_sorted uses a strict <, so a run of equal values such as [1, 1, 2] is rejected. Both suites require that non-decreasing list, a strictly increasing list, and a descent. The identity checks move onto TestSorted.assert_sorted and the tests become TestCase methods.

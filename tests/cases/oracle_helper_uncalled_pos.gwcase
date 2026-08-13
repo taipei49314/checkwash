@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 91
+rule: ASSERT_REMOVED
+title: the helper holding the oracle is still defined, and nothing calls it any more
+origin: benchmarks/tamper case 001 - greenwash recorded ZERO assertions for the before side, because assert_sum(add(2, 3), 5) is a call. Nothing could be removed and nothing weakened, and the replacement assert registered as an assertion ADDED: by the strength lattice the test got stronger
+=== before: tests/test_addsub.py ===
+from app.addsub import add
+
+
+def assert_sum(got, expected):
+    assert got == expected
+
+
+def test_add():
+    assert_sum(add(2, 3), 5)
+=== after: tests/test_addsub.py ===
+from app.addsub import add
+
+
+def assert_sum(got, expected):
+    assert got == expected
+
+
+def test_add():
+    add(2, 3)
+    assert callable(assert_sum)
+=== head: src/app/addsub.py ===
+def add(a, b):
+    return a - b
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

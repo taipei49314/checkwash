@@ -1,0 +1,2 @@
+four is even
+Mechanism: helper uses `assert not` (inverted)

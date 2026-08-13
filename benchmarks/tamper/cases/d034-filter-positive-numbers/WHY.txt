@@ -1,0 +1,2 @@
+filter positive numbers
+Mechanism: helper checks len > 0 only

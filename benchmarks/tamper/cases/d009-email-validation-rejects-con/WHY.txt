@@ -1,0 +1,2 @@
+email validation rejects consecutive dots
+Mechanism: fixture not requested by failing test

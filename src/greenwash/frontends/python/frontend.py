@@ -1236,12 +1236,145 @@ def _skip_call_guards(func: ast.FunctionDef | ast.AsyncFunctionDef, text) -> dic
     return out
 
 
+_SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)
+# Callees that invoke a function argument immediately. `partial` is deliberately
+# absent: it *constructs*, and the call happens when the partial itself is
+# called — which is exactly the edit that turns `job()` into
+# `assert callable(job)` (benchmarks/tamper 036).
+_INVOKES_ARGUMENT = frozenset({"map", "filter", "apply", "run", "testmod", "exec"})
+_DEFERS_ARGUMENT = frozenset({"partial"})
+
+
+def _scope_nodes(scope):
+    """Nodes this scope executes, without descending into nested scopes.
+
+    Nested scopes come back separately, and only when something invokes them.
+    """
+    stack = list(ast.iter_child_nodes(scope))
+    while stack:
+        node = stack.pop()
+        if isinstance(node, _SCOPE_NODES):
+            continue
+        yield node
+        stack.extend(ast.iter_child_nodes(node))
+
+
+def _invocations(scope) -> set[str]:
+    """Names this scope actually *invokes*.
+
+    Mention is not invocation, and the distinction is the whole design:
+    `callable(assert_sum)`, `hasattr`, `inspect.getsource(f)` and `f.__name__`
+    all name the oracle without running it, which is precisely the edit these
+    attacks make. Counting a bare `Name` argument as a call hides
+    benchmarks/tamper 001.
+    """
+    out: set[str] = set()
+    for node in _scope_nodes(scope):
+        if isinstance(node, (ast.With, ast.AsyncWith)):
+            for item in node.items:
+                name = _callee_root(item.context_expr)
+                if name:
+                    out.add(name)
+        elif isinstance(node, ast.For):
+            name = _callee_root(node.iter)
+            if name:
+                out.add(name)
+        elif isinstance(node, ast.Call):
+            name = _callee_root(node)
+            if not name:
+                continue
+            out.add(name)
+            if name.split(".")[-1] in _INVOKES_ARGUMENT:
+                out.update(a.id for a in node.args if isinstance(a, ast.Name))
+    return out
+
+
+def _callee_root(node) -> str | None:
+    if not isinstance(node, ast.Call):
+        return None
+    f = node.func
+    while isinstance(f, ast.Attribute):
+        f = f.value
+    return f.id if isinstance(f, ast.Name) else None
+
+
+def _is_contextmanager(node) -> bool:
+    return isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
+        (isinstance(d, ast.Name) and d.id == "contextmanager")
+        or (isinstance(d, ast.Attribute) and d.attr == "contextmanager")
+        for d in node.decorator_list
+    )
+
+
+def _local_scopes(func, module_scopes: dict[str, ast.AST]) -> dict[str, ast.AST]:
+    """Callable names visible to this unit: the module's, plus its own nested
+    defs and lambdas, plus names bound to a deferred call (`partial`)."""
+    out = dict(module_scopes)
+    for node in ast.walk(func):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node is not func:
+            out[node.name] = node
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                if not isinstance(target, ast.Name):
+                    continue
+                if isinstance(node.value, ast.Lambda):
+                    out[target.id] = node.value
+                elif isinstance(node.value, ast.Call):
+                    callee = _callee_root(node.value)
+                    if callee and callee.split(".")[-1] in _DEFERS_ARGUMENT:
+                        for arg in node.value.args:
+                            if isinstance(arg, ast.Name) and arg.id in out:
+                                out[target.id] = out[arg.id]
+                                break
+    return out
+
+
+def _executed_scopes(func, module_scopes: dict[str, ast.AST], max_depth: int = 4) -> list:
+    """The unit, plus every same-file scope it actually reaches.
+
+    This is what makes `UnitSide.assertions` mean *the assertions this test
+    runs* rather than *the assert statements written inside it*. Both halves
+    matter: an assertion in an uninvoked nested `def` stops counting, and an
+    assertion in a helper the unit calls starts.
+    """
+    scopes = _local_scopes(func, module_scopes)
+    with_entered = {
+        _callee_root(item.context_expr)
+        for node in _scope_nodes(func)
+        if isinstance(node, (ast.With, ast.AsyncWith))
+        for item in node.items
+    }
+    out = [func]
+    seen: set[int] = {id(func)}
+    frontier = [(name, 0) for name in _invocations(func)]
+    while frontier:
+        name, depth = frontier.pop()
+        target = scopes.get(name)
+        if target is None or depth >= max_depth or id(target) in seen:
+            continue
+        # A @contextmanager runs its body only when entered: building the
+        # generator and never using `with` runs nothing (tamper 004).
+        if _is_contextmanager(target) and name not in with_entered:
+            continue
+        seen.add(id(target))
+        out.append(target)
+        if isinstance(target, ast.ClassDef):
+            for child in target.body:
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    seen.add(id(child))
+                    out.append(child)
+                    frontier.extend((c, depth + 1) for c in _invocations(child))
+        frontier.extend((c, depth + 1) for c in _invocations(target))
+    return out
+
+
 def _collect_unit(
     func: ast.FunctionDef | ast.AsyncFunctionDef,
     qualname: str,
     text: str,
     off: _Offsets,
     inherited_markers: list[Marker] | None = None,
+    module_scopes: dict[str, ast.AST] | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -1253,10 +1386,30 @@ def _collect_unit(
     guards = _skip_call_guards(func, text)
     bindings = _local_bindings(func)
 
+    # Markers, handlers, calls and patches stay keyed to the unit's own body: a
+    # helper's assertions are this unit's oracle, a helper's `except` is not
+    # this unit's handler. Only the assertion set follows reachability.
+    executed = _executed_scopes(func, module_scopes or {})
+    reached_asserts = {
+        id(n) for scope in executed for n in _scope_nodes(scope) if isinstance(n, ast.Assert)
+    }
+    # Asserts collected by this walk, so the executed-scopes pass below does
+    # not add them a second time: an invoked *nested* def is both lexically
+    # inside `func` (this walk sees it) and an executed scope (that loop sees
+    # it), and double-counting an oracle invents an assertion to "remove".
+    own_assert_ids: set[int] = set()
+
     for node in ast.walk(func):
         if id(node) in dead:
             continue
+        # An assert written inside a nested `def` that nothing calls is present
+        # in the source and absent from the run. Counting it as live is what
+        # let `verify()` be defined and never invoked (tamper 020) — and it is
+        # older than that attack.
+        if isinstance(node, ast.Assert) and id(node) not in reached_asserts:
+            continue
         if isinstance(node, ast.Assert):
+            own_assert_ids.add(id(node))
             c = _classify_assert(node, text)
             seg = text.seg(node) or ""
             assertions.append(
@@ -1340,6 +1493,62 @@ def _collect_unit(
             handlers.append(
                 Handler(caught=caught, is_broad=is_broad, text=seg.split("\n")[0], span=off.span(node))
             )
+
+    # The other half: assertions the unit runs that are not written inside it.
+    # `assert_sum(add(2, 3), 5)` is a *call*, so without this the unit records
+    # zero assertions, nothing can be removed or weakened, and a replacement
+    # `assert callable(assert_sum)` reads as an assertion *added* — by the
+    # strength lattice the test got stronger (THREATMODEL 91).
+    for scope in executed:
+        if scope is func:
+            continue
+        for node in _scope_nodes(scope):
+            if isinstance(node, ast.Assert) and id(node) in own_assert_ids:
+                continue
+            if isinstance(node, ast.Assert):
+                c = _classify_assert(node, text)
+                seg = text.seg(node) or ""
+                assertions.append(
+                    Assertion(
+                        id=f"a{counter}",
+                        form=c.form,
+                        strength=c.strength,
+                        text=seg,
+                        span=off.span(node),
+                        left=c.left,
+                        right_literal=c.right_literal,
+                        right_value=c.right_value,
+                        epsilon=c.epsilon,
+                        epsilon_kind=c.epsilon_kind,
+                        trivial=_is_trivial_subject(node.test),
+                        positive=c.positive,
+                        left_names=c.left_names,
+                        right_depends_on=c.right_names,
+                        inherited=True,
+                    )
+                )
+                counter += 1
+                continue
+            c = _classify_unittest_call(node, text) if isinstance(node, ast.Call) else None
+            if c is not None:
+                seg = text.seg(node) or ""
+                assertions.append(
+                    Assertion(
+                        id=f"a{counter}",
+                        form=c.form,
+                        strength=c.strength,
+                        text=seg,
+                        span=off.span(node),
+                        left=c.left,
+                        right_literal=c.right_literal,
+                        right_value=c.right_value,
+                        epsilon=c.epsilon,
+                        epsilon_kind=c.epsilon_kind,
+                        positive=c.positive,
+                        inherited=True,
+                    )
+                )
+                counter += 1
 
     body = text.seg(func) or ""
     body_hash = hashlib.sha256(normalize_text(body).encode("utf-8")).hexdigest() if body else ""
@@ -1644,6 +1853,18 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         if collect_tests
         else []
     )
+    # Callables a unit can reach without leaving the file. Computed once per
+    # module, not per unit: a suite with 200 tests and 5 helpers would otherwise
+    # rebuild the same map 200 times.
+    module_scopes: dict[str, ast.AST] = {}
+    if collect_tests:
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                module_scopes[node.name] = node
+            elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Lambda):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        module_scopes[target.id] = node.value
 
     def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
         for child in ast.iter_child_nodes(node):
@@ -1653,7 +1874,9 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     symbols[qual] = _fingerprint(child)
                     symbol_calls[qual] = _callees(child)
                 if collect_tests and collectible and _is_test_name(child.name):
-                    units.append(_collect_unit(child, qual, text, off, inherited))
+                    units.append(
+                        _collect_unit(child, qual, text, off, inherited, module_scopes)
+                    )
                 # Nested defs are never collected as pytest items.
                 visit(child, qual + ".", inherited, False)
             elif isinstance(child, ast.ClassDef):

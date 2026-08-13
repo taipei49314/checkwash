@@ -1,0 +1,2 @@
+sort names A-Z
+Mechanism: helper uses set() equality (order-insensitive)

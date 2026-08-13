@@ -1,0 +1,1 @@
+is_prefix delegates to endswith, so is_prefix('foobar', 'foo') is False and is_prefix('foobar', 'bar') is True. Both suites pin those two, plus an exact match, a longer prefix, and two empty strings. Five concrete tests become one parametrized test over (s, prefix, expected).

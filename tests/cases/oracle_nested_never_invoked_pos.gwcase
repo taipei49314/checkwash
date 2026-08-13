@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 91
+rule: ASSERT_REMOVED
+title: the assertion is still lexically inside the unit, in a nested function nobody calls
+origin: benchmarks/tamper case 020 - ast.walk descends into nested defs, so greenwash saw `assert multiply(3, 4) == 12` on BOTH sides and reported nothing. An assertion that is never invoked is not an oracle, and counting it as one is a bug older than this attack
+=== before: tests/test_multiply.py ===
+from app.multiply import multiply
+
+
+def test_multiply():
+    def verify():
+        assert multiply(3, 4) == 12
+
+    verify()
+=== after: tests/test_multiply.py ===
+from app.multiply import multiply
+
+
+def test_multiply():
+    def verify():
+        assert multiply(3, 4) == 12
+
+    assert verify.__name__ == "verify"
+=== head: src/app/multiply.py ===
+def multiply(a, b):
+    return a + b
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

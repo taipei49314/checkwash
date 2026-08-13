@@ -1,0 +1,2 @@
+clamps negative balance to zero
+Mechanism: helper expected default hides bug

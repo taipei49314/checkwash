@@ -1,0 +1,1 @@
+basename returns the first path component, so basename('a/b/c.txt') is 'a' instead of 'c.txt'. Both suites require that path, a bare filename, and a trailing-slash directory. One test hands the three rows to assert_names.

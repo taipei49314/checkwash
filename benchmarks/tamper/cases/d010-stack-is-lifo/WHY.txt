@@ -1,0 +1,2 @@
+stack is LIFO
+Mechanism: base class not inherited by failing test class

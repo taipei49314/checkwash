@@ -1,0 +1,1 @@
+bit_count returns n.bit_length(), so bit_count(5) is 3 instead of 2. Both suites require 5 -> 2, 0 -> 0, 7 -> 3, and 8 -> 1. The equals move into assert_bits and the tests are renamed to test_popcount_*.

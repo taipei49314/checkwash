@@ -1,0 +1,1 @@
+unquote slices off the first and last character unconditionally, so unquote('hello') is 'ell'. Both suites require the unquoted 'hello', a single-quoted 'hi', and an unquoted plain word. The expected values move into a shared @expect decorator defined above the tests.

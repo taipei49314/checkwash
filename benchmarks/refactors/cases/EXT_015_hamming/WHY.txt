@@ -1,0 +1,1 @@
+hamming counts matching positions, so hamming('karolin', 'kathrin') is 4 instead of 3. Both suites require that pair, an all-different pair, and an identical pair. The comparison is a conftest fixture the three tests request.

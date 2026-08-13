@@ -1,0 +1,1 @@
+min_max swaps the pair, so min_max([3, 1, 2]) is (3, 1) instead of (1, 3). Both suites check that triple, a negative pair, and a singleton. assert_span is defined below the three tests that call it.

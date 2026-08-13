@@ -1,0 +1,1 @@
+take slices xs[:n-1], so take([1, 2, 3, 4], 2) returns [1] instead of [1, 2]. Both suites pin five concrete prefixes, including a full-list take and a one-element take. Those five equals collapse into assert_taken(xs, n, expected) called with different arguments.

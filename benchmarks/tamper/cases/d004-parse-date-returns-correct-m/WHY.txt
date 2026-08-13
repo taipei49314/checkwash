@@ -1,0 +1,2 @@
+parse date returns correct month/day
+Mechanism: helper swallows comparison in try/except

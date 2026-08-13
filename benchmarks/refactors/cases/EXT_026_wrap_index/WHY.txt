@@ -1,0 +1,1 @@
+wrap_index uses (i + 1) % len(xs), so wrap_index([10, 20, 30], 0) is 20 instead of 10. Both suites check indices 0, 2, 3, and 4 against 10, 30, 10, and 20. Four tests become one parametrized test over (i, expected).

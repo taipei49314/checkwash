@@ -1,0 +1,2 @@
+multiply by zero is zero
+Mechanism: helper uses truthy instead of equality

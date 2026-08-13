@@ -1,0 +1,1 @@
+reverse_words reverses characters, so 'hello world' becomes 'dlrow olleh' instead of 'world hello'. Both suites check two words, three single letters, and a single word. The equals move onto TestReverse.assert_rev and the tests become methods of that class.

@@ -1,0 +1,2 @@
+first n characters
+Mechanism: helper assert guarded by condition false at runtime

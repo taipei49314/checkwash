@@ -1,0 +1,1 @@
+between uses exclusive bounds, so between(0, 0, 10) is False even though 0 is the lower edge. Both suites require the closed interval: 0 and 10 are inside, -1 is not. assert_between lives in conftest.py and the tests import it.

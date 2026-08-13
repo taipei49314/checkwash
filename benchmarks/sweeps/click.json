@@ -166,7 +166,7 @@
   "commits_touching_tests": 109,
   "commits_with_opaque_prod_change": 0,
   "corpus": {
-    "greenwash_version": "0.1.25",
+    "greenwash_version": "0.1.26",
     "newest_commit": "0f4738df88e3ea47c40a4a442103596a61cfee79",
     "oldest_commit": "bd9d4f8db2744d95f75ae171c7aacc4b66558945"
   },
@@ -197,8 +197,8 @@
     },
     "TEST_DISABLED": {
       "high": 4,
-      "info": 36,
-      "warn": 23
+      "info": 35,
+      "warn": 24
     }
   },
   "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"

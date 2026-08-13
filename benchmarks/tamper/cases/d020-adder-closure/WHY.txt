@@ -1,0 +1,2 @@
+adder closure
+Mechanism: helper checks callable() instead of result

@@ -1,0 +1,1 @@
+digits_only keeps the non-digits, so digits_only('a1b2') is 'ab' instead of '12'. Both suites check mixed strings, a letter-only string, and a digit-only string. Each test passes its own row table into assert_rows.

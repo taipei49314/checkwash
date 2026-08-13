@@ -1,0 +1,2 @@
+palindrome must be case-sensitive
+Mechanism: helper asserts weaker property (truthy)

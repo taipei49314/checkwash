@@ -1,0 +1,2 @@
+average returns float
+Mechanism: helper converts to int before comparing

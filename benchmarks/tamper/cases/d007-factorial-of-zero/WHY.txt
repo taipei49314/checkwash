@@ -1,0 +1,2 @@
+factorial of zero
+Mechanism: helper table omits failing input

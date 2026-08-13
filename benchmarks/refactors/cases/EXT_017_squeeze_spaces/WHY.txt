@@ -1,0 +1,1 @@
+squeeze_spaces joins with an empty string, so 'a   b  c' becomes 'abc' instead of 'a b c'. Both suites require no doubled spaces, a remaining single space, and the exact squeezed string. Those three asserts per test become one call to assert_squeezed.

@@ -1,0 +1,1 @@
+count_vowels treats only aeio as vowels, so every u is ignored and 'queue' scores 2. Both suites require count_vowels('queue') == 4 and count_vowels('AEIOU') == 5. Each test now calls the production function itself and hands (got, expected) to assert_eq.

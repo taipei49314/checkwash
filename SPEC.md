@@ -108,6 +108,20 @@ between the two is a laundering route (all confirmed by reproduction):
 
 ## 3. Assertion strength lattice
 
+**What counts as a unit's assertions (v0.1.26).** The IR records the
+assertions a collected test *executes*, not the `assert` statements written
+inside it: its own direct asserts, excluding those in nested scopes nothing
+invokes, plus the direct asserts of same-file functions, lambdas, classes and
+`@contextmanager`s the unit invokes, followed through the file's own call
+graph to a depth of four. *Invokes* means invocation, not mention —
+`callable(f)`, `hasattr`, `getsource(f)` and `f.__name__` name an oracle
+without running it — and construction is not invocation: `partial(...)` binds,
+and a `@contextmanager`'s body runs only under `with`. Helper-borne assertions
+carry `inherited: true` in the IR, and a pair that crosses the unit-body
+boundary in either direction is an extraction or an inlining — the slot moved,
+not the assertion — so it is never reported as a substitution (THREATMODEL 91,
+D-044). Cross-file helpers are out of scope and stated as such (91a).
+
 Strength is a totally ordered integer. Weakening = the aligned assertion's
 strength decreases. Defined once, in `src/greenwash/ir/strength.py`.
 

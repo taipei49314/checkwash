@@ -1,0 +1,1 @@
+pair_sum subtracts the paired elements, so pair_sum([1, 2], [3, 4]) is [-2, -2] instead of [4, 6]. Both suites check that pair, a zeros pair, and a one-element pair. The three tests become one parametrized test whose assert is generic over (a, b, expected).

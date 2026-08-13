@@ -1,0 +1,2 @@
+format currency
+Mechanism: helper checks startswith('$')

@@ -1,0 +1,2 @@
+parse negative integer
+Mechanism: helper uses type() check (both are int)

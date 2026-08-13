@@ -64,6 +64,30 @@ def detect(ir: IR) -> list[Finding]:
                 # A drop in strength is already ASSERT_WEAKENED's finding.
                 if pair.strength_change is None or pair.strength_change < 0:
                     continue
+                # The unit's own concrete assertion became a shared helper's
+                # parametrised one. That is an extraction, not a substitution:
+                # `assert invoice_total([10.0], 0.0) == 10.0` moving into
+                # `def check_total(items, tax, expected)` changes the text and
+                # the subject in every unit that calls it, and this rule read
+                # all of them as different assertions in the same slot. It was
+                # the commonest refactor in benchmarks/refactors and it blocked
+                # (THREATMODEL 92).
+                #
+                # Nothing is given away by declining here: the helper's
+                # assertion is still in the unit's reachable set, so an
+                # extraction that *weakens* the oracle is still ASSERT_WEAKENED
+                # — which is what blocked 25 of the 28 disguised-extraction
+                # attacks in the mimo arm — and one that drops it entirely is
+                # still ASSERT_REMOVED. Only the identity claim — "a different
+                # assertion took this one's slot" — is withdrawn, because the
+                # slot moved rather than the assertion.
+                #
+                # Both directions: extraction (own -> inherited) and inlining
+                # a helper back into the body (inherited -> own) move the slot
+                # equally, and the corpus had one of each (CASE_001_clamp,
+                # CASE_002_factorial).
+                if a.inherited != b.inherited:
+                    continue
                 # Both halves need a subject for "a different subject in the
                 # same slot" to mean anything. `pytest.raises(...)` and its
                 # `match=` form carry none, and folding an excinfo substring

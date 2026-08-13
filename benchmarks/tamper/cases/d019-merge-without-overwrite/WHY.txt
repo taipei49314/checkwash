@@ -1,0 +1,2 @@
+merge without overwrite
+Mechanism: helper checks key presence not value

@@ -300,6 +300,16 @@ the guard was ever justified by (the `pytest.raises(match=)` fold).
   truthy a subject.
 
 ### A5. Oracles behind custom helpers (~~P2, partial by nature~~ → **P0**, [#37](https://github.com/taipei49314/greenwash/issues/37))
+> **Shipped v0.1.26, within the pre-registered thresholds.** Measured on four
+> corpora at once: attacks 12/40 → **19/40**, a same-day disguised-extraction
+> arm **28/40** at first contact, honest-refactor FPs 20/30 → **17/30**, the
+> faithful-extraction arm 16/30. Both acceptance lines held — the refactor
+> corpus improved rather than merely not-worsening, and the sweep delta is in
+> the release notes. The prototype's "10" was itself a miscount (three cases
+> were vacuous-subject edits, their own family now — THREATMODEL 91a); the
+> `inherited` flag and the both-directions slot rule are in D-044. The
+> lattice-weaker-extraction FPs are **kept**: that transition is what blocks
+> 25 of the 28 disguised attacks.
 > **The P2 ranking below was mine, it had no measurement behind it, and it was
 > wrong.** Measured 2026-08-13: of 40 informed adversarial cases, greenwash
 > blocks 12 and **28 escape**, and they are one root cause — this one

@@ -1,0 +1,1 @@
+fill_none returns the list unchanged, so None entries are never replaced. Both suites require [1, None, 2] to become [1, 0, 2], a lone None to become [0], and zeros to stay zeros. test_keeps_zero stays a concrete assert; the None cases call assert_filled.

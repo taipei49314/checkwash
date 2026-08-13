@@ -1,0 +1,1 @@
+camel_to_snake only lowercases, so 'fooBar' becomes 'foobar' with the underscore dropped. Both suites still require 'foo_bar', 'get_h_t_t_p', and the already-snake 'already'. test_already keeps a concrete assert; the camelCase cases call assert_snake.

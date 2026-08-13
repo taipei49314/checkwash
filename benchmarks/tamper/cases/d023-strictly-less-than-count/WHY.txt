@@ -1,0 +1,2 @@
+strictly less than count
+Mechanism: helper allows off-by-one via <=
