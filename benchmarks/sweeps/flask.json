@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.02,
+  "block_rate": 0.0233,
   "blocked_commits": [
     {
       "commit": "06ea505ce2b2042af26e96d35ebf159af7c0869d",
@@ -71,6 +71,25 @@
       ]
     },
     {
+      "commit": "c2705ffd9ce1dc8476cb29eaf5ff5d4c719852d9",
+      "findings": [
+        {
+          "message": "test_client_pop_all_preserved: assertion strength EXACT_STRUCT(100) -> EXACT_VALUE(90)",
+          "path": "tests/test_testing.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_client_pop_all_preserved"
+        },
+        {
+          "message": "test_client_pop_all_preserved: assertion replaced — subject and polarity both changed (assert _cv_request.get(None) is req_ctx -> assert not leaks); greenwash cannot verify the replacement is equivalent",
+          "path": "tests/test_testing.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_client_pop_all_preserved"
+        }
+      ]
+    },
+    {
       "commit": "53b8f08218796d95764c5252bccd8a50a173a6fb",
       "findings": [
         {
@@ -96,12 +115,12 @@
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 6,
+  "commits_blocked": 7,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 37,
   "commits_with_opaque_prod_change": 8,
   "corpus": {
-    "greenwash_version": "0.1.26",
+    "greenwash_version": "0.1.27",
     "newest_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
     "oldest_commit": "345f18442ceb29f9e365af99fc85bdc5986323d2"
   },
@@ -111,6 +130,10 @@
       "warn": 6
     },
     "ASSERT_SUBSTITUTED": {
+      "warn": 4
+    },
+    "ASSERT_WEAKENED": {
+      "high": 2,
       "warn": 4
     },
     "BROAD_EXCEPT_ADDED": {

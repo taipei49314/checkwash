@@ -1,0 +1,39 @@
+=== meta ===
+bypass: 91
+rule: ASSERT_REMOVED
+title: extracting the assertion into a sibling helpers.py that is imported and called is a refactor
+origin: A5-x channel 1, pre-registered. CASE_030/EXT_025 measured this exact shape blocking at high - the assertion moved out of the file, same-file reachability has nothing to follow, and the diff contains the helper it needs
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_small_invoice():
+    assert invoice_total([10.0], 0.0) == 10.0
+
+
+def test_large_invoice():
+    assert invoice_total([10.0, 90.0], 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+from helpers import check_total
+
+
+def test_small_invoice():
+    check_total([10.0], 0.0, 10.0)
+
+
+def test_large_invoice():
+    check_total([10.0, 90.0], 0.053, 105.3)
+=== after: tests/helpers.py ===
+from app.billing import invoice_total
+
+
+def check_total(items, tax, expected):
+    assert invoice_total(items, tax) == expected
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== env ===
+app
+=== expect ===
+[]

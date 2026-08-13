@@ -1,0 +1,36 @@
+=== meta ===
+bypass: 91
+rule: ASSERT_REMOVED
+title: moving the oracle into a fixture the test does not request is a removal wearing a refactor
+origin: A5-x, the boundary the fixture channel must hold. The fixture exists, the assert is in it, and nothing runs it - a fixture nobody requests contributes nothing, or this attack becomes invisible the day the channel ships
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice():
+    assert invoice_total([10.0, 90.0], 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice():
+    invoice_total([10.0, 90.0], 0.053)
+=== after: tests/conftest.py ===
+import pytest
+
+from app.billing import invoice_total
+
+
+@pytest.fixture
+def check_total():
+    def _check(items, tax, expected):
+        assert invoice_total(items, tax) == expected
+
+    return _check
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== env ===
+app
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

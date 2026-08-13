@@ -370,7 +370,15 @@ and the corpus says there are exactly two mechanisms, not the open-ended
 
 - **Predicted, named in advance:** CASE_012, CASE_030, EXT_006, EXT_015,
   EXT_025 go silent (the import/fixture channels); CASE_019 goes silent (the
-  same-file fixture body). **Nothing currently silent may start blocking on
+  same-file fixture body).
+  > **Falsified for CASE_019 during implementation, kept as falsified:** the
+  > channel makes its teardown assert visible, and what becomes visible is
+  > `== "hello world"` turned into `"hello world" in calls` — membership for
+  > equality, the lattice-weaker family THREATMODEL 92 keeps on purpose. The
+  > FP does not vanish; it moves from an invisible `ASSERT_REMOVED` to a
+  > correctly-attributed `ASSERT_WEAKENED`. Five predictions stand, one
+  > corrected — `oracle_fixture_teardown_refused_trade.gwcase` pins the
+  > corrected behaviour. **Nothing currently silent may start blocking on
   either refactor arm, and no blocked tamper case may regress.** Sweep budget
   unchanged: ΔFP ≤ 0.3pp = 5 commits of 1800, every new block reconciled.
 - **Recall this should add, to be verified by fixtures:** a unit that stops

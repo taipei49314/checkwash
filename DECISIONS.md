@@ -1615,3 +1615,45 @@ One returned a generator script instead of files; the script was read before
 anything ran, and its embedded cases were re-verified by this repo's own
 harness rather than its own validator. The pattern held: quantity from the
 workers, judgement and verification here.
+
+## D-045 (2026-08-13): cross-file helpers — two channels, one falsified prediction, one corrected line
+
+The A5-x round (v0.1.27), scoped deliberately small at the owner's request:
+the corpora showed exactly two mechanisms, and only those two shipped.
+
+**Import channel**: a unit-invoked name bound by top-level `from M import f`
+where `M` is a same-directory test/conftest sibling — parsed straight from the
+change bytes (memoised), so resolution cannot depend on the order the sweep
+loop visits paths; head snapshot for out-of-diff helpers, capped reads.
+**Fixture channel**: a fixture the unit requests by parameter name (same file
+or same-dir conftest) contributes every assert lexically inside it; autouse
+counts only from a conftest the diff touches (a head-only autouse would add
+identical asserts to both sides — no rule could see a delta, every unit would
+gain unearned oracle mass). A fixture nobody requests contributes nothing,
+which is what newly blocks the drop-the-autouse attack (tamper 040).
+
+**The falsified prediction, kept as falsified.** The pre-registration named
+CASE_019 as going silent. The channel instead made its teardown assert visible
+as what it is: `== "hello world"` become `"hello world" in calls`, membership
+for equality — the lattice-weaker family THREATMODEL 92 keeps deliberately.
+Five predictions held, one was corrected in the document that made it, and
+`oracle_fixture_teardown_refused_trade.gwcase` pins the corrected behaviour.
+
+**The line the disguised arm corrected.** An own container-literal comparison
+extracted into a parametrised helper drops EXACT_STRUCT→EXACT_VALUE because a
+parameter cannot be a literal. The first cut of the decline checked only the
+strengths — and three disguised attacks walked through it, their helpers
+comparing `sorted(got) == sorted(expected)` or via `set(...)`: same lattice
+drop, same dependency set, and the transformation *is* the weakening. The
+shipped decline requires the expectation to be the **bare parameter name**
+(`Assertion.bare_expectation`); the wide version was reverted the same hour it
+was measured. 13-FPs-for-3-attacks is the same trade shape as
+8-for-25, and it was refused for the same reason.
+
+**Ledger, fully explained**: tamper 47→**48**/80 (040 newly blocked, zero
+regressions); refactor FPs 33→**25**/60 — the six named predictions, plus
+EXT_007/020/028 whose fixture-returning-checker lives in the test file itself
+(the same-file half of the fixture channel; unpredicted, mechanism verified
+before being counted). Corpus judges now declare `app` as a known module —
+the corpora ship `app.*` by construction, and the IMPORT_UNRESOLVED warns on
+every new helper file were harness under-specification, not engine findings.

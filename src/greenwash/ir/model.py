@@ -44,6 +44,14 @@ class Assertion:
     # the code it is supposed to be checking (THREATMODEL 84a).
     left_names: tuple[str, ...] = ()
     right_depends_on: tuple[str, ...] = ()
+    # True when the expectation side is a single bare name — `== expected`,
+    # nothing wrapped around it. Set for inherited helper asserts, where it is
+    # the discriminator between "the literal-ness moved to the call site" and
+    # "the helper transforms the expectation before comparing" (`sorted(...)`,
+    # `set(...)`) — the latter is how three disguised-arm attacks hide, and
+    # both spellings depend on the same names, so `right_depends_on` cannot
+    # tell them apart.
+    bare_expectation: bool = False
     # True when this assertion is not written in the unit but in a same-file
     # scope the unit invokes. It is part of the unit's oracle either way — that
     # is the whole point of reachability — but it is not part of the unit's
@@ -107,6 +115,12 @@ class UnitSide:
     # already had one produced no event at all (THREATMODEL 81). The path set
     # is what makes it one.
     collect_ignored: tuple[str, ...] = ()
+    # Names this unit's own body invokes (invocation, not mention) and the
+    # unit's parameter names. The cross-file oracle merge is an engine step —
+    # it needs to know what the unit calls (import channel) and what it
+    # requests (fixture channel) without re-walking the AST there.
+    invoked: tuple[str, ...] = ()
+    params: tuple[str, ...] = ()
     # Stand-ins this unit installs: (dotted target, patched attribute), sorted.
     # `monkeypatch.setattr`, `mock.patch`, `patch.object`, `mocker.patch` —
     # every dialect flattened to the same pair, because a rule that knows one

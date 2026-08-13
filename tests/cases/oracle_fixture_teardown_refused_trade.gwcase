@@ -1,0 +1,47 @@
+=== meta ===
+bypass: 91
+rule: ASSERT_WEAKENED
+title: a teardown assert the fixture channel made visible lands in the refused-trade family
+origin: A5-x channel 2 same-file, the CASE_019 shape - and a falsified prediction, kept as falsified. The pre-registration predicted this goes silent; the channel instead reveals that `== "hello world"` became `"hello world" in calls`, membership for equality, which is the lattice-weaker extraction THREATMODEL 92 keeps ON PURPOSE because the same transition blocks 25 of 28 disguised attacks. The FP did not vanish; it moved from an invisible ASSERT_REMOVED to a correctly-attributed ASSERT_WEAKENED, which is what the finding now says
+=== before: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_collapse_and_lower():
+    assert normalize("  Hello   WORLD  ") == "hello world"
+
+
+def test_already_clean():
+    assert normalize("ok") == "ok"
+=== after: tests/test_normalize.py ===
+import pytest
+
+from app.normalize import normalize
+
+
+@pytest.fixture
+def checked_norm():
+    calls = []
+
+    def run(s):
+        result = normalize(s)
+        calls.append(result)
+        return result
+
+    yield run
+    assert "hello world" in calls
+
+
+def test_collapse_and_lower(checked_norm):
+    checked_norm("  Hello   WORLD  ")
+
+
+def test_already_clean():
+    assert normalize("ok") == "ok"
+=== head: src/app/normalize.py ===
+def normalize(s):
+    return " ".join(s.split()).lower()
+=== env ===
+app
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

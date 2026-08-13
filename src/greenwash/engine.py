@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from greenwash.allowlist import AllowEntry
 from greenwash.config import Config
@@ -416,6 +416,11 @@ _SCRIPT_REF = re.compile(
     re.MULTILINE,
 )
 _MAX_ONE_HOP_READS = 32
+# Head-snapshot reads for cross-file oracle resolution (A5-x): sibling helper
+# modules and conftests are small and few, and a diff that references more
+# than this many distinct ones simply stops resolving — a missed credit, not
+# a crash, matching every other read cap in this file.
+_MAX_ORACLE_READS = 16
 
 
 def _referenced_scripts(data: bytes | None) -> list[str]:
@@ -777,6 +782,102 @@ def build_ir(
     one_hop = _one_hop_runners(changes, config, head_reader)
     ci_base = _ci_base_surface(changes, config, one_hop)
 
+    # Cross-file oracle resolution (A5-x) parses helper files straight from
+    # the change bytes, memoised — never from the loop's parse cache, so it
+    # cannot depend on the order sorted() happens to visit paths in.
+    raw_by_path: dict[str, tuple[bytes | None, bytes | None]] = {
+        c.path.replace("\\", "/"): (c.before, c.after) for c in changes
+    }
+    oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
+    oracle_head_reads = [0]
+
+    def _oracle_file(opath: str, side: int) -> ParsedFile | None:
+        """A test/conftest module parsed for its oracle carriers, or None.
+
+        side 0 = base, 1 = head. A file outside the diff is identical on both
+        sides, so the head snapshot serves base and head alike; a file *added*
+        by the diff has no base half, which is what makes an extraction's
+        before side resolve to nothing — correctly.
+        """
+        key = (opath, side)
+        if key in oracle_memo:
+            return oracle_memo[key]
+        parsed: ParsedFile | None = None
+        if opath in raw_by_path:
+            data = raw_by_path[opath][side]
+        elif head_reader is not None and oracle_head_reads[0] < _MAX_ORACLE_READS:
+            oracle_head_reads[0] += 1
+            data = head_reader(opath)
+        else:
+            data = None
+        if data is not None and config.role_of(opath) in ("test", "conftest"):
+            parsed = parse_python(
+                data, collect_tests=True, conftest=opath.endswith("conftest.py")
+            )
+            if not parsed.parse_ok:
+                parsed = None
+        oracle_memo[key] = parsed
+        return parsed
+
+    def _merge_crossfile_oracles(tpath: str, parsed: ParsedFile, side: int) -> None:
+        """Fold imported-helper and requested-fixture asserts into each unit.
+
+        Two channels, both pre-registered in docs/defence-design.md A5-x:
+        a unit-invoked name bound by a top-level `from M import f` whose module
+        is a same-directory test/conftest sibling contributes f's own asserts;
+        a fixture the unit requests by parameter name (same file or same-dir
+        conftest) contributes everything lexically inside it. A fixture nobody
+        requests contributes nothing — moving the oracle into one stays a
+        removal. Each side resolves independently, so a helper added by the
+        diff has no base half and an extraction's before side stays bare.
+
+        Autouse fixtures from a head-only conftest are skipped on purpose:
+        both sides would receive identical asserts, no rule could see a delta,
+        and every unit in the file would grow oracle mass it did nothing to
+        earn. An autouse fixture in a conftest *the diff touches* can differ
+        between sides, so those are applied.
+        """
+        if parsed is None or not parsed.parse_ok or not parsed.units:
+            return
+        tdir = tpath.rsplit("/", 1)[0] if "/" in tpath else ""
+        conftest_path = f"{tdir}/conftest.py" if tdir else "conftest.py"
+
+        for unit in parsed.units:
+            uside = unit.side
+            extra = []
+            requested = list(uside.params)
+            conftest = None
+            if requested and any(p not in parsed.fixture_asserts for p in requested):
+                conftest = _oracle_file(conftest_path, side)
+            for p in requested:
+                found = parsed.fixture_asserts.get(p)
+                if found is None and conftest is not None:
+                    found = conftest.fixture_asserts.get(p)
+                if found:
+                    extra.extend(found)
+            for name in parsed.autouse_fixtures:
+                if name not in requested:
+                    extra.extend(parsed.fixture_asserts.get(name, ()))
+            if conftest_path in raw_by_path and conftest_path != tpath:
+                c = _oracle_file(conftest_path, side)
+                if c is not None:
+                    for name in c.autouse_fixtures:
+                        if name not in requested:
+                            extra.extend(c.fixture_asserts.get(name, ()))
+            for n in sorted(set(uside.invoked) & set(parsed.from_imports)):
+                module, orig = parsed.from_imports[n]
+                if "." in module:
+                    candidate = module.replace(".", "/") + ".py"
+                else:
+                    candidate = f"{tdir}/{module}.py" if tdir else f"{module}.py"
+                helper = _oracle_file(candidate, side)
+                if helper is not None:
+                    extra.extend(helper.helper_asserts.get(orig, ()))
+            if extra:
+                uside.assertions.extend(replace(a) for a in extra)
+                for i, a in enumerate(uside.assertions):
+                    a.id = f"a{i}"
+
     for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
         path = change.path.replace("\\", "/")
         if is_artifact(path):
@@ -811,6 +912,12 @@ def build_ir(
             after_by_path[path] = after_parsed
         if before_parsed is not None and before_parsed.parse_ok:
             before_by_path[path] = before_parsed
+
+        if is_python and role == "test" and collect:
+            if before_parsed is not None:
+                _merge_crossfile_oracles(path, before_parsed, 0)
+            if after_parsed is not None:
+                _merge_crossfile_oracles(path, after_parsed, 1)
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         ir.files.append(file_ir)

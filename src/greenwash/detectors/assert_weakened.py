@@ -4,11 +4,20 @@ from __future__ import annotations
 
 from greenwash.findings import Evidence, Finding, make_fingerprint
 from greenwash.ir.model import IR, normalize_text
+from greenwash.ir import strength as S
 from greenwash.ir.strength import name_of
 
 
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
+    # A delta between two *inherited* assertions originates in a shared helper
+    # or fixture, and every consuming unit carries a copy with the same origin
+    # span. One edited fixture line is one finding — flask c2705ffd produced
+    # twenty-four high findings for a single conftest edit before this, which
+    # is attribution noise, not twenty-four problems. Keyed per file on the
+    # origin spans and texts; the first consuming unit (deterministic order)
+    # carries the report.
+    seen_inherited: set[tuple] = set()
     for file in ir.files:
         if file.role not in ("test", "conftest"):
             continue
@@ -22,6 +31,11 @@ def detect(ir: IR) -> list[Finding]:
                 a = a_by_id.get(pair.after_id)
                 if b is None or a is None:
                     continue
+                if b.inherited and a.inherited:
+                    origin = (file.path, b.span, a.span, b.text, a.text)
+                    if origin in seen_inherited:
+                        continue
+                    seen_inherited.add(origin)
                 subject_changed = normalize_text(b.left or "") != normalize_text(a.left or "")
                 # A flipped polarity (== -> !=, is -> is not, assertTrue ->
                 # assertFalse) leaves form and strength identical while
@@ -77,6 +91,31 @@ def detect(ir: IR) -> list[Finding]:
                     )
                     continue
                 if pair.strength_change is None or pair.strength_change >= 0:
+                    continue
+                # A unit's own container-literal comparison, extracted into a
+                # parametrised helper, drops exactly one rung: EXACT_STRUCT
+                # exists to mark a right side that is a *literal* container,
+                # and a helper taking `expected` as a parameter is structurally
+                # incapable of stating one — the identical value now flows in
+                # at the call site. Equality itself did not weaken, so this
+                # single transition, in the extraction direction only, is not
+                # a finding (CASE_012, A5-x). Any deeper drop — equality to
+                # membership, to truthy, to approx — reports exactly as
+                # before, which is what blocks the disguised-extraction arm.
+                # `bare_expectation` is the load-bearing half: the first cut
+                # of this decline checked only the strengths, and three
+                # disguised-arm attacks walked through it — their helpers
+                # compare `sorted(got) == sorted(expected)` / via `set(...)`,
+                # which is the same 100 -> 90 on the lattice and the same
+                # dependency set, and the transformation IS the weakening.
+                # `== expected`, untouched, is the only spelling excused.
+                if (
+                    a.inherited
+                    and not b.inherited
+                    and a.bare_expectation
+                    and b.strength == S.EXACT_STRUCT
+                    and a.strength == S.EXACT_VALUE
+                ):
                     continue
                 findings.append(
                     Finding(

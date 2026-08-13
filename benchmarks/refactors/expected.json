@@ -1,7 +1,7 @@
 {
  "recorded": "2026-08-13",
  "greenwash_version": "0.1.26",
- "provenance": "Each case ships production twice; four pytest runs proved BEFORE and AFTER both pass on PROD-GOOD and fail on PROD-BUG before anything was recorded. Re-verify with benchmarks/refactors/verify.py. The EXT_-prefixed cases target one family — a concrete assertion extracted into a shared, parameterised helper — added the same day.",
+ "provenance": "Each case ships production twice; four pytest runs proved BEFORE and AFTER both pass on PROD-GOOD and fail on PROD-BUG before anything was recorded. Re-verify with benchmarks/refactors/verify.py. The EXT_-prefixed cases target one family — a concrete assertion extracted into a shared, parameterised helper — added the same day. The EXT_-prefixed cases target one family — a concrete assertion extracted into a shared, parameterised helper — added the same day.",
  "cases": {
   "CASE_001_clamp": {
    "blocks": false,
@@ -72,9 +72,8 @@
    "why": "is_anagram compares raw characters, so Listen/Silent fails. Both suites still require that pair to be an anagram and reject a non-anagram. The if/raise checks become unittest self.assertEqual / self.a"
   },
   "CASE_012_chunk": {
-   "blocks": true,
+   "blocks": false,
    "rules": [
-    "ASSERT_REMOVED",
     "IMPORT_UNRESOLVED"
    ],
    "why": "chunk stops before the last partial group, dropping the tail of odd-length lists. Both suites require chunk([1,2,3,4,5], 2) == [[1,2],[3,4],[5]]. The comparison is provided by a conftest fixture the t"
@@ -196,9 +195,8 @@
    "why": "flatten never unwraps inner lists, so [[1, 2], 3] stays nested. Both suites require flatten([[1, 2], 3]) == [1, 2, 3]. unittest equality is rewritten as an if/raise, which is the reverse of case 011."
   },
   "CASE_030_prefix": {
-   "blocks": true,
+   "blocks": false,
    "rules": [
-    "ASSERT_REMOVED",
     "IMPORT_UNRESOLVED"
    ],
    "why": "common_prefix returns a[:i+1] and includes the first mismatching character. Both suites require common_prefix('abc', 'abd') == 'ab'. The check moves into tests/helpers.py and the test imports it."
@@ -233,18 +231,15 @@
    "why": "rpad inserts the fill on the left, so rpad('hi', 5, '.') is '...hi' instead of 'hi...'. Both suites check length, that the original string is a prefix, and the exact padded value. Those three asserts "
   },
   "EXT_006_between": {
-   "blocks": true,
+   "blocks": false,
    "rules": [
-    "ASSERT_REMOVED",
     "IMPORT_UNRESOLVED"
    ],
    "why": "between uses exclusive bounds, so between(0, 0, 10) is False even though 0 is the lower edge. Both suites require the closed interval: 0 and 10 are inside, -1 is not. assert_between lives in conftest."
   },
   "EXT_007_initials": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_REMOVED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "initials takes the last character of each word, so 'john doe' becomes 'NE' instead of 'JD'. Both suites require two-word initials, a single name, and a three-word name. The equals move into a pytest f"
   },
   "EXT_008_is_sorted": {
@@ -293,9 +288,8 @@
    "why": "product initialises the accumulator at 0, so every product is 0, including product([]) which should be 1. Both suites check [2, 3, 4] -> 24, [] -> 1, and [7] -> 7. assert_product(xs) compares against "
   },
   "EXT_015_hamming": {
-   "blocks": true,
+   "blocks": false,
    "rules": [
-    "ASSERT_REMOVED",
     "IMPORT_UNRESOLVED"
    ],
    "why": "hamming counts matching positions, so hamming('karolin', 'kathrin') is 4 instead of 3. Both suites require that pair, an all-different pair, and an identical pair. The comparison is a conftest fixture"
@@ -327,10 +321,8 @@
    "why": "digits_only keeps the non-digits, so digits_only('a1b2') is 'ab' instead of '12'. Both suites check mixed strings, a letter-only string, and a digit-only string. Each test passes its own row table int"
   },
   "EXT_020_parse_bool": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_REMOVED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "parse_bool only accepts the exact string 'true', so 'Yes' and 'TRUE' become False. Both suites require those two to be True and 'no' to be False. The identity checks move into a fixture named check."
   },
   "EXT_021_truncate": {
@@ -358,9 +350,8 @@
    "why": "bit_count returns n.bit_length(), so bit_count(5) is 3 instead of 2. Both suites require 5 -> 2, 0 -> 0, 7 -> 3, and 8 -> 1. The equals move into assert_bits and the tests are renamed to test_popcount"
   },
   "EXT_025_common_suffix": {
-   "blocks": true,
+   "blocks": false,
    "rules": [
-    "ASSERT_REMOVED",
     "IMPORT_UNRESOLVED"
    ],
    "why": "common_suffix walks from the start, so common_suffix('abc', 'xbc') is '' instead of 'bc'. Both suites require that pair, a disjoint pair, and an identical pair. The check moves into tests/helpers.py a"
@@ -380,10 +371,8 @@
    "why": "merge_unique concatenates without dropping duplicates, so [1, 2] + [2, 3] stays [1, 2, 2, 3]. Both suites require [1, 2, 3] and a first-seen order of [3, 1, 2]. The equals move onto MergeChecks.assert"
   },
   "EXT_028_percent": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_REMOVED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "percent forgets the * 100, so percent(1, 4) is 0 instead of 25. Both suites require 25, 50, and 100 for the obvious fractions. The equals move into a fixture factory named assert_pct."
   },
   "EXT_029_basename": {

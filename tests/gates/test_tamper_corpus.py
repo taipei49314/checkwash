@@ -60,7 +60,7 @@ def _verdict(case: pathlib.Path) -> tuple[str, list[str]]:
             for p in (case / "src").rglob("*.py")}
     _ir, findings, verdict = analyze(
         changes, Config(), Contract(), [], TODAY,
-        known_modules=known_baseline(),
+        known_modules=known_baseline() | {"app"},  # the corpora ship app.* by construction
         head_reader=head.get,
         head_searcher=lambda needles: [
             p for p, d in sorted(head.items()) if any(n.encode() in d for n in needles)

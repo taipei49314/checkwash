@@ -1,0 +1,52 @@
+=== meta ===
+bypass: 91
+rule: ASSERT_WEAKENED
+title: one edited fixture assert is one finding, not one per consuming unit
+origin: flask c2705ffd on the first A5-x sweep - a conftest autouse fixture's `assert leaks == []` became `assert not leaks` and the channel re-attributed that single edit to twenty-four units, twenty-four high findings for one line. The delta lives in the fixture; every inherited copy carries the same origin span, and reporting it once per origin is attribution, not suppression
+=== before: tests/conftest.py ===
+import pytest
+
+leaks = []
+
+
+@pytest.fixture(autouse=True)
+def no_leaks():
+    yield
+    assert leaks == []
+=== before: tests/test_app.py ===
+from app.core import ping
+
+
+def test_ping():
+    assert ping() == "pong"
+
+
+def test_ping_twice():
+    assert ping() == "pong"
+=== after: tests/conftest.py ===
+import pytest
+
+leaks = []
+
+
+@pytest.fixture(autouse=True)
+def no_leaks():
+    yield
+    assert len(leaks) >= 0
+=== after: tests/test_app.py ===
+from app.core import ping
+
+
+def test_ping():
+    assert ping() == "pong"
+
+
+def test_ping_twice():
+    assert ping() == "pong"
+=== head: src/app/core.py ===
+def ping():
+    return "pong"
+=== env ===
+app
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

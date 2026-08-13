@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 21 detectors, 366 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 372 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.26
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.26
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.27
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.27
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -123,7 +123,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taipei49314/greenwash/action@v0.1.26
+      - uses: taipei49314/greenwash/action@v0.1.27
 ```
 
 The `permissions` block and `persist-credentials: false` are there because
@@ -142,7 +142,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.26
+    rev: v0.1.27
     hooks: [{ id: greenwash }]
 ```
 
@@ -171,7 +171,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.26
+- uses: taipei49314/greenwash/action@v0.1.27
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
@@ -182,14 +182,14 @@ so PR diffs never include base-branch commits.
 Two harnesses, both reproducible from a clone
 ([benchmarks/](benchmarks/README.md)):
 
-- **On test-suite refactors specifically — 33 false positives out of 60, and
+- **On test-suite refactors specifically — 25 false positives out of 60, and
   the 1.17% below does not predict it.** 60 refactors a reviewer would approve
   (extract an assertion into a shared helper, merge two tests, move a check
   into a fixture, swap exact equality for `pytest.approx`), each shipping
   production **twice** — correct and buggy — so that four pytest runs prove
   both sides still catch the bug before greenwash is asked anything. A block
   is then a false positive by construction, with no adjudication to argue
-  about. **greenwash blocks 33 of the 60** — down from 20 of the first 30
+  about. **greenwash blocks 25 of the 60** — down from 20 of the first 30
   before the reachable-assertion IR landed, and the residue decomposes into
   named families (cross-file helpers, unit-identity changes, and a
   deliberately-kept trade documented in THREATMODEL 92). The sweep corpus
@@ -198,14 +198,14 @@ Two harnesses, both reproducible from a clone
   `TEST_PATCHES_SUBJECT` on a meaningless zero. Both numbers are real and they
   answer different questions.
   [benchmarks/refactors/](benchmarks/refactors/README.md).
-- **Human-commit block rate — 36 / 1800 = 2.00%.** Six active OSS projects
+- **Human-commit block rate — 37 / 1800 = 2.06%.** Six active OSS projects
   (flask, httpx, attrs, click, rich, starlette), 300 consecutive
   human-reviewed commits each, none seen during development. That is how
   often greenwash would fail CI on a commit a human wrote. Every repo is
   at or under 4%; the progression from an initial 8.6%, and what moved each
   step, is in the benchmarks README.
-  A block is not automatically a mistake. All 36 were adjudicated commit by
-  commit against the real diff: **21 false positives (1.17%)**, 15 legitimate
+  A block is not automatically a mistake. All 37 were adjudicated commit by
+  commit against the real diff: **22 false positives (1.22%)**, 15 legitimate
   policy blocks (0.83%) where the commit really does drop oracle coverage
   with nothing visible replacing it, 0 unclear. Three precision rounds
   brought this down from 2.50% / 1.67%: skip conditions are *read* (constants
@@ -247,7 +247,7 @@ Two harnesses, both reproducible from a clone
   barely exercise the change, and the defence against over-flagging is the
   content gate (a Makefile that only compiles is still production) plus its
   negative fixtures, not the sweep.
-- **Recall against an attacker who has read the rules — 47 / 80, and that is
+- **Recall against an attacker who has read the rules — 48 / 80, and that is
   the number to look at.** 80 tampering cases across two arms, each verified
   mechanically before counting: production byte-identical, `pytest` red before
   and green after. The first arm (40 cases, written against a description of
@@ -255,7 +255,7 @@ Two harnesses, both reproducible from a clone
   that was a syntactic `assert`, so `assert_sum(add(2, 3), 5)` was a *call*
   and the unit read as having zero assertions. The IR now records **the
   assertions a test executes** — through the file's own call graph, invocation
-  and not mention — which brings that arm to **19/40** and blocks **28/40** of
+  and not mention — which brings that arm to **19/40** — 20/40 with the cross-file channels of v0.1.27 — and blocks **28/40** of
   a second arm written afterwards to *disguise* the weakening as a
   helper-extraction refactor. The 33 that still escape are enumerated, not
   waved at: most subvert the *meaning* of a syntactically strong assertion
@@ -317,7 +317,7 @@ Two harnesses, both reproducible from a clone
   fired, and the actual cause was in alignment rather than in any of them: the
   last-resort pairing stage matches leftover assertions by *span order*, so a
   deleted assertion and its unrelated replacement were reported as one
-  unchanged assertion. Closed in v0.1.26 by `ASSERT_SUBSTITUTED`, which is the
+  unchanged assertion. Closed in v0.1.27 by `ASSERT_SUBSTITUTED`, which is the
   first rule keyed on how a pair was formed rather than what it contains. The
   diff blocks at high on this build. D-031 and D-033 have the whole account,
   including the first attempted fix, which closed a six-line reduction of the

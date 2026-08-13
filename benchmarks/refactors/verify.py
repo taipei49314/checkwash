@@ -77,7 +77,7 @@ def judge(before_root: pathlib.Path, after_root: pathlib.Path, src: pathlib.Path
     head = {f"src/{_rel(p, src)}": p.read_bytes() for p in src.rglob("*.py")}
     _ir, findings, verdict = analyze(
         changes, Config(), Contract(), [], TODAY,
-        known_modules=known_baseline(),
+        known_modules=known_baseline() | {"app"},  # the corpora ship app.* by construction
         head_reader=head.get,
         head_searcher=lambda needles: [
             p for p, d in sorted(head.items()) if any(n.encode() in d for n in needles)

@@ -110,6 +110,15 @@ class ParsedFile:
     # (inside if/try) are deliberately absent: a name greenwash cannot pin
     # to one expression stays unevaluable.
     constants: dict[str, str] = field(default_factory=dict)
+    # Module-level oracle carriers, for the engine's cross-file merge (A5-x).
+    # `helper_asserts`: non-fixture, non-test top-level def -> its own direct
+    # asserts (classified, `inherited=True`, ids assigned at merge time).
+    # `fixture_asserts`: @pytest.fixture def -> every assert lexically inside
+    # it, nested defs included — the returned closure is what a unit calls,
+    # and the post-`yield` teardown runs unconditionally.
+    helper_asserts: dict[str, tuple] = field(default_factory=dict)
+    fixture_asserts: dict[str, tuple] = field(default_factory=dict)
+    autouse_fixtures: tuple[str, ...] = ()
     # Same-file `@pytest.fixture` name -> canonical text of what it produces.
     fixture_defs: dict[str, str] = field(default_factory=dict)
     # Top-level absolute `from M import a as b` bindings, local -> (module,
@@ -1568,6 +1577,12 @@ def _collect_unit(
         bindings=_binding_definitions(func),
         param_columns=_param_columns(func),
         patches=tuple(sorted(patches)),
+        invoked=tuple(sorted(_invocations(func))),
+        params=tuple(
+            a.arg
+            for a in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
+            if a.arg not in ("self", "cls")
+        ),
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
@@ -1961,6 +1976,10 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     ]
 
     units.sort(key=lambda u: u.span)
+    if collect_tests:
+        helper_asserts, fixture_asserts, autouse = _module_oracle_scopes(tree, text, off)
+    else:
+        helper_asserts, fixture_asserts, autouse = {}, {}, ()
     return ParsedFile(
         parse_ok=True,
         units=units,
@@ -1974,7 +1993,83 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         constants=_top_level_constants(tree, text),
         from_imports=_top_level_from_imports(tree),
         fixture_defs=_fixture_definitions(tree) if collect_tests else {},
+        helper_asserts=helper_asserts,
+        fixture_asserts=fixture_asserts,
+        autouse_fixtures=autouse,
     )
+
+
+def _is_fixture_def(node) -> bool:
+    return isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
+        _dotted(d.func if isinstance(d, ast.Call) else d) in ("pytest.fixture", "fixture")
+        for d in node.decorator_list
+    )
+
+
+def _classified_asserts(nodes, text, off) -> tuple:
+    out = []
+    for node in nodes:
+        if not isinstance(node, ast.Assert):
+            continue
+        c = _classify_assert(node, text)
+        seg = text.seg(node) or ""
+        bare = (
+            isinstance(node.test, ast.Compare)
+            and len(node.test.comparators) == 1
+            and isinstance(node.test.comparators[0], ast.Name)
+        )
+        out.append(
+            Assertion(
+                id="a?",  # assigned when merged into a unit
+                bare_expectation=bare,
+                form=c.form,
+                strength=c.strength,
+                text=seg,
+                span=off.span(node),
+                left=c.left,
+                right_literal=c.right_literal,
+                right_value=c.right_value,
+                epsilon=c.epsilon,
+                epsilon_kind=c.epsilon_kind,
+                trivial=_is_trivial_subject(node.test),
+                positive=c.positive,
+                left_names=c.left_names,
+                right_depends_on=c.right_names,
+                inherited=True,
+            )
+        )
+    return tuple(out)
+
+
+def _module_oracle_scopes(tree: ast.Module, text, off):
+    """(helper_asserts, fixture_asserts, autouse_fixtures) for a test module.
+
+    Helpers contribute their **own** direct asserts — one hop across the file
+    boundary, matching the same-file depth line. Fixtures contribute everything
+    lexically inside: the closure they return is what the unit invokes, and the
+    post-`yield` teardown runs whether or not anything calls it.
+    """
+    helpers: dict[str, tuple] = {}
+    fixtures: dict[str, tuple] = {}
+    autouse: list[str] = []
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if _is_fixture_def(node):
+            found = _classified_asserts(ast.walk(node), text, off)
+            if found:
+                fixtures[node.name] = found
+            for d in node.decorator_list:
+                if isinstance(d, ast.Call) and any(
+                    kw.arg == "autouse" and isinstance(kw.value, ast.Constant) and kw.value.value
+                    for kw in d.keywords
+                ):
+                    autouse.append(node.name)
+        elif not _is_test_name(node.name):
+            found = _classified_asserts(_scope_nodes(node), text, off)
+            if found:
+                helpers[node.name] = found
+    return helpers, fixtures, tuple(sorted(autouse))
 
 
 def _top_level_constants(tree: ast.Module, text) -> dict[str, str]:

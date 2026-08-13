@@ -1,6 +1,29 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-13 (v0.1.26: the IR now records the assertions a test executes)
+Updated: 2026-08-13 (v0.1.27: cross-file helpers, and the sweep bought its first real block since v0.1.15)
+
+## 2026-08-13 (v0.1.27): A5-x — the two cross-file channels the corpora actually contain
+
+Import channel (`from helpers import f`, same-directory sibling, parsed from
+change bytes so loop order cannot matter) and fixture channel (requested by
+parameter name, same file or same-dir conftest; autouse only from a touched
+conftest; **a fixture nobody requests contributes nothing**, which is what
+newly blocks the drop-the-autouse attack, tamper 040).
+
+Numbers: attacks **48/80** (arm 1 hits 20/40), refactor FPs **25/60**. Six
+pre-registered predictions: five held, CASE_019 falsified and kept as
+falsified — its teardown assert turns out to be membership-for-equality, the
+lattice-weaker family 92 keeps deliberately. One line corrected by the
+disguised arm itself: the EXACT_STRUCT→EXACT_VALUE extraction decline must
+require a **bare** `== expected` (the wide version excused `sorted(expected)`
+and three attacks walked through; reverted the same hour).
+
+The sweep moved for the first time since v0.1.15: **36 → 37**, one new block,
+flask `c2705ffd` ("merge app and request context") — an equivalent-rewrite
+false positive the fixture channel made visible, single-adjudicated and
+marked in the file, ΔFP 1 of the budgeted 5. Its first form was worse: one
+conftest edit fanned out to twenty-four findings before inherited-pair deltas
+were deduped to one per origin. D-045.
 
 ## 2026-08-13 (v0.1.26): reachable assertions — both numbers moved together
 
@@ -726,10 +749,10 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.26 |
+| version | v0.1.27 |
 | detectors | 21 |
-| human-commit block rate | 36/1800 = 2.00% |
-| adjudicated false positive | 21/1800 = 1.17% |
+| human-commit block rate | 37/1800 = 2.06% |
+| adjudicated false positive | 22/1800 = 1.22% |
 | legitimate policy block | 15/1800 = 0.83% |
 | opaque exemption share | 24/1800 = 1.33% |
 | classic adversarial decoys blocked | 12/12 |
