@@ -333,6 +333,57 @@ the guard was ever justified by (the `pytest.raises(match=)` fold).
 > right change is to the IR's question: not *which `assert` statements are in
 > this unit* but **which assertions can this collected test reach**. See #37.
 
+#### A5-x. The helper lives in another file (pre-registered 2026-08-13, before code)
+
+Five of the measured extraction false positives are one shape short of A5:
+the shared assertion moved not just out of the unit but out of the *file* —
+and the corpus says there are exactly two mechanisms, not the open-ended
+"cross-file dataflow" the residual note gestured at:
+
+1. **Plain import**: `from helpers import assert_prefix` /
+   `from conftest import assert_between`, a module-level function whose body
+   asserts. The helper file is *in the diff* (it was created by the same
+   refactor) or unchanged at head.
+2. **Fixture injection**: a `@pytest.fixture` in conftest (or the same file —
+   CASE_019's teardown shape) whose body or returned closure asserts; the unit
+   requests it by parameter name. No import statement exists.
+
+**Design, bounded to what the corpus shows:**
+
+- *Import channel*: a unit-invoked name bound by a top-level
+  `from M import f [as g]` resolves when `M` maps to a **test-role or conftest
+  file in the same directory as the importing file** — in the diff (parsed
+  from the change bytes directly, memoised, so resolution does not depend on
+  the order the sweep loop happens to parse files in) or in the head snapshot
+  (capped reads, same as D6 constants). `f`'s direct asserts join the unit's
+  reachable set as `inherited`. Depth across the file boundary is **one**: the
+  named function's own body; its calls are not followed further.
+- *Fixture channel*: a fixture the unit **requests by parameter name** (or an
+  autouse fixture in the same file or same-directory conftest) contributes
+  every assert lexically inside the fixture def — body and nested defs,
+  because the returned closure is what the unit calls and the post-`yield`
+  teardown runs unconditionally. A fixture **nobody requests contributes
+  nothing** — that is what keeps "move the oracle into a fixture the failing
+  test does not request" visible as a removal.
+- `import M; M.f(...)`, cross-directory imports, and helper files in prod
+  roles stay out, stated.
+
+- **Predicted, named in advance:** CASE_012, CASE_030, EXT_006, EXT_015,
+  EXT_025 go silent (the import/fixture channels); CASE_019 goes silent (the
+  same-file fixture body). **Nothing currently silent may start blocking on
+  either refactor arm, and no blocked tamper case may regress.** Sweep budget
+  unchanged: ΔFP ≤ 0.3pp = 5 commits of 1800, every new block reconciled.
+- **Recall this should add, to be verified by fixtures:** a unit that stops
+  calling its imported helper loses the inherited asserts (the cross-file
+  spelling of tamper 001); a helper file whose own assert is weakened weakens
+  every calling unit.
+- **Also in this round, harness not engine:** the corpus judges pass
+  `known_baseline()` with no `app` declared, so any *new* helper file's
+  `from app.X import` reads as a hallucinated import. The corpora ship their
+  own production package by construction; the judges declare it.
+
+### A5. Oracles behind custom helpers — original section
+
 `assert_invoice_ok(total)` in `helpers.py`, then the test stops calling it or
 calls it with a constant. The frontend understands bare `assert`, curated
 unittest methods and some `pytest.raises`; it does not understand hamcrest, a
