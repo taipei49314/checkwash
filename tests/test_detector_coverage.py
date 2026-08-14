@@ -13,6 +13,7 @@ from greenwash.config import Config
 from greenwash.contract import Contract, parse_contract
 from greenwash.detectors import REGISTRY
 from greenwash.engine import analyze
+from greenwash.gating import RULE_ORDER
 from greenwash.pyenv import known_baseline
 
 CASES = sorted((pathlib.Path(__file__).parent / "cases").glob("*.gwcase"))
@@ -55,6 +56,17 @@ def test_every_fixture_carries_parsed_metadata():
         if "rule" not in case.meta:
             silent.append(case_path.name)
     assert not silent, f"fixtures whose metadata did not parse: {silent}"
+
+
+def test_registry_rules_appear_in_rule_order():
+    """Unknown rules share one sort rank and make report order unstable.
+
+    Static review 2026-08-11 Issue 8 / E3. Derived rules (EXEMPTION_ADDED)
+    may sit in RULE_ORDER without being in REGISTRY; the other direction
+    is the defect.
+    """
+    missing = sorted(set(REGISTRY) - set(RULE_ORDER))
+    assert not missing, f"REGISTRY rules missing from RULE_ORDER: {missing}"
 
 
 def test_every_detector_has_a_positive_fixture():

@@ -1,6 +1,12 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.29: E2 — Finding.shape, not English message)
+Updated: 2026-08-15 (v0.1.30: E3 — REGISTRY ⊆ RULE_ORDER)
+
+## 2026-08-15 (v0.1.30): E3 — REGISTRY ⊆ RULE_ORDER
+
+Added TEST_FILE_UNPARSEABLE, CONFTEST_PATCHES_PROD, TEST_PATCHES_SUBJECT to
+RULE_ORDER. Sort rank only; verdicts unchanged. Test fails if a registry
+rule is missing from the order.
 
 ## 2026-08-15 (v0.1.29): E2 — TEST_DISABLED shape
 
@@ -762,7 +768,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.29 |
+| version | v0.1.30 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |
