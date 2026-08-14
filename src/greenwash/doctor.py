@@ -257,7 +257,9 @@ def collect(root: Path) -> list[Note]:
         "use a three-dot range for pull requests",
         "`greenwash check BASE...HEAD` resolves through the merge base, so the "
         "diff holds only the PR's own commits. A two-dot range drags in "
-        "base-branch commits and reports findings the PR did not introduce.",
+        "base-branch commits and reports findings the PR did not introduce. "
+        "A single-commit range still cannot see a wash split across PRs "
+        "(docs/process-windows.md); that is a process limit, not a detector.",
     ))
 
     return notes

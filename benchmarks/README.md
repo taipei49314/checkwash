@@ -13,6 +13,19 @@ check out the recorded commit, and re-run the sweep to compare. Without that
 pin the numbers were not checkable by anyone but the author, which was a fair
 criticism.
 
+From a greenwash checkout:
+
+```bash
+greenwash bench --local          # demo + in-clone pins
+greenwash bench --corpus DIR     # also require the six sweep clones
+```
+
+`--corpus` (or `GREENWASH_CORPUS`, or a sibling directory named
+`greenwash-corpus`) must contain one git clone per sweep JSON stem,
+and each clone must contain the `newest_commit` recorded in that
+JSON. Missing clones are a hard fail, not a skipped row. Re-running
+the 1800-commit sweep itself is `greenwash bench --corpus DIR --run-sweep`.
+
 `make_results.py` will refuse to publish the false-positive decomposition
 unless the adjudication file describes exactly the set of commits the sweep
 blocked — it names the unadjudicated and stale commits instead. Pairing a

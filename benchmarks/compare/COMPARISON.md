@@ -3,7 +3,9 @@
 Run: 2026-07-31. swarm-orchestrator v12.1.1, greenwash at commit 50fd65b.
 Both with **no LLM judge** (swarm's `--enable-llm-judge` left off, greenwash
 has none). Raw per-case data: `decoy-2026-07-31.json`. Reproduce with
-`run.py` (it shells out to both tools).
+`prepare.py` then `run.py` — exact steps in [README.md](README.md).
+`run.py` exits 2 and names the path if a clone or the swarm CLI is
+missing; it does not print a comparison from a partial run.
 
 ## Read this caveat before the numbers
 
@@ -79,3 +81,12 @@ required check. Neither result argues for replacing the other.
   here.
 - The decoy cheats were elicited from agents told to cheat; they are
   representative of the shortcut vocabulary, not of real-world frequency.
+- greenwash later grew a JS/TS *oracle scan* (T3.1). This comparison is
+  still the 2026-07-31 Python decoy run. It does not measure that
+  frontend, and it still does not measure swarm on JavaScript.
+
+## How to re-run
+
+See [README.md](README.md). A re-run with newer tool versions is a new
+paragraph dated with those versions. Do not silently rewrite the table
+above.

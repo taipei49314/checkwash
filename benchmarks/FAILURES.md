@@ -221,9 +221,22 @@ D-028 and D-029.
 | A pull request that **added** a backend, **added its own tests**, and gated them on `find_spec("redis")` | net tests disabled: zero — and the message said there was no production change in a diff that changed three production files | v0.1.9 | v0.1.11 |
 | Moving errexit from a shebang to `set -o errexit`, which makes a script *stricter* | reported as "a failing command no longer fails the script", over a script measured still exiting 1 on a failing test | v0.1.8 | v0.1.12 |
 
+## External credits
+
+Reports that arrived through the public issue templates, credited here
+when they become a fixture. Generated from
+`benchmarks/external-credits.json`. An empty table is the honest
+state — do not invent a row to fill it. Quarterly review:
+`docs/cheat-cadence.md`.
+
+| date | kind | reporter | issue | fixture | threatmodel |
+|---|---|---|---|---|---|
+| — | — | *none yet* | — | — | — |
+
 ## Send us one
 
 A cheat this missed, or an honest commit it blocked, is the most useful
 thing anyone can send. Both become regression fixtures with the reporter
 credited in the fixture header, and a row in the table above. Issue
-templates for both are in `.github/ISSUE_TEMPLATE/`.
+templates for both are in `.github/ISSUE_TEMPLATE/`. The quarterly
+review that turns a report into a credited row is `docs/cheat-cadence.md`.

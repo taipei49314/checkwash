@@ -48,7 +48,7 @@
 |----|------|--------|
 | #1 | 改 production 讓舊測試「誠實」通過 | 人審 / 規格 / 執行層 |
 | #3 | 不跑 greenwash、卸 required check | Branch protection / 組織政策 |
-| L0-C | 多 commit / 多 PR 洗白 | Merge 視窗掃描 / process |
+| L0-C | 多 commit / 多 PR 洗白 | Merge 視窗掃描 / [process](process-windows.md) |
 | — | 形式化證明「無作弊」 | 超出品類 |
 
 **核心保持：** 0 LLM · 0 runtime network · 決定性 · 可進 stop-hook。  
@@ -452,12 +452,12 @@ Labels：`roadmap` · `phase-t0`…`phase-t3` · `engineering` · `P0`–`P3`
 
 ### T3
 
-- [ ] T3.1 語言或 opaque 政策 → #23  
-- [ ] T3.2 bench 一鍵 → #24  
-- [ ] T3.3 對標固定化 → #25  
-- [ ] T3.4 外部 cheat 節奏 → #26  
+- [x] T3.1 語言或 opaque 政策 → #23  
+- [x] T3.2 bench 一鍵 → #24  
+- [x] T3.3 對標固定化 → #25  
+- [x] T3.4 外部 cheat 節奏 → #26  
 - [ ] T3.5 衛星執行層（可選） → #27  
-- [ ] T3.6 多窗口 process → #28  
+- [x] T3.6 多窗口 process → #28  
 
 ### Engineering
 

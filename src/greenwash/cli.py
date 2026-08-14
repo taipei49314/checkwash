@@ -3,8 +3,10 @@
     greenwash check [BASE..HEAD] [--task FILE] [--format term|json|sarif]
                     [--fail-on SEV] [--emit-ir] [--repo PATH]
     greenwash allow FINGERPRINT --reason "..." [--expires YYYY-MM-DD]
+    greenwash bench [--local] [--corpus DIR] [--run-sweep]
 
 Exit codes (SPEC §9): 0 pass, 1 block, 2 engine error.
+`bench` uses 0 / 2 only — it never reports a verdict.
 """
 
 from __future__ import annotations
@@ -395,6 +397,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     doctor.add_argument("--repo", default=".")
 
+    bench = sub.add_parser(
+        "bench",
+        help="reproduce published numbers from this checkout",
+    )
+    bench.add_argument(
+        "--repo",
+        default=".",
+        help="greenwash checkout (walks up looking for benchmarks/README.md)",
+    )
+    bench.add_argument(
+        "--corpus",
+        default=None,
+        help="directory of the six sweep clones (or set GREENWASH_CORPUS)",
+    )
+    bench.add_argument(
+        "--local",
+        action="store_true",
+        help="skip the third-party sweep clones; run only what this clone contains",
+    )
+    bench.add_argument(
+        "--run-sweep",
+        action="store_true",
+        help="re-run the 1800-commit sweep (slow; requires every clone and pin)",
+    )
+
     allow = sub.add_parser("allow", help="record a reviewed exemption")
     allow.add_argument("fingerprint")
     allow.add_argument("--reason", required=True)
@@ -412,7 +439,8 @@ def main(argv: list[str] | None = None) -> int:
     # unlisted name is silently reinterpreted as a `check` range, so a typo'd
     # or newly added command reports a verdict instead of an error.
     elif argv[0] not in (
-        "check", "allow", "sweep", "hook", "demo", "doctor", "-h", "--help", "--version"
+        "check", "allow", "sweep", "hook", "demo", "doctor", "bench",
+        "-h", "--help", "--version",
     ):
         argv = ["check", *argv]
     parser = build_parser()
@@ -439,6 +467,15 @@ def main(argv: list[str] | None = None) -> int:
             from greenwash.doctor import run as run_doctor
 
             return run_doctor(args.repo)
+        if args.command == "bench":
+            from greenwash.bench import run as run_bench
+
+            return run_bench(
+                args.repo,
+                corpus=args.corpus,
+                local_only=args.local,
+                run_sweep=args.run_sweep,
+            )
         parser.print_help()
         return 2
     except (GitError, OSError, RecursionError) as exc:

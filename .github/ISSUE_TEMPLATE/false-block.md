@@ -21,4 +21,6 @@ labels: false-positive
 
 ---
 Every false positive we've fixed came from a real diff like this one. It'll
-become a negative fixture so it can never regress.
+become a negative fixture so it can never regress. Reporter credit lands
+in `benchmarks/FAILURES.md` (External credits) after the quarterly review
+in `docs/cheat-cadence.md`.

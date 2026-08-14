@@ -17,6 +17,8 @@ honest**, that is a false positive and we want it just as much. Every one we
 have fixed came from a real diff, and each is now a negative fixture.
 
 Issue templates for both are in `.github/ISSUE_TEMPLATE/`.
+Reports are reviewed quarterly (`docs/cheat-cadence.md`); a credited
+external row lands in `benchmarks/FAILURES.md`.
 
 ## The one rule that is not negotiable
 
@@ -55,6 +57,7 @@ protocol is `src/greenwash/frontends/`.
 
 ```bash
 pip install -e ".[dev]"
-pytest                      # 410 tests: fixtures, e2e, perf and coverage gates
+pytest                      # 420 tests: fixtures, e2e, perf and coverage gates
 greenwash demo              # sanity: 7 real cheats blocked, offline
+greenwash bench --local     # in-clone reproduce; omit --local to require sweep clones
 ```

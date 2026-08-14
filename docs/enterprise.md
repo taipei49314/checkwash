@@ -28,7 +28,9 @@ greenwash check BASE...HEAD --format sarif > greenwash.sarif
 ```
 
 SARIF 2.1.0 for GitHub code scanning. It is a projection of findings, not a
-second verdict. Exit codes stay 0 / 1 / 2.
+second verdict. Exit codes stay 0 / 1 / 2. Use the three-dot range so the
+diff is the PR, not the last commit. A wash split across merged PRs is
+still outside that window — [process-windows.md](process-windows.md).
 
 ## 3. Allowlist — reviewed, time-boxed, base-side
 

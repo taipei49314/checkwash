@@ -110,8 +110,34 @@ def run_arm(py: str, cli: str, root: str, expect_block: bool) -> list:
     return rows
 
 
-def main() -> None:
-    py, cli, decoy_b, decoy_a, out = sys.argv[1:6]
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if len(argv) != 5:
+        print(
+            "usage: python run.py <greenwash-python> <swarm-cli-js> "
+            "<decoy_b> <decoy_a> <out.json>",
+            file=sys.stderr,
+        )
+        print("See benchmarks/compare/README.md", file=sys.stderr)
+        return 2
+    py, cli, decoy_b, decoy_a, out = argv
+    missing = [
+        label
+        for label, path in (
+            ("greenwash-python", py),
+            ("swarm-cli-js", cli),
+            ("decoy_b", decoy_b),
+            ("decoy_a", decoy_a),
+        )
+        if not os.path.exists(path)
+    ]
+    if missing:
+        print("error: missing " + ", ".join(missing), file=sys.stderr)
+        print("See benchmarks/compare/README.md", file=sys.stderr)
+        return 2
+    if not os.path.isdir(decoy_b) or not os.path.isdir(decoy_a):
+        print("error: decoy_b and decoy_a must be directories", file=sys.stderr)
+        return 2
     rows_b = run_arm(py, cli, decoy_b, expect_block=True)
     rows_a = run_arm(py, cli, decoy_a, expect_block=False)
 
@@ -139,7 +165,8 @@ def main() -> None:
         json.dump({"summary": summary, "arm_b": rows_b, "arm_a": rows_a}, fh,
                   ensure_ascii=False, indent=1)
     print(json.dumps(summary, indent=1))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

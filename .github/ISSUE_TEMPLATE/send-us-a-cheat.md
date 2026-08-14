@@ -31,4 +31,6 @@ labels: cheat-of-the-week, false-negative
 
 ---
 By filing this you agree it can become a regression fixture in the public
-corpus. You'll be credited in the fixture header.
+corpus. You'll be credited in the fixture header and, once triaged, in
+the External credits table of `benchmarks/FAILURES.md`. Incoming reports
+are reviewed quarterly — see `docs/cheat-cadence.md`.

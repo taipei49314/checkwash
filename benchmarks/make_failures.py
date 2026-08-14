@@ -218,12 +218,42 @@ def main() -> None:
       "exiting 1 on a failing test | v0.1.8 | v0.1.12 |")
     w("")
 
+    w("## External credits")
+    w("")
+    w("Reports that arrived through the public issue templates, credited here")
+    w("when they become a fixture. Generated from")
+    w("`benchmarks/external-credits.json`. An empty table is the honest")
+    w("state — do not invent a row to fill it. Quarterly review:")
+    w("`docs/cheat-cadence.md`.")
+    w("")
+    credits_path = os.path.join(HERE, "external-credits.json")
+    credits = (
+        _load(HERE, "external-credits.json").get("credits")
+        if os.path.isfile(credits_path)
+        else []
+    )
+    w("| date | kind | reporter | issue | fixture | threatmodel |")
+    w("|---|---|---|---|---|---|")
+    if not credits:
+        w("| — | — | *none yet* | — | — | — |")
+    else:
+        for row in credits:
+            issue = row.get("issue")
+            issue_cell = f"#{issue}" if issue else "—"
+            w(
+                f"| {row.get('date') or '—'} | {row.get('kind') or '—'} | "
+                f"{row.get('reporter') or '—'} | {issue_cell} | "
+                f"`{row.get('fixture') or '—'}` | {row.get('threatmodel_row') or '—'} |"
+            )
+    w("")
+
     w("## Send us one")
     w("")
     w("A cheat this missed, or an honest commit it blocked, is the most useful")
     w("thing anyone can send. Both become regression fixtures with the reporter")
     w("credited in the fixture header, and a row in the table above. Issue")
-    w("templates for both are in `.github/ISSUE_TEMPLATE/`.")
+    w("templates for both are in `.github/ISSUE_TEMPLATE/`. The quarterly")
+    w("review that turns a report into a credited row is `docs/cheat-cadence.md`.")
 
     path = os.path.join(HERE, "FAILURES.md")
     with open(path, "w", encoding="utf-8", newline="\n") as fh:

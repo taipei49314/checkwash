@@ -1,6 +1,24 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.39: T2.2 PR comments, T1.8 #54, T3.1 JS/TS)
+Updated: 2026-08-15 (v0.1.40: T3.2 bench, T3.3 compare, T3.4 cadence, T3.6 windows)
+
+## 2026-08-15 (v0.1.40): T3.2 / T3.3 / T3.4 / T3.6
+
+- **T3.2** `greenwash bench` reproduces what this checkout can
+  (demo + decoy/tamper/refactor pins) and fails closed when the six
+  sweep clones are missing. `--local` skips that requirement.
+  `--run-sweep` re-runs the 1800-commit window only when every pin
+  is present. Points at `benchmarks/README.md`. Exit 0/2, never 1.
+- **T3.3** `benchmarks/compare/prepare.py` materializes arm-b / arm-a;
+  `run.py` now exits 2 and names a missing path. COMPARISON.md keeps
+  the 2026-07-31 numbers and the Python-only caveat.
+- **T3.4** quarterly review in `docs/cheat-cadence.md`. FAILURES has
+  a generated External credits table from
+  `benchmarks/external-credits.json` (empty = none yet).
+- **T3.6** `docs/process-windows.md`: single-diff tools miss
+  multi-PR laundering (L0-C). Recommend `BASE...HEAD` plus optional
+  sweep. No claim that the engine closed L0-C.
+- **#86a stays info; #36 stays open.** T3.5 satellite not started.
 
 ## 2026-08-15 (v0.1.39): T2.2, T1.8, T3.1
 
@@ -904,7 +922,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.39 |
+| version | v0.1.40 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |
