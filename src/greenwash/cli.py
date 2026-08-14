@@ -1,6 +1,6 @@
 """greenwash CLI.
 
-    greenwash check [BASE..HEAD] [--task FILE] [--format term|json]
+    greenwash check [BASE..HEAD] [--task FILE] [--format term|json|sarif]
                     [--fail-on SEV] [--emit-ir] [--repo PATH]
     greenwash allow FINGERPRINT --reason "..." [--expires YYYY-MM-DD]
 
@@ -31,6 +31,7 @@ from greenwash.gitio import (
     rev_parse,
 )
 from greenwash.report.jsonout import findings_to_json, ir_to_json
+from greenwash.report.sarif import findings_to_sarif
 from greenwash.report.term import render
 from greenwash.sweep import sweep
 
@@ -211,6 +212,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         return 0
     if args.format == "json":
         _write_machine(findings_to_json(ir, findings, verdict, errors))
+    elif args.format == "sarif":
+        _write_machine(findings_to_sarif(ir, findings))
     elif args.format == "hook-json":
         # Claude Code Stop-hook protocol: JSON on stdout carries the decision,
         # exit 0 either way (non-zero would read as a hook failure).
@@ -366,7 +369,7 @@ def build_parser() -> argparse.ArgumentParser:
     check = sub.add_parser("check", help="analyse a diff for verification-layer tampering")
     check.add_argument("range", nargs="?", help="BASE..HEAD; omit to check HEAD..worktree")
     check.add_argument("--task", help="task manifest file (TASK.md style)")
-    check.add_argument("--format", choices=["term", "json", "hook-json"], default="term")
+    check.add_argument("--format", choices=["term", "json", "hook-json", "sarif"], default="term")
     check.add_argument("--fail-on", choices=list(SEVERITY_ORDER), default=None)
     check.add_argument("--emit-ir", action="store_true", help="print the IR JSON and exit")
     check.add_argument("--repo", default=".")

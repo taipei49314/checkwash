@@ -94,6 +94,39 @@ def test_worktree_mode_blocks_uncommitted_weakening(repo):
     assert payload["verdict"] == "block"
 
 
+def test_sarif_format_is_github_code_scanning_subset(repo):
+    _weaken(repo)
+    _git(repo, "commit", "-am", "agent fix")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
+    assert result.returncode == 1, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["version"] == "2.1.0"
+    assert payload["$schema"].endswith("sarif-2.1.0.json")
+    run = payload["runs"][0]
+    assert run["tool"]["driver"]["name"] == "greenwash"
+    assert "ASSERT_WEAKENED" in [rule["id"] for rule in run["tool"]["driver"]["rules"]]
+    hit = next(item for item in run["results"] if item["ruleId"] == "ASSERT_WEAKENED")
+    assert hit["level"] == "error"
+    assert hit["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == (
+        "tests/test_billing.py"
+    )
+    assert hit["locations"][0]["physicalLocation"]["region"]["startLine"] == 1
+    assert hit["partialFingerprints"]["greenwash/v1"]
+    again = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
+    assert again.stdout == result.stdout
+
+
+def test_sarif_pass_is_empty_results(repo):
+    (repo / "notes.md").write_text("release notes\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "docs")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["runs"][0]["results"] == []
+    assert payload["runs"][0]["tool"]["driver"]["rules"] == []
+
+
 def test_clean_range_passes(repo):
     (repo / "notes.md").write_text("release notes\n", encoding="utf-8")
     _git(repo, "add", "-A")

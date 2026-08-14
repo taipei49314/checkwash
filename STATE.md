@@ -1,6 +1,16 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (T0.4: gh ruleset to require the greenwash check)
+Updated: 2026-08-15 (v0.1.36: T2.1 `--format sarif`)
+
+## 2026-08-15 (v0.1.36): T2.1 SARIF 2.1.0
+
+`greenwash check --format sarif` emits a GitHub code-scanning subset:
+version 2.1.0, rule ids are greenwash rule ids, severity maps
+info→note / warn→warning / high|critical→error. Allowlisted findings
+are omitted. No timestamps; two runs are byte-identical. Location
+`startLine` is 1 until the IR carries a line — span offset is kept on
+the region. Exit codes unchanged (SPEC §9). Not a native-findings
+schema bump.
 
 ## 2026-08-15: T0.4 documented `gh` required-check command
 
@@ -852,7 +862,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.35 |
+| version | v0.1.36 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

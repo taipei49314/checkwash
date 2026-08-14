@@ -23,7 +23,7 @@ changes with it and `DECISIONS.md` carries the entry explaining why.
 | Severity model | `SPEC.md` §5 | Every detector reports at `warn`; only the escalator table promotes to `high`/`critical`. A detector will never start blocking on its own |
 | Exit codes | `SPEC.md` §9 | `0` pass, `1` block, `2` engine error. A crash is never reported as a block — that distinction is gated by an end-to-end test, because it once was not |
 | Finding fingerprints | `src/greenwash/findings.py` | A recorded exemption keeps matching. This has cost the project real features: a guard was deliberately kept out of marker identity so existing allowlists would survive (THREATMODEL 54, later closed another way) |
-| IR / findings schema version | `greenwash.IR_VERSION`, `greenwash_findings_version` | `--format json` and `--emit-ir` output stays parseable. A shape change bumps the number |
+| IR / findings schema version | `greenwash.IR_VERSION`, `greenwash_findings_version` | `--format json` and `--emit-ir` output stays parseable. A shape change bumps the number. `--format sarif` is a separate 2.1.0 projection (T2.1), not this schema |
 | Config schema | `SPEC.md` §1, §6 | `.greenwash/config.toml` keys keep their meaning. A malformed config is reported, never silently ignored |
 | Determinism | `SPEC.md` §8 | Same diff, same verdict — byte-identical across Linux, macOS and Windows on Python 3.11–3.13. Proved on every push by a job that diffs artifacts from all nine matrix legs |
 | Zero runtime dependencies | `pyproject.toml` | Gated by a test. It is what makes the single-file build possible |
