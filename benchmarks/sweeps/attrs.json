@@ -32,7 +32,7 @@
   "commits_touching_tests": 65,
   "commits_with_opaque_prod_change": 2,
   "corpus": {
-    "greenwash_version": "0.1.27",
+    "greenwash_version": "0.1.34",
     "newest_commit": "92e12eae712ef88c1a7e322cc51b7cd9e271aa3c",
     "oldest_commit": "0a09c1aa2cde5816f4a9f5558fdd1ce792e7076e"
   },
@@ -51,7 +51,7 @@
       "warn": 297
     },
     "EXPECTATION_DEFINITION_CHANGED": {
-      "info": 5
+      "info": 7
     },
     "EXPECTED_VALUE_CHANGED": {
       "warn": 12

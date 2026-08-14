@@ -1,6 +1,35 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.34: T1.9 credits — helper hop + D9 mark, not promoted)
+Updated: 2026-08-15 (v0.1.34 sweep restamp; #86a stays info)
+
+## 2026-08-15 (v0.1.34): 1800-commit sweep, #86a not promoted
+
+Same six windows as the committed v0.1.27 sweeps. At `info`, the
+block set is unchanged: **37/1800**, no SHA added or removed. Opaque
+24/1800. `EXPECTATION_DEFINITION_CHANGED` findings stayed info
+(51 total; attrs 5→7, the others identical). T1.9's marks did not
+move a verdict — they were not supposed to.
+
+Hypothetical promotion (rule added to `ORACLE_RULES`, D9's
+`dep_drift` tuple widened to include it, source otherwise untouched)
+is **37→50, +13 extra blocks**. That is past the §A1 handful and past
+the original +12 that kept the rule at `info`. Threshold does not
+move because the credits exist.
+
+| repo | info blocks | promoted | extra |
+|---|---|---|---|
+| attrs | 2 | 4 | +2 |
+| click | 12 | 17 | +5 |
+| flask | 7 | 7 | 0 |
+| httpx | 12 | 13 | +1 |
+| rich | 2 | 7 | +5 |
+| starlette | 2 | 2 | 0 |
+
+Of the two T1.9 motivating commits: starlette `100f05a66b` stays
+unblocked (D9 fires). rich `1c5e03eb32` still escalates to high —
+the helper hop does not credit that commit when the rule is an
+oracle. The other twelve extras are listed on issue #36. #86a stays
+visible and non-blocking.
 
 ## 2026-08-15 (v0.1.34): T1.9 credits, not a promotion
 

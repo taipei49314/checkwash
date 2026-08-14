@@ -120,7 +120,7 @@
   "commits_touching_tests": 37,
   "commits_with_opaque_prod_change": 8,
   "corpus": {
-    "greenwash_version": "0.1.27",
+    "greenwash_version": "0.1.34",
     "newest_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
     "oldest_commit": "345f18442ceb29f9e365af99fc85bdc5986323d2"
   },
