@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
-from greenwash.findings import Evidence, Finding, make_fingerprint
+from greenwash.findings import (
+    SHAPE_COLLECTION_CONTROL,
+    SHAPE_GUARD_WEAKENED,
+    SHAPE_MARKER_ADDED,
+    SHAPE_PARAM_CASES_REMOVED,
+    SHAPE_UNIT_REMOVED,
+    Evidence,
+    Finding,
+    make_fingerprint,
+)
 from greenwash.ir.model import IR
 
 
@@ -25,6 +34,7 @@ def detect(ir: IR) -> list[Finding]:
                         before=Evidence(text=text, span=unit.before.span),
                         after=None,
                         fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, text),
+                        shape=SHAPE_UNIT_REMOVED,
                     )
                 )
                 continue
@@ -34,9 +44,10 @@ def detect(ir: IR) -> list[Finding]:
                 marker_by_name = {m.name: m for m in unit.after.markers}
                 for name in unit.delta.markers_added:
                     m = marker_by_name.get(name)
+                    collection = name.startswith("conftest.")
                     what = (
                         "suite-level collection control added"
-                        if name.startswith("conftest.")
+                        if collection
                         else "disabling marker added"
                     )
                     findings.append(
@@ -49,6 +60,11 @@ def detect(ir: IR) -> list[Finding]:
                             before=None,
                             after=Evidence(text=m.text, span=m.span) if m else None,
                             fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, name),
+                            shape=(
+                                SHAPE_COLLECTION_CONTROL
+                                if collection
+                                else SHAPE_MARKER_ADDED
+                            ),
                         )
                     )
             for name in unit.delta.guards_weakened:
@@ -68,6 +84,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_fingerprint(
                             "TEST_DISABLED", file.path, unit.qualname, f"guard:{name}"
                         ),
+                        shape=SHAPE_GUARD_WEAKENED,
                     )
                 )
             if unit.delta.param_cases_removed:
@@ -89,6 +106,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_fingerprint(
                             "TEST_DISABLED", file.path, unit.qualname, "parametrize"
                         ),
+                        shape=SHAPE_PARAM_CASES_REMOVED,
                     )
                 )
     return findings

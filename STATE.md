@@ -1,6 +1,12 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.28: E1 — dotted_name lives in ir.astutil)
+Updated: 2026-08-15 (v0.1.29: E2 — Finding.shape, not English message)
+
+## 2026-08-15 (v0.1.29): E2 — TEST_DISABLED shape
+
+`test_disabled` writes `Finding.shape`. `_prod_removal_shape` reads that
+field only. Message text can change without breaking PROD_SYMBOL_REMOVED.
+Zero detector/fixture expectation change.
 
 ## 2026-08-15 (v0.1.28): E1 — one dotted_name
 
@@ -756,7 +762,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.28 |
+| version | v0.1.29 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

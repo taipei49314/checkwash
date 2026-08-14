@@ -15,7 +15,7 @@ import operator
 from greenwash.allowlist import AllowEntry, active_fingerprints
 from greenwash.config import SEVERITY_ORDER, Config
 from greenwash.contract import Contract
-from greenwash.findings import Finding
+from greenwash.findings import SHAPE_MARKER_ADDED, Finding
 from greenwash.ir.astutil import dotted_name as _dotted_name
 from greenwash.ir.markers import bare_names, marker_call, parse_expr
 from greenwash.ir.model import IR, Unit, normalize_text
@@ -167,8 +167,9 @@ def _prod_removal_shape(f: Finding, unit: Unit | None) -> bool:
     """Only the removal shapes of TEST_DISABLED are eligible for the
     PROD_SYMBOL_REMOVED compensation: a unit that disappeared outright, or
     parametrize rows that left. A disabling marker added to a *live* test is
-    the cheat this rule exists to catch, and stays out — discriminated on the
-    finding message because one unit can carry both events at once.
+    the cheat this rule exists to catch, and stays out. One unit can carry
+    both events at once, so this reads Finding.shape, never the English
+    message (E2 / review 2026-08-11 Issue 3).
     """
     if unit is None:
         return False
@@ -177,7 +178,7 @@ def _prod_removal_shape(f: Finding, unit: Unit | None) -> bool:
     return (
         unit.delta is not None
         and unit.delta.param_cases_removed > 0
-        and "disabling marker added" not in f.message
+        and f.shape != SHAPE_MARKER_ADDED
     )
 
 

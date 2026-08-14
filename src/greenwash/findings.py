@@ -7,6 +7,14 @@ from dataclasses import dataclass, field
 
 from greenwash.ir.model import normalize_text
 
+# TEST_DISABLED event kinds. Gating must read `Finding.shape`, never English
+# message text (E2 / static review 2026-08-11 Issue 3).
+SHAPE_UNIT_REMOVED = "unit_removed"
+SHAPE_MARKER_ADDED = "marker_added"
+SHAPE_COLLECTION_CONTROL = "collection_control"
+SHAPE_GUARD_WEAKENED = "guard_weakened"
+SHAPE_PARAM_CASES_REMOVED = "param_cases_removed"
+
 
 @dataclass
 class Evidence:
@@ -34,6 +42,8 @@ class Finding:
     # True when the assertion's left-hand subject was itself rewritten, not
     # just the matcher — that is a different edit from a style change.
     subject_changed: bool | None = None
+    # Detector-set event kind. Optional; currently TEST_DISABLED only.
+    shape: str | None = None
 
     def sort_key(self) -> tuple:
         from greenwash.gating import RULE_ORDER
