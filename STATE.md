@@ -1,6 +1,14 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.30: E3 — REGISTRY ⊆ RULE_ORDER)
+Updated: 2026-08-15 (v0.1.31: E4 — unittest name sets + unpack/walrus bindings)
+
+## 2026-08-15 (v0.1.31): E4 — unittest DERIVED + unpack/walrus
+
+`_classify_unittest_call` fills left_names / right_names with the same
+literal-side flip as bare assert. `_local_bindings` and `_binding_definitions`
+record tuple/list unpacks and walrus names. Subscript/attribute/`for`/`with`
+targets are still out (not local expectation bindings). THREATMODEL 86b/86g
+rows stay for the human to close. Sweep has no unittest power (0 of 140,509).
 
 ## 2026-08-15 (v0.1.30): E3 — REGISTRY ⊆ RULE_ORDER
 
@@ -768,7 +776,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.30 |
+| version | v0.1.31 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

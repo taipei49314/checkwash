@@ -5,7 +5,9 @@ import ast
 from greenwash.frontends.python.frontend import (
     _Offsets,
     _classify_assert,
+    _classify_unittest_call,
     _is_trivial_subject,
+    _local_bindings,
     parse_python,
 )
 from greenwash.ir import strength as S
@@ -58,6 +60,40 @@ def _strength_of(line: str) -> int | None:
     asserts = _single_test_assertions(src)
     assert len(asserts) == 1, f"expected 1 assertion for {line!r}"
     return asserts[0].strength
+
+
+def test_unittest_classify_fills_name_sets():
+    src = "self.assertEqual(invoice_total(items, 0.05), expected)"
+    tree = ast.parse(src)
+    call = tree.body[0].value
+    c = _classify_unittest_call(call, _Offsets(src))
+    assert c is not None
+    assert "items" in c.left_names
+    assert "expected" in c.right_names
+
+
+def test_unittest_classify_flips_literal_subject():
+    src = "self.assertEqual(105.0, invoice_total(items, 0.05))"
+    tree = ast.parse(src)
+    call = tree.body[0].value
+    c = _classify_unittest_call(call, _Offsets(src))
+    assert c is not None
+    assert "items" in c.left_names
+    assert c.right_value == "105.0"
+
+
+def test_local_bindings_unpack_and_walrus():
+    src = (
+        "def test_x():\n"
+        "    items = [1]\n"
+        "    _, expected = None, sum(items)\n"
+        "    if (got := total(items)):\n"
+        "        pass\n"
+    )
+    func = ast.parse(src).body[0]
+    binds = _local_bindings(func)
+    assert "items" in binds["expected"]
+    assert "items" in binds["got"]
 
 
 def test_lattice_classification():

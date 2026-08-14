@@ -528,6 +528,23 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
     return _Classified("truthy", S.TRUTHY)
 
 
+def _assignment_name_targets(target: ast.AST) -> list[str]:
+    """Local names an assignment target binds.
+
+    Bare names and tuple/list unpacks. Subscript and attribute targets are
+    not locals; starred leftovers are skipped. E4 / THREATMODEL 86g: the
+    spellings that hide a recomputed expectation, not every bindable node.
+    """
+    if isinstance(target, ast.Name):
+        return [target.id]
+    if isinstance(target, (ast.Tuple, ast.List)):
+        names: list[str] = []
+        for elt in target.elts:
+            names.extend(_assignment_name_targets(elt))
+        return names
+    return []
+
+
 def _binding_definitions(func) -> dict[str, str]:
     """Locally bound name -> structural key of its defining expression.
 
@@ -562,8 +579,15 @@ def _binding_definitions(func) -> dict[str, str]:
         except (AttributeError, ValueError):  # pragma: no cover - defensive
             key = ""
         for target in targets:
-            if isinstance(target, ast.Name):
-                out.setdefault(target.id, []).append(key)
+            for name in _assignment_name_targets(target):
+                out.setdefault(name, []).append(key)
+    for node in ast.walk(func):
+        if isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            try:
+                key = ast.unparse(node.value)
+            except (AttributeError, ValueError):  # pragma: no cover - defensive
+                key = ""
+            out.setdefault(node.target.id, []).append(key)
     # Unit separator, not "|": a Python expression can contain a bitwise or,
     # and `resolve_through` has to be able to tell "one binding" from "several".
     return {name: "".join(keys) for name, keys in sorted(out.items())}
@@ -592,8 +616,11 @@ def _local_bindings(func) -> dict[str, tuple[str, ...]]:
             continue
         refs = set(_referenced_names(node.value))
         for target in targets:
-            if isinstance(target, ast.Name):
-                out.setdefault(target.id, set()).update(refs)
+            for name in _assignment_name_targets(target):
+                out.setdefault(name, set()).update(refs)
+    for node in ast.walk(func):
+        if isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            out.setdefault(node.target.id, set()).update(_referenced_names(node.value))
     return {k: tuple(sorted(v)) for k, v in out.items()}
 
 
@@ -679,11 +706,19 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     right_val = None
     epsilon = None
     epsilon_kind = None
+    subject_node: ast.AST | None = None
+    expect_node: ast.AST | None = None
     if node.args:
-        left_text = text.seg(node.args[0])
+        subject_node = node.args[0]
         if len(node.args) > 1:
-            right_lit = _literal_repr(node.args[1], text)
-            right_val = _literal_value(node.args[1])
+            expect_node = node.args[1]
+            # Same literal-side flip as bare assert: `assertEqual(3, calc())`.
+            if _is_literal(node.args[0]) and not _is_literal(node.args[1]):
+                expect_node, subject_node = node.args[0], node.args[1]
+        left_text = text.seg(subject_node) if subject_node is not None else None
+        if expect_node is not None:
+            right_lit = _literal_repr(expect_node, text)
+            right_val = _literal_value(expect_node)
         if form == "compare_eq" and level == S.EXACT_VALUE and len(node.args) > 1:
             if _is_container_literal(node.args[0]) or _is_container_literal(node.args[1]):
                 level = S.EXACT_STRUCT
@@ -704,7 +739,16 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         if left_text and right_text and _norm(left_text) == _norm(right_text):
             form, level = "tautology", S.TAUTOLOGY
     return _Classified(
-        form, level, left_text, right_lit, right_val, epsilon, epsilon_kind, positive
+        form,
+        level,
+        left_text,
+        right_lit,
+        right_val,
+        epsilon,
+        epsilon_kind,
+        positive,
+        _referenced_names(subject_node),
+        _referenced_names(expect_node),
     )
 
 
@@ -1482,6 +1526,8 @@ def _collect_unit(
                         epsilon=c.epsilon,
                         epsilon_kind=c.epsilon_kind,
                         positive=c.positive,
+                        left_names=c.left_names,
+                        right_depends_on=_resolve_through(c.right_names, bindings),
                     )
                 )
                 counter += 1
@@ -1543,6 +1589,8 @@ def _collect_unit(
                         epsilon=c.epsilon,
                         epsilon_kind=c.epsilon_kind,
                         positive=c.positive,
+                        left_names=c.left_names,
+                        right_depends_on=c.right_names,
                         inherited=True,
                     )
                 )

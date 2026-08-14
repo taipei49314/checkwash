@@ -1,0 +1,21 @@
+=== meta ===
+rule: EXPECTED_VALUE_DERIVED
+title: Expectation bound through tuple unpack still derives from the subject's input
+origin: E4 / THREATMODEL 86g — _local_bindings used to miss unpack targets
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    _, expected = None, sum(items)
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTED_VALUE_DERIVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
