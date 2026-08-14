@@ -1,6 +1,13 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.32: E5 — split roles/ci/evidence/compat)
+Updated: 2026-08-15 (v0.1.33: E6 — structural subject equality on WEAKENED)
+
+## 2026-08-15 (v0.1.33): E6 — same_expr for ASSERT_WEAKENED
+
+`subject_changed` uses `ir.astutil.same_expr`, the same compare SUBSTITUTED
+uses. Extra parens are not a subject change; wrapping the subject is.
+MILD_WEAKENING follows the field. Fixtures: mild_weaken_reformat_neg,
+mild_weaken_subject_changed_pos.
 
 ## 2026-08-15 (v0.1.32): E5 — engine/gating split
 
@@ -783,7 +790,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.32 |
+| version | v0.1.33 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: Parenthesized subject is the same expression; mild drop stays MILD_WEAKENING
+origin: E6 — subject_changed must use same_expr, not normalize_text
+=== before: tests/test_series.py ===
+import unittest
+
+from calc import series
+
+
+class TestSeries(unittest.TestCase):
+    def test_series(self):
+        self.assertListEqual(series(3), [1, 2, 3])
+=== after: tests/test_series.py ===
+import unittest
+
+from calc import series
+
+
+class TestSeries(unittest.TestCase):
+    def test_series(self):
+        expected = [1, 2, 3]
+        self.assertEqual((series(3)), expected)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["MILD_WEAKENING"]}]

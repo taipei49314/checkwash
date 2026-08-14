@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from greenwash.findings import Evidence, Finding, make_fingerprint
-from greenwash.ir.model import IR, normalize_text
+from greenwash.ir.astutil import same_expr
+from greenwash.ir.model import IR
 from greenwash.ir import strength as S
 from greenwash.ir.strength import name_of
 
@@ -36,7 +37,10 @@ def detect(ir: IR) -> list[Finding]:
                     if origin in seen_inherited:
                         continue
                     seen_inherited.add(origin)
-                subject_changed = normalize_text(b.left or "") != normalize_text(a.left or "")
+                # Same structural compare SUBSTITUTED uses. Reformatting or
+                # extra parens is not a subject change; wrapping or replacing
+                # it is (E6 / review 2026-08-11 Issue 4).
+                subject_changed = not same_expr(b.left, a.left)
                 # A flipped polarity (== -> !=, is -> is not, assertTrue ->
                 # assertFalse) leaves form and strength identical while
                 # inverting what the test proves — invisible to the lattice

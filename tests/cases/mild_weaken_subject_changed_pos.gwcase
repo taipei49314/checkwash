@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: Wrapped subject is a real change; mild drop must not earn MILD_WEAKENING
+origin: E6 — same_expr is false for sorted(series(3)) vs series(3)
+=== before: tests/test_series.py ===
+import unittest
+
+from calc import series
+
+
+class TestSeries(unittest.TestCase):
+    def test_series(self):
+        self.assertListEqual(series(3), [1, 2, 3])
+=== after: tests/test_series.py ===
+import unittest
+
+from calc import series
+
+
+class TestSeries(unittest.TestCase):
+    def test_series(self):
+        expected = [1, 2, 3]
+        self.assertEqual(sorted(series(3)), expected)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
