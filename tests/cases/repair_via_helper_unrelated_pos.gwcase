@@ -1,0 +1,32 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a same-file helper that does not call the changed symbol earns no hop
+origin: T1.9 — render() never names invoice_total; the prod edit is unrelated
+=== before: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== after: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax) + 5.0, 2)
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def render(items):
+    return len(items)
+
+
+def test_label():
+    assert render([50.0, 50.0]) == 2
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def render(items):
+    return len(items)
+
+
+def test_label():
+    assert render([50.0, 50.0]) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

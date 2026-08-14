@@ -118,6 +118,9 @@ class ParsedFile:
     # it, nested defs included — the returned closure is what a unit calls,
     # and the post-`yield` teardown runs unconditionally.
     helper_asserts: dict[str, tuple] = field(default_factory=dict)
+    # Non-test, non-fixture top-level defs -> callee leaves. Repair evidence
+    # follows one hop through a helper the unit actually invokes (T1.9).
+    helper_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)
     fixture_asserts: dict[str, tuple] = field(default_factory=dict)
     autouse_fixtures: tuple[str, ...] = ()
     # Same-file `@pytest.fixture` name -> canonical text of what it produces.
@@ -2015,8 +2018,10 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     units.sort(key=lambda u: u.span)
     if collect_tests:
         helper_asserts, fixture_asserts, autouse = _module_oracle_scopes(tree, text, off)
+        helper_calls = _module_helper_calls(tree)
     else:
         helper_asserts, fixture_asserts, autouse = {}, {}, ()
+        helper_calls = {}
     return ParsedFile(
         parse_ok=True,
         units=units,
@@ -2031,9 +2036,22 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         from_imports=_top_level_from_imports(tree),
         fixture_defs=_fixture_definitions(tree) if collect_tests else {},
         helper_asserts=helper_asserts,
+        helper_calls=helper_calls,
         fixture_asserts=fixture_asserts,
         autouse_fixtures=autouse,
     )
+
+
+def _module_helper_calls(tree: ast.Module) -> dict[str, tuple[str, ...]]:
+    """Callee leaves of same-file helpers. One hop, no fixtures, no tests."""
+    out: dict[str, tuple[str, ...]] = {}
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if _is_test_name(node.name) or _is_fixture_def(node):
+            continue
+        out[node.name] = _callees(node)
+    return out
 
 
 def _is_fixture_def(node) -> bool:

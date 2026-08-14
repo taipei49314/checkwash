@@ -1,0 +1,31 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: a dependency pin change is D9 for a moved expectation definition
+origin: T1.9 — D9 currently scoped to CHANGED/SUBSTITUTED; this rule stays info
+=== before: pyproject.toml ===
+[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["werkzeug==2.3.6"]
+=== after: pyproject.toml ===
+[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["werkzeug==2.3.7"]
+=== before: tests/test_billing.py ===
+from billing import remote_addr
+
+
+def test_addr():
+    expected = b"127.0.0.1"
+    assert remote_addr() == expected
+=== after: tests/test_billing.py ===
+from billing import remote_addr
+
+
+def test_addr():
+    expected = "127.0.0.1"
+    assert remote_addr() == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info", "deescalators": ["DEPENDENCY_DRIFT"]},
+ {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

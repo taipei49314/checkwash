@@ -1,6 +1,16 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.33: E6 — structural subject equality on WEAKENED)
+Updated: 2026-08-15 (v0.1.34: T1.9 credits — helper hop + D9 mark, not promoted)
+
+## 2026-08-15 (v0.1.34): T1.9 credits, not a promotion
+
+One hop of repair evidence through a same-file helper the unit invokes
+(`FileIR.helper_calls`). TEST_DISABLED does not take that hop — a deleted
+test plus a rewritten prod body is still the local-rewrite escort.
+`EXPECTATION_DEFINITION_CHANGED` stays at `info` and outside `ORACLE_RULES`.
+D9 / symbol repair can now *mark* it (`DEPENDENCY_DRIFT` / `REPAIR_EVIDENCE`)
+without escalating. Fixtures written first. 1800-commit sweep and promotion
+are not in this commit.
 
 ## 2026-08-15 (v0.1.33): E6 — same_expr for ASSERT_WEAKENED
 
@@ -790,7 +800,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.33 |
+| version | v0.1.34 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

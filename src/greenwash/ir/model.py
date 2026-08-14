@@ -200,6 +200,9 @@ class FileIR:
     # supplied by one is invisible. Conftest fixtures are out of scope.
     fixture_defs: dict[str, str] = field(default_factory=dict)
     fixture_defs_before: dict[str, str] = field(default_factory=dict)
+    # Same-file helper name -> callee leaves. Repair evidence follows one
+    # hop through a helper the unit actually invokes (T1.9).
+    helper_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass

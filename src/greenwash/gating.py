@@ -235,7 +235,13 @@ def _file_repair_evidence(path: str, ir: IR) -> bool:
     return ir.globals.prod_opaque_change
 
 
-def _repair_evidence(unit: Unit | None, ir: IR, path: str | None = None) -> bool:
+def _repair_evidence(
+    unit: Unit | None,
+    ir: IR,
+    path: str | None = None,
+    *,
+    via_helper: bool = True,
+) -> bool:
     """Did production change in a way that plausibly explains editing THIS test?
 
     Diff-global "some prod file changed" was the old test, and one dead line
@@ -253,7 +259,20 @@ def _repair_evidence(unit: Unit | None, ir: IR, path: str | None = None) -> bool
     imports = ir.globals.test_file_imports.get(path) if path else None
     if _symbol_match(side.calls, ir.globals.prod_symbols_changed, imports):
         return True
-    return any(name in ir.globals.prod_symbol_callers for name in side.calls)
+    if any(name in ir.globals.prod_symbol_callers for name in side.calls):
+        return True
+    # T1.9: one hop through a same-file helper the unit actually invokes.
+    # Not for TEST_DISABLED — a deleted test plus a rewritten prod body is
+    # the local-rewrite escort, not repair (prod_symbol_removed_local_rewrite).
+    if via_helper and path:
+        file = next((f for f in ir.files if f.path == path), None)
+        if file is not None:
+            invoked = set(side.invoked)
+            for name in invoked:
+                callees = file.helper_calls.get(name)
+                if callees and _symbol_match(callees, ir.globals.prod_symbols_changed, imports):
+                    return True
+    return False
 
 
 def _same_unit_rewrite(unit: Unit | None) -> bool:
@@ -416,6 +435,14 @@ def apply_gates(
             f.rule == "BROAD_EXCEPT_ADDED" and roles.get(f.path) in ("test", "conftest")
         )
         if not is_oracle:
+            # T1.9: D9 (and symbol repair) can mark this rule without
+            # promoting it off info. Promotion is a later measured step.
+            if f.rule == "EXPECTATION_DEFINITION_CHANGED":
+                unit = units.get((f.path, f.unit or ""))
+                if ir.globals.dependency_manifest_changed:
+                    f.deescalators.append("DEPENDENCY_DRIFT")
+                elif _repair_evidence(unit, ir, f.path):
+                    f.deescalators.append("REPAIR_EVIDENCE")
             # Non-oracle escalations from the SPEC §5 table.
             if f.rule == "GUARDRAIL_TOUCHED":
                 # E4, but only for a constraint that existed. Creating one has
@@ -558,7 +585,9 @@ def apply_gates(
         # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
         # question: is there a production change that explains this edit?
         has_evidence = (
-            _file_repair_evidence(f.path, ir) if unit is None else _repair_evidence(unit, ir, f.path)
+            _file_repair_evidence(f.path, ir)
+            if unit is None
+            else _repair_evidence(unit, ir, f.path, via_helper=f.rule != "TEST_DISABLED")
         )
         package_only = (
             not has_evidence

@@ -1,0 +1,31 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: bumping this project's own version is not a dependency change
+origin: T1.9 — D9 must keep dropping the project's own version = line
+=== before: pyproject.toml ===
+[project]
+name = "demo"
+version = "0.1.0"
+dependencies = ["werkzeug==2.3.7"]
+=== after: pyproject.toml ===
+[project]
+name = "demo"
+version = "0.1.1"
+dependencies = ["werkzeug==2.3.7"]
+=== before: tests/test_billing.py ===
+from billing import remote_addr
+
+
+def test_addr():
+    expected = b"127.0.0.1"
+    assert remote_addr() == expected
+=== after: tests/test_billing.py ===
+from billing import remote_addr
+
+
+def test_addr():
+    expected = "127.0.0.1"
+    assert remote_addr() == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"},
+ {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

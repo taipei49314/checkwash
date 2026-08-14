@@ -348,6 +348,9 @@ def build_ir(
                 _merge_crossfile_oracles(path, after_parsed, 1)
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
+        parsed_for_helpers = after_parsed if after_parsed and after_parsed.parse_ok else before_parsed
+        if parsed_for_helpers is not None and parsed_for_helpers.parse_ok:
+            file_ir.helper_calls = dict(parsed_for_helpers.helper_calls)
         ir.files.append(file_ir)
         if is_python and not file_ir.parse_ok:
             ir.skipped_files.append(path)

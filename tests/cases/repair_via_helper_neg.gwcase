@@ -1,0 +1,32 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a same-file helper that calls the changed prod symbol is one hop of repair evidence
+origin: T1.9 — test calls render(), render() calls invoice_total, which changed
+=== before: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== after: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax) + 5.0, 2)
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def render(items):
+    return invoice_total(items, 0.05)
+
+
+def test_invoice_renders():
+    assert render([50.0, 50.0]) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def render(items):
+    return invoice_total(items, 0.05)
+
+
+def test_invoice_renders():
+    assert render([50.0, 50.0]) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
