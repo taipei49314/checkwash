@@ -24,6 +24,21 @@ Required in the *caller* workflow, not in this composite file:
 |---|---|---|
 | `fail-on` | `high` | Severity that fails the job |
 | `base` | PR base SHA, else `HEAD~1` | Left side of the range |
+| `comment-pr` | `false` | If `true`, post one review comment per high finding (T2.2) |
+
+`comment-pr: true` needs `pull-requests: write` on the *caller* workflow.
+The engine never opens a network socket. If the token cannot write, the
+comment step prints a soft-fail and the check verdict still stands.
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+# ...
+- uses: taipei49314/greenwash/action@27b7fd9391cb96bff5415829c0167bb6e9e6dbab # v0.1.34
+  with:
+    comment-pr: true
+```
 
 Inputs are passed into the script through `env:`, not interpolated into
 `run:`. zizmor 1.29.0 flags `${{ inputs.* }}` inside a `run` block as

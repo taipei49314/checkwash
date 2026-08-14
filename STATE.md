@@ -1,6 +1,24 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.38: T2.7 why-high / next-step in the term report)
+Updated: 2026-08-15 (v0.1.39: T2.2 PR comments, T1.8 #54, T3.1 JS/TS)
+
+## 2026-08-15 (v0.1.39): T2.2, T1.8, T3.1
+
+- **T2.2** `comment-pr: true` on the Action posts a PR review comment
+  per high finding. Engine stays offline. Missing write permission
+  soft-fails. Caller needs `pull-requests: write`.
+- **T1.8 / #54** `_mark_weakened_guards` now also compares *changed*
+  guard text: discriminating → always-true fires `TEST_DISABLED`.
+  Guard text is still not in the fingerprint, so allowlists survive
+  an honest rewrite of a still-discriminating condition. No DECISIONS
+  migration (identity unchanged). **#86a stays info; #36 stays open.**
+- **T3.1** picked the JS/TS oracle front, not the monorepo opaque
+  rewrite. `*.test.js` / `*.spec.ts` (etc.) are scanned for
+  `test`/`it` + `expect().matcher()`. Matcher weakenings and
+  `test.skip` reuse the existing detectors. Production `.js`/`.ts` is
+  not parsed. The six-repo Python corpus cannot measure this; fixtures
+  are the measurement. Written here because DECISIONS.md is
+  maintainer-only.
 
 ## 2026-08-15 (v0.1.38): T2.7 diagnostic term lines
 
@@ -886,7 +904,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.38 |
+| version | v0.1.39 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

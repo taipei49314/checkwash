@@ -35,6 +35,7 @@ from greenwash.evidence import (
     _suppression_texts,
 )
 from greenwash.findings import Finding
+from greenwash.frontends.javascript.frontend import is_js_test_path, parse_javascript
 from greenwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
@@ -321,6 +322,9 @@ def build_ir(
             # blocking assertion weakening into a warn (probe 2026-08-07).
             role = "ci"
         is_python = path.endswith(".py")
+        if is_js_test_path(path):
+            role = "test"
+        is_js_test = is_js_test_path(path)
 
         before_parsed: ParsedFile | None = None
         after_parsed: ParsedFile | None = None
@@ -335,6 +339,11 @@ def build_ir(
                 after_parsed = parse_python(
                     change.after, collect_tests=collect, conftest=is_conftest
                 )
+        elif is_js_test:
+            if change.before is not None:
+                before_parsed = parse_javascript(change.before)
+            if change.after is not None:
+                after_parsed = parse_javascript(change.after)
 
         if after_parsed is not None and after_parsed.parse_ok:
             after_by_path[path] = after_parsed

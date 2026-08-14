@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_DISABLED
+title: if version < X: skip -> if True: skip is a kill
+origin: T1.8 / THREATMODEL 54 — guard text changed, marker name did not. Row stays Open in THREATMODEL until the maintainer closes it.
+=== before: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    if sys.version_info < (3, 14):
+        pytest.skip("not on 3.14")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    if True:
+        pytest.skip("not on 3.14")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,14 @@
+=== meta ===
+rule: TEST_DISABLED
+title: test() -> test.skip() disables the JS unit
+origin: T3.1
+=== before: tests/invoice.test.js ===
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBe(105);
+});
+=== after: tests/invoice.test.js ===
+test.skip("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBe(105);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

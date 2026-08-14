@@ -1,0 +1,18 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: expect(x).toBe(y) -> toBeTruthy is the JS spelling of == -> is not None
+origin: T3.1 minimal JS/TS oracle
+=== before: tests/invoice.test.js ===
+const { total } = require("../src/invoice");
+
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBe(105);
+});
+=== after: tests/invoice.test.js ===
+const { total } = require("../src/invoice");
+
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBeTruthy();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,14 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: reformatting an expect() is not a weakening
+origin: T3.1
+=== before: tests/invoice.test.js ===
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBe(105);
+});
+=== after: tests/invoice.test.js ===
+test("applies tax", () => {
+    expect(total([50, 50], 0.05)).toBe(105)
+});
+=== expect ===
+[]

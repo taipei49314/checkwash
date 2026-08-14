@@ -16,6 +16,12 @@ inputs:
     description: base ref to diff against (defaults to the PR base)
     required: false
     default: ""
+  comment-pr:
+    description: >-
+      If true, post one PR review comment per high/critical finding.
+      Requires pull-requests: write. Soft-fails if the token cannot write.
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -27,18 +33,48 @@ runs:
       shell: bash
       env:
         PYTHONUTF8: "1"
+        GREENWASH_BASE: ${{ inputs.base }}
+        GREENWASH_FAIL_ON: ${{ inputs.fail-on }}
+        GREENWASH_PR_BASE: ${{ github.event.pull_request.base.sha }}
       run: |
-        BASE="${{ inputs.base }}"
-        if [ -z "$BASE" ] && [ -n "${{ github.event.pull_request.base.sha }}" ]; then
-          BASE="${{ github.event.pull_request.base.sha }}"
+        BASE="$GREENWASH_BASE"
+        if [ -z "$BASE" ] && [ -n "$GREENWASH_PR_BASE" ]; then
+          BASE="$GREENWASH_PR_BASE"
         fi
         if [ -z "$BASE" ]; then
           BASE="HEAD~1"
         fi
-        # fetch enough history for the merge-base
         git fetch --quiet --deepen=200 origin || true
         set +e
-        greenwash check "$BASE...HEAD" --fail-on "${{ inputs.fail-on }}" --format term | tee "$GITHUB_STEP_SUMMARY"
+        greenwash check "$BASE...HEAD" --fail-on "$GREENWASH_FAIL_ON" --format term | tee "$GITHUB_STEP_SUMMARY"
         code=${PIPESTATUS[0]}
+        echo "base=$BASE" >> "$GITHUB_OUTPUT"
+        echo "fail_on=$GREENWASH_FAIL_ON" >> "$GITHUB_OUTPUT"
+        echo "exit_code=$code" >> "$GITHUB_OUTPUT"
         set -e
         exit $code
+    - id: comment
+      if: ${{ inputs.comment-pr == 'true' }}
+      shell: bash
+      env:
+        PYTHONUTF8: "1"
+        GREENWASH_BASE: ${{ steps.check.outputs.base }}
+        GREENWASH_FAIL_ON: ${{ steps.check.outputs.fail_on }}
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        set +e
+        if [ -z "$PR_NUMBER" ] || [ -z "$GH_TOKEN" ]; then
+          echo "comment-pr skipped: not a pull_request or no token"
+          exit 0
+        fi
+        tmp="$(mktemp)"
+        greenwash check "$GREENWASH_BASE...HEAD" --fail-on "$GREENWASH_FAIL_ON" --format json > "$tmp"
+        python "${{ github.action_path }}/post_review.py" "$tmp"
+        status=$?
+        rm -f "$tmp"
+        if [ "$status" != "0" ]; then
+          echo "comment-pr soft-failed (exit $status); the check verdict above still stands"
+        fi
+        exit 0

@@ -75,7 +75,7 @@ def detect(ir: IR) -> list[Finding]:
                         severity="warn",
                         message=(
                             f"{unit.qualname}: skip guard now always fires "
-                            f"({(m.guard if m else name)!r}) — its condition was edited elsewhere"
+                            f"({(m.guard if m else name)!r})"
                         ),
                         path=file.path,
                         unit=unit.qualname,

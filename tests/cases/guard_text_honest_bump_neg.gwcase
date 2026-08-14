@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_DISABLED
+title: rewriting one discriminating guard into another is not a kill
+origin: T1.8 — only discriminating -> always-true fires. THREATMODEL 54 stays Open until the maintainer closes the row.
+=== before: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    if sys.version_info < (3, 10):
+        pytest.skip("needs 3.10")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    if sys.version_info < (3, 11):
+        pytest.skip("needs 3.11")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[]

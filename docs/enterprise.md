@@ -17,6 +17,10 @@ the [README](../README.md):
 
 3. `greenwash doctor` — it cannot see branch protection; confirm step 2.
 
+Optional PR line comments (T2.2): set `comment-pr: true` and add
+`pull-requests: write`. The engine does not talk to the network; the
+Action posts a review and soft-fails if the token cannot write.
+
 ## 2. SARIF (optional)
 
 ```bash

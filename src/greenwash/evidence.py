@@ -35,8 +35,13 @@ def _mark_weakened_guards(file) -> None:
             if not m.guard or m.name in unit.delta.markers_added:
                 continue
             old = before_by_name.get(m.name)
-            if old is None or (old.guard or "") != m.guard:
+            if old is None or not old.guard:
                 continue
+            # Same-text path is THREATMODEL 59 (constant behind the guard).
+            # Different-text path is THREATMODEL 54 (if X: skip → if True: skip).
+            # Guard text is not in the fingerprint; only the meaning change
+            # is an event, so recorded allowlists survive a rewrite of a
+            # still-discriminating condition.
             if guard_always_skips(m.guard, file.constants) and not guard_always_skips(
                 old.guard, file.constants_before
             ):
