@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, field
 
 from greenwash.ir import strength as S
+from greenwash.ir.astutil import dotted_name as _dotted
 from greenwash.ir.model import Assertion, Handler, Marker, UnitSide, normalize_text
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
@@ -205,18 +206,6 @@ class _Offsets:
     def seg(self, node: ast.AST) -> str:
         start, end = self.span(node)
         return self.text[start:end]
-
-
-def _dotted(node: ast.AST) -> str | None:
-    """`a.b.c` for Name/Attribute chains, else None."""
-    parts: list[str] = []
-    while isinstance(node, ast.Attribute):
-        parts.append(node.attr)
-        node = node.value
-    if isinstance(node, ast.Name):
-        parts.append(node.id)
-        return ".".join(reversed(parts))
-    return None
 
 
 def _is_container_literal(node: ast.AST) -> bool:

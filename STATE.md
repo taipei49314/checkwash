@@ -1,6 +1,13 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-13 (v0.1.27: cross-file helpers, and the sweep bought its first real block since v0.1.15)
+Updated: 2026-08-15 (v0.1.28: E1 — dotted_name lives in ir.astutil)
+
+## 2026-08-15 (v0.1.28): E1 — one dotted_name
+
+Zero-behavior extract. `frontend._dotted` and `gating._dotted_name` were the
+same Name/Attribute walk; both now alias `ir.astutil.dotted_name`.
+`expr_wraps` / `same_expr` were already shared (review 2026-08-11 Issue 7).
+No detector, gate, or fixture expectation changed.
 
 ## 2026-08-13 (v0.1.27): A5-x — the two cross-file channels the corpora actually contain
 
@@ -749,7 +756,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.27 |
+| version | v0.1.28 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

@@ -16,6 +16,7 @@ from greenwash.allowlist import AllowEntry, active_fingerprints
 from greenwash.config import SEVERITY_ORDER, Config
 from greenwash.contract import Contract
 from greenwash.findings import Finding
+from greenwash.ir.astutil import dotted_name as _dotted_name
 from greenwash.ir.markers import bare_names, marker_call, parse_expr
 from greenwash.ir.model import IR, Unit, normalize_text
 
@@ -531,17 +532,6 @@ def _eval_condition(
         return MAYBE
 
     return ev(node)
-
-
-def _dotted_name(node: ast.AST) -> str | None:
-    parts: list[str] = []
-    while isinstance(node, ast.Attribute):
-        parts.append(node.attr)
-        node = node.value
-    if isinstance(node, ast.Name):
-        parts.append(node.id)
-        return ".".join(reversed(parts))
-    return None
 
 
 def _discriminates(condition: ast.AST, consts: dict[str, ast.AST] | None) -> bool:

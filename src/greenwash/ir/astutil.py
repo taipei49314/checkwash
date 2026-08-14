@@ -6,6 +6,9 @@ containment rule means the next person to widen the boundary widens it in one
 of them, and the two rules disagree about what "the same subject" means without
 anything failing (static review 2026-08-11, Issue 7).
 
+`dotted_name` lived twice more, also byte-identical: `frontend._dotted` and
+`gating._dotted_name` (E1 / the same review's DRY table).
+
 Everything here is structural. Source text is the wrong unit for this: it makes
 reformatting a change and it makes `f( x )` a different subject from `f(x)`.
 """
@@ -16,6 +19,18 @@ import ast
 
 from greenwash.ir.markers import parse_expr
 from greenwash.ir.model import normalize_text
+
+
+def dotted_name(node: ast.AST) -> str | None:
+    """`a.b.c` for Name/Attribute chains, else None."""
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+        return ".".join(reversed(parts))
+    return None
 
 
 def same_expr(before: str | None, after: str | None) -> bool:
