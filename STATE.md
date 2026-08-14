@@ -1,6 +1,18 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.34 sweep restamp; #86a stays info)
+Updated: 2026-08-15 (T0.2: zizmor 1.29 re-check of the Action snippet)
+
+## 2026-08-15: T0.2 Action snippet re-checked on zizmor 1.29.0
+
+The README workflow already had `permissions: contents: read` and
+`persist-credentials: false`. Those two highs from the pydantic
+integration are gone. What remained under zizmor 1.29 blanket policy
+was `unpinned-uses` on `@v4` and `@v0.1.34`. The documented snippet
+is now hash-pinned (checkout v4.4.0, setup-python v5.6.0, greenwash
+v0.1.34) and locally 0 high / 0 medium. `action/action.yml` is
+unchanged: changing it without a new tag fails tag-parity.
+`template-injection` on `${{ inputs.* }}` inside the composite `run`
+block is the next release, not this snippet check.
 
 ## 2026-08-15 (v0.1.34): 1800-commit sweep, #86a not promoted
 

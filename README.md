@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 21 detectors, 395 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 396 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -119,18 +119,22 @@ jobs:
   greenwash:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: taipei49314/greenwash/action@v0.1.34
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - uses: taipei49314/greenwash/action@27b7fd9391cb96bff5415829c0167bb6e9e6dbab # v0.1.34
 ```
 
-The `permissions` block and `persist-credentials: false` are there because
-pydantic runs [zizmor](https://github.com/woodruffw/zizmor) in pre-commit, and
-without them this snippet scored two high findings — a workflow a
-security-conscious project cannot merge is not an integration
-([docs/integrations.md](docs/integrations.md)).
+Hash pins and `persist-credentials: false` are required by
+[zizmor](https://docs.zizmor.sh/audits/#unpinned-uses) blanket policy — a
+tag pin (`@v4`, `@v0.1.34`) is two `unpinned-uses` highs. Re-checked
+2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. After a
+greenwash release, replace the last SHA with `git rev-parse v0.1.xx`.
+See [action/README.md](action/README.md).
 
 Do not gate this job on anything. A conditional gate is the defect this
 project shipped in its own repository: the dogfood job carried

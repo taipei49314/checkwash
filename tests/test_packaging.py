@@ -167,6 +167,32 @@ def test_pinned_tag_ships_the_current_source():
     )
 
 
+def test_readme_action_snippet_is_zizmor_blanket():
+    """The documented workflow must be mergeable under zizmor 1.29 blanket.
+
+    The 2026-08-07 pydantic integration scored two highs on the then-README
+    snippet (no permissions, no persist-credentials). Those two are gone.
+    Re-check 2026-08-15: zizmor 1.29.0 still reports unpinned-uses as high
+    for @v4 / @v0.1.34, so every uses: in the snippet must be a commit SHA.
+    """
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    match = re.search(
+        r"```yaml\n(# \.github/workflows/greenwash\.yml\n.*?)```",
+        readme,
+        flags=re.S,
+    )
+    assert match, "README lost the required-check workflow fence"
+    snippet = match.group(1)
+    assert re.search(r"^permissions:\n  contents: read$", snippet, flags=re.M)
+    assert "persist-credentials: false" in snippet
+    uses = re.findall(r"^\s+- uses: (\S+)", snippet, flags=re.M)
+    assert uses, "README workflow has no uses: entries"
+    for ref in uses:
+        assert re.search(r"@[0-9a-f]{40}$", ref), (
+            f"{ref} is not hash-pinned; zizmor unpinned-uses is high"
+        )
+
+
 def test_readme_install_refs_match_version():
     """Every version-pinned install line in the README points at this version.
 

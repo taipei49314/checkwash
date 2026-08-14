@@ -37,7 +37,8 @@ def _documents() -> list[pathlib.Path]:
         )
         if (ROOT / name).exists()
     ]
-    return docs + top + sorted(ROOT.glob("benchmarks/**/*.md"))
+    extra = sorted(ROOT.glob("action/**/*.md"))
+    return docs + top + extra + sorted(ROOT.glob("benchmarks/**/*.md"))
 
 
 def test_every_relative_markdown_link_resolves():
