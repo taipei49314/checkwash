@@ -1,6 +1,17 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (T0.2: zizmor 1.29 re-check of the Action snippet)
+Updated: 2026-08-15 (T0.4: gh ruleset to require the greenwash check)
+
+## 2026-08-15: T0.4 documented `gh` required-check command
+
+README step 2 now has a reproducible command:
+`gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json`.
+The payload requires context `greenwash` (the job name in the snippet) on
+`~DEFAULT_BRANCH` and does not replace other rulesets. Linked from
+action/README and integrations.md. `doctor` still cannot see protection;
+it names the same command. Bumped to v0.1.35 so tag-parity covers the
+new `action/` files and the doctor pointer. T0 P0+P1 items are now all
+landed.
 
 ## 2026-08-15: T0.2 Action snippet re-checked on zizmor 1.29.0
 
@@ -841,7 +852,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.34 |
+| version | v0.1.35 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

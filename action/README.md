@@ -29,6 +29,19 @@ Inputs are passed into the script through `env:`, not interpolated into
 `run:`. zizmor 1.29.0 flags `${{ inputs.* }}` inside a `run` block as
 `template-injection`.
 
+## Require the check
+
+The job name in the README snippet is `greenwash`. That is the status-check
+context. After the workflow has run once:
+
+```bash
+gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json
+```
+
+The payload is [required-ruleset.json](required-ruleset.json). It targets
+`~DEFAULT_BRANCH` and does not replace other rulesets. Admin `repo` scope
+is required. `doctor` cannot see whether this ran.
+
 ## Pin lookup
 
 ```bash

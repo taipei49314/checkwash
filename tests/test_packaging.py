@@ -167,6 +167,30 @@ def test_pinned_tag_ships_the_current_source():
     )
 
 
+def test_required_ruleset_payload_matches_documented_job_name():
+    """T0.4: the gh ruleset payload must require the documented job name.
+
+    A JSON file that names a different context than the README workflow
+    would let someone run the documented command and still merge around
+    greenwash. The check name is the job key, `greenwash`.
+    """
+    import json
+
+    payload = json.loads((ROOT / "action" / "required-ruleset.json").read_text(encoding="utf-8"))
+    assert payload["target"] == "branch"
+    assert payload["enforcement"] == "active"
+    assert "~DEFAULT_BRANCH" in payload["conditions"]["ref_name"]["include"]
+    rules = payload["rules"]
+    assert len(rules) == 1
+    assert rules[0]["type"] == "required_status_checks"
+    contexts = [c["context"] for c in rules[0]["parameters"]["required_status_checks"]]
+    assert contexts == ["greenwash"]
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json" in readme
+    assert "action/required-ruleset.json" in (ROOT / "action" / "README.md").read_text(encoding="utf-8")
+
+
 def test_readme_action_snippet_is_zizmor_blanket():
     """The documented workflow must be mergeable under zizmor 1.29 blanket.
 

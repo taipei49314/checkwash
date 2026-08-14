@@ -196,7 +196,9 @@ def collect(root: Path) -> list[Note]:
         "Branch protection lives behind GitHub API token scopes this tool does "
         "not ask for. A green job that is not a required status check does not "
         "prevent a merge. Make the job's status check required, and match the "
-        "status-check name to the job name exactly.",
+        "status-check name to the job name exactly. The README step 2 command "
+        "is: gh api repos/OWNER/REPO/rulesets --method POST "
+        "--input action/required-ruleset.json",
     ))
 
     notes.append(Note(
