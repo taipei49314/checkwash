@@ -1,6 +1,13 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (T2.5 perf collection gate + T2.6 hash-pinned workflows)
+Updated: 2026-08-15 (v0.1.38: T2.7 why-high / next-step in the term report)
+
+## 2026-08-15 (v0.1.38): T2.7 diagnostic term lines
+
+High findings print `why high:` (the escalator that actually fired) and
+`no de-escalator applied` when none did. Next step stays the allow
+instruction. Credits that did not fire are not listed — that would be
+the COLLECTION_CONTROL_UNEXPLAINED class of claim.
 
 ## 2026-08-15: T2.5 / T2.6 CI hardness
 
@@ -879,7 +886,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.37 |
+| version | v0.1.38 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

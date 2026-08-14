@@ -86,15 +86,20 @@ def render(
         lines.append(f"{f.rule}   {sev}   {where}")
         lines.append(f"  {f.message}")
         if f.escalators:
-            lines.append(f"  escalators: {', '.join(f.escalators)}")
+            lines.append(f"  why high: {', '.join(f.escalators)}" if f.severity in ("high", "critical") else f"  escalators: {', '.join(f.escalators)}")
         if f.deescalators:
-            lines.append(f"  context: {', '.join(f.deescalators)}")
+            lines.append(f"  held at {f.severity} by: {', '.join(f.deescalators)}")
+        elif f.severity in ("high", "critical"):
+            # Say only what did not happen. Listing credits that did not
+            # fire as if they should have is the COLLECTION_CONTROL_UNEXPLAINED
+            # class of lie.
+            lines.append("  no de-escalator applied")
         if f.before is not None:
             lines.append(f"  before  {_evidence(f.before.text)}")
         if f.after is not None:
             lines.append(f"  after   {_evidence(f.after.text)}")
         if f.severity in ("high", "critical"):
-            lines.append("  fix the code, or record a reviewed exemption:")
+            lines.append("  next: fix the code, or record a reviewed exemption:")
             lines.append(f'    greenwash allow "{f.fingerprint}" --reason "..."')
             # The allowlist is read from the *base* side, so an agent cannot
             # exempt itself inside the diff under review. Correct, and it made

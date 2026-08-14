@@ -153,6 +153,9 @@ def test_term_report_renders(repo):
     assert "allow_cap=180d" in result.stdout
     assert "commit .greenwash/allow.toml" in result.stdout
     assert "greenwash allow" in result.stdout
+    assert "why high:" in result.stdout
+    assert "no de-escalator applied" in result.stdout
+    assert "next: fix the code" in result.stdout
 
 
 def test_allow_roundtrip(repo):
