@@ -150,6 +150,8 @@ def test_term_report_renders(repo):
     result = _greenwash(repo, "check")
     assert result.returncode == 1
     assert "ASSERT_WEAKENED" in result.stdout
+    assert "allow_cap=180d" in result.stdout
+    assert "commit .greenwash/allow.toml" in result.stdout
     assert "greenwash allow" in result.stdout
 
 

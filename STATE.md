@@ -1,6 +1,14 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.36: T2.1 `--format sarif`)
+Updated: 2026-08-15 (v0.1.37: T2.3 allow workflow + T2.4 findings contract)
+
+## 2026-08-15 (v0.1.37): T2.3 allow workflow, T2.4 machine contract
+
+`docs/enterprise.md` is the one-page path: required check, SARIF, allow
+(reason + 180-day cap, base-side commit), CODEOWNERS. `doctor` always
+states the cap and counts active / expired / over-cap entries. Term
+footer prints `allow_cap=180d`. `docs/stability.md` lists frozen
+`--format json` keys and when `FINDINGS_VERSION` / `IR_VERSION` bump.
 
 ## 2026-08-15 (v0.1.36): T2.1 SARIF 2.1.0
 
@@ -862,7 +870,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.36 |
+| version | v0.1.37 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

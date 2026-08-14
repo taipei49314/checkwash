@@ -57,6 +57,43 @@ def load_allowlist(data: bytes | None) -> tuple[list[AllowEntry], str | None]:
     return entries, None
 
 
+@dataclass
+class AllowSummary:
+    present: bool
+    parse_error: str | None
+    entries: int
+    active: int
+    expired: int
+    over_cap: int
+
+
+def summarize_allowlist(data: bytes | None, today: datetime.date) -> AllowSummary:
+    """How the ledger will be honoured today. Same rules as `active_fingerprints`."""
+    if not data:
+        return AllowSummary(False, None, 0, 0, 0, 0)
+    entries, err = load_allowlist(data)
+    if err:
+        return AllowSummary(True, err, 0, 0, 0, 0)
+    active = expired = over_cap = 0
+    for e in entries:
+        try:
+            expiry = datetime.date.fromisoformat(e.expires)
+        except ValueError:
+            continue
+        try:
+            start = datetime.date.fromisoformat(e.created)
+        except ValueError:
+            start = today
+        if (expiry - start).days > MAX_EXPIRY_DAYS:
+            over_cap += 1
+            continue
+        if expiry < today:
+            expired += 1
+            continue
+        active += 1
+    return AllowSummary(True, None, len(entries), active, expired, over_cap)
+
+
 def active_fingerprints(entries: list[AllowEntry], today: datetime.date) -> set[str]:
     """Exemptions still in force today.
 

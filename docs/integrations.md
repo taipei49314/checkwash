@@ -1,6 +1,6 @@
 # Field integrations
 
-> **CI defence means a required status check, and nothing less.** A greenwash job that runs and reports but is not required does not prevent a merge; a stop-hook or a pre-commit hook is author-side only and is skipped by `--no-verify`. The three steps are in the README under *Required check*, and `greenwash doctor` checks the two of them that live in the repository. It cannot see branch protection — that one is yours to confirm, via the UI or `gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json`.
+> **CI defence means a required status check, and nothing less.** A greenwash job that runs and reports but is not required does not prevent a merge; a stop-hook or a pre-commit hook is author-side only and is skipped by `--no-verify`. The three steps are in the README under *Required check*, and `greenwash doctor` checks the two of them that live in the repository. It cannot see branch protection — that one is yours to confirm, via the UI or `gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json`. The one-page enterprise checklist (required + SARIF + allow expiry + CODEOWNERS) is [enterprise.md](enterprise.md).
 
 
 Three real third-party Python projects, integrated from scratch, adjudicated commit by commit.

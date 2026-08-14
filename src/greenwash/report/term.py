@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sys
 
+from greenwash.allowlist import MAX_EXPIRY_DAYS
 from greenwash.findings import Finding
 from greenwash.ir.model import IR
 
@@ -109,13 +110,17 @@ def render(
     if ir.skipped_files:
         lines.append(f"skipped (unparseable): {', '.join(ir.skipped_files)}")
     if suppressed:
-        lines.append(f"allowlisted findings: {len(suppressed)} (see .greenwash/allow.toml)")
+        lines.append(
+            f"allowlisted findings: {len(suppressed)} "
+            f"(see .greenwash/allow.toml; expiry cap {MAX_EXPIRY_DAYS} days; "
+            "takes effect after commit)"
+        )
     counts = {"critical": 0, "high": 0, "warn": 0, "info": 0}
     for f in visible:
         counts[f.severity] += 1
     lines.append(
         "summary: "
         + " ".join(f"{k}={v}" for k, v in counts.items())
-        + f" verdict={verdict}"
+        + f" verdict={verdict} allow_cap={MAX_EXPIRY_DAYS}d"
     )
     return "\n".join(lines) + "\n"

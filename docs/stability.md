@@ -29,6 +29,49 @@ changes with it and `DECISIONS.md` carries the entry explaining why.
 | Zero runtime dependencies | `pyproject.toml` | Gated by a test. It is what makes the single-file build possible |
 | Never executes your code | the whole design | greenwash reads ASTs. It does not import, run, or evaluate anything in the diff |
 
+## Machine findings contract (`FINDINGS_VERSION` / `IR_VERSION`)
+
+`--format json` is the machine interface. Today both numbers are **1**.
+
+`greenwash.FINDINGS_VERSION` is the envelope. Current keys, closed:
+
+| key | meaning |
+|---|---|
+| `greenwash_findings_version` | integer; this table |
+| `run.base` / `run.head` | revision labels, not timestamps |
+| `run.greenwash_version` | package version string |
+| `findings` | array of finding objects |
+| `summary` | counts for `info`, `warn`, `high`, `critical` |
+| `skipped_files` | unparseable paths |
+| `config_errors` | parse failures for base-side config/allow |
+| `verdict` | `pass` or `block` |
+
+Each finding object is the dataclass field set of `Finding`: `rule`,
+`severity`, `message`, `path`, `unit`, `before`, `after`, `escalators`,
+`deescalators`, `fingerprint`, `allowlisted`, `strength_drop`,
+`strength_after`, `subject_changed`, `shape`. Evidence objects have
+`text` and `span` (character offsets into CRLF→LF-normalized source).
+
+`greenwash.IR_VERSION` is `--emit-ir`. The IR is a dataclass tree
+serialized by `to_jsonable` (tuples become lists). A consumer should
+key on `version` inside the payload, not on field order.
+
+`--format sarif` is a **projection** of the same findings into SARIF
+2.1.0. It does not bump `FINDINGS_VERSION`. Allowlisted findings are
+omitted there.
+
+### When the number moves
+
+- **Bump `FINDINGS_VERSION` or `IR_VERSION`** if a field is renamed,
+  removed, or changes meaning, or if a required key is added.
+- **Do not bump** for a new optional field, a new rule id, or a new
+  `--format`. Rule ids themselves are frozen (table above).
+- A bump is a breaking change: the minor version moves with it and
+  `DECISIONS.md` records why. Pin the package in CI if you parse JSON.
+
+`--format json` remains sorted keys, `ensure_ascii=False`, LF, UTF-8
+bytes, no timestamps (SPEC §8).
+
 ## Not frozen: this will change, on purpose
 
 **Detector coverage grows, and growth can newly block something.** That is the

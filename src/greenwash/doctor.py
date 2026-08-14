@@ -15,10 +15,13 @@ is the whole point of the command.
 
 from __future__ import annotations
 
+import datetime
 import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+from greenwash.allowlist import MAX_EXPIRY_DAYS, summarize_allowlist
 
 # "This job runs greenwash as a check" — not merely "mentions greenwash".
 #
@@ -221,6 +224,33 @@ def collect(root: Path) -> list[Note]:
         "itself. A new allowlist entry therefore takes effect on the *next* diff, "
         "and must be committed.",
     ))
+
+    allow_bytes = allow.read_bytes() if allow.exists() else None
+    ledger = summarize_allowlist(allow_bytes, datetime.date.today())
+    if ledger.parse_error:
+        notes.append(Note(
+            "warn",
+            "allow.toml could not be parsed; no exemptions are active",
+            ledger.parse_error,
+        ))
+    else:
+        notes.append(Note(
+            "info",
+            f"allowlist expiry is capped at {MAX_EXPIRY_DAYS} days",
+            (
+                f"{ledger.entries} entries in .greenwash/allow.toml; "
+                f"{ledger.active} active today, {ledger.expired} expired, "
+                f"{ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap "
+                "(ignored on read)."
+                if ledger.present
+                else (
+                    "no allow.toml yet. `greenwash allow` writes one; "
+                    f"expiry is capped at {MAX_EXPIRY_DAYS} days on write "
+                    "and again on read. Commit it — the ledger is read from "
+                    "the base side. Put `.greenwash/` in CODEOWNERS."
+                )
+            ),
+        ))
 
     notes.append(Note(
         "info",

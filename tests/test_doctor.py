@@ -123,6 +123,28 @@ def test_the_limits_are_always_stated(tmp_path):
     assert "cannot block when it does not run" in titles
     assert "read from the BASE side" in titles
     assert "three-dot range" in titles
+    assert "allowlist expiry is capped at 180 days" in titles
+
+
+def test_doctor_reports_over_cap_allow_entries(tmp_path):
+    notes = collect(_repo(tmp_path, {
+        f"{CI}/ci.yml": (
+            "on:\n  pull_request:\n\njobs:\n  guard:\n    steps:\n"
+            "      - uses: taipei49314/greenwash/action@v1\n"
+        ),
+        ".greenwash/allow.toml": (
+            "[[allow]]\n"
+            'fingerprint = "ASSERT_WEAKENED/tests/x.py/t/deadbeefdead"\n'
+            'rule = "ASSERT_WEAKENED"\n'
+            'reason = "hand-edited decade"\n'
+            'author = "audit"\n'
+            'created = "2020-01-01"\n'
+            'expires = "2030-01-01"\n'
+        ),
+    }))
+    note = next(n for n in notes if "180 days" in n.title)
+    assert "1 over the 180-day cap" in note.detail
+    assert "0 active" in note.detail
 
 
 def test_doctor_is_a_registered_subcommand():
