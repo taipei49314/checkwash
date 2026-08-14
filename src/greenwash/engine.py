@@ -1,173 +1,70 @@
-﻿"""Pipeline orchestration: FileChange list â†’ IR â†’ findings â†’ verdict.
+"""Pipeline orchestration: FileChange list → IR → findings → verdict.
 
 Source-agnostic: gitio and the .gwcase runner both produce FileChange lists,
 so fixtures exercise the exact same pipeline the CLI runs.
+
+Role / CI / evidence helpers live in greenwash.roles, .ci, .evidence (E5).
 """
 
 from __future__ import annotations
 
 import datetime
-import re
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
 from greenwash.allowlist import AllowEntry
+from greenwash.change import EngineError, FileChange
+from greenwash.ci import (
+    _ci_base_surface,
+    _deps_differ,
+    _is_ci_workflow,
+    _runs_tests,
+    _scan_ci_weakening,
+)
 from greenwash.config import Config
 from greenwash.contract import Contract
 from greenwash.deps import MANIFESTS
 from greenwash.detectors import REGISTRY
+from greenwash.evidence import (
+    _MAX_DUP_READS,
+    _gate_constants,
+    _mark_weakened_guards,
+    _module_of,
+    _record_callers,
+    _scope_match,
+    _suppression_texts,
+)
 from greenwash.findings import Finding
-from greenwash.gating import apply_gates, unit_is_live
-from greenwash.ir.diffalign import align_file
-from greenwash.ir.markers import bare_names, marker_call, parse_expr
-from greenwash.ir.model import IR, DiffGlobals, normalize_text
-from greenwash.pyenv import known_baseline
 from greenwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
-    module_constants,
     parse_python,
 )
-
-
-@dataclass
-class FileChange:
-    path: str  # forward-slash normalized
-    status: str  # added | modified | deleted
-    before: bytes | None
-    after: bytes | None
-    old_path: str | None = None  # set for git renames (R status)
-    synthetic: str | None = None  # marks halves of an expanded rename
-
-
-class EngineError(Exception):
-    pass
-
-
-# Generated/binary artifacts. A changed file here says nothing about
-# production behaviour, so it must never buy repair evidence: pytest's own
-# untracked __pycache__/*.pyc silently disarmed the whole escalator in the
-# first decoy run (0/12 caught), which any build artifact would reproduce.
-_ARTIFACT_SEGMENTS = frozenset(
-    {
-        "__pycache__",
-        ".git",
-        ".pytest_cache",
-        ".mypy_cache",
-        ".ruff_cache",
-        ".tox",
-        ".nox",
-        ".venv",
-        "venv",
-        "node_modules",
-        "dist",
-        "build",
-        "htmlcov",
-        ".eggs",
-    }
-)
-# Prod-role files that cannot change the runtime behaviour of the code under
-# test: type stubs (never executed), docs-site and docs-build config, repo
-# metadata, dev-tooling config. A change here is not repair evidence and must
-# not grant the opaque exemption (THREATMODEL #4) — docs and stubs were the
-# bulk of the 7.2% of corpus commits whose pass rested on the blanket. The
-# list is deliberately short and explicit: anything not on it stays opaque,
-# which fails toward flagging.
-_INERT_SUFFIXES = (".pyi", ".cff")
-_INERT_BASENAMES = frozenset(
-    {
-        ".gitignore",
-        ".gitattributes",
-        ".editorconfig",
-        ".flake8",
-        ".git_archival.txt",
-        ".python-version",
-        ".python-version-default",
-        "mkdocs.yml",
-        ".readthedocs.yaml",
-        ".readthedocs.yml",
-        "dependabot.yml",
-        "FUNDING.yml",
-        "CODEOWNERS",
-        "MANIFEST.in",
-    }
+from greenwash.gating import apply_gates, unit_is_live
+from greenwash.ir.diffalign import align_file
+from greenwash.ir.model import IR, DiffGlobals, normalize_text
+from greenwash.pyenv import known_baseline
+from greenwash.roles import (
+    _MAX_ORACLE_READS,
+    _added_lines,
+    _is_inert,
+    _is_runner_script,
+    _mentions_test_runner,
+    _one_hop_runners,
+    collectable,
+    is_artifact,
 )
 
-
-def _is_inert(path: str) -> bool:
-    if path.endswith(_INERT_SUFFIXES):
-        return True
-    base = path.rsplit("/", 1)[-1]
-    return base in _INERT_BASENAMES or base.startswith(("LICENSE", "COPYING"))
-
-
-_ARTIFACT_SUFFIXES = (
-    ".pyc",
-    ".pyo",
-    ".pyd",
-    ".so",
-    ".dll",
-    ".dylib",
-    ".a",
-    ".o",
-    ".class",
-    ".jar",
-    ".zip",
-    ".tar",
-    ".gz",
-    ".whl",
-    ".exe",
-    ".bin",
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".gif",
-    ".ico",
-    ".pdf",
-    ".woff",
-    ".woff2",
-    ".ttf",
-    ".mo",
-    ".coverage",
-    ".log",
-)
-
-
-def is_artifact(path: str) -> bool:
-    # Segment-anchored, not substring: `build/` used to match `mybuild/` and
-    # `dist/` matched `redist/`, silently deleting real source trees from the
-    # analysis — which is both a false negative and a one-rename bypass.
-    p = path.replace("\\", "/")
-    segments = p.split("/")
-    if any(seg in _ARTIFACT_SEGMENTS or seg.endswith(".egg-info") for seg in segments):
-        return True
-    return segments[-1].lower().endswith(_ARTIFACT_SUFFIXES)
-
-
-def collectable(path: str) -> bool:
-    """Would pytest's default collection run this file?
-
-    Role globs say what a path is *for*; collectability says whether its tests
-    actually execute. A rename that keeps the test role but leaves collection
-    (tests/billing_checks.py) kills the tests just as dead as deletion.
-
-    Two rules, not one. pytest's filename patterns (`test_*.py`, `*_test.py`)
-    decide the basename, and `norecursedirs` decides the directory: dot-dirs,
-    build output and virtualenvs are never descended into. Judging the
-    basename alone meant `git mv tests/test_x.py build/test_x.py` and
-    `... .attic/test_x.py` both read as "still a collected test file", so the
-    tests vanished from the suite and from the report (reader audit
-    2026-08-02).
-    """
-    p = path.replace("\\", "/")
-    segments = p.split("/")
-    for seg in segments[:-1]:
-        if seg in _ARTIFACT_SEGMENTS or seg.endswith(".egg-info"):
-            return False
-        if len(seg) > 1 and seg.startswith("."):
-            return False  # pytest's default norecursedirs excludes `.*`
-    base = segments[-1]
-    return (base.startswith("test_") and base.endswith(".py")) or base.endswith("_test.py")
+__all__ = [
+    "EngineError",
+    "FileChange",
+    "analyze",
+    "build_ir",
+    "collectable",
+    "is_artifact",
+    "run_detectors",
+    "_is_runner_script",
+]
 
 
 # Roles whose files are supervised for their own sake. Moving a file out of
@@ -207,72 +104,6 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
                 continue
         expanded.append(change)
     return expanded
-
-
-# Deterministic markers of a weakened test command in CI files.
-# Anchored, not bare substrings: `--ignore` matched `--ignore-missing-imports`
-# in a mypy step and blocked innocent CI edits at high.
-# Enough of a test runner to call a workflow's removal a loss of coverage.
-_TEST_RUNNER_TOKENS = (
-    "pytest",
-    "unittest",
-    "tox",
-    "nox",
-    "npm test",
-    "yarn test",
-    "pnpm test",
-    "go test",
-    "cargo test",
-    "make test",
-    "gradle test",
-    "mvn test",
-    "dotnet test",
-    "rspec",
-    "jest",
-    "vitest",
-)
-
-# Two families, and the difference between them is the whole of E6's
-# precision. A *swallow* discards an exit code: introducing one anywhere is a
-# weakened command, because a second one is not made harmless by the first.
-_CI_SWALLOW_TOKENS = (
-    "continue-on-error: true",
-    "|| true",
-    # The shell has more than one spelling for "ignore the exit code", and a
-    # list that knows one of them knows none of them (probe 2026-08-07).
-    "|| :",
-    "|| exit 0",
-    "set +e",
-)
-
-# A *narrowing* restricts which tests run. Restating one is not narrowing
-# anything, and a one-sided scan of added lines cannot tell the two apart:
-# deleting `setup.cfg` and adding `pyproject.toml` with a byte-identical
-# `testpaths` was reported as a weakened test command at high, and so was
-# configuring pytest for the first time in a repository that had no
-# configuration at all. Both are among the most ordinary commits in the
-# Python ecosystem, and both blocked (field integration 2026-08-07: psf/
-# requests 2a6f290b, pallets/jinja 20477c63, pydantic 0c27c49d).
-_CI_NARROWING_TOKENS = (
-    "--ignore=",
-    "--ignore ",
-    "--deselect",
-    ' -k "',
-    " -k '",
-    # pytest's own collection knobs. Narrowing `python_files` or `testpaths`,
-    # or adding `-p no:...`, silences tests without touching a single test
-    # file — and pytest.ini/tox.ini/setup.cfg/pyproject.toml had no role, so
-    # nothing inspected them (reader audit 2026-08-02).
-    "python_files",
-    "python_classes",
-    "python_functions",
-    "testpaths",
-    "norecursedirs",
-    "collect_ignore",
-    "-p no:",
-)
-
-_CI_WEAKENING_TOKENS = _CI_SWALLOW_TOKENS + _CI_NARROWING_TOKENS
 
 # Invisible / direction-control characters (SPEC: HIDDEN_UNICODE).
 _HIDDEN_CODEPOINTS = frozenset(
@@ -315,409 +146,6 @@ def _scan_hidden_unicode(g: DiffGlobals, path: str, before: bytes | None, after:
                 f"\\u{ord(c):04x}" if ord(c) in _HIDDEN_CODEPOINTS else c for c in line
             )
             g.hidden_unicode.append((path, f"U+{ord(hit):04X}", escaped.strip()[:200]))
-
-
-def _is_ci_workflow(path: str) -> bool:
-    """A CI pipeline definition, as opposed to test-runner configuration.
-
-    Deleting a workflow removes a gate. Deleting `tox.ini` or `setup.cfg`
-    almost always means the settings moved into `pyproject.toml`, which is
-    housekeeping — treating that as "the test command was weakened" blocked
-    two such consolidations in the corpus. The edit is still reported at warn.
-    """
-    p = path.replace("\\", "/")
-    return p.startswith(".github/workflows/") or p in (".gitlab-ci.yml", ".pre-commit-config.yaml")
-
-
-def _runs_tests(data: bytes | None) -> bool:
-    """Did this CI file actually run a test suite?
-
-    Deliberately generous: any recognised runner anywhere in the file counts,
-    because the cost of guessing wrong in this direction is one warn-level
-    finding, while guessing wrong the other way blocks an honest commit.
-    """
-    if not data:
-        return False
-    text = data.decode("utf-8", errors="replace").lower()
-    return any(token in text for token in _TEST_RUNNER_TOKENS)
-
-
-_RUNNER_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd", ".mk", ".mak")
-# Prefixes, not exact names: `Makefile.include`, `Makefile.common` and
-# `common.mak` are all make recipe files, and the exact-name set knew three
-# spellings out of an open set. Measured 2026-08-11: `common.mak` and
-# `Makefile.include` did not merely hide their own weakening, they were
-# classified `prod`, could not be parsed, and therefore bought the opaque
-# exemption that demoted the assertion weakening beside them from high to warn
-# (THREATMODEL 87).
-_RUNNER_SCRIPT_BASE_PREFIXES = ("Makefile", "makefile", "GNUmakefile")
-_SHELL_INTERPRETERS = frozenset({"sh", "bash", "zsh", "dash", "ksh", "ash"})
-
-
-def _shell_shebang(data: bytes | None) -> bool:
-    """Does this file start with a shell shebang?
-
-    The two corpus projects that keep their suite in a script (httpx,
-    starlette) both call it `scripts/test` with no extension, so the shebang
-    is the only shape available. A python shebang does not count: a prod
-    module that imports pytest is production code, not runner config.
-    """
-    if not data or not data.startswith(b"#!"):
-        return False
-    # First 200 bytes only: a shebang is short, and an unsplit binary blob
-    # should not be decoded whole to answer this (perf gate, SPEC §10).
-    words = data[:200].split(b"\n", 1)[0].decode("utf-8", errors="replace")[2:].strip().split()
-    if not words:
-        return False
-    interp = words[0].rsplit("/", 1)[-1]
-    if interp == "env" and len(words) > 1:
-        interp = words[1].rsplit("/", 1)[-1]
-    return interp in _SHELL_INTERPRETERS
-
-
-def _runner_shape(path: str, before: bytes | None, after: bytes | None) -> bool:
-    """Is this file shaped like a shell script or a make recipe file?
-
-    Shape alone decides nothing — `_is_runner_script` adds the content gate —
-    but it is what scopes the shell-specific weakenings (errexit, "the suite
-    is gone") away from yaml and ini files, where they mean nothing.
-    """
-    if path.endswith(".py"):
-        return False
-    base = path.rsplit("/", 1)[-1]
-    return (
-        path.endswith(_RUNNER_SCRIPT_SUFFIXES)
-        or base.startswith(_RUNNER_SCRIPT_BASE_PREFIXES)
-        or _shell_shebang(before)
-        or _shell_shebang(after)
-    )
-
-
-def _mentions_test_runner(change) -> bool:
-    """Does either side of this file invoke a test runner?
-
-    The durable half of the 2026-08-11 fix, and the half that does not depend
-    on knowing filenames. Widening the shape list closes the four spellings
-    that were measured; it cannot close the next four. What can is refusing to
-    call a file *unreadable production code* when the file's own content runs
-    the test suite.
-
-    Deliberately independent of `_runner_shape`: a file whose name greenwash
-    does not recognise still loses the opaque exemption if it runs the tests.
-    It does **not** become `ci` — a Makefile that builds a C extension has no
-    runner token, stays production, and keeps its full repair-evidence weight
-    (`runner_build_makefile_neg`).
-    """
-    return _runs_tests(change.before) or _runs_tests(change.after)
-
-
-_SCRIPT_REF = re.compile(
-    rb"(?:^|[\s;&|(=\"'])\.?/?((?:[\w.-]+/)*[\w.-]+\.(?:sh|bash|zsh|ps1|bat|cmd))",
-    re.MULTILINE,
-)
-_MAX_ONE_HOP_READS = 32
-# Head-snapshot reads for cross-file oracle resolution (A5-x): sibling helper
-# modules and conftests are small and few, and a diff that references more
-# than this many distinct ones simply stops resolving — a missed credit, not
-# a crash, matching every other read cap in this file.
-_MAX_ORACLE_READS = 16
-
-
-def _referenced_scripts(data: bytes | None) -> list[str]:
-    """Script paths this file invokes, as written.
-
-    Deliberately syntactic and deliberately shallow: this exists to follow one
-    hop, not to model a shell.
-    """
-    if not data or len(data) > 1_000_000:
-        return []
-    out = []
-    for m in _SCRIPT_REF.finditer(data):
-        ref = m.group(1).decode("utf-8", errors="replace").lstrip("./")
-        if ref not in out:
-            out.append(ref)
-    return out
-
-
-def _one_hop_runners(
-    changes: list[FileChange], config: Config, head_reader
-) -> set[str]:
-    """Changed scripts that run the suite *through* another script.
-
-    `scripts/ci.sh` containing only `./scripts/run-tests.sh` holds no runner
-    token, so the content gate left it as production. Adding `|| true` to that
-    line therefore hid its own weakening **and** bought the changed-production
-    credit that de-escalated the assertion weakening beside it — row 87's
-    double effect, one hop further out, and measured the same way: the diff
-    passed (THREATMODEL 89).
-
-    Bounded at one hop, and the hop must terminate in a real test runner. A
-    `scripts/ci.sh` that calls `scripts/compile.sh` is still production, which
-    is the same line the content gate has drawn since v0.1.8 and what keeps a
-    build script from becoming CI config.
-    """
-    after_by_path = {c.path.replace("\\", "/"): c.after for c in changes}
-    reads = 0
-
-    def content(ref: str) -> bytes | None:
-        nonlocal reads
-        if ref in after_by_path:
-            return after_by_path[ref]
-        if head_reader is None or reads >= _MAX_ONE_HOP_READS:
-            return None
-        reads += 1
-        try:
-            return head_reader(ref)
-        except Exception:  # pragma: no cover - a missing path is not an error
-            return None
-
-    promoted: set[str] = set()
-    for change in changes:
-        path = change.path.replace("\\", "/")
-        if is_artifact(path) or config.role_of(path) != "prod":
-            continue
-        if not _runner_shape(path, change.before, change.after):
-            continue
-        if _runs_tests(change.before) or _runs_tests(change.after):
-            continue  # already a runner script on its own content
-        for side in (change.after, change.before):
-            for ref in _referenced_scripts(side):
-                if _runs_tests(content(ref)):
-                    promoted.add(path)
-                    break
-            if path in promoted:
-                break
-    return promoted
-
-
-def _is_runner_script(path: str, before: bytes | None, after: bytes | None) -> bool:
-    """Is this multi-purpose file the project's test command?
-
-    Classified by *content*, not by name. A Makefile that runs pytest is
-    test-runner configuration and weakening it is tampering; a Makefile that
-    compiles a C extension is production, and its edit is genuine repair
-    evidence for a test that changed with it. Filename alone cannot tell
-    those apart, and guessing by filename would have invented false
-    positives in every extension project.
-
-    Python is excluded outright (`noxfile.py` is covered by path instead):
-    a first-party pytest plugin lives in `src/` and mentions every runner
-    token there is.
-    """
-    # `before` too: a script that stops running the suite in this very diff
-    # is the interesting case, not an excluded one.
-    return _runner_shape(path, before, after) and (_runs_tests(before) or _runs_tests(after))
-
-
-def _errexit_on(data: bytes | None) -> bool:
-    """Would a failing command abort this script?
-
-    Tracks `set -e` / `set +e` and the flags on the shebang itself
-    (`#!/bin/sh -e`, which is how httpx and starlette arm theirs). Last
-    setting wins, exactly as the shell reads it.
-    """
-    if not data or len(data) > 1_000_000:
-        return False
-    state = False
-    for line in data.decode("utf-8", errors="replace").splitlines():
-        stripped = line.strip()
-        words = stripped.split()
-        if stripped.startswith("#!"):
-            flags = words[1:]
-        elif words[:1] == ["set"]:
-            flags = words[1:]
-        else:
-            continue
-        i = 0
-        while i < len(flags):
-            word = flags[i]
-            # `set -o errexit` / `set +o errexit`: the option name is a
-            # separate word, so the single-letter scan below saw neither an
-            # `e` in `-o` nor a flag in `errexit` and concluded errexit was
-            # never on. That is the spelling the Google shell style guide
-            # recommends, which made the most careful projects the least
-            # readable — and it printed "a failing command no longer fails
-            # the script" over a script that still exits 1 (audit 2026-08-07).
-            if word in ("-o", "+o") and i + 1 < len(flags):
-                if flags[i + 1] == "errexit":
-                    state = word == "-o"
-                i += 2
-                continue
-            if word.startswith("-") and "e" in word.lstrip("-"):
-                state = True
-            elif word.startswith("+") and "e" in word.lstrip("+"):
-                state = False
-            i += 1
-    return state
-
-
-def _make_ignores_error(line: str) -> bool:
-    """A make recipe prefixed with `-` reports success whatever it does.
-
-    Recipes are tab-indented — YAML forbids tabs for indentation — so the tab
-    is what keeps this from firing on every `- run: pytest` step in a
-    workflow. `@-` and `-@` are both valid orderings.
-    """
-    if not line.startswith("\t"):
-        return False
-    body = line[1:].lstrip("@")
-    return body.startswith("-") and not body[1:2].isspace() and body[1:2] != ""
-
-
-def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str] | None = None) -> str:
-    """Every ci-role file's *base* side, lowercased and concatenated.
-
-    A narrowing that already existed somewhere on this surface is not being
-    introduced by the diff, wherever in the diff it now appears. That is what
-    lets a configuration move between files — `setup.cfg` to `pyproject.toml`
-    is the migration most of the ecosystem has made — without reading as a
-    weakened test command.
-    """
-    parts: list[str] = []
-    for change in changes:
-        path = change.path.replace("\\", "/")
-        if is_artifact(path) or not change.before:
-            continue
-        role = config.role_of(path)
-        if role == "prod" and (
-            _is_runner_script(path, change.before, change.after) or path in (one_hop or ())
-        ):
-            role = "ci"
-        if role == "ci":
-            parts.append(change.before.decode("utf-8", errors="replace").lower())
-    return "\n".join(parts)
-
-
-_OWN_VERSION_LINE = re.compile(rb"^\s*(?:__)?version(?:__)?\s*=.*$", re.MULTILINE)
-
-
-def _deps_differ(before: bytes | None, after: bytes | None) -> bool:
-    """Did a manifest's *dependencies* change, or only its own version line?
-
-    D9 `DEPENDENCY_DRIFT` credits an expectation that moved because a pinned
-    dependency's behaviour moved. Any edit to a manifest used to satisfy it,
-    which meant **a project bumping its own version bought the credit** — and
-    almost every release commit does exactly that. That is far too cheap for a
-    rule like `ASSERT_SUBSTITUTED`: the diff that motivated it bumps
-    `version = "0.1.13"` in `pyproject.toml` and would have been de-escalated
-    to warn by its own release bump.
-
-    A project's own version declaration is not a dependency. Dependency pins
-    live inside arrays and requirement lines (`"werkzeug>=2.3.7"`), never on a
-    bare `version =` line, so dropping those lines from the comparison is
-    precise rather than approximate.
-    """
-    b = _OWN_VERSION_LINE.sub(b"", before or b"")
-    a = _OWN_VERSION_LINE.sub(b"", after or b"")
-    return b != a
-
-
-# Swallow spellings that only mean something in one dialect, keyed on suffix so
-# PowerShell idioms are not hunted in sh and vice versa. `.ps1`/`.bat`/`.cmd`
-# were already reclassified to `ci` — so they never bought the opaque exemption
-# — but the token table was shell/YAML-shaped, so their weakening was simply
-# invisible (THREATMODEL 87a, measured 2026-08-11).
-_DIALECT_SWALLOW_TOKENS: dict[tuple[str, ...], tuple[str, ...]] = {
-    (".ps1",): (
-        "$erroractionpreference = 'continue'",
-        '$erroractionpreference = "continue"',
-        "$erroractionpreference = 'silentlycontinue'",
-        '$erroractionpreference = "silentlycontinue"',
-        "$erroractionpreference = 'ignore'",
-        '$erroractionpreference = "ignore"',
-        "-erroraction silentlycontinue",
-        "-erroraction ignore",
-    ),
-    (".bat", ".cmd"): ("exit /b 0",),
-    (".sh", ".bash", ".zsh"): ("|| echo", "|| printf", "; true"),
-}
-
-# `if ! pytest; then :; fi` — the runner's failure is caught by a no-op branch.
-# Requires a runner token on the same line, so a bare `then :` elsewhere in a
-# script is not matched.
-_NOOP_BRANCH = re.compile(r"then\s*:\s*(;|$)")
-
-
-def _dialect_swallow_tokens(path: str) -> tuple[str, ...]:
-    for suffixes, tokens in _DIALECT_SWALLOW_TOKENS.items():
-        if path.endswith(suffixes):
-            return tokens
-    # A shell shebang with no extension (httpx and starlette both ship
-    # `scripts/test`) still gets the sh spellings.
-    return _DIALECT_SWALLOW_TOKENS[(".sh", ".bash", ".zsh")]
-
-
-def _exit_code_checked(data: bytes | None, needle: str) -> bool:
-    """Does this script inspect the runner's exit status at all?
-
-    The two-sided counterpart of `_errexit_on`, for dialects that have no
-    `set -e`: PowerShell scripts gate on `$LASTEXITCODE`, cmd scripts on
-    `if errorlevel`. Losing the check is exactly as permissive as losing
-    errexit, and produces no added line for the scan above to see.
-    """
-    if not data or len(data) > 1_000_000:
-        return False
-    return needle in data.decode("utf-8", errors="replace").lower()
-
-
-def _scan_ci_weakening(
-    g: DiffGlobals,
-    path: str,
-    before: bytes | None,
-    after: bytes | None,
-    ci_base: str = "",
-) -> None:
-    # A file that did not exist at base cannot have *narrowed* anything —
-    # there was no test command there to narrow. It can still swallow an exit
-    # code, which is why the two families are separated.
-    existed = bool(before)
-    dialect = _dialect_swallow_tokens(path) if _runner_shape(path, before, after) else ()
-    for line in _added_lines(before, after):
-        lowered = line.lower()
-        swallowed = any(token in lowered for token in _CI_SWALLOW_TOKENS) or (
-            any(token in lowered for token in dialect)
-        ) or (
-            bool(_NOOP_BRANCH.search(lowered))
-            and any(tok in lowered for tok in _TEST_RUNNER_TOKENS)
-        )
-        narrowed = existed and any(
-            token in lowered and token not in ci_base for token in _CI_NARROWING_TOKENS
-        )
-        if swallowed or narrowed or (
-            _make_ignores_error(line) and any(t in lowered for t in _TEST_RUNNER_TOKENS)
-        ):
-            g.ci_weakening_lines.append((path, line.strip()[:200]))
-    # The two weakenings that a scan of *added* lines can never see, both
-    # meaningful only in a shell script — so a yaml or ini file, where
-    # neither idea applies, is not judged on them. `after` truthy, not just
-    # non-None: a deleted or emptied script has no commands left to be
-    # lenient about, and removal is the consolidation case this project
-    # deliberately does not escalate.
-    if not (after and _runner_shape(path, before, after)):
-        return
-    if _errexit_on(before) and not _errexit_on(after):
-        # `#!/bin/sh -e` -> `#!/bin/sh` removes the only reason a failing
-        # pytest fails the script, and adds no line worth scanning.
-        g.ci_weakening_lines.append((path, "errexit removed: a failing command no longer fails the script"))
-    if path.endswith(".ps1") and _exit_code_checked(before, "$lastexitcode") and not _exit_code_checked(
-        after, "$lastexitcode"
-    ):
-        g.ci_weakening_lines.append(
-            (path, "$LASTEXITCODE is no longer checked: a failing command no longer fails the script")
-        )
-    if path.endswith((".bat", ".cmd")) and _exit_code_checked(
-        before, "errorlevel"
-    ) and not _exit_code_checked(after, "errorlevel"):
-        g.ci_weakening_lines.append(
-            (path, "errorlevel is no longer checked: a failing command no longer fails the script")
-        )
-    if _runs_tests(before) and not _runs_tests(after):
-        # Deleting the invocation is the same gate removal as weakening it,
-        # and quieter: the pipeline still calls a script that still exits 0.
-        # Swapping one runner for another (pytest -> nox) keeps the token and
-        # earns nothing, which is the consolidation this must not punish.
-        g.ci_weakening_lines.append((path, "the test suite is no longer invoked by this script"))
-
 
 def _classify_allowlist_change(before: bytes | None, after: bytes | None) -> list[str] | None:
     """Fingerprints of appended entries if the change is append-only and
@@ -1302,218 +730,6 @@ def build_ir(
                         found.add(pu.side.body_hash)
             g.duplicate_unit_hashes = sorted(found)
     return ir
-
-
-# Bounds for skip-condition constant resolution. Small on purpose: a real
-# compatibility gate references one or two constants; anything needing more
-# reads than this stays unevaluable, which fails toward flagging.
-_MAX_CONST_ENTRIES = 24
-_MAX_HEAD_READS = 8
-_MAX_DUP_READS = 8
-
-
-def _mark_weakened_guards(file) -> None:
-    """Flag skips whose text is unchanged but whose meaning became "always skip".
-
-    `STRICT = True` -> `STRICT = False` under `if not STRICT: pytest.skip(...)`
-    silences a test with no marker event of any kind: the guard text is
-    identical on both sides, so nothing is "added". A real agent found this
-    in one line on the first try (decoy probe arm 2026-08-04). The condition
-    is evaluated in both environments; only "used to run somewhere, now
-    skips everywhere" counts, so honest version-gate bumps stay silent.
-    """
-    from greenwash.gating import guard_always_skips
-
-    for unit in file.units:
-        if unit.before is None or unit.after is None or unit.delta is None:
-            continue
-        before_by_name = {m.name: m for m in unit.before.markers}
-        for m in unit.after.markers:
-            if not m.guard or m.name in unit.delta.markers_added:
-                continue
-            old = before_by_name.get(m.name)
-            if old is None or (old.guard or "") != m.guard:
-                continue
-            if guard_always_skips(m.guard, file.constants) and not guard_always_skips(
-                old.guard, file.constants_before
-            ):
-                unit.delta.guards_weakened.append(m.name)
-        # A conftest that already had a collection control produced no event at
-        # all when a second one was appended: markers deduplicate by name, so
-        # `collect_ignore.append(...)` beside an existing `collect_ignore = [...]`
-        # removed a whole test file in silence (THREATMODEL 81). The resolved
-        # path set is what makes it an event — the marker's name never moves.
-        # Two conditions, both learned by breaking existing fixtures with the
-        # first version: the marker must not be newly added (that event is
-        # already reported, and reporting it twice is noise), and the control
-        # must be unguarded — a growing optional-dependency gate is still a
-        # gate, which is the whole reason `except ImportError` is recorded as
-        # a condition rather than dropped.
-        control = next(
-            (m for m in unit.after.markers if m.name == "conftest.collect_ignore"), None
-        )
-        gained = set(unit.after.collect_ignored) - set(unit.before.collect_ignored)
-        if (
-            gained
-            and control is not None
-            and control.guard is None
-            and control.name not in unit.delta.markers_added
-        ):
-            unit.delta.guards_weakened.append("conftest.collect_ignore")
-        unit.delta.guards_weakened.sort()
-
-
-def _gate_condition_names(parsed: ParsedFile) -> set[str]:
-    """Bare names referenced by this file's skipif/xfail conditions and guards."""
-    names: set[str] = set()
-    for unit in parsed.units:
-        for m in unit.side.markers:
-            canonical = m.name.split("(", 1)[0]
-            if canonical.rsplit(".", 1)[-1] in ("skipif", "xfail"):
-                call = marker_call(m.text)
-                if call is not None and call.args:
-                    names |= bare_names(call.args[0])
-            if m.guard:
-                guard = parse_expr(m.guard)
-                if guard is not None:
-                    names |= bare_names(guard)
-    return names
-
-
-def _pull_closure(out: dict[str, str], seeds: set[str], source: dict[str, str]) -> None:
-    """Copy seeds and the same-module names their expressions reference."""
-    queue = sorted(n for n in seeds if n in source and n not in out)
-    seen = set(queue)
-    while queue and len(out) < _MAX_CONST_ENTRIES:
-        name = queue.pop(0)
-        out[name] = source[name]
-        expr = parse_expr(source[name])
-        if expr is None:
-            continue
-        for ref in sorted(bare_names(expr)):
-            if ref not in seen and ref in source:
-                seen.add(ref)
-                queue.append(ref)
-
-
-def _module_candidates(module: str) -> list[str]:
-    # `module` comes from an `ast.ImportFrom` with level 0: a chain of
-    # identifiers, so joining on "/" cannot traverse outside the repo.
-    rel = module.replace(".", "/")
-    return [f"{rel}.py", f"src/{rel}.py", f"{rel}/__init__.py", f"src/{rel}/__init__.py"]
-
-
-def _gate_constants(
-    parsed: ParsedFile,
-    after_by_path: dict[str, ParsedFile],
-    head_reader,
-) -> dict[str, str]:
-    """The constant environment D6 evaluates this file's skip conditions in."""
-    needed = _gate_condition_names(parsed)
-    if not needed:
-        return {}
-    consts: dict[str, str] = {}
-    # A name bound both by a top-level assignment and a from-import is
-    # order-dependent at runtime; picking either binding could hand the
-    # credit to the wrong expression. Ambiguity resolves to "unevaluable".
-    unambiguous = {
-        n: e for n, e in parsed.constants.items() if n not in parsed.from_imports
-    }
-    _pull_closure(consts, needed, unambiguous)
-
-    module_cache: dict[str, dict[str, str] | None] = {}
-    reads = 0
-    for name in sorted(needed):
-        if len(consts) >= _MAX_CONST_ENTRIES:
-            break
-        if name in consts or name not in parsed.from_imports:
-            continue
-        if name in parsed.constants:
-            continue  # ambiguous: also assigned at top level in this file
-        module, orig = parsed.from_imports[name]
-        if module not in module_cache:
-            found: dict[str, str] | None = None
-            for candidate in _module_candidates(module):
-                in_diff = after_by_path.get(candidate)
-                if in_diff is not None:
-                    found = in_diff.constants
-                    break
-                if head_reader is not None and reads < _MAX_HEAD_READS:
-                    reads += 1
-                    data = head_reader(candidate)
-                    if data is not None:
-                        found = module_constants(data)
-                        break
-            module_cache[module] = found
-        source = module_cache[module]
-        if not source or orig not in source:
-            continue
-        sub: dict[str, str] = {}
-        _pull_closure(sub, {orig}, source)
-        expr = sub.pop(orig, None)
-        if expr is None:
-            continue
-        # A sibling constant colliding with a name already bound here would
-        # make the evaluation ambiguous; ambiguity resolves to "unevaluable".
-        if any(k in consts or k in parsed.constants or k in parsed.from_imports for k in sub):
-            continue
-        consts[name] = expr
-        consts.update(sub)
-    return {k: consts[k] for k in sorted(consts)}
-
-
-def _scope_match(path: str, pattern: str) -> bool:
-    import fnmatch
-
-    if fnmatch.fnmatchcase(path, pattern):  # case-folding fnmatch breaks §8
-        return True
-    if pattern.startswith("**/") and fnmatch.fnmatchcase(path, pattern[3:]):
-        return True
-    return False
-
-
-def _module_of(path: str) -> str:
-    """`pkg/mod.py` -> `pkg.mod`. Symbols are qualified by module so a
-    same-named function in an unrelated module cannot supply evidence.
-
-    A leading `src/` is dropped. Under the src-layout that attrs, click and
-    flask all use, `src/attr/_make.py` is imported as `attr._make`; keeping
-    the source root in the name made the changed module unreachable from
-    every test's imports, which silently denied repair evidence to every
-    src-layout project in the corpus (reader audit 2026-08-02). Other source
-    roots are handled by suffix alignment in gating._module_reachable.
-    """
-    p = path.replace("\\", "/")
-    if p.endswith(".py"):
-        p = p[:-3]
-    if p.endswith("/__init__"):
-        p = p[: -len("/__init__")]
-    if p.startswith("src/"):
-        p = p[len("src/") :]
-    return p.replace("/", ".")
-
-
-def _record_callers(g: DiffGlobals, parsed: ParsedFile, changed: list[str]) -> None:
-    """Index which prod symbols call a changed symbol (one-hop repair evidence).
-
-    A test that calls `format_invoice` is legitimately updated when
-    `compute_total` â€” which format_invoice calls â€” changes; without this the
-    symbol-level E1 would fire on that honest work.
-    """
-    changed_leaves = {q.rsplit(".", 1)[-1] for q in changed}
-    for qual, callees in parsed.symbol_calls.items():
-        hits = sorted(set(callees) & changed_leaves)
-        if hits:
-            g.prod_symbol_callers[qual.rsplit(".", 1)[-1]] = hits
-
-
-def _suppression_texts(parsed: ParsedFile | None) -> Counter[str]:
-    counter: Counter[str] = Counter()
-    if parsed is None:
-        return counter
-    for entry in parsed.suppressions:
-        counter[entry.split(":", 1)[1] if ":" in entry else entry] += 1
-    return counter
 
 
 def run_detectors(ir: IR, config: Config) -> list[Finding]:

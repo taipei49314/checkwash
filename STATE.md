@@ -1,6 +1,13 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.31: E4 — unittest name sets + unpack/walrus bindings)
+Updated: 2026-08-15 (v0.1.32: E5 — split roles/ci/evidence/compat)
+
+## 2026-08-15 (v0.1.32): E5 — engine/gating split
+
+Zero-behavior extract. `roles.py`, `ci.py`, `evidence.py`, `compat.py`,
+`change.py` hold the helpers; `engine.py` and `gating.py` orchestrate.
+Public imports (`FileChange`, `analyze`, `apply_gates`) unchanged. No SPEC
+policy change.
 
 ## 2026-08-15 (v0.1.31): E4 — unittest DERIVED + unpack/walrus
 
@@ -776,7 +783,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.31 |
+| version | v0.1.32 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |
