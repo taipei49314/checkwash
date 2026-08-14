@@ -58,6 +58,26 @@ build if the version and the tag disagree:
   venv in CI, which asserts `pip freeze` contains greenwash and nothing else
 - `greenwash.pyz` — the single-file build, gated by `tests/test_zipapp.py`
 
+### pyz reproducibility
+
+The release job builds the zipapp with:
+
+```bash
+python -m zipapp src -m "greenwash.cli:main" -o dist/greenwash.pyz -c
+```
+
+That is **source-reproducible** on the same CPython minor: same `src/`
+tree, same `-m` entry, compressed. It is **not** bit-identical across
+Python versions or zip implementations. Visitors should treat the
+GitHub release asset as the artifact and verify it by running
+`python greenwash.pyz --version` and `python greenwash.pyz demo`.
+`tests/test_zipapp.py` on every push is the gate that the recipe still
+works; the release job is what people download.
+
+Workflow `uses:` are hash-pinned (T2.6). `contents: write` exists only
+on the `build` job, only to attach assets to an already-published
+release. PyPI uses OIDC (`id-token: write`) and no stored token.
+
 ## PyPI
 
 Not automated by default, on purpose. The `pypi` job publishes through trusted

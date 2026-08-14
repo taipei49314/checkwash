@@ -1,6 +1,15 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.37: T2.3 allow workflow + T2.4 findings contract)
+Updated: 2026-08-15 (T2.5 perf collection gate + T2.6 hash-pinned workflows)
+
+## 2026-08-15: T2.5 / T2.6 CI hardness
+
+Default `pytest` still runs `tests/gates/test_perf.py` (1.0s / 2.5s
+budgets); `test_perf_gate_is_in_default_collection` fails if that file
+or those names disappear, or if addopts grows `--ignore`/`-k`. CI and
+release `uses:` are hash-pinned; checkouts set
+`persist-credentials: false`. RELEASING.md states the pyz recipe is
+source-reproducible, not bit-identical across CPython versions.
 
 ## 2026-08-15 (v0.1.37): T2.3 allow workflow, T2.4 machine contract
 

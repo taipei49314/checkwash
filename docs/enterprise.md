@@ -57,7 +57,14 @@ action/required-ruleset.json @org/security-reviewers
 A CODEOWNERS file is not a merge gate unless the branch rule also requires
 a code-owner review.
 
-## 5. What this still does not do
+## 5. Perf SLO
+
+`tests/gates/test_perf.py` runs in default `pytest` (the CI job has no
+`-k` / `--ignore`). Budgets: 3000-line test diff **< 1.0 s**; 500 files
+**< 2.5 s**. A regression beyond those fails the push. The ROADMAP
+stop-hook target is p95 < 2 s on a medium diff; 1.0 s is the hard gate.
+
+## 6. What this still does not do
 
 - It does not see branch protection. Confirm step 2 yourself.
 - It does not stop someone deleting the job in the same diff. Protect

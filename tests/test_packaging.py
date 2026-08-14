@@ -217,6 +217,29 @@ def test_readme_action_snippet_is_zizmor_blanket():
         )
 
 
+def test_perf_gate_is_in_default_collection():
+    """T2.5: the SLO file cannot vanish from default pytest or be skipped.
+
+    CI runs `pytest` with no -k / --ignore. The budgets live in
+    tests/gates/test_perf.py (agent-read-only). This test only checks that
+    the file is still part of the default collection.
+    """
+    perf = ROOT / "tests" / "gates" / "test_perf.py"
+    text = perf.read_text(encoding="utf-8")
+    assert "def test_large_single_diff_within_budget" in text
+    assert "BUDGET_LARGE_DIFF_S" in text
+    addopts = (
+        _pyproject()
+        .get("tool", {})
+        .get("pytest", {})
+        .get("ini_options", {})
+        .get("addopts", "")
+    )
+    blob = addopts if isinstance(addopts, str) else " ".join(addopts)
+    assert "--ignore" not in blob
+    assert " -k " not in f" {blob} "
+
+
 def test_readme_install_refs_match_version():
     """Every version-pinned install line in the README points at this version.
 
