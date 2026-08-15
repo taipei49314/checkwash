@@ -220,8 +220,9 @@ def test_readme_action_snippet_is_zizmor_blanket():
 
     # The required-check snippet is what a visitor pastes. Pinning an old
     # tag's peeled commit (v0.1.34 while the README advertised v0.1.40) ships
-    # them an Action six releases behind. An annotated tag object's SHA is not
-    # a commit and GitHub rejects it as an Action ref, so it must not pass.
+    # them an Action six releases behind. An annotated tag-object SHA is not a
+    # commit SHA and is an unsupported, unreliable Action pin; the resolver has
+    # regressed on it, so it must not pass this contract.
     version = _pyproject()["project"]["version"]
     tag = f"v{version}"
     sha = subprocess.check_output(
