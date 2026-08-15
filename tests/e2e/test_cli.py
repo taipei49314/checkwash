@@ -199,6 +199,25 @@ def test_engine_error_exit_code(tmp_path):
 
 
 def test_hook_json_blocks_with_reason(repo):
+    guardrail = repo / ".claude" / "settings.json"
+    guardrail.parent.mkdir()
+    guardrail.write_text("{}\n", encoding="utf-8")
+    warn = _greenwash(
+        repo,
+        "check",
+        "--fail-on",
+        "warn",
+        "--format",
+        "hook-json",
+    )
+    assert warn.returncode == 0, warn.stderr
+    warn_payload = json.loads(warn.stdout)
+    assert warn_payload["decision"] == "block"
+    assert "1 finding(s) blocking" in warn_payload["reason"]
+    assert "GUARDRAIL_TOUCHED" in warn_payload["reason"]
+
+    guardrail.unlink()
+    guardrail.parent.rmdir()
     _weaken(repo)
     result = _greenwash(repo, "check", "--format", "hook-json")
     # Stop-hook protocol: decision travels in JSON, exit stays 0.
