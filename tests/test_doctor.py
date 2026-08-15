@@ -183,6 +183,14 @@ def test_conditions_unsafe_context_and_event_shorthand_are_incomplete(tmp_path):
 
 def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
     cases = {
+        "unseparated-on": CANONICAL.replace("on: [pull_request]", "on:[pull_request]"),
+        "unseparated-runs-on": CANONICAL.replace(
+            "runs-on: ubuntu-latest", "runs-on:ubuntu-latest"
+        ),
+        "unseparated-uses": CANONICAL.replace(
+            "- uses: actions/checkout@", "- uses:actions/checkout@", 1
+        ),
+        "unseparated-with-value": CANONICAL.replace("fetch-depth: 0", "fetch-depth:0"),
         "duplicate-on": "on: push\n" + CANONICAL,
         "duplicate-jobs": CANONICAL + "\njobs:\n  other:\n    runs-on: ubuntu-latest\n",
         "duplicate-job-id": CANONICAL + "  greenwash:\n    runs-on: ubuntu-latest\n",

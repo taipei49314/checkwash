@@ -64,7 +64,7 @@ def _indent(line: str) -> int:
 
 
 def _mapping(line: str, indent: int) -> tuple[str, str] | None:
-    match = re.fullmatch(rf" {{{indent}}}([A-Za-z_][A-Za-z0-9_-]*):(?:\s*(.*))?", line)
+    match = re.fullmatch(rf" {{{indent}}}([A-Za-z_][A-Za-z0-9_-]*):(?: +(.*))?", line)
     return (match.group(1), match.group(2) or "") if match else None
 
 
@@ -80,7 +80,7 @@ def _unfiltered_event(lines: list[str], on_index: int, on_value: str) -> bool:
 
 
 def _step(lines: list[str]) -> tuple[dict[str, str], dict[str, str]] | None:
-    first = re.fullmatch(r"      - ([a-z][a-z0-9-]*):(?:\s*(.*))?", lines[0])
+    first = re.fullmatch(r"      - ([a-z][a-z0-9-]*):(?: +(.*))?", lines[0])
     if not first:
         return None
     props = {first.group(1): first.group(2) or ""}
