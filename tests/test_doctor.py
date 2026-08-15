@@ -66,6 +66,10 @@ def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
         )
         _incomplete(_canonical_repo(tmp_path / action.replace("/", "-"), sha64), action)
 
+    for job_id in ("audit", "test", "green_wash", "Greenwash"):
+        renamed = CANONICAL.replace("\n  greenwash:\n", f"\n  {job_id}:\n")
+        _incomplete(_canonical_repo(tmp_path / f"job-{job_id}", renamed), job_id)
+
     path = tmp_path / "crlf" / CI / "greenwash.yaml"
     path.parent.mkdir(parents=True)
     path.write_bytes(("\ufeff" + CANONICAL.replace("\n", "\r\n")).encode("utf-8"))

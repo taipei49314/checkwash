@@ -243,7 +243,7 @@ def _workflow(path: Path) -> tuple[list[str], bool]:
             starts.append((index, item[0]))
         elif _indent(lines[index]) < 4:
             return [], candidate
-    if len(starts) != 1 or starts[0][0] != jobs[0][0] + 1:
+    if starts != [(jobs[0][0] + 1, "greenwash")]:
         return [], candidate
     healthy = []
     for pos, (start, name) in enumerate(starts):
