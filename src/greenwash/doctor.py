@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import hashlib
+import os
 import re
 import stat
 from dataclasses import dataclass
@@ -118,8 +119,12 @@ def _plain_chain(root: Path, relative: str | Path) -> bool:
         return False
     current = root
     for part in relative.parts:
-        current /= part
         try:
+            with os.scandir(current) as entries:
+                matches = [entry.name for entry in entries if entry.name.casefold() == part.casefold()]
+            if matches != [part]:
+                return False
+            current /= matches[0]
             info = current.lstat()
         except OSError:
             return False

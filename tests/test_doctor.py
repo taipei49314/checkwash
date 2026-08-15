@@ -42,6 +42,12 @@ def _incomplete(root: pathlib.Path, label: str) -> None:
     assert not _levels(notes, "runs unconditionally"), label
 
 
+def _not_healthy(root: pathlib.Path, label: str) -> None:
+    notes = collect(root)
+    assert not _levels(notes, "runs unconditionally"), label
+    assert [note for note in notes if note.level in {"warn", "problem"}], label
+
+
 def _canonical_repo(tmp_path: pathlib.Path, body: str = CANONICAL, suffix: str = ".yml"):
     return _repo(tmp_path, {f"{CI}/greenwash{suffix}": body})
 
@@ -228,10 +234,31 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
         _incomplete(_canonical_repo(tmp_path / label, workflow), label)
 
 
-def test_fake_workflow_extensions_are_not_scanned(tmp_path):
+def test_fake_workflow_extensions_and_case_mismatches_are_not_healthy(tmp_path):
     notes = collect(_canonical_repo(tmp_path, suffix=".yml.bak"))
     assert _levels(notes, "no greenwash installation found") == ["problem"]
     assert not _levels(notes, "runs unconditionally")
+
+    remote = _repo(tmp_path / "mixed-remote", {
+        ".GitHub/Workflows/greenwash.yml": CANONICAL,
+    })
+    _not_healthy(remote, "mixed-case workflow ancestors")
+
+    ci = (ROOT / CI / "ci.yml").read_text(encoding="utf-8")
+    action = (ROOT / "action/action.yml").read_text(encoding="utf-8")
+    post = (ROOT / "action/post_review.py").read_text(encoding="utf-8")
+    ancestor = _repo(tmp_path / "mixed-action-ancestor", {
+        f"{CI}/ci.yml": ci,
+        "Action/action.yml": action,
+        "Action/post_review.py": post,
+    })
+    _not_healthy(ancestor, "mixed-case action ancestor")
+    leaf = _repo(tmp_path / "mixed-action-leaf", {
+        f"{CI}/ci.yml": ci,
+        "action/Action.yml": action,
+        "action/post_review.py": post,
+    })
+    _not_healthy(leaf, "mixed-case action leaf")
 
 
 def _symlink(link: pathlib.Path, target: pathlib.Path, directory: bool = False) -> None:
