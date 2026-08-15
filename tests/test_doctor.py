@@ -1,18 +1,21 @@
-"""`greenwash doctor` must be right about which job is the gate.
+"""`doctor` proves only the documented, tightly bounded workflow shape."""
 
-Both of the first version's mistakes are pinned here, because both were made
-against this repository on the first run and both are the kind that make a
-diagnostic worse than nothing: it missed the real gate (a repo-local
-`uses: ./action`) and it warned confidently about release-pipeline jobs that
-merely install the package.
-"""
-
+import io
 import json
 import pathlib
+import re
 
-from greenwash.doctor import collect
+import pytest
+
+from greenwash.doctor import collect, run
+
 
 CI = ".github/workflows"
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+README = (ROOT / "README.md").read_text(encoding="utf-8")
+CANONICAL = re.search(
+    r"```yaml\n(# \.github/workflows/greenwash\.yml\n.*?)```", README, re.S
+).group(1)
 
 
 def _repo(tmp_path: pathlib.Path, files: dict[str, str]) -> pathlib.Path:
@@ -27,136 +30,275 @@ def _levels(notes, title_contains):
     return [n.level for n in notes if title_contains in n.title]
 
 
-def test_local_hook_without_ci_is_a_problem(tmp_path):
-    notes = collect(_repo(tmp_path, {
-        ".claude/settings.json": json.dumps({"hooks": {"Stop": "greenwash check"}}),
-    }))
-    assert _levels(notes, "runs locally but not in CI") == ["problem"]
-
-
-def test_nothing_installed_is_a_problem(tmp_path):
-    notes = collect(_repo(tmp_path, {"README.md": "hello"}))
-    assert _levels(notes, "no greenwash installation found") == ["problem"]
-
-
-def test_unconditional_gate_is_healthy(tmp_path):
-    notes = collect(_repo(tmp_path, {
-        f"{CI}/ci.yml": (
-            "on:\n  pull_request:\n\njobs:\n  guard:\n    runs-on: ubuntu-latest\n"
-            "    steps:\n      - uses: taipei49314/greenwash/action@v1\n"
-        ),
-    }))
+def _healthy(root: pathlib.Path) -> None:
+    notes = collect(root)
     assert _levels(notes, "runs unconditionally") == ["ok"]
-    assert not [n for n in notes if n.level in ("problem", "warn")]
+    assert not [note for note in notes if note.level in {"warn", "problem"}]
 
 
-def test_repo_local_action_counts_as_a_gate(tmp_path):
-    """`uses: ./action` says nothing on its own — it is greenwash only if that
-    action.yml is. The first version missed this repository's own dogfood job."""
-    notes = collect(_repo(tmp_path, {
-        "action/action.yml": "name: greenwash\nruns:\n  using: composite\n",
-        f"{CI}/ci.yml": (
-            "on:\n  push:\n\njobs:\n  dogfood:\n    runs-on: ubuntu-latest\n"
-            "    steps:\n      - uses: ./action\n"
+def _incomplete(root: pathlib.Path, label: str) -> None:
+    notes = collect(root)
+    assert _levels(notes, "workflow analysis incomplete") == ["warn"], label
+    assert not _levels(notes, "runs unconditionally"), label
+
+
+def _canonical_repo(tmp_path: pathlib.Path, body: str = CANONICAL, suffix: str = ".yml"):
+    return _repo(tmp_path, {f"{CI}/greenwash{suffix}": body})
+
+
+def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
+    _healthy(_canonical_repo(tmp_path / "lf"))
+
+    sha64 = re.sub(r"(?<=@)([0-9a-f]{40})(?=\s|$)", r"\1" + "a" * 24, CANONICAL)
+    _healthy(_canonical_repo(tmp_path / "sha64", sha64))
+
+    path = tmp_path / "crlf" / CI / "greenwash.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(("\ufeff" + CANONICAL.replace("\n", "\r\n")).encode("utf-8"))
+    _healthy(tmp_path / "crlf")
+
+
+def test_supported_unfiltered_block_events_are_healthy(tmp_path):
+    for event in ("pull_request", "push", "merge_group"):
+        workflow = CANONICAL.replace("on: [pull_request]", f"on:\n  {event}:")
+        _healthy(_canonical_repo(tmp_path / event, workflow))
+
+def test_actual_self_dogfood_requires_exact_local_action_sources(tmp_path):
+    files = {
+        f"{CI}/ci.yml": (ROOT / CI / "ci.yml").read_text(encoding="utf-8"),
+        "action/action.yml": (ROOT / "action/action.yml").read_text(encoding="utf-8"),
+        "action/post_review.py": (ROOT / "action/post_review.py").read_text(encoding="utf-8"),
+    }
+    _healthy(_repo(tmp_path / "exact", files))
+
+    for changed in ("action/action.yml", "action/post_review.py"):
+        tampered = dict(files)
+        tampered[changed] += "\n# drift\n"
+        _incomplete(_repo(tmp_path / changed.replace("/", "-"), tampered), changed)
+
+
+def test_direct_runs_and_text_spoofs_are_never_healthy(tmp_path):
+    replacements = {
+        "echo": "      # uses: taipei49314/greenwash/action@" + "a" * 40 + "\n"
+        "      - run: echo 'greenwash check HEAD~1..HEAD'",
+        "shell-swallow": "      - run: greenwash check HEAD~1..HEAD || true",
+        "hook-json": "      - run: greenwash check HEAD~1..HEAD --format hook-json",
+        "emit-ir": "      - run: greenwash check HEAD~1..HEAD --emit-ir",
+    }
+    gate = re.search(r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M).group(0)
+    for label, replacement in replacements.items():
+        _incomplete(_canonical_repo(tmp_path / label, CANONICAL.replace(gate, replacement)), label)
+
+    env_spoof = CANONICAL.replace(
+        "permissions:\n", "env:\n  GREENWASH_COMMAND: greenwash check HEAD~1..HEAD\n\npermissions:\n"
+    )
+    _incomplete(_canonical_repo(tmp_path / "env-spoof", env_spoof), "env spoof")
+
+
+def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
+    checkout = re.search(r"^      - uses: actions/checkout@[^\n]+(?:\n        with:\n(?:          [^\n]+\n?)+)", CANONICAL, re.M).group(0).rstrip()
+    setup = re.search(r"^      - uses: actions/setup-python@[^\n]+(?:\n        with:\n(?:          [^\n]+\n?)+)", CANONICAL, re.M).group(0).rstrip()
+    gate = re.search(r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M).group(0)
+    cases = {
+        "checkout-ref": CANONICAL.replace("          fetch-depth: 0", "          fetch-depth: 0\n          ref: main"),
+        "wrong-repo": CANONICAL.replace("          fetch-depth: 0", "          fetch-depth: 0\n          repository: attacker/repo"),
+        "missing-checkout": CANONICAL.replace(checkout + "\n", ""),
+        "late-checkout": CANONICAL.replace(checkout, "__SETUP__").replace(setup, checkout).replace("__SETUP__", setup),
+        "pre-mutation": CANONICAL.replace(checkout, "      - run: git checkout -- action/action.yml\n" + checkout),
+        "post-mutation": CANONICAL.replace(gate, gate + "\n      - run: git reset --hard HEAD~1"),
+        "wrong-python": CANONICAL.replace('python-version: "3.12"', 'python-version: "3.11"'),
+        "tagged-checkout": re.sub(r"actions/checkout@[0-9a-f]{40}", "actions/checkout@v4", CANONICAL),
+        "uppercase-gate": re.sub(
+            r"taipei49314/greenwash/action@[0-9a-f]{40}",
+            "taipei49314/greenwash/action@" + "A" * 40,
+            CANONICAL,
         ),
-    }))
-    assert _levels(notes, "runs unconditionally") == ["ok"]
+        "wrong-action-owner": CANONICAL.replace(
+            "taipei49314/greenwash/action@", "attacker/greenwash/action@"
+        ),
+        "tagged-action": re.sub(
+            r"taipei49314/greenwash/action@[0-9a-f]{40}",
+            "taipei49314/greenwash/action@v0.1.41",
+            CANONICAL,
+        ),
+        "missing-action-ref": re.sub(
+            r"taipei49314/greenwash/action@[0-9a-f]{40}",
+            "taipei49314/greenwash/action",
+            CANONICAL,
+        ),
+    }
+    for label, workflow in cases.items():
+        _incomplete(_canonical_repo(tmp_path / label, workflow), label)
 
 
-def test_a_local_action_that_is_not_greenwash_is_not_a_gate(tmp_path):
-    notes = collect(_repo(tmp_path, {
-        "action/action.yml": "name: linter\nruns:\n  using: composite\n",
-        f"{CI}/ci.yml": "on:\n  push:\n\njobs:\n  lint:\n    steps:\n      - uses: ./action\n",
-    }))
+def test_conditions_unsafe_context_and_event_shorthand_are_incomplete(tmp_path):
+    cases = {
+        "event-shorthand": CANONICAL.replace("on: [pull_request]", "on: pull_request"),
+        "pr-target": CANONICAL.replace("pull_request", "pull_request_target", 1),
+        "filtered-event": CANONICAL.replace(
+            "on: [pull_request]", "on:\n  pull_request:\n    types: [closed]"
+        ),
+        "mixed-event-shape": CANONICAL.replace(
+            "on: [pull_request]", "on:\n  push:\n    branches: [main]\n  pull_request:"
+        ),
+        "runs-on-list": CANONICAL.replace("runs-on: ubuntu-latest", "runs-on: [ubuntu-latest]"),
+        "job-if": CANONICAL.replace(
+            "    runs-on: ubuntu-latest", "    if: always()\n    runs-on: ubuntu-latest"
+        ),
+        "job-continue": CANONICAL.replace(
+            "    runs-on: ubuntu-latest", "    continue-on-error: true\n    runs-on: ubuntu-latest"
+        ),
+        "step-if": CANONICAL.replace(
+            "      - uses: taipei49314/greenwash/action@",
+            "      - if: always()\n        uses: taipei49314/greenwash/action@",
+        ),
+        "step-env": CANONICAL.replace(
+            "      - uses: taipei49314/greenwash/action@",
+            "      - env:\n          PATH: fake\n        uses: taipei49314/greenwash/action@",
+        ),
+        "step-continue": CANONICAL.replace(
+            "      - uses: taipei49314/greenwash/action@",
+            "      - continue-on-error: true\n        uses: taipei49314/greenwash/action@",
+        ),
+        "step-shell": CANONICAL.replace(
+            "      - uses: taipei49314/greenwash/action@",
+            "      - shell: bash\n        uses: taipei49314/greenwash/action@",
+        ),
+        "step-working-directory": CANONICAL.replace(
+            "      - uses: taipei49314/greenwash/action@",
+            "      - working-directory: elsewhere\n        uses: taipei49314/greenwash/action@",
+        ),
+        "remote-with": CANONICAL + "        with:\n          base: HEAD\n",
+    }
+    for key in ("if", "continue-on-error", "env", "defaults", "strategy", "container"):
+        cases[f"workflow-{key}"] = CANONICAL.replace(
+            "permissions:\n", f"{key}: unsafe\n\npermissions:\n"
+        )
+        cases[f"job-{key}"] = CANONICAL.replace(
+            "    runs-on: ubuntu-latest", f"    {key}: unsafe\n    runs-on: ubuntu-latest"
+        )
+    for label, workflow in cases.items():
+        _incomplete(_canonical_repo(tmp_path / label, workflow), label)
+
+
+def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
+    cases = {
+        "duplicate-on": "on: push\n" + CANONICAL,
+        "duplicate-jobs": CANONICAL + "\njobs:\n  other:\n    runs-on: ubuntu-latest\n",
+        "duplicate-job-id": CANONICAL + "  greenwash:\n    runs-on: ubuntu-latest\n",
+        "duplicate-runs-on": CANONICAL.replace(
+            "    runs-on: ubuntu-latest", "    runs-on: ubuntu-latest\n    runs-on: ubuntu-latest"
+        ),
+        "duplicate-uses": CANONICAL.replace(
+            "        with:\n          fetch-depth", "        uses: actions/checkout@" + "a" * 40 + "\n        with:\n          fetch-depth", 1
+        ),
+        "duplicate-run": CANONICAL.replace(
+            re.search(
+                r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M
+            ).group(0),
+            "      - run: greenwash check HEAD~1..HEAD\n        run: echo swallowed",
+        ),
+        "duplicate-with-key": CANONICAL.replace(
+            "          fetch-depth: 0", "          fetch-depth: 0\n          fetch-depth: 0"
+        ),
+        "alias": CANONICAL.replace("on: [pull_request]", "events: &events [pull_request]\non: *events"),
+        "merge": CANONICAL.replace("    runs-on: ubuntu-latest", "    <<: *defaults\n    runs-on: ubuntu-latest"),
+        "flow-jobs": CANONICAL.split("jobs:\n", 1)[0] + "jobs: {greenwash: {runs-on: ubuntu-latest}}\n",
+        "tab": CANONICAL.replace("    runs-on", "\truns-on"),
+        "orphan-before-runs-on": CANONICAL.replace(
+            "  greenwash:\n    runs-on", "  greenwash:\n      orphan: value\n    runs-on"
+        ),
+        "orphan-before-first-step": CANONICAL.replace(
+            "    steps:\n      - uses:", "    steps:\n        orphan: value\n      - uses:"
+        ),
+        "orphan-after-name": "name: greenwash\n  orphan: value\n" + CANONICAL,
+        "orphan-after-flow-event": CANONICAL.replace(
+            "on: [pull_request]\n", "on: [pull_request]\n  orphan: value\n"
+        ),
+    }
+    for label, workflow in cases.items():
+        _incomplete(_canonical_repo(tmp_path / label, workflow), label)
+
+
+def test_fake_workflow_extensions_are_not_scanned(tmp_path):
+    notes = collect(_canonical_repo(tmp_path, suffix=".yml.bak"))
     assert _levels(notes, "no greenwash installation found") == ["problem"]
+    assert not _levels(notes, "runs unconditionally")
 
 
-def test_every_gate_conditional_is_a_warning(tmp_path):
-    notes = collect(_repo(tmp_path, {
-        f"{CI}/ci.yml": (
-            "on:\n  pull_request:\n\njobs:\n  guard:\n    if: github.event_name == 'schedule'\n"
-            "    steps:\n      - uses: taipei49314/greenwash/action@v1\n"
-        ),
-    }))
-    assert _levels(notes, "every greenwash gate is conditional") == ["warn"]
+def _symlink(link: pathlib.Path, target: pathlib.Path, directory: bool = False) -> None:
+    try:
+        link.symlink_to(target, target_is_directory=directory)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlinks unavailable: {exc}")
 
 
-def test_release_only_workflow_cannot_gate_a_merge(tmp_path):
-    notes = collect(_repo(tmp_path, {
-        f"{CI}/release.yml": (
-            "on:\n  release:\n    types: [published]\n\njobs:\n  build:\n"
-            "    steps:\n      - run: greenwash check HEAD~1..HEAD\n"
-        ),
-    }))
-    assert _levels(notes, "never runs on a pull request or a push") == ["problem"]
+def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
+    file_root = tmp_path / "file-link"
+    target = file_root / "canonical-source.yml"
+    target.parent.mkdir(parents=True)
+    target.write_text(CANONICAL, encoding="utf-8")
+    workflow = file_root / CI / "greenwash.yml"
+    workflow.parent.mkdir(parents=True)
+    _symlink(workflow, target)
+    _incomplete(file_root, "linked workflow file")
+
+    directory_root = tmp_path / "directory-link"
+    source_dir = directory_root / "workflow-source"
+    source_dir.mkdir(parents=True)
+    (source_dir / "greenwash.yml").write_text(CANONICAL, encoding="utf-8")
+    (directory_root / ".github").mkdir()
+    _symlink(directory_root / CI, source_dir, directory=True)
+    _incomplete(directory_root, "linked workflow directory")
+
+    action_root = tmp_path / "action-link"
+    files = {
+        f"{CI}/ci.yml": (ROOT / CI / "ci.yml").read_text(encoding="utf-8"),
+        "action/post_review.py": (ROOT / "action/post_review.py").read_text(encoding="utf-8"),
+        "action-source.yml": (ROOT / "action/action.yml").read_text(encoding="utf-8"),
+    }
+    _repo(action_root, files)
+    _symlink(action_root / "action/action.yml", action_root / "action-source.yml")
+    _incomplete(action_root, "linked local action")
 
 
-def test_merely_installing_greenwash_is_not_a_gate(tmp_path):
-    """Packaging greenwash is not gating with it.
-
-    (The first version's actual mistake was one step further along: it counted
-    the release job that genuinely runs `greenwash check` on the built wheel,
-    then warned that this "gate" was conditional — true of the job, irrelevant
-    to merges, since a release-triggered workflow cannot gate one. That case is
-    `test_release_only_workflow_cannot_gate_a_merge`. This test pins the
-    simpler boundary underneath it.)"""
-    notes = collect(_repo(tmp_path, {
-        f"{CI}/release.yml": (
-            "on:\n  release:\n\njobs:\n  build:\n    steps:\n"
-            "      - run: pip install greenwash && python -m build\n"
-        ),
-    }))
-    assert _levels(notes, "no greenwash installation found") == ["problem"]
+def test_local_hook_without_ci_and_empty_repo_remain_problems(tmp_path):
+    hooked = _repo(tmp_path / "hook", {
+        ".claude/settings.json": json.dumps({"hooks": {"Stop": "greenwash check"}})
+    })
+    assert _levels(collect(hooked), "runs locally but not in CI") == ["problem"]
+    assert _levels(collect(_repo(tmp_path / "empty", {"README.md": "hello"})), "no greenwash installation found") == ["problem"]
 
 
-def test_the_limits_are_always_stated(tmp_path):
-    """The command exists to say what it cannot know. Those notes are not
-    optional garnish and must appear on every run, healthy or not."""
-    notes = collect(_repo(tmp_path, {
-        f"{CI}/ci.yml": (
-            "on:\n  pull_request:\n\njobs:\n  guard:\n    steps:\n"
-            "      - uses: taipei49314/greenwash/action@v1\n"
-        ),
-    }))
-    titles = " | ".join(n.title for n in notes)
+def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
+    root = _canonical_repo(tmp_path / "healthy")
+    titles = " | ".join(note.title for note in collect(root))
     assert "cannot tell whether the check is *required*" in titles
     assert "cannot block when it does not run" in titles
     assert "read from the BASE side" in titles
     assert "three-dot range" in titles
     assert "allowlist expiry is capped at 180 days" in titles
+    assert run(str(root), io.StringIO()) == 0
 
+    bad = _canonical_repo(tmp_path / "bad", CANONICAL.replace("on: [pull_request]", "on: pull_request"))
+    assert run(str(bad), io.StringIO()) == 1
 
-def test_doctor_reports_over_cap_allow_entries(tmp_path):
-    notes = collect(_repo(tmp_path, {
-        f"{CI}/ci.yml": (
-            "on:\n  pull_request:\n\njobs:\n  guard:\n    steps:\n"
-            "      - uses: taipei49314/greenwash/action@v1\n"
-        ),
-        ".greenwash/allow.toml": (
-            "[[allow]]\n"
-            'fingerprint = "ASSERT_WEAKENED/tests/x.py/t/deadbeefdead"\n'
-            'rule = "ASSERT_WEAKENED"\n'
-            'reason = "hand-edited decade"\n'
-            'author = "audit"\n'
-            'created = "2020-01-01"\n'
-            'expires = "2030-01-01"\n'
-        ),
-    }))
-    note = next(n for n in notes if "180 days" in n.title)
-    assert "1 over the 180-day cap" in note.detail
-    assert "0 active" in note.detail
+    allow = (
+        "[[allow]]\n"
+        'fingerprint = "ASSERT_WEAKENED/tests/x.py/t/deadbeefdead"\n'
+        'rule = "ASSERT_WEAKENED"\nreason = "hand-edited decade"\nauthor = "audit"\n'
+        'created = "2020-01-01"\nexpires = "2030-01-01"\n'
+    )
+    notes = collect(_repo(tmp_path / "allow", {f"{CI}/greenwash.yml": CANONICAL, ".greenwash/allow.toml": allow}))
+    note = next(note for note in notes if "180 days" in note.title)
+    assert "1 over the 180-day cap" in note.detail and "0 active" in note.detail
 
 
 def test_doctor_is_a_registered_subcommand():
-    """An unlisted subcommand is silently reinterpreted as a `check` range, so
-    `greenwash doctor` would report a verdict on a bogus revision instead of
-    erroring."""
     from greenwash.cli import build_parser
-
-    args = build_parser().parse_args(["doctor", "--repo", "."])
-    assert args.command == "doctor"
-
     import greenwash.cli as cli_module
+
+    assert build_parser().parse_args(["doctor", "--repo", "."]).command == "doctor"
     source = pathlib.Path(cli_module.__file__).read_text(encoding="utf-8")
     fallback = source.split("elif argv[0] not in (", 1)[1].split("):", 1)[0]
-    assert '"doctor"' in fallback, "doctor missing from main()'s bare-word passthrough list"
+    assert '"doctor"' in fallback

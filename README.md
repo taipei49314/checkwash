@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 21 detectors, 426 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 428 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -111,12 +111,12 @@ reports, and blocks nothing.
 A one-page enterprise path — required check, SARIF, allowlist, CODEOWNERS —
 is in [docs/enterprise.md](docs/enterprise.md).
 
-**3. Verify.** `greenwash doctor` reads your workflows and says whether a gate
-exists and whether it is unconditional — a job gated behind an `if:` that is
-never true is the failure this project shipped itself. `doctor` cannot see
-branch protection (that needs API token scopes greenwash does not ask for), and
-it says so rather than implying otherwise: step 2 is the one a human must
-confirm.
+**3. Verify.** `greenwash doctor` recognizes the exact three-step gate below
+and says whether it can run unconditionally. It deliberately reports other
+workflow shapes as analysis incomplete instead of guessing that a textual
+`greenwash` mention is load-bearing. `doctor` cannot see branch protection
+(that needs API token scopes greenwash does not ask for), and it says so rather
+than implying otherwise: step 2 is the one a human must confirm.
 
 ```bash
 greenwash doctor        # exit 0 = no problems found; 1 = problems or warnings

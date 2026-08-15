@@ -1,47 +1,15 @@
-"""`greenwash doctor` — is this installation actually load-bearing?
-
-The failure this exists for is not a crash. It is a repository that has
-greenwash installed, green, and unable to block anything: a stop-hook with no
-CI check behind it, or a CI job gated by an `if:` that is never true. This
-project shipped that exact defect itself — the dogfood job was
-`if: github.event_name == 'pull_request'` in a repository that has never had a
-pull request, so it never executed once while the README told people to use it.
-
-Everything here is best-effort and local. Branch protection lives in GitHub's
-API behind token scopes greenwash does not ask for, so this command cannot
-prove a check is *required*; it says so rather than implying otherwise, which
-is the whole point of the command.
-"""
+"""`greenwash doctor` — conservatively prove a load-bearing CI gate."""
 
 from __future__ import annotations
 
 import datetime
-import json
+import hashlib
 import re
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 
 from greenwash.allowlist import MAX_EXPIRY_DAYS, summarize_allowlist
-
-# "This job runs greenwash as a check" — not merely "mentions greenwash".
-#
-# The distinction is the whole value of the command, and the first version got
-# it wrong in both directions on this very repository: it missed the `dogfood`
-# job, which uses a *local* `uses: ./action`, and it warned about the release
-# pipeline's `build` and `pypi` jobs, which only `pip install greenwash` to
-# package it. A doctor that reports the wrong jobs is worse than none.
-_INVOKES = re.compile(
-    r"""
-      greenwash/action                 # uses: owner/greenwash/action@vX
-    | greenwash(\.pyz)?\s+check        # greenwash check / greenwash.pyz check
-    | -m\s+greenwash\s+check           # python -m greenwash check
-    """,
-    re.VERBOSE,
-)
-# A repository-local composite action: only counts if that action is greenwash.
-_LOCAL_ACTION = re.compile(r"uses:\s*\./([A-Za-z0-9._/-]+)")
-# A job key at two-space indent inside `jobs:`.
-_JOB_KEY = re.compile(r"^  ([A-Za-z0-9_-]+):", re.MULTILINE)
 
 
 @dataclass
@@ -51,6 +19,16 @@ class Note:
     detail: str
 
 
+_SHA = r"[0-9a-f]{40}(?:[0-9a-f]{24})?"
+_EVENTS = {"pull_request", "push", "merge_group"}
+_BANNED = {"if", "continue-on-error", "env", "defaults", "strategy", "container"}
+_LOCAL_HASHES = {
+    "action/action.yml": "eae47dca54b3d31f1ce6641c58fa28009f4c8af7d31746947cca7d211de74c1d",
+    "action/post_review.py": "9998180cd23c39133dd14e32ede356ec26ea26672d5d447fc282d0a26eb84a01",
+}
+_SELF_WORKFLOW_HASH = "061a410b92eeaf56d4106fd46d8b0341305085cbde369eb86108f6cb27f1ef48"
+
+
 def _read(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8", errors="replace")
@@ -58,210 +36,293 @@ def _read(path: Path) -> str:
         return ""
 
 
-_GATING_EVENTS = ("push", "pull_request", "pull_request_target", "merge_group")
-
-
-def _gates_merges(text: str) -> bool:
-    """Is this workflow triggered by something that can gate a merge?
-
-    A workflow that runs only on `release` or `workflow_dispatch` cannot block
-    anyone's pull request, so its jobs must not be judged as if they could.
-    Checking every greenwash-invoking job regardless produced three confident
-    warnings about this project's own release pipeline on the first run.
-    """
-    head = text.split("\njobs:", 1)[0]
-    return any(re.search(rf"^\s+{event}:", head, re.MULTILINE) for event in _GATING_EVENTS)
-
-
-def _workflow_jobs_invoking_greenwash(root: Path) -> list[tuple[str, str, str]]:
-    """(workflow path, job name, job body, gates_merges) per greenwash job."""
-    out = []
-    wf_dir = root / ".github" / "workflows"
-    if not wf_dir.is_dir():
-        return out
-    local_actions = _greenwash_local_actions(root)
-
-    def invokes(blob: str) -> bool:
-        if _INVOKES.search(blob):
-            return True
-        return any(m.group(1).rstrip("/") in local_actions for m in _LOCAL_ACTION.finditer(blob))
-
-    for path in sorted(wf_dir.glob("*.y*ml")):
-        text = _read(path)
-        if not invokes(text):
+def _without_comment(line: str) -> str:
+    quote = ""
+    escaped = False
+    for index, char in enumerate(line):
+        if quote == '"' and char == "\\" and not escaped:
+            escaped = True
             continue
-        starts = [(m.group(1), m.start()) for m in _JOB_KEY.finditer(text)]
-        for i, (name, start) in enumerate(starts):
-            end = starts[i + 1][1] if i + 1 < len(starts) else len(text)
-            body = text[start:end]
-            if invokes(body):
-                rel = path.relative_to(root).as_posix()
-                out.append((rel, name, body, _gates_merges(text)))
-    return out
+        if char in "\"'" and not escaped:
+            if not quote:
+                quote = char
+            elif quote == char:
+                quote = ""
+        if char == "#" and not quote and (index == 0 or line[index - 1].isspace()):
+            return line[:index].rstrip()
+        escaped = False
+    return line.rstrip()
 
 
-def _greenwash_local_actions(root: Path) -> set[str]:
-    """Directories holding a repo-local composite action that runs greenwash.
+def _lines(text: str) -> list[str]:
+    text = text.removeprefix("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+    return [clean for line in text.split("\n") if (clean := _without_comment(line)).strip()]
 
-    `uses: ./action` says nothing on its own — it is greenwash only if that
-    action.yml is greenwash's. This repository dogfoods exactly that way.
-    """
-    found = set()
-    for candidate in sorted(root.glob("**/action.yml")) + sorted(root.glob("**/action.yaml")):
-        if ".git" in candidate.parts:
+
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _mapping(line: str, indent: int) -> tuple[str, str] | None:
+    match = re.fullmatch(rf" {{{indent}}}([A-Za-z_][A-Za-z0-9_-]*):(?:\s*(.*))?", line)
+    return (match.group(1), match.group(2) or "") if match else None
+
+
+def _unfiltered_event(lines: list[str], on_index: int, on_value: str) -> bool:
+    if on_value:
+        match = re.fullmatch(r"\[\s*([A-Za-z_]+)\s*\]", on_value)
+        return bool(match and match.group(1) in _EVENTS)
+    end = next((i for i in range(on_index + 1, len(lines)) if _indent(lines[i]) == 0), len(lines))
+    if end != on_index + 2:
+        return False
+    item = _mapping(lines[on_index + 1], 2)
+    return bool(item and item[0] in _EVENTS and not item[1])
+
+
+def _step(lines: list[str]) -> tuple[dict[str, str], dict[str, str]] | None:
+    first = re.fullmatch(r"      - ([a-z][a-z0-9-]*):(?:\s*(.*))?", lines[0])
+    if not first:
+        return None
+    props = {first.group(1): first.group(2) or ""}
+    with_values: dict[str, str] = {}
+    in_with = first.group(1) == "with" and not props["with"]
+    for line in lines[1:]:
+        indent = _indent(line)
+        item = _mapping(line, indent)
+        if indent == 8 and item:
+            if item[0] in props:
+                return None
+            props[item[0]] = item[1]
+            in_with = item[0] == "with" and not item[1]
+        elif indent == 10 and item and in_with:
+            if item[0] in with_values:
+                return None
+            with_values[item[0]] = item[1]
+        else:
+            return None
+    return props, with_values
+
+
+def _digest(path: Path) -> str:
+    try:
+        text = path.read_bytes().decode("utf-8-sig")
+    except (OSError, UnicodeDecodeError):
+        return ""
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n").encode()
+    return hashlib.sha256(normalized).hexdigest()
+
+
+def _linked(path: Path) -> bool:
+    try:
+        attrs = getattr(path.lstat(), "st_file_attributes", 0)
+    except OSError:
+        return False
+    return path.is_symlink() or bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+
+
+def _local_action_matches(root: Path) -> bool:
+    return all(
+        not _linked(root / name) and _digest(root / name) == expected
+        for name, expected in _LOCAL_HASHES.items()
+    )
+
+
+def _uses(props: dict[str, str], owner: str) -> bool:
+    return set(props) == {"uses", "with"} and bool(re.fullmatch(owner + "@" + _SHA, props["uses"]))
+
+
+def _healthy_job(root: Path, body: list[str]) -> bool:
+    job_items: list[tuple[int, str, str]] = []
+    for index, line in enumerate(body[1:], 1):
+        if _indent(line) == 4:
+            item = _mapping(line, 4)
+            if item is None or item[0] in _BANNED or any(old[1] == item[0] for old in job_items):
+                return False
+            job_items.append((index, item[0], item[1]))
+        elif _indent(line) < 6:
+            return False
+    if job_items != [
+        (1, "runs-on", "ubuntu-latest"), (2, "steps", "")
+    ]:
+        return False
+    step_lines = body[job_items[1][0] + 1:]
+    starts = [i for i, line in enumerate(step_lines) if _indent(line) == 6]
+    if starts[:1] != [0] or len(starts) != 3 or any(
+        not step_lines[i].startswith("      - ") for i in starts
+    ):
+        return False
+    parsed = []
+    for pos, start in enumerate(starts):
+        end = starts[pos + 1] if pos + 1 < len(starts) else len(step_lines)
+        value = _step(step_lines[start:end])
+        if value is None:
+            return False
+        parsed.append(value)
+    checkout, setup, gate = parsed
+    if not _uses(checkout[0], "actions/checkout") or checkout[1] != {
+        "fetch-depth": "0", "persist-credentials": "false"
+    }:
+        return False
+    if not _uses(setup[0], "actions/setup-python") or setup[1] != {"python-version": '"3.12"'}:
+        return False
+    props, with_values = gate
+    remote = set(props) == {"uses"} and not with_values and bool(
+        re.fullmatch("taipei49314/greenwash/action@" + _SHA, props.get("uses", ""))
+    )
+    local = props == {"uses": "./action", "with": ""} and with_values == {
+        "base": "${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
+    } and _local_action_matches(root)
+    return remote or local
+
+
+def _workflow(root: Path, path: Path) -> tuple[list[str], bool]:
+    if _digest(path) == _SELF_WORKFLOW_HASH and _local_action_matches(root):
+        return ["dogfood"], True
+    lines = _lines(_read(path))
+    blob = "\n".join(lines)
+    candidate = "greenwash" in blob.lower() or "uses: ./action" in blob
+    if not lines or any("\t" in line for line in lines) or re.search(r"(^|\s)<<:|(^|\s)[*&][A-Za-z_]", blob):
+        return [], candidate
+    top: list[tuple[int, str, str]] = []
+    for index, line in enumerate(lines):
+        if _indent(line) == 0:
+            item = _mapping(line, 0)
+            if item is None or any(old[1] == item[0] for old in top):
+                return [], candidate
+            top.append((index, item[0], item[1]))
+    keys = [key for _, key, _ in top]
+    if keys not in (["on", "permissions", "jobs"], ["name", "on", "permissions", "jobs"]):
+        return [], candidate
+    if _BANNED.intersection(keys):
+        return [], candidate
+    on = [item for item in top if item[1] == "on"]
+    jobs = [item for item in top if item[1] == "jobs"]
+    if len(on) != 1 or len(jobs) != 1 or jobs[0][2] or not _unfiltered_event(lines, on[0][0], on[0][2]):
+        return [], candidate
+    permissions = next(item for item in top if item[1] == "permissions")
+    name_offset = 1 if keys[0] == "name" else 0
+    if top[0][0] != 0 or (name_offset and (
+        not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 ._-]*", top[0][2]) or on[0][0] != 1
+    )):
+        return [], candidate
+    expected_permission = on[0][0] + (1 if on[0][2] else 2)
+    if permissions[0] != expected_permission:
+        return [], candidate
+    permission_end = next(
+        (i for i in range(permissions[0] + 1, len(lines)) if _indent(lines[i]) == 0), len(lines)
+    )
+    if (permissions[2] or permission_end != permissions[0] + 2
+            or lines[permissions[0] + 1] != "  contents: read"):
+        return [], candidate
+    end = next((i for i in range(jobs[0][0] + 1, len(lines)) if _indent(lines[i]) == 0), len(lines))
+    starts: list[tuple[int, str]] = []
+    for index in range(jobs[0][0] + 1, end):
+        if _indent(lines[index]) == 2:
+            item = _mapping(lines[index], 2)
+            if item is None or item[1] or any(name == item[0] for _, name in starts):
+                return [], candidate
+            starts.append((index, item[0]))
+        elif _indent(lines[index]) < 4:
+            return [], candidate
+    if len(starts) != 1 or starts[0][0] != jobs[0][0] + 1:
+        return [], candidate
+    healthy = []
+    for pos, (start, name) in enumerate(starts):
+        stop = starts[pos + 1][0] if pos + 1 < len(starts) else end
+        if _healthy_job(root, lines[start:stop]):
+            healthy.append(name)
+    return healthy, candidate
+
+
+def _workflow_gates(root: Path) -> tuple[list[tuple[str, str]], list[str]]:
+    gates, incomplete = [], []
+    directory = root / ".github" / "workflows"
+    if not directory.is_dir():
+        return gates, incomplete
+    if _linked(directory):
+        return gates, [".github/workflows (linked path)"]
+    for path in sorted(p for p in directory.iterdir() if p.is_file() and p.suffix in {".yml", ".yaml"}):
+        if _linked(path):
+            incomplete.append(path.relative_to(root).as_posix())
             continue
-        if "greenwash" in _read(candidate):
-            found.add(candidate.parent.relative_to(root).as_posix())
-    return found
-
-
-def _conditions(job_body: str) -> list[str]:
-    return [
-        line.strip()[3:].strip()
-        for line in job_body.split("\n")
-        if line.strip().startswith("if:")
-    ]
+        names, candidate = _workflow(root, path)
+        rel = path.relative_to(root).as_posix()
+        gates.extend((rel, name) for name in names)
+        if candidate and not names:
+            incomplete.append(rel)
+    return gates, incomplete
 
 
 def collect(root: Path) -> list[Note]:
     notes: list[Note] = []
-
-    jobs = _workflow_jobs_invoking_greenwash(root)
+    jobs, incomplete = _workflow_gates(root)
     hook_installed = "greenwash" in _read(root / ".claude" / "settings.json")
-    precommit = _read(root / ".pre-commit-config.yaml")
-    precommit_installed = "greenwash" in precommit
+    precommit_installed = "greenwash" in _read(root / ".pre-commit-config.yaml")
 
-    if not jobs:
-        where = [
-            name
-            for name, present in (
-                ("a Claude Code stop-hook", hook_installed),
-                ("pre-commit", precommit_installed),
-            )
-            if present
-        ]
+    if jobs:
+        detail = ", ".join(f"{path} :: {job}" for path, job in jobs)
+        notes.append(Note("ok", f"{len(jobs)} CI job(s) invoke greenwash", detail))
+        notes.append(Note("ok", "at least one greenwash gate runs unconditionally", detail))
+    elif incomplete:
+        notes.append(Note(
+            "warn", "workflow analysis incomplete",
+            "No exact supported gate was proven in " + ", ".join(incomplete) + ". "
+            "Use the three-step, hash-pinned workflow from the README; direct run steps are never trusted.",
+        ))
+    else:
+        where = [name for name, present in (
+            ("a Claude Code stop-hook", hook_installed), ("pre-commit", precommit_installed)
+        ) if present]
         if where:
             notes.append(Note(
-                "problem",
-                "greenwash runs locally but not in CI",
-                "Found " + " and ".join(where) + ", and no workflow under "
-                ".github/workflows that invokes greenwash. A local hook is an "
-                "author-side convenience: it is skipped with --no-verify, and it "
-                "is not present at all when someone else pushes. Nothing here can "
-                "stop a merge.",
+                "problem", "greenwash runs locally but not in CI",
+                "Found " + " and ".join(where) + ", and no exact supported workflow under "
+                ".github/workflows. A local hook can be skipped and cannot stop someone else's merge.",
             ))
         else:
             notes.append(Note(
-                "problem",
-                "no greenwash installation found",
-                "No workflow invokes greenwash and no local hook was found. See "
-                "the Required check section of the README.",
-            ))
-    else:
-        notes.append(Note(
-            "ok",
-            f"{len(jobs)} CI job(s) invoke greenwash",
-            ", ".join(f"{path} :: {job}" for path, job, _, _ in jobs),
-        ))
-        # Only jobs in a workflow that a pull request or push can trigger are
-        # capable of gating a merge at all. A release-only job being
-        # conditional says nothing.
-        gating = [(path, job, body) for path, job, body, gates in jobs if gates]
-        unconditional = [(p, j) for p, j, body in gating if not _conditions(body)]
-        if not gating:
-            notes.append(Note(
-                "problem",
-                "greenwash never runs on a pull request or a push",
-                "Every workflow that invokes greenwash is triggered only by "
-                "events that cannot gate a merge (release, workflow_dispatch, "
-                "schedule). Nothing here can stop a change from landing.",
-            ))
-        elif not unconditional:
-            notes.append(Note(
-                "warn",
-                "every greenwash gate is conditional",
-                "; ".join(f"{p} :: {j} gated on {_conditions(b)}" for p, j, b in gating)
-                + ". A job that does not run cannot block. This project shipped "
-                "exactly that: a dogfood job gated to pull_request in a repository "
-                "that had never had one, so it never executed while the docs said "
-                "it did. At least one gate should be unconditional.",
-            ))
-        else:
-            notes.append(Note(
-                "ok",
-                "at least one greenwash gate runs unconditionally",
-                ", ".join(f"{p} :: {j}" for p, j in unconditional),
+                "problem", "no greenwash installation found",
+                "No exact supported workflow invokes greenwash and no local hook was found. "
+                "See the Required check section of the README.",
             ))
 
     notes.append(Note(
-        "info",
-        "greenwash cannot tell whether the check is *required*",
-        "Branch protection lives behind GitHub API token scopes this tool does "
-        "not ask for. A green job that is not a required status check does not "
-        "prevent a merge. Make the job's status check required, and match the "
-        "status-check name to the job name exactly. The README step 2 command "
-        "is: gh api repos/OWNER/REPO/rulesets --method POST "
-        "--input action/required-ruleset.json",
+        "info", "greenwash cannot tell whether the check is *required*",
+        "Branch protection lives behind GitHub API token scopes this tool does not ask for. "
+        "A green job that is not a required status check does not prevent a merge. Make the "
+        "job's status check required. The README step 2 command is: gh api "
+        "repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json",
     ))
-
     notes.append(Note(
-        "info",
-        "greenwash cannot block when it does not run",
-        "A change that deletes or disables the greenwash job disarms it in the "
-        "same diff that would have been judged. Protect the workflow file (code "
-        "owners, or a required review on .github/**) — the tool can report that "
-        "the invocation disappeared, but it cannot enforce its own presence.",
+        "info", "greenwash cannot block when it does not run",
+        "A change that deletes or disables the greenwash job disarms it in the same diff. "
+        "Protect the workflow file with code owners or required review on .github/**.",
     ))
-
     cfg = root / ".greenwash" / "config.toml"
     allow = root / ".greenwash" / "allow.toml"
     notes.append(Note(
-        "info" if cfg.exists() or allow.exists() else "info",
-        "configuration is read from the BASE side of the diff",
+        "info", "configuration is read from the BASE side of the diff",
         f"config: {'present' if cfg.exists() else 'absent (defaults)'}; "
-        f"allowlist: {'present' if allow.exists() else 'absent'}. "
-        "Both are read from the base commit on purpose, so a diff cannot exempt "
-        "itself. A new allowlist entry therefore takes effect on the *next* diff, "
-        "and must be committed.",
+        f"allowlist: {'present' if allow.exists() else 'absent'}. A new allowlist entry "
+        "takes effect on the next diff and must be committed.",
     ))
-
-    allow_bytes = allow.read_bytes() if allow.exists() else None
-    ledger = summarize_allowlist(allow_bytes, datetime.date.today())
+    ledger = summarize_allowlist(allow.read_bytes() if allow.exists() else None, datetime.date.today())
     if ledger.parse_error:
-        notes.append(Note(
-            "warn",
-            "allow.toml could not be parsed; no exemptions are active",
-            ledger.parse_error,
-        ))
+        notes.append(Note("warn", "allow.toml could not be parsed; no exemptions are active", ledger.parse_error))
     else:
-        notes.append(Note(
-            "info",
-            f"allowlist expiry is capped at {MAX_EXPIRY_DAYS} days",
-            (
-                f"{ledger.entries} entries in .greenwash/allow.toml; "
-                f"{ledger.active} active today, {ledger.expired} expired, "
-                f"{ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap "
-                "(ignored on read)."
-                if ledger.present
-                else (
-                    "no allow.toml yet. `greenwash allow` writes one; "
-                    f"expiry is capped at {MAX_EXPIRY_DAYS} days on write "
-                    "and again on read. Commit it — the ledger is read from "
-                    "the base side. Put `.greenwash/` in CODEOWNERS."
-                )
-            ),
-        ))
-
+        detail = (
+            f"{ledger.entries} entries in .greenwash/allow.toml; {ledger.active} active today, "
+            f"{ledger.expired} expired, {ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap (ignored on read)."
+            if ledger.present else
+            f"no allow.toml yet. `greenwash allow` writes one; expiry is capped at "
+            f"{MAX_EXPIRY_DAYS} days. Commit it and put `.greenwash/` in CODEOWNERS."
+        )
+        notes.append(Note("info", f"allowlist expiry is capped at {MAX_EXPIRY_DAYS} days", detail))
     notes.append(Note(
-        "info",
-        "use a three-dot range for pull requests",
-        "`greenwash check BASE...HEAD` resolves through the merge base, so the "
-        "diff holds only the PR's own commits. A two-dot range drags in "
-        "base-branch commits and reports findings the PR did not introduce. "
-        "A single-commit range still cannot see a wash split across PRs "
-        "(docs/process-windows.md); that is a process limit, not a detector.",
+        "info", "use a three-dot range for pull requests",
+        "`greenwash check BASE...HEAD` resolves through the merge base. A two-dot range drags "
+        "in base-branch commits; a single range cannot see a wash split across PRs.",
     ))
-
     return notes
 
 
@@ -279,7 +340,6 @@ def run(root: str = ".", stream=None) -> int:
         for line in _wrap(note.detail):
             stream.write(f"      {line}\n")
         stream.write("\n")
-
     problems = [n for n in notes if n.level == "problem"]
     warns = [n for n in notes if n.level == "warn"]
     stream.write(
