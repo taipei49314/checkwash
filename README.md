@@ -148,10 +148,13 @@ jobs:
 Hash pins and `persist-credentials: false` are required by
 [zizmor](https://docs.zizmor.sh/audits/#unpinned-uses) blanket policy — a
 tag pin (`@v4`, `@vX.Y.Z`) is two `unpinned-uses` highs. Re-checked
-2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. After a
-greenwash release, replace the last SHA with
-`git rev-parse 'vX.Y.Z^{commit}'` (the peeled release commit, not the annotated
-tag object's SHA).
+2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. The greenwash
+SHA is deliberately the newest prior stable pin that `doctor` could verify at
+build time. Release N cannot embed its own commit SHA, so it adopts that SHA
+only after it already exists, in the next release. The result is an explicit
+one-release trust lag, not an arbitrary 40-hex claim. Verify this pin with
+`git rev-parse 'v0.1.41^{commit}'`; for another trusted release, substitute its
+version in `git rev-parse 'vX.Y.Z^{commit}'`.
 See [action/README.md](action/README.md).
 
 Do not gate this job on anything. A conditional gate is the defect this
@@ -192,8 +195,8 @@ greenwash hook install --agent claude-code
 # pre-commit — prints the config block to paste
 greenwash hook install --agent pre-commit
 
-# GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.41
+# GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
+- uses: taipei49314/greenwash/action@ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83 # v0.1.41
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
