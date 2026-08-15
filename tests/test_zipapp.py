@@ -17,6 +17,7 @@ loads them.
 import os
 import subprocess
 import sys
+import tomllib
 import zipapp
 from pathlib import Path
 
@@ -25,7 +26,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _build(tmp_path: Path) -> Path:
     target = tmp_path / "greenwash.pyz"
-    zipapp.create_archive(ROOT / "src", target=target, main="greenwash.cli:main", compressed=True)
+    zipapp.create_archive(
+        ROOT / "src",
+        target=target,
+        main="greenwash.zipapp_entry:run",
+        compressed=True,
+    )
     return target
 
 
@@ -41,10 +47,17 @@ def _run(pyz: Path, *args: str, cwd: Path | None = None) -> subprocess.Completed
 def test_zipapp_builds_and_reports_its_version(tmp_path):
     pyz = _build(tmp_path)
     assert pyz.stat().st_size < 4_000_000, "single-file build should stay small enough to attach to a release"
-    from greenwash import __version__
-
-    out = _run(pyz, "--version").stdout.decode("utf-8", "replace")
+    with open(ROOT / "pyproject.toml", "rb") as source:
+        __version__ = tomllib.load(source)["project"]["version"]
+    proc = _run(pyz, "--version")
+    out = proc.stdout.decode("utf-8", "replace")
     assert __version__ in out, out
+    assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")
+    assert out.strip() == f"greenwash {__version__}", out
+
+    release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    assert 'python -m zipapp src -m "greenwash.zipapp_entry:run"' in release
+    assert "python tools/qualify_zipapp.py dist/greenwash.pyz" in release
 
 
 def test_zipapp_demo_reads_its_packaged_cases(tmp_path):
@@ -80,6 +93,20 @@ def test_zipapp_checks_a_real_repository(tmp_path):
 
     payload = json.loads(proc.stdout.decode("utf-8"))
     assert payload["verdict"] in ("pass", "block")
+
+
+def test_zipapp_preserves_process_exit_contract(tmp_path):
+    """The generated top-level entry point must propagate CLI exits 0/1/2."""
+    pyz = _build(tmp_path)
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "qualify_zipapp.py"), str(pyz)],
+        capture_output=True,
+        env={**os.environ, "PYTHONUTF8": "1"},
+    )
+    assert proc.returncode == 0, (
+        proc.stdout.decode("utf-8", "replace")
+        + proc.stderr.decode("utf-8", "replace")
+    )
 
 
 def test_no_runtime_dependencies_so_the_single_file_can_exist():
