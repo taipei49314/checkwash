@@ -36,10 +36,10 @@ def _read(path: Path) -> str:
         return ""
 
 
-def _read_workflow(path: Path) -> str | None:
+def _decode_workflow(data: bytes) -> str | None:
     try:
-        text = path.read_bytes().decode("utf-8-sig")
-    except (OSError, UnicodeDecodeError):
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError:
         return None
     # A narrow YAML-printable subset. NEL, LS, and PS are valid YAML line
     # breaks, but supporting them would require another parsing grammar.
@@ -147,17 +147,31 @@ def _plain_chain(root: Path, relative: str | Path) -> bool:
     return True
 
 
-def _tracked_blob(root: Path, relative: str | Path) -> bool:
-    relative = Path(relative)
-    if relative.is_absolute() or ".." in relative.parts:
-        return False
-    requested = relative.as_posix()
+def _regular_bytes(path: Path) -> bytes | None:
+    descriptor = -1
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            return None
+        with os.fdopen(descriptor, "rb") as handle:
+            descriptor = -1
+            return handle.read()
+    except OSError:
+        return None
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
+def _git_query(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | None:
     env = {key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")}
     env.update({
         "GIT_CEILING_DIRECTORIES": str(root.parent.resolve()),
         "GIT_CONFIG_GLOBAL": os.devnull,
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_DISCOVERY_ACROSS_FILESYSTEM": "0",
+        "GIT_NO_LAZY_FETCH": "1",
         "GIT_OPTIONAL_LOCKS": "0",
         "GIT_TERMINAL_PROMPT": "0",
         "GCM_INTERACTIVE": "Never",
@@ -165,35 +179,59 @@ def _tracked_blob(root: Path, relative: str | Path) -> bool:
     try:
         result = subprocess.run(
             [
-                "git", "--no-optional-locks", "-c", "core.fsmonitor=false",
-                "--literal-pathspecs", "ls-files", "--stage", "-z", "--", requested,
+                "git", "--no-optional-locks", "--no-replace-objects",
+                "-c", "core.fsmonitor=false",
+                "--literal-pathspecs", *args,
             ],
             cwd=root,
             env=env,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            text=True,
-            encoding="utf-8",
-            errors="strict",
             timeout=5,
             check=False,
         )
-    except (OSError, subprocess.SubprocessError, UnicodeError):
-        return False
-    records = result.stdout.split("\0")
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result
+
+
+def _tracked_blob(root: Path, relative: str | Path) -> bytes | None:
+    relative = Path(relative)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    requested = relative.as_posix()
+    try:
+        encoded = requested.encode("utf-8")
+    except UnicodeEncodeError:
+        return None
+    result = _git_query(root, "ls-files", "--stage", "-z", "--", requested)
+    if result is None:
+        return None
+    records = result.stdout.split(b"\0")
     if result.returncode or len(records) != 2 or records[1]:
-        return False
-    header, separator, actual = records[0].partition("\t")
-    fields = header.split(" ")
-    return bool(
+        return None
+    header, separator, actual = records[0].partition(b"\t")
+    fields = header.split(b" ")
+    if not (
         separator
-        and actual == requested
+        and actual == encoded
         and len(fields) == 3
-        and fields[0] in {"100644", "100755"}
-        and re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", fields[1])
-        and fields[2] == "0"
-    )
+        and fields[0] in {b"100644", b"100755"}
+        and re.fullmatch(rb"[0-9a-f]{40}|[0-9a-f]{64}", fields[1])
+        and fields[2] == b"0"
+    ):
+        return None
+    oid = fields[1].decode("ascii")
+    blob = _git_query(root, "cat-file", "blob", oid)
+    worktree = _regular_bytes(root / relative)
+    if blob is None or blob.returncode or worktree is None:
+        return None
+    normalized_blob = blob.stdout.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    normalized_worktree = worktree.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    if worktree != blob.stdout and normalized_worktree != normalized_blob:
+        return None
+    return blob.stdout
 
 
 def _uses(props: dict[str, str], owner: str) -> bool:
@@ -241,8 +279,8 @@ def _healthy_job(body: list[str]) -> bool:
     return remote
 
 
-def _workflow(path: Path) -> tuple[list[str], bool]:
-    text = _read_workflow(path)
+def _workflow(data: bytes) -> tuple[list[str], bool]:
+    text = _decode_workflow(data)
     if text is None:
         return [], True
     lines = _lines(text)
@@ -312,10 +350,11 @@ def _workflow_gates(root: Path) -> tuple[list[tuple[str, str]], list[str]]:
         return gates, [".github/workflows (linked path)"]
     for path in sorted(p for p in directory.iterdir() if p.is_file() and p.suffix in {".yml", ".yaml"}):
         relative = path.relative_to(root)
-        if not _plain_chain(root, relative) or not _tracked_blob(root, relative):
+        blob = _tracked_blob(root, relative) if _plain_chain(root, relative) else None
+        if blob is None:
             incomplete.append(relative.as_posix())
             continue
-        names, candidate = _workflow(path)
+        names, candidate = _workflow(blob)
         rel = path.relative_to(root).as_posix()
         gates.extend((rel, name) for name in names)
         if candidate and not names:

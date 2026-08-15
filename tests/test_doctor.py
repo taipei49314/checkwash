@@ -2,6 +2,7 @@
 
 import io
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -20,9 +21,18 @@ CANONICAL = re.search(
 
 
 def _git(root: pathlib.Path, *args: str) -> subprocess.CompletedProcess[str]:
+    env = {key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")}
+    env.update({
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GIT_TERMINAL_PROMPT": "0",
+        "GCM_INTERACTIVE": "Never",
+    })
     return subprocess.run(
         ["git", "--no-optional-locks", "-c", "core.fsmonitor=false", *args],
         cwd=root,
+        env=env,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -98,6 +108,8 @@ def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
     path = tmp_path / "crlf" / CI / "greenwash.yaml"
     path.parent.mkdir(parents=True)
     path.write_bytes(("\ufeff" + CANONICAL.replace("\n", "\r\n")).encode("utf-8"))
+    _init_repo(tmp_path / "crlf")
+    _git(tmp_path / "crlf", "config", "core.autocrlf", "true")
     _stage(tmp_path / "crlf")
     _healthy(tmp_path / "crlf")
 
@@ -420,6 +432,27 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
     untracked_path.parent.mkdir(parents=True)
     untracked_path.write_text(CANONICAL, encoding="utf-8")
     _incomplete(untracked, "untracked workflow")
+
+    mismatched = _canonical_repo(
+        tmp_path / "index-worktree-mismatch",
+        CANONICAL.replace("on: [pull_request]", "on: [push]"),
+    )
+    (mismatched / CI / "greenwash.yml").write_text(CANONICAL, encoding="utf-8")
+    _incomplete(mismatched, "canonical worktree over a noncanonical index blob")
+
+    reverse_mismatch = _canonical_repo(tmp_path / "worktree-index-mismatch")
+    (reverse_mismatch / CI / "greenwash.yml").write_text(
+        CANONICAL.replace("on: [pull_request]", "on: [push]"), encoding="utf-8"
+    )
+    _incomplete(reverse_mismatch, "noncanonical worktree over a canonical index blob")
+
+    intent = tmp_path / "intent-to-add"
+    _init_repo(intent)
+    intent_path = intent / CI / "greenwash.yml"
+    intent_path.parent.mkdir(parents=True)
+    intent_path.write_text(CANONICAL, encoding="utf-8")
+    _git(intent, "--literal-pathspecs", "add", "-N", "--", f"{CI}/greenwash.yml")
+    _incomplete(intent, "intent-to-add workflow")
 
     for ancestor in (".github", ".github/workflows"):
         root = _gitlink_repo(tmp_path / ("gitlink-" + ancestor.replace("/", "-")), ancestor)
