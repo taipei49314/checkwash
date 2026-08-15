@@ -71,7 +71,7 @@ def _without_comment(line: str) -> str:
 
 
 def _lines(text: str) -> list[str]:
-    text = text.removeprefix("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     return [clean for line in text.split("\n") if (clean := _without_comment(line)).strip(" ")]
 
 

@@ -270,6 +270,7 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
         _incomplete(_canonical_repo(tmp_path / label, workflow), label)
 
     raw_cases = {
+        "double-bom": b"\xef\xbb\xbf\xef\xbb\xbf" + CANONICAL.encode("utf-8"),
         "invalid-utf8-full-comment": b"# invalid \xff\n" + CANONICAL.encode("utf-8"),
         "invalid-utf8-trailing-comment": CANONICAL.encode("utf-8").replace(
             b"on: [pull_request]", b"on: [pull_request] # invalid \xff", 1
