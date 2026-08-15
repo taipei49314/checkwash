@@ -55,7 +55,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   after   assert total > 0
 ```
 
-Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. v0.1.25, 21 detectors, 422 tests, Apache-2.0.
+Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. v0.1.25, 21 detectors, 425 tests, Apache-2.0.
 
 When nothing fires, the report says **`no known tampering pattern detected`**. Not "no cheating". That wording is fixed in the source, because the second sentence is one a diff-layer tool cannot support.
 
@@ -209,8 +209,8 @@ And the datapoint that cuts against the loudest version of the pitch: under natu
 Not on PyPI yet — `pipx install greenwash` does not work.
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.12
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.12
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.41
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.41
 
 greenwash demo                            # replay 8 real tampering cases + 1 honest fix
 greenwash sweep HEAD --limit 300 --repo .  # your repo's block rate, not mine
@@ -221,7 +221,7 @@ Python 3.11+. Exit `0` = nothing at or above `fail_on` (default `high`), `1` = b
 
 When it is wrong, the finding prints the escape hatch: `greenwash allow "<fingerprint>" --reason "..."`, which writes a per-fingerprint entry with a reason, an author and an expiry into `.greenwash/allow.toml`. Two properties matter: config, allowlist and task contract are read from the **base** side, so an agent cannot disarm the check in the same diff the check is examining; and the 180-day cap is enforced on read, not only on write, so hand-editing a longer expiry does not work.
 
-Integrations — GitHub Action (`taipei49314/greenwash/action@v0.1.12`), pre-commit (`rev: v0.1.12`), and a Claude Code stop-hook that checks the working tree the moment the agent finishes, before the diff is even a commit. The engine is identical behind all of them, and the advertised tag's `src/`, `action/` and pre-commit hook are diffed against the working tree by a test, because the README once pinned a tag two fixes behind main.
+Integrations — GitHub Action (`taipei49314/greenwash/action@v0.1.41`), pre-commit (`rev: v0.1.41`), and a Claude Code stop-hook that checks the working tree the moment the agent finishes, before the diff is even a commit. The engine is identical behind all of them, and the advertised tag's `src/`, `action/` and pre-commit hook are diffed against the working tree by a test, because the README once pinned a tag two fixes behind main.
 
 **Honest about CI cost:** the analysis is 0.2 s for a 3000-line test diff and 0.7 s for 500 changed files, enforced by a gate that fails at 1.0 s and 2.5 s rather than asserted in a README — that gate first failed on arrival, at 4.1 s. The *job* also does a `pip install` and a `git fetch --deepen=200`, and wants `fetch-depth: 0` on checkout. I have not measured those, and on most repos they will dominate. The defensible claim is "the check is not what makes your CI slow", not "greenwash is free".
 
@@ -265,7 +265,7 @@ Apache-2.0. https://github.com/taipei49314/greenwash
 
 Agents make CI green two ways: by fixing the bug, or by deleting the failing test, widening a tolerance, rewriting the expected value to whatever the broken code returns, or dropping `|| true` into `scripts/test.sh`. greenwash reads the *diff* and blocks the second kind — alignment, then a two-sided AST comparison against an assertion-strength lattice, so `assert total == 105.3` → `assert total > 0` is a finding and a genuine refactor is not.
 
-Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. v0.1.25, 21 detectors, 422 tests, Apache-2.0.
+Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. v0.1.25, 21 detectors, 425 tests, Apache-2.0.
 
 What is measured, all from a harness in `benchmarks/`:
 
@@ -281,7 +281,7 @@ It is a tripwire that raises the cost of cheating, not a guarantee. An agent tha
 Not on PyPI yet:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.12
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.41
 greenwash demo
 greenwash sweep HEAD --limit 300 --repo .   # your number, not mine
 ```

@@ -431,6 +431,42 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+_SUBCOMMANDS = ("check", "allow", "sweep", "hook", "demo", "doctor", "bench")
+
+
+def _edit_distance(left: str, right: str) -> int:
+    if left == right:
+        return 0
+    if abs(len(left) - len(right)) > 2:
+        return 3
+    prev = list(range(len(right) + 1))
+    for i, ca in enumerate(left, 1):
+        cur = [i]
+        for j, cb in enumerate(right, 1):
+            cur.append(
+                min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb))
+            )
+        prev = cur
+    return prev[-1]
+
+
+def _closest_command(token: str) -> str | None:
+    """A misspelled subcommand, not a git rev that check should accept."""
+    if not token.isalpha() or len(token) < 3:
+        return None
+    folded = token.lower()
+    best: str | None = None
+    best_d = 3
+    for name in _SUBCOMMANDS:
+        dist = _edit_distance(folded, name)
+        if dist < best_d:
+            best_d = dist
+            best = name
+    if best is not None and 1 <= best_d <= 2:
+        return best
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
@@ -442,6 +478,13 @@ def main(argv: list[str] | None = None) -> int:
         "check", "allow", "sweep", "hook", "demo", "doctor", "bench",
         "-h", "--help", "--version",
     ):
+        hint = _closest_command(argv[0])
+        if hint:
+            print(
+                f"error: unknown command {argv[0]!r}. Did you mean {hint!r}?",
+                file=sys.stderr,
+            )
+            return 2
         argv = ["check", *argv]
     parser = build_parser()
     args = parser.parse_args(argv)

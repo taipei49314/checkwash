@@ -1,6 +1,13 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (user-path: Action pin + latest pyz were stale)
+Updated: 2026-08-15 (v0.1.41: typo'd commands, Action docs, launch install pins)
+
+## 2026-08-15 (v0.1.41): leftover user-path bugs
+
+`greenwash chek` now errors (`unknown command`, hint `check`) instead of
+being judged as a range. `action/README.md` no longer embeds a stale
+SHA — copy the pin from the root README. Launch copy-paste install
+lines point at this tag, not v0.1.12.
 
 ## 2026-08-15: required-check snippet was six releases behind
 
@@ -938,7 +945,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.40 |
+| version | v0.1.41 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |
