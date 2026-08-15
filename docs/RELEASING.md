@@ -63,7 +63,7 @@ build if the version and the tag disagree:
 The release job builds the zipapp with:
 
 ```bash
-python -m zipapp src -m "greenwash.cli:main" -o dist/greenwash.pyz -c
+python -m zipapp src -m "greenwash.zipapp_entry:run" -o dist/greenwash.pyz -c
 ```
 
 That is **source-reproducible** on the same CPython minor: same `src/`

@@ -218,18 +218,76 @@ def test_readme_action_snippet_is_zizmor_blanket():
             f"{ref} is not hash-pinned; zizmor unpinned-uses is high"
         )
 
-    # The required-check snippet is what a visitor pastes. Pinning an old
-    # tag's SHA (v0.1.34 while the README advertised v0.1.40) ships them
-    # an Action six releases behind. The hash must be the advertised tag.
-    version = _pyproject()["project"]["version"]
-    tag = f"v{version}"
-    sha = subprocess.check_output(
-        ["git", "rev-parse", tag], cwd=str(ROOT), text=True
-    ).strip()
-    assert f"taipei49314/greenwash/action@{sha}" in snippet, (
-        f"README Action pin is not {tag} ({sha}). After cutting the tag, "
-        "set the snippet SHA to `git rev-parse` of that tag."
+    # The required-check snippet, self-audit workflow, and doctor's offline
+    # allowlist are one contract. The Greenwash pin intentionally trails by one
+    # release: a commit cannot contain its own SHA, so only an already-existing
+    # stable tag can be verified and embedded.
+    from greenwash.doctor import _PINS
+
+    greenwash = re.search(
+        r"^\s+- uses: taipei49314/greenwash/action@([0-9a-f]{40}) # (v\d+\.\d+\.\d+)$",
+        snippet,
+        flags=re.M,
     )
+    if greenwash is None:
+        raise AssertionError("README Greenwash Action pin lost its trusted-tag annotation")
+    pin, trusted_tag = greenwash.groups()
+    tag = trusted_tag
+    sha = subprocess.check_output(
+        ["git", "rev-parse", "--verify", f"{tag}^{{commit}}"],
+        cwd=str(ROOT),
+        text=True,
+    ).strip()
+    greenwash_refs = [
+        ref for ref in uses if ref.startswith("taipei49314/greenwash/action@")
+    ]
+    assert greenwash_refs == [f"taipei49314/greenwash/action@{sha}"], (
+        f"README Action pin is not {tag}'s peeled commit ({sha}). Verify the "
+        "trusted release with `git rev-parse 'vX.Y.Z^{{commit}}'`."
+    )
+    assert "`git rev-parse 'vX.Y.Z^{commit}'`" in readme
+    action_doc = (ROOT / "action" / "README.md").read_text(encoding="utf-8")
+    assert (
+        f"git ls-remote https://github.com/taipei49314/greenwash.git "
+        f"'refs/tags/{tag}^{{}}'"
+    ) in action_doc
+
+    self_audit = (ROOT / ".github" / "workflows" / "greenwash.yml").read_text(
+        encoding="utf-8"
+    )
+    assert self_audit == snippet, "README and self-audit workflow differ"
+    assert pin == _PINS["taipei49314/greenwash/action"]
+    assert uses == [
+        f"{owner}@{_PINS[owner]}"
+        for owner in (
+            "actions/checkout",
+            "actions/setup-python",
+            "taipei49314/greenwash/action",
+        )
+    ]
+    assert sha == pin, f"{tag} peels to {sha}, not trusted pin {pin}"
+
+    def version_tuple(value: str) -> tuple[int, int, int]:
+        return tuple(int(part) for part in value.removeprefix("v").split("."))
+
+    current_version = version_tuple(_pyproject()["project"]["version"])
+    trusted_version = version_tuple(trusted_tag)
+    assert trusted_version <= current_version
+    if trusted_version < current_version:
+        released = subprocess.check_output(
+            ["git", "tag", "--list", "v[0-9]*"], cwd=str(ROOT), text=True
+        ).splitlines()
+        prior = [
+            version_tuple(tag)
+            for tag in released
+            if re.fullmatch(r"v\d+\.\d+\.\d+", tag)
+            and version_tuple(tag) < current_version
+        ]
+        assert prior and trusted_version == max(prior), (
+            f"trusted {trusted_tag} is not the newest prior stable tag"
+        )
+
+    assert "cannot embed its own commit SHA" in readme
 
 
 def test_perf_gate_is_in_default_collection():

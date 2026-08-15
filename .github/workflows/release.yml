@@ -58,9 +58,10 @@ jobs:
           PYTHONUTF8: "1"
         run: |
           set -euo pipefail
-          python -m zipapp src -m "greenwash.cli:main" -o dist/greenwash.pyz -c
+          python -m zipapp src -m "greenwash.zipapp_entry:run" -o dist/greenwash.pyz -c
           python dist/greenwash.pyz --version
           python dist/greenwash.pyz demo > /dev/null
+          python tools/qualify_zipapp.py dist/greenwash.pyz
           ls -l dist/
 
       - name: a fresh install of the wheel must run, replay the demo, and check a repo

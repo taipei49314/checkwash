@@ -222,9 +222,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         import json as _json
 
         if verdict == "block":
+            threshold = SEVERITY_ORDER[config.fail_on]
             visible = [
                 f for f in findings
-                if not f.allowlisted and f.severity in ("high", "critical")
+                if not f.allowlisted
+                and SEVERITY_ORDER[f.severity] >= threshold
             ]
             head = visible[0] if visible else None
             reason = "greenwash: " + (

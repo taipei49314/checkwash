@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 21 detectors, 425 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 428 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.41
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.41
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.42
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.42
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -111,12 +111,12 @@ reports, and blocks nothing.
 A one-page enterprise path — required check, SARIF, allowlist, CODEOWNERS —
 is in [docs/enterprise.md](docs/enterprise.md).
 
-**3. Verify.** `greenwash doctor` reads your workflows and says whether a gate
-exists and whether it is unconditional — a job gated behind an `if:` that is
-never true is the failure this project shipped itself. `doctor` cannot see
-branch protection (that needs API token scopes greenwash does not ask for), and
-it says so rather than implying otherwise: step 2 is the one a human must
-confirm.
+**3. Verify.** `greenwash doctor` recognizes the exact three-step gate below
+and says whether it can run unconditionally. It deliberately reports other
+workflow shapes as analysis incomplete instead of guessing that a textual
+`greenwash` mention is load-bearing. `doctor` cannot see branch protection
+(that needs API token scopes greenwash does not ask for), and it says so rather
+than implying otherwise: step 2 is the one a human must confirm.
 
 ```bash
 greenwash doctor        # exit 0 = no problems found; 1 = problems or warnings
@@ -142,14 +142,19 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@7b3bc70d391ac79f4d95b834c930e8e8aa04d8eb # v0.1.41
+      - uses: taipei49314/greenwash/action@ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83 # v0.1.41
 ```
 
 Hash pins and `persist-credentials: false` are required by
 [zizmor](https://docs.zizmor.sh/audits/#unpinned-uses) blanket policy — a
 tag pin (`@v4`, `@vX.Y.Z`) is two `unpinned-uses` highs. Re-checked
-2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. After a
-greenwash release, replace the last SHA with `git rev-parse vX.Y.Z`.
+2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. The greenwash
+SHA is deliberately the newest prior stable pin that `doctor` could verify at
+build time. Release N cannot embed its own commit SHA, so it adopts that SHA
+only after it already exists, in the next release. The result is an explicit
+one-release trust lag, not an arbitrary 40-hex claim. Verify this pin with
+`git rev-parse 'v0.1.41^{commit}'`; for another trusted release, substitute its
+version in `git rev-parse 'vX.Y.Z^{commit}'`.
 See [action/README.md](action/README.md).
 
 Do not gate this job on anything. A conditional gate is the defect this
@@ -162,7 +167,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.41
+    rev: v0.1.42
     hooks: [{ id: greenwash }]
 ```
 
@@ -190,8 +195,8 @@ greenwash hook install --agent claude-code
 # pre-commit — prints the config block to paste
 greenwash hook install --agent pre-commit
 
-# GitHub Actions — see action/action.yml; CI runs this action on every push
-- uses: taipei49314/greenwash/action@v0.1.41
+# GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
+- uses: taipei49314/greenwash/action@ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83 # v0.1.41
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,

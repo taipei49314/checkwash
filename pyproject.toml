@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "greenwash"
-version = "0.1.41"
+version = "0.1.42"
 description = "Your agent deleted the failing test to make CI green. greenwash catches it before merge."
 readme = "README.md"
 license = "Apache-2.0"
