@@ -112,17 +112,28 @@ def _digest(path: Path) -> str:
     return hashlib.sha256(normalized).hexdigest()
 
 
-def _linked(path: Path) -> bool:
-    try:
-        attrs = getattr(path.lstat(), "st_file_attributes", 0)
-    except OSError:
+def _plain_chain(root: Path, relative: str | Path) -> bool:
+    relative = Path(relative)
+    if relative.is_absolute() or ".." in relative.parts:
         return False
-    return path.is_symlink() or bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+    current = root
+    for part in relative.parts:
+        current /= part
+        try:
+            info = current.lstat()
+        except OSError:
+            return False
+        if current.is_symlink() or (
+            getattr(info, "st_file_attributes", 0)
+            & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+        ):
+            return False
+    return True
 
 
 def _local_action_matches(root: Path) -> bool:
     return all(
-        not _linked(root / name) and _digest(root / name) == expected
+        _plain_chain(root, name) and _digest(root / name) == expected
         for name, expected in _LOCAL_HASHES.items()
     )
 
@@ -239,10 +250,10 @@ def _workflow_gates(root: Path) -> tuple[list[tuple[str, str]], list[str]]:
     directory = root / ".github" / "workflows"
     if not directory.is_dir():
         return gates, incomplete
-    if _linked(directory):
+    if not _plain_chain(root, ".github/workflows"):
         return gates, [".github/workflows (linked path)"]
     for path in sorted(p for p in directory.iterdir() if p.is_file() and p.suffix in {".yml", ".yaml"}):
-        if _linked(path):
+        if not _plain_chain(root, path.relative_to(root)):
             incomplete.append(path.relative_to(root).as_posix())
             continue
         names, candidate = _workflow(root, path)

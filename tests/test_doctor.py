@@ -251,6 +251,14 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
     _symlink(workflow, target)
     _incomplete(file_root, "linked workflow file")
 
+    github_root = tmp_path / "github-link"
+    external_github = tmp_path / "external-github"
+    (external_github / "workflows").mkdir(parents=True)
+    (external_github / "workflows/greenwash.yml").write_text(CANONICAL, encoding="utf-8")
+    github_root.mkdir()
+    _symlink(github_root / ".github", external_github, directory=True)
+    _incomplete(github_root, "linked .github ancestor")
+
     directory_root = tmp_path / "directory-link"
     source_dir = directory_root / "workflow-source"
     source_dir.mkdir(parents=True)
@@ -268,6 +276,18 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
     _repo(action_root, files)
     _symlink(action_root / "action/action.yml", action_root / "action-source.yml")
     _incomplete(action_root, "linked local action")
+
+    action_ancestor_root = tmp_path / "action-ancestor-link"
+    external_action = tmp_path / "external-action"
+    _repo(external_action, {
+        "action.yml": (ROOT / "action/action.yml").read_text(encoding="utf-8"),
+        "post_review.py": (ROOT / "action/post_review.py").read_text(encoding="utf-8"),
+    })
+    _repo(action_ancestor_root, {
+        f"{CI}/ci.yml": (ROOT / CI / "ci.yml").read_text(encoding="utf-8"),
+    })
+    _symlink(action_ancestor_root / "action", external_action, directory=True)
+    _incomplete(action_ancestor_root, "linked action ancestor")
 
 
 def test_local_hook_without_ci_and_empty_repo_remain_problems(tmp_path):
