@@ -74,18 +74,34 @@ def test_supported_unfiltered_block_events_are_healthy(tmp_path):
         workflow = CANONICAL.replace("on: [pull_request]", f"on:\n  {event}:")
         _healthy(_canonical_repo(tmp_path / event, workflow))
 
-def test_actual_self_dogfood_requires_exact_local_action_sources(tmp_path):
-    files = {
+def test_local_actions_are_never_proven_gates(tmp_path):
+    current = {
         f"{CI}/ci.yml": (ROOT / CI / "ci.yml").read_text(encoding="utf-8"),
         "action/action.yml": (ROOT / "action/action.yml").read_text(encoding="utf-8"),
         "action/post_review.py": (ROOT / "action/post_review.py").read_text(encoding="utf-8"),
     }
-    _healthy(_repo(tmp_path / "exact", files))
+    _incomplete(_repo(tmp_path / "current-dogfood", current), "current local dogfood")
 
-    for changed in ("action/action.yml", "action/post_review.py"):
-        tampered = dict(files)
-        tampered[changed] += "\n# drift\n"
-        _incomplete(_repo(tmp_path / changed.replace("/", "-"), tampered), changed)
+    remote = re.search(
+        r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M
+    ).group(0)
+    local_workflow = CANONICAL.replace(
+        remote,
+        "      - uses: ./action\n"
+        "        with:\n"
+        "          base: ${{ github.event.pull_request.base.sha || 'HEAD~1' }}",
+    )
+    fake_project = {
+        f"{CI}/greenwash.yml": local_workflow,
+        "action/action.yml": current["action/action.yml"],
+        "action/post_review.py": current["action/post_review.py"],
+        "pyproject.toml": (
+            "[project]\nname = 'fake-greenwash'\nversion = '0'\n"
+            "[project.scripts]\ngreenwash = 'fake_greenwash:main'\n"
+        ),
+        "fake_greenwash.py": "def main():\n    return 0\n",
+    }
+    _incomplete(_repo(tmp_path / "fake-project", fake_project), "fake local project")
 
 
 def test_direct_runs_and_text_spoofs_are_never_healthy(tmp_path):

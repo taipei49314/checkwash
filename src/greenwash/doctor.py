@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-import hashlib
 import os
 import re
 import stat
@@ -23,11 +22,6 @@ class Note:
 _SHA = r"[0-9a-f]{40}"
 _EVENTS = {"pull_request", "push", "merge_group"}
 _BANNED = {"if", "continue-on-error", "env", "defaults", "strategy", "container"}
-_LOCAL_HASHES = {
-    "action/action.yml": "eae47dca54b3d31f1ce6641c58fa28009f4c8af7d31746947cca7d211de74c1d",
-    "action/post_review.py": "9998180cd23c39133dd14e32ede356ec26ea26672d5d447fc282d0a26eb84a01",
-}
-_SELF_WORKFLOW_HASH = "061a410b92eeaf56d4106fd46d8b0341305085cbde369eb86108f6cb27f1ef48"
 
 
 def _read(path: Path) -> str:
@@ -104,15 +98,6 @@ def _step(lines: list[str]) -> tuple[dict[str, str], dict[str, str]] | None:
     return props, with_values
 
 
-def _digest(path: Path) -> str:
-    try:
-        text = path.read_bytes().decode("utf-8-sig")
-    except (OSError, UnicodeDecodeError):
-        return ""
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n").encode()
-    return hashlib.sha256(normalized).hexdigest()
-
-
 def _plain_chain(root: Path, relative: str | Path) -> bool:
     relative = Path(relative)
     if relative.is_absolute() or ".." in relative.parts:
@@ -136,18 +121,11 @@ def _plain_chain(root: Path, relative: str | Path) -> bool:
     return True
 
 
-def _local_action_matches(root: Path) -> bool:
-    return all(
-        _plain_chain(root, name) and _digest(root / name) == expected
-        for name, expected in _LOCAL_HASHES.items()
-    )
-
-
 def _uses(props: dict[str, str], owner: str) -> bool:
     return set(props) == {"uses", "with"} and bool(re.fullmatch(owner + "@" + _SHA, props["uses"]))
 
 
-def _healthy_job(root: Path, body: list[str]) -> bool:
+def _healthy_job(body: list[str]) -> bool:
     job_items: list[tuple[int, str, str]] = []
     for index, line in enumerate(body[1:], 1):
         if _indent(line) == 4:
@@ -185,15 +163,10 @@ def _healthy_job(root: Path, body: list[str]) -> bool:
     remote = set(props) == {"uses"} and not with_values and bool(
         re.fullmatch("taipei49314/greenwash/action@" + _SHA, props.get("uses", ""))
     )
-    local = props == {"uses": "./action", "with": ""} and with_values == {
-        "base": "${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
-    } and _local_action_matches(root)
-    return remote or local
+    return remote
 
 
-def _workflow(root: Path, path: Path) -> tuple[list[str], bool]:
-    if _digest(path) == _SELF_WORKFLOW_HASH and _local_action_matches(root):
-        return ["dogfood"], True
+def _workflow(path: Path) -> tuple[list[str], bool]:
     lines = _lines(_read(path))
     blob = "\n".join(lines)
     candidate = "greenwash" in blob.lower() or "uses: ./action" in blob
@@ -245,7 +218,7 @@ def _workflow(root: Path, path: Path) -> tuple[list[str], bool]:
     healthy = []
     for pos, (start, name) in enumerate(starts):
         stop = starts[pos + 1][0] if pos + 1 < len(starts) else end
-        if _healthy_job(root, lines[start:stop]):
+        if _healthy_job(lines[start:stop]):
             healthy.append(name)
     return healthy, candidate
 
@@ -261,7 +234,7 @@ def _workflow_gates(root: Path) -> tuple[list[tuple[str, str]], list[str]]:
         if not _plain_chain(root, path.relative_to(root)):
             incomplete.append(path.relative_to(root).as_posix())
             continue
-        names, candidate = _workflow(root, path)
+        names, candidate = _workflow(path)
         rel = path.relative_to(root).as_posix()
         gates.extend((rel, name) for name in names)
         if candidate and not names:
