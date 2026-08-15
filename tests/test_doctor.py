@@ -72,10 +72,12 @@ def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
     _healthy(tmp_path / "crlf")
 
 
-def test_supported_unfiltered_block_events_are_healthy(tmp_path):
-    for event in ("pull_request", "push", "merge_group"):
+def test_only_an_unfiltered_pull_request_event_is_healthy(tmp_path):
+    block_pull_request = CANONICAL.replace("on: [pull_request]", "on:\n  pull_request:")
+    _healthy(_canonical_repo(tmp_path / "pull-request", block_pull_request))
+    for event in ("push", "merge_group"):
         workflow = CANONICAL.replace("on: [pull_request]", f"on:\n  {event}:")
-        _healthy(_canonical_repo(tmp_path / event, workflow))
+        _incomplete(_canonical_repo(tmp_path / event, workflow), event)
 
 def test_local_actions_are_never_proven_gates(tmp_path):
     current = {

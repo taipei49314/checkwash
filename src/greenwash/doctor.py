@@ -20,7 +20,7 @@ class Note:
 
 
 _SHA = r"[0-9a-f]{40}"
-_EVENTS = {"pull_request", "push", "merge_group"}
+_EVENT = "pull_request"
 _BANNED = {"if", "continue-on-error", "env", "defaults", "strategy", "container"}
 
 
@@ -87,12 +87,12 @@ def _mapping(line: str, indent: int) -> tuple[str, str] | None:
 def _unfiltered_event(lines: list[str], on_index: int, on_value: str) -> bool:
     if on_value:
         match = re.fullmatch(r"\[ *([A-Za-z_]+) *\]", on_value)
-        return bool(match and match.group(1) in _EVENTS)
+        return bool(match and match.group(1) == _EVENT)
     end = next((i for i in range(on_index + 1, len(lines)) if _indent(lines[i]) == 0), len(lines))
     if end != on_index + 2:
         return False
     item = _mapping(lines[on_index + 1], 2)
-    return bool(item and item[0] in _EVENTS and not item[1])
+    return bool(item and item[0] == _EVENT and not item[1])
 
 
 def _step(lines: list[str]) -> tuple[dict[str, str], dict[str, str]] | None:
