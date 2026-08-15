@@ -54,6 +54,9 @@ def _canonical_repo(tmp_path: pathlib.Path, body: str = CANONICAL, suffix: str =
 
 def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
     _healthy(_canonical_repo(tmp_path / "lf"))
+    _healthy(_canonical_repo(tmp_path / "unicode-comment", CANONICAL.replace(
+        "# .github/workflows/greenwash.yml", "# 稽核 workflow"
+    )))
 
     for action in ("actions/checkout", "actions/setup-python", "taipei49314/greenwash/action"):
         sha64 = re.sub(
@@ -250,9 +253,51 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
         "orphan-after-flow-event": CANONICAL.replace(
             "on: [pull_request]\n", "on: [pull_request]\n  orphan: value\n"
         ),
+        "nbsp-runs-on": CANONICAL.replace(
+            "runs-on: ubuntu-latest", "runs-on: ubuntu-latest\u00a0"
+        ),
+        "nbsp-before-comment": CANONICAL.replace(
+            "runs-on: ubuntu-latest", "runs-on: ubuntu-latest\u00a0# hidden"
+        ),
+        "nbsp-only-line": CANONICAL.replace("jobs:\n", "jobs:\n\u00a0\n"),
+        "nbsp-flow-event": CANONICAL.replace(
+            "on: [pull_request]", "on: [\u00a0pull_request\u00a0]"
+        ),
     }
     for label, workflow in cases.items():
         _incomplete(_canonical_repo(tmp_path / label, workflow), label)
+
+    raw_cases = {
+        "invalid-utf8-full-comment": b"# invalid \xff\n" + CANONICAL.encode("utf-8"),
+        "invalid-utf8-trailing-comment": CANONICAL.encode("utf-8").replace(
+            b"on: [pull_request]", b"on: [pull_request] # invalid \xff", 1
+        ),
+    }
+    controls = {
+        "null-byte": b"\x00",
+        "unit-separator": b"\x1f",
+        "delete": b"\x7f",
+        "c1-control": "\u009f".encode("utf-8"),
+        "noncharacter": "\ufffe".encode("utf-8"),
+    }
+    for label, marker in controls.items():
+        raw_cases[label] = CANONICAL.encode("utf-8").replace(
+            b"on: [pull_request]", b"on: [pull_request] # hidden " + marker, 1
+        )
+    for label, separator in {
+        "nel-hidden-line": "\u0085",
+        "ls-hidden-line": "\u2028",
+        "ps-hidden-line": "\u2029",
+    }.items():
+        raw_cases[label] = (
+            f"# hidden{separator}jobs: {{shadow: {{}}}}\n" + CANONICAL
+        ).encode("utf-8")
+    for label, payload in raw_cases.items():
+        root = tmp_path / label
+        path = root / CI / "greenwash.yml"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(payload)
+        _incomplete(root, label)
 
 
 def test_fake_workflow_extensions_and_case_mismatches_are_not_healthy(tmp_path):

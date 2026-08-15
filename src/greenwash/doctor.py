@@ -31,6 +31,27 @@ def _read(path: Path) -> str:
         return ""
 
 
+def _read_workflow(path: Path) -> str | None:
+    try:
+        text = path.read_bytes().decode("utf-8-sig")
+    except (OSError, UnicodeDecodeError):
+        return None
+    # A narrow YAML-printable subset. NEL, LS, and PS are valid YAML line
+    # breaks, but supporting them would require another parsing grammar.
+    for char in text:
+        codepoint = ord(char)
+        if char in "\t\n\r" or 0x20 <= codepoint <= 0x7E:
+            continue
+        if (
+            0xA0 <= codepoint <= 0xD7FF
+            or 0xE000 <= codepoint <= 0xFFFD
+            or 0x10000 <= codepoint <= 0x10FFFF
+        ) and codepoint not in {0x2028, 0x2029}:
+            continue
+        return None
+    return text
+
+
 def _without_comment(line: str) -> str:
     quote = ""
     escaped = False
@@ -43,15 +64,15 @@ def _without_comment(line: str) -> str:
                 quote = char
             elif quote == char:
                 quote = ""
-        if char == "#" and not quote and (index == 0 or line[index - 1].isspace()):
-            return line[:index].rstrip()
+        if char == "#" and not quote and (index == 0 or line[index - 1] in " \t"):
+            return line[:index].rstrip(" ")
         escaped = False
-    return line.rstrip()
+    return line.rstrip(" ")
 
 
 def _lines(text: str) -> list[str]:
     text = text.removeprefix("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
-    return [clean for line in text.split("\n") if (clean := _without_comment(line)).strip()]
+    return [clean for line in text.split("\n") if (clean := _without_comment(line)).strip(" ")]
 
 
 def _indent(line: str) -> int:
@@ -65,7 +86,7 @@ def _mapping(line: str, indent: int) -> tuple[str, str] | None:
 
 def _unfiltered_event(lines: list[str], on_index: int, on_value: str) -> bool:
     if on_value:
-        match = re.fullmatch(r"\[\s*([A-Za-z_]+)\s*\]", on_value)
+        match = re.fullmatch(r"\[ *([A-Za-z_]+) *\]", on_value)
         return bool(match and match.group(1) in _EVENTS)
     end = next((i for i in range(on_index + 1, len(lines)) if _indent(lines[i]) == 0), len(lines))
     if end != on_index + 2:
@@ -167,10 +188,15 @@ def _healthy_job(body: list[str]) -> bool:
 
 
 def _workflow(path: Path) -> tuple[list[str], bool]:
-    lines = _lines(_read(path))
+    text = _read_workflow(path)
+    if text is None:
+        return [], True
+    lines = _lines(text)
     blob = "\n".join(lines)
     candidate = "greenwash" in blob.lower() or "uses: ./action" in blob
-    if not lines or any("\t" in line for line in lines) or re.search(r"(^|\s)<<:|(^|\s)[*&][A-Za-z_]", blob):
+    if not lines or any("\t" in line for line in lines) or re.search(
+        r"(^|[ \t])<<:|(^|[ \t])[*&][A-Za-z_]", blob
+    ):
         return [], candidate
     top: list[tuple[int, str, str]] = []
     for index, line in enumerate(lines):
