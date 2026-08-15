@@ -142,7 +142,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@70f1bb6470351a034c7d0ec4c4a200e9dc95075c # v0.1.40
+      - uses: taipei49314/greenwash/action@7b3bc70d391ac79f4d95b834c930e8e8aa04d8eb # v0.1.41
 ```
 
 Hash pins and `persist-credentials: false` are required by
