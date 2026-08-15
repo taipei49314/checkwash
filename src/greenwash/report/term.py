@@ -6,6 +6,7 @@ import os
 import sys
 
 from greenwash.allowlist import MAX_EXPIRY_DAYS
+from greenwash.config import SEVERITY_ORDER
 from greenwash.findings import Finding
 from greenwash.ir.model import IR
 
@@ -71,9 +72,15 @@ def render(
         head = "greenwash: no known tampering pattern detected"
         lines.append(_c("32", sym["pass"] + " " + head, color))
     else:
-        n_high = sum(1 for f in visible if f.severity in ("high", "critical"))
+        threshold = SEVERITY_ORDER[fail_on]
+        n_at_or_above = sum(
+            1 for f in visible if SEVERITY_ORDER[f.severity] >= threshold
+        )
         if blocking:
-            head = f"greenwash: {n_high} finding(s) at or above {fail_on} {sym['dash']} blocking"
+            head = (
+                f"greenwash: {n_at_or_above} finding(s) at or above {fail_on} "
+                f"{sym['dash']} blocking"
+            )
             lines.append(_c("31", sym["block"] + " " + head, color))
         else:
             head = f"greenwash: {len(visible)} finding(s), none at or above {fail_on}"

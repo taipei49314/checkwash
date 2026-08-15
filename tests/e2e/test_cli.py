@@ -158,6 +158,22 @@ def test_term_report_renders(repo):
     assert "next: fix the code" in result.stdout
 
 
+def test_term_header_counts_findings_at_active_threshold(repo):
+    guardrail = repo / ".claude" / "settings.json"
+    guardrail.parent.mkdir()
+    guardrail.write_text("{}\n", encoding="utf-8")
+
+    high = _greenwash(repo, "check", "--fail-on", "high")
+    assert high.returncode == 0, high.stderr
+    assert "greenwash: 1 finding(s), none at or above high" in high.stdout
+    assert "verdict=pass" in high.stdout
+
+    warn = _greenwash(repo, "check", "--fail-on", "warn")
+    assert warn.returncode == 1, warn.stderr
+    assert "greenwash: 1 finding(s) at or above warn" in warn.stdout
+    assert "verdict=block" in warn.stdout
+
+
 def test_allow_roundtrip(repo):
     _weaken(repo)
     first = _greenwash(repo, "check", "--format", "json")
