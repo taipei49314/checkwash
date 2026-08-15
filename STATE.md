@@ -1,6 +1,14 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.40: T3.2 bench, T3.3 compare, T3.4 cadence, T3.6 windows)
+Updated: 2026-08-15 (T3.5 design note; ROADMAP tracker aligned; still v0.1.40)
+
+## 2026-08-15: T3.5 satellite is a note, not a package
+
+`docs/satellite-execution.md` is the T3.5 acceptance: execution /
+mutation stays off `check`. No sibling package was created. A test
+fails if a `mutate`/`mutation`/`rerun` module appears under
+`src/greenwash/`. **#86a stays info; #36 stays open.** ROADMAP
+section 10 checkboxes now match the closed issues.
 
 ## 2026-08-15 (v0.1.40): T3.2 / T3.3 / T3.4 / T3.6
 

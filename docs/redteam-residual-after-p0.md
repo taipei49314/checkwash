@@ -426,7 +426,7 @@ gating 註解：**unittest.skipIf 刻意未進 D6**。
 
 1. **強制 CI + 不可從 PR 關 detector**（base 側 policy 鎖）  
 2. **任務級 `oracle_freeze` + 人審** 對 high-risk 變更  
-3. **執行層陪跑**（mutation、重跑 fail 測試、sandbox 比 base/head 行為）——greenwash 刻意不做  
+3. **執行層陪跑**（mutation、重跑 fail 測試、sandbox 比 base/head 行為）——greenwash 刻意不做；見 [satellite-execution.md](satellite-execution.md)  
 4. **多 diff 窗口**（stack 整串 / merge-base 全 PR，不只最後一個 commit）  
 5. **接受 residual rate**：公開 `FAILURES.md`，當 cost 函數不是 0-miss  
 

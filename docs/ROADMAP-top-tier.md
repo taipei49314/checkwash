@@ -125,9 +125,9 @@
 
 **T0 完成定義（DoD）：**
 
-- [ ] 文件路徑：clone → install → Action → required check 無歧義  
-- [ ] `doctor` 在「只裝沒鎖」時會警告  
-- [ ] CI 防禦宣稱與 required 綁定  
+- [x] 文件路徑：clone → install → Action → required check 無歧義  
+- [x] `doctor` 在「只裝沒鎖」時會警告  
+- [x] CI 防禦宣稱與 required 綁定  
 
 ---
 
@@ -172,8 +172,8 @@
 
 **T2 DoD：**
 
-- [ ] 企業 POC 清單（required + SARIF + allow 過期）可一頁走完  
-- [ ] semver：breaking 只碰 SPEC 標註面  
+- [x] 企業 POC 清單（required + SARIF + allow 過期）可一頁走完（[enterprise.md](enterprise.md)）  
+- [x] semver：breaking 只碰 SPEC 標註面（[stability.md](stability.md)）  
 
 ---
 
@@ -187,13 +187,13 @@
 | T3.2 | `greenwash bench` / 一鍵複現 sweep+decoy | 外部可複現 | P1 |
 | T3.3 | 對標 harness 固定化（AgentLint / 同類） | `benchmarks/compare` 可重跑 | P2 |
 | T3.4 | 外部 cheat 貢獻節奏（issue 模板已有 → 季度回顧） | FAILURES 有外部 credited 列 | P2 |
-| T3.5 | **衛星（可選獨立套件）：** 執行陪跑 / mutation | 不進預設 core | P3 |
+| T3.5 | **衛星（可選獨立套件）：** 執行陪跑 / mutation | 不進預設 core；[設計備註](satellite-execution.md) | P3 |
 | T3.6 | 多 commit / PR 視窗掃描文件 + 可選 `sweep` 整合 | process 文件 | P2 |
 
 **T3 DoD：**
 
-- [ ] 第二前線（語言或 opaque 政策）有 corpus 數字  
-- [ ] 基準成為他人可引用 baseline  
+- [ ] 第二前線（語言或 opaque 政策）有 corpus 數字 — T3.1 是 JS/TS fixture 量測，六倉 Python corpus 量不到  
+- [x] 基準成為他人可引用 baseline（`greenwash bench` + compare prepare/run）  
 
 ---
 
@@ -423,32 +423,32 @@ Labels：`roadmap` · `phase-t0`…`phase-t3` · `engineering` · `P0`–`P3`
 
 ### T0
 
-- [ ] T0.1 Required 三步驟文件 → #2  
-- [ ] T0.2 Action 安全範本 → #3  
-- [ ] T0.3 `doctor` → #4  
-- [ ] T0.5 宣稱與 required 綁定 → #6  
-- [ ] T0.4 / T0.6 可選項 → #5 · #7  
+- [x] T0.1 Required 三步驟文件 → #2  
+- [x] T0.2 Action 安全範本 → #3  
+- [x] T0.3 `doctor` → #4  
+- [x] T0.5 宣稱與 required 綁定 → #6  
+- [x] T0.4 / T0.6 可選項 → #5 · #7  
 
 ### T1
 
-- [ ] T1.1 Binding diff → #8  
-- [ ] T1.2 Fixture / parametrize → #9  
-- [ ] T1.3 Dataflow k=2 → #10  
+- [x] T1.1 Binding diff → #8 (`EXPECTATION_DEFINITION_CHANGED` at info; #86a not promoted)  
+- [x] T1.2 Fixture / parametrize → #9  
+- [x] T1.3 Dataflow k=2 → #10  
 - [x] T1.4 Test-local patch → #11 (v0.1.25, `TEST_PATCHES_SUBJECT`)  
-- [ ] T1.5 CI script one-hop → #12  
-- [ ] T1.6 Collection 語意 → #13  
-- [ ] T1.7 Informed release gate → #14  
-- [ ] T1.8 Guard #54 → #15  
+- [x] T1.5 CI script one-hop → #12  
+- [x] T1.6 Collection 語意 → #13  
+- [x] T1.7 Informed release gate → #14  
+- [x] T1.8 Guard #54 → #15 (v0.1.39)  
 
 ### T2
 
-- [ ] T2.1 SARIF → #16  
-- [ ] T2.2 PR 註解（選） → #17  
-- [ ] T2.3 Allow 工作流 → #18  
-- [ ] T2.4 Schema 穩定文件 → #19  
-- [ ] T2.5 Perf SLO → #20  
-- [ ] T2.6 供應鏈 → #21  
-- [ ] T2.7 診斷 report → #22  
+- [x] T2.1 SARIF → #16  
+- [x] T2.2 PR 註解（選） → #17  
+- [x] T2.3 Allow 工作流 → #18  
+- [x] T2.4 Schema 穩定文件 → #19  
+- [x] T2.5 Perf SLO → #20  
+- [x] T2.6 供應鏈 → #21  
+- [x] T2.7 診斷 report → #22  
 
 ### T3
 
@@ -456,17 +456,17 @@ Labels：`roadmap` · `phase-t0`…`phase-t3` · `engineering` · `P0`–`P3`
 - [x] T3.2 bench 一鍵 → #24  
 - [x] T3.3 對標固定化 → #25  
 - [x] T3.4 外部 cheat 節奏 → #26  
-- [ ] T3.5 衛星執行層（可選） → #27  
+- [x] T3.5 衛星執行層（可選） → #27（[設計備註](satellite-execution.md)，非套件）  
 - [x] T3.6 多窗口 process → #28  
 
 ### Engineering
 
-- [ ] E1 astutil → #29  
-- [ ] E2 Finding.shape → #30  
-- [ ] E3 REGISTRY/ORDER → #31  
-- [ ] E4 unittest names → #32  
-- [ ] E5 split modules → #33  
-- [ ] E6 structural subject → #34  
+- [x] E1 astutil → #29  
+- [x] E2 Finding.shape → #30  
+- [x] E3 REGISTRY/ORDER → #31  
+- [x] E4 unittest names → #32  
+- [x] E5 split modules → #33  
+- [x] E6 structural subject → #34  
 
 ### 常駐
 
