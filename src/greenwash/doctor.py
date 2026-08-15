@@ -6,6 +6,7 @@ import datetime
 import os
 import re
 import stat
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -146,6 +147,55 @@ def _plain_chain(root: Path, relative: str | Path) -> bool:
     return True
 
 
+def _tracked_blob(root: Path, relative: str | Path) -> bool:
+    relative = Path(relative)
+    if relative.is_absolute() or ".." in relative.parts:
+        return False
+    requested = relative.as_posix()
+    env = {key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")}
+    env.update({
+        "GIT_CEILING_DIRECTORIES": str(root.parent.resolve()),
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_DISCOVERY_ACROSS_FILESYSTEM": "0",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GIT_TERMINAL_PROMPT": "0",
+        "GCM_INTERACTIVE": "Never",
+    })
+    try:
+        result = subprocess.run(
+            [
+                "git", "--no-optional-locks", "-c", "core.fsmonitor=false",
+                "--literal-pathspecs", "ls-files", "--stage", "-z", "--", requested,
+            ],
+            cwd=root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            errors="strict",
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return False
+    records = result.stdout.split("\0")
+    if result.returncode or len(records) != 2 or records[1]:
+        return False
+    header, separator, actual = records[0].partition("\t")
+    fields = header.split(" ")
+    return bool(
+        separator
+        and actual == requested
+        and len(fields) == 3
+        and fields[0] in {"100644", "100755"}
+        and re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", fields[1])
+        and fields[2] == "0"
+    )
+
+
 def _uses(props: dict[str, str], owner: str) -> bool:
     return set(props) == {"uses", "with"} and props["uses"] == f"{owner}@{_PINS[owner]}"
 
@@ -261,8 +311,9 @@ def _workflow_gates(root: Path) -> tuple[list[tuple[str, str]], list[str]]:
     if not _plain_chain(root, ".github/workflows"):
         return gates, [".github/workflows (linked path)"]
     for path in sorted(p for p in directory.iterdir() if p.is_file() and p.suffix in {".yml", ".yaml"}):
-        if not _plain_chain(root, path.relative_to(root)):
-            incomplete.append(path.relative_to(root).as_posix())
+        relative = path.relative_to(root)
+        if not _plain_chain(root, relative) or not _tracked_blob(root, relative):
+            incomplete.append(relative.as_posix())
             continue
         names, candidate = _workflow(path)
         rel = path.relative_to(root).as_posix()

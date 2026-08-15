@@ -4,6 +4,7 @@ import io
 import json
 import pathlib
 import re
+import subprocess
 
 import pytest
 
@@ -18,11 +19,35 @@ CANONICAL = re.search(
 ).group(1)
 
 
+def _git(root: pathlib.Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "--no-optional-locks", "-c", "core.fsmonitor=false", *args],
+        cwd=root,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
+
+
+def _init_repo(root: pathlib.Path) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    if not (root / ".git").exists():
+        _git(root, "init", "--quiet")
+
+
+def _stage(root: pathlib.Path) -> None:
+    _init_repo(root)
+    _git(root, "--literal-pathspecs", "add", "-f", "--all", "--", ".")
+
+
 def _repo(tmp_path: pathlib.Path, files: dict[str, str]) -> pathlib.Path:
     for name, body in files.items():
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(body, encoding="utf-8")
+    _stage(tmp_path)
     return tmp_path
 
 
@@ -73,6 +98,7 @@ def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
     path = tmp_path / "crlf" / CI / "greenwash.yaml"
     path.parent.mkdir(parents=True)
     path.write_bytes(("\ufeff" + CANONICAL.replace("\n", "\r\n")).encode("utf-8"))
+    _stage(tmp_path / "crlf")
     _healthy(tmp_path / "crlf")
 
 
@@ -319,6 +345,7 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
         path = root / CI / "greenwash.yml"
         path.parent.mkdir(parents=True)
         path.write_bytes(payload)
+        _stage(root)
         _incomplete(root, label)
 
 
@@ -356,7 +383,48 @@ def _symlink(link: pathlib.Path, target: pathlib.Path, directory: bool = False) 
         pytest.skip(f"symlinks unavailable: {exc}")
 
 
+def _gitlink_repo(root: pathlib.Path, relative: str) -> pathlib.Path:
+    _init_repo(root)
+    link_path = pathlib.Path(relative)
+    nested = root / link_path
+    nested.mkdir(parents=True)
+    _git(nested, "init", "--quiet")
+    workflow = nested / (pathlib.Path(CI) / "greenwash.yml").relative_to(link_path)
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text(CANONICAL, encoding="utf-8")
+    _stage(nested)
+    _git(
+        nested,
+        "-c", "user.name=greenwash-test",
+        "-c", "user.email=greenwash-test@example.invalid",
+        "commit", "--quiet", "-m", "gitlink fixture",
+    )
+    _git(root, "--literal-pathspecs", "add", "-f", "--", link_path.as_posix())
+    entry = _git(
+        root, "--literal-pathspecs", "ls-files", "--stage", "--", link_path.as_posix()
+    ).stdout
+    assert entry.startswith("160000 "), f"fixture is not a gitlink: {entry!r}"
+    return root
+
+
 def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
+    absent = tmp_path / "no-git-index"
+    absent_path = absent / CI / "greenwash.yml"
+    absent_path.parent.mkdir(parents=True)
+    absent_path.write_text(CANONICAL, encoding="utf-8")
+    _incomplete(absent, "workflow without Git index")
+
+    untracked = tmp_path / "untracked"
+    _init_repo(untracked)
+    untracked_path = untracked / CI / "greenwash.yml"
+    untracked_path.parent.mkdir(parents=True)
+    untracked_path.write_text(CANONICAL, encoding="utf-8")
+    _incomplete(untracked, "untracked workflow")
+
+    for ancestor in (".github", ".github/workflows"):
+        root = _gitlink_repo(tmp_path / ("gitlink-" + ancestor.replace("/", "-")), ancestor)
+        _incomplete(root, f"{ancestor} gitlink ancestor")
+
     file_root = tmp_path / "file-link"
     target = file_root / "canonical-source.yml"
     target.parent.mkdir(parents=True)
