@@ -1,6 +1,28 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.41: typo'd commands, Action docs, launch install pins)
+Updated: 2026-08-15 (v0.1.42: fail-closed zipapp exits and a proof-bounded doctor)
+
+## 2026-08-15 (v0.1.42): the downloadable CLI now carries its verdict
+
+The release zipapp now propagates the CLI's process contract: clean is exit 0,
+a blocking term/JSON/SARIF result is exit 1, and an input or engine error is
+exit 2. The hook-JSON protocol deliberately remains exit 0 and carries its
+block decision in JSON. The release workflow qualifies the built pyz across
+all of those paths; the qualifier uses explicit failures rather than bare
+assertions.
+
+`greenwash doctor` no longer infers a load-bearing gate from workflow text. It
+reports healthy only for the documented, unconditional pull-request workflow:
+the exact checkout/setup/Greenwash commit pins, exact checkout inputs, literal
+runner, three steps, a tracked regular workflow blob, and the `greenwash`
+status context required by the shipped ruleset. Unsupported or ambiguous YAML
+is incomplete and exits 1. Because a commit cannot contain its own SHA,
+v0.1.42 deliberately trusts the already published v0.1.41 Action commit; that
+pin advances one release later.
+
+Terminal and hook-JSON finding counts now use the active `fail_on` threshold
+and exclude allowlisted findings. These are delivery and diagnostic fixes, not
+detector changes; the measured corpus and authority boundaries are unchanged.
 
 ## 2026-08-15 (v0.1.41): leftover user-path bugs
 
@@ -945,7 +967,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.41 |
+| version | v0.1.42 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

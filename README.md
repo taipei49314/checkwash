@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.41
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.41
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.42
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.42
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -167,7 +167,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.41
+    rev: v0.1.42
     hooks: [{ id: greenwash }]
 ```
 
