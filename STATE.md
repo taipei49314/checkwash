@@ -1,6 +1,14 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (T3.5 design note; ROADMAP tracker aligned; still v0.1.40)
+Updated: 2026-08-15 (user-path: Action pin + latest pyz were stale)
+
+## 2026-08-15: required-check snippet was six releases behind
+
+README's hash-pinned Action was still `v0.1.34` while install/pre-commit
+said `v0.1.40`. `releases/latest` still pointed at the v0.1.39 pyz
+because no GitHub Release was cut for the v0.1.40 tag. Snippet SHA is
+now `70f1bb64` (v0.1.40); a packaging gate fails if it drifts from
+the advertised tag again.
 
 ## 2026-08-15: T3.5 satellite is a note, not a package
 

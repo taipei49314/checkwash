@@ -74,7 +74,8 @@ greenwash check                 # HEAD vs the working tree
 greenwash check --format sarif  # SARIF 2.1.0 for GitHub code scanning
 # JS/TS: *.test.js / *.spec.ts matcher weakenings (T3.1)
 greenwash demo                  # replay real tampering cases, fully offline
-greenwash bench --local         # reproduce in-clone numbers; fails if sweep clones missing
+greenwash bench --local         # reproduce in-clone numbers (demo + pins)
+# omit --local to also require the six sweep clones; missing clones exit 2
 ```
 
 `greenwash demo` replays eight real tampering cases — a softened assertion, a
@@ -141,7 +142,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@27b7fd9391cb96bff5415829c0167bb6e9e6dbab # v0.1.34
+      - uses: taipei49314/greenwash/action@70f1bb6470351a034c7d0ec4c4a200e9dc95075c # v0.1.40
 ```
 
 Hash pins and `persist-credentials: false` are required by

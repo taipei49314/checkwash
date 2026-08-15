@@ -199,6 +199,8 @@ def test_readme_action_snippet_is_zizmor_blanket():
     Re-check 2026-08-15: zizmor 1.29.0 still reports unpinned-uses as high
     for @v4 / @v0.1.34, so every uses: in the snippet must be a commit SHA.
     """
+    import subprocess
+
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     match = re.search(
         r"```yaml\n(# \.github/workflows/greenwash\.yml\n.*?)```",
@@ -215,6 +217,19 @@ def test_readme_action_snippet_is_zizmor_blanket():
         assert re.search(r"@[0-9a-f]{40}$", ref), (
             f"{ref} is not hash-pinned; zizmor unpinned-uses is high"
         )
+
+    # The required-check snippet is what a visitor pastes. Pinning an old
+    # tag's SHA (v0.1.34 while the README advertised v0.1.40) ships them
+    # an Action six releases behind. The hash must be the advertised tag.
+    version = _pyproject()["project"]["version"]
+    tag = f"v{version}"
+    sha = subprocess.check_output(
+        ["git", "rev-parse", tag], cwd=str(ROOT), text=True
+    ).strip()
+    assert f"taipei49314/greenwash/action@{sha}" in snippet, (
+        f"README Action pin is not {tag} ({sha}). After cutting the tag, "
+        "set the snippet SHA to `git rev-parse` of that tag."
+    )
 
 
 def test_perf_gate_is_in_default_collection():

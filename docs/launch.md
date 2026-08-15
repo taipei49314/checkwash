@@ -212,7 +212,7 @@ Not on PyPI yet — `pipx install greenwash` does not work.
 pipx install git+https://github.com/taipei49314/greenwash@v0.1.12
 # or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.12
 
-greenwash demo                            # replay 7 real tampering cases + 1 honest fix
+greenwash demo                            # replay 8 real tampering cases + 1 honest fix
 greenwash sweep HEAD --limit 300 --repo .  # your repo's block rate, not mine
 greenwash check HEAD~1..HEAD               # a live diff
 ```
