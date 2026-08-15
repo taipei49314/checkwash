@@ -88,8 +88,9 @@ def _canonical_repo(tmp_path: pathlib.Path, body: str = CANONICAL, suffix: str =
 
 
 def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
-    _healthy(_canonical_repo(tmp_path / "lf"))
-    _healthy(_canonical_repo(tmp_path / "unicode-comment", CANONICAL.replace(
+    case_root = tmp_path / "canonical-cases"
+    _healthy(_canonical_repo(case_root))
+    _healthy(_canonical_repo(case_root, CANONICAL.replace(
         "# .github/workflows/greenwash.yml", "# 稽核 workflow"
     )))
 
@@ -99,11 +100,11 @@ def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
             r"\1" + "a" * 24,
             CANONICAL,
         )
-        _incomplete(_canonical_repo(tmp_path / action.replace("/", "-"), sha64), action)
+        _incomplete(_canonical_repo(case_root, sha64), action)
 
     for job_id in ("audit", "test", "green_wash", "Greenwash"):
         renamed = CANONICAL.replace("\n  greenwash:\n", f"\n  {job_id}:\n")
-        _incomplete(_canonical_repo(tmp_path / f"job-{job_id}", renamed), job_id)
+        _incomplete(_canonical_repo(case_root, renamed), job_id)
 
     path = tmp_path / "crlf" / CI / "greenwash.yaml"
     path.parent.mkdir(parents=True)
@@ -115,11 +116,12 @@ def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
 
 
 def test_only_an_unfiltered_pull_request_event_is_healthy(tmp_path):
+    case_root = tmp_path / "event-cases"
     block_pull_request = CANONICAL.replace("on: [pull_request]", "on:\n  pull_request:")
-    _healthy(_canonical_repo(tmp_path / "pull-request", block_pull_request))
+    _healthy(_canonical_repo(case_root, block_pull_request))
     for event in ("push", "merge_group"):
         workflow = CANONICAL.replace("on: [pull_request]", f"on:\n  {event}:")
-        _incomplete(_canonical_repo(tmp_path / event, workflow), event)
+        _incomplete(_canonical_repo(case_root, workflow), event)
 
 def test_local_actions_are_never_proven_gates(tmp_path):
     current = {
@@ -152,6 +154,7 @@ def test_local_actions_are_never_proven_gates(tmp_path):
 
 
 def test_direct_runs_and_text_spoofs_are_never_healthy(tmp_path):
+    case_root = tmp_path / "spoof-cases"
     replacements = {
         "echo": "      # uses: taipei49314/greenwash/action@" + "a" * 40 + "\n"
         "      - run: echo 'greenwash check HEAD~1..HEAD'",
@@ -161,15 +164,16 @@ def test_direct_runs_and_text_spoofs_are_never_healthy(tmp_path):
     }
     gate = re.search(r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M).group(0)
     for label, replacement in replacements.items():
-        _incomplete(_canonical_repo(tmp_path / label, CANONICAL.replace(gate, replacement)), label)
+        _incomplete(_canonical_repo(case_root, CANONICAL.replace(gate, replacement)), label)
 
     env_spoof = CANONICAL.replace(
         "permissions:\n", "env:\n  GREENWASH_COMMAND: greenwash check HEAD~1..HEAD\n\npermissions:\n"
     )
-    _incomplete(_canonical_repo(tmp_path / "env-spoof", env_spoof), "env spoof")
+    _incomplete(_canonical_repo(case_root, env_spoof), "env spoof")
 
 
 def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
+    case_root = tmp_path / "step-cases"
     checkout = re.search(r"^      - uses: actions/checkout@[^\n]+(?:\n        with:\n(?:          [^\n]+\n?)+)", CANONICAL, re.M).group(0).rstrip()
     setup = re.search(r"^      - uses: actions/setup-python@[^\n]+(?:\n        with:\n(?:          [^\n]+\n?)+)", CANONICAL, re.M).group(0).rstrip()
     gate = re.search(r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M).group(0)
@@ -217,10 +221,11 @@ def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
             pin, "0123456789abcdef0123456789abcdef01234567"
         )
     for label, workflow in cases.items():
-        _incomplete(_canonical_repo(tmp_path / label, workflow), label)
+        _incomplete(_canonical_repo(case_root, workflow), label)
 
 
 def test_conditions_unsafe_context_and_event_shorthand_are_incomplete(tmp_path):
+    case_root = tmp_path / "condition-cases"
     cases = {
         "event-shorthand": CANONICAL.replace("on: [pull_request]", "on: pull_request"),
         "pr-target": CANONICAL.replace("pull_request", "pull_request_target", 1),
@@ -267,10 +272,11 @@ def test_conditions_unsafe_context_and_event_shorthand_are_incomplete(tmp_path):
             "    runs-on: ubuntu-latest", f"    {key}: unsafe\n    runs-on: ubuntu-latest"
         )
     for label, workflow in cases.items():
-        _incomplete(_canonical_repo(tmp_path / label, workflow), label)
+        _incomplete(_canonical_repo(case_root, workflow), label)
 
 
 def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
+    case_root = tmp_path / "syntax-cases"
     cases = {
         "unseparated-on": CANONICAL.replace("on: [pull_request]", "on:[pull_request]"),
         "unseparated-runs-on": CANONICAL.replace(
@@ -324,7 +330,7 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
         ),
     }
     for label, workflow in cases.items():
-        _incomplete(_canonical_repo(tmp_path / label, workflow), label)
+        _incomplete(_canonical_repo(case_root, workflow), label)
 
     raw_cases = {
         "double-bom": b"\xef\xbb\xbf\xef\xbb\xbf" + CANONICAL.encode("utf-8"),
@@ -353,9 +359,9 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
             f"# hidden{separator}jobs: {{shadow: {{}}}}\n" + CANONICAL
         ).encode("utf-8")
     for label, payload in raw_cases.items():
-        root = tmp_path / label
+        root = case_root
         path = root / CI / "greenwash.yml"
-        path.parent.mkdir(parents=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(payload)
         _stage(root)
         _incomplete(root, label)
@@ -515,7 +521,7 @@ def test_local_hook_without_ci_and_empty_repo_remain_problems(tmp_path):
 
 
 def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
-    root = _canonical_repo(tmp_path / "healthy")
+    root = _canonical_repo(tmp_path / "limit-cases")
     titles = " | ".join(note.title for note in collect(root))
     assert "cannot tell whether the check is *required*" in titles
     assert "cannot block when it does not run" in titles
@@ -524,7 +530,7 @@ def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
     assert "allowlist expiry is capped at 180 days" in titles
     assert run(str(root), io.StringIO()) == 0
 
-    bad = _canonical_repo(tmp_path / "bad", CANONICAL.replace("on: [pull_request]", "on: pull_request"))
+    bad = _canonical_repo(root, CANONICAL.replace("on: [pull_request]", "on: pull_request"))
     assert run(str(bad), io.StringIO()) == 1
 
     allow = (
@@ -533,7 +539,7 @@ def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
         'rule = "ASSERT_WEAKENED"\nreason = "hand-edited decade"\nauthor = "audit"\n'
         'created = "2020-01-01"\nexpires = "2030-01-01"\n'
     )
-    notes = collect(_repo(tmp_path / "allow", {f"{CI}/greenwash.yml": CANONICAL, ".greenwash/allow.toml": allow}))
+    notes = collect(_repo(root, {f"{CI}/greenwash.yml": CANONICAL, ".greenwash/allow.toml": allow}))
     note = next(note for note in notes if "180 days" in note.title)
     assert "1 over the 180-day cap" in note.detail and "0 active" in note.detail
 
