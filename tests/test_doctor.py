@@ -158,7 +158,22 @@ def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
             "taipei49314/greenwash/action",
             CANONICAL,
         ),
+        "annotated-tag-object": re.sub(
+            r"taipei49314/greenwash/action@[0-9a-f]{40}",
+            "taipei49314/greenwash/action@7b3bc70d391ac79f4d95b834c930e8e8aa04d8eb",
+            CANONICAL,
+        ),
     }
+    pins = {
+        "checkout": "11d5960a326750d5838078e36cf38b85af677262",
+        "setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
+        "greenwash": "ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83",
+    }
+    for label, pin in pins.items():
+        cases[f"zero-{label}"] = CANONICAL.replace(pin, "0" * 40)
+        cases[f"random-{label}"] = CANONICAL.replace(
+            pin, "0123456789abcdef0123456789abcdef01234567"
+        )
     for label, workflow in cases.items():
         _incomplete(_canonical_repo(tmp_path / label, workflow), label)
 

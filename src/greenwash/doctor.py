@@ -19,9 +19,13 @@ class Note:
     detail: str
 
 
-_SHA = r"[0-9a-f]{40}"
 _EVENT = "pull_request"
 _BANNED = {"if", "continue-on-error", "env", "defaults", "strategy", "container"}
+_PINS = {
+    "actions/checkout": "11d5960a326750d5838078e36cf38b85af677262",
+    "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
+    "taipei49314/greenwash/action": "ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83",
+}
 
 
 def _read(path: Path) -> str:
@@ -143,7 +147,7 @@ def _plain_chain(root: Path, relative: str | Path) -> bool:
 
 
 def _uses(props: dict[str, str], owner: str) -> bool:
-    return set(props) == {"uses", "with"} and bool(re.fullmatch(owner + "@" + _SHA, props["uses"]))
+    return set(props) == {"uses", "with"} and props["uses"] == f"{owner}@{_PINS[owner]}"
 
 
 def _healthy_job(body: list[str]) -> bool:
@@ -181,8 +185,8 @@ def _healthy_job(body: list[str]) -> bool:
     if not _uses(setup[0], "actions/setup-python") or setup[1] != {"python-version": '"3.12"'}:
         return False
     props, with_values = gate
-    remote = set(props) == {"uses"} and not with_values and bool(
-        re.fullmatch("taipei49314/greenwash/action@" + _SHA, props.get("uses", ""))
+    remote = set(props) == {"uses"} and not with_values and props["uses"] == (
+        "taipei49314/greenwash/action@" + _PINS["taipei49314/greenwash/action"]
     )
     return remote
 
