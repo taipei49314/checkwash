@@ -55,8 +55,13 @@ def _canonical_repo(tmp_path: pathlib.Path, body: str = CANONICAL, suffix: str =
 def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
     _healthy(_canonical_repo(tmp_path / "lf"))
 
-    sha64 = re.sub(r"(?<=@)([0-9a-f]{40})(?=\s|$)", r"\1" + "a" * 24, CANONICAL)
-    _healthy(_canonical_repo(tmp_path / "sha64", sha64))
+    for action in ("actions/checkout", "actions/setup-python", "taipei49314/greenwash/action"):
+        sha64 = re.sub(
+            rf"(?<={re.escape(action)}@)([0-9a-f]{{40}})(?=\s|$)",
+            r"\1" + "a" * 24,
+            CANONICAL,
+        )
+        _incomplete(_canonical_repo(tmp_path / action.replace("/", "-"), sha64), action)
 
     path = tmp_path / "crlf" / CI / "greenwash.yaml"
     path.parent.mkdir(parents=True)

@@ -20,7 +20,7 @@ class Note:
     detail: str
 
 
-_SHA = r"[0-9a-f]{40}(?:[0-9a-f]{24})?"
+_SHA = r"[0-9a-f]{40}"
 _EVENTS = {"pull_request", "push", "merge_group"}
 _BANNED = {"if", "continue-on-error", "env", "defaults", "strategy", "container"}
 _LOCAL_HASHES = {
