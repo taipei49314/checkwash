@@ -219,17 +219,29 @@ def test_readme_action_snippet_is_zizmor_blanket():
         )
 
     # The required-check snippet is what a visitor pastes. Pinning an old
-    # tag's SHA (v0.1.34 while the README advertised v0.1.40) ships them
-    # an Action six releases behind. The hash must be the advertised tag.
+    # tag's peeled commit (v0.1.34 while the README advertised v0.1.40) ships
+    # them an Action six releases behind. An annotated tag object's SHA is not
+    # a commit and GitHub rejects it as an Action ref, so it must not pass.
     version = _pyproject()["project"]["version"]
     tag = f"v{version}"
     sha = subprocess.check_output(
-        ["git", "rev-parse", tag], cwd=str(ROOT), text=True
+        ["git", "rev-parse", "--verify", f"{tag}^{{commit}}"],
+        cwd=str(ROOT),
+        text=True,
     ).strip()
-    assert f"taipei49314/greenwash/action@{sha}" in snippet, (
-        f"README Action pin is not {tag} ({sha}). After cutting the tag, "
-        "set the snippet SHA to `git rev-parse` of that tag."
+    greenwash_refs = [
+        ref for ref in uses if ref.startswith("taipei49314/greenwash/action@")
+    ]
+    assert greenwash_refs == [f"taipei49314/greenwash/action@{sha}"], (
+        f"README Action pin is not {tag}'s peeled commit ({sha}). After cutting "
+        "the tag, set the snippet SHA to `git rev-parse 'vX.Y.Z^{{commit}}'`."
     )
+    assert "`git rev-parse 'vX.Y.Z^{commit}'`" in readme
+    action_doc = (ROOT / "action" / "README.md").read_text(encoding="utf-8")
+    assert (
+        f"git ls-remote https://github.com/taipei49314/greenwash.git "
+        f"'refs/tags/{tag}^{{}}'"
+    ) in action_doc
 
 
 def test_perf_gate_is_in_default_collection():

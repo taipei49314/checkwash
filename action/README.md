@@ -7,9 +7,9 @@ against the PR (or `HEAD~1` on a push).
 
 Copy the hash-pinned snippet in the root [README](../README.md).
 A tag pin (`actions/checkout@v4`, `taipei49314/greenwash/action@v0.1.41`)
-fails zizmor's default `unpinned-uses` policy. The SHA in that snippet
-is `git rev-parse` of the advertised tag — do not copy an older pin
-from this file.
+fails zizmor's default `unpinned-uses` policy. The SHA in that snippet is the
+advertised tag's **peeled commit** (`git rev-parse 'vX.Y.Z^{commit}'`), not the
+annotated tag object's SHA — do not copy an older pin from this file.
 
 Required in the *caller* workflow, not in this composite file:
 
@@ -64,5 +64,5 @@ is required. `doctor` cannot see whether this ran.
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v4.4.0
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v5.6.0
-git ls-remote https://github.com/taipei49314/greenwash.git refs/tags/v0.1.41
+git ls-remote https://github.com/taipei49314/greenwash.git 'refs/tags/v0.1.41^{}'
 ```

@@ -142,14 +142,16 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@7b3bc70d391ac79f4d95b834c930e8e8aa04d8eb # v0.1.41
+      - uses: taipei49314/greenwash/action@ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83 # v0.1.41
 ```
 
 Hash pins and `persist-credentials: false` are required by
 [zizmor](https://docs.zizmor.sh/audits/#unpinned-uses) blanket policy — a
 tag pin (`@v4`, `@vX.Y.Z`) is two `unpinned-uses` highs. Re-checked
 2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. After a
-greenwash release, replace the last SHA with `git rev-parse vX.Y.Z`.
+greenwash release, replace the last SHA with
+`git rev-parse 'vX.Y.Z^{commit}'` (the peeled release commit, not the annotated
+tag object's SHA).
 See [action/README.md](action/README.md).
 
 Do not gate this job on anything. A conditional gate is the defect this
