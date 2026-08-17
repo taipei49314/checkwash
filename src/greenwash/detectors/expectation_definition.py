@@ -153,9 +153,16 @@ def detect(ir: IR) -> list[Finding]:
                 # the oracle, and a name heuristic would get that wrong.
                 consumed = set(a.right_depends_on)
                 subject_seeds = set(a.left_names)
-                # Membership whose haystack is `result.output`: the current
-                # expect names are the producer. The needle lives in left_names.
-                if _haystack_is_produced(a.text):
+                # Membership whose haystack is `result.output`: the classifier
+                # leaves that side as expect only when the needle is also a
+                # name. A literal needle has already been flipped
+                # (`right_literal` set, `right_depends_on` empty). Swapping
+                # that again blames the producer — T1.11.
+                if (
+                    _haystack_is_produced(a.text)
+                    and a.right_literal is None
+                    and a.right_depends_on
+                ):
                     consumed, subject_seeds = subject_seeds, consumed
                 subject_names = _name_closure(subject_seeds, unit.after.bindings)
                 moved = sorted(

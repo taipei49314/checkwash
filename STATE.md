@@ -1,6 +1,23 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-18 (T1.10 producer/haystack polarity; #86a stays info)
+Updated: 2026-08-18 (T1.11 literal-needle swap; #86a stays info)
+
+## 2026-08-18: T1.11 — do not invert a literal membership needle
+
+T1.10 swapped whenever the haystack was `result.output`. That is right
+when both sides are names (`expected in result.output`). It is wrong
+when the needle is already a literal: the classifier flipped, and
+swapping again reports `result` after `invoke(main)` → `invoke(httpx.main)`.
+
+Swap only if `right_literal` is absent and `right_depends_on` is
+non-empty. Fixture `expectation_definition_literal_needle_neg` first.
+T1.10 fixtures and the #86a pos case stay.
+
+Hypothetical promotion on the same 6×300 pins: **37→41, +4, gone 0**.
+httpx `78d381` / `933551` silent. Remaining extras are the four rich
+commits (`1c5e03e`, `823de91`, `9303d77`, `c8abbb3`). That is the
+§A1 handful. **#86a stays info** — promotion is a maintainer edit of
+`ORACLE_RULES` / SPEC, still #36's gate.
 
 ## 2026-08-18: T1.10 — producer rewrites are not expectation edits
 

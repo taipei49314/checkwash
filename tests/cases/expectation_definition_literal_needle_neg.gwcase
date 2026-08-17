@@ -1,0 +1,32 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: a literal needle in result.output is already the expectation
+origin: T1.11 — do not swap again after the classifier flipped a literal left
+=== before: tests/test_cli.py ===
+class Result:
+    def __init__(self, output):
+        self.output = output
+
+
+def run(flag):
+    return Result("ok" if flag else "no")
+
+
+def test_prints_ok():
+    result = run(True)
+    assert "ok" in result.output
+=== after: tests/test_cli.py ===
+class Result:
+    def __init__(self, output):
+        self.output = output
+
+
+def run(flag):
+    return Result("ok" if flag else "no")
+
+
+def test_prints_ok():
+    result = run(False)
+    assert "ok" in result.output
+=== expect ===
+[]
