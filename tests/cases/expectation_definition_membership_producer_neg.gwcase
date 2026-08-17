@@ -1,0 +1,34 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: rewriting the invoke result is not an expectation edit
+origin: T1.10 — `assert expected in result.output`; result is the haystack, not the oracle
+=== before: tests/test_cli.py ===
+class Result:
+    def __init__(self, output):
+        self.output = output
+
+
+def run(flag):
+    return Result("ok" if flag else "no")
+
+
+def test_prints_ok():
+    result = run(True)
+    expected = "ok"
+    assert expected in result.output
+=== after: tests/test_cli.py ===
+class Result:
+    def __init__(self, output):
+        self.output = output
+
+
+def run(flag):
+    return Result("ok" if flag else "no")
+
+
+def test_prints_ok():
+    result = run(False)
+    expected = "ok"
+    assert expected in result.output
+=== expect ===
+[]

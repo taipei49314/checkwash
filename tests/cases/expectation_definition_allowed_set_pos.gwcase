@@ -1,0 +1,16 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: rewriting a bare-name membership set is still an expectation edit
+origin: T1.10 — `assert x in allowed`; the haystack is the oracle, not a producer attribute
+=== before: tests/test_allowed.py ===
+def test_allowed():
+    x = 1
+    allowed = {1, 2}
+    assert x in allowed
+=== after: tests/test_allowed.py ===
+def test_allowed():
+    x = 1
+    allowed = {1, 2, 3}
+    assert x in allowed
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]

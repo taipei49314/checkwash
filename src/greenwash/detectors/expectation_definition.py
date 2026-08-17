@@ -53,6 +53,8 @@ takes no repair-evidence path, because neither would change what it does.
 
 from __future__ import annotations
 
+import ast
+
 from greenwash.findings import Evidence, Finding, make_fingerprint
 from greenwash.ir.model import IR, normalize_text
 
@@ -68,6 +70,57 @@ def _column_values_edited(before: str, after: str) -> bool:
     """
     b, a = before.split(""), after.split("")
     return len(b) == len(a) and b != a
+
+
+def _haystack_is_produced(text: str) -> bool:
+    """True when a membership haystack is an attribute/subscript of a local.
+
+    `assert expected in result.output` — the container is produced by the
+    test, the needle is the oracle. `assert x in allowed` — the container
+    is a bare name and *is* the oracle. T1.10.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    if not tree.body or not isinstance(tree.body[0], ast.Assert):
+        return False
+    test = tree.body[0].test
+    if not isinstance(test, ast.Compare) or not test.ops:
+        return False
+    if not isinstance(test.ops[0], (ast.In, ast.NotIn)):
+        return False
+    haystack = test.comparators[-1] if test.comparators else None
+    return isinstance(haystack, (ast.Attribute, ast.Subscript))
+
+
+def _names_in_binding_key(key: str) -> set[str]:
+    names: set[str] = set()
+    for part in key.split(""):
+        if not part:
+            continue
+        try:
+            tree = ast.parse(part, mode="eval")
+        except SyntaxError:
+            continue
+        names.update(
+            n.id for n in ast.walk(tree) if isinstance(n, ast.Name)
+        )
+    return names
+
+
+def _name_closure(seeds: set[str], bindings: dict[str, str]) -> set[str]:
+    """Binding-graph closure, same keep-intermediates rule as `_resolve_through`."""
+    seen: set[str] = set()
+    queue = list(seeds)
+    while queue:
+        name = queue.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        if name in bindings:
+            queue.extend(_names_in_binding_key(bindings[name]) - seen)
+    return seen
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -99,27 +152,38 @@ def detect(ir: IR) -> list[Finding]:
                 # actually consumes. Editing the input column is not editing
                 # the oracle, and a name heuristic would get that wrong.
                 consumed = set(a.right_depends_on)
+                subject_seeds = set(a.left_names)
+                # Membership whose haystack is `result.output`: the current
+                # expect names are the producer. The needle lives in left_names.
+                if _haystack_is_produced(a.text):
+                    consumed, subject_seeds = subject_seeds, consumed
+                subject_names = _name_closure(subject_seeds, unit.after.bindings)
                 moved = sorted(
-                    {
-                        name
-                        for name in consumed & set(unit.after.bindings)
-                        if name in unit.before.bindings
-                        and unit.before.bindings[name] != unit.after.bindings[name]
-                    }
-                    | {
-                        name
-                        for name in consumed & set(unit.after.param_columns)
-                        if name in unit.before.param_columns
-                        and _column_values_edited(
-                            unit.before.param_columns[name], unit.after.param_columns[name]
-                        )
-                    }
-                    | {
-                        name
-                        for name in consumed & set(file.fixture_defs)
-                        if name in file.fixture_defs_before
-                        and file.fixture_defs_before[name] != file.fixture_defs[name]
-                    }
+                    name
+                    for name in (
+                        {
+                            name
+                            for name in consumed & set(unit.after.bindings)
+                            if name in unit.before.bindings
+                            and unit.before.bindings[name] != unit.after.bindings[name]
+                        }
+                        | {
+                            name
+                            for name in consumed & set(unit.after.param_columns)
+                            if name in unit.before.param_columns
+                            and _column_values_edited(
+                                unit.before.param_columns[name],
+                                unit.after.param_columns[name],
+                            )
+                        }
+                        | {
+                            name
+                            for name in consumed & set(file.fixture_defs)
+                            if name in file.fixture_defs_before
+                            and file.fixture_defs_before[name] != file.fixture_defs[name]
+                        }
+                    )
+                    if name not in subject_names
                 )
                 if not moved:
                     continue

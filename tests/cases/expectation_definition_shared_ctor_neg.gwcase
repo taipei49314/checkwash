@@ -1,0 +1,36 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: a constructor used on both sides of the comparison is not an expectation
+origin: T1.10 — `hash(C(1)) == hash(C(2))` after the factory kwargs move
+=== before: tests/test_make.py ===
+def make(flag):
+    class C:
+        def __init__(self, n):
+            self.n = n
+
+        def __hash__(self):
+            return self.n if flag else 0
+
+    return C
+
+
+def test_hash_eq():
+    C = make(True)
+    assert hash(C(1)) == hash(C(2))
+=== after: tests/test_make.py ===
+def make(flag):
+    class C:
+        def __init__(self, n):
+            self.n = n
+
+        def __hash__(self):
+            return self.n if flag else 0
+
+    return C
+
+
+def test_hash_eq():
+    C = make(False)
+    assert hash(C(1)) == hash(C(2))
+=== expect ===
+[]

@@ -1,0 +1,26 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: rewriting the needle of an `in` is an expectation edit
+origin: T1.10 — the producer-rewrite silence must not hide a moved expected fragment
+=== before: tests/test_cli.py ===
+class Result:
+    def __init__(self, output):
+        self.output = output
+
+
+def test_prints_ok():
+    result = Result("ok")
+    expected = "ok"
+    assert expected in result.output
+=== after: tests/test_cli.py ===
+class Result:
+    def __init__(self, output):
+        self.output = output
+
+
+def test_prints_ok():
+    result = Result("ok")
+    expected = "yes"
+    assert expected in result.output
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]

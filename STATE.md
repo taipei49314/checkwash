@@ -1,6 +1,27 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-18 (T1.9 package-repair credit; #86a stays info)
+Updated: 2026-08-18 (T1.10 producer/haystack polarity; #86a stays info)
+
+## 2026-08-18: T1.10 — producer rewrites are not expectation edits
+
+`EXPECTATION_DEFINITION_CHANGED` was naming the wrong local on test-only
+setup diffs: `result` after `runner.invoke` moved, `C` after factory
+kwargs moved, `auth` after `DigestAuth` → `httpx.DigestAuth`. The
+assertion line was untouched and the needle / compared values had not
+moved.
+
+Two stated filters, fixtures first (#41):
+
+- Membership whose haystack is an Attribute/Subscript (`result.output`)
+  treats that side as the subject. `assert x in allowed` (bare Name)
+  still fires when `allowed` changes.
+- A moved binding that appears in the resolved subject-name closure is
+  a shared producer, not an oracle. #86a pos fixture still fires.
+
+Named extras re-checked: httpx `7985f68`, attrs `6e51cb7`, click
+`efd4daf` / `bb2a1d9` go silent. rich goldens `823de91` / `9303d77` /
+`c8abbb3` and the motivating `1c5e03e` still report. **#86a stays
+info.** Promotion remains #36's gate.
 
 ## 2026-08-18: T1.9 remaining credit — PACKAGE_REPAIR marks this rule
 
