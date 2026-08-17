@@ -1,6 +1,36 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-15 (v0.1.42: fail-closed zipapp exits and a proof-bounded doctor)
+Updated: 2026-08-18 (T1.9 package-repair credit; #86a stays info)
+
+## 2026-08-18: T1.9 remaining credit — PACKAGE_REPAIR marks this rule
+
+Helper hop + D9 already shipped in v0.1.34. D-037 named a second
+defensible credit: the existing PACKAGE_REPAIR shape (test imports a
+package in which a *modified existing* symbol lives; not "any prod
+file", not top-level-package equality). That mark now applies to
+`EXPECTATION_DEFINITION_CHANGED` at info. The oracle-path
+`package_only` / D9 tuples include the rule so promotion stays a
+one-line `ORACLE_RULES` add. Fixtures written first from the httpx
+URL-parser shape, not from the thirteen SHAs.
+
+Hypothetical promotion on the same 6x300 windows: **37→45, +8**.
+Previous T1.9 promotion was +13. Five of the six prod+test extras
+are now credited (attrs `bde3f58`, click `029bbed` / `19fd4d6` /
+`4e4c7a6`, rich `e9b0e19`). Remaining extras, all named:
+
+- attrs `6e51cb7` — test-only `hash=` → `unsafe_hash=`
+- click `efd4daf` — test-only parametrize expansion
+- click `bb2a1d9` — test-only parametrize column reshape
+- httpx `7985f68` — test-only `Response` → `httpx.Response`
+- rich `1c5e03e` — the original motivating commit; helper calls
+  `Console.print`, changed symbol is `Table._get_padding_width`
+  (sibling module; T1.9 one-hop does not name it)
+- rich `823de91` / `9303d77` / `c8abbb3` — test-only golden /
+  3.13 repr updates
+
+Eight is still past the §A1 handful (ΔFP ≤ 5). **#86a stays info,
+outside `ORACLE_RULES`.** Threshold does not move. Issue #36 stays
+the promotion gate.
 
 ## 2026-08-15 (v0.1.42): the downloadable CLI now carries its verdict
 

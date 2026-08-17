@@ -37,3 +37,23 @@ def test_case(case_path):
 
 def test_cases_exist():
     assert len(CASES) >= 10, "fixture corpus shrank — pos/neg cases are the FP defence line"
+
+
+def test_expectation_definition_package_unrelated_has_no_credit():
+    """Subset matching cannot say 'PACKAGE_REPAIR is absent'; pin it here.
+
+    A modified symbol in a package the test does not import must not mark
+    EXPECTATION_DEFINITION_CHANGED. The paired *_neg fixture requires the
+    mark when the import reaches the package.
+    """
+    case_path = pathlib.Path(__file__).parent / "cases" / (
+        "expectation_definition_package_unrelated_pos.gwcase"
+    )
+    case = parse_case(case_path.read_text(encoding="utf-8"))
+    _ir, findings, _verdict = analyze(
+        case_to_changes(case), Config(), Contract(), [], TODAY
+    )
+    hits = [f for f in findings if f.rule == "EXPECTATION_DEFINITION_CHANGED"]
+    assert hits, "rule did not fire"
+    credits = {"PACKAGE_REPAIR", "REPAIR_EVIDENCE", "DEPENDENCY_DRIFT"}
+    assert not credits.intersection(hits[0].deescalators), hits[0].deescalators

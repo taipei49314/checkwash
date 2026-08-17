@@ -443,6 +443,12 @@ def apply_gates(
                     f.deescalators.append("DEPENDENCY_DRIFT")
                 elif _repair_evidence(unit, ir, f.path):
                     f.deescalators.append("REPAIR_EVIDENCE")
+                elif _package_evidence(f.path, ir):
+                    # D-037's second credit: same PACKAGE_REPAIR shape
+                    # EXPECTED_VALUE_CHANGED already uses. Mark only — the
+                    # rule stays info and outside ORACLE_RULES until a
+                    # promotion sweep clears the §A1 handful.
+                    f.deescalators.append("PACKAGE_REPAIR")
             # Non-oracle escalations from the SPEC §5 table.
             if f.rule == "GUARDRAIL_TOUCHED":
                 # E4, but only for a constraint that existed. Creating one has
@@ -591,7 +597,7 @@ def apply_gates(
         )
         package_only = (
             not has_evidence
-            and f.rule == "EXPECTED_VALUE_CHANGED"
+            and f.rule in ("EXPECTED_VALUE_CHANGED", "EXPECTATION_DEFINITION_CHANGED")
             and _package_evidence(f.path, ir)
         )
         # An expectation literal tracking a dependency change: httpx 0.28
@@ -614,7 +620,11 @@ def apply_gates(
         dep_drift = (
             not has_evidence
             and not package_only
-            and f.rule in ("EXPECTED_VALUE_CHANGED", "ASSERT_SUBSTITUTED")
+            and f.rule in (
+                "EXPECTED_VALUE_CHANGED",
+                "ASSERT_SUBSTITUTED",
+                "EXPECTATION_DEFINITION_CHANGED",
+            )
             and ir.globals.dependency_manifest_changed
         )
         # A production change never makes it correct to stop *collecting*

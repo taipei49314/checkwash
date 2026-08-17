@@ -1,0 +1,34 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: a same-file helper that calls the changed prod symbol is repair evidence
+origin: T1.9 — the helper-hop credit on this rule, not only on ASSERT_WEAKENED
+=== before: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== after: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax) + 5.0, 2)
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def render(items):
+    return invoice_total(items, 0.05)
+
+
+def test_invoice_renders():
+    expected = 105.0
+    assert render([50.0, 50.0]) == expected
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def render(items):
+    return invoice_total(items, 0.05)
+
+
+def test_invoice_renders():
+    expected = 110.0
+    assert render([50.0, 50.0]) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info", "deescalators": ["REPAIR_EVIDENCE"]}]

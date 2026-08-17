@@ -1,0 +1,26 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: a modified symbol in a package the test does not import is not PACKAGE_REPAIR
+origin: T1.9 — the credit is import-reachable, not "any prod file changed"
+=== before: otherpkg/util.py ===
+def helper(x):
+    return x + 1
+=== after: otherpkg/util.py ===
+def helper(x):
+    return x + 2
+=== before: tests/test_invoice.py ===
+import billing
+
+
+def test_invoice():
+    expected = 105.0
+    assert billing.invoice_total([50.0, 50.0], 0.05) == expected
+=== after: tests/test_invoice.py ===
+import billing
+
+
+def test_invoice():
+    expected = 110.0
+    assert billing.invoice_total([50.0, 50.0], 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]

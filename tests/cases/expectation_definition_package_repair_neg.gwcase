@@ -1,0 +1,26 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: a modified symbol in the imported package is PACKAGE_REPAIR for a moved expectation definition
+origin: T1.9 — D-037's second credit; httpx URL-parser shape, not a corpus SHA
+=== before: billing/_math.py ===
+def total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== after: billing/_math.py ===
+def total(items, tax):
+    return round(sum(items) * (1 + tax) + 5.0, 2)
+=== before: tests/test_invoice.py ===
+import billing
+
+
+def test_invoice():
+    expected = 105.0
+    assert billing.invoice_total([50.0, 50.0], 0.05) == expected
+=== after: tests/test_invoice.py ===
+import billing
+
+
+def test_invoice():
+    expected = 110.0
+    assert billing.invoice_total([50.0, 50.0], 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info", "deescalators": ["PACKAGE_REPAIR"]}]
