@@ -142,7 +142,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83 # v0.1.41
+      - uses: taipei49314/greenwash/action@dacae21258e9ab6c7557c69e0d314341ef8e2441 # v0.1.42
 ```
 
 Hash pins and `persist-credentials: false` are required by
@@ -196,7 +196,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/greenwash/action@ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83 # v0.1.41
+- uses: taipei49314/greenwash/action@dacae21258e9ab6c7557c69e0d314341ef8e2441 # v0.1.42
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
