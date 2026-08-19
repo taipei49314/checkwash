@@ -304,9 +304,15 @@ def _approx_epsilon(call: ast.Call, text: str) -> tuple[str | None, str | None]:
         if seg:
             parts.append(("rel", seg))
     if not parts:
-        # `approx(42)` with no tolerance at all still has an implicit default;
-        # record it so approx(42) -> approx(7) is a value change, not silence.
-        return None, None
+        # `approx(42)` still carries pytest's implicit default (rel=1e-06,
+        # abs=1e-12). Recording it makes a tolerance that APPEARS in the head
+        # a widening of that default instead of silence — the comment here
+        # claimed as much for two releases while the code returned None
+        # (audit 2026-08-19). One default kind suffices: it turns every
+        # one-sided tolerance event two-sided, and tightening to the default
+        # reads equal and stays quiet. Keyed form, like every other single
+        # tolerance, so the detector's per-kind parse sees the same key.
+        return "rel=1e-06", "rel"
     parts.sort()
     return "|".join(f"{k}={v}" for k, v in parts), "multi" if len(parts) > 1 else parts[0][0]
 
@@ -490,7 +496,19 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
     approx = _find_approx_call(test)
     if approx is not None:
         eps, kind = _approx_epsilon(approx, text)
-        return _Classified("approx", S.APPROX, epsilon=eps, epsilon_kind=kind)
+        # The argument of the approx call is the expected value; recording it
+        # puts `approx(105.0)` -> `approx(100.0)` in front of
+        # EXPECTED_VALUE_CHANGED. Strength is APPROX on both sides, so the
+        # rewrite was completely invisible before (audit 2026-08-19).
+        expected = approx.args[0] if approx.args else None
+        return _Classified(
+            "approx",
+            S.APPROX,
+            right_literal=_literal_repr(expected, text) if expected is not None else None,
+            right_value=_literal_value(expected) if expected is not None else None,
+            epsilon=eps,
+            epsilon_kind=kind,
+        )
     if isinstance(test, ast.Compare) and test.ops:
         left = test.left
         comparators = test.comparators
@@ -774,6 +792,12 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             seg = text.seg(node.args[2])
             if seg:
                 epsilon, epsilon_kind = seg, "places"
+        if epsilon is None:
+            # assertAlmostEqual's implicit default is places=7. Recording it
+            # makes `places=0` appearing a loosening of that default instead
+            # of silence — same one-sided-event defect as pytest.approx
+            # (audit 2026-08-19).
+            epsilon, epsilon_kind = "7", "places"
     if form == "truthy" and node.args and _is_literal(node.args[0]):
         form, level = "tautology", S.TAUTOLOGY
     if form == "compare_eq" and subject_node is not None and expect_node is not None:

@@ -1,0 +1,27 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: the expected literal rewritten to whatever the buggy code returns,
+note2: wrapped in approx. The approx classification discarded left/right
+note3: literals, so EXPECTED_VALUE_CHANGED never saw it — falsifies row
+note4: 15's closure for approx-wrapped expectations.
+origin: audit 2026-08-19, verdict pass with zero findings
+=== before: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    items = [50.0, 50.0]
+    assert app.invoice_total(items, 0.05) == pytest.approx(105.0)
+=== after: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    items = [50.0, 50.0]
+    assert app.invoice_total(items, 0.05) == pytest.approx(100.0)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

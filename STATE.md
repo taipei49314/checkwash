@@ -1,6 +1,43 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A1: unittest classifier parity)
+Updated: 2026-08-19 (audit round A2: approx tolerances and expected literals)
+
+## 2026-08-19: A2 — a tolerance that appears, and an expectation approx hides
+
+Two silent-pass defects in the approx family, both from the 2026-08-19
+external audit and reproduced with the real CLI before the fix:
+
+- **The appearing tolerance.** diffalign compares epsilons only when both
+  sides have one, so `pytest.approx(105.0)` → `pytest.approx(105.0, rel=0.5)`
+  — five orders of magnitude of new slack over the implicit default — and
+  the unittest spelling `assertAlmostEqual(x, 105.0)` →
+  `assertAlmostEqual(x, 105.0, places=0)` produced nothing at all.
+  `_approx_epsilon` now records pytest's implicit default (`rel=1e-06`,
+  keyed form so the detector's per-kind parse agrees), and the unittest
+  classifier records `places=7`. Every one-sided event became two-sided;
+  tightening to the default reads equal and stays quiet (direction pinned
+  by a negative fixture). The dead branch in tolerance_loosened ("a
+  tolerance that did not exist before is new slack") is reachable through
+  the multi-key path as before — the appearance itself is now the more
+  precise signal.
+- **The hidden expected literal.** The approx classification discarded
+  left/right literals, so `approx(105.0)` → `approx(100.0)` — the row-15
+  cheat wearing approx — was invisible to EXPECTED_VALUE_CHANGED (strength
+  APPROX on both sides, nothing else to see). The approx argument is now
+  recorded as the expected literal.
+
+The `_approx_epsilon` docstring claimed the default-recording behaviour two
+releases ago ("record it so approx(42) -> approx(7) is a value change, not
+silence") while the code returned `(None, None)` — this round ships what the
+comment promised.
+
+Gates: 447 tests all green (was 443); recorded arms, tamper and refactor
+corpora unchanged; dogfood clean. Fixtures: approx_tolerance_added_pos,
+approx_expected_rewrite_pos, almost_places_added_pos,
+approx_default_tightened_neg. Residual: a default recorded for `rel` only —
+`abs`-only edits against the implicit 1e-12 are still one-sided in the
+multi-key path, which classifies them as new slack (the fail-toward-flagging
+side).
 
 ## 2026-08-19: A1 — the unittest classifier grows the bare path's twins
 

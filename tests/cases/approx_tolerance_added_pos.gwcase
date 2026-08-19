@@ -1,0 +1,27 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+note: a tolerance that did not exist before. approx(105.0) carries pytest's
+note2: implicit rel=1e-06; adding rel=0.5 widens it by five orders of
+note3: magnitude. The comparison required an epsilon on BOTH sides, so the
+note4: appearance of slack was invisible.
+origin: audit 2026-08-19, verdict pass with zero findings
+=== before: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    items = [50.0, 50.0]
+    assert app.invoice_total(items, 0.05) == pytest.approx(105.0)
+=== after: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    items = [50.0, 50.0]
+    assert app.invoice_total(items, 0.05) == pytest.approx(105.0, rel=0.5)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
