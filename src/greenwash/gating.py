@@ -87,6 +87,31 @@ def _unit_index(ir: IR) -> dict[tuple[str, str], Unit]:
     return index
 
 
+def _module_alignment(module: str, imports: list[str]) -> int:
+    """The longest aligned component prefix between `module` and any import.
+
+    `_module_reachable` answers the same question at depth >= 1; the symbol
+    matcher additionally needs to know HOW aligned the reach was, because a
+    root-level import (`from app import billing`) reaches every module in
+    the package at depth 1 — and depth 1 is also exactly how much two
+    unrelated sibling modules share.
+    """
+    if not module:
+        return 99  # a top-level module file: any import reaches it, as ever
+    mod = [c for c in module.split(".") if c]
+    best = 0
+    for imp in imports:
+        want = [c for c in imp.split(".") if c]
+        if not want:
+            continue
+        for start in range(len(mod)):
+            tail = mod[start:]
+            overlap = min(len(tail), len(want))
+            if tail[:overlap] == want[:overlap] and overlap > best:
+                best = overlap
+    return best
+
+
 def _module_reachable(module: str, imports: list[str]) -> bool:
     """Could a test importing `imports` be reaching into `module`?
 
@@ -102,19 +127,7 @@ def _module_reachable(module: str, imports: list[str]) -> bool:
     package, but no suffix of one aligns with the other, so the same-package
     collision (bypass #35) is refused exactly as before.
     """
-    if not module:
-        return True
-    mod = [c for c in module.split(".") if c]
-    for imp in imports:
-        want = [c for c in imp.split(".") if c]
-        if not want:
-            continue
-        for start in range(len(mod)):
-            tail = mod[start:]
-            overlap = min(len(tail), len(want))
-            if tail[:overlap] == want[:overlap]:
-                return True
-    return False
+    return _module_alignment(module, imports) >= 1
 
 
 def _symbol_match(
@@ -127,16 +140,42 @@ def _symbol_match(
     `module_b.calculate` — a same-name collision in an unrelated module
     (confirmed bypass). The changed symbol's module must also be reachable
     from what this test file imports.
+
+    Reachable at depth 1 is not enough for a leaf-name hit (D-038, audit
+    2026-08-19): a root-level import (`from app import billing`) reaches
+    every module in the package, so `app.util::calculate` paid for a test of
+    `app.billing.calculate` with one dead edit in a sibling — bypass #35's
+    shape, reopened through the reachability fix that closed it. A leaf hit
+    now additionally needs either a two-component alignment, or a dotted
+    call whose first component IS the changed module's leaf — the honest
+    root-import shape (`from app import billing; billing.calculate()` and
+    the diff changes `app.billing::calculate`) keeps its credit through the
+    second clause. Full-qual matches are unchanged. Stated residual: an
+    aliased root import (`from app import billing as b; b.calculate()`)
+    loses the second clause and reads as no evidence — visible at warn,
+    allowlistable, and priced below reopening the sibling hole.
     """
     call_set = set(calls)
     for entry in changed_symbols:
         module, _, qual = entry.rpartition("::")
         leaf = qual.rsplit(".", 1)[-1]
-        if qual not in call_set and leaf not in call_set:
+        qual_hit = qual in call_set
+        leaf_hit = leaf in call_set
+        if not qual_hit and not leaf_hit:
             continue
         # No import information (unparsed test file): fall back to the old,
         # more permissive behaviour rather than inventing evidence either way.
-        if imports is None or _module_reachable(module, imports):
+        if imports is None:
+            return True
+        if qual_hit and _module_reachable(module, imports):
+            return True
+        if leaf_hit and (
+            _module_alignment(module, imports) >= 2
+            or any(
+                "." in c and c.split(".")[0] == module.rsplit(".", 1)[-1]
+                for c in call_set
+            )
+        ):
             return True
     return False
 

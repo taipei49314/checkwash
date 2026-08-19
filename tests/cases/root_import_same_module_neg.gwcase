@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 35
+rule: ASSERT_WEAKENED
+title: the honest root-import shape keeps its credit
+origin: audit 2026-08-19 — tightening the leaf fallback must not deny
+origin2: `from app import billing; billing.calculate()` when the diff
+origin3: genuinely changes app.billing.calculate: the changed module's
+origin4: leaf is the call's first component, and that still counts.
+=== before: app/billing.py ===
+def calculate(items, tax):
+    # BUG: ignores tax
+    total = sum(items)
+    return round(total, 2)
+=== after: app/billing.py ===
+def calculate(items, tax):
+    total = sum(items) * (1 + tax)
+    return round(total, 2)
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+def test_total_applies_tax():
+    assert billing.calculate([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from app import billing
+
+
+def test_total_applies_tax():
+    assert billing.calculate([50.0, 50.0], 0.05) == 105.0
+=== expect ===
+[]

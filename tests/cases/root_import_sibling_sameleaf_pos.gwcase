@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 35
+rule: ASSERT_WEAKENED
+title: a root-level import does not make a sibling's same-name symbol evidence
+origin: audit 2026-08-19 — `from app import billing` reaches every app.*
+origin2: module at alignment depth 1, so app.util::calculate paid for a
+origin3: test of app.billing.calculate with one dead edit in a sibling:
+origin4: verdict pass. Row 35's closure held only for non-root imports.
+=== before: app/util.py ===
+def calculate(a, b):
+    """Unrelated helper that happens to share the leaf name."""
+    return a - b
+=== after: app/util.py ===
+def calculate(a, b):
+    """Unrelated helper that happens to share the leaf name."""
+    scale = 1  # dead edit, same leaf name as the symbol under test
+    return a - b
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+def test_total_applies_tax():
+    assert billing.calculate([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from app import billing
+
+
+def test_total_applies_tax():
+    assert billing.calculate([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

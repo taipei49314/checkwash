@@ -1,6 +1,29 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A9: the cap's anchor and the silent config)
+Updated: 2026-08-19 (audit round B1: depth-1 reachability buys no leaf names)
+
+## 2026-08-19: B1 — a root import reaches every sibling, and that is not evidence
+
+Frozen-zone change (gating.py), maintainer-approved, D-046. A root-level
+import (`from app import billing`) reaches every module in the package at
+alignment depth 1 — exactly as much as two unrelated siblings share — so the
+leaf-name fallback in `_symbol_match` let `app.util::calculate` pay for a
+weakened test of `app.billing.calculate` with one dead edit: bypass #35
+reopened through its own closure (audit probe reproduced as verdict pass,
+now block at high on the same scratch repo).
+
+A leaf hit now needs ≥2 aligned components, or a dotted call whose first
+component is the changed module's leaf (the honest root-import shape keeps
+its credit). Full-qual matches, the `imports is None` fallback, PACKAGE_REPAIR
+and the src-layout behaviour are unchanged — the audit's X4 shape
+(root import + sibling symbol feeding package evidence) is the httpx case
+PACKAGE_REPAIR exists for and is filed as a THREATMODEL row, not closed.
+Residual: aliased root imports lose clause (b); visible at warn.
+
+Gates: 463 tests all green (was 461); arms/tamper/refactor corpora
+unchanged; dogfood clean. Fixtures: root_import_sibling_sameleaf_pos,
+root_import_same_module_neg; FAILURES.md regenerated (row 35 carries both
+new pins).
 
 ## 2026-08-19: A9 — anchors and warnings
 

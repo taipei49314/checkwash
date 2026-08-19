@@ -1657,3 +1657,44 @@ EXT_007/020/028 whose fixture-returning-checker lives in the test file itself
 before being counted). Corpus judges now declare `app` as a known module —
 the corpora ship `app.*` by construction, and the IMPORT_UNRESOLVED warns on
 every new helper file were harness under-specification, not engine findings.
+
+## D-046 (2026-08-19): depth-1 reachability is not evidence for a leaf name
+
+*Maintainer-approved frozen-zone change (gating.py), applied by the audit
+round, D-038 reference in the code comment corrected to this entry.*
+
+**Incident.** The 2026-08-19 external audit reopened bypass #35 through the
+fix that closed it. `_symbol_match` accepts a leaf-name hit when the changed
+symbol's module is "reachable" from the test's imports — but
+`_module_reachable` is alignment at depth ≥ 1, and a root-level import
+(`from app import billing`, recorded as `"app"`) reaches **every** module in
+the package at exactly depth 1. Measured with the real CLI: weaken the
+assertion, edit a same-leaf-name function in a sibling module the test never
+reads (`app/util.py::calculate` while the test exercises
+`app.billing.calculate`), verdict **pass** with `REPAIR_EVIDENCE`. The
+row-35 closure held only for imports deeper than the root.
+
+**Frozen:** a leaf-name hit grants evidence only with (a) ≥2 aligned
+components between the changed module and some import, or (b) a dotted call
+in the unit whose first component **is** the changed module's leaf — the
+honest root-import shape (`from app import billing; billing.calculate()`
+over a real change to `app.billing::calculate`) keeps its credit through
+(b). Full-qual matches and the `imports is None` fallback are unchanged.
+`_module_alignment` is the shared implementation; `_module_reachable`
+remains `>= 1` for every other consumer, so PACKAGE_REPAIR and the
+src-layout fix are untouched — which also means the audit's X4 shape
+(root import + any sibling symbol edit feeding `_package_evidence`) is
+**unchanged by design**: it is structurally the httpx case PACKAGE_REPAIR
+exists for, and closing it would re-block the 13 httpx commits the rule
+was measured on. Filed as a THREATMODEL row instead.
+
+**Cost accepted:** an aliased root import (`from app import billing as b;
+b.calculate()`) loses clause (b) and reads as no evidence — visible at
+warn, allowlistable. Priced below reopening the sibling hole. The same
+audit's PACKAGE_REPAIR/X4 and fingerprint-rename residuals are stated as
+THREATMODEL rows rather than half-fixed here.
+
+**Verification:** fixtures `root_import_sibling_sameleaf_pos` (the attack
+blocks at high) and `root_import_same_module_neg` (the honest shape keeps
+REPAIR_EVIDENCE); the audit's original scratch repo flips pass → block;
+arms/tamper/refactor corpora unchanged; dogfood clean.
