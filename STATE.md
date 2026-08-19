@@ -1,8 +1,33 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A8: git's answers, taken verbatim)
+Updated: 2026-08-19 (audit round A9: the cap's anchor and the silent config)
 
-## 2026-08-19: A8 — the two places git's output was trusted unquoted
+## 2026-08-19: A9 — anchors and warnings
+
+- **The 180-day cap anchored at the ledger's own `created`.** A hand-edited
+  base-side entry with `created = "2030-01-01"` / `expires = "2030-06-01"` —
+  a 151-day window that does not even start for years — was honoured today
+  (audit 2026-08-19, reproduced as `allowlisted=True` → verdict pass), which
+  is precisely the hand-edited-ledger scenario bypass #39's read-side
+  enforcement exists for. `_entry_state` is now the one implementation both
+  consumers share (the doctor summary and the gate can never disagree), and
+  the anchor is `min(created, today)`. Pinned by
+  allowlist_future_created_pos alongside the existing over_cap fixture;
+  FAILURES.md regenerated (row 39 now carries both pins).
+- **Value-level config problems were silently ignored.** Only TOML *parse*
+  failures produced a diagnostic; `on_engine_error = "Block"` (capital B),
+  `fail_on = 5`, a non-list `roles` entry or an unknown role name all fell
+  through to defaults with `config_errors: []` — and the on_engine_error
+  typo reverts in the loosening direction. `load_config` now returns
+  warnings for rejected values, threaded into stderr and `config_errors`
+  (and the term report) but never fatal: the one value a warning can
+  concern must not become the engine error it describes. Pinned by e2e
+  test_config_value_warning_is_visible_not_fatal.
+
+Gates: 461 tests all green (was 459); arms/tamper/refactor corpora
+unchanged; dogfood clean.
+
+## 2026-08-19: A8 — the two places git's answers were trusted unquoted
 
 - **grep_head_paths** ran `git grep -l -F` without `-z`: with the default
   `core.quotepath`, every non-ASCII path came back C-quoted

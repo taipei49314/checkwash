@@ -100,7 +100,7 @@ behind it* unshippable.
 | 36 | An unrelated `except AssertionError: pass` riding on a sibling test's repair evidence | `row36_file_scoped_no_sibling_evidence_pos.gwcase` |
 | 37 | Widen `abs` while leaving `rel` alone | `tolerance_second_kind_pos.gwcase` |
 | 38 | Put the expectation on the left: `assert 3 == calc()` | `expected_on_left_pos.gwcase` |
-| 39 | Hand-edit an exemption past the 180-day cap | `allowlist_over_cap_pos.gwcase` |
+| 39 | Hand-edit an exemption past the 180-day cap | `allowlist_future_created_pos.gwcase`, `allowlist_over_cap_pos.gwcase` |
 | 40 | `__test__ = False` at module or class scope de-collects everything | `test_attr_false_class_pos.gwcase`, `test_attr_false_pos.gwcase` |
 | 41 | `pytest.param(..., marks=pytest.mark.skip)` on every row: the row count never changes | `param_marks_skip_pos.gwcase` |
 | 42 | Narrow `python_files` / `testpaths`, or add `addopts = -k ...`, in `pytest.ini` / `tox.ini` / `setup.cfg` / `pyproject.toml` | `pytest_ini_narrowed_pos.gwcase` |

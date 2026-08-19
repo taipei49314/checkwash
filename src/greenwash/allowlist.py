@@ -67,6 +67,34 @@ class AllowSummary:
     over_cap: int
 
 
+def _entry_state(e: AllowEntry, today: datetime.date) -> str:
+    """`active`, `expired`, `over_cap`, or `invalid` — the one implementation
+    both consumers share, so the doctor's summary and the gate can never
+    disagree (their docstrings promise "same rules").
+
+    The cap is anchored at `min(created, today)`: anchoring at `created`
+    alone let a hand-edited ledger set `created = "2030-01-01"` /
+    `expires = "2030-06-01"` — a 151-day window that does not even start for
+    years — and be honoured today, which defeats the read-side enforcement
+    exactly the way bypass #39 closed (audit 2026-08-19). A missing or
+    unparseable `created` still anchors at today.
+    """
+    try:
+        expiry = datetime.date.fromisoformat(e.expires)
+    except ValueError:
+        return "invalid"
+    try:
+        start = datetime.date.fromisoformat(e.created)
+    except ValueError:
+        start = today
+    anchor = min(start, today)
+    if (expiry - anchor).days > MAX_EXPIRY_DAYS:
+        return "over_cap"
+    if expiry < today:
+        return "expired"
+    return "active"
+
+
 def summarize_allowlist(data: bytes | None, today: datetime.date) -> AllowSummary:
     """How the ledger will be honoured today. Same rules as `active_fingerprints`."""
     if not data:
@@ -76,21 +104,13 @@ def summarize_allowlist(data: bytes | None, today: datetime.date) -> AllowSummar
         return AllowSummary(True, err, 0, 0, 0, 0)
     active = expired = over_cap = 0
     for e in entries:
-        try:
-            expiry = datetime.date.fromisoformat(e.expires)
-        except ValueError:
-            continue
-        try:
-            start = datetime.date.fromisoformat(e.created)
-        except ValueError:
-            start = today
-        if (expiry - start).days > MAX_EXPIRY_DAYS:
+        state = _entry_state(e, today)
+        if state == "over_cap":
             over_cap += 1
-            continue
-        if expiry < today:
+        elif state == "expired":
             expired += 1
-            continue
-        active += 1
+        elif state == "active":
+            active += 1
     return AllowSummary(True, None, len(entries), active, expired, over_cap)
 
 
@@ -99,23 +119,11 @@ def active_fingerprints(entries: list[AllowEntry], today: datetime.date) -> set[
 
     The MAX_EXPIRY_DAYS cap was only checked when `greenwash allow` wrote an
     entry, so a hand-edited ledger could grant a ten-year exemption and be
-    honoured (reader audit 2026-08-02). The cap is enforced here too, against
-    `created` where it is present and against today otherwise, so the reading
-    side never trusts a window the writing side would have refused.
+    honoured (reader audit 2026-08-02). The cap is enforced here too,
+    anchored at `min(created, today)` — see `_entry_state` for why the
+    anchor is not `created` alone — so the reading side never trusts a
+    window the writing side would have refused.
     """
-    active: set[str] = set()
-    for e in entries:
-        try:
-            expiry = datetime.date.fromisoformat(e.expires)
-        except ValueError:
-            continue
-        if expiry < today:
-            continue
-        try:
-            start = datetime.date.fromisoformat(e.created)
-        except ValueError:
-            start = today
-        if (expiry - start).days > MAX_EXPIRY_DAYS:
-            continue  # over the cap: treat as not exempted
-        active.add(e.fingerprint)
-    return active
+    return {
+        e.fingerprint for e in entries if _entry_state(e, today) == "active"
+    }

@@ -99,7 +99,7 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
             # A root commit has no parent: nothing to diff, not an error.
             result.skipped += 1
             continue
-        config, _err = load_config(read_base_file(repo, parent, ".greenwash/config.toml"))
+        config, _err, _warn = load_config(read_base_file(repo, parent, ".greenwash/config.toml"))
         if fail_on:
             config.fail_on = fail_on
         allow, _aerr = load_allowlist(read_base_file(repo, parent, ".greenwash/allow.toml"))

@@ -149,7 +149,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
                             return hits
             return hits
 
-    config, config_error = load_config(read_base_file(repo, config_side, ".greenwash/config.toml"))
+    config, config_error, config_warnings = load_config(
+        read_base_file(repo, config_side, ".greenwash/config.toml")
+    )
     if args.fail_on:
         config.fail_on = args.fail_on
     allow_entries, allow_error = load_allowlist(
@@ -157,8 +159,12 @@ def _cmd_check(args: argparse.Namespace) -> int:
     )
     # A config that silently fails to parse used to revert a hardened gate to
     # defaults with no diagnostic anywhere (confirmed red-team finding).
+    # Value-level warnings are visible in the same channels but never fatal:
+    # the one value a warning can concern (on_engine_error itself) must not
+    # become the engine error it describes (audit 2026-08-19).
     errors = [e for e in (config_error, allow_error) if e]
-    for message in errors:
+    diagnostics = errors + config_warnings
+    for message in diagnostics:
         print(f"greenwash: {message}", file=sys.stderr)
     if errors and config.on_engine_error == "block":
         return 2
@@ -213,7 +219,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         _write_machine(ir_to_json(ir))
         return 0
     if args.format == "json":
-        _write_machine(findings_to_json(ir, findings, verdict, errors))
+        _write_machine(findings_to_json(ir, findings, verdict, diagnostics))
     elif args.format == "sarif":
         _write_machine(findings_to_sarif(ir, findings))
     elif args.format == "hook-json":
@@ -242,7 +248,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
             _write_machine("{}\n")
         return 0
     else:
-        _write_term(render(ir, findings, verdict, config.fail_on, errors=errors))
+        _write_term(render(ir, findings, verdict, config.fail_on, errors=diagnostics))
     return 1 if verdict == "block" else 0
 
 
