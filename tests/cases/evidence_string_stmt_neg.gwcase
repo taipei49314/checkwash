@@ -1,4 +1,5 @@
 === meta ===
+bypass: 4
 rule: ASSERT_WEAKENED
 note: a bare string statement after the docstring — docstring stripping
 note2: only removes body[0], so this noise flipped the fingerprint and

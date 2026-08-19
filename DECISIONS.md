@@ -1698,3 +1698,26 @@ THREATMODEL rows rather than half-fixed here.
 blocks at high) and `root_import_same_module_neg` (the honest shape keeps
 REPAIR_EVIDENCE); the audit's original scratch repo flips pass → block;
 arms/tamper/refactor corpora unchanged; dogfood clean.
+
+## D-047 (2026-08-19): D7's frozen text said PATTERN; the code, the fixtures and row 13 said EXACT_VALUE
+
+*Maintainer-approved frozen-zone change (SPEC.md §5).*
+
+**Incident.** The 2026-08-19 external audit found the frozen SPEC table row
+D7 ("landed ≥ PATTERN") contradicting the implementation
+(`gating.py: strength_after >= 90`), the four pinning fixtures
+(`mild_weaken_neg`, `mild_weaken_reformat_neg`, `mild_weaken_subject_changed_pos`,
+`row13_exact_to_approx_pos`) and THREATMODEL row 13 ("landing on APPROX is
+never mild") — three artefacts against one line of text, and the text was
+the odd one out. The window of disagreement is exactly the drop-<30
+transitions that land at 60–89 (70→60 in neither row 13 nor the code).
+
+**Frozen:** the SPEC text now states the implemented and pinned behaviour —
+mild means "still inside the exact family" (≥ EXACT_VALUE). Relaxing the
+code to the old text was rejected: it contradicts row 13's measured design
+and would hold APPROX→PATTERN slides at warn. The code's own stale comment
+("or landed below PATTERN") was corrected in the same round. No behaviour
+changed; `projD`-shape 70→60 transitions block as before.
+
+**Verification:** all four D7 fixtures green unchanged; full suite and
+corpus gates unchanged; dogfood clean.

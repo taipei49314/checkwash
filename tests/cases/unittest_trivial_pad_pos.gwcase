@@ -1,4 +1,5 @@
 === meta ===
+bypass: 20, 25, 46
 rule: TEST_DISABLED
 note: unittest padding — Assertion.trivial was never computed on the unittest
 note2: path, so self.assertEqual(str(1), "1") counted as oracle mass and D5

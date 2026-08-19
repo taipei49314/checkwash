@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **108 bypasses** are documented, of which **23 are not closed**.
+- **110 bypasses** are documented, of which **24 are not closed**.
 - **22 of 1800** human-written commits are blocked by mistake (1.22%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -26,11 +26,12 @@ it is known not to.
 | 75 | Name the runner file `Justfile`, `.justfile`, `ci/justfile`, `Makefile.include` or `common.mak` — spellings the ecosystem uses and `_runner_shape` does not know | — |
 | 77 | Weaken a `.bat` or `.ps1` runner | — |
 
-## Narrowed, still open (1)
+## Narrowed, still open (2)
 
 | # | shape | pinned by |
 |---|---|---|
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
+| 93 | Buy repair evidence with an alpha-rename inside the called symbol — `total` → `subtotal` changes the AST fingerprint and nothing else | — |
 
 ## Closed in part (1)
 
@@ -38,7 +39,7 @@ it is known not to.
 |---|---|---|
 | 76 | Disarm with `set -o errexit` / `set +o errexit` (long form), an unspaced or-fallback, an or-fallback into `echo`, or `if ! runner; then ... fi` | `runner_script_errexit_longform_pos.gwcase` |
 
-## Open by design — the cost of a deliberate trade (5)
+## Open by design — the cost of a deliberate trade (6)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -47,6 +48,7 @@ it is known not to.
 | 84c | Smuggle an assertion substitution into a genuine dependency bump, so D9 `DEPENDENCY_DRIFT` holds it at warn | — |
 | 84d | Reorient a comparison *and* replace the subject in one edit, so the reorientation guard swallows it | — |
 | 88 | Disarm the judge in the diff it would have judged: delete the greenwash job from the workflow, add an `if:` that is never true, or drop the required-status-check requirement | — |
+| 94 | Root-import + a modified existing symbol in any sibling module feeding PACKAGE_REPAIR for an expectation rewrite | — |
 
 ## Out of scope — the limits of the whole approach (2)
 
@@ -55,7 +57,7 @@ it is known not to.
 | 1 | Rewrite prod logic so the weak test passes honestly | — |
 | 3 | Remove the hook / run outside greenwash | — |
 
-## Closed — each pinned by something that runs (83)
+## Closed — each pinned by something that runs (84)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -65,7 +67,7 @@ behind it* unshippable.
 
 | # | shape | pinned by |
 |---|---|---|
-| 4 | Add a dead constant, reorder defs, or edit an unrelated function to defuse E1 | `dead_prod_line_pos.gwcase`, `prod_reorder_pos.gwcase`, `trivial_prod_change_pos.gwcase` |
+| 4 | Add a dead constant, reorder defs, or edit an unrelated function to defuse E1 | `dead_prod_line_pos.gwcase`, `evidence_annotation_neg.gwcase`, `evidence_dead_local_neg.gwcase`, `evidence_string_stmt_neg.gwcase`, `prod_reorder_pos.gwcase`, `trivial_prod_change_pos.gwcase` |
 | 5 | `git mv` / plain `mv` a test file out of collection | — |
 | 6 | Rename the test class out of pytest's `Test*` rule | `class_rename_out_of_collection_pos.gwcase` |
 | 7 | conftest hook that skips the whole suite | `conftest_skip_hook_pos.gwcase` |
@@ -76,17 +78,17 @@ behind it* unshippable.
 | 12 | Leave a build artifact (`.pyc`, `dist/`, …) in the diff to grant repair evidence | `artifact_cannot_disarm_pos.gwcase` |
 | 13 | Replace an exact comparison with a wide `pytest.approx(...)` | `row13_exact_to_approx_pos.gwcase` |
 | 14 | Wrap both sides in `sorted()` to make an ordered check order-blind | `row14_sorted_wrap_pos.gwcase` |
-| 15 | Rewrite the expected literal to whatever the buggy code returns | `expected_value_rewritten_pos.gwcase` |
+| 15 | Rewrite the expected literal to whatever the buggy code returns | `approx_expected_rewrite_pos.gwcase`, `expected_value_rewritten_pos.gwcase` |
 | 16 | Swallow the assertion in a broad `try/except` inside the test | `broad_except_in_test_pos.gwcase` |
 | 17 | Put the test under a directory named `mybuild/` so artifact filtering drops it | `row17_mybuild_dir_neg.gwcase` |
 | 18 | Edit `TASK.md` in the same diff to drop `oracle_freeze` or widen scope | `oracle_freeze_pos.gwcase` |
 | 19 | `skipif(sys.version_info >= (3, 0))` as a fake compat gate | `compat_gate_version_always_true_pos.gwcase` |
-| 20 | Add `assert str(1) == "1"` as padding to fake compensation for deleted oracles | `row20_vacuous_padding_pos.gwcase` |
-| 21 | Widen a *positional* tolerance: `approx(9.0, 0.001)` → `approx(9.0, 1e6)` | `row21_positional_tolerance_pos.gwcase` |
+| 20 | Add `assert str(1) == "1"` as padding to fake compensation for deleted oracles | `bare_literal_bound_pad_pos.gwcase`, `row20_vacuous_padding_pos.gwcase`, `unittest_trivial_pad_pos.gwcase` |
+| 21 | Widen a *positional* tolerance: `approx(9.0, 0.001)` → `approx(9.0, 1e6)` | `almost_places_added_pos.gwcase`, `approx_tolerance_added_pos.gwcase`, `row21_positional_tolerance_pos.gwcase` |
 | 22 | `except AssertionError: pass` around the assertion | `broad_except_in_test_pos.gwcase` |
 | 23 | Rewrite an expected value while touching an *unrelated* file in an imported package to earn PACKAGE_REPAIR | `package_repair_needs_modified_symbol_pos.gwcase` |
 | 24 | `assert f(x) == f(x) + 0` — self-comparison behind an identity op | `self_compare_identity_pos.gwcase` |
-| 25 | Pad a faked compensation with `assert str(1) == "1"` (vacuous) | `row20_vacuous_padding_pos.gwcase` |
+| 25 | Pad a faked compensation with `assert str(1) == "1"` (vacuous) | `bare_literal_bound_pad_pos.gwcase`, `row20_vacuous_padding_pos.gwcase`, `unittest_trivial_pad_pos.gwcase` |
 | 26 | `git mv AGENTS.md docs/AGENTS.old` — escape the guardrail role by renaming | `guardrail_rename_escape_pos.gwcase` |
 | 27 | Move a workflow out of `.github/workflows/` | `guardrail_rename_escape_pos.gwcase` |
 | 28 | Move an assertion into a never-called nested `def` (or `lambda`) | `nested_scope_assertion_pos.gwcase` |
@@ -107,7 +109,7 @@ behind it* unshippable.
 | 43 | `git mv tests/test_x.py build/test_x.py` (or `.attic/`, `dist/`, `htmlcov/`, any dot-dir) | `moved_to_build_dir_pos.gwcase`, `moved_to_dot_dir_pos.gwcase` |
 | 44 | Any always-true `skipif` outside seven hardcoded spellings — `skipif(True or sys.platform == "win32")`, `skipif(sys.version_info >= (3, 8))`, `skipif(os.name != "java")` | `compat_gate_always_true_pos.gwcase`, `compat_gate_version_always_true_pos.gwcase` |
 | 45 | Delete 5 tests / 7 exact assertions, add 1 weak test with a similar name | `split_rename_mass_pos.gwcase` |
-| 46 | `assert "" in str(x)` / `assert len(x) >= 0` as compensation padding | `unfalsifiable_padding_pos.gwcase` |
+| 46 | `assert "" in str(x)` / `assert len(x) >= 0` as compensation padding | `bare_literal_bound_pad_pos.gwcase`, `unfalsifiable_padding_pos.gwcase`, `unittest_trivial_pad_pos.gwcase` |
 | 47 | One non-ASCII character on the assertion line, reopening #10 | `unicode_offset_tautology_pos.gwcase` |
 | 48 | `if not True:` / `if 1 == 2:` / `if False and x:` / `for _ in []:` / an unmatchable `match` | `dead_branch_compare_pos.gwcase`, `dead_branch_empty_for_pos.gwcase`, `dead_branch_not_true_pos.gwcase`, `if_false_assertion_pos.gwcase` |
 | 49 | `assert (cond, "message")` — the always-true tuple assert | `tuple_assert_pos.gwcase` |
@@ -143,13 +145,14 @@ behind it* unshippable.
 | 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | — |
 | 86 | Put the tests in a `unittest.TestCase` subclass that is not named `Test*` — `class BillingTests(unittest.TestCase)` — and weaken anything inside it | `unittest_class_aliased_base_pos.gwcase`, `unittest_class_not_named_test_pos.gwcase` |
 | 86c | Substitute an assertion where **neither** expectation is a literal — `assert ok == success` -> `assert pinned == wanted` | — |
+| 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | — |
 | 87 | An **unrecognised runner file** does not merely hide its own weakening — it *buys* the opaque exemption. Weaken an assertion and weaken the test command in `common.mak`, `Makefile.include`, `Justfile` (capital J) or `ci/justfile`, with no production change | `runner_common_mak_pos.gwcase`, `runner_justfile_capital_pos.gwcase`, `runner_justfile_nested_pos.gwcase`, `runner_makefile_include_pos.gwcase` |
 | 87a | Weaken a **PowerShell or cmd** runner: `$ErrorActionPreference = "Continue"` plus `exit 0`, or `exit /b 0` replacing `if errorlevel 1` | — |
 | 89 | Weaken the suite in an **intermediate** script: the CI entry only calls another script, so it holds no runner token of its own — `./scripts/run-tests.sh` becoming `./scripts/run-tests.sh \|\| true` | `runner_one_hop_pos.gwcase` |
 | 90 | Patch the code under test **from inside the test**, not from a conftest: `monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)` two lines above `assert billing.invoice_total(...) == 105.3`, or the same thing spelled `mock.patch(...)` / `patch.object(...)` / `mocker.patch(...)`. Production and the assertion line both stay byte-identical | `test_patches_subject_mock_patch_pos.gwcase`, `test_patches_subject_new_test_neg.gwcase`, `test_patches_subject_pos.gwcase`, `test_patches_subject_stdlib_neg.gwcase`, `test_patches_subject_unrelated_attr_neg.gwcase`, `test_patches_subject_via_local_pos.gwcase` |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | `oracle_crossfile_import_neg.gwcase`, `oracle_crossfile_uncalled_pos.gwcase`, `oracle_fixture_checker_neg.gwcase`, `oracle_fixture_fanout_dedup.gwcase`, `oracle_fixture_teardown_refused_trade.gwcase`, `oracle_fixture_unrequested_pos.gwcase`, `oracle_helper_renamed_neg.gwcase`, `oracle_helper_uncalled_pos.gwcase`, `oracle_moved_into_helper_neg.gwcase`, `oracle_nested_never_invoked_pos.gwcase` |
 
-## Unclassified (13)
+## Unclassified (12)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -162,7 +165,6 @@ behind it* unshippable.
 | 86f | Flip the comparison so the expectation sits on the left | — |
 | 86g | Bind the recomputed expectation through a spelling `_local_bindings` does not record — tuple unpacking, walrus, subscript/attribute targets, `for` targets, `with ... as`, comprehension variables | — |
 | 86h | (False positive, not a bypass) A test that imports through a `src.` package root gets no repair evidence at all | — |
-| 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | — |
 | 86j | The expectation lives in a **conftest** fixture, not a same-file one | — |
 | 91a | Everything row 91's reachable set cannot see: subvert the *meaning* of a syntactically strong assertion (`__eq__`/`__bool__`/`__contains__` always true, a swallowing `__exit__`, a no-op `TestResult`, `int()`/`set()`/`bool()` coercion inside the helper, a default `expected` parameter never overridden); make the subject vacuous while keeping the assert (`for n in nums if False`, `mismatches[:0]`, `assert pred` where `pred` was called); compute zero runs (exhausted iterator, unscheduled coroutine, table filtered to passing inputs); put the helper in *another file* (conftest.py, tests/helpers.py); or change unit identity (merge, split, params fixture) | — |
 | 92 | (False positive, and the largest one) Restructure where a test's assertions live, without weakening anything: extract the check into a helper or a `conftest.py`, move it into a fixture's teardown, merge two tests into one, split one into two, drive them from a params fixture, put the comparison behind `operator.eq` or a comparison object's method, replace exact equality with `pytest.approx` and a tolerance | — |

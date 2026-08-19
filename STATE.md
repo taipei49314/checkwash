@@ -1,6 +1,26 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round B1: depth-1 reachability buys no leaf names)
+Updated: 2026-08-19 (audit round B2: the ledger catches up with the code)
+
+## 2026-08-19: B2 — THREATMODEL, SPEC and DECISIONS for the whole round
+
+Frozen-zone package, maintainer-approved (D-046/D-047):
+
+- **THREATMODEL**: rows 4, 15, 20, 21, 25, 35, 46 amended with the audit
+  round's re-closures and their fixtures; row 86i (the unittest→bare
+  modernisation false positive) flipped **Open → Closed v0.1.43**; new rows
+  **93** (alpha-rename fingerprint evidence — open, narrowed) and **94**
+  (root-import PACKAGE_REPAIR sibling — open by design, the httpx shape).
+  FAILURES.md regenerated: 110 bypasses, 24 not closed.
+- **SPEC §5 D7**: the frozen text said "landed ≥ PATTERN"; the code, the
+  four pinning fixtures and row 13 all said EXACT_VALUE. The text was the
+  odd one out and now states the implemented behaviour (D-047). No code
+  change; the stale gating comment corrected in the same round.
+- Nine fixtures gained `bypass:` pins so every re-closure claim is backed by
+  the map `test_threatmodel_pinned` enforces.
+
+Gates: 463 tests all green; arms/tamper/refactor corpora unchanged;
+dogfood clean.
 
 ## 2026-08-19: B1 — a root import reaches every sibling, and that is not evidence
 

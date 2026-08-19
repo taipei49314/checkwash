@@ -1,4 +1,5 @@
 === meta ===
+bypass: 21
 rule: TOLERANCE_LOOSENED
 note: the unittest spelling of the appearing-tolerance cheat:
 note2: assertAlmostEqual defaults to places=7; places=0 accepts anything

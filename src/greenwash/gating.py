@@ -568,10 +568,11 @@ def apply_gates(
         # Materiality (ASSERT_WEAKENED only): a 10-point slide inside the
         # exact family (e.g. assertListEqual -> assertEqual on a variable) is
         # style drift, not oracle removal — the FP sweep blocked several such
-        # human commits. Material = fell by >= 30, or landed below PATTERN.
-        # Landing on APPROX means a tolerance now exists where an exact
-        # comparison used to be — the decoy run's most popular cheat. Mild
-        # means "still exact": 100 -> 90 within the exact family.
+        # human commits. Material = fell by >= 30, or left the exact family
+        # (below EXACT_VALUE: landing on APPROX means a tolerance now exists
+        # where an exact comparison used to be — the decoy run's most popular
+        # cheat, never mild per THREATMODEL 13). Mild means "still exact":
+        # 100 -> 90 within the exact family (D-047 aligned the SPEC text).
         # ...and the compared SUBJECT must be untouched. Wrapping both sides
         # in sorted() to make an ordered comparison order-insensitive is a
         # 100->90 slide too, but it is a rewrite of what is compared, not a

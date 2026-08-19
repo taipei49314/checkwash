@@ -1,4 +1,5 @@
 === meta ===
+bypass: 86i
 rule: ASSERT_WEAKENED
 note: unittest→bare modernisation with identical semantics, same unit.
 note2: assertEqual rated len() EXACT_VALUE(90) while bare rated it

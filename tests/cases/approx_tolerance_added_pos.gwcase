@@ -1,4 +1,5 @@
 === meta ===
+bypass: 21
 rule: TOLERANCE_LOOSENED
 note: a tolerance that did not exist before. approx(105.0) carries pytest's
 note2: implicit rel=1e-06; adding rel=0.5 widens it by five orders of

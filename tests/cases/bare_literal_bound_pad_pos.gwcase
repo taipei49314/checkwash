@@ -1,4 +1,5 @@
 === meta ===
+bypass: 20, 25, 46
 rule: TEST_DISABLED
 note: bare-dialect padding — the subject is a bare Name so it read as state,
 note2: but the value was bound to the very literal it is compared against

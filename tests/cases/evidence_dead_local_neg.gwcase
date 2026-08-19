@@ -1,4 +1,5 @@
 === meta ===
+bypass: 4
 rule: ASSERT_WEAKENED
 note: a dead literal binding inside the function under test —
 note2: `_checked = None` is never read; it changed the dump and bought
