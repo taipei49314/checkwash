@@ -1,6 +1,28 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A6: D9 earns its name — pins, not bytes)
+Updated: 2026-08-19 (audit round A7: the sNaN crash and one untrue message)
+
+## 2026-08-19: A7 — no crash for two tokens, no claim without proof
+
+- **sNaN.** `Decimal("sNaN")` constructs and raises InvalidOperation on
+  *comparison*, which sat outside `_one_loosened`'s guarded constructors —
+  `rel=1e-9` → `rel=sNaN` was an engine error (exit 2) for a two-token edit,
+  a cheap denial of any verdict. Signaling NaNs now fall under the same
+  "no guess, no noise" contract as unparseable literals (fixture:
+  tolerance_snan_neg, zero findings, no crash).
+- **One untrue message.** A cross-form polarity difference —
+  `== 105.0` becoming `is not None` — was reported as "the test now proves
+  the opposite", which it does not: the replacement is not the negation of
+  the old assertion, and SPEC §4 forbids exactly that class of unearned
+  claim. The message now says form and polarity both changed and equivalence
+  cannot be verified; the verdict and severity path are untouched (the
+  finding still blocks). Same-form inversions (`==` → `!=`) keep the
+  proves-the-opposite wording, which is true for them.
+
+Gates: 458 tests all green (was 457); arms/tamper/refactor corpora
+unchanged; dogfood clean. The message change is unpinnable by .gwcase
+(expectations match rule/severity, not prose) — this paragraph is the
+record.
 
 ## 2026-08-19: A6 — a manifest edit that changes no dependency earns nothing
 

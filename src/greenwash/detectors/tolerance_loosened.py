@@ -30,6 +30,12 @@ def _one_loosened(kind: str, before: str, after: str) -> bool:
         b, a = Decimal(before), Decimal(after)
     except InvalidOperation:
         return False  # unparseable literals: no guess, no noise
+    if b.is_snan() or a.is_snan():
+        # A signaling NaN constructs fine and then raises InvalidOperation on
+        # *comparison* — outside the guard above, it was a crash exit (2) for
+        # a two-token test edit (audit 2026-08-19). Same contract: no guess,
+        # no noise.
+        return False
     if kind == "places":
         return a < b  # more places = stricter
     return a > b
