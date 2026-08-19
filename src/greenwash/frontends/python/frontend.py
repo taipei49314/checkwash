@@ -525,9 +525,31 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         subject_node = left
         if comparators and _is_literal(left) and not _is_literal(comparators[-1]):
             expect_node, subject_node = left, comparators[-1]
+        # A chained comparison is a range oracle: the non-literal operand is
+        # the subject (usually the middle term) and every literal bound is
+        # part of the expectation. The middle term used to be recorded
+        # nowhere — subject_node stayed the LEFT bound, so rewriting that
+        # bound (`0` -> `-1000000`) moved only the subject text and no rule
+        # saw the oracle move (audit 2026-08-19).
+        bounds: list[ast.AST] | None = None
+        if len(test.ops) > 1:
+            operands = [left, *comparators]
+            non_literals = [n for n in operands if not _is_literal(n)]
+            if len(non_literals) == 1:
+                subject_node = non_literals[0]
+                bounds = [n for n in operands if _is_literal(n)]
+                expect_node = bounds[-1] if bounds else None
         left_text = text.seg(subject_node)
         right_lit = _literal_repr(expect_node, text) if expect_node is not None else None
         right_val = _literal_value(expect_node) if expect_node is not None else None
+        if bounds is not None and len(bounds) > 1:
+            # The whole bound tuple is the expectation, so moving any single
+            # bound is an expectation rewrite.
+            right_lit = ", ".join(filter(None, (text.seg(b) for b in bounds)))
+            try:
+                right_val = _canonical_repr(tuple(ast.literal_eval(b) for b in bounds))
+            except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+                right_val = None
         pos = not isinstance(op, (ast.NotEq, ast.IsNot, ast.NotIn))
         c = _classify_compare_op(
             op, left, comparators, text, left_text, right_lit, right_val, pos, subject_node

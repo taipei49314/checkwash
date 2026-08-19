@@ -1,0 +1,14 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: formatting-only edit to a chained range check — same bounds, same
+note2: subject, parens added. The bound tuple is compared by canonical
+note3: value, so spacing and parentheses are not a change.
+origin: audit 2026-08-19, added with the chained-bound change
+=== before: tests/test_penalty.py ===
+def test_penalty_in_range(score):
+    assert 0 < score < 60
+=== after: tests/test_penalty.py ===
+def test_penalty_in_range(score):
+    assert 0 < (score) < 60
+=== expect ===
+[]

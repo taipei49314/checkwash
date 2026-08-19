@@ -1,6 +1,27 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A2: approx tolerances and expected literals)
+Updated: 2026-08-19 (audit round A3: chained-comparison bounds)
+
+## 2026-08-19: A3 — the middle term of a chained comparison exists now
+
+`assert 0 < score < 60` recorded the LEFT literal as the subject and the
+last comparator as the whole expectation; the middle term — the actual
+subject — was recorded nowhere, so rewriting the lower bound
+(`0` → `-1000000`, the over-penalty bug now passes) moved only the subject
+text and produced zero findings (audit 2026-08-19, reproduced with the real
+CLI; the unchained spelling of the same edit blocked at high).
+
+A chain with exactly one non-literal operand now records that operand as
+the subject and the tuple of literal bounds as the expectation, compared by
+canonical value — moving any single bound is an expectation rewrite
+(EXPECTED_VALUE_CHANGED), and formatting is not a change (pinned by the
+negative fixture). Strength stays BOUND via the first operator, as before.
+Residual: a chain with two non-literal operands (`x < y < 60`) keeps the old
+subject selection — its lower bound is still invisible.
+
+Gates: 449 tests all green (was 447); arms/tamper/refactor corpora
+unchanged; dogfood clean. Fixtures: chained_bound_rewrite_pos,
+chained_reformat_neg.
 
 ## 2026-08-19: A2 — a tolerance that appears, and an expectation approx hides
 

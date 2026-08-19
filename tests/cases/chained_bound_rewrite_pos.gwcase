@@ -1,0 +1,14 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: chained range check — the lower bound rewritten to admit the buggy
+note2: output. The classifier recorded the LEFT literal as the subject and
+note3: the middle term nowhere, so the only thing that moved was invisible.
+origin: audit 2026-08-19, verdict pass with zero findings
+=== before: tests/test_penalty.py ===
+def test_penalty_in_range(score):
+    assert 0 < score < 60
+=== after: tests/test_penalty.py ===
+def test_penalty_in_range(score):
+    assert -1000000 < score < 60
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
