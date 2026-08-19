@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 21 detectors, 437 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 463 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -66,8 +66,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.42
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.42
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.43
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.43
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -142,7 +142,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83 # v0.1.41
+      - uses: taipei49314/greenwash/action@dacae21258e9ab6c7557c69e0d314341ef8e2441 # v0.1.42
 ```
 
 Hash pins and `persist-credentials: false` are required by
@@ -167,7 +167,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.42
+    rev: v0.1.43
     hooks: [{ id: greenwash }]
 ```
 
@@ -196,7 +196,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/greenwash/action@ec58e9fcd5fc791c79429fc68f6a7dbcb4d40d83 # v0.1.41
+- uses: taipei49314/greenwash/action@dacae21258e9ab6c7557c69e0d314341ef8e2441 # v0.1.42
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,

@@ -1,0 +1,37 @@
+=== meta ===
+bypass: 39
+rule: ASSERT_WEAKENED
+title: A future-dated created anchors the cap at today, not at itself
+origin: audit 2026-08-19 — created = "2030-01-01" / expires = "2030-06-01"
+origin2: is a 151-day window that does not start for years; anchoring the
+origin3: 180-day cap at the ledger's own created honoured it today.
+=== before: tests/test_x.py ===
+from calc import add
+
+
+def test_add():
+    assert add(1, 2) == 3
+=== after: tests/test_x.py ===
+from calc import add
+
+
+def test_add():
+    assert add(1, 2) >= 0
+=== before: .greenwash/allow.toml ===
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_x.py/test_add/f7fb58968d50"
+rule = "ASSERT_WEAKENED"
+reason = "legit exemption committed through review"
+author = "maintainer"
+created = "2030-01-01"
+expires = "2030-06-01"
+=== after: .greenwash/allow.toml ===
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_x.py/test_add/f7fb58968d50"
+rule = "ASSERT_WEAKENED"
+reason = "legit exemption committed through review"
+author = "maintainer"
+created = "2030-01-01"
+expires = "2030-06-01"
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -421,7 +421,7 @@ def build_ir(
         if role in ("test", "conftest", "prod", "ci", "guardrail"):
             _scan_hidden_unicode(g, path, change.before, change.after)
 
-        if path in MANIFESTS and _deps_differ(change.before, change.after):
+        if path in MANIFESTS and _deps_differ(change.before, change.after, path):
             g.dependency_manifest_changed = True
 
         if role == "conftest" and change.after is not None:

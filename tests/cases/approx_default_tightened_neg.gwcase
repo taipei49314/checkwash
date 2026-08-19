@@ -1,0 +1,26 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+note: direction pin — dropping an explicit loose tolerance for the implicit
+note2: default is a TIGHTENING (rel=0.5 -> rel=1e-06) and must stay quiet,
+note3: like every other tolerance narrowing.
+origin: audit 2026-08-19, added with the default-epsilon change
+=== before: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    items = [50.0, 50.0]
+    assert app.invoice_total(items, 0.05) == pytest.approx(105.0, rel=0.5)
+=== after: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    items = [50.0, 50.0]
+    assert app.invoice_total(items, 0.05) == pytest.approx(105.0)
+=== expect ===
+[]

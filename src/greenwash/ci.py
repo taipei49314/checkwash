@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 
 from greenwash.change import FileChange
+from greenwash.deps import parse_manifest_pins
 from greenwash.config import Config
 from greenwash.ir.model import DiffGlobals
 from greenwash.roles import (
@@ -110,22 +111,28 @@ def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str
 _OWN_VERSION_LINE = re.compile(rb"^\s*(?:__)?version(?:__)?\s*=.*$", re.MULTILINE)
 
 
-def _deps_differ(before: bytes | None, after: bytes | None) -> bool:
-    """Did a manifest's *dependencies* change, or only its own version line?
+def _deps_differ(before: bytes | None, after: bytes | None, path: str) -> bool:
+    """Did a manifest's *dependencies* change — not its bytes, its pins?
 
     D9 `DEPENDENCY_DRIFT` credits an expectation that moved because a pinned
     dependency's behaviour moved. Any edit to a manifest used to satisfy it,
     which meant **a project bumping its own version bought the credit** — and
-    almost every release commit does exactly that. That is far too cheap for a
-    rule like `ASSERT_SUBSTITUTED`: the diff that motivated it bumps
-    `version = "0.1.13"` in `pyproject.toml` and would have been de-escalated
-    to warn by its own release bump.
+    almost every release commit does exactly that.
 
-    A project's own version declaration is not a dependency. Dependency pins
-    live inside arrays and requirement lines (`"werkzeug>=2.3.7"`), never on a
-    bare `version =` line, so dropping those lines from the comparison is
-    precise rather than approximate.
+    The comparison was still bytes after the own-version strip, so a comment
+    appended to requirements.txt or a swap of the `name`/`version` lines in
+    pyproject.toml — no dependency touched — granted the credit to an
+    expectation rewrite riding along in the same diff (audit 2026-08-19,
+    both shapes reproduced as verdict pass). The semantic content is the set
+    of `(distribution, pin)` pairs (`parse_manifest_pins`): reorder-invisible
+    and comment-blind, while a real specifier change still differs. When
+    neither side parses to a single pin, fall back to the byte comparison
+    rather than declaring an exotic manifest inert.
     """
+    b_pins = parse_manifest_pins(path, before or b"")
+    a_pins = parse_manifest_pins(path, after or b"")
+    if b_pins or a_pins:
+        return b_pins != a_pins
     b = _OWN_VERSION_LINE.sub(b"", before or b"")
     a = _OWN_VERSION_LINE.sub(b"", after or b"")
     return b != a
@@ -236,28 +243,4 @@ def _scan_ci_weakening(
         # Swapping one runner for another (pytest -> nox) keeps the token and
         # earns nothing, which is the consolidation this must not punish.
         g.ci_weakening_lines.append((path, "the test suite is no longer invoked by this script"))
-
-
-_OWN_VERSION_LINE = re.compile(rb"^\s*(?:__)?version(?:__)?\s*=.*$", re.MULTILINE)
-
-
-def _deps_differ(before: bytes | None, after: bytes | None) -> bool:
-    """Did a manifest's *dependencies* change, or only its own version line?
-
-    D9 `DEPENDENCY_DRIFT` credits an expectation that moved because a pinned
-    dependency's behaviour moved. Any edit to a manifest used to satisfy it,
-    which meant **a project bumping its own version bought the credit** — and
-    almost every release commit does exactly that. That is far too cheap for a
-    rule like `ASSERT_SUBSTITUTED`: the diff that motivated it bumps
-    `version = "0.1.13"` in `pyproject.toml` and would have been de-escalated
-    to warn by its own release bump.
-
-    A project's own version declaration is not a dependency. Dependency pins
-    live inside arrays and requirement lines (`"werkzeug>=2.3.7"`), never on a
-    bare `version =` line, so dropping those lines from the comparison is
-    precise rather than approximate.
-    """
-    b = _OWN_VERSION_LINE.sub(b"", before or b"")
-    a = _OWN_VERSION_LINE.sub(b"", after or b"")
-    return b != a
 

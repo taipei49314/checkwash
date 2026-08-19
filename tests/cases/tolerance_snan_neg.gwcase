@@ -1,0 +1,24 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+note: a signaling NaN constructs fine and raises on comparison — outside
+note2: the guarded constructors it was an engine error (exit 2) for a
+note3: two-token edit. No guess, no noise, and no crash.
+origin: audit 2026-08-19, exit 2 engine error
+=== before: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    assert app.invoice_total([50.0], 0.05) == pytest.approx(105.0, rel=1e-9)
+=== after: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    assert app.invoice_total([50.0], 0.05) == pytest.approx(105.0, rel=sNaN)
+=== expect ===
+[]

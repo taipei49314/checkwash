@@ -115,32 +115,61 @@ def _match(path: str, pattern: str) -> bool:
     return False
 
 
-def load_config(data: bytes | None) -> tuple[Config, str | None]:
-    """-> (config, error). A malformed config is never silently ignored: a
-    hardened `fail_on` reverting to defaults must be visible (SPEC §6)."""
+def load_config(data: bytes | None) -> tuple[Config, str | None, list[str]]:
+    """-> (config, error, warnings). A malformed config is never silently
+    ignored: a hardened `fail_on` reverting to defaults must be visible
+    (SPEC §6).
+
+    The error slot is for parse failures (defaults in effect, exit-2-able
+    under `on_engine_error = "block"`). Value-level problems — a `fail_on`
+    that is not a severity, an `on_engine_error` spelling the enum does not
+    contain, roles that are not globs — collect in `warnings`: visible in
+    stderr and `config_errors`, never fatal, because the one value such a
+    warning can concern (`on_engine_error` itself) must not become the
+    engine error it describes (audit 2026-08-19: `on_engine_error = "Block"`
+    silently reverted to `pass_with_warning`, the loosening direction, with
+    `config_errors: []`)."""
     cfg = Config()
     if not data:
-        return cfg, None
+        return cfg, None, []
     try:
         raw = tomllib.loads(data.decode("utf-8", errors="replace"))
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
-        return cfg, f".greenwash/config.toml could not be parsed ({exc}); defaults are in effect"
+        return cfg, f".greenwash/config.toml could not be parsed ({exc}); defaults are in effect", []
+    warnings: list[str] = []
     roles = raw.get("roles")
     if isinstance(roles, dict):
         for role, globs in roles.items():
             if isinstance(globs, list) and all(isinstance(g, str) for g in globs):
+                if role not in cfg.roles:
+                    warnings.append(f"config.toml: unknown role '{role}' (known: {', '.join(_ROLE_ORDER)})")
+                    continue
                 cfg.roles[role] = globs
+            else:
+                warnings.append(f"config.toml: roles.{role} must be a list of glob strings; ignored")
     gate = raw.get("gate", {})
     if isinstance(gate, dict):
         fail_on = gate.get("fail_on")
         if fail_on in SEVERITY_ORDER:
             cfg.fail_on = fail_on
+        elif fail_on is not None:
+            warnings.append(
+                f"config.toml: gate.fail_on must be one of {', '.join(SEVERITY_ORDER)}; "
+                f"got {fail_on!r}, default 'high' is in effect"
+            )
         oee = gate.get("on_engine_error")
         if oee in ("pass_with_warning", "block"):
             cfg.on_engine_error = oee
+        elif oee is not None:
+            warnings.append(
+                "config.toml: gate.on_engine_error must be 'pass_with_warning' or 'block'; "
+                f"got {oee!r}, default 'pass_with_warning' is in effect"
+            )
     detectors = raw.get("detectors", {})
     if isinstance(detectors, dict):
         disable = detectors.get("disable")
         if isinstance(disable, list) and all(isinstance(d, str) for d in disable):
             cfg.disabled_detectors = disable
-    return cfg, None
+        elif disable is not None:
+            warnings.append("config.toml: detectors.disable must be a list of rule IDs; ignored")
+    return cfg, None, warnings

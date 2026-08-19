@@ -1,6 +1,299 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-18 (T1.11 literal-needle swap; #86a stays info)
+Updated: 2026-08-19 (audit round B2: the ledger catches up with the code)
+
+## 2026-08-19: B2 — THREATMODEL, SPEC and DECISIONS for the whole round
+
+Frozen-zone package, maintainer-approved (D-046/D-047):
+
+- **THREATMODEL**: rows 4, 15, 20, 21, 25, 35, 46 amended with the audit
+  round's re-closures and their fixtures; row 86i (the unittest→bare
+  modernisation false positive) flipped **Open → Closed v0.1.43**; new rows
+  **93** (alpha-rename fingerprint evidence — open, narrowed) and **94**
+  (root-import PACKAGE_REPAIR sibling — open by design, the httpx shape).
+  FAILURES.md regenerated: 110 bypasses, 24 not closed.
+- **SPEC §5 D7**: the frozen text said "landed ≥ PATTERN"; the code, the
+  four pinning fixtures and row 13 all said EXACT_VALUE. The text was the
+  odd one out and now states the implemented behaviour (D-047). No code
+  change; the stale gating comment corrected in the same round.
+- Nine fixtures gained `bypass:` pins so every re-closure claim is backed by
+  the map `test_threatmodel_pinned` enforces.
+
+Gates: 463 tests all green; arms/tamper/refactor corpora unchanged;
+dogfood clean.
+
+## 2026-08-19: B1 — a root import reaches every sibling, and that is not evidence
+
+Frozen-zone change (gating.py), maintainer-approved, D-046. A root-level
+import (`from app import billing`) reaches every module in the package at
+alignment depth 1 — exactly as much as two unrelated siblings share — so the
+leaf-name fallback in `_symbol_match` let `app.util::calculate` pay for a
+weakened test of `app.billing.calculate` with one dead edit: bypass #35
+reopened through its own closure (audit probe reproduced as verdict pass,
+now block at high on the same scratch repo).
+
+A leaf hit now needs ≥2 aligned components, or a dotted call whose first
+component is the changed module's leaf (the honest root-import shape keeps
+its credit). Full-qual matches, the `imports is None` fallback, PACKAGE_REPAIR
+and the src-layout behaviour are unchanged — the audit's X4 shape
+(root import + sibling symbol feeding package evidence) is the httpx case
+PACKAGE_REPAIR exists for and is filed as a THREATMODEL row, not closed.
+Residual: aliased root imports lose clause (b); visible at warn.
+
+Gates: 463 tests all green (was 461); arms/tamper/refactor corpora
+unchanged; dogfood clean. Fixtures: root_import_sibling_sameleaf_pos,
+root_import_same_module_neg; FAILURES.md regenerated (row 35 carries both
+new pins).
+
+## 2026-08-19: A9 — anchors and warnings
+
+- **The 180-day cap anchored at the ledger's own `created`.** A hand-edited
+  base-side entry with `created = "2030-01-01"` / `expires = "2030-06-01"` —
+  a 151-day window that does not even start for years — was honoured today
+  (audit 2026-08-19, reproduced as `allowlisted=True` → verdict pass), which
+  is precisely the hand-edited-ledger scenario bypass #39's read-side
+  enforcement exists for. `_entry_state` is now the one implementation both
+  consumers share (the doctor summary and the gate can never disagree), and
+  the anchor is `min(created, today)`. Pinned by
+  allowlist_future_created_pos alongside the existing over_cap fixture;
+  FAILURES.md regenerated (row 39 now carries both pins).
+- **Value-level config problems were silently ignored.** Only TOML *parse*
+  failures produced a diagnostic; `on_engine_error = "Block"` (capital B),
+  `fail_on = 5`, a non-list `roles` entry or an unknown role name all fell
+  through to defaults with `config_errors: []` — and the on_engine_error
+  typo reverts in the loosening direction. `load_config` now returns
+  warnings for rejected values, threaded into stderr and `config_errors`
+  (and the term report) but never fatal: the one value a warning can
+  concern must not become the engine error it describes. Pinned by e2e
+  test_config_value_warning_is_visible_not_fatal.
+
+Gates: 461 tests all green (was 459); arms/tamper/refactor corpora
+unchanged; dogfood clean.
+
+## 2026-08-19: A8 — the two places git's answers were trusted unquoted
+
+- **grep_head_paths** ran `git grep -l -F` without `-z`: with the default
+  `core.quotepath`, every non-ASCII path came back C-quoted
+  (`"tests/test_\346\213\267\350\262\235.py"`), failed the role filter
+  downstream, and the duplicate-survivor search never found CJK-named
+  copies — the D10 DUPLICATE_REMAINS credit was lost and an honest dedup
+  deletion blocked at high. `-z` keeps the `rev:path` record shape,
+  NUL-terminates it, and returns path bytes verbatim (format verified
+  against the real binary before parsing). The same defence
+  `diff --name-status -z` and `status --porcelain -z` already apply
+  elsewhere; pinned by an e2e test with a real `tests/test_拷貝.py`.
+- **read_blobs** writes one protocol request per spec
+  (`{rev}:{path}\n`); a path containing a newline becomes two requests, and
+  git's extra `<fragment> missing` response is consumed as the next spec's
+  header — when the response count happens to realign, the loop completes
+  with wrong assignments and no fallback: an existing file's blob reads as
+  None and its weakenings vanish silently. Verified at protocol level with
+  the real binary (Git-for-Windows refuses such paths outright, so the
+  entry arrives in Linux-authored trees and then breaks Windows analyses of
+  the same diff). Specs containing a newline are now rejected as missing
+  before the request is built — the file stays visible as unreadable
+  rather than poisoning its neighbours.
+
+Gates: 459 tests all green (was 458); arms/tamper/refactor corpora
+unchanged; dogfood clean. New e2e:
+test_cjk_named_duplicate_survivor_gets_credit.
+
+## 2026-08-19: A7 — no crash for two tokens, no claim without proof
+
+- **sNaN.** `Decimal("sNaN")` constructs and raises InvalidOperation on
+  *comparison*, which sat outside `_one_loosened`'s guarded constructors —
+  `rel=1e-9` → `rel=sNaN` was an engine error (exit 2) for a two-token edit,
+  a cheap denial of any verdict. Signaling NaNs now fall under the same
+  "no guess, no noise" contract as unparseable literals (fixture:
+  tolerance_snan_neg, zero findings, no crash).
+- **One untrue message.** A cross-form polarity difference —
+  `== 105.0` becoming `is not None` — was reported as "the test now proves
+  the opposite", which it does not: the replacement is not the negation of
+  the old assertion, and SPEC §4 forbids exactly that class of unearned
+  claim. The message now says form and polarity both changed and equivalence
+  cannot be verified; the verdict and severity path are untouched (the
+  finding still blocks). Same-form inversions (`==` → `!=`) keep the
+  proves-the-opposite wording, which is true for them.
+
+Gates: 458 tests all green (was 457); arms/tamper/refactor corpora
+unchanged; dogfood clean. The message change is unpinnable by .gwcase
+(expectations match rule/severity, not prose) — this paragraph is the
+record.
+
+## 2026-08-19: A6 — a manifest edit that changes no dependency earns nothing
+
+`_deps_differ` compared bytes after stripping own-`version =` lines, so a
+comment appended to requirements.txt or a swap of pyproject.toml's
+`name`/`version` lines — no dependency touched — granted D9
+DEPENDENCY_DRIFT to an expectation rewrite riding along in the same diff
+(audit 2026-08-19, both shapes reproduced as verdict pass; rows 57/84c
+accept the credit only for "a real manifest change").
+
+`parse_manifest_pins` (deps.py) extracts the `(distribution, pin)` set for
+all four manifest families — PEP 621 arrays with optional-dependencies,
+poetry tables including dict constraints, poetry/uv lock stanzas pairing
+`name` with `version`, requirements lines with inline comments stripped —
+and `_deps_differ` compares sets: reorder-invisible, comment-blind, real
+specifier changes still differ. Neither side parsing to a single pin falls
+back to the old byte comparison rather than declaring an exotic manifest
+inert. Also removed: the second, identical `_deps_differ` definition that
+had been living later in ci.py since the byte era (only the second one
+executed; harmless but a divergent-edit hazard).
+
+Gates: 457 tests all green (was 455); arms/tamper/refactor corpora
+unchanged; dogfood clean. Fixtures: deps_comment_only_neg, deps_reorder_neg
+(the pyproject shape additionally reports the expected CI_WORKFLOW_TOUCHED
+warn — the file is ci-role whatever the edit).
+
+## 2026-08-19: A5 — padding whose subject is a freshly bound literal
+
+`data = [1, 2, 3]; assert data == [1, 2, 3]` — the subject is a bare Name,
+so triviality called it state and the lattice called it EXACT_STRUCT(100):
+full oracle mass. Deleting the failing test and adding that one line kept
+verdict pass through D5 RESTRUCTURED (audit probe, reproduced twice). The
+bare-dialect member of the padding family (rows 20/25/46); A1 closed the
+unittest spelling, this closes the other.
+
+`_vacuous_bound_asserts` marks `assert name == <literal>` when the same
+statement list binds `name` to a structurally identical literal earlier and
+**nothing between mentions the name** — `process(data); assert data == ...`
+is a genuine oracle over `process` and keeps its mass (direction pinned by
+the negative fixture). Outer bindings are invisible to inner blocks (fails
+toward real). The pass runs once per unit; the 500-file perf budget holds.
+
+Gates: 455 tests all green (was 453); arms/tamper/refactor corpora
+unchanged; dogfood clean. Fixtures: bare_literal_bound_pad_pos,
+bare_bound_then_used_neg. Residual: a binding reached through an if-branch
+window or a comprehension is not tracked — stated, not chased.
+
+## 2026-08-19: A4 — a cosmetic edit no longer changes a symbol's fingerprint
+
+Repair evidence equated "the called symbol's AST changed" with "its
+behaviour changed", and an attacker controls both sides of the diff. Four
+one-line purchases of REPAIR_EVIDENCE for any oracle cheat, all reproduced
+with the real CLI before the fix (THREATMODEL row 4 reopened): an added
+return annotation, a non-leading string statement (docstring stripping only
+reads body[0], and the strip happens first, which renumbered the noise to
+the docstring slot — caught by the fixture on the second cut), a value-less
+`x: int`, and a dead literal binding inside the function body.
+
+`_normalize_for_fingerprint` runs on production parses only, after the
+docstring strip: parameter/return annotations cleared (functions and
+lambdas), every remaining string-constant statement dropped, value-less
+annotated assignments dropped, and — inside function bodies only, with a
+`global`/`nonlocal` guard, and only when a drop candidate exists — a
+literal assignment to a name the function never reads. Module- and
+class-level constants are untouched on purpose: `TAX = 0.05` in billing.py
+is read by the test, and dropping it would deny honest repair evidence
+(pinned by evidence_real_fix_still_counts_neg).
+
+Deliberate residual: alpha-renames (`total` → `subtotal`) still flip the
+fingerprint. Normalising them needs scope analysis greenwash does not have,
+and a wrong normalisation silently disables evidence for genuine
+rename-driven API changes. Row to be filed in the THREATMODEL round.
+
+Gates: 453 tests all green (was 449); perf budgets hold (the dead-binding
+check is lazy — one cheap pass unless a candidate exists); arms/tamper/
+refactor corpora unchanged; dogfood clean. Fixtures:
+evidence_annotation_neg, evidence_string_stmt_neg, evidence_dead_local_neg,
+evidence_real_fix_still_counts_neg.
+
+## 2026-08-19: A3 — the middle term of a chained comparison exists now
+
+`assert 0 < score < 60` recorded the LEFT literal as the subject and the
+last comparator as the whole expectation; the middle term — the actual
+subject — was recorded nowhere, so rewriting the lower bound
+(`0` → `-1000000`, the over-penalty bug now passes) moved only the subject
+text and produced zero findings (audit 2026-08-19, reproduced with the real
+CLI; the unchained spelling of the same edit blocked at high).
+
+A chain with exactly one non-literal operand now records that operand as
+the subject and the tuple of literal bounds as the expectation, compared by
+canonical value — moving any single bound is an expectation rewrite
+(EXPECTED_VALUE_CHANGED), and formatting is not a change (pinned by the
+negative fixture). Strength stays BOUND via the first operator, as before.
+Residual: a chain with two non-literal operands (`x < y < 60`) keeps the old
+subject selection — its lower bound is still invisible.
+
+Gates: 449 tests all green (was 447); arms/tamper/refactor corpora
+unchanged; dogfood clean. Fixtures: chained_bound_rewrite_pos,
+chained_reformat_neg.
+
+## 2026-08-19: A2 — a tolerance that appears, and an expectation approx hides
+
+Two silent-pass defects in the approx family, both from the 2026-08-19
+external audit and reproduced with the real CLI before the fix:
+
+- **The appearing tolerance.** diffalign compares epsilons only when both
+  sides have one, so `pytest.approx(105.0)` → `pytest.approx(105.0, rel=0.5)`
+  — five orders of magnitude of new slack over the implicit default — and
+  the unittest spelling `assertAlmostEqual(x, 105.0)` →
+  `assertAlmostEqual(x, 105.0, places=0)` produced nothing at all.
+  `_approx_epsilon` now records pytest's implicit default (`rel=1e-06`,
+  keyed form so the detector's per-kind parse agrees), and the unittest
+  classifier records `places=7`. Every one-sided event became two-sided;
+  tightening to the default reads equal and stays quiet (direction pinned
+  by a negative fixture). The dead branch in tolerance_loosened ("a
+  tolerance that did not exist before is new slack") is reachable through
+  the multi-key path as before — the appearance itself is now the more
+  precise signal.
+- **The hidden expected literal.** The approx classification discarded
+  left/right literals, so `approx(105.0)` → `approx(100.0)` — the row-15
+  cheat wearing approx — was invisible to EXPECTED_VALUE_CHANGED (strength
+  APPROX on both sides, nothing else to see). The approx argument is now
+  recorded as the expected literal.
+
+The `_approx_epsilon` docstring claimed the default-recording behaviour two
+releases ago ("record it so approx(42) -> approx(7) is a value change, not
+silence") while the code returned `(None, None)` — this round ships what the
+comment promised.
+
+Gates: 447 tests all green (was 443); recorded arms, tamper and refactor
+corpora unchanged; dogfood clean. Fixtures: approx_tolerance_added_pos,
+approx_expected_rewrite_pos, almost_places_added_pos,
+approx_default_tightened_neg. Residual: a default recorded for `rel` only —
+`abs`-only edits against the implicit 1e-12 are still one-sided in the
+multi-key path, which classifies them as new slack (the fail-toward-flagging
+side).
+
+## 2026-08-19: A1 — the unittest classifier grows the bare path's twins
+
+Four defects, one root: every consistency feature built on the bare-assert
+path existed without its unittest twin, and the corpus contains zero
+`self.assert*` assertions (THREATMODEL 86b), so nothing could surface the
+divergence. Found by an external read-only audit (2026-08-19), every claim
+reproduced with the real CLI before this fix:
+
+- **literal-first TAUTOLOGY.** The self-comparison check read `seg(args[1])`
+  against `seg(args[1])`, so every `assertEqual(expected, actual)` — the
+  canonical unittest order — rated TAUTOLOGY(10) and the lattice was inert on
+  it: `assertEqual(105.0, total)` weakened to `assertTrue(total)` produced
+  zero findings. Now compares the post-flip subject against the post-flip
+  expectation, identity ops stripped, same as bare.
+- **None-family polarity.** assertIsNone sat in `_NEGATED_UNITTEST` while
+  bare `is None` is positive, so a spelling conversion was reported as
+  "the test now proves the opposite" and a genuine cross-dialect inversion
+  did not fire. Polarity now follows the bare lattice, and
+  `assertIs(x, None)`/`assertIsNot(x, None)` normalise to the dedicated
+  spellings before classification.
+- **trivial never computed.** `Assertion.trivial` defaulted False on the
+  unittest path, so `self.assertEqual(str(1), "1")` counted as oracle mass
+  and reopened the padding family (rows 20/25/46) in this dialect.
+  `_Classified.trivial` now carries it from the classifier.
+- **len() shape by operand order and dialect.** The len→TYPE_SHAPE rule read
+  the pre-flip left operand and had no unittest twin, so
+  `assertEqual(len(x), 2)` (90) → `assert len(x) == 2` (50) blocked a
+  routine modernisation at high. The rule now reads the post-flip subject in
+  both dialects.
+
+Gates: 443 tests, all green (was 437); recorded arms, tamper and refactor
+corpora unchanged — no existing fixture flipped; dogfood clean. New
+fixtures: unittest_literal_first_pos, unittest_isnone_true_inversion_pos,
+unittest_trivial_pad_pos, unittest_isnone_spelling_neg,
+unittest_len_modernize_neg, bare_len_operand_flip_neg. Stated residual: the
+`_is_unfalsifiable` enumerations (empty-needle membership, `len(x) >= 0`)
+still have no unittest spelling — the audited defects are closed, the wider
+enumeration parity is not annexed here.
 
 ## 2026-08-18: T1.11 — do not invert a literal membership needle
 
@@ -1035,7 +1328,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.42 |
+| version | v0.1.43 |
 | detectors | 21 |
 | human-commit block rate | 37/1800 = 2.06% |
 | adjudicated false positive | 22/1800 = 1.22% |

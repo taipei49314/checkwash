@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 21
+rule: TOLERANCE_LOOSENED
+note: the unittest spelling of the appearing-tolerance cheat:
+note2: assertAlmostEqual defaults to places=7; places=0 accepts anything
+note3: within 0.5. One-sided epsilon, so invisible.
+origin: audit 2026-08-19, verdict pass with zero findings
+=== before: tests/test_billing.py ===
+import unittest
+
+import app
+
+
+class Billing(unittest.TestCase):
+    def test_total(self):
+        self.assertAlmostEqual(app.invoice_total([50.0, 50.0], 0.05), 105.0)
+=== after: tests/test_billing.py ===
+import unittest
+
+import app
+
+
+class Billing(unittest.TestCase):
+    def test_total(self):
+        self.assertAlmostEqual(app.invoice_total([50.0, 50.0], 0.05), 105.0, places=0)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

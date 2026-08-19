@@ -76,6 +76,70 @@ def project_names(path: str, data: bytes) -> set[str]:
     return names
 
 
+def parse_manifest_pins(path: str, data: bytes) -> set[tuple[str, str]]:
+    """The set of `(distribution, pin)` pairs a manifest declares.
+
+    `_deps_differ` used to compare manifest bytes, so a comment or a line
+    reorder — no dependency touched — granted D9 DEPENDENCY_DRIFT credit to
+    an expectation rewrite riding along in the same diff (audit 2026-08-19:
+    `# refreshed pins for the CI cache` appended to requirements.txt; name
+    and version lines swapped in pyproject.toml; both verdict pass). The set
+    of pins is the semantic content: reorder-invisible and comment-blind,
+    while a real specifier change still differs.
+
+    Pin strings keep their specifier text (markers, extras) with whitespace
+    collapsed; distributions are lowercased. Requirements-style inline
+    comments are stripped before the spec is taken. An empty set means
+    "nothing here parses as a pin" — the caller falls back to the byte
+    comparison rather than declaring the manifest inert.
+    """
+    text = data.decode("utf-8-sig", errors="replace")
+    pins: set[tuple[str, str]] = set()
+    if path.endswith(".toml") and path != "uv.lock":
+        try:
+            raw = tomllib.loads(text)
+        except tomllib.TOMLDecodeError:
+            return pins
+        project = raw.get("project", {})
+        if isinstance(project, dict):
+            specs: list[str] = [s for s in project.get("dependencies", []) or [] if isinstance(s, str)]
+            optional = project.get("optional-dependencies", {})
+            if isinstance(optional, dict):
+                for group in optional.values():
+                    specs.extend(s for s in group or [] if isinstance(s, str))
+            for spec in specs:
+                m = _REQ_LINE.match(spec)
+                if m:
+                    pins.add((m.group(1).lower(), spec[m.end():].strip().replace(" ", "")))
+        tool = raw.get("tool") if isinstance(raw.get("tool"), dict) else {}
+        poetry = tool.get("poetry", {}) if isinstance(tool, dict) else {}
+        if isinstance(poetry, dict):
+            for group in ("dependencies", "dev-dependencies"):
+                deps = poetry.get(group, {})
+                if isinstance(deps, dict):
+                    for dist, constraint in deps.items():
+                        if isinstance(constraint, str):
+                            pins.add((str(dist).lower(), constraint.replace(" ", "")))
+                        elif isinstance(constraint, dict) and isinstance(constraint.get("version"), str):
+                            pins.add((str(dist).lower(), constraint["version"]))
+    elif path.endswith(".lock"):
+        # poetry.lock / uv.lock: pair each stanza's `name` with its `version`.
+        for stanza in re.split(r"(?m)^\[", text):
+            name = _NAME_FIELD.search(stanza)
+            version = re.search(r'^\s*version\s*=\s*"([^"]+)"', stanza, re.MULTILINE)
+            if name and version:
+                pins.add((name.group(1).lower(), version.group(1)))
+    else:  # requirements-style
+        for line in text.split("\n"):
+            stripped = re.sub(r"\s+#.*$", "", line.strip())
+            if not stripped or stripped.startswith(("#", "-")):
+                continue
+            m = _REQ_LINE.match(stripped)
+            if m:
+                pins.add((m.group(1).lower(), stripped[m.end():].strip().replace(" ", "")))
+    return pins
+
+
 def parse_manifest(path: str, data: bytes) -> set[str]:
     text = data.decode("utf-8-sig", errors="replace")
     names: set[str] = set()

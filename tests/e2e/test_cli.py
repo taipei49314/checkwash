@@ -506,3 +506,51 @@ def test_rename_into_prod_earns_no_opaque_exemption(repo):
     weakened = [f for f in payload["findings"] if f["rule"] == "ASSERT_WEAKENED"]
     assert weakened and weakened[0]["severity"] == "high", payload["findings"]
     assert "REPAIR_EVIDENCE" not in weakened[0]["deescalators"]
+
+
+def test_cjk_named_duplicate_survivor_gets_credit(repo):
+    # git's default core.quotepath C-quotes non-ASCII paths, so the duplicate
+    # search's `git grep` answer never matched a collectable test file and the
+    # DUPLICATE_REMAINS credit was lost — a false block for CJK-filename
+    # repositories (audit 2026-08-19). grep now runs -z, which returns path
+    # bytes verbatim.
+    survivor = repo / "tests" / "test_拷貝.py"
+    survivor.write_text(
+        (repo / "tests" / "test_billing.py").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "add duplicate copy")
+    _git(repo, "rm", "-q", "tests/test_billing.py")
+    _git(repo, "commit", "-m", "drop one copy")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 0, result.stdout
+    payload = json.loads(result.stdout)
+    disabled = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
+    assert disabled and disabled[0]["severity"] == "info"
+    assert "DUPLICATE_REMAINS" in disabled[0]["deescalators"]
+
+
+def test_config_value_warning_is_visible_not_fatal(repo):
+    # A value-level mistake (on_engine_error = "Block") used to fall through
+    # validation silently and revert to pass_with_warning — the loosening
+    # direction, with config_errors empty (audit 2026-08-19). It must be
+    # visible in config_errors without becoming the engine error it
+    # describes.
+    (repo / ".greenwash").mkdir()
+    (repo / ".greenwash" / "config.toml").write_text(
+        '[gate]\non_engine_error = "Block"\nfail_on = 5\n',
+        encoding="utf-8",
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "add config")
+    # Config is read from the base side, so the analysed range must sit
+    # after the config commit.
+    (repo / "README.md").write_text("docs\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "docs")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 0, result.stdout
+    payload = json.loads(result.stdout)
+    assert any("on_engine_error" in e for e in payload["config_errors"]), payload
+    assert any("fail_on" in e for e in payload["config_errors"]), payload

@@ -304,9 +304,15 @@ def _approx_epsilon(call: ast.Call, text: str) -> tuple[str | None, str | None]:
         if seg:
             parts.append(("rel", seg))
     if not parts:
-        # `approx(42)` with no tolerance at all still has an implicit default;
-        # record it so approx(42) -> approx(7) is a value change, not silence.
-        return None, None
+        # `approx(42)` still carries pytest's implicit default (rel=1e-06,
+        # abs=1e-12). Recording it makes a tolerance that APPEARS in the head
+        # a widening of that default instead of silence — the comment here
+        # claimed as much for two releases while the code returned None
+        # (audit 2026-08-19). One default kind suffices: it turns every
+        # one-sided tolerance event two-sided, and tightening to the default
+        # reads equal and stays quiet. Keyed form, like every other single
+        # tolerance, so the detector's per-kind parse sees the same key.
+        return "rel=1e-06", "rel"
     parts.sort()
     return "|".join(f"{k}={v}" for k, v in parts), "multi" if len(parts) > 1 else parts[0][0]
 
@@ -363,11 +369,22 @@ class _Classified:
     # _collect_unit resolves right_names into Assertion.right_depends_on.
     left_names: tuple[str, ...] = ()
     right_names: tuple[str, ...] = ()
+    # Whether the classified assertion depends on nothing but literals and
+    # builtin calls — the vacuousness test that keeps padding out of D4/D5
+    # compensation. Computed here so every construction site can pass it
+    # through without re-deriving nodes it no longer holds.
+    trivial: bool = False
 
 
+# The polarity of the None family follows the bare lattice: `is None` is the
+# positive form there (op `Is` → positive), so assertIsNone must be too.
+# assertIsNone used to sit in this set while bare `is None` was positive, so a
+# spelling conversion between the two dialects read as a polarity inversion
+# ("the test now proves the opposite") and a genuine cross-dialect inversion
+# did not fire at all (audit 2026-08-19).
 _NEGATED_UNITTEST = frozenset(
     {
-        "assertNotEqual", "assertFalse", "assertIsNone", "assertNotIn",
+        "assertNotEqual", "assertFalse", "assertIsNotNone", "assertNotIn",
         "assertNotRegex", "assertNotIsInstance", "assertNotAlmostEqual",
         "assertIsNot",
     }
@@ -479,7 +496,19 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
     approx = _find_approx_call(test)
     if approx is not None:
         eps, kind = _approx_epsilon(approx, text)
-        return _Classified("approx", S.APPROX, epsilon=eps, epsilon_kind=kind)
+        # The argument of the approx call is the expected value; recording it
+        # puts `approx(105.0)` -> `approx(100.0)` in front of
+        # EXPECTED_VALUE_CHANGED. Strength is APPROX on both sides, so the
+        # rewrite was completely invisible before (audit 2026-08-19).
+        expected = approx.args[0] if approx.args else None
+        return _Classified(
+            "approx",
+            S.APPROX,
+            right_literal=_literal_repr(expected, text) if expected is not None else None,
+            right_value=_literal_value(expected) if expected is not None else None,
+            epsilon=eps,
+            epsilon_kind=kind,
+        )
     if isinstance(test, ast.Compare) and test.ops:
         left = test.left
         comparators = test.comparators
@@ -496,12 +525,34 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         subject_node = left
         if comparators and _is_literal(left) and not _is_literal(comparators[-1]):
             expect_node, subject_node = left, comparators[-1]
+        # A chained comparison is a range oracle: the non-literal operand is
+        # the subject (usually the middle term) and every literal bound is
+        # part of the expectation. The middle term used to be recorded
+        # nowhere — subject_node stayed the LEFT bound, so rewriting that
+        # bound (`0` -> `-1000000`) moved only the subject text and no rule
+        # saw the oracle move (audit 2026-08-19).
+        bounds: list[ast.AST] | None = None
+        if len(test.ops) > 1:
+            operands = [left, *comparators]
+            non_literals = [n for n in operands if not _is_literal(n)]
+            if len(non_literals) == 1:
+                subject_node = non_literals[0]
+                bounds = [n for n in operands if _is_literal(n)]
+                expect_node = bounds[-1] if bounds else None
         left_text = text.seg(subject_node)
         right_lit = _literal_repr(expect_node, text) if expect_node is not None else None
         right_val = _literal_value(expect_node) if expect_node is not None else None
+        if bounds is not None and len(bounds) > 1:
+            # The whole bound tuple is the expectation, so moving any single
+            # bound is an expectation rewrite.
+            right_lit = ", ".join(filter(None, (text.seg(b) for b in bounds)))
+            try:
+                right_val = _canonical_repr(tuple(ast.literal_eval(b) for b in bounds))
+            except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+                right_val = None
         pos = not isinstance(op, (ast.NotEq, ast.IsNot, ast.NotIn))
         c = _classify_compare_op(
-            op, left, comparators, text, left_text, right_lit, right_val, pos
+            op, left, comparators, text, left_text, right_lit, right_val, pos, subject_node
         )
         # Which side is the subject and which the expectation was decided
         # above, including the `assert 3 == calc()` flip, so the name sets come
@@ -665,11 +716,16 @@ def _referenced_names(node) -> tuple[str, ...]:
 
 
 def _classify_compare_op(
-    op, left, comparators, text, left_text, right_lit, right_val, pos
+    op, left, comparators, text, left_text, right_lit, right_val, pos, subject=None
 ) -> _Classified:
     """The comparison-operator chain, split out so the caller can attach name
     sets to whichever `_Classified` comes back without repeating them at nine
-    return sites."""
+    return sites. `subject` is the post-flip subject node: the `len()` shape
+    rule must follow it, or `assert 3 == len(x)` and `assert len(x) == 3` rate
+    differently and a pure operand flip reads as a weakening (SPEC §3 says
+    `len(x) == n` is TYPE_SHAPE, full stop — audit 2026-08-19)."""
+    if subject is None:
+        subject = left
     if isinstance(op, (ast.Eq, ast.NotEq)):
         # Self-comparison (`assert f(x) == f(x)`) can never fail: the
         # oracle is gone even though the form still looks exact. Strip
@@ -679,7 +735,7 @@ def _classify_compare_op(
             _strip_identity(comparators[0], text)
         ):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
-        if isinstance(left, ast.Call) and _dotted(left.func) == "len":
+        if isinstance(subject, ast.Call) and _dotted(subject.func) == "len":
             return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
         if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
             return _Classified("compare_eq", S.EXACT_STRUCT, left_text, right_lit, right_val, positive=pos)
@@ -703,6 +759,17 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     if method not in _UNITTEST_MAP:
         return None
     form, level = _UNITTEST_MAP[method]
+    # `assertIs(x, None)` / `assertIsNot(x, None)` are the generic spellings of
+    # assertIsNone / assertIsNotNone. Leaving them at compare_eq made the
+    # dialects incoherent — bare `assert x is None` is non_null, so a pure
+    # spelling conversion was reported as a polarity inversion while a genuine
+    # cross-dialect inversion was not (audit 2026-08-19).
+    if method in ("assertIs", "assertIsNot") and len(node.args) > 1:
+        for arg in node.args[:2]:
+            if isinstance(arg, ast.Constant) and arg.value is None:
+                method = "assertIsNone" if method == "assertIs" else "assertIsNotNone"
+                form, level = _UNITTEST_MAP[method]
+                break
     positive = method not in _NEGATED_UNITTEST
     left_text = None
     right_lit = None
@@ -725,6 +792,18 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         if form == "compare_eq" and level == S.EXACT_VALUE and len(node.args) > 1:
             if _is_container_literal(node.args[0]) or _is_container_literal(node.args[1]):
                 level = S.EXACT_STRUCT
+        # The len() shape rule, on the post-flip subject, same as the bare
+        # lattice: `assertEqual(len(x), 3)` and `assert len(x) == 3` are both
+        # TYPE_SHAPE. Without it the unittest dialect rated the shape
+        # EXACT_VALUE and a routine modernisation blocked at high
+        # (audit 2026-08-19).
+        if (
+            form == "compare_eq"
+            and level == S.EXACT_VALUE
+            and isinstance(subject_node, ast.Call)
+            and _dotted(subject_node.func) == "len"
+        ):
+            form, level = "type_shape", S.TYPE_SHAPE
     if form == "approx":
         for kw in node.keywords:
             if kw.arg in ("places", "delta"):
@@ -735,11 +814,26 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             seg = text.seg(node.args[2])
             if seg:
                 epsilon, epsilon_kind = seg, "places"
+        if epsilon is None:
+            # assertAlmostEqual's implicit default is places=7. Recording it
+            # makes `places=0` appearing a loosening of that default instead
+            # of silence — same one-sided-event defect as pytest.approx
+            # (audit 2026-08-19).
+            epsilon, epsilon_kind = "7", "places"
     if form == "truthy" and node.args and _is_literal(node.args[0]):
         form, level = "tautology", S.TAUTOLOGY
-    if form == "compare_eq" and len(node.args) > 1:
-        right_text = text.seg(node.args[1])
-        if left_text and right_text and _norm(left_text) == _norm(right_text):
+    if form == "compare_eq" and subject_node is not None and expect_node is not None:
+        # Self-comparison with identity ops stripped, on the two actual
+        # operands — the post-flip subject against the post-flip expectation.
+        # The old check read `seg(args[1])` against `seg(args[1])`, so every
+        # literal-first `assertEqual(expected, actual)` — the canonical
+        # unittest order — was a textual self-comparison and classified
+        # TAUTOLOGY(10). With strength 10 recorded, any weakening read as a
+        # strength rise and the whole lattice was inert on the dialect's most
+        # common spelling (audit 2026-08-19).
+        if _norm(_strip_identity(subject_node, text)) == _norm(
+            _strip_identity(expect_node, text)
+        ):
             form, level = "tautology", S.TAUTOLOGY
     return _Classified(
         form,
@@ -752,6 +846,12 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         positive,
         _referenced_names(subject_node),
         _referenced_names(expect_node),
+        # Same vacuousness test the bare path applies (`assert str(1) == "1"`
+        # cannot fail): without it, `self.assertEqual(str(1), "1")` counted as
+        # oracle mass for D4/D5 and reopened the padding family in the
+        # unittest dialect (THREATMODEL 20/25/46, audit 2026-08-19).
+        _is_trivial_subject(subject_node)
+        and (expect_node is None or _is_trivial_subject(expect_node)),
     )
 
 
@@ -1413,6 +1513,67 @@ def _executed_scopes(func, module_scopes: dict[str, ast.AST], max_depth: int = 4
     return out
 
 
+def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
+    """Ids of `assert data == <literal>` where `data` was bound to the same
+    literal earlier in the same statement list and nothing between touches it.
+
+    The subject is a bare Name, so `_is_trivial_subject` calls it state — yet
+    straight-line locally the assertion cannot fail. That spelling counted as
+    full oracle mass for D4/D5 and excused a deleted failing test through
+    RESTRUCTURED: the bare-dialect member of the padding family (rows
+    20/25/46), reproduced as a silent pass in the 2026-08-19 audit.
+
+    Deliberately narrow: same statement list only (an outer binding is
+    invisible to an inner block, failing toward real, not vacuous), both
+    operand orders accepted, and ANY mention of the name between binding and
+    assert disqualifies — `data = [1, 2, 3]; process(data);
+    assert data == [1, 2, 3]` is a genuine oracle over `process`, not
+    padding.
+    """
+    out: set[int] = set()
+
+    def _nameless(node: ast.AST) -> bool:
+        return not any(isinstance(n, ast.Name) for n in ast.walk(node))
+
+    for holder in ast.walk(func):
+        body = getattr(holder, "body", None)
+        if not isinstance(body, list):
+            continue
+        bound: dict[str, ast.expr] = {}
+        for stmt in body:
+            if (
+                isinstance(stmt, ast.Assign)
+                and len(stmt.targets) == 1
+                and isinstance(stmt.targets[0], ast.Name)
+                and _nameless(stmt.value)
+            ):
+                bound[stmt.targets[0].id] = stmt.value
+                continue
+            if isinstance(stmt, ast.Assert) and id(stmt) not in out:
+                t = stmt.test
+                if (
+                    isinstance(t, ast.Compare)
+                    and len(t.ops) == 1
+                    and isinstance(t.ops[0], ast.Eq)
+                    and t.comparators
+                ):
+                    pair = None
+                    if isinstance(t.left, ast.Name) and _nameless(t.comparators[0]):
+                        pair = (t.left, t.comparators[0])
+                    elif isinstance(t.comparators[0], ast.Name) and _nameless(t.left):
+                        pair = (t.comparators[0], t.left)
+                    if pair is not None:
+                        subject, expect = pair
+                        hit = bound.get(subject.id)
+                        if hit is not None and ast.dump(hit) == ast.dump(expect):
+                            out.add(id(stmt))
+            mentions = {n.id for n in ast.walk(stmt) if isinstance(n, ast.Name)}
+            for name in list(bound):
+                if name in mentions:
+                    del bound[name]
+    return out
+
+
 def _collect_unit(
     func: ast.FunctionDef | ast.AsyncFunctionDef,
     qualname: str,
@@ -1430,6 +1591,7 @@ def _collect_unit(
     dead = _unreachable_ids(func)
     guards = _skip_call_guards(func, text)
     bindings = _local_bindings(func)
+    vacuous = _vacuous_bound_asserts(func)
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
     # helper's assertions are this unit's oracle, a helper's `except` is not
@@ -1469,7 +1631,7 @@ def _collect_unit(
                     right_value=c.right_value,
                     epsilon=c.epsilon,
                     epsilon_kind=c.epsilon_kind,
-                    trivial=_is_trivial_subject(node.test),
+                    trivial=_is_trivial_subject(node.test) or id(node) in vacuous,
                     positive=c.positive,
                     left_names=c.left_names,
                     right_depends_on=_resolve_through(c.right_names, bindings),
@@ -1531,6 +1693,7 @@ def _collect_unit(
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=_resolve_through(c.right_names, bindings),
+                        trivial=c.trivial,
                     )
                 )
                 counter += 1
@@ -1567,7 +1730,7 @@ def _collect_unit(
                         right_value=c.right_value,
                         epsilon=c.epsilon,
                         epsilon_kind=c.epsilon_kind,
-                        trivial=_is_trivial_subject(node.test),
+                        trivial=_is_trivial_subject(node.test) or id(node) in vacuous,
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=c.right_names,
@@ -1595,6 +1758,7 @@ def _collect_unit(
                         left_names=c.left_names,
                         right_depends_on=c.right_names,
                         inherited=True,
+                        trivial=c.trivial,
                     )
                 )
                 counter += 1
@@ -1828,6 +1992,102 @@ def _strip_docstrings(tree: ast.AST) -> ast.AST:
     return tree
 
 
+def _normalize_for_fingerprint(tree: ast.AST) -> ast.AST:
+    """Strip what cannot change behaviour, so a cosmetic edit does not flip a
+    symbol's fingerprint and buy repair evidence (audit 2026-08-19).
+
+    `def f(x) -> float:` with an added return annotation, a non-leading string
+    statement after the docstring, `x: int` with no value, and
+    `_checked = None` inside the function body all change `ast.dump` while
+    changing nothing the code does — and an attacker controls both sides of
+    the diff, so each was a one-line purchase of REPAIR_EVIDENCE for any
+    oracle cheat (THREATMODEL row 4 reopened).
+
+    Removed here: parameter/return annotations (function and lambda), string
+    constants in non-leading statement position, value-less annotated
+    assignments, the annotation of a value-carrying annotated assignment,
+    and — **inside function bodies only** — an assignment of a literal to a
+    name the function never reads. Module- and class-level constants are
+    untouched: a constant the production file never reads may still be read
+    by the tests (`TAX = 0.05` in billing.py), and dropping it would deny
+    honest repair evidence. Functions containing `global`/`nonlocal` keep
+    their assignments: a store can escape the scope without a load.
+
+    Deliberately NOT normalised: alpha-renames. Deciding which names escape
+    needs scope analysis greenwash does not have, and a wrong normalisation
+    silently disables evidence for genuine rename-driven API changes — a
+    documented residual, priced as such.
+    """
+    for node in ast.walk(tree):
+        args: ast.arguments | None = None
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            node.returns = None
+            args = node.args
+        elif isinstance(node, ast.Lambda):
+            args = node.args
+        if args is not None:
+            for arg in (
+                *args.posonlyargs, *args.args, args.vararg,
+                *args.kwonlyargs, args.kwarg,
+            ):
+                if arg is not None:
+                    arg.annotation = None
+        if isinstance(node, ast.AnnAssign) and node.annotation is not None:
+            node.annotation = None
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            kept: list[ast.stmt] = []
+            for stmt in node.body:
+                # Any string statement still standing is noise: leading
+                # docstrings were stripped by the earlier pass, so a survivor
+                # here was never a docstring (audit 2026-08-19).
+                if (
+                    isinstance(stmt, ast.Expr)
+                    and isinstance(stmt.value, ast.Constant)
+                    and isinstance(stmt.value.value, str)
+                ):
+                    continue
+                if isinstance(stmt, ast.AnnAssign) and stmt.value is None:
+                    continue  # `x: int` binds nothing
+                kept.append(stmt)
+            node.body = kept or [ast.Pass()]
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        # The expensive checks (nested walks) run only when a drop candidate
+        # exists, so files without dead literal bindings pay one cheap pass.
+        if not any(
+            isinstance(stmt, ast.Assign)
+            and len(stmt.targets) == 1
+            and isinstance(stmt.targets[0], ast.Name)
+            and isinstance(stmt.value, ast.Constant)
+            for stmt in node.body
+        ):
+            continue
+        if any(
+            isinstance(stmt, (ast.Global, ast.Nonlocal))
+            for stmt in ast.walk(node)
+        ):
+            continue
+        loads = {
+            n.id
+            for n in ast.walk(node)
+            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)
+        }
+        kept = []
+        for stmt in node.body:
+            if (
+                isinstance(stmt, ast.Assign)
+                and len(stmt.targets) == 1
+                and isinstance(stmt.targets[0], ast.Name)
+                and stmt.targets[0].id not in loads
+                and isinstance(stmt.value, ast.Constant)
+            ):
+                continue  # a literal bound to a name this scope never reads
+            kept.append(stmt)
+        node.body = kept or [ast.Pass()]
+    return tree
+
+
 def _fingerprint(node: ast.AST) -> str:
     dump = ast.dump(node, include_attributes=False)
     return hashlib.sha256(dump.encode("utf-8")).hexdigest()[:16]
@@ -1890,9 +2150,15 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         # of crashing the process (confirmed red-team finding).
         return ParsedFile(parse_ok=False)
 
-    # One parse, one in-place docstring strip: symbol fingerprints are dumped
-    # straight from subtrees instead of re-running unparse+parse per symbol.
+    # One parse, one in-place normalisation: symbol fingerprints are dumped
+    # straight from subtrees instead of re-running unparse+parse per symbol,
+    # and the fingerprint ignores what cannot change behaviour (annotations,
+    # noise statements, dead literal bindings) so a cosmetic prod edit buys
+    # no repair evidence. Test files never fingerprint symbols, so they skip
+    # the pass entirely — collection semantics never see a mutated tree.
     _strip_docstrings(tree)
+    if not collect_tests:
+        _normalize_for_fingerprint(tree)
     text = off = _Offsets(raw)
     units: list[ParsedUnit] = []
     symbols: dict[str, str] = {}

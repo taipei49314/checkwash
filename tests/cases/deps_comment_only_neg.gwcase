@@ -1,0 +1,25 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: a comment appended to requirements.txt — no dependency touched —
+note2: used to satisfy D9's byte comparison and de-escalate the expectation
+note3: rewrite to the buggy value.
+origin: audit 2026-08-19, verdict pass with DEPENDENCY_DRIFT
+=== before: requirements.txt ===
+pytest>=7
+=== after: requirements.txt ===
+pytest>=7
+# refreshed pins for the CI cache
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 90.0
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

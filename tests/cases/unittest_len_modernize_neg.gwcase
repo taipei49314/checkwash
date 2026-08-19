@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 86i
+rule: ASSERT_WEAKENED
+note: unittest→bare modernisation with identical semantics, same unit.
+note2: assertEqual rated len() EXACT_VALUE(90) while bare rated it
+note3: TYPE_SHAPE(50), so the routine cleanup blocked at high as a
+note4: 90→50 "weakening".
+origin: audit 2026-08-19, blocked at high
+=== before: tests/test_lines.py ===
+import unittest
+
+import app
+
+
+class Lines(unittest.TestCase):
+    def test_lines(self):
+        items = ["a", "b"]
+        self.assertEqual(len(app.line_items(items)), 2)
+=== after: tests/test_lines.py ===
+import unittest
+
+import app
+
+
+class Lines(unittest.TestCase):
+    def test_lines(self):
+        items = ["a", "b"]
+        assert len(app.line_items(items)) == 2
+=== expect ===
+[]

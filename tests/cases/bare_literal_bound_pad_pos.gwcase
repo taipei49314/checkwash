@@ -1,0 +1,20 @@
+=== meta ===
+bypass: 20, 25, 46
+rule: TEST_DISABLED
+note: bare-dialect padding — the subject is a bare Name so it read as state,
+note2: but the value was bound to the very literal it is compared against
+note3: one line up. Counted as oracle mass, D5 RESTRUCTURED excused the
+note4: deletion.
+origin: audit 2026-08-19, verdict pass with RESTRUCTURED credit
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+def test_coverage_ok():
+    data = [1, 2, 3]
+    assert data == [1, 2, 3]
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

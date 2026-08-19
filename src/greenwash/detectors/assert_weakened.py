@@ -62,12 +62,24 @@ def detect(ir: IR) -> list[Finding]:
                             f"both changed ({b.text.strip()[:60]} -> {a.text.strip()[:60]}); "
                             "greenwash cannot verify the replacement is equivalent"
                         )
-                    else:
+                    elif b.form == a.form:
                         message = (
                             f"{unit.qualname}: assertion polarity inverted "
                             f"({'positive' if b.positive else 'negative'} -> "
                             f"{'positive' if a.positive else 'negative'}) — "
                             "the test now proves the opposite"
+                        )
+                    else:
+                        # A cross-form polarity difference (`== 105.0` becoming
+                        # `is not None`) is a replacement, not a negation: the
+                        # new assertion does not prove the opposite of the old
+                        # one, and saying so is exactly the class of unearned
+                        # claim SPEC §4 forbids (audit 2026-08-19). It still
+                        # blocks — the drop is graded as an inversion below.
+                        message = (
+                            f"{unit.qualname}: assertion form and polarity both changed "
+                            f"({b.text.strip()[:60]} -> {a.text.strip()[:60]}); "
+                            "greenwash cannot verify the replacement is equivalent"
                         )
                     findings.append(
                         Finding(

@@ -30,6 +30,12 @@ def _one_loosened(kind: str, before: str, after: str) -> bool:
         b, a = Decimal(before), Decimal(after)
     except InvalidOperation:
         return False  # unparseable literals: no guess, no noise
+    if b.is_snan() or a.is_snan():
+        # A signaling NaN constructs fine and then raises InvalidOperation on
+        # *comparison* — outside the guard above, it was a crash exit (2) for
+        # a two-token test edit (audit 2026-08-19). Same contract: no guess,
+        # no noise.
+        return False
     if kind == "places":
         return a < b  # more places = stricter
     return a > b
@@ -63,18 +69,26 @@ def detect(ir: IR) -> list[Finding]:
             for kind, before_eps, after_eps in unit.delta.tolerance_changes:
                 if not _loosened(kind, before_eps, after_eps):
                     continue
+                # Epsilons are recorded keyed ("rel=1e-6", "rel=1e-9|abs=1")
+                # or bare ("0.5" for a positional tolerance): show the key
+                # only when the value does not carry it, so the report reads
+                # "rel=1e-6 -> rel=1e-2", not "rel=rel=1e-6" (user-perspective
+                # review 2026-08-19; the doubling predates the keyed format
+                # and reached the demo's output).
+                b_show = before_eps if "=" in before_eps else f"{kind}={before_eps}"
+                a_show = after_eps if "=" in after_eps else f"{kind}={after_eps}"
                 findings.append(
                     Finding(
                         rule="TOLERANCE_LOOSENED",
                         severity="warn",
                         message=(
                             f"{unit.qualname}: tolerance loosened "
-                            f"({kind} {before_eps} -> {after_eps})"
+                            f"({b_show} -> {a_show})"
                         ),
                         path=file.path,
                         unit=unit.qualname,
-                        before=Evidence(text=f"{kind}={before_eps}", span=unit.before.span),
-                        after=Evidence(text=f"{kind}={after_eps}", span=unit.after.span),
+                        before=Evidence(text=b_show, span=unit.before.span),
+                        after=Evidence(text=a_show, span=unit.after.span),
                         fingerprint=make_fingerprint(
                             "TOLERANCE_LOOSENED", file.path, unit.qualname, f"{kind}:{before_eps}"
                         ),

@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 4
+rule: ASSERT_WEAKENED
+note: a return annotation on the symbol under test changes its AST
+note2: fingerprint and nothing else — the bug stays, the assertion is
+note3: weakened, and REPAIR_EVIDENCE used to disarm E1 for one cosmetic
+note4: line.
+origin: audit 2026-08-19, verdict pass with REPAIR_EVIDENCE
+=== before: billing.py ===
+def invoice_total(items, tax):
+    total = sum(items)
+    return round(total, 2)
+=== after: billing.py ===
+def invoice_total(items, tax) -> float:
+    total = sum(items)
+    return round(total, 2)
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,30 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: assertIs(result, None) and assertIsNone(result) assert the same thing;
+note2: the generic spelling classified compare_eq/positive while assertIsNone
+note3: was negative, so the conversion was reported as proving the opposite.
+origin: audit 2026-08-19, blocked at high with an untrue message
+=== before: tests/test_users.py ===
+import unittest
+
+import app
+
+
+class Users(unittest.TestCase):
+    def test_missing_user(self):
+        result = app.find_user(404)
+        self.assertIs(result, None)
+=== after: tests/test_users.py ===
+import unittest
+
+import app
+
+
+class Users(unittest.TestCase):
+    def test_missing_user(self):
+        result = app.find_user(404)
+        self.assertIsNone(result)
+=== before: app/__init__.py ===
+=== after: app/__init__.py ===
+=== expect ===
+[]

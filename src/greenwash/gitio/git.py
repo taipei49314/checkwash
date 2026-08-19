@@ -68,7 +68,26 @@ def read_blobs(repo: str, specs: list[tuple[str, str]]) -> dict[tuple[str, str],
     if not specs:
         return {}
     uniq = sorted(set(specs))
-    stdin = b"".join(f"{rev}:{path}\n".encode("utf-8") for rev, path in uniq)
+    stdin_specs: list[tuple[str, str]] = []
+    result: dict[tuple[str, str], bytes | None] = {}
+    for s in uniq:
+        if "\n" in s[0] or "\n" in s[1]:
+            # A newline inside a spec becomes two protocol requests; git's
+            # extra `<fragment> missing` response is then consumed as the
+            # next spec's header, and when the response count happens to
+            # realign the loop below completes with WRONG assignments and no
+            # fallback — an existing file's blob reads as None and its
+            # weakenings vanish silently (audit 2026-08-19, verified at
+            # protocol level with the real binary; Git-for-Windows refuses
+            # such paths outright, so the entry arrives in Linux-authored
+            # trees). Rejected here as missing: the file stays visible as
+            # unreadable rather than poisoning its neighbours.
+            result[s] = None
+        else:
+            stdin_specs.append(s)
+    if not stdin_specs:
+        return result
+    stdin = b"".join(f"{rev}:{path}\n".encode("utf-8") for rev, path in stdin_specs)
     try:
         proc = subprocess.run(
             ["git", "-C", repo, "cat-file", "--batch"],
@@ -79,11 +98,12 @@ def read_blobs(repo: str, specs: list[tuple[str, str]]) -> dict[tuple[str, str],
     except FileNotFoundError as exc:
         raise GitError("git executable not found") from exc
 
-    out, pos, result = proc.stdout, 0, {}
-    for spec in uniq:
+    out, pos = proc.stdout, 0
+    for spec in stdin_specs:
         end = out.find(b"\n", pos)
         if end < 0:
-            return {s: _read_blob(repo, *s) for s in uniq}
+            result.update({s: _read_blob(repo, *s) for s in stdin_specs if s not in result})
+            return result
         header = out[pos:end]
         pos = end + 1
         if header.endswith(b" missing") or header.endswith(b" ambiguous"):
@@ -91,7 +111,8 @@ def read_blobs(repo: str, specs: list[tuple[str, str]]) -> dict[tuple[str, str],
             continue
         parts = header.rsplit(b" ", 1)
         if len(parts) != 2 or not parts[1].isdigit():
-            return {s: _read_blob(repo, *s) for s in uniq}
+            result.update({s: _read_blob(repo, *s) for s in stdin_specs if s not in result})
+            return result
         size = int(parts[1])
         result[spec] = out[pos : pos + size]
         pos += size + 1  # content is followed by a newline
@@ -104,10 +125,19 @@ def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
     One subprocess for the whole batch; used by the duplicate-unit search to
     find surviving copies of deleted tests without reading the tree. git grep
     exits 1 on no match, which is an answer, not an error.
+
+    `-z` keeps the `rev:path` record shape but NUL-terminates it and — the
+    load-bearing half — disables path quoting. With the default
+    `core.quotepath`, any non-ASCII path came back C-quoted
+    (`"tests/test_\\346\\213\\267\\350\\262\\235.py"`), failed the role
+    filter downstream, and the duplicate-survivor search never found
+    CJK-named copies: a false block for exactly the repositories most likely
+    to have them (audit 2026-08-19). Format verified against the real binary:
+    one record per match, first-colon split, path bytes verbatim UTF-8.
     """
     if not needles:
         return []
-    args = ["grep", "-l", "-F"]
+    args = ["grep", "-l", "-F", "-z"]
     for needle in needles:
         args += ["-e", needle]
     args.append(rev)
@@ -116,9 +146,9 @@ def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
     except GitError:
         return []
     paths = []
-    for line in out.decode("utf-8", "replace").split("\n"):
-        if ":" in line:
-            paths.append(line.split(":", 1)[1])
+    for tok in out.split(b"\0"):
+        if b":" in tok:
+            paths.append(tok.split(b":", 1)[1].decode("utf-8", "replace"))
     return paths
 
 
