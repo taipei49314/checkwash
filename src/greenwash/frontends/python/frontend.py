@@ -363,11 +363,22 @@ class _Classified:
     # _collect_unit resolves right_names into Assertion.right_depends_on.
     left_names: tuple[str, ...] = ()
     right_names: tuple[str, ...] = ()
+    # Whether the classified assertion depends on nothing but literals and
+    # builtin calls — the vacuousness test that keeps padding out of D4/D5
+    # compensation. Computed here so every construction site can pass it
+    # through without re-deriving nodes it no longer holds.
+    trivial: bool = False
 
 
+# The polarity of the None family follows the bare lattice: `is None` is the
+# positive form there (op `Is` → positive), so assertIsNone must be too.
+# assertIsNone used to sit in this set while bare `is None` was positive, so a
+# spelling conversion between the two dialects read as a polarity inversion
+# ("the test now proves the opposite") and a genuine cross-dialect inversion
+# did not fire at all (audit 2026-08-19).
 _NEGATED_UNITTEST = frozenset(
     {
-        "assertNotEqual", "assertFalse", "assertIsNone", "assertNotIn",
+        "assertNotEqual", "assertFalse", "assertIsNotNone", "assertNotIn",
         "assertNotRegex", "assertNotIsInstance", "assertNotAlmostEqual",
         "assertIsNot",
     }
@@ -501,7 +512,7 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         right_val = _literal_value(expect_node) if expect_node is not None else None
         pos = not isinstance(op, (ast.NotEq, ast.IsNot, ast.NotIn))
         c = _classify_compare_op(
-            op, left, comparators, text, left_text, right_lit, right_val, pos
+            op, left, comparators, text, left_text, right_lit, right_val, pos, subject_node
         )
         # Which side is the subject and which the expectation was decided
         # above, including the `assert 3 == calc()` flip, so the name sets come
@@ -665,11 +676,16 @@ def _referenced_names(node) -> tuple[str, ...]:
 
 
 def _classify_compare_op(
-    op, left, comparators, text, left_text, right_lit, right_val, pos
+    op, left, comparators, text, left_text, right_lit, right_val, pos, subject=None
 ) -> _Classified:
     """The comparison-operator chain, split out so the caller can attach name
     sets to whichever `_Classified` comes back without repeating them at nine
-    return sites."""
+    return sites. `subject` is the post-flip subject node: the `len()` shape
+    rule must follow it, or `assert 3 == len(x)` and `assert len(x) == 3` rate
+    differently and a pure operand flip reads as a weakening (SPEC §3 says
+    `len(x) == n` is TYPE_SHAPE, full stop — audit 2026-08-19)."""
+    if subject is None:
+        subject = left
     if isinstance(op, (ast.Eq, ast.NotEq)):
         # Self-comparison (`assert f(x) == f(x)`) can never fail: the
         # oracle is gone even though the form still looks exact. Strip
@@ -679,7 +695,7 @@ def _classify_compare_op(
             _strip_identity(comparators[0], text)
         ):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
-        if isinstance(left, ast.Call) and _dotted(left.func) == "len":
+        if isinstance(subject, ast.Call) and _dotted(subject.func) == "len":
             return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
         if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
             return _Classified("compare_eq", S.EXACT_STRUCT, left_text, right_lit, right_val, positive=pos)
@@ -703,6 +719,17 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     if method not in _UNITTEST_MAP:
         return None
     form, level = _UNITTEST_MAP[method]
+    # `assertIs(x, None)` / `assertIsNot(x, None)` are the generic spellings of
+    # assertIsNone / assertIsNotNone. Leaving them at compare_eq made the
+    # dialects incoherent — bare `assert x is None` is non_null, so a pure
+    # spelling conversion was reported as a polarity inversion while a genuine
+    # cross-dialect inversion was not (audit 2026-08-19).
+    if method in ("assertIs", "assertIsNot") and len(node.args) > 1:
+        for arg in node.args[:2]:
+            if isinstance(arg, ast.Constant) and arg.value is None:
+                method = "assertIsNone" if method == "assertIs" else "assertIsNotNone"
+                form, level = _UNITTEST_MAP[method]
+                break
     positive = method not in _NEGATED_UNITTEST
     left_text = None
     right_lit = None
@@ -725,6 +752,18 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         if form == "compare_eq" and level == S.EXACT_VALUE and len(node.args) > 1:
             if _is_container_literal(node.args[0]) or _is_container_literal(node.args[1]):
                 level = S.EXACT_STRUCT
+        # The len() shape rule, on the post-flip subject, same as the bare
+        # lattice: `assertEqual(len(x), 3)` and `assert len(x) == 3` are both
+        # TYPE_SHAPE. Without it the unittest dialect rated the shape
+        # EXACT_VALUE and a routine modernisation blocked at high
+        # (audit 2026-08-19).
+        if (
+            form == "compare_eq"
+            and level == S.EXACT_VALUE
+            and isinstance(subject_node, ast.Call)
+            and _dotted(subject_node.func) == "len"
+        ):
+            form, level = "type_shape", S.TYPE_SHAPE
     if form == "approx":
         for kw in node.keywords:
             if kw.arg in ("places", "delta"):
@@ -737,9 +776,18 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
                 epsilon, epsilon_kind = seg, "places"
     if form == "truthy" and node.args and _is_literal(node.args[0]):
         form, level = "tautology", S.TAUTOLOGY
-    if form == "compare_eq" and len(node.args) > 1:
-        right_text = text.seg(node.args[1])
-        if left_text and right_text and _norm(left_text) == _norm(right_text):
+    if form == "compare_eq" and subject_node is not None and expect_node is not None:
+        # Self-comparison with identity ops stripped, on the two actual
+        # operands — the post-flip subject against the post-flip expectation.
+        # The old check read `seg(args[1])` against `seg(args[1])`, so every
+        # literal-first `assertEqual(expected, actual)` — the canonical
+        # unittest order — was a textual self-comparison and classified
+        # TAUTOLOGY(10). With strength 10 recorded, any weakening read as a
+        # strength rise and the whole lattice was inert on the dialect's most
+        # common spelling (audit 2026-08-19).
+        if _norm(_strip_identity(subject_node, text)) == _norm(
+            _strip_identity(expect_node, text)
+        ):
             form, level = "tautology", S.TAUTOLOGY
     return _Classified(
         form,
@@ -752,6 +800,12 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         positive,
         _referenced_names(subject_node),
         _referenced_names(expect_node),
+        # Same vacuousness test the bare path applies (`assert str(1) == "1"`
+        # cannot fail): without it, `self.assertEqual(str(1), "1")` counted as
+        # oracle mass for D4/D5 and reopened the padding family in the
+        # unittest dialect (THREATMODEL 20/25/46, audit 2026-08-19).
+        _is_trivial_subject(subject_node)
+        and (expect_node is None or _is_trivial_subject(expect_node)),
     )
 
 
@@ -1531,6 +1585,7 @@ def _collect_unit(
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=_resolve_through(c.right_names, bindings),
+                        trivial=c.trivial,
                     )
                 )
                 counter += 1
@@ -1595,6 +1650,7 @@ def _collect_unit(
                         left_names=c.left_names,
                         right_depends_on=c.right_names,
                         inherited=True,
+                        trivial=c.trivial,
                     )
                 )
                 counter += 1

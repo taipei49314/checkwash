@@ -1,6 +1,45 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-18 (T1.11 literal-needle swap; #86a stays info)
+Updated: 2026-08-19 (audit round A1: unittest classifier parity)
+
+## 2026-08-19: A1 — the unittest classifier grows the bare path's twins
+
+Four defects, one root: every consistency feature built on the bare-assert
+path existed without its unittest twin, and the corpus contains zero
+`self.assert*` assertions (THREATMODEL 86b), so nothing could surface the
+divergence. Found by an external read-only audit (2026-08-19), every claim
+reproduced with the real CLI before this fix:
+
+- **literal-first TAUTOLOGY.** The self-comparison check read `seg(args[1])`
+  against `seg(args[1])`, so every `assertEqual(expected, actual)` — the
+  canonical unittest order — rated TAUTOLOGY(10) and the lattice was inert on
+  it: `assertEqual(105.0, total)` weakened to `assertTrue(total)` produced
+  zero findings. Now compares the post-flip subject against the post-flip
+  expectation, identity ops stripped, same as bare.
+- **None-family polarity.** assertIsNone sat in `_NEGATED_UNITTEST` while
+  bare `is None` is positive, so a spelling conversion was reported as
+  "the test now proves the opposite" and a genuine cross-dialect inversion
+  did not fire. Polarity now follows the bare lattice, and
+  `assertIs(x, None)`/`assertIsNot(x, None)` normalise to the dedicated
+  spellings before classification.
+- **trivial never computed.** `Assertion.trivial` defaulted False on the
+  unittest path, so `self.assertEqual(str(1), "1")` counted as oracle mass
+  and reopened the padding family (rows 20/25/46) in this dialect.
+  `_Classified.trivial` now carries it from the classifier.
+- **len() shape by operand order and dialect.** The len→TYPE_SHAPE rule read
+  the pre-flip left operand and had no unittest twin, so
+  `assertEqual(len(x), 2)` (90) → `assert len(x) == 2` (50) blocked a
+  routine modernisation at high. The rule now reads the post-flip subject in
+  both dialects.
+
+Gates: 443 tests, all green (was 437); recorded arms, tamper and refactor
+corpora unchanged — no existing fixture flipped; dogfood clean. New
+fixtures: unittest_literal_first_pos, unittest_isnone_true_inversion_pos,
+unittest_trivial_pad_pos, unittest_isnone_spelling_neg,
+unittest_len_modernize_neg, bare_len_operand_flip_neg. Stated residual: the
+`_is_unfalsifiable` enumerations (empty-needle membership, `len(x) >= 0`)
+still have no unittest spelling — the audited defects are closed, the wider
+enumeration parity is not annexed here.
 
 ## 2026-08-18: T1.11 — do not invert a literal membership needle
 

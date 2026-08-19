@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: pure operand flip in the bare dialect — `assert 2 == len(x)` to
+note2: `assert len(x) == 2`. The len() shape rule read the pre-flip left
+note3: operand, so the two spellings rated 90 and 50 and the flip blocked.
+origin: audit 2026-08-19, blocked at high
+=== before: tests/test_lines.py ===
+import app
+
+
+def test_lines():
+    items = ["a", "b"]
+    assert 2 == len(app.line_items(items))
+=== after: tests/test_lines.py ===
+import app
+
+
+def test_lines():
+    items = ["a", "b"]
+    assert len(app.line_items(items)) == 2
+=== expect ===
+[]

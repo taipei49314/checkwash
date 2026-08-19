@@ -1,0 +1,32 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: literal-first assertEqual is the canonical unittest order; it rated
+note2: TAUTOLOGY(10) because the self-comparison check read args[1] against
+note3: args[1], so any weakening read as a strength rise and nothing fired.
+origin: audit 2026-08-19, reproduced as verdict pass with zero findings
+=== before: tests/test_billing.py ===
+import unittest
+
+import app
+
+
+class Billing(unittest.TestCase):
+    def test_total_applies_tax(self):
+        items = [50.0, 50.0]
+        total = app.invoice_total(items, 0.05)
+        self.assertEqual(105.0, total)
+=== after: tests/test_billing.py ===
+import unittest
+
+import app
+
+
+class Billing(unittest.TestCase):
+    def test_total_applies_tax(self):
+        items = [50.0, 50.0]
+        total = app.invoice_total(items, 0.05)
+        self.assertTrue(total)
+=== before: app/__init__.py ===
+=== after: app/__init__.py ===
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,30 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+note: the genuine cross-dialect inversion — `assert x is None` replaced by
+note2: assertIsNotNone — did not fire, because bare `is None` and assertIsNone
+note3: carried opposite polarity flags. Same root as the spelling false block.
+origin: audit 2026-08-19, verdict pass on a real polarity flip
+=== before: tests/test_users.py ===
+import unittest
+
+import app
+
+
+class Users(unittest.TestCase):
+    def test_missing_user(self):
+        result = app.find_user(404)
+        assert result is None
+=== after: tests/test_users.py ===
+import unittest
+
+import app
+
+
+class Users(unittest.TestCase):
+    def test_missing_user(self):
+        result = app.find_user(404)
+        self.assertIsNotNone(result)
+=== before: app/__init__.py ===
+=== after: app/__init__.py ===
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high"}]
