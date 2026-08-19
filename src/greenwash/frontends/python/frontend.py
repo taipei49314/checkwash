@@ -1513,6 +1513,67 @@ def _executed_scopes(func, module_scopes: dict[str, ast.AST], max_depth: int = 4
     return out
 
 
+def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
+    """Ids of `assert data == <literal>` where `data` was bound to the same
+    literal earlier in the same statement list and nothing between touches it.
+
+    The subject is a bare Name, so `_is_trivial_subject` calls it state — yet
+    straight-line locally the assertion cannot fail. That spelling counted as
+    full oracle mass for D4/D5 and excused a deleted failing test through
+    RESTRUCTURED: the bare-dialect member of the padding family (rows
+    20/25/46), reproduced as a silent pass in the 2026-08-19 audit.
+
+    Deliberately narrow: same statement list only (an outer binding is
+    invisible to an inner block, failing toward real, not vacuous), both
+    operand orders accepted, and ANY mention of the name between binding and
+    assert disqualifies — `data = [1, 2, 3]; process(data);
+    assert data == [1, 2, 3]` is a genuine oracle over `process`, not
+    padding.
+    """
+    out: set[int] = set()
+
+    def _nameless(node: ast.AST) -> bool:
+        return not any(isinstance(n, ast.Name) for n in ast.walk(node))
+
+    for holder in ast.walk(func):
+        body = getattr(holder, "body", None)
+        if not isinstance(body, list):
+            continue
+        bound: dict[str, ast.expr] = {}
+        for stmt in body:
+            if (
+                isinstance(stmt, ast.Assign)
+                and len(stmt.targets) == 1
+                and isinstance(stmt.targets[0], ast.Name)
+                and _nameless(stmt.value)
+            ):
+                bound[stmt.targets[0].id] = stmt.value
+                continue
+            if isinstance(stmt, ast.Assert) and id(stmt) not in out:
+                t = stmt.test
+                if (
+                    isinstance(t, ast.Compare)
+                    and len(t.ops) == 1
+                    and isinstance(t.ops[0], ast.Eq)
+                    and t.comparators
+                ):
+                    pair = None
+                    if isinstance(t.left, ast.Name) and _nameless(t.comparators[0]):
+                        pair = (t.left, t.comparators[0])
+                    elif isinstance(t.comparators[0], ast.Name) and _nameless(t.left):
+                        pair = (t.comparators[0], t.left)
+                    if pair is not None:
+                        subject, expect = pair
+                        hit = bound.get(subject.id)
+                        if hit is not None and ast.dump(hit) == ast.dump(expect):
+                            out.add(id(stmt))
+            mentions = {n.id for n in ast.walk(stmt) if isinstance(n, ast.Name)}
+            for name in list(bound):
+                if name in mentions:
+                    del bound[name]
+    return out
+
+
 def _collect_unit(
     func: ast.FunctionDef | ast.AsyncFunctionDef,
     qualname: str,
@@ -1530,6 +1591,7 @@ def _collect_unit(
     dead = _unreachable_ids(func)
     guards = _skip_call_guards(func, text)
     bindings = _local_bindings(func)
+    vacuous = _vacuous_bound_asserts(func)
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
     # helper's assertions are this unit's oracle, a helper's `except` is not
@@ -1569,7 +1631,7 @@ def _collect_unit(
                     right_value=c.right_value,
                     epsilon=c.epsilon,
                     epsilon_kind=c.epsilon_kind,
-                    trivial=_is_trivial_subject(node.test),
+                    trivial=_is_trivial_subject(node.test) or id(node) in vacuous,
                     positive=c.positive,
                     left_names=c.left_names,
                     right_depends_on=_resolve_through(c.right_names, bindings),
@@ -1668,7 +1730,7 @@ def _collect_unit(
                         right_value=c.right_value,
                         epsilon=c.epsilon,
                         epsilon_kind=c.epsilon_kind,
-                        trivial=_is_trivial_subject(node.test),
+                        trivial=_is_trivial_subject(node.test) or id(node) in vacuous,
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=c.right_names,

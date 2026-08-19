@@ -1,6 +1,27 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A4: fingerprint ignores the cosmetic)
+Updated: 2026-08-19 (audit round A5: literal-bound padding in the bare dialect)
+
+## 2026-08-19: A5 — padding whose subject is a freshly bound literal
+
+`data = [1, 2, 3]; assert data == [1, 2, 3]` — the subject is a bare Name,
+so triviality called it state and the lattice called it EXACT_STRUCT(100):
+full oracle mass. Deleting the failing test and adding that one line kept
+verdict pass through D5 RESTRUCTURED (audit probe, reproduced twice). The
+bare-dialect member of the padding family (rows 20/25/46); A1 closed the
+unittest spelling, this closes the other.
+
+`_vacuous_bound_asserts` marks `assert name == <literal>` when the same
+statement list binds `name` to a structurally identical literal earlier and
+**nothing between mentions the name** — `process(data); assert data == ...`
+is a genuine oracle over `process` and keeps its mass (direction pinned by
+the negative fixture). Outer bindings are invisible to inner blocks (fails
+toward real). The pass runs once per unit; the 500-file perf budget holds.
+
+Gates: 455 tests all green (was 453); arms/tamper/refactor corpora
+unchanged; dogfood clean. Fixtures: bare_literal_bound_pad_pos,
+bare_bound_then_used_neg. Residual: a binding reached through an if-branch
+window or a comprehension is not tracked — stated, not chased.
 
 ## 2026-08-19: A4 — a cosmetic edit no longer changes a symbol's fingerprint
 

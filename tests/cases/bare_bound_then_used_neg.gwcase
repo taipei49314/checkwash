@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+note: direction pin — the same shape with the name passed through code in
+note2: between is a genuine oracle over that code, not padding, and keeps
+note3: its compensation mass. Any mention disqualifies the vacuous reading.
+origin: audit 2026-08-19, added with the bound-subject change
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_restructured():
+    data = [50.0, 50.0]
+    total = invoice_total(data, 0.05)
+    assert data == [50.0, 50.0]
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
