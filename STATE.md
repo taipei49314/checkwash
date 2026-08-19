@@ -1,6 +1,34 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A7: the sNaN crash and one untrue message)
+Updated: 2026-08-19 (audit round A8: git's answers, taken verbatim)
+
+## 2026-08-19: A8 — the two places git's output was trusted unquoted
+
+- **grep_head_paths** ran `git grep -l -F` without `-z`: with the default
+  `core.quotepath`, every non-ASCII path came back C-quoted
+  (`"tests/test_\346\213\267\350\262\235.py"`), failed the role filter
+  downstream, and the duplicate-survivor search never found CJK-named
+  copies — the D10 DUPLICATE_REMAINS credit was lost and an honest dedup
+  deletion blocked at high. `-z` keeps the `rev:path` record shape,
+  NUL-terminates it, and returns path bytes verbatim (format verified
+  against the real binary before parsing). The same defence
+  `diff --name-status -z` and `status --porcelain -z` already apply
+  elsewhere; pinned by an e2e test with a real `tests/test_拷貝.py`.
+- **read_blobs** writes one protocol request per spec
+  (`{rev}:{path}\n`); a path containing a newline becomes two requests, and
+  git's extra `<fragment> missing` response is consumed as the next spec's
+  header — when the response count happens to realign, the loop completes
+  with wrong assignments and no fallback: an existing file's blob reads as
+  None and its weakenings vanish silently. Verified at protocol level with
+  the real binary (Git-for-Windows refuses such paths outright, so the
+  entry arrives in Linux-authored trees and then breaks Windows analyses of
+  the same diff). Specs containing a newline are now rejected as missing
+  before the request is built — the file stays visible as unreadable
+  rather than poisoning its neighbours.
+
+Gates: 459 tests all green (was 458); arms/tamper/refactor corpora
+unchanged; dogfood clean. New e2e:
+test_cjk_named_duplicate_survivor_gets_credit.
 
 ## 2026-08-19: A7 — no crash for two tokens, no claim without proof
 

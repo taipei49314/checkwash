@@ -506,3 +506,26 @@ def test_rename_into_prod_earns_no_opaque_exemption(repo):
     weakened = [f for f in payload["findings"] if f["rule"] == "ASSERT_WEAKENED"]
     assert weakened and weakened[0]["severity"] == "high", payload["findings"]
     assert "REPAIR_EVIDENCE" not in weakened[0]["deescalators"]
+
+
+def test_cjk_named_duplicate_survivor_gets_credit(repo):
+    # git's default core.quotepath C-quotes non-ASCII paths, so the duplicate
+    # search's `git grep` answer never matched a collectable test file and the
+    # DUPLICATE_REMAINS credit was lost — a false block for CJK-filename
+    # repositories (audit 2026-08-19). grep now runs -z, which returns path
+    # bytes verbatim.
+    survivor = repo / "tests" / "test_拷貝.py"
+    survivor.write_text(
+        (repo / "tests" / "test_billing.py").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "add duplicate copy")
+    _git(repo, "rm", "-q", "tests/test_billing.py")
+    _git(repo, "commit", "-m", "drop one copy")
+    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 0, result.stdout
+    payload = json.loads(result.stdout)
+    disabled = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
+    assert disabled and disabled[0]["severity"] == "info"
+    assert "DUPLICATE_REMAINS" in disabled[0]["deescalators"]
