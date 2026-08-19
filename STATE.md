@@ -1,6 +1,38 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A3: chained-comparison bounds)
+Updated: 2026-08-19 (audit round A4: fingerprint ignores the cosmetic)
+
+## 2026-08-19: A4 — a cosmetic edit no longer changes a symbol's fingerprint
+
+Repair evidence equated "the called symbol's AST changed" with "its
+behaviour changed", and an attacker controls both sides of the diff. Four
+one-line purchases of REPAIR_EVIDENCE for any oracle cheat, all reproduced
+with the real CLI before the fix (THREATMODEL row 4 reopened): an added
+return annotation, a non-leading string statement (docstring stripping only
+reads body[0], and the strip happens first, which renumbered the noise to
+the docstring slot — caught by the fixture on the second cut), a value-less
+`x: int`, and a dead literal binding inside the function body.
+
+`_normalize_for_fingerprint` runs on production parses only, after the
+docstring strip: parameter/return annotations cleared (functions and
+lambdas), every remaining string-constant statement dropped, value-less
+annotated assignments dropped, and — inside function bodies only, with a
+`global`/`nonlocal` guard, and only when a drop candidate exists — a
+literal assignment to a name the function never reads. Module- and
+class-level constants are untouched on purpose: `TAX = 0.05` in billing.py
+is read by the test, and dropping it would deny honest repair evidence
+(pinned by evidence_real_fix_still_counts_neg).
+
+Deliberate residual: alpha-renames (`total` → `subtotal`) still flip the
+fingerprint. Normalising them needs scope analysis greenwash does not have,
+and a wrong normalisation silently disables evidence for genuine
+rename-driven API changes. Row to be filed in the THREATMODEL round.
+
+Gates: 453 tests all green (was 449); perf budgets hold (the dead-binding
+check is lazy — one cheap pass unless a candidate exists); arms/tamper/
+refactor corpora unchanged; dogfood clean. Fixtures:
+evidence_annotation_neg, evidence_string_stmt_neg, evidence_dead_local_neg,
+evidence_real_fix_still_counts_neg.
 
 ## 2026-08-19: A3 — the middle term of a chained comparison exists now
 

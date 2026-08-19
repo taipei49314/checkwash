@@ -1930,6 +1930,102 @@ def _strip_docstrings(tree: ast.AST) -> ast.AST:
     return tree
 
 
+def _normalize_for_fingerprint(tree: ast.AST) -> ast.AST:
+    """Strip what cannot change behaviour, so a cosmetic edit does not flip a
+    symbol's fingerprint and buy repair evidence (audit 2026-08-19).
+
+    `def f(x) -> float:` with an added return annotation, a non-leading string
+    statement after the docstring, `x: int` with no value, and
+    `_checked = None` inside the function body all change `ast.dump` while
+    changing nothing the code does — and an attacker controls both sides of
+    the diff, so each was a one-line purchase of REPAIR_EVIDENCE for any
+    oracle cheat (THREATMODEL row 4 reopened).
+
+    Removed here: parameter/return annotations (function and lambda), string
+    constants in non-leading statement position, value-less annotated
+    assignments, the annotation of a value-carrying annotated assignment,
+    and — **inside function bodies only** — an assignment of a literal to a
+    name the function never reads. Module- and class-level constants are
+    untouched: a constant the production file never reads may still be read
+    by the tests (`TAX = 0.05` in billing.py), and dropping it would deny
+    honest repair evidence. Functions containing `global`/`nonlocal` keep
+    their assignments: a store can escape the scope without a load.
+
+    Deliberately NOT normalised: alpha-renames. Deciding which names escape
+    needs scope analysis greenwash does not have, and a wrong normalisation
+    silently disables evidence for genuine rename-driven API changes — a
+    documented residual, priced as such.
+    """
+    for node in ast.walk(tree):
+        args: ast.arguments | None = None
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            node.returns = None
+            args = node.args
+        elif isinstance(node, ast.Lambda):
+            args = node.args
+        if args is not None:
+            for arg in (
+                *args.posonlyargs, *args.args, args.vararg,
+                *args.kwonlyargs, args.kwarg,
+            ):
+                if arg is not None:
+                    arg.annotation = None
+        if isinstance(node, ast.AnnAssign) and node.annotation is not None:
+            node.annotation = None
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            kept: list[ast.stmt] = []
+            for stmt in node.body:
+                # Any string statement still standing is noise: leading
+                # docstrings were stripped by the earlier pass, so a survivor
+                # here was never a docstring (audit 2026-08-19).
+                if (
+                    isinstance(stmt, ast.Expr)
+                    and isinstance(stmt.value, ast.Constant)
+                    and isinstance(stmt.value.value, str)
+                ):
+                    continue
+                if isinstance(stmt, ast.AnnAssign) and stmt.value is None:
+                    continue  # `x: int` binds nothing
+                kept.append(stmt)
+            node.body = kept or [ast.Pass()]
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        # The expensive checks (nested walks) run only when a drop candidate
+        # exists, so files without dead literal bindings pay one cheap pass.
+        if not any(
+            isinstance(stmt, ast.Assign)
+            and len(stmt.targets) == 1
+            and isinstance(stmt.targets[0], ast.Name)
+            and isinstance(stmt.value, ast.Constant)
+            for stmt in node.body
+        ):
+            continue
+        if any(
+            isinstance(stmt, (ast.Global, ast.Nonlocal))
+            for stmt in ast.walk(node)
+        ):
+            continue
+        loads = {
+            n.id
+            for n in ast.walk(node)
+            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)
+        }
+        kept = []
+        for stmt in node.body:
+            if (
+                isinstance(stmt, ast.Assign)
+                and len(stmt.targets) == 1
+                and isinstance(stmt.targets[0], ast.Name)
+                and stmt.targets[0].id not in loads
+                and isinstance(stmt.value, ast.Constant)
+            ):
+                continue  # a literal bound to a name this scope never reads
+            kept.append(stmt)
+        node.body = kept or [ast.Pass()]
+    return tree
+
+
 def _fingerprint(node: ast.AST) -> str:
     dump = ast.dump(node, include_attributes=False)
     return hashlib.sha256(dump.encode("utf-8")).hexdigest()[:16]
@@ -1992,9 +2088,15 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         # of crashing the process (confirmed red-team finding).
         return ParsedFile(parse_ok=False)
 
-    # One parse, one in-place docstring strip: symbol fingerprints are dumped
-    # straight from subtrees instead of re-running unparse+parse per symbol.
+    # One parse, one in-place normalisation: symbol fingerprints are dumped
+    # straight from subtrees instead of re-running unparse+parse per symbol,
+    # and the fingerprint ignores what cannot change behaviour (annotations,
+    # noise statements, dead literal bindings) so a cosmetic prod edit buys
+    # no repair evidence. Test files never fingerprint symbols, so they skip
+    # the pass entirely — collection semantics never see a mutated tree.
     _strip_docstrings(tree)
+    if not collect_tests:
+        _normalize_for_fingerprint(tree)
     text = off = _Offsets(raw)
     units: list[ParsedUnit] = []
     symbols: dict[str, str] = {}

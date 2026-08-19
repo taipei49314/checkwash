@@ -1,0 +1,30 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: the honest half of the same coin — the production fix genuinely
+note2: changes the symbol the test calls, so the expectation update keeps
+note3: its repair evidence and stays at warn. Normalisation must not
+note4: over-reach into real behaviour changes.
+origin: audit 2026-08-19, added with the fingerprint normalisation
+=== before: billing.py ===
+def invoice_total(items, tax):
+    # BUG: ignores tax
+    total = sum(items)
+    return round(total, 2)
+=== after: billing.py ===
+def invoice_total(items, tax):
+    total = sum(items) * (1 + tax)
+    return round(total, 2)
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 100.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
