@@ -1,0 +1,29 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: the pyproject name/version lines swapped — pure reorder, the pin set
+note2: is identical, so the credit is not earned.
+origin: audit 2026-08-19, verdict pass with DEPENDENCY_DRIFT
+=== before: pyproject.toml ===
+[project]
+name = "billing"
+version = "0.1.0"
+dependencies = ["pytest>=7"]
+=== after: pyproject.toml ===
+[project]
+version = "0.1.0"
+name = "billing"
+dependencies = ["pytest>=7"]
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 90.0
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "pyproject.toml"}]

@@ -1,6 +1,31 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round A5: literal-bound padding in the bare dialect)
+Updated: 2026-08-19 (audit round A6: D9 earns its name — pins, not bytes)
+
+## 2026-08-19: A6 — a manifest edit that changes no dependency earns nothing
+
+`_deps_differ` compared bytes after stripping own-`version =` lines, so a
+comment appended to requirements.txt or a swap of pyproject.toml's
+`name`/`version` lines — no dependency touched — granted D9
+DEPENDENCY_DRIFT to an expectation rewrite riding along in the same diff
+(audit 2026-08-19, both shapes reproduced as verdict pass; rows 57/84c
+accept the credit only for "a real manifest change").
+
+`parse_manifest_pins` (deps.py) extracts the `(distribution, pin)` set for
+all four manifest families — PEP 621 arrays with optional-dependencies,
+poetry tables including dict constraints, poetry/uv lock stanzas pairing
+`name` with `version`, requirements lines with inline comments stripped —
+and `_deps_differ` compares sets: reorder-invisible, comment-blind, real
+specifier changes still differ. Neither side parsing to a single pin falls
+back to the old byte comparison rather than declaring an exotic manifest
+inert. Also removed: the second, identical `_deps_differ` definition that
+had been living later in ci.py since the byte era (only the second one
+executed; harmless but a divergent-edit hazard).
+
+Gates: 457 tests all green (was 455); arms/tamper/refactor corpora
+unchanged; dogfood clean. Fixtures: deps_comment_only_neg, deps_reorder_neg
+(the pyproject shape additionally reports the expected CI_WORKFLOW_TOUCHED
+warn — the file is ci-role whatever the edit).
 
 ## 2026-08-19: A5 — padding whose subject is a freshly bound literal
 

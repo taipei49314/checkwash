@@ -57,7 +57,7 @@ protocol is `src/greenwash/frontends/`.
 
 ```bash
 pip install -e ".[dev]"
-pytest                      # 455 tests: fixtures, e2e, perf and coverage gates
+pytest                      # 457 tests: fixtures, e2e, perf and coverage gates
 greenwash demo              # sanity: 8 real cheats blocked, offline
 greenwash bench --local     # in-clone reproduce; omit --local to require sweep clones
 ```
