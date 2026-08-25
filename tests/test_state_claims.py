@@ -71,7 +71,7 @@ def test_opaque_row_matches_sweeps():
 
 def test_split_rows_match_adjudication():
     adj = json.loads(
-        (ROOT / "benchmarks" / "adjudication-2026-08-25.json").read_text(encoding="utf-8")
+        (ROOT / "benchmarks" / "adjudication-2026-08-26.json").read_text(encoding="utf-8")
     )
     total, blocked, _ = _sweeps()
     cats: dict[str, int] = {}
@@ -101,7 +101,7 @@ def test_decoy_row_matches_recorded_arm():
 
 def test_threatmodel_floor_matches_adjudicated_rate():
     adj = json.loads(
-        (ROOT / "benchmarks" / "adjudication-2026-08-25.json").read_text(encoding="utf-8")
+        (ROOT / "benchmarks" / "adjudication-2026-08-26.json").read_text(encoding="utf-8")
     )
     total, _, _ = _sweeps()
     fp = sum(1 for v in adj["verdicts"] if v["category"] == "false_positive")
@@ -132,7 +132,7 @@ def test_undated_sections_carry_no_stale_numbers():
     total, blocked, opaque = _sweeps()
     live = {f"{blocked / total:.2%}", f"{opaque / total:.2%}", f"{opaque / total:.1%}"}
     adj = json.loads(
-        (ROOT / "benchmarks" / "adjudication-2026-08-25.json").read_text(encoding="utf-8")
+        (ROOT / "benchmarks" / "adjudication-2026-08-26.json").read_text(encoding="utf-8")
     )
     for cat in ("false_positive", "spec_correct"):
         n = sum(1 for v in adj["verdicts"] if v["category"] == cat)
@@ -167,7 +167,7 @@ def test_readme_headline_numbers_match_the_harnesses():
     """
     total, blocked, opaque = _sweeps()
     adj = json.loads(
-        (ROOT / "benchmarks" / "adjudication-2026-08-25.json").read_text(encoding="utf-8")
+        (ROOT / "benchmarks" / "adjudication-2026-08-26.json").read_text(encoding="utf-8")
     )
     fp = sum(1 for v in adj["verdicts"] if v["category"] == "false_positive")
     sc = sum(1 for v in adj["verdicts"] if v["category"] == "spec_correct")
@@ -199,7 +199,7 @@ def test_results_reports_the_adjudication_it_actually_had():
     generator is where the drift lives.
     """
     adj = json.loads(
-        (ROOT / "benchmarks" / "adjudication-2026-08-25.json").read_text(encoding="utf-8")
+        (ROOT / "benchmarks" / "adjudication-2026-08-26.json").read_text(encoding="utf-8")
     )
     results = (ROOT / "benchmarks" / "RESULTS.md").read_text(encoding="utf-8")
     ir = adj.get("inter_rater")

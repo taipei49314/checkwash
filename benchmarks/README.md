@@ -86,7 +86,12 @@ instead of just counting them is what made both catches possible.
 Several adjudication passes exist, of different populations — only the newest
 describes the current build; the others are kept as history:
 
-- `adjudication-2026-08-25.json` — all 42 blocks of the **current** build
+- `adjudication-2026-08-26.json` — all 41 blocks of the **current** build:
+  26 false positive, 15 spec-correct, 0 unclear. Identical to 2026-08-25
+  minus rich c8abbb3bd2, which v0.1.45's gated-alternative guard stopped
+  blocking (the guard was built from that block's own adjudication); nothing
+  re-judged.
+- `adjudication-2026-08-25.json` — the 42 blocks of v0.1.44
   (the #86a promotion round): 27 false positive, 15 spec-correct, 0 unclear.
   The 37 pre-promotion verdicts are carried verbatim from 2026-08-03; the
   five blocks the promotion added were each judged by two blind raters with

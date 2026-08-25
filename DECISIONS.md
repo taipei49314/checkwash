@@ -1699,6 +1699,37 @@ blocks at high) and `root_import_same_module_neg` (the honest shape keeps
 REPAIR_EVIDENCE); the audit's original scratch repo flips pass → block;
 arms/tamper/refactor corpora unchanged; dogfood clean.
 
+## D-049 (2026-08-26): the gated-alternative guard — additions are not edits, in both channels
+
+*Maintainer-directed frozen-zone change (SPEC.md §4 row, detector guard, IR field).*
+
+**Incident.** rich `c8abbb3bd2` ("Fix test for Python 3.13") wrapped a golden
+in `if sys.version_info >= (3, 13):` and kept the old string verbatim in the
+`else`. Both raters judged the block false: nothing was replaced, the
+pre-3.13 comparison stayed byte-for-byte, an alternative was *added*. The
+parametrize channel has excluded exactly this event class since it shipped
+(`_column_values_edited`: "Only a same-length column with different cells is
+an expectation edit"); the binding channel was a bare `!=` — the identical
+event excluded in one channel and reported in the other.
+
+**Frozen:** the binding channel spares a changed key only when three clauses
+hold at once — the after side has more definitions; every before-side
+definition survives verbatim (multiset containment, because
+`_binding_definitions` walks breadth-first and order is not a contract); and
+the name's bindings are pairwise branch-exclusive (`if`/`match` arms),
+recorded by the frontend on `UnitSide.exclusive_bindings`. The third clause
+is the correction the port demands: parametrize rows are parallel items,
+bindings are sequential rebinds where the last one reaches the assertion, so
+a same-length guard alone would have silenced `expected = honest` followed
+by `expected = evil` — which fires today and is pinned to keep firing
+(`expectation_definition_sequential_rebind_pos`). Each clause is pinned by
+the fixture its own mutation turns red; the mirror arm order has its own
+fixture so the guard is not fitted to the one observed spelling. The
+residual is structural honesty's price: the guard reads branch structure,
+not branch truth, and the tautological gate that walks through it is
+THREATMODEL row 95, open by design. Weakening any clause, or widening the
+exclusion beyond `if`/`match` arms, reverts this decision.
+
 ## D-048 (2026-08-25): #86a promoted — EXPECTATION_DEFINITION_CHANGED joins ORACLE_RULES
 
 *Maintainer-approved frozen-zone change (gating.py ORACLE_RULES, SPEC.md §4 row, detector base severity).*

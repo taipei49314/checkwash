@@ -1,6 +1,50 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-25 (the #86a promotion round: measured, adjudicated, pinned)
+Updated: 2026-08-26 (the gated-alternative guard: the binding channel learns additions)
+
+## 2026-08-26: the binding channel learns what the parametrize channel knew
+
+First of the three residuals the promotion round filed. The parametrize
+channel has excluded additions since it shipped — added rows are
+`TEST_DISABLED`'s event, "Only a same-length column with different cells is
+an expectation edit" — while the binding channel was a bare `!=` on the
+`\x1f`-joined keys, so rich `c8abbb3bd2` ("Fix test for Python 3.13", the
+old golden kept verbatim in the `else` arm) blocked at high with no
+production change to explain, and both raters called it false.
+
+The port is not the naive one. Parametrize rows are parallel test items;
+bindings are sequential rebinds where the last one reaches the assertion —
+so "the old definition survives" proves nothing on a straight line, and a
+same-length guard alone would have opened a new bypass (append
+`expected = evil` after the honest binding: today that fires, and it must
+keep firing). The guard demands three things at once: more definitions on
+the after side, every before-side definition surviving verbatim (multiset
+containment — `_binding_definitions` walks breadth-first, order is not a
+contract), and the name's bindings pairwise **branch-exclusive**, computed
+by a new statement walk in the frontend (`_exclusive_bindings`, recorded on
+`UnitSide.exclusive_bindings`): `if`/`elif`/`else` and `match` arms diverge,
+loop/`with`/`try` bodies and nested defs keep their parent's path, a walrus
+in an `if` test belongs to the parent. Default-then-override
+(`e = 0; if c: e = 1`) is not exclusive and keeps firing.
+
+Fixtures first, four of them, each clause pinned by its own mutation:
+gated_alternative_neg (the c8abbb3 shape) and its mirror spelling —
+silencing only the observed arm order would have been fitting the guard to
+one commit; sequential_rebind_pos red under mutation A (exclusivity clause
+dropped); branches_replaced_pos red under mutation B (containment dropped);
+both negs red under mutation C (guard removed). Restored: all four green.
+
+Measured: rich 7→6, gone exactly `c8abbb3bd2`, extra zero; the other five
+repos byte-identical block sets; sweep total 42→41 = 2.28%; tamper 48/80
+and refactor 25/60 case-for-case unmoved. Adjudication rolls to
+`adjudication-2026-08-26.json` (41 verdicts, the dropped block leaving the
+population the same way v0.1.3–v0.1.5's did). Floor 1.50%→1.44%.
+
+The honest residual is named where it lives: the guard reads branch
+*structure*, not branch *truth*, so a tautological gate
+(`if sys.version_info >= (3, 0):`) walks through it — THREATMODEL row 95,
+open by design, priced at the level of the cheaper silences row 86a already
+lists. D-049.
 
 ## 2026-08-25: #86a promoted — and the promotion audited its own premise first
 
@@ -1383,10 +1427,10 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.44 |
+| version | v0.1.45 |
 | detectors | 21 |
-| human-commit block rate | 42/1800 = 2.33% |
-| adjudicated false positive | 27/1800 = 1.50% |
+| human-commit block rate | 41/1800 = 2.28% |
+| adjudicated false positive | 26/1800 = 1.44% |
 | legitimate policy block | 15/1800 = 0.83% |
 | opaque exemption share | 24/1800 = 1.33% |
 | classic adversarial decoys blocked | 12/12 |

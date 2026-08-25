@@ -1,0 +1,27 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: An unconditional rebind appended after the honest binding is a definition edit, not an alternative
+origin: adversarial review of the gated-alternative guard, 2026-08-26 — the last unconditional binding is what reaches the assertion, so "the old definition survives verbatim" proves nothing on a straight line; the guard must demand branch exclusivity
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(sum(items) * (1 + TAX), 2)
+    assert invoice_total(items, TAX) == expected
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(sum(items) * (1 + TAX), 2)
+    expected = round(sum(items), 2)
+    assert invoice_total(items, TAX) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -11,8 +11,8 @@ it is known not to.
 
 ## The short version
 
-- **110 bypasses** are documented, of which **28 are not closed**.
-- **27 of 1800** human-written commits are blocked by mistake (1.50%), each one named below.
+- **111 bypasses** are documented, of which **29 are not closed**.
+- **26 of 1800** human-written commits are blocked by mistake (1.44%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - A production file greenwash cannot read suppresses escalation for the
@@ -44,7 +44,7 @@ it is known not to.
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | — |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | `oracle_crossfile_import_neg.gwcase`, `oracle_crossfile_uncalled_pos.gwcase`, `oracle_fixture_checker_neg.gwcase`, `oracle_fixture_fanout_dedup.gwcase`, `oracle_fixture_teardown_refused_trade.gwcase`, `oracle_fixture_unrequested_pos.gwcase`, `oracle_helper_renamed_neg.gwcase`, `oracle_helper_uncalled_pos.gwcase`, `oracle_moved_into_helper_neg.gwcase`, `oracle_nested_never_invoked_pos.gwcase` |
 
-## Open by design — the cost of a deliberate trade (6)
+## Open by design — the cost of a deliberate trade (7)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -54,6 +54,7 @@ it is known not to.
 | 84d | Reorient a comparison *and* replace the subject in one edit, so the reorientation guard swallows it | — |
 | 88 | Disarm the judge in the diff it would have judged: delete the greenwash job from the workflow, add an `if:` that is never true, or drop the required-status-check requirement | — |
 | 94 | Root-import + a modified existing symbol in any sibling module feeding PACKAGE_REPAIR for an expectation rewrite | — |
+| 95 | Gate the evil expectation on a tautology and keep the old one in the dead arm: `if sys.version_info >= (3, 0): expected = evil` / `else: expected = old` — branch-exclusive, old definition verbatim, so v0.1.45's gated-alternative guard spares it and the assertion compares against evil on every interpreter that exists | — |
 
 ## Out of scope — the limits of the whole approach (2)
 
@@ -173,7 +174,7 @@ behind it* unshippable.
 
 Every commit in the 1800-commit corpus that greenwash blocks and should
 not. Adjudicated by three raters; the reasoning for all three ships in
-`adjudication-2026-08-25.json` and the two blind re-adjudications beside it.
+`adjudication-2026-08-26.json` and the two blind re-adjudications beside it.
 
 | commit | three raters | why the block is wrong |
 |---|---|---|
@@ -201,7 +202,6 @@ not. Adjudicated by three raters; the reasoning for all three ships in
 | rich `7022e20224` | FP/FP/? | "Test fixes"; flagged unit tests/test_progress.py::test_columns, whose expected ANSI golden is repaired. The base golden was not a rendering of any code: it contained `\x1b[32m 0/m0:00:07\x1b[0m` - an SGR sequence severed mid-parameter - and was missing the en |
 | rich `823de916d9` | FP/policy/? | "test fixes", test-only (tests/test_ansi.py, +5/-3), updating three expectations after 69cee6e "preserve newlines" changed AnsiDecoder.decode four commits earlier. All three assertions are byte-identical across the diff and all three expectations got LONGER an |
 | rich `9303d77e8d` | FP/policy/? | "markdown test", one file +1/-1: the expected golden in tests/test_markdown_no_hyperlinks.py::test_markdown_render joins "Two spaces at the end of a line" + "produces a line break." onto one rendered line. Verified at the judged commit that the MARKDOWN fixtur |
-| rich `c8abbb3bd2` | FP/FP/? | "Fix test for Python 3.13" (Hugo van Kemenade), tests/test_pretty.py::test_attrs_broken_310, +4/-1, no production change. CPython 3.13 changed AttributeError messages to the qualified type name, which lengthens the inner repr and makes pretty_repr wrap. The co |
 | starlette `02b6ed7b18` | FP/FP/FP | "Return explicit origin in CORS response when credentials are allowed (#3137)" replaces the `has_cookie` condition in starlette/middleware/cors.py with `self.allow_credentials`, so the cookie-triggered behavior the flagged tests asserted no longer exists; test |
 | starlette `90b805fda7` | FP/FP/FP | "Set `Content-Type` instead of `Content-Range` on multi-range responses (#3142)" changes starlette/responses.py to write the multipart boundary into content-type rather than content-range, so the flagged assert in test_file_response_multi_small_chunk_size nece |
 

@@ -51,8 +51,9 @@ named residual rather than a credit fitted to make the number smaller:
   test's input) moved in an *earlier* commit and the golden catches up here.
   Repair evidence does not cross commit boundaries.
 - rich `c8abbb3bd2` added a version-gated alternative golden while keeping the
-  old one verbatim: the parametrize channel's same-length guard excludes
-  exactly this event, the binding channel has no such guard yet.
+  old one verbatim: closed in v0.1.45 by `_gated_alternative_added` — the
+  binding channel's port of the parametrize channel's additions-are-not-edits
+  principle, with the branch-exclusivity clause sequential rebinds demand.
 - rich `7022e202245b` repairs a golden no implementation could ever have
   produced, and its only manifest edit is a blank line — which A6 correctly
   refuses to pardon.
@@ -82,6 +83,39 @@ def _column_values_edited(before: str, after: str) -> bool:
     """
     b, a = before.split(""), after.split("")
     return len(b) == len(a) and b != a
+
+
+def _gated_alternative_added(before_key: str, after_key: str, exclusive: bool) -> bool:
+    """Did the diff add a branch-exclusive alternative and keep every old
+    definition verbatim?
+
+    The binding-channel port of `_column_values_edited`'s principle — additions
+    are not expectation edits — with the correction the port needs: parametrize
+    rows are parallel test items, bindings are sequential rebinds where the
+    last one reaches the assertion. So "the old definition survives" proves
+    nothing on a straight line (`expected = honest` followed by
+    `expected = evil` keeps the honest text and compares against evil), and
+    the guard demands all three at once:
+
+    - the after side has *more* definitions than the before side,
+    - every before-side definition survives verbatim (multiset containment —
+      `_binding_definitions` walks breadth-first, so order is not a contract),
+    - the name's bindings are pairwise branch-exclusive (`if`/`elif`/`else`
+      or `match` arms), so at most one executes on any path.
+
+    rich c8abbb3bd2 — the 3.13 golden added under `sys.version_info` with the
+    3.10–3.12 golden kept verbatim in the `else` — is the adjudicated false
+    positive this exists for. A tautological gate (`if True: evil else: old`)
+    satisfies all three and is a stated residual in THREATMODEL 86a: the guard
+    reads branch structure, not branch truth.
+    """
+    if not exclusive:
+        return False
+    from collections import Counter
+
+    before = Counter(before_key.split(""))
+    after = Counter(after_key.split(""))
+    return sum(after.values()) > sum(before.values()) and before <= after
 
 
 def _haystack_is_produced(text: str) -> bool:
@@ -185,6 +219,11 @@ def detect(ir: IR) -> list[Finding]:
                             for name in consumed & set(unit.after.bindings)
                             if name in unit.before.bindings
                             and unit.before.bindings[name] != unit.after.bindings[name]
+                            and not _gated_alternative_added(
+                                unit.before.bindings[name],
+                                unit.after.bindings[name],
+                                name in unit.after.exclusive_bindings,
+                            )
                         }
                         | {
                             name

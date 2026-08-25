@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.0233,
+  "block_rate": 0.02,
   "blocked_commits": [
     {
       "commit": "48293cde887c4f25a7bca022131b56495f370a88",
@@ -86,27 +86,15 @@
           "unit": "test_columns"
         }
       ]
-    },
-    {
-      "commit": "c8abbb3bd2632655d4dce61e7a8bffc49d981cc8",
-      "findings": [
-        {
-          "message": "test_attrs_broken_310: the assertion is unchanged but its expectation is not — expected is defined differently now, so the test compares against a different value than it did",
-          "path": "tests/test_pretty.py",
-          "rule": "EXPECTATION_DEFINITION_CHANGED",
-          "severity": "high",
-          "unit": "test_attrs_broken_310"
-        }
-      ]
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 7,
+  "commits_blocked": 6,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 71,
   "commits_with_opaque_prod_change": 1,
   "corpus": {
-    "greenwash_version": "0.1.44",
+    "greenwash_version": "0.1.45",
     "newest_commit": "ce51a2f8bf326878a94a382cb7102c85824f7e04",
     "oldest_commit": "65fcf281283244b8ee4ded75a4b60c7eb316da6e"
   },
@@ -122,7 +110,7 @@
       "warn": 34
     },
     "EXPECTATION_DEFINITION_CHANGED": {
-      "high": 7,
+      "high": 6,
       "warn": 11
     },
     "EXPECTED_VALUE_CHANGED": {

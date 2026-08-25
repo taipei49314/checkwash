@@ -647,6 +647,106 @@ def _binding_definitions(func) -> dict[str, str]:
     return {name: "".join(keys) for name, keys in sorted(out.items())}
 
 
+def _exclusive_bindings(func) -> tuple[str, ...]:
+    """Multiply-bound names whose every binding sits in a different branch arm.
+
+    A statement walk that labels each binding with its branch path — one
+    `(id(branch_stmt), arm_index)` per enclosing `if`/`match` arm. Two bindings
+    are exclusive when their paths diverge: at the first differing step they
+    are different arms of the same statement, so no execution reaches both.
+    A name qualifies only if *all* its bindings are pairwise exclusive —
+    `expected = old` followed by an unconditional `expected = new` shares a
+    path and must not qualify, because the second binding is the one the
+    assertion reads.
+
+    Records exactly the node kinds `_binding_definitions` records — Assign,
+    AnnAssign, AugAssign and walrus — so the two walks agree on what counts
+    as a binding. Deliberately narrow: `for`/`while`/`with`/`try` bodies keep their parent's
+    path (a rebind there is sequential or partially-executed, not an
+    alternative), a walrus in an `if` test belongs to the parent path (the
+    test runs before the branch), and nested `def`/`class` bodies keep the
+    parent path too, mirroring the flat walk `_binding_definitions` uses.
+    Conservative failures fire the rule, which is the safe direction.
+    """
+    found: dict[str, list[tuple]] = {}
+
+    def record(stmt, path) -> None:
+        for node in ast.walk(stmt):
+            if isinstance(node, ast.Assign):
+                targets, value = node.targets, node.value
+            elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+                targets, value = [node.target], node.value
+            elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+                found.setdefault(node.target.id, []).append(path)
+                continue
+            else:
+                continue
+            if value is None:
+                continue
+            for target in targets:
+                for name in _assignment_name_targets(target):
+                    found.setdefault(name, []).append(path)
+
+    def record_expr(expr, path) -> None:
+        if expr is None:
+            return
+        for node in ast.walk(expr):
+            if isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+                found.setdefault(node.target.id, []).append(path)
+
+    def walk(stmts, path) -> None:
+        for s in stmts:
+            if isinstance(s, ast.If):
+                record_expr(s.test, path)
+                walk(s.body, path + ((id(s), 0),))
+                walk(s.orelse, path + ((id(s), 1),))
+            elif isinstance(s, ast.Match):
+                record_expr(s.subject, path)
+                for i, case in enumerate(s.cases):
+                    walk(case.body, path + ((id(s), i),))
+            elif isinstance(s, (ast.For, ast.AsyncFor)):
+                record_expr(s.iter, path)
+                walk(s.body, path)
+                walk(s.orelse, path)
+            elif isinstance(s, ast.While):
+                record_expr(s.test, path)
+                walk(s.body, path)
+                walk(s.orelse, path)
+            elif isinstance(s, (ast.With, ast.AsyncWith)):
+                for item in s.items:
+                    record_expr(item.context_expr, path)
+                walk(s.body, path)
+            elif isinstance(s, ast.Try):
+                walk(s.body, path)
+                for h in s.handlers:
+                    walk(h.body, path)
+                walk(s.orelse, path)
+                walk(s.finalbody, path)
+            elif isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                walk(s.body, path)
+            else:
+                record(s, path)
+
+    walk(func.body, ())
+
+    def exclusive(paths: list[tuple]) -> bool:
+        for i in range(len(paths)):
+            for j in range(i + 1, len(paths)):
+                a, b = paths[i], paths[j]
+                diverged = False
+                for x, y in zip(a, b):
+                    if x != y:
+                        diverged = x[0] == y[0]
+                        break
+                if not diverged:
+                    return False
+        return True
+
+    return tuple(
+        sorted(name for name, paths in found.items() if len(paths) > 1 and exclusive(paths))
+    )
+
+
 def _local_bindings(func) -> dict[str, tuple[str, ...]]:
     """In-body `name = <expr>` bindings, name -> names referenced by the RHS.
 
@@ -1779,6 +1879,7 @@ def _collect_unit(
         param_cases=_param_case_count(func),
         body_hash=body_hash,
         bindings=_binding_definitions(func),
+        exclusive_bindings=_exclusive_bindings(func),
         param_columns=_param_columns(func),
         patches=tuple(sorted(patches)),
         invoked=tuple(sorted(_invocations(func))),

@@ -1,0 +1,29 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Splitting the golden into two branches counts only if the old definition survives verbatim
+origin: adversarial review of the gated-alternative guard, 2026-08-26 — exclusive branches whose arms are both new replaced the oracle, they did not add an alternative to it
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    expected = round(sum(items) * (1 + TAX), 2)
+    assert invoice_total(items, TAX) == expected
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    if len(items) > 1:
+        expected = round(sum(items), 2)
+    else:
+        expected = round(sum(items), 3)
+    assert invoice_total(items, TAX) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -16,7 +16,7 @@ import sys
 REPOS = ["flask", "httpx", "attrs", "click", "rich", "starlette"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 # The adjudication is tied to one sweep. Bump both together, never one.
-ADJUDICATION = "adjudication-2026-08-25.json"
+ADJUDICATION = "adjudication-2026-08-26.json"
 
 
 def load_round(directory: str) -> dict:

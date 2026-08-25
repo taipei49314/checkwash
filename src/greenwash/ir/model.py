@@ -130,6 +130,17 @@ class UnitSide:
     # question about the *diff*, not about this file, so the judgement lives in
     # the detector where `DiffGlobals` is in reach.
     patches: tuple[tuple[str, str], ...] = ()
+    # Names bound more than once whose bindings are pairwise branch-exclusive —
+    # every one in a different arm of the same `if`/`elif`/`else` (or `match`)
+    # chain, so at most one of them executes on any path. `bindings` joins the
+    # definitions but flattens the control flow, and the difference is load-
+    # bearing: a version-gated alternative golden (`if sys.version_info >=
+    # (3, 13): expected = new` / `else: expected = old`) keeps the old oracle
+    # alive on the path that had it, while the same two definitions on a
+    # straight line are a rebind where the last one wins at the assertion.
+    # rich c8abbb3bd2 (adjudicated false positive, 2026-08-25) is the first
+    # shape; the guard that spares it must not spare the second.
+    exclusive_bindings: tuple[str, ...] = ()
 
     @property
     def disabled(self) -> bool:

@@ -30,7 +30,7 @@ _ROW_CELLS = re.compile(r"(?<!\\)\|")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-ADJUDICATION = "adjudication-2026-08-25.json"
+ADJUDICATION = "adjudication-2026-08-26.json"
 
 
 def _load(*parts: str) -> dict:
