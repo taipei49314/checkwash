@@ -1699,6 +1699,40 @@ blocks at high) and `root_import_same_module_neg` (the honest shape keeps
 REPAIR_EVIDENCE); the audit's original scratch repo flips pass → block;
 arms/tamper/refactor corpora unchanged; dogfood clean.
 
+## D-050 (2026-08-26): the prior-window pardon is refused — the two-commit split stays open
+
+*Maintainer-approved refusal; no frozen text changes, the source tree reverts to v0.1.45.*
+
+**Incident.** The promotion round's second residual — production lands first,
+the test golden catches up test-only, in-diff repair evidence rightly finds
+nothing (`823de916d9`, adjudicated false) — got its obvious fix built and
+measured behind a pre-registered gate: a `REPAIR_EVIDENCE_PRIOR`
+de-escalator fed by the five first-parent commits before the analyzed diff,
+with every conservative clause the in-diff channel has and three more. The
+gate was P1–P4 all hold or no ship. P4 (zero unpredicted movement) broke:
+the sweep removed a second, unpredicted block (`7022e202245b`), because on
+merge-flow history "five commits" is five first-parent steps — measured at
+19 commits average on click, 57 max — and that window carried whole merged
+pull requests whose combined diff reached `rich/progress.py`, which
+`test_columns` calls directly.
+
+**Decided:** the channel is refused, not repaired. Three structural reasons
+beyond the breach, each measured or constructive: the window's stated
+exposure was off by an order of magnitude on the corpus it was tuned
+against; a prior credit is never spent, so one stranger's repaired change
+keeps pardoning subsequent edits to the same expectation for the rest of
+the window — a shape the in-diff purchase cannot produce, since it forces
+the attacker to author the artifact in the reviewed diff; and the pardon
+removes the explaining artifact from the reviewer's view entirely. The
+repairs exist (per-commit non-merge enumeration, unit-level spent credit,
+sha-bearing messages) and were declined together: they make the pardon
+channel more machinery than some detectors, in the trust path, to buy back
+two adjudicated-false blocks of 1800 that are already published as the
+promotion's price. Same refusal shape as THREATMODEL 92. Re-attempting a
+cross-commit pardon requires a new decision superseding this one, and its
+pre-registration must state window semantics in *commits reachable*, not
+first-parent steps.
+
 ## D-049 (2026-08-26): the gated-alternative guard — additions are not edits, in both channels
 
 *Maintainer-directed frozen-zone change (SPEC.md §4 row, detector guard, IR field).*

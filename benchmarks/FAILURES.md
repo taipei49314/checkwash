@@ -26,14 +26,15 @@ it is known not to.
 | 75 | Name the runner file `Justfile`, `.justfile`, `ci/justfile`, `Makefile.include` or `common.mak` — spellings the ecosystem uses and `_runner_shape` does not know | — |
 | 77 | Weaken a `.bat` or `.ps1` runner | — |
 
-## Narrowed, still open (2)
+## Narrowed, still open (3)
 
 | # | shape | pinned by |
 |---|---|---|
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
+| 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | — |
 | 93 | Buy repair evidence with an alpha-rename inside the called symbol — `total` → `subtotal` changes the AST fingerprint and nothing else | — |
 
-## Closed in part (6)
+## Closed in part (5)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -41,7 +42,6 @@ it is known not to.
 | 84 | Launder the oracle anywhere but the subject: hoist the wrapper to a preceding statement, wrap the *argument*, or make the expected side an inline re-implementation of the buggy behaviour | `subject_argument_wrap_pos.gwcase`, `subject_hoisted_wrap_pos.gwcase` |
 | 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | — |
 | 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | — |
-| 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | — |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | `oracle_crossfile_import_neg.gwcase`, `oracle_crossfile_uncalled_pos.gwcase`, `oracle_fixture_checker_neg.gwcase`, `oracle_fixture_fanout_dedup.gwcase`, `oracle_fixture_teardown_refused_trade.gwcase`, `oracle_fixture_unrequested_pos.gwcase`, `oracle_helper_renamed_neg.gwcase`, `oracle_helper_uncalled_pos.gwcase`, `oracle_moved_into_helper_neg.gwcase`, `oracle_nested_never_invoked_pos.gwcase` |
 
 ## Open by design — the cost of a deliberate trade (7)

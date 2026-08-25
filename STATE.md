@@ -1,6 +1,71 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-26 (the gated-alternative guard: the binding channel learns additions)
+Updated: 2026-08-26 (the prior-window pardon: built, measured, refused at its own gate)
+
+## 2026-08-26: the prior-window pardon — built, measured, and refused at its own gate
+
+The second residual from the promotion round (the two-commit split: production
+lands first, the test golden catches up test-only, in-diff repair evidence
+correctly finds nothing) got the obvious fix built end to end: a
+`REPAIR_EVIDENCE_PRIOR` de-escalator fed by the combined diff of the five
+first-parent commits before the analyzed one, prod-side parseable-Python
+modified-symbols only, no opaque escape, no test-side credit, the in-diff
+`_symbol_match` bar unchanged. Pre-registered before measurement: P1
+`823de916d9` leaves the block set; P2 `9303d77e8d` does not (its prior change
+is test-side input); P3 zero spec-correct departures; P4 zero unpredicted
+movement; **P1–P4 all hold or this does not ship.**
+
+It does not ship. Four findings, each measured, any one sufficient:
+
+- **The window lies on merge-flow repos.** "Five commits" is five
+  *first-parent steps*: sampled over 40 analysis points per corpus repo, the
+  window really contains on average 19 commits on click (max **57**), 12 on
+  rich, 9 on flask. A pardon channel whose stated exposure is off by 11x on
+  the repos it was tuned against does not get to call its exposure stated.
+- **P4 breached — the channel out-ran its own designers on its own corpus.**
+  The full sweep removed not one block but two: `823de916d9` (predicted) and
+  `7022e202245b` (predicted by nobody). Forensics: that commit's window,
+  merge-inflated, contains whole pull requests (#3078 fix/progress-type among
+  them) whose combined diff modifies `rich/progress.py` and
+  `rich/console.py` — and `test_columns` calls `Progress(` and `Console(`
+  directly. Both departures are adjudicated false positives, which is why
+  this reads like a win; the pre-registration exists precisely so that an
+  unpredicted pardon is read as what it is.
+- **Credit is never spent.** After an honest catch-up takes the pardon, the
+  same prior production change keeps pardoning further expectation edits to
+  the same symbols for the rest of the window — including an attacker's
+  edit landed *after* the honest one, riding a stranger's already-repaired
+  change. The in-diff purchase has no such shape: it forces the attacker to
+  author the explaining artifact themselves, in the same diff.
+- **The reviewer loses the artifact.** An in-diff pardon puts the
+  explaining production change in front of the reviewer; the prior pardon
+  replaces it with the tool's unreviewable say-so ("held at warn by:
+  REPAIR_EVIDENCE_PRIOR", pointing at nothing in the diff).
+
+Availability at a random moment is low (0–0.9% of test units pardonable at
+each repo's current HEAD) — and irrelevant, because an attacker chooses the
+moment and hot symbols are touched constantly. Every flaw has a fix
+(per-commit non-merge window enumeration, unit-level spent-credit semantics,
+the pardoning sha carried in the message), and together they make the pardon
+channel more machinery than some detectors, in the one place machinery is
+trust. Bought back: two of 1800, both already published as the promotion's
+price. Refused on the same grounds as THREATMODEL 92: the trade funds the
+attack surface out of the safety margin.
+
+What the rejected build would have shipped, for the record: 39/1800 blocked
+(engine 0.1.46-unreleased, full six-repo sweep), gone exactly
+{`823de916d9`, `7022e202245b`}, other five repos byte-identical, tamper
+48/80 and refactor 25/60 unmoved (single-diff arms cannot exercise the
+channel — that verification gap was itself one of the stated reasons to
+distrust it). The source tree is reverted to v0.1.45 exactly; the four
+channel fixtures went with it, because they pin behaviour nothing has any
+more. The two-commit split stays what the promotion round named it: an open,
+adjudicated false-positive residual (`823de916d9`, `9303d77e8d`), now with
+the measured record of why the obvious channel does not pay for itself.
+Single-commit spot checks during the round: P1 and P2 both reproduced
+exactly as predicted before the full sweep contradicted P4 — a channel can
+pass every aimed shot and still fail the sweep, which is the whole argument
+for sweeps. D-050.
 
 ## 2026-08-26: the binding channel learns what the parametrize channel knew
 
