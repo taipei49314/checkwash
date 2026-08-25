@@ -1,0 +1,33 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: A module-constant expectation moved because production moved is repair
+origin: the new source arm takes the same oracle path as every other source — an in-diff production change to the called symbol holds it at warn
+=== before: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== after: billing.py ===
+def invoice_total(items, tax):
+    total = round(sum(items) * (1 + tax), 2)
+    return total + 5.0
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+EXPECTED_TOTAL = 105.0
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, TAX) == EXPECTED_TOTAL
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+EXPECTED_TOTAL = 110.0
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, TAX) == EXPECTED_TOTAL
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

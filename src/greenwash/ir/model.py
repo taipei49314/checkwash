@@ -206,6 +206,17 @@ class FileIR:
     # The same environment resolved against this file's BASE side, so a
     # constant edit under an unchanged guard can be compared (GUARD_WEAKENED).
     constants_before: dict[str, str] = field(default_factory=dict)
+    # Same-file top-level constant name -> canonical (ast.unparse) defining
+    # expression, on each side. NOT the merged D6 environment above: that one
+    # resolves cross-file with a head reader on the after side only, and an
+    # asymmetric environment must never feed a two-sided comparison. These two
+    # are the file's own module scope, both sides, canonicalized the same way
+    # — the fourth expectation source for EXPECTATION_DEFINITION_CHANGED
+    # (THREATMODEL 86a's largest blind bucket, 29.2% of the census; D-051).
+    # Top-level rebinds are last-wins on both sides, which is module
+    # execution order.
+    module_constants: dict[str, str] = field(default_factory=dict)
+    module_constants_before: dict[str, str] = field(default_factory=dict)
     # Same-file `@pytest.fixture` name -> canonical text of what it returns or
     # yields. A fixture is not a collected unit, so without this an expectation
     # supplied by one is invisible. Conftest fixtures are out of scope.

@@ -235,6 +235,20 @@ def detect(ir: IR) -> list[Finding]:
                             )
                         }
                         | {
+                            # The fourth source: a same-file top-level
+                            # constant, canonical on both sides, last-wins
+                            # like module execution. The subject-closure
+                            # filter below still applies — a constant the
+                            # subject also consumes is a shared producer
+                            # (T1.10), not an oracle. THREATMODEL 86a's
+                            # largest blind bucket until D-051.
+                            name
+                            for name in consumed & set(file.module_constants)
+                            if name in file.module_constants_before
+                            and file.module_constants_before[name]
+                            != file.module_constants[name]
+                        }
+                        | {
                             name
                             for name in consumed & set(file.fixture_defs)
                             if name in file.fixture_defs_before

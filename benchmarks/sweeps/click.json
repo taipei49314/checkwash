@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.04,
+  "block_rate": 0.0433,
   "blocked_commits": [
     {
       "commit": "a391797d00d2ef32ebc4fb0034462a2ec5e6d3d4",
@@ -100,6 +100,18 @@
       ]
     },
     {
+      "commit": "5989375dc3953a5709c411e11f658c242319858e",
+      "findings": [
+        {
+          "message": "test_light_imports: the assertion is unchanged but its expectation is not — ALLOWED_IMPORTS is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_imports.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_light_imports"
+        }
+      ]
+    },
+    {
       "commit": "97b300c41b6b241570f598f387e2e018844be0f4",
       "findings": [
         {
@@ -168,12 +180,12 @@
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 12,
+  "commits_blocked": 13,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 109,
   "commits_with_opaque_prod_change": 0,
   "corpus": {
-    "greenwash_version": "0.1.45",
+    "greenwash_version": "0.1.46",
     "newest_commit": "0f4738df88e3ea47c40a4a442103596a61cfee79",
     "oldest_commit": "bd9d4f8db2744d95f75ae171c7aacc4b66558945"
   },
@@ -193,8 +205,8 @@
       "warn": 64
     },
     "EXPECTATION_DEFINITION_CHANGED": {
-      "high": 1,
-      "warn": 15
+      "high": 2,
+      "warn": 17
     },
     "EXPECTED_VALUE_CHANGED": {
       "high": 4,

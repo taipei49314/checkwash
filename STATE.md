@@ -1,6 +1,56 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-26 (the prior-window pardon: built, measured, refused at its own gate)
+Updated: 2026-08-26 (module constants: the largest blind bucket closes, pre-registered and measured)
+
+## 2026-08-26: the largest blind bucket closes — module constants become the fourth source
+
+The last residual the promotion round filed, and the biggest: 29.2% of the
+corpus's named expectations (445/1526, the 2026-08-25 census) live in
+module-level constants, and editing one — `EXPECTED_TOTAL = 105.0` →
+`100.0`, assertion byte-identical — produced verdict pass, zero findings
+from all 21 rules. Reproduced before building anything.
+
+Pre-registered before measurement (P1–P4, the D-050 discipline):
+`EXPECTATION_DEFINITION_CHANGED` gains a fourth expectation source — the
+file's own top-level constants, on new IR fields
+`module_constants`/`module_constants_before`. Deliberately NOT the merged
+D6 environment: that one resolves cross-file with a head reader on the
+after side only, and an asymmetric environment must never feed a two-sided
+comparison. Segments are canonicalized (`ast.parse(mode="eval")` +
+`unparse`; unparseable segments go silent) because the raw-text comparison
+was the binding channel's first false positive. Top-level rebinds are
+last-wins on both sides — module execution order — so appending
+`EXPECTED = evil` at the bottom of the file is caught by construction,
+with none of the branch machinery the unit channel needed. The
+subject-closure exclusion applies unchanged: a constant the subject also
+consumes is a shared producer (T1.10), not an oracle.
+
+Four fixtures, three mutations, each clause pinned: the probe shape blocks
+at high; the same edit with its production change in-diff holds at warn
+via `REPAIR_EVIDENCE`; a shared-producer constant stays silent (closure
+mutation turns it red); a reformatted constant stays silent (raw-compare
+mutation turns it red).
+
+Measured, every pre-registered line held: the sweep moved 41 → **42**,
+gone **zero**, exactly one new block — click `5989375dc3` ("ParamType
+typing improvements"), where the typed production code newly imports `abc`
+and `uuid` and the same diff adds exactly those two names to
+`ALLOWED_IMPORTS`, the module-constant oracle of `test_light_imports`.
+Adjudicated false (maintainer single-pass, the round's one new block,
+weaker independence noted): the oracle genuinely widens but the
+compensation is visible in the reviewed diff — the tool cannot connect the
+hunks because an import-audit test calls no production symbol, the
+`1c5e03eb32` failed-connection family. One of five budgeted. Arms
+case-for-case unmoved (48/80, 25/60) — and unlike the prior-window round,
+these single-diff arms genuinely exercise the new arm, so their silence is
+measurement, not construction. `adjudication-2026-08-26b.json` carries 42
+verdicts (41 verbatim + 1); floor 1.44% → 1.50%.
+
+Stated residuals, none annexed: a constant imported from another file
+(`from constants import EXPECTED`), conftest constants, and a constant
+moved under a top-level `if` — it leaves `_top_level_constants` and the
+arm goes silent, the module-scope cousin of row 95's tautological gate,
+recorded there. D-051.
 
 ## 2026-08-26: the prior-window pardon — built, measured, and refused at its own gate
 
@@ -1492,10 +1542,10 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.45 |
+| version | v0.1.46 |
 | detectors | 21 |
-| human-commit block rate | 41/1800 = 2.28% |
-| adjudicated false positive | 26/1800 = 1.44% |
+| human-commit block rate | 42/1800 = 2.33% |
+| adjudicated false positive | 27/1800 = 1.50% |
 | legitimate policy block | 15/1800 = 0.83% |
 | opaque exemption share | 24/1800 = 1.33% |
 | classic adversarial decoys blocked | 12/12 |

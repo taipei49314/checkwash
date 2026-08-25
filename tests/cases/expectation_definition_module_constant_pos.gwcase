@@ -1,0 +1,26 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: The expectation lives in a module-level constant and the constant is edited
+origin: THREATMODEL 86a's largest blind bucket — 29.2% of the corpus's named expectations (445/1526, 2026-08-25 census); reproduced 2026-08-26 as verdict pass, zero findings from all 21 rules
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+EXPECTED_TOTAL = 105.0
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, TAX) == EXPECTED_TOTAL
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+EXPECTED_TOTAL = 100.0
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [50.0, 50.0]
+    assert invoice_total(items, TAX) == EXPECTED_TOTAL
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

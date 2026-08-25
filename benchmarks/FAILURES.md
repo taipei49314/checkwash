@@ -12,7 +12,7 @@ it is known not to.
 ## The short version
 
 - **111 bypasses** are documented, of which **29 are not closed**.
-- **26 of 1800** human-written commits are blocked by mistake (1.44%), each one named below.
+- **27 of 1800** human-written commits are blocked by mistake (1.50%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - A production file greenwash cannot read suppresses escalation for the
@@ -174,13 +174,14 @@ behind it* unshippable.
 
 Every commit in the 1800-commit corpus that greenwash blocks and should
 not. Adjudicated by three raters; the reasoning for all three ships in
-`adjudication-2026-08-26.json` and the two blind re-adjudications beside it.
+`adjudication-2026-08-26b.json` and the two blind re-adjudications beside it.
 
 | commit | three raters | why the block is wrong |
 |---|---|---|
 | attrs `ce89f5d11f` | FP/FP/FP | "Fix message passing in frozen errors" makes FrozenError set its message via __init__/super().__init__(msg); the test adds `match="can't set attribute"` to both pytest.raises blocks AND keeps/duplicates the exact-value check as `assert e.value.msg == e.value.a |
 | attrs `f520d9a89f` | FP/FP/FP | "Only soft-deprecate hash (#1330)" removes the `warnings.warn(DeprecationWarning(...))` calls from both `attrs()` and `make_class()` in src/attr/_make.py in the same diff, so the two `test_hash_is_deprecated` tests (which assert `pytest.deprecated_call()`) tes |
 | click `1557e26522` | FP/FP/FP | "Check for warning exception with idiomatic context manager" replaces `assert result.exit_code == 1` / `isinstance(result.exception, UserWarning)` / `"used more than once" in str(...)` with `with pytest.warns(UserWarning, match="used more than once"): runner.i |
+| click `5989375dc3` | FP/?/? | "ParamType typing improvements" adds typing across src/click/types.py (220 lines), core.py and termui.py; the typed code now imports abc and uuid at runtime, and the same diff adds exactly "abc" and "uuid" to ALLOWED_IMPORTS in tests/test_imports.py - the modu |
 | click `777a89e232` | FP/FP/FP | "Add regular and stress tests for ``CliRunner`` stream lifecycle and ownership" deletes the 25-line tests/test_testing_logging.py but adds a 538-line tests/test_stream_lifecycle.py in the same diff whose "Category 3: Logging interaction (issues #824, #3110)" s |
 | click `bbe1eb6d41` | FP/FP/FP | "Remove duplicate test" drops the single line `assert value is not True` from test_unset_sentinel, but the same test body (unchanged, immediately below) contains `real_values` including `True` and loops `assert value != real_value; assert value is not real_val |
 | click `bd131e1ab6` | FP/FP/FP | "Fix test_edit to work with BSD sed" changes the test's own input from `"a\nb"` to `"a\nb\n"` in the same hunk, so the expected value necessarily becomes `"aTest\nbTest\n"`. It remains a single exact `==` comparison (greenwash itself notes "no change in assert |

@@ -1,0 +1,416 @@
+{
+ "date": "2026-08-26",
+ "source": "FP sweep benchmarks/sweeps/ (v0.1.46 module-constants arm), 6 OSS repos x 300 commits = 1800",
+ "method": "the D-051 module-constants arm adds exactly one block to the sweep (41 -> 42, click 5989375dc3, gone 0). The 41 prior verdicts are carried verbatim from adjudication-2026-08-26.json; the one new block was adjudicated by the maintainer single-pass against the real diff - weaker independence than the promotion round's two blind raters, noted per the 2026-08-03 precedent for its five maintainer-judged verdicts. Pre-registration (P1-P4, scratchpad preregister-module-constants) held on every line: zero departures, one new block inside the five-of-1800 budget, arms case-for-case unmoved.",
+ "categories": {
+  "false_positive": "blocking was wrong; no oracle weakening, or compensated visibly in-diff",
+  "spec_correct": "blocking was defensible; oracle coverage dropped with no visible in-diff compensation",
+  "unclear": "cannot be decided from the diff"
+ },
+ "verdicts": [
+  {
+   "repo": "attrs",
+   "commit": "ce89f5d11feb0805da9ed10bb165238cc959f1bb",
+   "category": "false_positive",
+   "reason": "\"Fix message passing in frozen errors\" makes FrozenError set its message via __init__/super().__init__(msg); the test adds `match=\"can't set attribute\"` to both pytest.raises blocks AND keeps/duplicates the exact-value check as `assert e.value.msg == e.value.args[0] == \"can't set attribute\"` in both blocks. The oracle got strictly stronger; greenwash only saw the new `match=` pattern and scored it as a downgrade.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "attrs",
+   "commit": "f520d9a89f1fde6fdc5310ffe6c5d4c7467fb10b",
+   "category": "false_positive",
+   "reason": "\"Only soft-deprecate hash (#1330)\" removes the `warnings.warn(DeprecationWarning(...))` calls from both `attrs()` and `make_class()` in src/attr/_make.py in the same diff, so the two `test_hash_is_deprecated` tests (which assert `pytest.deprecated_call()`) test behavior that no longer exists. Production genuinely changed in a way that explains the deletion; greenwash failed to connect the src and tests hunks.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "click",
+   "commit": "06847da9126a99c88bf347adf213d33bfe4e4af2",
+   "category": "spec_correct",
+   "reason": "\"Support legacy case of default aligning to flag_value for flag whose default=True\" rewrites the tail of test_flag_value_prompt to `assert result.exit_code == 0 if expected not in (REPEAT, INVALID) else 1`, which Python parses as `assert ((exit_code == 0) if cond else 1)` — for every new REPEAT/INVALID case the exit-code check degrades to `assert 1`, an always-true truthy assertion. greenwash's EXACT_VALUE(90) -> TRUTHY(20) is literally what the diff does.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "click",
+   "commit": "1557e265222c431b1e4d6c4dd6754006ed10dc02",
+   "category": "false_positive",
+   "reason": "\"Check for warning exception with idiomatic context manager\" replaces `assert result.exit_code == 1` / `isinstance(result.exception, UserWarning)` / `\"used more than once\" in str(...)` with `with pytest.warns(UserWarning, match=\"used more than once\"): runner.invoke(cli, [])`. The exit_code==1 assertion only held because pyproject sets `filterwarnings = [\"error\"]`; inside pytest.warns the warning is recorded instead of raised, so that assertion is no longer applicable, and pytest.warns still fails if the warning type or message is absent. The oracle moved form without losing strength.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "click",
+   "commit": "777a89e232d5771141be545ff749a7ad2eaa5fc2",
+   "category": "false_positive",
+   "reason": "\"Add regular and stress tests for ``CliRunner`` stream lifecycle and ownership\" deletes the 25-line tests/test_testing_logging.py but adds a 538-line tests/test_stream_lifecycle.py in the same diff whose \"Category 3: Logging interaction (issues #824, #3110)\" section includes test_invoke_with_logger_and_prompt described as \"the exact #824 reproducer\" plus test_logging_with_cli_log_level, replacing the deleted test's coverage and removing its FIXME-weakened dual-value assertion.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "click",
+   "commit": "97b300c41b6b241570f598f387e2e018844be0f4",
+   "category": "spec_correct",
+   "reason": "\"add zizmor to scan workflows\" deletes .github/workflows/test-flask.yaml, which ran flask's full pytest suite against click main as a downstream integration gate, and also removes the `stress` job from tests.yaml; the only added workflow is a zizmor GitHub Actions security scanner, so real CI test coverage is removed with nothing in this diff replacing it.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "click",
+   "commit": "a391797d00d2ef32ebc4fb0034462a2ec5e6d3d4",
+   "category": "spec_correct",
+   "reason": "\"Make test echo file.\" moves nine echo/pager units verbatim into tests/test_utils_2/ (all de-escalated to info as moves once the relocation credits could see them), but it ALSO deletes test_prompt_cast_default outright: `git grep -l \"def test_prompt_cast_default\" a391797d00` finds the unit nowhere at that commit's head. A real oracle (prompt default cast to int, isinstance assert) vanished with no copy, no move and no replacement; the next-day commit 1103c5cac2 re-added it, which reads as an accidental deletion caught. The original adjudication said \"every flagged unit exists verbatim in the new files in the same diff\" - that was wrong for this unit, discovered when the v0.1.5 duplicate search went looking for the surviving copy and proved there was none. Blocking is correct.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "click",
+   "commit": "b7e5fd4cc7de70280eccd39f2bb956df617e5519",
+   "category": "spec_correct",
+   "reason": "\"Fix broken fish completion and multiline help string\" rewrites FishComplete.format_completion from a 3-line newline-delimited frame to a comma/tab frame, updates the parametrized format cases to match, and then deletes test_fish_multiline_help_complete outright. The new code still escapes newlines (help_.replace(\"\\n\", \"\\\\n\")) but nothing in the post-commit tests/test_shell_completion.py exercises a multi-line help string any more, so coverage of the very bug being fixed drops with no replacement in this diff.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "click",
+   "commit": "bbe1eb6d41f54bd49690a5c385b0895d061a76c1",
+   "category": "false_positive",
+   "reason": "\"Remove duplicate test\" drops the single line `assert value is not True` from test_unset_sentinel, but the same test body (unchanged, immediately below) contains `real_values` including `True` and loops `assert value != real_value; assert value is not real_value`. The removed assertion is exactly subsumed by retained coverage in the same unit, so the oracle is not weakened.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "click",
+   "commit": "bd131e1ab63da2281d6dd9b8205ad2eb5a085468",
+   "category": "false_positive",
+   "reason": "\"Fix test_edit to work with BSD sed\" changes the test's own input from `\"a\\nb\"` to `\"a\\nb\\n\"` in the same hunk, so the expected value necessarily becomes `\"aTest\\nbTest\\n\"`. It remains a single exact `==` comparison (greenwash itself notes \"no change in assertion strength\"); the input change that explains the new expectation is visible three lines above in the same diff.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "click",
+   "commit": "becbde5cf416441627f779e8dd34e57738ee1c1f",
+   "category": "false_positive",
+   "reason": "\"pager doesn't close std streams\" adds a `_SkipClose` wrapper in src/click/_termui_impl.py so `_nullpager` now yields `_SkipClose(stream)` instead of the stream itself; `assert pager is created[0]` is therefore impossible by construction and is replaced with the stronger, on-point `assert not stream.closed` plus the retained `stream.getvalue() == styled_text`, and a new end-to-end `test_with_echo_via_pager` is added in tests/test_testing.py in the same diff.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "click",
+   "commit": "c3535905c77a29afc84861b29d3ad366ce5451bd",
+   "category": "spec_correct",
+   "reason": "\"Fix broken fish completion and multiline help string\" deletes test_fish_multiline_help_complete (50 lines) outright, and nothing in the diff replaces it — the updated parametrized fish cases only cover the new \"plain,a\\nplain,b\\tbee\\n\" comma/tab format, not the multi-line help escaping (`item.help.replace(\"\\n\", \"\\\\n\")`) that the deleted test asserted. Real coverage drop with no in-diff compensation; a reviewer would allowlist it as a revert of the regressing PR's test.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "click",
+   "commit": "cf0c36d33734af1de9ecd5d3305970eb26ebba7f",
+   "category": "false_positive",
+   "reason": "\"Add parametrized tests for `should_strip_ansi`\" does not invert polarity: `assert not should_strip_ansi(stream=...)` was replaced by `assert click._compat._is_jupyter_kernel_output(stream=...)`, a different predicate whose True is semantically the same claim, and the same diff adds a 36-case parametrized `test_should_strip_ansi` covering isatty/is_jupyter/color. Coverage rises, not falls.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "click",
+   "commit": "e3c0898975a7e095a3f11fd2d13035872a55a3e5",
+   "category": "false_positive",
+   "reason": "\"add codespell pre-commit hook\" is a spelling fix that edits the fixture and the assertion in lockstep: the sentinel is changed at its definition (default=/help=\"you won't see me\") and in the matching `assert \"you won't see me\" not in result.output`. The assertion still checks that the same sentinel never reaches output, so strength is unchanged.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "flask",
+   "commit": "06ea505ce2b2042af26e96d35ebf159af7c0869d",
+   "category": "false_positive",
+   "reason": "\"separate copy per call\" moves `original.copy()` from decoration time into the wrapper in src/flask/ctx.py, and the same diff deletes the greenlet dependency from pyproject.toml while replacing both `TestGreenletContextCopying` tests with `test_copy_context_thread`, which drives `copy_current_request_context` across a 10-item ThreadPoolExecutor map and asserts the same current_app/path/args/session invariants — equivalent (arguably stronger) coverage added in the same diff.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "flask",
+   "commit": "1d7281fe0770a97229a2a75189a712cff866b448",
+   "category": "spec_correct",
+   "reason": "\"remove egg test\" deletes test_egg_installed_paths and the install_egg fixture (37 lines of conftest) while the only production change in src/flask/scaffold.py is a comment edit ('points to the .egg or .zip file' -> 'points to the .zip file'); the loader.archive branch it exercised still exists and nothing in this diff replaces the coverage. Deleting for environmental reasons (Python 3.12 drops setuptools) is exactly the allowlist case.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "flask",
+   "commit": "53b8f08218796d95764c5252bccd8a50a173a6fb",
+   "category": "false_positive",
+   "reason": "\"push preserved contexts in correct order\" changes src/flask/testing.py from `while self._new_contexts: cm = self._new_contexts.pop()` to a forward `for cm in self._new_contexts`, and the flagged test is renamed test_redirect_keep_session -> test_redirect_session in the same diff, rewritten to assert the newly-correct ordering (session[\"redirect\"] and session[\"target\"] both True after follow_redirects) rather than removed.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "flask",
+   "commit": "91c6b3fecf36b1f04554e57cc4060ccb737a445d",
+   "category": "spec_correct",
+   "reason": "The commit is exactly \"remove unicode host test\" — a single file, 21 pure deletions of `test_environ_for_valid_idna_completes`, with no production change and no replacement test anywhere in the diff. Oracle coverage for IDNA HTTP_HOST handling drops with nothing in this diff compensating, so blocking is greenwash doing its documented job and a reviewer would allowlist it.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "flask",
+   "commit": "a31e6b73469cb2bf7eb8f70b5ff21f710fd2e23c",
+   "category": "spec_correct",
+   "reason": "\"remove werkzeug host tests\" is 48 pure deletions in one test file, no production change, no replacement anywhere in the diff. The coverage moved to the upstream werkzeug project, which no diff analyser can see. Blocking is the documented behaviour; a reviewer allowlists it.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "flask",
+   "commit": "d98eb69a354158252854ed4a5c9778e03d089191",
+   "category": "spec_correct",
+   "reason": "\"revert cli test change\" is test-only and undoes the strengthening from e82db2c: `assert \"HEAD\" not in output` plus `assert \"OPTIONS\" not in output` collapse back to the single narrower `assert \"GET, HEAD, OPTIONS, POST\" not in output`, and the `_automatic_options` filter in test_all_urls is dropped too. No production file is touched and nothing in this diff restores the lost coverage.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "httpx",
+   "commit": "4f6edf36e93fd9f83ff95b065718fd6bd0c4d3c5",
+   "category": "spec_correct",
+   "reason": "\"test `parse_header_links` via public api (#3061)\" changes `assert parse_header_links(value) == expected` to `assert all(link in all_links for link in expected)` — exact equality becomes a subset check, so extra/incorrect links go undetected and the `(\"\", [])` parameter case becomes vacuously true. The production edit is a behavior-preserving rewrite of `Response.links` into a dict comprehension and the added `test_parse_header_links_no_link` only covers the missing-header case, so nothing in this diff restores the lost exactness.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "httpx",
+   "commit": "71a1589928e4d75a5d0d8201e32b5bc7963fb5f8",
+   "category": "false_positive",
+   "reason": "\"Use httpx public API for 'test_content' tests\" swaps every `encode_request(...)` call for `httpx.Request(method, url, ...)` in the same hunks; the Host header appears in the expectations because a real Request populates it, which is why `{'Transfer-Encoding': 'chunked'}` becomes `{'Host': 'www.example.com', 'Transfer-Encoding': 'chunked'}`. The assertions stay full-dict equality (test_empty_content even gains `Content-Length: 0`), so the rewrites are compensated in-diff by the visible change of subject under test.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "httpx",
+   "commit": "7488b15226263dbd06565d4e577fc6e339c1ef64",
+   "category": "spec_correct",
+   "reason": "\"Drop private imports from test_exceptions.py (#2571)\" deletes test_httpx_exceptions_exposed, whose oracle was that every Exception subclass in the private httpx._exceptions module is re-exported on httpx; the surviving test_httpcore_all_exceptions_mapped only checks that httpcore exception *names* appear in httpx, so an httpx-defined exception left unexported is no longer caught, and nothing in this diff restores that check.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "httpx",
+   "commit": "7947b56076db933079ec0c33d1f81406e33008e7",
+   "category": "false_positive",
+   "reason": "\"Drop private import of 'encode_request' in test_multipart\" rewrites the test to use the public `httpx.Request` API with a fixed BOUNDARY. Both oracles survive in the same hunk: the exact dict equality `request.headers == {Host, Content-Type, Transfer-Encoding: chunked}` (now stricter, it also pins Host) and the exact byte equality on `request.content`. Only the incidental `assert isinstance(stream, typing.Iterable)` scaffolding for the removed private API is gone.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "httpx",
+   "commit": "9fd6f0ca6616d0310a3ee0b0c6ef509a97995797",
+   "category": "false_positive",
+   "reason": "\"Ensure JSON representation is compact\" changes encode_json to `json_dumps(json, ensure_ascii=False, separators=(\",\", \":\"), allow_nan=False)` in httpx/_content.py in the same diff, which directly explains Content-Length 18 -> 17. The flagged edit `response.json() == {\"hello\": \"world\"}` -> `str(response.json()) == \"{'hello': 'world'}\"` is at least as strict (string repr also pins key order), so no coverage was lost.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "httpx",
+   "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
+   "category": "spec_correct",
+   "reason": "\"Adapt test_response_decode_text_using_autodetect for chardet 6.0\" turns `assert response.encoding == \"ISO-8859-1\"` into `assert response.encoding in (\"ISO-8859-1\", \"WINDOWS-1252\")`. The expectation is genuinely widened to accept two values and nothing in this diff (no production change, only a comment) replaces the lost precision — the justification lives in an external dependency's version bump, exactly the case a reviewer would allowlist.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "httpx",
+   "commit": "bddd774ce065f3442c1f46af1db5b85b1bfb7613",
+   "category": "false_positive",
+   "reason": "\"Revert \\\"Raise `TypeError` on invalid query params. (#2523)\\\"\" deletes the `raise TypeError(f\"Expected str, int, float, bool, or None...\")` from primitive_value_to_str in httpx/_utils.py in the same diff, so test_invalid_query_params (a `pytest.raises(TypeError, match=...)` on exactly that message) is asserting behavior that no longer exists. The production change explaining the deletion is right there in the diff; greenwash failed to connect them.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "httpx",
+   "commit": "cca62060cb958e89078279e625a752aa0d02c40c",
+   "category": "false_positive",
+   "reason": "\"Drop private imports from test_decoders.py (#2570)\" rewrites the decoder tests onto the public API, and the same diff compensates: test_byte_chunker/test_text_chunker are replaced by new chunk_size=7 cases in tests/models/test_responses.py (test_iter_raw_with_chunksize, test_iter_text_with_chunk_size). The line-decoder 'rewrites' are just the merge of the old decode()+flush() split into one iter_lines() list — e.g. ['a','','b'] + ['c'] becomes ['a','','b','c'] — same expected output.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "httpx",
+   "commit": "db9072f998b53ff66d50778bf5edee8e2cc8ede1",
+   "category": "false_positive",
+   "reason": "\"Add URL parsing tests from WHATWG (#3188)\" rewrites `validate_path` in httpx/_urlparse.py — the `//` and `:` checks are re-guarded under `not has_scheme and not has_authority` and both messages are reworded to \"Relative URLs cannot have a path starting with ...\" — so the expectation edit tracks a visible production change in the same diff; the assertions keep identical strength (still `pytest.raises(httpx.InvalidURL)` plus exact message equality), and the diff adds tests/models/test_whatwg.py with a 9.7k-line WHATWG conformance corpus.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "httpx",
+   "commit": "eeb5e3c2a3ff2403ec47b5926715ecd61143d92d",
+   "category": "spec_correct",
+   "reason": "\"Cleanup unneccessary test case (#3375)\" is a test-only diff (23 deletions, no production change) that removes test_netrc_auth_nopassword. Its asserts duplicated test_netrc_auth_credentials_do_not_exist, but it was the only test constructing httpx.NetRCAuth against the passwordless .netrc-nopassword fixture on Python 3.11+, and nothing in this diff replaces that; a reviewer would allowlist it rather than call it a tool bug.",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "httpx",
+   "commit": "fc84f7f6eb77fe5d4428261c837ac8016ec77a28",
+   "category": "spec_correct",
+   "reason": "\"test `same_origin` via public api (#3062)\" replaces `assert not same_origin(o1, o2)` with an assertion about redirect headers — a different subject entirely, in a test-only diff. THREATMODEL \"what greenwash cannot catch\" #7 states that a private-API check rewritten against the public API blocks deliberately, because the de-escalation that would excuse it would also excuse swapping an exact comparison for a wide approx().",
+   "rater_a": "spec_correct",
+   "rater_b": "spec_correct",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "rich",
+   "commit": "48293cde887c4f25a7bca022131b56495f370a88",
+   "category": "false_positive",
+   "reason": "[majority of three blind raters overturned the original single-rater call: A=spec_correct, B=false_positive, C=false_positive] \"fix tests\" is a one-line, test-only diff that rewrites `Text.from_ansi(\"\\nHello\\nWorld\\n\\n\").plain` from `\"Hello\\nWorld\\n\\n\"` to `\"\\nHello\\nWorld\\n\\n\"` with no production change anywhere in the commit; only by reading the two preceding commits (33d56f1 \"tests\" added the assertion, f261bfa touched only whitespace in rich/ansi.py) can you tell the original expectation was a copy-paste mistake rather than the intended spec, so a diff-scoped analyser blocking an expectation bent to match current behaviour is doing its documented job.",
+   "rater_a": "spec_correct",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "rich",
+   "commit": "82afcb4ff58db4d7628062a8a695de3bc64febab",
+   "category": "spec_correct",
+   "reason": "\"test fixes\" is test-only: it deletes test_no_nested_live outright and rewrites several hardcoded ANSI expectations to match new output. The cause is an upstream pygments change, outside the diff, so the expectations are bent to match current behaviour with nothing in-diff explaining why. Exactly the shape the rule exists to surface; a reviewer allowlists it.",
+   "rater_a": "spec_correct",
+   "rater_b": "false_positive",
+   "rater_c": "spec_correct"
+  },
+  {
+   "repo": "starlette",
+   "commit": "02b6ed7b18c741c00795010e9d716b58006af2c3",
+   "category": "false_positive",
+   "reason": "\"Return explicit origin in CORS response when credentials are allowed (#3137)\" replaces the `has_cookie` condition in starlette/middleware/cors.py with `self.allow_credentials`, so the cookie-triggered behavior the flagged tests asserted no longer exists; test_cors_allowed_origin_does_not_leak_between_credentialed_requests is renamed to ..._between_requests and keeps its three-request leak check, and test_cors_credentialed_requests_return_specific_origin's oracle moves into test_cors_allow_all (allow_credentials=True), which the same diff changes to assert access-control-allow-origin == \"https://example.org\" instead of \"*\".",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "starlette",
+   "commit": "90b805fda70db2316d79aa577f4c3eb670f9a8a1",
+   "category": "false_positive",
+   "reason": "\"Set `Content-Type` instead of `Content-Range` on multi-range responses (#3142)\" changes starlette/responses.py to write the multipart boundary into content-type rather than content-range, so the flagged assert in test_file_response_multi_small_chunk_size necessarily changes; the same hunk adds `assert \"content-range\" not in headers` and `assert headers[\"content-type\"].startswith(\"multipart/byteranges; boundary=\")`, and the sibling range tests gain the same pair — coverage goes up, not down.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive",
+   "rater_c": "false_positive"
+  },
+  {
+   "repo": "httpx",
+   "commit": "e4241c6155c8a85789566b8fe10fa2291eea20f4",
+   "category": "false_positive",
+   "reason": "\"Drop private imports from test_proxies.py (#2850)\" replaces `pattern = URLPattern(proxy_key); assert pattern in client._mounts` with `assert proxy_key in client_patterns`, where client_patterns is derived from client._mounts in the same unit. Same membership check, same strength, expressed without the private import; no oracle coverage is lost. Newly blocked in v0.1.15 by ASSERT_SUBSTITUTED, which cannot tell this re-expression from a replacement because both the subject and the expectation move. It belongs to the same rewrite-onto-the-public-API cluster as the already-adjudicated false positives cca62060cb, 7947b56076 and 71a1589928.",
+   "adjudicated_by": "single adjudicator (2026-08-09 verification round), NOT the three-rater panel that decided the other 35 — the inter-rater agreement figure below does not cover this row"
+  },
+  {
+   "repo": "flask",
+   "commit": "c2705ffd9ce1dc8476cb29eaf5ff5d4c719852d9",
+   "category": "false_positive",
+   "reason": "\"merge app and request context\" is a large honest refactor: the request context variable folds into _cv_app, so tests/test_testing.py rewrites `assert _cv_request.get(None) is req_ctx` to `assert _cv_app.get(None) is req_ctx` (same identity check against the renamed internal) and the autouse leak fixture rewrites `assert leaks == []` to `assert not leaks` (equivalent for a list). No oracle coverage is lost. Newly blocked in v0.1.27: the A5-x fixture channel makes the conftest autouse assert part of each unit's reachable set, so its rewrite became visible and reads as a replacement greenwash cannot verify equivalent — the same equivalent-rewrite family (THREATMODEL #7) as the httpx public-API cluster. Two findings on test_client_pop_all_preserved after the one-finding-per-origin dedupe; before it, the same commit produced twenty-four.",
+   "adjudicated_by": "single adjudicator (2026-08-13 A5-x round), NOT the three-rater panel that decided the original 35 — the inter-rater agreement figure below does not cover this row"
+  },
+  {
+   "repo": "rich",
+   "commit": "1c5e03eb32020011f5b13174e186c588d09d749c",
+   "category": "false_positive",
+   "reason": "\"fix for padding width\" (issue #3871) rewrites rich/table.py::Table._get_padding_width to honour pad_edge=False, and refreshes the inline golden in tests/test_columns.py::test_render to match. The assertion `assert render() == expected` is byte-identical on both sides; the golden is 44 lines before and after with 8 lines differing by one space each, and the same diff ADDS a regression oracle (tests/test_table.py::test_padding_width, `assert output == \"aaa aaa aaa\\n\"`). Coverage rose. greenwash nonetheless printed NO_PROD_CHANGE_IN_DIFF over a diff with 16 changed production lines: test_render calls a module-local render() helper, so _symbol_match cannot reach Table._get_padding_width three hops away, and _package_evidence refuses rich.table against tests importing rich.columns/rich.console. Same shape as attrs f520d9a89f. The detector's own docstring already records this commit as a cost of the rule.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive"
+  },
+  {
+   "repo": "rich",
+   "commit": "823de916d9fa5ee5dec985a94c2ff37f24e9c052",
+   "category": "false_positive",
+   "reason": "\"test fixes\", test-only (tests/test_ansi.py, +5/-3), updating three expectations after 69cee6e \"preserve newlines\" changed AnsiDecoder.decode four commits earlier. All three assertions are byte-identical across the diff and all three expectations got LONGER and more specific: a 5-element golden list gained Text(\"\"), a golden string gained a trailing \\n, a parametrize cell gained a trailing \\n. Under exact ==, accepted values stayed at one on both sides; nothing deleted, widened, or given a tolerance, and the input column ansi_bytes was untouched. test_decode_newlines is present on the BEFORE side asserting Text.from_ansi(\"Hello\\n\").plain == \"Hello\\n\", which passes only under the new behaviour - the before-side file was internally contradictory and this commit resolves it toward the documented, issue-numbered contract. Contrast httpx b5addb64f0 (spec_correct), where == became `in (...)`. DISPUTED 1-1; the dissent is that NO_PROD_CHANGE_IN_DIFF is literally true here (one test file, nothing for repair evidence to find) and that a reviewer cannot tell an honest fixup from an agent editing until green. Reconciled FP because the dissent's proof of coverage drop - \"all three now accept output they previously rejected\" - is true of every expectation edit including strengthening ones. Residual carried forward: this is the two-commit split shape, and the rule has no cross-commit repair-evidence credit.",
+   "rater_a": "false_positive",
+   "rater_b": "spec_correct",
+   "disputed": true,
+   "reconciler": "false_positive"
+  },
+  {
+   "repo": "rich",
+   "commit": "9303d77e8d41c6f43c090420f921dd3fc66ebfd1",
+   "category": "false_positive",
+   "reason": "\"markdown test\", one file +1/-1: the expected golden in tests/test_markdown_no_hyperlinks.py::test_markdown_render joins \"Two spaces at the end of a line\" + \"produces a line break.\" onto one rendered line. Verified at the judged commit that the MARKDOWN fixture carries NO trailing double-space (`cat -A` gives `Two spaces at the end of a line$`), so per CommonMark the paragraph must render joined and the base golden asserted a string the renderer cannot produce. The double-space was stripped from the INPUT one commit earlier by e9b0e19, which did not update that region of the golden. The joined value is corroborated in-tree by tests/test_markdown.py, which drives the same fixture through a byte-identical render() and has carried the joined form since a7edd719 (2024-08-26, \"fix test\") - the identical one-line repair in the sibling file. Assertion unchanged, still byte-exact equality over the whole ~4KB render; nothing deleted, no lattice downgrade. DISPUTED 1-1; the dissent is that the hard-line-break path is no longer exercised at all. True, but that coverage was lost at e9b0e19: both sides of THIS diff feed a fixture with no hard break, so the base-side oracle was not covering the path, merely unsatisfiable. spec_correct requires a coverage drop in the diff being judged. Noted for the record: the rule surfaced a real silently-degraded test input that no other rule saw - an argument for its value at info, not for this block.",
+   "rater_a": "false_positive",
+   "rater_b": "spec_correct",
+   "disputed": true,
+   "reconciler": "false_positive"
+  },
+  {
+   "repo": "rich",
+   "commit": "7022e202245b6bdeb39e8025d2b5dab793841ec8",
+   "category": "false_positive",
+   "reason": "\"Test fixes\"; flagged unit tests/test_progress.py::test_columns, whose expected ANSI golden is repaired. The base golden was not a rendering of any code: it contained `\\x1b[32m 0/m0:00:07\\x1b[0m` - an SGR sequence severed mid-parameter - and was missing the entire print(\"foo\") render frame, damage introduced by a hand-edit of the golden in a preceding test-only commit. Verified: `git show 7022e202~1:tests/test_progress.py | grep -c \"0/m0:00:07\"` = 1, and 0 at the head. The edit is a pure insertion (base is a strict subsequence of head, ~3.7KB -> ~4.2KB), the assertion `assert result == expected` is unchanged, and the oracle got strictly more demanding. A golden no implementation can satisfy is not an oracle; restoring it is repair, not tampering. LEDGER CORRECTION: the note that this commit lost a repair-evidence credit to \"D-038\" is false in both halves. The identifier is stale - D-038 is the v0.1.19 byte-identical-output incident; the leaf-name tightening is D-046 (DECISIONS.md:1661), and gating.py:144 still cites the wrong entry. And no credit was lost: _module_alignment('rich.panel', <test_progress.py imports>) = 0, so rich.panel fails the pre-D-046 `>= 1` predicate identically, and neither leaf (Panel, __rich_console__) appears anywhere in the test file, so the tightened clause is never reached. One rater confirmed this empirically by reverting _symbol_match to its pre-D-046 form and re-sweeping: identical block. Denial comes from _package_evidence/_module_alignment refusing rich.panel against rich.progress/rich.console - the older bypass-#35 closure, untouched by D-046. D-046 is exonerated; the reason this commit is new at v0.1.43 remains UNIDENTIFIED and should be bisected before the promotion ships, given zero margin. Unresolved residual: the same commit changes a parametrize cell in tests/test_console.py from (133, 24) to (80, 25) with no production change to rich/console.py, a more oracle-relevant edit that the rule did not name.",
+   "rater_a": "false_positive",
+   "rater_b": "false_positive"
+  },
+  {
+   "repo": "click",
+   "commit": "5989375dc3953a5709c411e11f658c242319858e",
+   "category": "false_positive",
+   "reason": "\"ParamType typing improvements\" adds typing across src/click/types.py (220 lines), core.py and termui.py; the typed code now imports abc and uuid at runtime, and the same diff adds exactly \"abc\" and \"uuid\" to ALLOWED_IMPORTS in tests/test_imports.py - the module-constant oracle of test_light_imports, newly visible to EXPECTATION_DEFINITION_CHANGED via the D-051 constants arm. The oracle genuinely widens (two more permitted imports), and the production change explaining it is in the reviewed diff - the house false_positive clause 'compensated visibly in-diff' verbatim. The tool cannot connect the hunks: an import-audit test calls no production symbol (it spawns a subprocess and inspects sys.modules), so symbol-level repair evidence has nothing to match, and package evidence's alignment bar (D-046) does not reach click.types from a bare 'import click'. Same failed-connection family as attrs f520d9a89f and rich 1c5e03eb32. Maintainer-adjudicated single-pass (the round's one new block), noted as weaker independence per the 2026-08-03 file's precedent.",
+   "rater_a": "false_positive"
+  }
+ ],
+ "inter_rater": {
+  "raters": 3,
+  "method": "rater A = original per-commit adjudication; raters B and C = independent blind passes over the same 35 diffs, with no access to prior verdicts",
+  "pairwise_agreement": {
+   "A-B": 0.943,
+   "A-C": 0.914,
+   "B-C": 0.914
+  },
+  "cohen_kappa": {
+   "A-B": 0.884,
+   "A-C": 0.826,
+   "B-C": 0.824
+  },
+  "fleiss_kappa": 0.844,
+  "items_with_any_disagreement": 4,
+  "reconciliation": "published category = majority of the three; a 3-way split would become unclear (none occurred)"
+ },
+ "promotion_round_2026_08_25": {
+  "new_blocks": 5,
+  "raters": 2,
+  "method": "two blind raters per commit with distinct lenses; 1-1 splits settled by a diff-reading reconciler; dissents preserved",
+  "items_with_any_disagreement": 2,
+  "disagreed": [
+   "823de916d9fa5ee5dec985a94c2ff37f24e9c052",
+   "9303d77e8d41c6f43c090420f921dd3fc66ebfd1"
+  ],
+  "tally": {
+   "false_positive": 5,
+   "spec_correct": 0
+  },
+  "note": "the written line (docs/defence-design.md, ~5 of 1800) permits at most five new blocks judged false; five new blocks means the line cannot arithmetically fail this round, so the adjudication is reported as evidence, not as a gate that discriminated. Incremental precision of the promotion on honest history: 0/5."
+ }
+}

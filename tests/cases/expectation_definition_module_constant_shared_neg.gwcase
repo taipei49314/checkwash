@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: A module constant the subject also consumes is a shared producer, not an oracle
+origin: T1.10's principle carried to the new source — changing FACTOR changes both sides of the comparison, so it explains itself
+=== before: tests/test_scale.py ===
+from scaling import scale
+
+FACTOR = 3
+
+
+def test_scale_applies_factor():
+    items = [10.0, 20.0]
+    assert scale(items, FACTOR) == [FACTOR * 10.0, FACTOR * 20.0]
+=== after: tests/test_scale.py ===
+from scaling import scale
+
+FACTOR = 4
+
+
+def test_scale_applies_factor():
+    items = [10.0, 20.0]
+    assert scale(items, FACTOR) == [FACTOR * 10.0, FACTOR * 20.0]
+=== expect ===
+[]

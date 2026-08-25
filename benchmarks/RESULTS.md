@@ -14,17 +14,17 @@ these repos during development.
 greenwash sweep HEAD --limit 300 --repo <path>   # per repo
 ```
 
-**Blocked (would fail CI at the default `fail_on = high`): 41/1800 = 2.28%** (final)
+**Blocked (would fail CI at the default `fail_on = high`): 42/1800 = 2.33%** (final)
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
 | flask | 300 | 37 | 7 | 2.33% |
 | httpx | 300 | 92 | 12 | 4.00% |
 | attrs | 300 | 65 | 2 | 0.67% |
-| click | 300 | 109 | 12 | 4.00% |
+| click | 300 | 109 | 13 | 4.33% |
 | rich | 300 | 71 | 6 | 2.00% |
 | starlette | 300 | 92 | 2 | 0.67% |
-| **total** | **1800** | **466** | **41** | **2.28%** |
+| **total** | **1800** | **466** | **42** | **2.33%** |
 
 Engine errors: 0.
 
@@ -37,7 +37,7 @@ Blocking findings by rule (commits containing at least one):
 | `TEST_DISABLED` | 16 |
 | `ASSERT_WEAKENED` | 12 |
 | `EXPECTED_VALUE_CHANGED` | 6 |
-| `EXPECTATION_DEFINITION_CHANGED` | 5 |
+| `EXPECTATION_DEFINITION_CHANGED` | 6 |
 | `ASSERT_SUBSTITUTED` | 2 |
 | `EXPECTED_VALUE_HARDCODED` | 1 |
 | `CI_WORKFLOW_TOUCHED` | 1 |
@@ -46,7 +46,7 @@ Blocking findings by rule (commits containing at least one):
 ## Decomposed: what those blocks are
 
 A block is not automatically a false positive. Every one of the
-41 blocks above was adjudicated against the real diff, into
+42 blocks above was adjudicated against the real diff, into
 *false positive* (blocking was wrong), *spec-correct*
 (the diff really does drop oracle coverage with no visible
 compensation — the tool doing its documented job, allowlist it), or
@@ -54,8 +54,8 @@ compensation — the tool doing its documented job, allowlist it), or
 
 | measure | count | rate over 1800 commits |
 |---|---:|---:|
-| historical human-commit **block rate** | 41 | **2.28%** |
-| adjudicated **false positive** | 26 | **1.44%** |
+| historical human-commit **block rate** | 42 | **2.33%** |
+| adjudicated **false positive** | 27 | **1.50%** |
 | **legitimate policy block** (spec-correct) | 15 | 0.83% |
 | **unclear** | 0 | 0.00% |
 
@@ -63,13 +63,13 @@ The headline figure to compare against other tools is the block rate,
 because that is what a team feels in CI. The figure that says whether
 greenwash is *wrong* is the adjudicated false-positive rate.
 
-Raw per-commit verdicts and reasoning: `adjudication-2026-08-26.json`.
+Raw per-commit verdicts and reasoning: `adjudication-2026-08-26b.json`.
 
-How they were judged: v0.1.45's gated-alternative guard stopped blocking rich c8abbb3bd2 (the adjudicated false positive the guard was built from: a version-gated alternative golden added with the old one kept verbatim in the else arm). Its verdict is dropped from the population because the sweep no longer blocks it - the house rule since v0.1.3-v0.1.5, whose stopped-blocking commits left the file the same way. The 41 remaining verdicts are carried verbatim from adjudication-2026-08-25.json; nothing was re-judged. That file's method note records how those 42 were produced..
+How they were judged: the D-051 module-constants arm adds exactly one block to the sweep (41 -> 42, click 5989375dc3, gone 0). The 41 prior verdicts are carried verbatim from adjudication-2026-08-26.json; the one new block was adjudicated by the maintainer single-pass against the real diff - weaker independence than the promotion round's two blind raters, noted per the 2026-08-03 precedent for its five maintainer-judged verdicts. Pre-registration (P1-P4, scratchpad preregister-module-constants) held on every line: zero departures, one new block inside the five-of-1800 budget, arms case-for-case unmoved..
 
 **How much to trust the split.** The block rate is a machine count and
 is exact; the split between *false positive* and *legitimate policy
-block* is a judgement call on 41 diffs, and the boundary is genuinely
+block* is a judgement call on 42 diffs, and the boundary is genuinely
 arguable on some of them (a test deleted because its coverage moved
 upstream is invisible to any diff analyser — called spec-correct here,
 another reviewer might say the tool should not have blocked). Read the
@@ -80,7 +80,7 @@ It has been judged 3 times. rater A = original per-commit adjudication; raters B
 - pairwise agreement: A-B 94.3%, A-C 91.4%, B-C 91.4%
 - Cohen's kappa: A-B 0.88, A-C 0.83, B-C 0.82
 - Fleiss' kappa across all 3: **0.844**
-- commits with any disagreement: 4 of 41
+- commits with any disagreement: 4 of 42
 - reconciliation: published category = majority of the three; a 3-way split would become unclear (none occurred)
 
 The 5 blocks the 2026-08-25 promotion added were judged separately by 2 blind raters each (two blind raters per commit with distinct lenses; 1-1 splits settled by a diff-reading reconciler; dissents preserved); 2 of 5 drew a split. the written line (docs/defence-design.md, ~5 of 1800) permits at most five new blocks judged false; five new blocks means the line cannot arithmetically fail this round, so the adjudication is reported as evidence, not as a gate that discriminated. Incremental precision of the promotion on honest history: 0/5.

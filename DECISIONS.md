@@ -1699,6 +1699,38 @@ blocks at high) and `root_import_same_module_neg` (the honest shape keeps
 REPAIR_EVIDENCE); the audit's original scratch repo flips pass → block;
 arms/tamper/refactor corpora unchanged; dogfood clean.
 
+## D-051 (2026-08-26): module constants become the fourth expectation source
+
+*Maintainer-directed frozen-zone change (SPEC.md §4 row, detector source arm, IR fields).*
+
+**Incident.** The 2026-08-25 census put 29.2% of the corpus's named
+expectations (445/1526) in module-level constants — the largest single blind
+bucket — and the probe confirmed total blindness: `EXPECTED_TOTAL = 105.0` →
+`100.0` at module scope, assertion byte-identical, verdict pass, zero
+findings from all 21 rules.
+
+**Frozen:** `EXPECTATION_DEFINITION_CHANGED` reads a fourth source — the
+file's own top-level constants, carried on
+`FileIR.module_constants`/`module_constants_before`, canonicalized with
+`ast.unparse` on both sides (the raw-segment comparison would relive the
+binding channel's first false positive), last-wins per side (module
+execution order — an appended `EXPECTED = evil` at the bottom of the file is
+caught with none of the unit channel's branch machinery), consumed-by-the-
+expectation only, subject-closure excluded (T1.10). The merged D6
+environment is explicitly NOT the comparison input: it resolves cross-file
+with a head reader on one side only, and an asymmetric environment must
+never feed a two-sided comparison. Pre-registered gate held on every line:
+sweep 41→42, gone zero, the one new block (click `5989375dc3`) adjudicated
+false — the compensation is visible in the reviewed diff, the tool cannot
+connect an import-audit test that calls no production symbol, the
+`1c5e03eb32` failed-connection family — inside the five-of-1800 budget;
+tamper 48/80 and refactor 25/60 case-for-case unmoved, and these single-diff
+arms genuinely exercise the arm, unlike the refused prior-window channel.
+Stated residuals, each its own round if ever taken: imported constants,
+conftest constants, constants moved under a top-level `if` (row 95's
+module-scope cousin). Weakening the canonicalization, the consumed filter,
+or the subject-closure exclusion reverts this decision.
+
 ## D-050 (2026-08-26): the prior-window pardon is refused — the two-commit split stays open
 
 *Maintainer-approved refusal; no frozen text changes, the source tree reverts to v0.1.45.*

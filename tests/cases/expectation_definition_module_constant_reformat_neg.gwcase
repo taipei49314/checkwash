@@ -1,0 +1,29 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Reformatting a module constant's defining expression is not a change
+origin: the binding channel learned this in its first round (structural keys, not source text); the constants arm compares canonically from day one
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+EXPECTED_TOTAL = round(200.0 * 1.05, 2)
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [100.0, 100.0]
+    assert invoice_total(items, TAX) == EXPECTED_TOTAL
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+EXPECTED_TOTAL = round(
+    200.0 * 1.05,
+    2,
+)
+TAX = 0.05
+
+
+def test_invoice_total_applies_tax():
+    items = [100.0, 100.0]
+    assert invoice_total(items, TAX) == EXPECTED_TOTAL
+=== expect ===
+[]

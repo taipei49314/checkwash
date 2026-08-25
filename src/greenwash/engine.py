@@ -8,6 +8,7 @@ Role / CI / evidence helpers live in greenwash.roles, .ci, .evidence (E5).
 
 from __future__ import annotations
 
+import ast
 import datetime
 from collections import Counter
 from dataclasses import replace
@@ -162,6 +163,25 @@ def _classify_allowlist_change(before: bytes | None, after: bytes | None) -> lis
     if after_entries[: len(before_entries)] != before_entries:
         return None
     return [e.fingerprint for e in after_entries[len(before_entries) :]]
+
+
+def _canonical_constants(raw: dict[str, str]) -> dict[str, str]:
+    """Top-level constant name -> canonical defining expression.
+
+    `_top_level_constants` records raw source segments — right for D6, which
+    resolves and evaluates them, wrong for a two-sided comparison, where a
+    reformat would read as a change (the binding channel's first false
+    positive, solved there with `ast.unparse`; same medicine here). A segment
+    that does not parse as an expression is skipped: the arm goes silent on
+    it rather than comparing bytes it cannot normalize.
+    """
+    out: dict[str, str] = {}
+    for name, seg in raw.items():
+        try:
+            out[name] = ast.unparse(ast.parse(seg, mode="eval"))
+        except (SyntaxError, ValueError):
+            continue
+    return out
 
 
 def build_ir(
@@ -648,10 +668,12 @@ def build_ir(
         if file.role in ("test", "conftest") and parsed is not None:
             file.constants = _gate_constants(parsed, after_by_path, head_reader)
             file.fixture_defs = dict(parsed.fixture_defs)
+            file.module_constants = _canonical_constants(parsed.constants)
             before = before_by_path.get(file.path)
             if before is not None:
                 file.constants_before = _gate_constants(before, before_by_path, None)
                 file.fixture_defs_before = dict(before.fixture_defs)
+                file.module_constants_before = _canonical_constants(before.constants)
                 _mark_weakened_guards(file)
 
     # Move credits, counted after the constant environments exist because
