@@ -1699,6 +1699,48 @@ blocks at high) and `root_import_same_module_neg` (the honest shape keeps
 REPAIR_EVIDENCE); the audit's original scratch repo flips pass → block;
 arms/tamper/refactor corpora unchanged; dogfood clean.
 
+## D-048 (2026-08-25): #86a promoted — EXPECTATION_DEFINITION_CHANGED joins ORACLE_RULES
+
+*Maintainer-approved frozen-zone change (gating.py ORACLE_RULES, SPEC.md §4 row, detector base severity).*
+
+**Incident.** Issue #36 held promotion until the §A1 line (≤ 5 new blocks
+judged false on the 1800-commit sweep) was met. The round that met it also
+found the ledger's promotion premise was stale twice over: STATE's recorded
+"+4" was measured by drivers hard-coded (`sys.path.insert`) onto a
+**v0.1.42 clone eighteen commits behind the shipping tree** — on v0.1.43 the
+true cost is **+5** (37→42, all rich, gone 0), the fifth block appearing
+because A6 correctly stopped a blank-line `pyproject.toml` edit from buying
+`DEPENDENCY_DRIFT`. And "promotion is a one-line `ORACLE_RULES` add" was
+false: the detector was the tree's only sub-`warn` emitter (`info`), so a
+credited finding would have sat below every peer and below `fail_on="warn"`,
+silently contradicting SPEC §4's "base severity of every finding is `warn`"
+and D-002; and the non-oracle credit branch in gating carried a comment
+promising the rule "stays info and outside ORACLE_RULES" — unreachable the
+moment it joined. All five new blocks were adjudicated (two blind raters
+each, 1–1 splits reconciled, dissents preserved:
+`benchmarks/adjudication-2026-08-25.json`): **five false, zero defensible**.
+With exactly five new blocks the ≤ 5 line cannot arithmetically fail, so it
+is reported as evidence, not as a gate that discriminated; the incremental
+precision of the promotion on honest history is 0/5 and is published as the
+price.
+
+**Frozen:** `EXPECTATION_DEFINITION_CHANGED` is in `ORACLE_RULES`, base
+severity `warn`, escalating and de-escalating exactly as its peer oracle
+rules; membership of `ORACLE_RULES` is machine-pinned by
+`tests/test_oracle_rules_pinned.py` (every member exists in REGISTRY, no §4
+row of a member may claim it cannot gate, and the membership itself is
+frozen in the test). The eleven re-pinned fixtures carry the promotion
+(seven at high with `NO_PROD_CHANGE_IN_DIFF`, four negs at warn with their
+credits — `expectation_definition_repaired_neg` now pins its
+`REPAIR_EVIDENCE`, without which the mutation check passes on a broken
+promotion). THREATMODEL 86a is **Partly closed**: the residuals (55.5%
+visible surface, module constants 29.2% blind, one-token assertion-line
+evasions, closure poisoning, alpha/unit renames, purchasable repair) are in
+the row, each reproduced against the promoted build on 2026-08-25.
+Un-promoting, re-basing the detector below `warn`, or shipping an
+`ORACLE_RULES` edit without its fixture-and-ledger round reverts this
+decision.
+
 ## D-047 (2026-08-19): D7's frozen text said PATTERN; the code, the fixtures and row 13 said EXACT_VALUE
 
 *Maintainer-approved frozen-zone change (SPEC.md §5).*

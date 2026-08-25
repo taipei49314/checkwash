@@ -29,4 +29,4 @@ def expected_total():
 def test_invoice_total_applies_tax(expected_total):
     assert invoice_total([50.0, 50.0], 0.05) == expected_total
 === expect ===
-[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

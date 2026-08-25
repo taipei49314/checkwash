@@ -83,11 +83,19 @@ test_prompt_cast_default reappears nowhere, so the verdict is now
 spec-correct and the commit correctly stays blocked. Adjudicating blocks
 instead of just counting them is what made both catches possible.
 
-Two adjudication passes exist, of two different populations — the earlier one
-does not describe the current build and is kept only as history:
+Several adjudication passes exist, of different populations — only the newest
+describes the current build; the others are kept as history:
 
-- `adjudication-2026-08-03.json` — all 35 blocks of the **current** build:
-  20 false positive, 15 spec-correct, 0 unclear, **by majority of three
+- `adjudication-2026-08-25.json` — all 42 blocks of the **current** build
+  (the #86a promotion round): 27 false positive, 15 spec-correct, 0 unclear.
+  The 37 pre-promotion verdicts are carried verbatim from 2026-08-03; the
+  five blocks the promotion added were each judged by two blind raters with
+  distinct lenses, 1–1 splits settled by a diff-reading reconciler with the
+  dissent preserved in the verdict. All five: false positive — the
+  promotion's incremental precision on honest history is 0/5, published as
+  its price (D-048).
+- `adjudication-2026-08-03.json` — the 37 blocks as of v0.1.7–v0.1.43:
+  22 false positive, 15 spec-correct, 0 unclear, **by majority of three
   raters**. Two additional raters re-adjudicated all 35 commits blind
   (their verdicts ship as `adjudication-rater-B/C-2026-08-04.json`):
   pairwise agreement 94.3% / 91.4% / 91.4%, Cohen's kappa 0.88 / 0.83 /

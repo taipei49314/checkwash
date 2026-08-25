@@ -196,6 +196,25 @@ still a compat gate.
 > and adding them until the count looked acceptable would have been
 > fitting the rule to twelve known commits. They get their own round.
 > Re-swept at `info`: 36→36, no verdict moved, 24 info findings. D-037.
+>
+> **Promoted v0.1.44 (2026-08-25).** The credit rounds happened (T1.9,
+> T1.10, T1.11, PACKAGE_REPAIR) and the promotion sweep on the shipping
+> tree costs **5** (37→42 of 1800, all rich, gone 0) — inside this
+> section's own line. Each of the five was adjudicated by two blind
+> raters (`benchmarks/adjudication-2026-08-25.json`): five false, zero
+> defensible, so the line is met arithmetically but the incremental
+> precision on honest history is 0/5 — recorded as the price, not spun
+> as a win. Note the earlier ledger said this would be "a one-line
+> `ORACLE_RULES` add"; it was three edits (membership, base severity
+> `info`→`warn`, dead non-oracle branch), and the base-severity drift
+> had already made SPEC §4's first sentence false — caught only because
+> the promotion round went looking. `ORACLE_RULES` membership is now
+> machine-pinned (tests/test_oracle_rules_pinned.py). THREATMODEL 86a
+> is **Partly closed**: the census puts the rule's visible surface at
+> 55.5% of named expectations (module constants 29.2% are the largest
+> blind bucket), and the one-token assertion edits, closure poisoning,
+> alpha-rename, unit-rename and purchasable-repair evasions are all
+> reproduced and stay open in the row.
 
 
 The highest-value item in the report and in my own verification, because it

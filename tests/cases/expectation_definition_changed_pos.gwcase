@@ -2,6 +2,7 @@
 rule: EXPECTATION_DEFINITION_CHANGED
 title: The expectation's definition is edited while the assertion line stays byte-identical
 origin: THREATMODEL 86a — reproduced 2026-08-09, the shape v0.1.14's EXPECTED_VALUE_DERIVED could not see
+bypass: 86a
 === before: tests/test_billing.py ===
 from billing import invoice_total
 
@@ -23,4 +24,4 @@ def test_invoice_total_applies_tax():
     expected = round(sum(items), 2)
     assert invoice_total(items, TAX) == expected
 === expect ===
-[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

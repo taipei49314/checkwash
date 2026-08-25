@@ -1,6 +1,61 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-19 (audit round B2: the ledger catches up with the code)
+Updated: 2026-08-25 (the #86a promotion round: measured, adjudicated, pinned)
+
+## 2026-08-25: #86a promoted — and the promotion audited its own premise first
+
+The round that executed #36's promotion began by re-measuring it, and the
+recorded premise failed twice:
+
+- **STATE's "+4" was measured on the wrong engine.** Every stored promotion
+  driver in the corpus scratch (`_promote86a*.py`) hard-codes
+  `sys.path.insert(0, r"C:\Users\G713RW\greenwash\src")` — a v0.1.42 clone
+  eighteen commits behind the shipping tree — and reads its `benchmarks/sweeps`
+  as baseline; the editable install resolving to this tree is silently
+  shadowed. On v0.1.43 the promotion costs **+5** (37→42, all rich, gone 0).
+  The fifth, rich `7022e202245b`, was walked commit-by-commit across the
+  eighteen: it starts blocking at **A6** — its only manifest edit is a blank
+  line in `pyproject.toml`, exactly the no-dependency manifest change A6
+  stopped crediting. Intended effect, not collateral; D-046 (first suspected
+  via a stale `D-038` comment pointer in gating, now corrected) is exonerated
+  by measurement — alignment 0 before and after, no leaf hit to adjudicate.
+- **"A one-line `ORACLE_RULES` add" was false.** The detector emitted the
+  tree's only sub-`warn` severity, so a credited finding would have sat below
+  `fail_on="warn"` — silently contradicting SPEC §4's first sentence and
+  D-002 — and gating carried a non-oracle credit branch whose comment
+  promised the rule "stays info and outside ORACLE_RULES". Three edits, all
+  in this round: membership, base `info`→`warn`, dead branch deleted.
+
+Adjudication of the five new blocks (two blind raters each, distinct lenses,
+1–1 splits reconciled, dissents preserved in
+`benchmarks/adjudication-2026-08-25.json`): **five false, zero defensible.**
+With exactly five new blocks the §A1 "more than five judged false" line
+cannot arithmetically fail, so it is met but did not discriminate; the
+promotion's incremental precision on honest history is **0/5**, published as
+the price of making the definition-edit attack gate at all. THREATMODEL 86a
+flips to **Partly closed v0.1.44** with the reproduced residuals in the row
+(55.5% visible surface, module constants 29.2% blind, one-token
+assertion-line evasions, closure poisoning, alpha/unit renames, purchasable
+repair evidence). `ORACLE_RULES` — the set that decides what can block —
+had no machine pin at all (`grep ORACLE_RULES tests/` was empty), which is
+how SPEC drifted unwatched; `tests/test_oracle_rules_pinned.py` now freezes
+membership, requires every member to exist, and forbids a member's §4 row
+from claiming it cannot gate. Mutation-verified: pulling the membership line
+turns exactly 11 fixtures red; reverting base severity alone turns exactly
+the 4 negs red; pulling one member turns the pin test red.
+`expectation_definition_repaired_neg` now pins its `REPAIR_EVIDENCE` credit —
+unpinned, the first mutation passed on a broken promotion (10 red, not 11),
+a verifier blind to its own object inside the check built to prevent that.
+
+Gates: full suite green (466 tests; was 463 — the three pins above);
+promoted sweep regenerated into benchmarks/sweeps (six repos, engine
+0.1.44); arms/tamper/refactor corpora untouched by the rule change: the
+detector fires identically, only its severity path moved. Residuals filed,
+each its own round, none annexed here: the c8abbb3-shape binding-channel
+length guard (the parametrize channel already excludes added-alternative
+events; the binding channel is a bare `!=` on `\x1f`-joined keys), the
+two-commit split (prod lands first, test catches up — no cross-commit
+repair credit exists), and the module-constant blind bucket.
 
 ## 2026-08-19: B2 — THREATMODEL, SPEC and DECISIONS for the whole round
 
@@ -1328,10 +1383,10 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.43 |
+| version | v0.1.44 |
 | detectors | 21 |
-| human-commit block rate | 37/1800 = 2.06% |
-| adjudicated false positive | 22/1800 = 1.22% |
+| human-commit block rate | 42/1800 = 2.33% |
+| adjudicated false positive | 27/1800 = 1.50% |
 | legitimate policy block | 15/1800 = 0.83% |
 | opaque exemption share | 24/1800 = 1.33% |
 | classic adversarial decoys blocked | 12/12 |

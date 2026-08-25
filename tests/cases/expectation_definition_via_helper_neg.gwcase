@@ -31,4 +31,4 @@ def test_invoice_renders():
     expected = 110.0
     assert render([50.0, 50.0]) == expected
 === expect ===
-[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

@@ -30,7 +30,7 @@ _ROW_CELLS = re.compile(r"(?<!\\)\|")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-ADJUDICATION = "adjudication-2026-08-03.json"
+ADJUDICATION = "adjudication-2026-08-25.json"
 
 
 def _load(*parts: str) -> dict:
@@ -66,7 +66,7 @@ def status_of(raw: str) -> str:
         return "open by design"
     if "narrowed" in low and "open" in low:
         return "narrowed, still open"
-    if "closed in part" in low:
+    if "closed in part" in low or "partly closed" in low:
         return "closed in part"
     if raw.startswith("**Open**") or low.startswith("open"):
         return "open"

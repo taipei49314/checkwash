@@ -16,7 +16,7 @@ import sys
 REPOS = ["flask", "httpx", "attrs", "click", "rich", "starlette"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 # The adjudication is tied to one sweep. Bump both together, never one.
-ADJUDICATION = "adjudication-2026-08-03.json"
+ADJUDICATION = "adjudication-2026-08-25.json"
 
 
 def load_round(directory: str) -> dict:
@@ -201,6 +201,15 @@ def main() -> None:
             if ir.get("reconciliation"):
                 w(f"- reconciliation: {ir['reconciliation']}")
             w("")
+            pr = adj.get("promotion_round_2026_08_25")
+            if isinstance(pr, dict):
+                w(
+                    f"The {pr['new_blocks']} blocks the 2026-08-25 promotion added were judged "
+                    f"separately by {pr['raters']} blind raters each ({pr['method']}); "
+                    f"{pr['items_with_any_disagreement']} of {pr['new_blocks']} drew a split. "
+                    f"{pr.get('note', '')}".rstrip()
+                )
+                w("")
         else:
             w("Each commit was judged once, with no second opinion and no")
             w("inter-rater agreement measured. What would make the split solid is")

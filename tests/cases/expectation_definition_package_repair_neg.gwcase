@@ -23,4 +23,4 @@ def test_invoice():
     expected = 110.0
     assert billing.invoice_total([50.0, 50.0], 0.05) == expected
 === expect ===
-[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info", "deescalators": ["PACKAGE_REPAIR"]}]
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "warn", "deescalators": ["PACKAGE_REPAIR"]}]

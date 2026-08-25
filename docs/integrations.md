@@ -52,6 +52,14 @@ verification disagree, this document states the verified number.
 
 ## Headline
 
+> **Dated caveat (2026-08-25):** every number below was measured before the
+> v0.1.44 `EXPECTATION_DEFINITION_CHANGED` promotion. On the tuning corpus the
+> promotion added five blocks (all judged false); its effect on these three
+> projects is unmeasured — jinja is not cloned locally, and a two-of-three
+> re-run would not be comparable. Until an external re-run happens, treat the
+> false-positive rate here as a floor for the promoted build, not an estimate.
+
+
 Sweep-comparable numbers only (greenwash's own `sweep`, which counts non-merge commits):
 
 | project | commits analysed | blocked | block rate | engine errors | genuine | false positive | disputed |

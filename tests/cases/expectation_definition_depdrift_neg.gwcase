@@ -27,5 +27,5 @@ def test_addr():
     expected = "127.0.0.1"
     assert remote_addr() == expected
 === expect ===
-[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info", "deescalators": ["DEPENDENCY_DRIFT"]},
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "warn", "deescalators": ["DEPENDENCY_DRIFT"]},
  {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

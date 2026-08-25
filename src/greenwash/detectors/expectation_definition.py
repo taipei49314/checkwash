@@ -23,32 +23,44 @@ local name, keyed structurally so reformatting is not a change. If the
 expectation resolves to a local binding and that binding's definition moved
 while the subject and the assertion did not, the oracle moved.
 
-**This rule reports at `info` and never blocks, and that was decided by
+**This rule blocks through the same repair-evidence path as every oracle
+rule, and both that promotion and the years it spent at `info` were decided by
 measurement rather than by taste.**
 
 The design was written with a threshold fixed in advance (`docs/defence-design.md`
 §A1): *if the corpus sweep adds more than a handful of blocks, it does not ship
-as a blocking rule.* The sweep added **twelve** — 36 blocks to 48 across 1800
-human commits, a block rate of 2.00% to 2.67%, every one of them from this rule.
-Samples:
+as a blocking rule.* The v0.1.19 sweep added **twelve** — 36 blocks to 48 across
+1800 human commits — so the rule shipped visible and non-blocking, the twelve
+were recorded, and the missing credits were built in their own evidence-first
+rounds (T1.9 helper hop and D9, T1.10 producer filters, T1.11 literal needles,
+PACKAGE_REPAIR under D-037) rather than reverse-engineered from twelve data
+points.
+
+The 2026-08-25 promotion sweep on the shipping tree put the cost at **five**
+(37→42 of 1800, all in rich, adjudicated one by one in
+`benchmarks/adjudication-2026-08-25.json`, none judged a defensible block) —
+inside the pre-registered line of five. The known costs stay recorded, each a
+named residual rather than a credit fitted to make the number smaller:
 
 - rich `1c5e03eb32` "fix for padding width" genuinely fixes production and
-  updates the golden string to match. It blocked at high printing
+  updates the golden string to match. It blocks at high printing
   `NO_PROD_CHANGE_IN_DIFF` over a diff full of production changes, because the
   test calls a local `render()` helper and symbol-level repair evidence cannot
-  reach through it.
-- starlette `100f05a66b` moved an expectation because a dependency changed —
-  the case D9 `DEPENDENCY_DRIFT` exists for, which is scoped to two other rules.
+  reach the changed symbol three hops away in a sibling module.
+- rich `823de916d9` / `9303d77e8d` are the two-commit shape: production (or the
+  test's input) moved in an *earlier* commit and the golden catches up here.
+  Repair evidence does not cross commit boundaries.
+- rich `c8abbb3bd2` added a version-gated alternative golden while keeping the
+  old one verbatim: the parametrize channel's same-length guard excludes
+  exactly this event, the binding channel has no such guard yet.
+- rich `7022e202245b` repairs a golden no implementation could ever have
+  produced, and its only manifest edit is a blank line — which A6 correctly
+  refuses to pardon.
 
-Both have obvious-looking credits that would bring the number down. Adding them
-and re-sweeping until the count looked acceptable would be fitting the rule to
-twelve data points, which is how a published false-positive rate stops meaning
-anything. So the rule ships visible and non-blocking, the twelve are recorded,
-and the credits get their own evidence-first round rather than being reverse-
-engineered from this one.
-
-Being `info` also keeps it out of `ORACLE_RULES`: it earns no escalation and
-takes no repair-evidence path, because neither would change what it does.
+Base severity is `warn` like every other detector (SPEC §5, D-002); gating
+escalates to high only when no production change in the diff explains the
+edit, and repair evidence, PACKAGE_REPAIR and D9 `DEPENDENCY_DRIFT` de-escalate
+it exactly as they do its peer oracle rules.
 """
 
 from __future__ import annotations
@@ -197,7 +209,7 @@ def detect(ir: IR) -> list[Finding]:
                 findings.append(
                     Finding(
                         rule="EXPECTATION_DEFINITION_CHANGED",
-                        severity="info",
+                        severity="warn",
                         message=(
                             f"{unit.qualname}: the assertion is unchanged but its expectation "
                             f"is not — {', '.join(moved)} is defined differently now, so the "

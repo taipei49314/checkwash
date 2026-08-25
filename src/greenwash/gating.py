@@ -50,6 +50,15 @@ ORACLE_RULES = {
     # existed. Legitimate when production moved under the test, which is what
     # repair evidence measures — so it takes the same path, not its own.
     "TEST_PATCHES_SUBJECT",
+    # The expectation's *definition* moved while the assertion line stayed
+    # byte-identical (THREATMODEL 86a). Shipped at info in v0.1.19 because the
+    # promotion sweep cost twelve blocks; the credit rounds (T1.9 helper hop
+    # and D9, T1.10 producer filters, T1.11 literal needles, PACKAGE_REPAIR
+    # under D-037) closed those one evidence class at a time, and the
+    # 2026-08-25 re-sweep on this tree costs five — each adjudicated and named
+    # in benchmarks/adjudication-2026-08-25.json, none judged a defensible
+    # block, inside the written line of five (D-048).
+    "EXPECTATION_DEFINITION_CHANGED",
 }
 
 # Report order: most severe rule classes first within a path.
@@ -141,7 +150,7 @@ def _symbol_match(
     (confirmed bypass). The changed symbol's module must also be reachable
     from what this test file imports.
 
-    Reachable at depth 1 is not enough for a leaf-name hit (D-038, audit
+    Reachable at depth 1 is not enough for a leaf-name hit (D-046, audit
     2026-08-19): a root-level import (`from app import billing`) reaches
     every module in the package, so `app.util::calculate` paid for a test of
     `app.billing.calculate` with one dead edit in a sibling — bypass #35's
@@ -474,20 +483,6 @@ def apply_gates(
             f.rule == "BROAD_EXCEPT_ADDED" and roles.get(f.path) in ("test", "conftest")
         )
         if not is_oracle:
-            # T1.9: D9 (and symbol repair) can mark this rule without
-            # promoting it off info. Promotion is a later measured step.
-            if f.rule == "EXPECTATION_DEFINITION_CHANGED":
-                unit = units.get((f.path, f.unit or ""))
-                if ir.globals.dependency_manifest_changed:
-                    f.deescalators.append("DEPENDENCY_DRIFT")
-                elif _repair_evidence(unit, ir, f.path):
-                    f.deescalators.append("REPAIR_EVIDENCE")
-                elif _package_evidence(f.path, ir):
-                    # D-037's second credit: same PACKAGE_REPAIR shape
-                    # EXPECTED_VALUE_CHANGED already uses. Mark only — the
-                    # rule stays info and outside ORACLE_RULES until a
-                    # promotion sweep clears the §A1 handful.
-                    f.deescalators.append("PACKAGE_REPAIR")
             # Non-oracle escalations from the SPEC §5 table.
             if f.rule == "GUARDRAIL_TOUCHED":
                 # E4, but only for a constraint that existed. Creating one has

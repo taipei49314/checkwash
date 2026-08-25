@@ -16,7 +16,7 @@ greenwash 自己的定位是：**deterministic tripwire that raises the cost of 
 |------|------|------|------|
 | 1 | 只改 prod 讓舊測試過 | 保證過（設計不擋） | 中（prod diff） |
 | 2 | 既有 opaque 檔 + 弱化測試 | 壓 E1，整 diff 過 | 低–中 |
-| 3 | 改 expected 綁定（#86a） | 靜音 | 極低 |
+| 3 | 改 expected 綁定（#86a） | ~~靜音~~ 教科書形狀自 v0.1.44 起 block at high;繞形(單 token 改斷言行/毒 closure/α-rename/模組常數)仍靜音,見 THREATMODEL 86a | 極低 |
 | 4 | subject 前一行 / 包參數（#84） | 靜音 | 低 |
 | 5 | `if True: pytest.skip()`（#54） | 靜音 | 低 |
 | 6 | Justfile / `common.mak` 弱化 CI | 常零 finding | 低 |

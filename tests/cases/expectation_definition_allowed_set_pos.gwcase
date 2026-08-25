@@ -13,4 +13,4 @@ def test_allowed():
     allowed = {1, 2, 3}
     assert x in allowed
 === expect ===
-[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "info"}]
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

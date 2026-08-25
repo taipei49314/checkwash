@@ -431,7 +431,7 @@ Labels：`roadmap` · `phase-t0`…`phase-t3` · `engineering` · `P0`–`P3`
 
 ### T1
 
-- [x] T1.1 Binding diff → #8 (`EXPECTATION_DEFINITION_CHANGED` at info; #86a not promoted)  
+- [x] T1.1 Binding diff → #8 (`EXPECTATION_DEFINITION_CHANGED` at info; promoted to blocking v0.1.44, 2026-08-25 — #86a Partly closed, THREATMODEL row has the residuals)  
 - [x] T1.2 Fixture / parametrize → #9  
 - [x] T1.3 Dataflow k=2 → #10  
 - [x] T1.4 Test-local patch → #11 (v0.1.25, `TEST_PATCHES_SUBJECT`)  
