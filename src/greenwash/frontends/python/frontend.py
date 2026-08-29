@@ -599,14 +599,24 @@ def _assignment_name_targets(target: ast.AST) -> list[str]:
     return []
 
 
-def _binding_definitions(func) -> dict[str, str]:
-    """Locally bound name -> structural key of its defining expression.
+def _binding_maps(
+    func, *, include_definitions: bool = True
+) -> tuple[dict[str, str], dict[str, tuple[str, ...]]]:
+    """Collect definition keys and referenced names in one AST walk.
 
-    Canonical source (`ast.unparse`) rather than raw text, so reformatting the
-    expression is not a change — the first false positive this would otherwise
-    invent. A name bound more than once takes the joined keys of every
-    right-hand side, in source order, because greenwash cannot tell which one
-    reaches the assertion without evaluating.
+    The two maps used to be built by `_binding_definitions` and
+    `_local_bindings`, each with separate assignment and walrus walks. That
+    meant four complete traversals of every test unit before exclusivity was
+    considered. The 500-file perf gate exercises thousands of small units, so
+    the repeated traversal was measurable there. One pass can produce both
+    maps without changing either contract.
+
+    Definition keys use canonical source (`ast.unparse`) rather than raw text,
+    so reformatting an expression is not a change — the first false positive
+    this would otherwise invent. A name bound more than once takes the joined
+    keys of every right-hand side because greenwash cannot tell which one
+    reaches the assertion without evaluating. Assignment keys remain ahead of
+    walrus keys, matching the former two-pass ordering.
 
     **Not `ast.dump`.** The first version used it and broke the byte-identical
     guarantee: `ast.dump` renders the AST's internal field set, which changes
@@ -618,33 +628,67 @@ def _binding_definitions(func) -> dict[str, str]:
     This cannot be verified on a single interpreter: only the matrix can see a
     cross-version divergence, which is precisely why that job exists.
     """
-    out: dict[str, list[str]] = {}
+    definitions: dict[str, list[str]] = {}
+    walrus_definitions: dict[str, list[str]] = {}
+    assignment_references: dict[str, set[str]] = {}
+    walrus_references: dict[str, set[str]] = {}
     for node in ast.walk(func):
         if isinstance(node, ast.Assign):
             targets, value = node.targets, node.value
         elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
             targets, value = [node.target], node.value
+        elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            if include_definitions:
+                try:
+                    key = ast.unparse(node.value)
+                except (AttributeError, ValueError):  # pragma: no cover - defensive
+                    key = ""
+                walrus_definitions.setdefault(node.target.id, []).append(key)
+            walrus_references.setdefault(node.target.id, set()).update(
+                _referenced_names(node.value)
+            )
+            continue
         else:
             continue
         if value is None:
             continue
-        try:
-            key = ast.unparse(value)
-        except (AttributeError, ValueError):  # pragma: no cover - defensive
-            key = ""
-        for target in targets:
-            for name in _assignment_name_targets(target):
-                out.setdefault(name, []).append(key)
-    for node in ast.walk(func):
-        if isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+        if include_definitions:
             try:
-                key = ast.unparse(node.value)
+                key = ast.unparse(value)
             except (AttributeError, ValueError):  # pragma: no cover - defensive
                 key = ""
-            out.setdefault(node.target.id, []).append(key)
+        refs = set(_referenced_names(value))
+        for target in targets:
+            for name in _assignment_name_targets(target):
+                if include_definitions:
+                    definitions.setdefault(name, []).append(key)
+                assignment_references.setdefault(name, set()).update(refs)
     # Unit separator, not "|": a Python expression can contain a bitwise or,
     # and `resolve_through` has to be able to tell "one binding" from "several".
-    return {name: "".join(keys) for name, keys in sorted(out.items())}
+    definition_names = definitions.keys() | walrus_definitions.keys()
+    definition_map = {
+        name: "".join(definitions.get(name, []) + walrus_definitions.get(name, []))
+        for name in sorted(definition_names)
+    }
+    # Preserve `_local_bindings`' former insertion order: every ordinary
+    # assignment name in walk order, followed by walrus-only names. Map order
+    # is not part of detector policy, but keeping it costs nothing and makes
+    # this a strict refactor for focused frontend callers too.
+    references = {name: set(refs) for name, refs in assignment_references.items()}
+    for name, refs in walrus_references.items():
+        references.setdefault(name, set()).update(refs)
+    reference_map = {name: tuple(sorted(refs)) for name, refs in references.items()}
+    return definition_map, reference_map
+
+
+def _binding_definitions(func) -> dict[str, str]:
+    """Definition half of `_binding_maps` for focused frontend callers."""
+    return _binding_maps(func)[0]
+
+
+def _local_bindings(func) -> dict[str, tuple[str, ...]]:
+    """Reference half of `_binding_maps` for focused frontend callers."""
+    return _binding_maps(func, include_definitions=False)[1]
 
 
 def _exclusive_bindings(func) -> tuple[str, ...]:
@@ -659,7 +703,7 @@ def _exclusive_bindings(func) -> tuple[str, ...]:
     path and must not qualify, because the second binding is the one the
     assertion reads.
 
-    Records exactly the node kinds `_binding_definitions` records — Assign,
+    Records exactly the node kinds `_binding_maps` records — Assign,
     AnnAssign, AugAssign and walrus — so the two walks agree on what counts
     as a binding. Deliberately narrow: `for`/`while`/`with`/`try` bodies keep their parent's
     path (a rebind there is sequential or partially-executed, not an
@@ -745,37 +789,6 @@ def _exclusive_bindings(func) -> tuple[str, ...]:
     return tuple(
         sorted(name for name, paths in found.items() if len(paths) > 1 and exclusive(paths))
     )
-
-
-def _local_bindings(func) -> dict[str, tuple[str, ...]]:
-    """In-body `name = <expr>` bindings, name -> names referenced by the RHS.
-
-    Only assignments written inside the unit count. Function parameters are
-    deliberately excluded, which is what keeps a parametrized test off
-    EXPECTED_VALUE_DERIVED: `@parametrize("items,expected", ...)` binds
-    `expected` as an argument, so it resolves to itself and shares no name
-    with the subject. A name rebound more than once maps to the union of its
-    right-hand sides, because greenwash cannot order them without evaluating.
-    """
-    out: dict[str, set[str]] = {}
-    for node in ast.walk(func):
-        targets = []
-        if isinstance(node, ast.Assign):
-            targets = node.targets
-        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
-            targets = [node.target]
-        else:
-            continue
-        if node.value is None:
-            continue
-        refs = set(_referenced_names(node.value))
-        for target in targets:
-            for name in _assignment_name_targets(target):
-                out.setdefault(name, set()).update(refs)
-    for node in ast.walk(func):
-        if isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
-            out.setdefault(node.target.id, set()).update(_referenced_names(node.value))
-    return {k: tuple(sorted(v)) for k, v in out.items()}
 
 
 def _resolve_through(names: tuple[str, ...], bindings: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
@@ -1690,7 +1703,7 @@ def _collect_unit(
     counter = 0
     dead = _unreachable_ids(func)
     guards = _skip_call_guards(func, text)
-    bindings = _local_bindings(func)
+    definition_bindings, bindings = _binding_maps(func)
     vacuous = _vacuous_bound_asserts(func)
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
@@ -1878,8 +1891,15 @@ def _collect_unit(
         handlers=sorted(handlers, key=lambda h: h.span),
         param_cases=_param_case_count(func),
         body_hash=body_hash,
-        bindings=_binding_definitions(func),
-        exclusive_bindings=_exclusive_bindings(func),
+        bindings=definition_bindings,
+        # Exclusivity can only matter for a multiply-bound name. Most test
+        # units bind each local once, so avoid another full statement walk
+        # when the definition map already proves the result must be empty.
+        exclusive_bindings=(
+            _exclusive_bindings(func)
+            if any("" in key for key in definition_bindings.values())
+            else ()
+        ),
         param_columns=_param_columns(func),
         patches=tuple(sorted(patches)),
         invoked=tuple(sorted(_invocations(func))),

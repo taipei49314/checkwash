@@ -68,8 +68,8 @@ Pick the surface that fits; the engine is identical behind all of them, and
 Not on PyPI yet — install from the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.46
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.46
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.47
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.47
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -144,7 +144,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@01570fb45b1e7b137cf1381fa1a89cbc660c4903 # v0.1.45
+      - uses: taipei49314/greenwash/action@840596b2c4c6e33c3cec23d587e4b8cec476b34a # v0.1.46
 ```
 
 Hash pins and `persist-credentials: false` are required by
@@ -169,7 +169,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.46
+    rev: v0.1.47
     hooks: [{ id: greenwash }]
 ```
 
@@ -198,7 +198,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/greenwash/action@01570fb45b1e7b137cf1381fa1a89cbc660c4903 # v0.1.45
+- uses: taipei49314/greenwash/action@840596b2c4c6e33c3cec23d587e4b8cec476b34a # v0.1.46
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,

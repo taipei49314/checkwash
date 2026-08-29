@@ -1,6 +1,37 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-26 (module constants: the largest blind bucket closes, pre-registered and measured)
+Updated: 2026-08-29 (binding collection: one walk, restored perf headroom, zero verdict drift)
+
+## 2026-08-29: the same bindings are walked once
+
+The v0.1.46 release chain was clean on correctness but not stable at its own
+500-file performance gate. The frozen 2.5 s threshold reproduced red under an
+otherwise green suite and again in isolation (2.60–3.88 s across the observed
+failures). The gate is the contract; widening it was not an option.
+
+The cause was repeated work, not a detector trade. Every test unit walked the
+same AST four times to build two views of the same assignments (definition
+keys and referenced-name closure), then walked its statements again to prove
+that `exclusive_bindings` was empty even when no name had more than one
+definition. `_binding_maps` now builds both maps in one walk while preserving
+the former assignment-before-walrus ordering. The unit consumes that pair
+once. Exclusivity runs only when the already-built definition map contains a
+multiply-bound name; without one, a non-empty result is impossible.
+
+No judgement moved. The deterministic emitted-corpus artifact is byte-for-byte
+identical before and after (`6994a886…`); an independent differential checked
+2,165 real and fixture functions, including assignment order, walrus, unpack,
+annotated and augmented assignments, and found zero IR differences. The full
+six-repo sweep held case-for-case at **42/1800** (attrs 2, click 13, flask 7,
+httpx 12, rich 6, starlette 2), with the same newest commits and zero engine
+errors. The frozen perf gate then passed in ten independent fresh processes;
+frontend, golden-case, determinism and finding-shape suites stayed green.
+
+Explicit non-goal: the flat binding census still crosses nested lexical
+scopes. A homonymous local in an uncalled nested helper can still make an
+unchanged outer expectation look edited. That false positive was reproduced
+during this takeover and is the next named defect; it is not smuggled into a
+zero-behaviour performance round.
 
 ## 2026-08-26: the largest blind bucket closes — module constants become the fourth source
 
@@ -1542,7 +1573,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.1.46 |
+| version | v0.1.47 |
 | detectors | 21 |
 | human-commit block rate | 42/1800 = 2.33% |
 | adjudicated false positive | 27/1800 = 1.50% |
