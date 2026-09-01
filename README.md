@@ -6,11 +6,13 @@
 
 **Your agent deleted the failing test to make CI green. checkwash catches it before merge.**
 
-A deterministic, zero-LLM, local-only detector for code changes that tamper
-with your *verification layer* — weakened assertions, loosened float
-tolerances, new skips, rewritten golden files, hardcoded expected values,
-self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
-failing.
+It reads the git diff. If the tests got weaker and the production code was
+not actually fixed, it blocks. It does not run your suite, call an LLM, or
+use the network.
+
+Typical catches: `assert total == 105.3` becoming `assert total > 0`, a new
+`pytest.mark.skip`, a deleted test, a looser float tolerance, a rewritten
+golden file, or a CI script that stops failing.
 
 > Status: **pre-release.** 21 detectors, 535 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
@@ -31,16 +33,13 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 
 **In short**
 
-- **0 LLM / 0 network / 0 runtime deps** — pure-stdlib Python; deterministic verdicts on 3.11–3.13
-- **Fast enough for a stop-hook, measured through the path you run** — 0.2 s engine on a 3000-line
-  test diff, 1.6 s end to end for 300 changed files; analyses the *diff*, never executes code under review
-- **Blockable by default** on composite high-severity evidence (see [SPEC.md](SPEC.md))
-- **Measured, not asserted** — public corpora + published failures: [benchmarks/](benchmarks/README.md), [THREATMODEL.md](THREATMODEL.md), [benchmarks/FAILURES.md](benchmarks/FAILURES.md)
-- **Out of sample it does worse, and that is published too** — three projects never in the tuning
-  corpus: 667 commits, 15 blocks, **11 false positives (1.65%)** against the 1.50% measured on the
-  corpus the detectors were built against. Zero engine errors. Measured before the v0.1.44
-  promotion; the promoted rule's out-of-sample cost is unmeasured until the next external run.
-  [docs/integrations.md](docs/integrations.md)
+| | |
+|---|---|
+| Needs | Python 3.11+, git. No pip packages at runtime. |
+| Looks at | The diff. Never executes the code under review. |
+| Stops a merge | Only if you make the `checkwash` job a **required** status check. Installing it is not enough. |
+| Speed | 0.2 s engine on a 3000-line test diff; 1.6 s end-to-end for 300 files. |
+| Honest cost | On 1800 human commits: **27 false positives (1.50%)**. Out of sample, worse: **11 false positives (1.65%)** on 667 commits it was not tuned on. Published: [benchmarks/](benchmarks/README.md), [THREATMODEL.md](THREATMODEL.md), [FAILURES.md](benchmarks/FAILURES.md), [integrations.md](docs/integrations.md). |
 
 ## Sixty seconds, from nothing
 
@@ -65,9 +64,8 @@ before you believe any number on this page. The single-file build is gated by
 Pick the surface that fits; the engine is identical behind all of them, and
 [docs/stability.md](docs/stability.md) says which parts of it are frozen.
 
-On PyPI the distribution is `checkwash` — `pipx install checkwash` — while the
-import and primary CLI keep the `checkwash` name (`checkwash` is also installed
-as a CLI alias). From the repo:
+Install the CLI, then run it. `greenwash` is a leftover alias and does the
+same thing. From the repo:
 
 ```bash
 pipx install git+https://github.com/taipei49314/checkwash@v0.2.8
