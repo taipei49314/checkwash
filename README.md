@@ -281,7 +281,7 @@ Two harnesses, both reproducible from a clone
   barely exercise the change, and the defence against over-flagging is the
   content gate (a Makefile that only compiles is still production) plus its
   negative fixtures, not the sweep.
-- **Recall against an attacker who has read the rules — 48 / 80, and that is
+- **Recall against an attacker who has read the rules — 49 / 80, and that is
   the number to look at.** 80 tampering cases across two arms, each verified
   mechanically before counting: production byte-identical, `pytest` red before
   and green after. The first arm (40 cases, written against a description of
@@ -289,9 +289,9 @@ Two harnesses, both reproducible from a clone
   that was a syntactic `assert`, so `assert_sum(add(2, 3), 5)` was a *call*
   and the unit read as having zero assertions. The IR now records **the
   assertions a test executes** — through the file's own call graph, invocation
-  and not mention — which brings that arm to **19/40** — 20/40 with the cross-file channels of v0.1.27 — and blocks **28/40** of
+  and not mention — which brings that arm to **19/40** — 20/40 with the cross-file channels of v0.1.27, 21/40 with v0.2.4's 91b closure — and blocks **28/40** of
   a second arm written afterwards to *disguise* the weakening as a
-  helper-extraction refactor. The 33 that still escape are enumerated, not
+  helper-extraction refactor. The 31 that still escape are enumerated, not
   waved at: most subvert the *meaning* of a syntactically strong assertion
   (`__eq__` that is always true, a no-op `TestResult`) or compute zero runs,
   which a single static diff cannot decide — mutation testing is the honest
