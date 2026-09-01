@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "greenwash"
+name = "checkwash"
 version = "0.1.48"
 description = "Your agent deleted the failing test to make CI green. greenwash catches it before merge."
 readme = "README.md"
@@ -29,6 +29,7 @@ dev = ["pytest>=8"]
 
 [project.scripts]
 greenwash = "greenwash.cli:main"
+checkwash = "greenwash.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/taipei49314/greenwash"

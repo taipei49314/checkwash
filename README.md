@@ -65,7 +65,9 @@ before you believe any number on this page. The single-file build is gated by
 Pick the surface that fits; the engine is identical behind all of them, and
 [docs/stability.md](docs/stability.md) says which parts of it are frozen.
 
-Not on PyPI yet — install from the repo:
+On PyPI the distribution is `checkwash` — `pipx install checkwash` — while the
+import and primary CLI keep the `greenwash` name (`checkwash` is also installed
+as a CLI alias). From the repo:
 
 ```bash
 pipx install git+https://github.com/taipei49314/greenwash@v0.1.48
