@@ -70,8 +70,8 @@ import and primary CLI keep the `checkwash` name (`checkwash` is also installed
 as a CLI alias). From the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/checkwash@v0.2.5
-# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.5
+pipx install git+https://github.com/taipei49314/checkwash@v0.2.6
+# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.6
 
 checkwash check HEAD~1..HEAD    # a range
 checkwash check                 # HEAD vs the working tree
@@ -139,25 +139,25 @@ jobs:
   checkwash:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@bcfa75ce92c29728a03690edd39a105f387ccc09 # v0.2.4
+      - uses: taipei49314/checkwash/action@2e8ad3742fb76b98b2b4e957837b7e6009f3b2b1 # v0.2.5
 ```
 
 Hash pins and `persist-credentials: false` are required by
 [zizmor](https://docs.zizmor.sh/audits/#unpinned-uses) blanket policy — a
 tag pin (`@v4`, `@vX.Y.Z`) is two `unpinned-uses` highs. Re-checked
-2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. The checkwash
+2026-09-01 on zizmor 1.30.0: this snippet is 0 high / 0 medium. The checkwash
 SHA is deliberately the newest prior stable pin that `doctor` could verify at
 build time. Release N cannot embed its own commit SHA, so it adopts that SHA
 only after it already exists, in the next release. The result is an explicit
 one-release trust lag, not an arbitrary 40-hex claim. Verify this pin with
-`git rev-parse 'v0.1.41^{commit}'`; for another trusted release, substitute its
+`git rev-parse 'v0.2.5^{commit}'`; for another trusted release, substitute its
 version in `git rev-parse 'vX.Y.Z^{commit}'`.
 See [action/README.md](action/README.md).
 
@@ -171,7 +171,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/checkwash
-    rev: v0.2.5
+    rev: v0.2.6
     hooks: [{ id: checkwash }]
 ```
 
@@ -200,7 +200,7 @@ checkwash hook install --agent claude-code
 checkwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/checkwash/action@bcfa75ce92c29728a03690edd39a105f387ccc09 # v0.2.4
+- uses: taipei49314/checkwash/action@2e8ad3742fb76b98b2b4e957837b7e6009f3b2b1 # v0.2.5
 ```
 
 `checkwash check BASE...HEAD` (three dots) resolves through the merge base,

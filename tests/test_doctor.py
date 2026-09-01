@@ -211,9 +211,9 @@ def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
         ),
     }
     pins = {
-        "checkout": "11d5960a326750d5838078e36cf38b85af677262",
-        "setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
-        "checkwash": "bcfa75ce92c29728a03690edd39a105f387ccc09",
+        "checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+        "checkwash": "2e8ad3742fb76b98b2b4e957837b7e6009f3b2b1",
     }
     for label, pin in pins.items():
         cases[f"zero-{label}"] = CANONICAL.replace(pin, "0" * 40)
