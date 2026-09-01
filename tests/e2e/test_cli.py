@@ -280,6 +280,35 @@ def test_hook_install_reads_bom_settings(repo):
     assert "greenwash check --format hook-json" in commands
 
 
+def test_hook_install_local_targets_local_settings(repo):
+    # --local writes the machine-local file and leaves the shared one alone:
+    # installing into settings.json edits a guardrail file this tool's own
+    # GUARDRAIL_TOUCHED detector flags, so trying the gate should not force a
+    # guardrail commit.
+    result = _greenwash(repo, "hook", "install", "--agent", "claude-code", "--local")
+    assert result.returncode == 0, result.stderr
+    claude_dir = repo / ".claude"
+    assert not (claude_dir / "settings.json").exists()
+    settings = json.loads((claude_dir / "settings.local.json").read_text(encoding="utf-8"))
+    commands = [
+        h["command"]
+        for entry in settings["hooks"]["Stop"]
+        for h in entry["hooks"]
+    ]
+    assert "greenwash check --format hook-json" in commands
+    # idempotent, same as the shared path
+    again = _greenwash(repo, "hook", "install", "--agent", "claude-code", "--local")
+    assert again.returncode == 0
+    settings2 = json.loads((claude_dir / "settings.local.json").read_text(encoding="utf-8"))
+    assert settings2 == settings
+
+
+def test_hook_install_local_refused_for_pre_commit(repo):
+    result = _greenwash(repo, "hook", "install", "--agent", "pre-commit", "--local")
+    assert result.returncode == 2
+    assert "claude-code only" in result.stderr
+
+
 def _greenwash_cp1252(repo, *args):
     # Forces the legacy-locale pipe encoding that crashed the term report
     # (confirmed red-team finding): exit codes must survive cp1252.
