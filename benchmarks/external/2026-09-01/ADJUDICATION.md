@@ -208,7 +208,14 @@ test) and do not change the verdict.
 8. **Tri-state `is None`** — graded NON_NULL(30) where `None` is an exact
    domain value (sympy ceca5c64, a31843cd).
 
-## Disagreements for the owner's final labels
+## Disagreements — RESOLVED
+
+**Owner resolution, 2026-09-01: rater 2's labels adopted as final for
+items (1)–(4) below.** The final dataset labels are therefore exactly the
+per-block verdicts above: 67 FP / 7 TP-policy / 0 UNCERTAIN. Item (5) is
+a scope question, not a label disagreement; it remains open as
+[#54](https://github.com/taipei49314/checkwash/issues/54). The original
+list is kept verbatim for the record:
 
 1. **aiohttp c52fe79c, 79b5f5fa** — rater 1: plausible policy blocks;
    rater 2: FP (compensation visible in-diff). Owner to resolve.

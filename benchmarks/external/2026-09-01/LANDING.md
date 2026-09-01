@@ -1,12 +1,14 @@
 # External field run, 2026-09-01 — landing note
 
-**Status: two-rater, pending owner resolution.** Rater 1 is the field-run
-maintainer (FINAL_REPORT.md); rater 2's full per-block pass is in
+**Status: two-rater, resolved.** Rater 1 is the field-run maintainer
+(FINAL_REPORT.md); rater 2's full per-block pass is in
 [ADJUDICATION.md](ADJUDICATION.md) — 67 FP / 7 TP-policy / 0 UNCERTAIN,
-with 74/74 agreement on the tampering axis (zero true tampering). The
-disagreement list at the end of ADJUDICATION.md awaits the owner's final
-labels. Per the report's own limitations section, nothing here enters the
-published benchmark numbers until that resolution.
+with 74/74 agreement on the tampering axis (zero true tampering). On
+2026-09-01 the owner adopted rater 2's labels as final; those verdicts
+are now the dataset's labels. The one remaining open item is the
+supply-chain scope question
+([#54](https://github.com/taipei49314/checkwash/issues/54)), which is a
+SPEC decision, not a label.
 
 ## What this is
 
