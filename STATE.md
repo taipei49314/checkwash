@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-08-29 (binding collection: one walk, restored perf headroom, zero verdict drift)
+Updated: 2026-09-02 (rounds since 2026-08-29 — the checkwash identity rename, R1 #53, per-call-site inherited reaching #55, the neutralization family #57, the #54 scope ruling and its THREATMODEL/DECISIONS pass — are recorded in their commit messages and issue closures, not as sections here; the authoritative table below is current)
 
 ## 2026-08-29: the same bindings are walked once
 
