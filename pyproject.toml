@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "checkwash"
-version = "0.1.49"
-description = "Your agent deleted the failing test to make CI green. greenwash catches it before merge."
+version = "0.2.0"
+description = "Your agent deleted the failing test to make CI green. checkwash catches it before merge."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
@@ -28,16 +28,16 @@ dependencies = []
 dev = ["pytest>=8"]
 
 [project.scripts]
-greenwash = "greenwash.cli:main"
-checkwash = "greenwash.cli:main"
+greenwash = "checkwash.cli:main"
+checkwash = "checkwash.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/taipei49314/greenwash"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/greenwash"]
+packages = ["src/checkwash"]
 # demo_cases/*.gwcase ship in the wheel so `greenwash demo` works after pipx.
-artifacts = ["src/greenwash/demo_cases/*.gwcase"]
+artifacts = ["src/checkwash/demo_cases/*.gwcase"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -10,7 +10,7 @@ Two things can break it and neither shows up anywhere else: a runtime
 dependency creeping into pyproject (the zipapp would import it and die), and
 package data read by a path instead of `importlib.resources` (inside a zip
 there are no paths). The demo is the canary for the second — its cases live
-in `src/greenwash/demo_cases/` and are loaded exactly the way a pipx install
+in `src/checkwash/demo_cases/` and are loaded exactly the way a pipx install
 loads them.
 """
 
@@ -25,11 +25,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _build(tmp_path: Path) -> Path:
-    target = tmp_path / "greenwash.pyz"
+    target = tmp_path / "checkwash.pyz"
     zipapp.create_archive(
         ROOT / "src",
         target=target,
-        main="greenwash.zipapp_entry:run",
+        main="checkwash.zipapp_entry:run",
         compressed=True,
     )
     return target
@@ -53,11 +53,11 @@ def test_zipapp_builds_and_reports_its_version(tmp_path):
     out = proc.stdout.decode("utf-8", "replace")
     assert __version__ in out, out
     assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")
-    assert out.strip() == f"greenwash {__version__}", out
+    assert out.strip() == f"checkwash {__version__}", out
 
     release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    assert 'python -m zipapp src -m "greenwash.zipapp_entry:run"' in release
-    assert "python tools/qualify_zipapp.py dist/greenwash.pyz" in release
+    assert 'python -m zipapp src -m "checkwash.zipapp_entry:run"' in release
+    assert "python tools/qualify_zipapp.py dist/checkwash.pyz" in release
 
 
 def test_zipapp_demo_reads_its_packaged_cases(tmp_path):
@@ -71,8 +71,8 @@ def test_zipapp_demo_reads_its_packaged_cases(tmp_path):
     the failure this test exists to catch. Counting the cases independently
     and requiring the demo to block all of them fails in that case.
     """
-    from greenwash.cases import parse_case
-    from greenwash.demo import _load_cases
+    from checkwash.cases import parse_case
+    from checkwash.demo import _load_cases
 
     # The floor on how many cases must exist is asserted next door in
     # test_demo_command.py; repeating it here would be a second place to

@@ -4,7 +4,7 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SRC = ROOT / "src" / "greenwash"
+SRC = ROOT / "src" / "checkwash"
 NOTE = ROOT / "docs" / "satellite-execution.md"
 
 # Names that would mean execution leaked into the core package.
@@ -18,7 +18,7 @@ def test_satellite_note_is_non_default():
     assert "not a product" in text.lower() or "design note" in text.lower()
     assert "must not import" in text.lower()
     assert "zero execution" in text.lower()
-    assert "src/greenwash/" in text
+    assert "src/checkwash/" in text
 
 
 def test_core_package_has_no_execution_satellite_module():

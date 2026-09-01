@@ -8,7 +8,7 @@ It is not. It is an ordering constraint, and this is the order.
 
 ```bash
 # 1. bump, in both places
-#    src/greenwash/__init__.py  __version__ = "0.1.14"
+#    src/checkwash/__init__.py  __version__ = "0.1.14"
 #    pyproject.toml             version = "0.1.14"
 
 # 2. update the pins the version owns
@@ -23,7 +23,7 @@ git tag -a v0.1.14 -m "..."
 
 # 5. verify. Everything is green here or the release does not happen.
 pytest                                  # tag parity is now checkable, and checked
-greenwash check --repo .                # the judge judges itself
+checkwash check --repo .                # the judge judges itself
 
 # 6. push both, together
 git push origin main --follow-tags
@@ -54,23 +54,23 @@ gate working. Cut the tag.
 The `release` workflow builds these on a published release, and refuses to
 build if the version and the tag disagree:
 
-- `greenwash-X.Y.Z-py3-none-any.whl` and the sdist — installed into a fresh
-  venv in CI, which asserts `pip freeze` contains greenwash and nothing else
-- `greenwash.pyz` — the single-file build, gated by `tests/test_zipapp.py`
+- `checkwash-X.Y.Z-py3-none-any.whl` and the sdist — installed into a fresh
+  venv in CI, which asserts `pip freeze` contains checkwash and nothing else
+- `checkwash.pyz` — the single-file build, gated by `tests/test_zipapp.py`
 
 ### pyz reproducibility
 
 The release job builds the zipapp with:
 
 ```bash
-python -m zipapp src -m "greenwash.zipapp_entry:run" -o dist/greenwash.pyz -c
+python -m zipapp src -m "checkwash.zipapp_entry:run" -o dist/checkwash.pyz -c
 ```
 
 That is **source-reproducible** on the same CPython minor: same `src/`
 tree, same `-m` entry, compressed. It is **not** bit-identical across
 Python versions or zip implementations. Visitors should treat the
 GitHub release asset as the artifact and verify it by running
-`python greenwash.pyz --version` and `python greenwash.pyz demo`.
+`python checkwash.pyz --version` and `python checkwash.pyz demo`.
 `tests/test_zipapp.py` on every push is the gate that the recipe still
 works; the release job is what people download.
 
@@ -84,7 +84,7 @@ Not automated by default, on purpose. The `pypi` job publishes through trusted
 publishing, so no token is stored anywhere by anyone. Three steps, all the
 maintainer's:
 
-1. Register greenwash as a trusted publisher on PyPI for this repository and
+1. Register checkwash as a trusted publisher on PyPI for this repository and
    the `release` workflow.
 2. Set the repository variable `PYPI_ENABLED` to `true`.
 3. Keep the `pypi` environment for its deployment protection rules.

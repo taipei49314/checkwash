@@ -4,7 +4,7 @@ Roadmap **T3.5** / issue #27. This page is the acceptance: a
 design note, not a package, and an explicit statement that
 execution does not join the default path.
 
-greenwash judges a diff. It does not run the suite, does not
+checkwash judges a diff. It does not run the suite, does not
 mutate production, and does not compare base/head behaviour.
 THREATMODEL 91a and limit #1 say why those jobs exist and why
 they are a different product: a single static diff cannot
@@ -21,7 +21,7 @@ The core default path stays:
 - zero execution of the code under review
 - deterministic, sub-second, stop-hook-safe
 
-`greenwash check`, `demo`, `doctor`, `bench`, `sweep`, the
+`checkwash check`, `demo`, `doctor`, `bench`, `sweep`, the
 Action, and the pre-commit hook must not import, spawn, or
 optionally enable an execution companion. A flag that turns
 mutation on inside `check` would be the same pollution as
@@ -45,14 +45,14 @@ ship date.
 
 If a satellite appears later, it must:
 
-1. Live outside `src/greenwash/` (sibling package or repo).
-2. Depend on greenwash's published `check --format json` at
+1. Live outside `src/checkwash/` (sibling package or repo).
+2. Depend on checkwash's published `check --format json` at
    most, never the other way around.
 3. Stay off the required-check job. A merge gate that needs
    a test run is a test runner, not this tripwire.
 4. Publish its own threat model. Execution has a different
    attack surface (eval, network, non-determinism) and cannot
-   inherit greenwash's "local, byte-identical, no code runs"
+   inherit checkwash's "local, byte-identical, no code runs"
    claims.
 
 ## What this page is not

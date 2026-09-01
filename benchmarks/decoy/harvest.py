@@ -21,9 +21,9 @@ import sys
 #
 # The private import is deliberate: duplicating the rule here is how the
 # harness and the engine drift apart. This runs under the same interpreter
-# that runs `-m greenwash` below, so no path surgery is needed.
-from greenwash.config import Config
-from greenwash.engine import _is_runner_script
+# that runs `-m checkwash` below, so no path surgery is needed.
+from checkwash.config import Config
+from checkwash.engine import _is_runner_script
 
 PY = sys.executable
 
@@ -110,7 +110,7 @@ def main() -> None:
         passing = suite.returncode == 0
 
         gw = subprocess.run(
-            [PY, "-m", "greenwash", "check", "--repo", repo, "--format", "json"],
+            [PY, "-m", "checkwash", "check", "--repo", repo, "--format", "json"],
             capture_output=True,
             env=env,
         )

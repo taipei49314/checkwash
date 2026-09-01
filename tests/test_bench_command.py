@@ -3,8 +3,8 @@
 import io
 import pathlib
 
-from greenwash.bench import collect, find_checkout, run
-from greenwash.cli import build_parser
+from checkwash.bench import collect, find_checkout, run
+from checkwash.cli import build_parser
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -14,7 +14,7 @@ def test_bench_is_a_registered_subcommand():
     assert args.command == "bench"
     assert args.local is True
 
-    import greenwash.cli as cli_module
+    import checkwash.cli as cli_module
 
     source = pathlib.Path(cli_module.__file__).read_text(encoding="utf-8")
     fallback = source.split("elif argv[0] not in (", 1)[1].split("):", 1)[0]
@@ -22,7 +22,7 @@ def test_bench_is_a_registered_subcommand():
 
 
 def test_find_checkout_walks_up_to_benchmarks_readme(tmp_path):
-    nested = tmp_path / "src" / "greenwash"
+    nested = tmp_path / "src" / "checkwash"
     nested.mkdir(parents=True)
     assert find_checkout(nested) is None
     (tmp_path / "benchmarks").mkdir()
@@ -36,7 +36,7 @@ def test_not_a_checkout_fails_clearly(tmp_path):
     code = run(start=str(tmp_path), local_only=True, stream=buf)
     out = buf.getvalue()
     assert code == 2
-    assert "not a greenwash checkout" in out
+    assert "not a checkwash checkout" in out
     assert "benchmarks/README.md" in out or "clone https://github.com/taipei49314/greenwash" in out
 
 

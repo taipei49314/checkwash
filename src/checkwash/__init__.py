@@ -1,6 +1,6 @@
 """checkwash: a deterministic, zero-LLM detector for diffs that tamper with the verification layer."""
 
-__version__ = "0.1.49"
+__version__ = "0.2.0"
 
 IR_VERSION = 1
 FINDINGS_VERSION = 1

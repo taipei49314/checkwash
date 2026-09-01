@@ -1,6 +1,6 @@
 """T3.1: the JS/TS scanner sees matcher weakenings and skip wrappers."""
 
-from greenwash.frontends.javascript.frontend import is_js_test_path, parse_javascript
+from checkwash.frontends.javascript.frontend import is_js_test_path, parse_javascript
 
 
 def test_js_test_path_suffixes():

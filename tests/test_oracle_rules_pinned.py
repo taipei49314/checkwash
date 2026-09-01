@@ -19,8 +19,8 @@ Three pins, weakest to strongest:
 import pathlib
 import re
 
-from greenwash.detectors import REGISTRY
-from greenwash.gating import ORACLE_RULES
+from checkwash.detectors import REGISTRY
+from checkwash.gating import ORACLE_RULES
 
 SPEC = pathlib.Path(__file__).resolve().parents[1] / "SPEC.md"
 

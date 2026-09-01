@@ -58,7 +58,7 @@ def main(path: str) -> int:
     body = {
         "commit_id": "",
         "event": "COMMENT",
-        "body": f"greenwash: {len(comments)} high finding(s)",
+        "body": f"checkwash: {len(comments)} high finding(s)",
         "comments": comments[:32],
     }
     # commit_id empty is rejected; omit it so GitHub uses the latest HEAD.

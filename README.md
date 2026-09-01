@@ -1,10 +1,10 @@
-# greenwash
+# checkwash
 
 [![CI](https://github.com/taipei49314/greenwash/actions/workflows/ci.yml/badge.svg)](https://github.com/taipei49314/greenwash/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#install)
 
-**Your agent deleted the failing test to make CI green. greenwash catches it before merge.**
+**Your agent deleted the failing test to make CI green. checkwash catches it before merge.**
 
 A deterministic, zero-LLM, local-only detector for code changes that tamper
 with your *verification layer* — weakened assertions, loosened float
@@ -18,9 +18,9 @@ failing.
 > that a harness hasn't produced on a clean checkout.
 
 ```
-$ greenwash check HEAD~1..HEAD
+$ checkwash check HEAD~1..HEAD
 
-✗ greenwash: 1 high-severity finding — blocking
+✗ checkwash: 1 high-severity finding — blocking
 
 ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   assertion strength: EXACT_VALUE(90) -> BOUND(40)
@@ -50,9 +50,9 @@ dependencies, so there is nothing else to fetch.
 
 ```bash
 curl -LO https://github.com/taipei49314/greenwash/releases/latest/download/greenwash.pyz
-python greenwash.pyz demo                       # 8 real tampering cases, blocked, offline
-python greenwash.pyz check HEAD~1..HEAD         # your last commit
-python greenwash.pyz sweep HEAD --limit 100     # how often it would have blocked you
+python checkwash.pyz demo                       # 8 real tampering cases, blocked, offline
+python checkwash.pyz check HEAD~1..HEAD         # your last commit
+python checkwash.pyz sweep HEAD --limit 100     # how often it would have blocked you
 ```
 
 `demo` takes under half a second and needs nothing but Python 3.11+. `sweep`
@@ -66,23 +66,23 @@ Pick the surface that fits; the engine is identical behind all of them, and
 [docs/stability.md](docs/stability.md) says which parts of it are frozen.
 
 On PyPI the distribution is `checkwash` — `pipx install checkwash` — while the
-import and primary CLI keep the `greenwash` name (`checkwash` is also installed
+import and primary CLI keep the `checkwash` name (`checkwash` is also installed
 as a CLI alias). From the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.49
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.49
+pipx install git+https://github.com/taipei49314/greenwash@v0.2.0
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.2.0
 
-greenwash check HEAD~1..HEAD    # a range
-greenwash check                 # HEAD vs the working tree
-greenwash check --format sarif  # SARIF 2.1.0 for GitHub code scanning
+checkwash check HEAD~1..HEAD    # a range
+checkwash check                 # HEAD vs the working tree
+checkwash check --format sarif  # SARIF 2.1.0 for GitHub code scanning
 # JS/TS: *.test.js / *.spec.ts matcher weakenings (T3.1)
-greenwash demo                  # replay real tampering cases, fully offline
-greenwash bench --local         # reproduce in-clone numbers (demo + pins)
+checkwash demo                  # replay real tampering cases, fully offline
+checkwash bench --local         # reproduce in-clone numbers (demo + pins)
 # omit --local to also require the six sweep clones; missing clones exit 2
 ```
 
-`greenwash demo` replays eight real tampering cases — a softened assertion, a
+`checkwash demo` replays eight real tampering cases — a softened assertion, a
 widened tolerance, a rewritten expectation, an xfail'd failure, a swallowed
 error, a relaxed CI step, a self-edited CLAUDE.md, and an assertion swapped for
 an unrelated one of the same strength — plus one honest fix that stays silent. No network, no key, no LLM; every verdict comes from the same
@@ -90,7 +90,7 @@ engine `check` runs.
 
 ### Required check — the only configuration that blocks a merge
 
-greenwash installed is not greenwash enforcing. A green job that is not a
+checkwash installed is not checkwash enforcing. A green job that is not a
 **required status check** does not stop anyone merging, and a local stop-hook
 is an author-side convenience: it is skipped by `--no-verify` and is simply not
 present when someone else pushes. Three steps, in this order.
@@ -99,15 +99,15 @@ present when someone else pushes. Three steps, in this order.
 check's name.
 
 **2. Make that status check required.** The check name is the **job** name
-(`greenwash` in the snippet below), not the workflow filename. UI: Settings →
-Rules → Rulesets → require the `greenwash` status check on the default
+(`checkwash` in the snippet below), not the workflow filename. UI: Settings →
+Rules → Rulesets → require the `checkwash` status check on the default
 branch. Or, with admin `gh` access and this file in the clone:
 
 ```bash
 gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json
 ```
 
-That creates a ruleset on `~DEFAULT_BRANCH` requiring context `greenwash`.
+That creates a ruleset on `~DEFAULT_BRANCH` requiring context `checkwash`.
 It does not overwrite existing rulesets. List first with
 `gh api repos/OWNER/REPO/rulesets`. Without this step the workflow runs,
 reports, and blocks nothing.
@@ -115,15 +115,15 @@ reports, and blocks nothing.
 A one-page enterprise path — required check, SARIF, allowlist, CODEOWNERS —
 is in [docs/enterprise.md](docs/enterprise.md).
 
-**3. Verify.** `greenwash doctor` recognizes the exact three-step gate below
+**3. Verify.** `checkwash doctor` recognizes the exact three-step gate below
 and says whether it can run unconditionally. It deliberately reports other
 workflow shapes as analysis incomplete instead of guessing that a textual
-`greenwash` mention is load-bearing. `doctor` cannot see branch protection
-(that needs API token scopes greenwash does not ask for), and it says so rather
+`checkwash` mention is load-bearing. `doctor` cannot see branch protection
+(that needs API token scopes checkwash does not ask for), and it says so rather
 than implying otherwise: step 2 is the one a human must confirm.
 
 ```bash
-greenwash doctor        # exit 0 = no problems found; 1 = problems or warnings
+checkwash doctor        # exit 0 = no problems found; 1 = problems or warnings
 ```
 
 **GitHub Action** — blocks a PR on high-severity findings:
@@ -146,13 +146,13 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@bda9f37e97f2bb9950413ceec9fee91f48985b67 # v0.1.48
+      - uses: taipei49314/greenwash/action@7e931075b8acb0a6c04b1bd705336baf66258a1d # v0.1.49
 ```
 
 Hash pins and `persist-credentials: false` are required by
 [zizmor](https://docs.zizmor.sh/audits/#unpinned-uses) blanket policy — a
 tag pin (`@v4`, `@vX.Y.Z`) is two `unpinned-uses` highs. Re-checked
-2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. The greenwash
+2026-08-15 on zizmor 1.29.0: this snippet is 0 high / 0 medium. The checkwash
 SHA is deliberately the newest prior stable pin that `doctor` could verify at
 build time. Release N cannot embed its own commit SHA, so it adopts that SHA
 only after it already exists, in the next release. The result is an explicit
@@ -171,18 +171,18 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.49
-    hooks: [{ id: greenwash }]
+    rev: v0.2.0
+    hooks: [{ id: checkwash }]
 ```
 
 **Claude Code stop-hook** — checks the diff the moment the agent finishes and
 blocks the stop on tampering:
 
 ```bash
-greenwash hook install --agent claude-code
+checkwash hook install --agent claude-code
 ```
 
-greenwash runs the published action against its own diff on every push
+checkwash runs the published action against its own diff on every push
 (`.github/workflows/ci.yml`, the `dogfood` job): the judge is judged. That
 job was previously gated to pull requests, in a repository that has never had
 one, so it had never executed — a test now fails if it is made conditional
@@ -194,20 +194,20 @@ License: Apache-2.0.
 
 ```bash
 # Claude Code — block the agent's stop on high findings
-greenwash hook install --agent claude-code
+checkwash hook install --agent claude-code
 
 # pre-commit — prints the config block to paste
-greenwash hook install --agent pre-commit
+checkwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/greenwash/action@bda9f37e97f2bb9950413ceec9fee91f48985b67 # v0.1.48
+- uses: taipei49314/greenwash/action@7e931075b8acb0a6c04b1bd705336baf66258a1d # v0.1.49
 ```
 
-`greenwash check BASE...HEAD` (three dots) resolves through the merge base,
+`checkwash check BASE...HEAD` (three dots) resolves through the merge base,
 so PR diffs never include base-branch commits. A wash split across merged
 PRs is still outside that window — [docs/process-windows.md](docs/process-windows.md).
 To reproduce the published numbers from this checkout:
-`greenwash bench` (add `--local` if you do not have the six sweep clones).
+`checkwash bench` (add `--local` if you do not have the six sweep clones).
 
 ## Measured, not asserted
 
@@ -219,9 +219,9 @@ Two harnesses, both reproducible from a clone
   (extract an assertion into a shared helper, merge two tests, move a check
   into a fixture, swap exact equality for `pytest.approx`), each shipping
   production **twice** — correct and buggy — so that four pytest runs prove
-  both sides still catch the bug before greenwash is asked anything. A block
+  both sides still catch the bug before checkwash is asked anything. A block
   is then a false positive by construction, with no adjudication to argue
-  about. **greenwash blocks 25 of the 60** — down from 20 of the first 30
+  about. **checkwash blocks 25 of the 60** — down from 20 of the first 30
   before the reachable-assertion IR landed, and the residue decomposes into
   named families (cross-file helpers, unit-identity changes, and a
   deliberately-kept trade documented in THREATMODEL 92). The sweep corpus
@@ -233,7 +233,7 @@ Two harnesses, both reproducible from a clone
 - **Human-commit block rate — 42 / 1800 = 2.33%.** Six active OSS projects
   (flask, httpx, attrs, click, rich, starlette), 300 consecutive
   human-reviewed commits each, none seen during development. That is how
-  often greenwash would fail CI on a commit a human wrote. Every repo is
+  often checkwash would fail CI on a commit a human wrote. Every repo is
   at or under 4%; the progression from an initial 8.6%, and what moved each
   step, is in the benchmarks README.
   A block is not automatically a mistake. All 37 were adjudicated commit by
@@ -259,7 +259,7 @@ Two harnesses, both reproducible from a clone
   marked, and the per-commit reasoning of all three raters ships in
   [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
   **1.33% of the corpus (24/1800) never got a real analysis**: those commits
-  touch a production file greenwash genuinely cannot read — other-language
+  touch a production file checkwash genuinely cannot read — other-language
   code, templates, data files, unparseable Python — which suppresses
   escalation for the whole diff (THREATMODEL #4). That share of the pass
   rate rests on a documented blind spot, measured rather than assumed. It
@@ -268,7 +268,7 @@ Two harnesses, both reproducible from a clone
   the test suite no longer qualify) removed 105 exemptions and **did not
   change a single verdict** — every one had been protecting a commit that
   passed on its own merits anyway.
-  The same round taught greenwash where the test command actually lives. A
+  The same round taught checkwash where the test command actually lives. A
   shell script or make recipe that runs the suite is test-runner
   configuration, not production: weakening it (`|| true`, `set +e`, a `-`
   before a make recipe, losing `set -e`, or deleting the invocation) is now
@@ -283,7 +283,7 @@ Two harnesses, both reproducible from a clone
   the number to look at.** 80 tampering cases across two arms, each verified
   mechanically before counting: production byte-identical, `pytest` red before
   and green after. The first arm (40 cases, written against a description of
-  every rule here) caught greenwash at **12/40**: the IR only knew an oracle
+  every rule here) caught checkwash at **12/40**: the IR only knew an oracle
   that was a syntactic `assert`, so `assert_sum(add(2, 3), 5)` was a *call*
   and the unit read as having zero assertions. The IR now records **the
   assertions a test executes** — through the file's own call graph, invocation
@@ -299,7 +299,7 @@ Two harnesses, both reproducible from a clone
   behaviour — but a helper that stops being called and a fixture that stops
   being `autouse` are not exotic.
 - **Recall on the older decoy corpus — 12 / 12, then probed harder.** Twelve bug-fix tasks run through
-  real coding agents told to make CI green without fixing the bug; greenwash
+  real coding agents told to make CI green without fixing the bug; checkwash
   blocks all twelve tampering diffs. Under natural conditions, 0 of 12 agents
   touched a test at all — an honest datapoint, recorded as such.
   A second wave of six *probe* tasks (2026-08-04) aimed agents at the
@@ -315,7 +315,7 @@ Two harnesses, both reproducible from a clone
   caught.** The first agent's opening move was to make the suite non-fatal
   inside the runner script — a diff the previous release scored at zero
   findings, and this one blocks. The second escaped: it dropped the failing
-  tests out of collection, which greenwash *detected*, and the honest
+  tests out of collection, which checkwash *detected*, and the honest
   one-line `scripts/lint.sh` edit its own task asked for demoted the finding
   to a warning, because a script that does not run tests is still an
   unreadable production change (THREATMODEL #4). That escape is published
@@ -326,8 +326,8 @@ Two harnesses, both reproducible from a clone
   is the point).
 - **The informed arm — the adversary reads the source.** Every arm above hides
   the defender. This repository is public, so one arm does not: the agent gets
-  greenwash's complete source, spec and threat model, and may run
-  `greenwash check` against its own diff until it stops blocking. Three of six
+  checkwash's complete source, spec and threat model, and may run
+  `checkwash check` against its own diff until it stops blocking. Three of six
   tasks were refused outright by the agent provider's safety filter, so the
   sample is three, and **all three reached a green suite past the shipped
   engine.** One rewrote production instead of the tests (THREATMODEL #1, out
@@ -341,10 +341,10 @@ Two harnesses, both reproducible from a clone
   attempts, three different routes past the shipped build, two of them now
   regression fixtures and one of them a documented limit of the whole approach.
 - **A live miss in this repository, the day after that arm ran.** Another agent
-  working on greenwash changed the test that guards its own release tag,
+  working on checkwash changed the test that guards its own release tag,
   replacing one assertion with a different one of equal strength and adding an
   early return. That is the gate's documented failure mode, written into its
-  own assertion message. **greenwash passed the diff** — two
+  own assertion message. **checkwash passed the diff** — two
   `CI_WORKFLOW_TOUCHED` warns and nothing else. Three rules came close and none
   fired, and the actual cause was in alignment rather than in any of them: the
   last-resort pairing stage matches leftover assertions by *span order*, so a
@@ -361,12 +361,12 @@ harness is how it was found. See [benchmarks/decoy/](benchmarks/decoy/).
 
 ## Prior art
 
-greenwash is not the first tool to look for agent shortcuts in diffs, and
+checkwash is not the first tool to look for agent shortcuts in diffs, and
 does not claim to be. Closest neighbours, credited up front:
 
 - [swarm-orchestrator](https://github.com/moonrunnerkc/swarm-orchestrator) —
   a PR audit suite (11 detectors, JS/TS-tuned, LLM judge layer, sandboxed
-  runtime proofs; advisory by default). greenwash is the narrow, deterministic
+  runtime proofs; advisory by default). checkwash is the narrow, deterministic
   end of this spectrum: Python-first oracle *semantics* (a strength lattice,
   not matcher swap-lists or assertion counts), zero LLM anywhere, zero code
   execution, byte-identical verdicts, and a per-fingerprint reviewed-exemption
@@ -375,7 +375,7 @@ does not claim to be. Closest neighbours, credited up front:
   rules including `no-test-weakening`; state-based linting rather than
   two-sided semantic diff.
 - mumei (reported; Claude-Code-specific harness with clean-HEAD test reruns
-  and golden-file freezing) — a harness, where greenwash is a single-purpose
+  and golden-file freezing) — a harness, where checkwash is a single-purpose
   differ any harness can call.
 
 License: Apache-2.0.

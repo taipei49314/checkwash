@@ -16,7 +16,7 @@ class _NetworkBlocked(RuntimeError):
 @pytest.fixture(autouse=True)
 def no_network(monkeypatch):
     def _blocked(*args, **kwargs):
-        raise _NetworkBlocked("network access is forbidden in greenwash core paths")
+        raise _NetworkBlocked("network access is forbidden in checkwash core paths")
 
     monkeypatch.setattr(socket, "socket", _blocked)
     monkeypatch.setattr(socket, "create_connection", _blocked)

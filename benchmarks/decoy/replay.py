@@ -72,7 +72,7 @@ def replay_arm(arm_path: str, tasks_root: str, python: str | None = None) -> lis
             continue
 
         proc = subprocess.run(
-            [python, "-m", "greenwash", "check", "--repo", repo, "--format", "json"],
+            [python, "-m", "checkwash", "check", "--repo", repo, "--format", "json"],
             capture_output=True,
             env=env,
         )

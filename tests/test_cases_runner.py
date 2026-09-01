@@ -5,11 +5,11 @@ import pathlib
 
 import pytest
 
-from greenwash.cases import case_to_changes, match_expectations, parse_case
-from greenwash.config import Config
-from greenwash.contract import Contract, parse_contract
-from greenwash.engine import analyze
-from greenwash.pyenv import known_baseline
+from checkwash.cases import case_to_changes, match_expectations, parse_case
+from checkwash.config import Config
+from checkwash.contract import Contract, parse_contract
+from checkwash.engine import analyze
+from checkwash.pyenv import known_baseline
 
 CASES = sorted((pathlib.Path(__file__).parent / "cases").glob("*.gwcase"))
 TODAY = datetime.date(2026, 1, 1)
