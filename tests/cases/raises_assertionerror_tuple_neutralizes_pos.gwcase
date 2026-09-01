@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 91b
+rule: BROAD_EXCEPT_ADDED
+note: the tuple spelling of the raises() neutralization — `raises((Assertion
+note2: Error, ValueError))` still expects the assert to fail. The `except`
+note3: path already expands `except (AssertionError, X)`; the with-context
+note4: path has to match, or the fix would be closed for the bare type and
+note5: open one spelling over. Found in the health review before v0.2.4.
+origin: self-review 2026-09-01
+=== before: tests/test_shop.py ===
+from shop import add
+
+
+def test_add():
+    assert add(2, 2) == 4
+=== after: tests/test_shop.py ===
+import pytest
+
+from shop import add
+
+
+def test_add():
+    with pytest.raises((AssertionError, ValueError)):
+        assert add(2, 2) == 4
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

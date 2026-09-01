@@ -1386,7 +1386,14 @@ def _neutralizes_assertionerror(call: ast.AST) -> str | None:
         candidates = call.args[:1]
     else:
         return None
+    # A tuple of exception types is legal for both — `raises((AssertionError,
+    # ValueError))`, `suppress(AssertionError, KeyError)` — and the `except`
+    # path already expands tuples, so missing it here would reopen the same
+    # move one spelling over.
+    exprs: list[ast.AST] = []
     for arg in candidates:
+        exprs.extend(arg.elts if isinstance(arg, ast.Tuple) else [arg])
+    for arg in exprs:
         name = arg.id if isinstance(arg, ast.Name) else (
             arg.attr if isinstance(arg, ast.Attribute) else None
         )
