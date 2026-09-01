@@ -2,9 +2,9 @@
 
 import ast
 
-from greenwash import gating
-from greenwash.frontends.python import frontend
-from greenwash.ir.astutil import dotted_name, expr_wraps, same_expr
+from checkwash import gating
+from checkwash.frontends.python import frontend
+from checkwash.ir.astutil import dotted_name, expr_wraps, same_expr
 
 
 def _expr(src: str) -> ast.AST:

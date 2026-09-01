@@ -11,9 +11,9 @@ import time
 
 import pytest
 
-from greenwash.config import Config
-from greenwash.contract import Contract
-from greenwash.engine import FileChange, analyze
+from checkwash.config import Config
+from checkwash.contract import Contract
+from checkwash.engine import FileChange, analyze
 
 TODAY = datetime.date(2026, 1, 1)
 

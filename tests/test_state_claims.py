@@ -46,13 +46,13 @@ def _sweeps() -> tuple[int, int, int]:
 
 
 def test_version_row_matches_package():
-    from greenwash import __version__
+    from checkwash import __version__
 
     assert _table()["version"] == f"v{__version__}"
 
 
 def test_detector_row_matches_registry():
-    from greenwash.detectors import REGISTRY
+    from checkwash.detectors import REGISTRY
 
     assert int(_table()["detectors"]) == len(REGISTRY)
 

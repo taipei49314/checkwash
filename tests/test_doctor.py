@@ -9,7 +9,7 @@ import subprocess
 
 import pytest
 
-from greenwash.doctor import collect, run
+from checkwash.doctor import collect, run
 
 
 CI = ".github/workflows"
@@ -369,7 +369,7 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
 
 def test_fake_workflow_extensions_and_case_mismatches_are_not_healthy(tmp_path):
     notes = collect(_canonical_repo(tmp_path, suffix=".yml.bak"))
-    assert _levels(notes, "no greenwash installation found") == ["problem"]
+    assert _levels(notes, "no checkwash installation found") == ["problem"]
     assert not _levels(notes, "runs unconditionally")
 
     remote = _repo(tmp_path / "mixed-remote", {
@@ -517,7 +517,7 @@ def test_local_hook_without_ci_and_empty_repo_remain_problems(tmp_path):
         ".claude/settings.json": json.dumps({"hooks": {"Stop": "greenwash check"}})
     })
     assert _levels(collect(hooked), "runs locally but not in CI") == ["problem"]
-    assert _levels(collect(_repo(tmp_path / "empty", {"README.md": "hello"})), "no greenwash installation found") == ["problem"]
+    assert _levels(collect(_repo(tmp_path / "empty", {"README.md": "hello"})), "no checkwash installation found") == ["problem"]
 
 
 def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
@@ -545,8 +545,8 @@ def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
 
 
 def test_doctor_is_a_registered_subcommand():
-    from greenwash.cli import build_parser
-    import greenwash.cli as cli_module
+    from checkwash.cli import build_parser
+    import checkwash.cli as cli_module
 
     assert build_parser().parse_args(["doctor", "--repo", "."]).command == "doctor"
     source = pathlib.Path(cli_module.__file__).read_text(encoding="utf-8")

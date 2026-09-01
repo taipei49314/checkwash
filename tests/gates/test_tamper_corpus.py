@@ -18,10 +18,10 @@ import pathlib
 
 import pytest
 
-from greenwash.config import Config
-from greenwash.contract import Contract
-from greenwash.engine import FileChange, analyze
-from greenwash.pyenv import known_baseline
+from checkwash.config import Config
+from checkwash.contract import Contract
+from checkwash.engine import FileChange, analyze
+from checkwash.pyenv import known_baseline
 
 import datetime
 

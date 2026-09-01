@@ -1,7 +1,7 @@
 """Alignment tests: renames must never read as deletions (SPEC §7)."""
 
-from greenwash.frontends.python.frontend import parse_python
-from greenwash.ir.diffalign import align_file
+from checkwash.frontends.python.frontend import parse_python
+from checkwash.ir.diffalign import align_file
 
 
 def _align(before_src: str, after_src: str, **kwargs):

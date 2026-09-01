@@ -11,8 +11,8 @@ itself the judge.
 import pathlib
 import re
 
-from greenwash.config import DEFAULT_ROLES
-from greenwash.detectors import REGISTRY
+from checkwash.config import DEFAULT_ROLES
+from checkwash.detectors import REGISTRY
 
 SPEC = pathlib.Path(__file__).resolve().parents[1] / "SPEC.md"
 

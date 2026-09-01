@@ -5,25 +5,25 @@ from __future__ import annotations
 import datetime
 from pathlib import Path
 
-from greenwash.cases import case_to_changes, parse_case
-from greenwash.config import Config
-from greenwash.contract import Contract
-from greenwash.engine import analyze
-from greenwash.findings import (
+from checkwash.cases import case_to_changes, parse_case
+from checkwash.config import Config
+from checkwash.contract import Contract
+from checkwash.engine import analyze
+from checkwash.findings import (
     SHAPE_MARKER_ADDED,
     SHAPE_PARAM_CASES_REMOVED,
     SHAPE_UNIT_REMOVED,
     Finding,
 )
-from greenwash.gating import _prod_removal_shape
-from greenwash.ir.model import Unit, UnitDelta, UnitSide
+from checkwash.gating import _prod_removal_shape
+from checkwash.ir.model import Unit, UnitDelta, UnitSide
 
 ROOT = Path(__file__).resolve().parent.parent
 CASES = Path(__file__).resolve().parent / "cases"
 
 
 def test_gating_source_does_not_parse_disabled_message():
-    src = (ROOT / "src" / "greenwash" / "gating.py").read_text(encoding="utf-8")
+    src = (ROOT / "src" / "checkwash" / "gating.py").read_text(encoding="utf-8")
     assert "not in f.message" not in src
     assert "in f.message" not in src
 

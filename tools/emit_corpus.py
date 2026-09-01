@@ -11,11 +11,11 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
 
-from greenwash.cases import case_to_changes, parse_case  # noqa: E402
-from greenwash.config import Config  # noqa: E402
-from greenwash.contract import Contract, parse_contract  # noqa: E402
-from greenwash.engine import analyze  # noqa: E402
-from greenwash.report.jsonout import findings_to_json, ir_to_json  # noqa: E402
+from checkwash.cases import case_to_changes, parse_case  # noqa: E402
+from checkwash.config import Config  # noqa: E402
+from checkwash.contract import Contract, parse_contract  # noqa: E402
+from checkwash.engine import analyze  # noqa: E402
+from checkwash.report.jsonout import findings_to_json, ir_to_json  # noqa: E402
 
 CASES = sorted((pathlib.Path(__file__).resolve().parent.parent / "tests" / "cases").glob("*.gwcase"))
 TODAY = datetime.date(2026, 1, 1)

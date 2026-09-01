@@ -7,11 +7,11 @@ every tampering case in it must still block. Both are gates, not hopes.
 import datetime
 import io
 
-from greenwash.cases import case_to_changes, parse_case
-from greenwash.config import Config
-from greenwash.contract import Contract, parse_contract
-from greenwash.demo import _load_cases, run
-from greenwash.engine import analyze
+from checkwash.cases import case_to_changes, parse_case
+from checkwash.config import Config
+from checkwash.contract import Contract, parse_contract
+from checkwash.demo import _load_cases, run
+from checkwash.engine import analyze
 
 TODAY = datetime.date(2026, 1, 1)
 

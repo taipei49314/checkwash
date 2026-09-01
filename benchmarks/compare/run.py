@@ -24,7 +24,7 @@ import sys
 def greenwash_blocks(py: str, repo: str) -> tuple[bool, list[str]]:
     env = {**os.environ, "GREENWASH_TODAY": "2026-07-30", "PYTHONUTF8": "1"}
     p = subprocess.run(
-        [py, "-m", "greenwash", "check", "--repo", repo, "--format", "json"],
+        [py, "-m", "checkwash", "check", "--repo", repo, "--format", "json"],
         capture_output=True, env=env,
     )
     try:

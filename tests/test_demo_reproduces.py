@@ -8,9 +8,9 @@ the honest fix stays silent.
 import datetime
 import pathlib
 
-from greenwash.config import Config
-from greenwash.contract import Contract
-from greenwash.engine import FileChange, analyze
+from checkwash.config import Config
+from checkwash.contract import Contract
+from checkwash.engine import FileChange, analyze
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent / "examples" / "invoice"
 TODAY = datetime.date(2026, 1, 1)

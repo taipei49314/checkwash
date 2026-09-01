@@ -58,10 +58,10 @@ jobs:
           PYTHONUTF8: "1"
         run: |
           set -euo pipefail
-          python -m zipapp src -m "greenwash.zipapp_entry:run" -o dist/greenwash.pyz -c
-          python dist/greenwash.pyz --version
-          python dist/greenwash.pyz demo > /dev/null
-          python tools/qualify_zipapp.py dist/greenwash.pyz
+          python -m zipapp src -m "checkwash.zipapp_entry:run" -o dist/checkwash.pyz -c
+          python dist/checkwash.pyz --version
+          python dist/checkwash.pyz demo > /dev/null
+          python tools/qualify_zipapp.py dist/checkwash.pyz
           ls -l dist/
 
       - name: a fresh install of the wheel must run, replay the demo, and check a repo
@@ -123,5 +123,5 @@ jobs:
           name: dist
           path: dist/
       - name: the zipapp is a GitHub asset, not a PyPI one
-        run: rm -f dist/greenwash.pyz
+        run: rm -f dist/checkwash.pyz
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

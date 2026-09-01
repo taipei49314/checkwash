@@ -3,11 +3,11 @@
 import datetime
 import pathlib
 
-from greenwash.cases import case_to_changes, parse_case
-from greenwash.config import Config
-from greenwash.contract import Contract, parse_contract
-from greenwash.engine import analyze
-from greenwash.report.jsonout import findings_to_json, ir_to_json
+from checkwash.cases import case_to_changes, parse_case
+from checkwash.config import Config
+from checkwash.contract import Contract, parse_contract
+from checkwash.engine import analyze
+from checkwash.report.jsonout import findings_to_json, ir_to_json
 
 CASES = sorted((pathlib.Path(__file__).parent / "cases").glob("*.gwcase"))
 TODAY = datetime.date(2026, 1, 1)
@@ -43,7 +43,7 @@ def test_set_literals_are_hash_seed_independent():
     snippet = (
         "import ast, sys;"
         "sys.path.insert(0, 'src');"
-        "from greenwash.frontends.python.frontend import _literal_value;"
+        "from checkwash.frontends.python.frontend import _literal_value;"
         "print(_literal_value(ast.parse('{\"d\",\"c\",\"b\",\"a\"}', mode='eval').body))"
     )
     outputs = set()

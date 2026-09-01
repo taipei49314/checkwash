@@ -9,7 +9,7 @@ import pathlib
 import re
 import tomllib
 
-import greenwash
+import checkwash
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -20,7 +20,7 @@ def _pyproject() -> dict:
 
 
 def test_version_matches_pyproject():
-    assert greenwash.__version__ == _pyproject()["project"]["version"]
+    assert checkwash.__version__ == _pyproject()["project"]["version"]
 
 
 def test_no_runtime_dependencies():
@@ -40,8 +40,8 @@ def test_dist_name_and_cli_alias():
     project = _pyproject()["project"]
     assert project["name"] == "checkwash"
     scripts = project["scripts"]
-    assert scripts["greenwash"] == "greenwash.cli:main"
-    assert scripts["checkwash"] == "greenwash.cli:main"
+    assert scripts["greenwash"] == "checkwash.cli:main"
+    assert scripts["checkwash"] == "checkwash.cli:main"
 
 
 def test_documented_test_count_is_accurate():
@@ -76,7 +76,7 @@ def test_documented_test_count_is_accurate():
     # detectors,  tests" and this test passed on the result (2026-08-08).
     # Checking a value when present and saying nothing when it is gone is the
     # same absence-blindness as a gate that skips when its subject is missing.
-    from greenwash.detectors import REGISTRY
+    from checkwash.detectors import REGISTRY
 
     # Only greenwash's own status lines: docs/launch.md also describes other
     # tools ("a PR audit suite (11 detectors, ...)") and those are their
@@ -106,8 +106,8 @@ def test_documented_test_count_is_accurate():
     # The README also states how many tampering cases `demo` replays, in two
     # places and in two spellings. Both are hand-typed claims about packaged
     # data, which is the definition of something that drifts.
-    from greenwash.cases import parse_case
-    from greenwash.demo import _load_cases
+    from checkwash.cases import parse_case
+    from checkwash.demo import _load_cases
 
     n_demo = len([1 for _n, text in _load_cases() if parse_case(text).expect])
     words = {
@@ -237,7 +237,7 @@ def test_readme_action_snippet_is_zizmor_blanket():
     # allowlist are one contract. The Greenwash pin intentionally trails by one
     # release: a commit cannot contain its own SHA, so only an already-existing
     # stable tag can be verified and embedded.
-    from greenwash.doctor import _PINS
+    from checkwash.doctor import _PINS
 
     greenwash = re.search(
         r"^\s+- uses: taipei49314/greenwash/action@([0-9a-f]{40}) # (v\d+\.\d+\.\d+)$",

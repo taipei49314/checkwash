@@ -23,9 +23,9 @@ def _git(repo, *args):
     )
 
 
-def _greenwash(repo, *args):
+def _checkwash(repo, *args):
     return subprocess.run(
-        [sys.executable, "-m", "greenwash", *args, "--repo", str(repo)],
+        [sys.executable, "-m", "checkwash", *args, "--repo", str(repo)],
         capture_output=True,
         text=True,
         env=_ENV,
@@ -73,7 +73,7 @@ def _weaken(repo):
 def test_range_mode_blocks_weakened_assert(repo):
     _weaken(repo)
     _git(repo, "commit", "-am", "agent fix")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 1, result.stderr
     payload = json.loads(result.stdout)
     assert payload["verdict"] == "block"
@@ -88,7 +88,7 @@ def test_range_mode_blocks_weakened_assert(repo):
 
 def test_worktree_mode_blocks_uncommitted_weakening(repo):
     _weaken(repo)
-    result = _greenwash(repo, "check", "--format", "json")
+    result = _checkwash(repo, "check", "--format", "json")
     assert result.returncode == 1, result.stderr
     payload = json.loads(result.stdout)
     assert payload["verdict"] == "block"
@@ -97,13 +97,13 @@ def test_worktree_mode_blocks_uncommitted_weakening(repo):
 def test_sarif_format_is_github_code_scanning_subset(repo):
     _weaken(repo)
     _git(repo, "commit", "-am", "agent fix")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
     assert result.returncode == 1, result.stderr
     payload = json.loads(result.stdout)
     assert payload["version"] == "2.1.0"
     assert payload["$schema"].endswith("sarif-2.1.0.json")
     run = payload["runs"][0]
-    assert run["tool"]["driver"]["name"] == "greenwash"
+    assert run["tool"]["driver"]["name"] == "checkwash"
     assert "ASSERT_WEAKENED" in [rule["id"] for rule in run["tool"]["driver"]["rules"]]
     hit = next(item for item in run["results"] if item["ruleId"] == "ASSERT_WEAKENED")
     assert hit["level"] == "error"
@@ -111,8 +111,8 @@ def test_sarif_format_is_github_code_scanning_subset(repo):
         "tests/test_billing.py"
     )
     assert hit["locations"][0]["physicalLocation"]["region"]["startLine"] == 1
-    assert hit["partialFingerprints"]["greenwash/v1"]
-    again = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
+    assert hit["partialFingerprints"]["checkwash/v1"]
+    again = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
     assert again.stdout == result.stdout
 
 
@@ -120,7 +120,7 @@ def test_sarif_pass_is_empty_results(repo):
     (repo / "notes.md").write_text("release notes\n", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "docs")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["runs"][0]["results"] == []
@@ -131,7 +131,7 @@ def test_clean_range_passes(repo):
     (repo / "notes.md").write_text("release notes\n", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "docs")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["verdict"] == "pass"
 
@@ -139,20 +139,20 @@ def test_clean_range_passes(repo):
 def test_cross_process_byte_identical(repo):
     _weaken(repo)
     _git(repo, "commit", "-am", "agent fix")
-    a = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
-    b = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    a = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    b = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert a.stdout == b.stdout
     assert a.stdout
 
 
 def test_term_report_renders(repo):
     _weaken(repo)
-    result = _greenwash(repo, "check")
+    result = _checkwash(repo, "check")
     assert result.returncode == 1
     assert "ASSERT_WEAKENED" in result.stdout
     assert "allow_cap=180d" in result.stdout
     assert "commit .greenwash/allow.toml" in result.stdout
-    assert "greenwash allow" in result.stdout
+    assert "checkwash allow" in result.stdout
     assert "why high:" in result.stdout
     assert "no de-escalator applied" in result.stdout
     assert "next: fix the code" in result.stdout
@@ -163,30 +163,30 @@ def test_term_header_counts_findings_at_active_threshold(repo):
     guardrail.parent.mkdir()
     guardrail.write_text("{}\n", encoding="utf-8")
 
-    high = _greenwash(repo, "check", "--fail-on", "high")
+    high = _checkwash(repo, "check", "--fail-on", "high")
     assert high.returncode == 0, high.stderr
-    assert "greenwash: 1 finding(s), none at or above high" in high.stdout
+    assert "checkwash: 1 finding(s), none at or above high" in high.stdout
     assert "verdict=pass" in high.stdout
 
-    warn = _greenwash(repo, "check", "--fail-on", "warn")
+    warn = _checkwash(repo, "check", "--fail-on", "warn")
     assert warn.returncode == 1, warn.stderr
-    assert "greenwash: 1 finding(s) at or above warn" in warn.stdout
+    assert "checkwash: 1 finding(s) at or above warn" in warn.stdout
     assert "verdict=block" in warn.stdout
 
 
 def test_allow_roundtrip(repo):
     _weaken(repo)
-    first = _greenwash(repo, "check", "--format", "json")
+    first = _checkwash(repo, "check", "--format", "json")
     fingerprint = json.loads(first.stdout)["findings"][0]["fingerprint"]
 
-    allow = _greenwash(repo, "allow", fingerprint, "--reason", "reviewed: issue 482")
+    allow = _checkwash(repo, "allow", fingerprint, "--reason", "reviewed: issue 482")
     assert allow.returncode == 0, allow.stderr
     # Only the exemption goes through review/commit; the weakened test stays
     # in the worktree. Exemptions are honoured from the BASE side (SPEC §6).
     _git(repo, "add", ".greenwash")
     _git(repo, "commit", "-m", "record exemption")
 
-    result = _greenwash(repo, "check", "--format", "json")
+    result = _checkwash(repo, "check", "--format", "json")
     assert result.returncode == 0, result.stdout
     payload = json.loads(result.stdout)
     assert payload["verdict"] == "pass"
@@ -194,7 +194,7 @@ def test_allow_roundtrip(repo):
 
 
 def test_engine_error_exit_code(tmp_path):
-    result = _greenwash(tmp_path, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(tmp_path, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 2
 
 
@@ -202,7 +202,7 @@ def test_hook_json_blocks_with_reason(repo):
     guardrail = repo / ".claude" / "settings.json"
     guardrail.parent.mkdir()
     guardrail.write_text("{}\n", encoding="utf-8")
-    warn = _greenwash(
+    warn = _checkwash(
         repo,
         "check",
         "--fail-on",
@@ -219,17 +219,17 @@ def test_hook_json_blocks_with_reason(repo):
     guardrail.unlink()
     guardrail.parent.rmdir()
     _weaken(repo)
-    result = _greenwash(repo, "check", "--format", "hook-json")
+    result = _checkwash(repo, "check", "--format", "hook-json")
     # Stop-hook protocol: decision travels in JSON, exit stays 0.
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["decision"] == "block"
     assert "ASSERT_WEAKENED" in payload["reason"]
-    assert "greenwash allow" in payload["reason"]
+    assert "checkwash allow" in payload["reason"]
 
 
 def test_hook_json_clean_is_empty_object(repo):
-    result = _greenwash(repo, "check", "--format", "hook-json")
+    result = _checkwash(repo, "check", "--format", "hook-json")
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {}
 
@@ -240,7 +240,7 @@ def test_hook_install_merges_existing_settings(repo):
     (claude_dir / "settings.json").write_text(
         '{"permissions": {"allow": ["Bash(pytest:*)"]}}', encoding="utf-8"
     )
-    result = _greenwash(repo, "hook", "install", "--agent", "claude-code")
+    result = _checkwash(repo, "hook", "install", "--agent", "claude-code")
     assert result.returncode == 0, result.stderr
     settings = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
     assert settings["permissions"]["allow"] == ["Bash(pytest:*)"]  # preserved
@@ -249,9 +249,9 @@ def test_hook_install_merges_existing_settings(repo):
         for entry in settings["hooks"]["Stop"]
         for h in entry["hooks"]
     ]
-    assert "greenwash check --format hook-json" in commands
+    assert "checkwash check --format hook-json" in commands
     # idempotent
-    again = _greenwash(repo, "hook", "install", "--agent", "claude-code")
+    again = _checkwash(repo, "hook", "install", "--agent", "claude-code")
     assert again.returncode == 0
     settings2 = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
     assert settings2 == settings
@@ -266,7 +266,7 @@ def test_hook_install_reads_bom_settings(repo):
     (claude_dir / "settings.json").write_bytes(
         '{"permissions": {"allow": ["Bash(pytest:*)"]}}'.encode("utf-8-sig")
     )
-    result = _greenwash(repo, "hook", "install", "--agent", "claude-code")
+    result = _checkwash(repo, "hook", "install", "--agent", "claude-code")
     assert result.returncode == 0, result.stderr
     raw = (claude_dir / "settings.json").read_bytes()
     assert not raw.startswith(b"\xef\xbb\xbf")  # write normalizes the BOM away
@@ -277,7 +277,7 @@ def test_hook_install_reads_bom_settings(repo):
         for entry in settings["hooks"]["Stop"]
         for h in entry["hooks"]
     ]
-    assert "greenwash check --format hook-json" in commands
+    assert "checkwash check --format hook-json" in commands
 
 
 def test_hook_install_local_targets_local_settings(repo):
@@ -285,7 +285,7 @@ def test_hook_install_local_targets_local_settings(repo):
     # installing into settings.json edits a guardrail file this tool's own
     # GUARDRAIL_TOUCHED detector flags, so trying the gate should not force a
     # guardrail commit.
-    result = _greenwash(repo, "hook", "install", "--agent", "claude-code", "--local")
+    result = _checkwash(repo, "hook", "install", "--agent", "claude-code", "--local")
     assert result.returncode == 0, result.stderr
     claude_dir = repo / ".claude"
     assert not (claude_dir / "settings.json").exists()
@@ -295,26 +295,26 @@ def test_hook_install_local_targets_local_settings(repo):
         for entry in settings["hooks"]["Stop"]
         for h in entry["hooks"]
     ]
-    assert "greenwash check --format hook-json" in commands
+    assert "checkwash check --format hook-json" in commands
     # idempotent, same as the shared path
-    again = _greenwash(repo, "hook", "install", "--agent", "claude-code", "--local")
+    again = _checkwash(repo, "hook", "install", "--agent", "claude-code", "--local")
     assert again.returncode == 0
     settings2 = json.loads((claude_dir / "settings.local.json").read_text(encoding="utf-8"))
     assert settings2 == settings
 
 
 def test_hook_install_local_refused_for_pre_commit(repo):
-    result = _greenwash(repo, "hook", "install", "--agent", "pre-commit", "--local")
+    result = _checkwash(repo, "hook", "install", "--agent", "pre-commit", "--local")
     assert result.returncode == 2
     assert "claude-code only" in result.stderr
 
 
-def _greenwash_cp1252(repo, *args):
+def _checkwash_cp1252(repo, *args):
     # Forces the legacy-locale pipe encoding that crashed the term report
     # (confirmed red-team finding): exit codes must survive cp1252.
     env = {**_ENV, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"}
     return subprocess.run(
-        [sys.executable, "-m", "greenwash", *args, "--repo", str(repo)],
+        [sys.executable, "-m", "checkwash", *args, "--repo", str(repo)],
         capture_output=True,
         env=env,
     )
@@ -324,14 +324,14 @@ def test_cp1252_pipe_clean_diff_exits_zero(repo):
     (repo / "notes.md").write_text("notes\n", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "docs")
-    result = _greenwash_cp1252(repo, "check", "HEAD~1..HEAD")
+    result = _checkwash_cp1252(repo, "check", "HEAD~1..HEAD")
     assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
-    assert b"greenwash" in result.stdout
+    assert b"checkwash" in result.stdout
 
 
 def test_cp1252_pipe_block_exits_one(repo):
     _weaken(repo)
-    result = _greenwash_cp1252(repo, "check")
+    result = _checkwash_cp1252(repo, "check")
     assert result.returncode == 1, result.stderr.decode("utf-8", "replace")
     assert b"ASSERT_WEAKENED" in result.stdout
 
@@ -341,7 +341,7 @@ def test_rename_test_file_out_of_tests_blocks(repo):
     # with zero findings (confirmed red-team bypass).
     _git(repo, "mv", "tests/test_billing.py", "legacy_billing.py")
     _git(repo, "commit", "-m", "archive tests")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 1, result.stdout
     payload = json.loads(result.stdout)
     disabled = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
@@ -352,7 +352,7 @@ def test_rename_test_file_out_of_tests_blocks(repo):
 def test_rename_test_file_to_uncollected_name_blocks(repo):
     _git(repo, "mv", "tests/test_billing.py", "tests/billing_checks.py")
     _git(repo, "commit", "-m", "reorganize")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 1, result.stdout
     payload = json.loads(result.stdout)
     assert any(f["rule"] == "TEST_DISABLED" for f in payload["findings"])
@@ -361,7 +361,7 @@ def test_rename_test_file_to_uncollected_name_blocks(repo):
 def test_rename_test_file_to_collected_name_is_benign(repo):
     _git(repo, "mv", "tests/test_billing.py", "tests/test_invoices.py")
     _git(repo, "commit", "-m", "rename test module")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 0, result.stdout
     assert json.loads(result.stdout)["verdict"] == "pass"
 
@@ -371,7 +371,7 @@ def test_worktree_mode_catches_plain_mv_relocation(repo):
     # integration) still laundered it (confirmed red-team finding).
     (repo / "attic").mkdir()
     os.replace(repo / "tests" / "test_billing.py", repo / "attic" / "legacy.py")
-    result = _greenwash(repo, "check", "--format", "json")
+    result = _checkwash(repo, "check", "--format", "json")
     assert result.returncode == 1, result.stdout
     payload = json.loads(result.stdout)
     disabled = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
@@ -382,7 +382,7 @@ def test_worktree_case_only_rename_is_visible(repo):
     # On a case-insensitive volume the deleted path used to be read back off
     # disk as the renamed file's bytes and dropped as unchanged.
     os.replace(repo / "tests" / "test_billing.py", repo / "tests" / "Billing_Checks.py")
-    result = _greenwash(repo, "check", "--format", "json")
+    result = _checkwash(repo, "check", "--format", "json")
     assert result.returncode == 1, result.stdout
     payload = json.loads(result.stdout)
     assert any(f["rule"] == "TEST_DISABLED" for f in payload["findings"])
@@ -399,7 +399,7 @@ def test_three_dot_range_uses_merge_base(repo):
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "main: add discount")
 
-    three = _greenwash(repo, "check", "main...feat", "--format", "json")
+    three = _checkwash(repo, "check", "main...feat", "--format", "json")
     assert three.returncode == 1, three.stdout
     payload = json.loads(three.stdout)
     weakened = [f for f in payload["findings"] if f["rule"] == "ASSERT_WEAKENED"]
@@ -423,7 +423,7 @@ def test_json_is_utf8_regardless_of_locale(repo):
         encoding="utf-8",
     )
     _git(repo, "commit", "-am", "weaken")
-    result = _greenwash_cp1252(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash_cp1252(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 1
     payload = json.loads(result.stdout.decode("utf-8"))  # must be valid UTF-8
     assert "發票總額" in json.dumps(payload, ensure_ascii=False)
@@ -433,7 +433,7 @@ def test_recursion_bomb_is_engine_error_not_block(repo):
     (repo / "tests" / "test_deep.py").write_text(
         "def test_deep():\n    assert " + "1+" * 20000 + "1\n", encoding="utf-8"
     )
-    result = _greenwash(repo, "check", "--format", "json")
+    result = _checkwash(repo, "check", "--format", "json")
     # Either parsed fine or degraded visibly — but never a bogus "block",
     # and never an unhandled traceback.
     assert result.returncode in (0, 2), result.stdout
@@ -447,7 +447,7 @@ def test_malformed_config_is_reported_not_swallowed(repo):
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "add config")
     _weaken(repo)
-    result = _greenwash(repo, "check", "--format", "json")
+    result = _checkwash(repo, "check", "--format", "json")
     payload = json.loads(result.stdout)
     assert payload["config_errors"], "a config that failed to parse must be surfaced"
     assert "config.toml" in result.stderr
@@ -455,9 +455,9 @@ def test_malformed_config_is_reported_not_swallowed(repo):
 
 def test_allow_reason_with_backslash_stays_valid_toml(repo):
     _weaken(repo)
-    first = _greenwash(repo, "check", "--format", "json")
+    first = _checkwash(repo, "check", "--format", "json")
     fingerprint = json.loads(first.stdout)["findings"][0]["fingerprint"]
-    allow = _greenwash(
+    allow = _checkwash(
         repo, "allow", fingerprint, "--reason", r"see notes in C:\Users\bob\review.md"
     )
     assert allow.returncode == 0, allow.stderr
@@ -506,7 +506,7 @@ def test_range_mode_resolves_compat_constant_from_unchanged_file(repo):
     # the head revision (click b761eda, the FP the sweep adjudication found).
     _add_compat_gate(repo)
     _git(repo, "commit", "-am", "skip pager test on windows")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["verdict"] == "pass"
@@ -517,7 +517,7 @@ def test_range_mode_resolves_compat_constant_from_unchanged_file(repo):
 
 def test_worktree_mode_resolves_compat_constant_from_disk(repo):
     _add_compat_gate(repo)
-    result = _greenwash(repo, "check", "--format", "json")
+    result = _checkwash(repo, "check", "--format", "json")
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["verdict"] == "pass"
@@ -552,7 +552,7 @@ def test_rename_into_prod_earns_no_opaque_exemption(repo):
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "weaken the oracle behind a renamed doc")
 
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 1, result.stdout
     payload = json.loads(result.stdout)
     weakened = [f for f in payload["findings"] if f["rule"] == "ASSERT_WEAKENED"]
@@ -575,7 +575,7 @@ def test_cjk_named_duplicate_survivor_gets_credit(repo):
     _git(repo, "commit", "-m", "add duplicate copy")
     _git(repo, "rm", "-q", "tests/test_billing.py")
     _git(repo, "commit", "-m", "drop one copy")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 0, result.stdout
     payload = json.loads(result.stdout)
     disabled = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
@@ -601,7 +601,7 @@ def test_config_value_warning_is_visible_not_fatal(repo):
     (repo / "README.md").write_text("docs\n", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "docs")
-    result = _greenwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
     assert result.returncode == 0, result.stdout
     payload = json.loads(result.stdout)
     assert any("on_engine_error" in e for e in payload["config_errors"]), payload

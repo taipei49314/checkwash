@@ -48,7 +48,7 @@ def _expect_exit(
         stdout = result.stdout.decode("utf-8", "replace")
         stderr = result.stderr.decode("utf-8", "replace")
         raise RuntimeError(
-            f"greenwash.pyz {' '.join(args)} exited {result.returncode}, expected {expected}\n"
+            f"checkwash.pyz {' '.join(args)} exited {result.returncode}, expected {expected}\n"
             f"stdout:\n{stdout}\nstderr:\n{stderr}"
         )
     return result
@@ -61,15 +61,15 @@ def _require(condition: bool, message: str) -> None:
 
 def qualify(pyz: Path) -> None:
     pyz = pyz.resolve(strict=True)
-    with tempfile.TemporaryDirectory(prefix="greenwash-pyz-qualification-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="checkwash-pyz-qualification-") as temporary:
         repo = Path(temporary)
         _git(repo, "init", "-b", "main")
-        _git(repo, "config", "user.name", "greenwash zipapp qualification")
+        _git(repo, "config", "user.name", "checkwash zipapp qualification")
         _git(repo, "config", "user.email", "zipapp@example.invalid")
         _git(repo, "config", "commit.gpgsign", "false")
 
         version = _expect_exit(pyz, repo, 0, "--version")
-        _require(version.stdout.startswith(b"greenwash "), "--version output is malformed")
+        _require(version.stdout.startswith(b"checkwash "), "--version output is malformed")
         demo = _expect_exit(pyz, repo, 0, "demo")
         _require(b"tampering cases blocked" in demo.stdout, "demo summary is missing")
 
@@ -161,7 +161,7 @@ def qualify(pyz: Path) -> None:
         _require("ASSERT_WEAKENED" in hook_reason, "hook-json reason has no ASSERT_WEAKENED finding")
 
         failed = _expect_exit(pyz, repo, 2, "check", "MISSING_REF..HEAD", "--format", "json")
-        _require(b"greenwash engine error" in failed.stderr, "bad ref has no engine error")
+        _require(b"checkwash engine error" in failed.stderr, "bad ref has no engine error")
         bad_range = _expect_exit(pyz, repo, 2, "check", "HEAD")
         _require(b"range must be BASE..HEAD" in bad_range.stderr, "bad range has no range error")
         typo = _expect_exit(pyz, repo, 2, "chek")
@@ -171,7 +171,7 @@ def qualify(pyz: Path) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     if len(args) != 1:
-        print("usage: python tools/qualify_zipapp.py PATH/greenwash.pyz", file=sys.stderr)
+        print("usage: python tools/qualify_zipapp.py PATH/checkwash.pyz", file=sys.stderr)
         return 2
     try:
         qualify(Path(args[0]))

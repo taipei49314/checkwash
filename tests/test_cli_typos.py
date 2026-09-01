@@ -2,7 +2,7 @@
 
 import io
 
-from greenwash.cli import _closest_command, main
+from checkwash.cli import _closest_command, main
 
 
 def test_chek_is_unknown_command_not_a_range():

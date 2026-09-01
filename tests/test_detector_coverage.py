@@ -8,13 +8,13 @@ negative fixture is an unbounded false-positive risk. This gate is what keeps
 import datetime
 import pathlib
 
-from greenwash.cases import case_to_changes, parse_case
-from greenwash.config import Config
-from greenwash.contract import Contract, parse_contract
-from greenwash.detectors import REGISTRY
-from greenwash.engine import analyze
-from greenwash.gating import RULE_ORDER
-from greenwash.pyenv import known_baseline
+from checkwash.cases import case_to_changes, parse_case
+from checkwash.config import Config
+from checkwash.contract import Contract, parse_contract
+from checkwash.detectors import REGISTRY
+from checkwash.engine import analyze
+from checkwash.gating import RULE_ORDER
+from checkwash.pyenv import known_baseline
 
 CASES = sorted((pathlib.Path(__file__).parent / "cases").glob("*.gwcase"))
 TODAY = datetime.date(2026, 1, 1)

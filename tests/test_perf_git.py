@@ -100,7 +100,7 @@ def test_range_check_through_git_stays_within_budget(big_repo):
     env = {**os.environ, "PYTHONUTF8": "1", "GREENWASH_TODAY": "2026-01-01"}
     start = time.perf_counter()
     proc = subprocess.run(
-        [sys.executable, "-m", "greenwash", "check", "HEAD~1..HEAD",
+        [sys.executable, "-m", "checkwash", "check", "HEAD~1..HEAD",
          "--repo", str(big_repo), "--format", "json"],
         capture_output=True, env=env,
     )
@@ -116,7 +116,7 @@ def test_range_check_through_git_stays_within_budget(big_repo):
 def test_blobs_are_read_in_a_batch_not_one_process_each(big_repo):
     """The count, not just the clock: a timing budget alone would pass on a
     fast machine while the process-per-blob shape crept back in."""
-    from greenwash.gitio import git as gitio
+    from checkwash.gitio import git as gitio
 
     calls = []
     original = gitio._run

@@ -2,7 +2,7 @@
 
 import ast
 
-from greenwash.frontends.python.frontend import (
+from checkwash.frontends.python.frontend import (
     _Offsets,
     _classify_assert,
     _classify_unittest_call,
@@ -10,7 +10,7 @@ from greenwash.frontends.python.frontend import (
     _local_bindings,
     parse_python,
 )
-from greenwash.ir import strength as S
+from checkwash.ir import strength as S
 
 
 def _triviality(expr: str) -> bool:
@@ -269,7 +269,7 @@ def test_container_literal_upgrade_is_uniform():
 
 
 def test_normalize_preserves_string_interior():
-    from greenwash.ir.model import normalize_text
+    from checkwash.ir.model import normalize_text
 
     a = normalize_text('assert g("s") == "hello world"')
     b = normalize_text('assert g("s") == "helloworld"')
