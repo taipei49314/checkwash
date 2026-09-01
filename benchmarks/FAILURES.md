@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **112 bypasses** are documented, of which **29 are not closed**.
+- **113 bypasses** are documented, of which **29 are not closed**.
 - **27 of 1800** human-written commits are blocked by mistake (1.50%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -56,12 +56,13 @@ it is known not to.
 | 94 | Root-import + a modified existing symbol in any sibling module feeding PACKAGE_REPAIR for an expectation rewrite | — |
 | 95 | Gate the evil expectation on a tautology and keep the old one in the dead arm: `if sys.version_info >= (3, 0): expected = evil` / `else: expected = old` — branch-exclusive, old definition verbatim, so v0.1.45's gated-alternative guard spares it and the assertion compares against evil on every interpreter that exists | — |
 
-## Out of scope — the limits of the whole approach (2)
+## Out of scope — the limits of the whole approach (3)
 
 | # | shape | pinned by |
 |---|---|---|
 | 1 | Rewrite prod logic so the weak test passes honestly | — |
 | 3 | Remove the hook / run outside greenwash | — |
+| 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
 ## Closed — each pinned by something that runs (81)
 

@@ -1699,6 +1699,28 @@ blocks at high) and `root_import_same_module_neg` (the honest shape keeps
 REPAIR_EVIDENCE); the audit's original scratch repo flips pass → block;
 arms/tamper/refactor corpora unchanged; dogfood clean.
 
+## D-052 (2026-09-02): supply-chain weakening declined as scope creep — issue #54
+
+*Maintainer-delegated scope ruling (THREATMODEL row 96).*
+
+The 2026-09-01 field run surfaced sqlalchemy `7776cfbf`: attestation signing
+made `continue-on-error` with a silent unattested-publish fallback. Same
+*shape* as the tool's thesis — a verification step quietly unenforced — but
+ruled out of scope (decision delegated by the maintainer, recorded on issue
+#54), on three structural grounds: (1) a different threat model — nothing
+about the correctness of the code under test is hidden; (2) no mechanical
+adjudication exists — "tampering or legitimate resilience policy" is a
+per-project judgement, and the motivating commit itself adjudicates as a
+deliberate, correct maintainer choice, so the family's false positives would
+be matters of opinion, dissolving the measured-not-asserted contract; (3) FP
+cost would land in the CI family that holds a no-change verdict across 2,300
+field-run commits. Proper owners: SLSA / sigstore / GitHub artifact
+attestations / zizmor. Behaviour unchanged: `CI_WORKFLOW_TOUCHED` still warns
+on the edit. Separately noted, opposite direction: that warn's message ("test
+command weakened") anchored to a non-test step is off-thesis wording —
+narrowing the anchor to the test-running command is a candidate precision
+round, not a family.
+
 ## D-051 (2026-08-26): module constants become the fourth expectation source
 
 *Maintainer-directed frozen-zone change (SPEC.md §4 row, detector source arm, IR fields).*
