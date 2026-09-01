@@ -1,11 +1,11 @@
-# .github/workflows/greenwash.yml
+# .github/workflows/checkwash.yml
 on: [pull_request]
 
 permissions:
   contents: read
 
 jobs:
-  greenwash:
+  checkwash:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -15,4 +15,4 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@7e931075b8acb0a6c04b1bd705336baf66258a1d # v0.1.49
+      - uses: taipei49314/checkwash/action@6d472382aab56afdd8f254128a68de796565c674 # v0.2.0

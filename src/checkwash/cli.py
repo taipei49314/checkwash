@@ -265,7 +265,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
 _PRECOMMIT_SNIPPET = """\
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/taipei49314/greenwash
+  - repo: https://github.com/taipei49314/checkwash
     rev: v{version}
     hooks:
       - id: checkwash

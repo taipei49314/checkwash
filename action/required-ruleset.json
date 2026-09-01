@@ -1,5 +1,5 @@
 {
-  "name": "greenwash required",
+  "name": "checkwash required",
   "target": "branch",
   "enforcement": "active",
   "conditions": {
@@ -14,7 +14,7 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
-          { "context": "greenwash" }
+          { "context": "checkwash" }
         ]
       }
     }

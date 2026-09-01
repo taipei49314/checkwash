@@ -13,7 +13,7 @@ from checkwash.findings import Finding
 from checkwash.ir.model import IR
 
 _SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
-_INFORMATION_URI = "https://github.com/taipei49314/greenwash"
+_INFORMATION_URI = "https://github.com/taipei49314/checkwash"
 
 _LEVEL = {
     "info": "note",

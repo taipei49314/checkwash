@@ -1,14 +1,23 @@
 # Consumers reference this repo in their .pre-commit-config.yaml:
 #
 #   repos:
-#     - repo: https://github.com/taipei49314/greenwash
+#     - repo: https://github.com/taipei49314/checkwash
 #       rev: <tag>
 #       hooks:
-#         - id: greenwash
-- id: greenwash
-  name: greenwash (oracle-tampering tripwire)
+#         - id: checkwash
+- id: checkwash
+  name: checkwash (oracle-tampering tripwire)
   description: deterministic detector for diffs that weaken the test oracle
-  entry: greenwash check --format term
+  entry: checkwash check --format term
+  language: python
+  pass_filenames: false
+  always_run: true
+# Legacy alias from the greenwash era; same gate, kept so existing configs
+# keep working. Prefer `id: checkwash`.
+- id: greenwash
+  name: checkwash (legacy alias id)
+  description: deterministic detector for diffs that weaken the test oracle
+  entry: checkwash check --format term
   language: python
   pass_filenames: false
   always_run: true

@@ -37,7 +37,7 @@ def test_not_a_checkout_fails_clearly(tmp_path):
     out = buf.getvalue()
     assert code == 2
     assert "not a checkwash checkout" in out
-    assert "benchmarks/README.md" in out or "clone https://github.com/taipei49314/greenwash" in out
+    assert "benchmarks/README.md" in out or "clone https://github.com/taipei49314/checkwash" in out
 
 
 def test_local_from_this_checkout_passes():

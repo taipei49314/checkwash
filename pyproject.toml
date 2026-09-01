@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "checkwash"
-version = "0.2.0"
+version = "0.2.1"
 description = "Your agent deleted the failing test to make CI green. checkwash catches it before merge."
 readme = "README.md"
 license = "Apache-2.0"
@@ -32,7 +32,7 @@ greenwash = "checkwash.cli:main"
 checkwash = "checkwash.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/taipei49314/greenwash"
+Homepage = "https://github.com/taipei49314/checkwash"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/checkwash"]

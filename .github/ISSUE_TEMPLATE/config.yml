@@ -3,7 +3,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Check the known-failures page first
-    url: https://github.com/taipei49314/greenwash/blob/main/benchmarks/FAILURES.md
+    url: https://github.com/taipei49314/checkwash/blob/main/benchmarks/FAILURES.md
     about: >-
       Every bypass that is still open, every human commit greenwash blocks by
       mistake, and every cheat a real agent got past it — one generated page.
@@ -11,14 +11,14 @@ contact_links:
       rather than found a new one, which is still worth saying, and the row
       number makes it a two-line issue.
   - name: What it is documented as unable to do
-    url: https://github.com/taipei49314/greenwash/blob/main/THREATMODEL.md
+    url: https://github.com/taipei49314/checkwash/blob/main/THREATMODEL.md
     about: >-
       Rewriting production so a weak test passes honestly is undecidable at
       the diff layer and out of scope by design; a production file greenwash
       cannot read suppresses escalation for the whole diff. Neither is a bug
       report, and both are measured rather than waved away.
   - name: What is frozen and what will change under you
-    url: https://github.com/taipei49314/greenwash/blob/main/docs/stability.md
+    url: https://github.com/taipei49314/checkwash/blob/main/docs/stability.md
     about: >-
       Before reporting that an upgrade started blocking something: detector
       coverage grows on purpose, and growth can newly block. Whether that is a
