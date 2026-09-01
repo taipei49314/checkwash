@@ -293,7 +293,12 @@ def _cmd_hook_install(args: argparse.Namespace) -> int:
     settings_path = os.path.join(args.repo, ".claude", "settings.json")
     settings: dict = {}
     if os.path.exists(settings_path):
-        with open(settings_path, encoding="utf-8") as fh:
+        # utf-8-sig, not utf-8: Windows tooling routinely writes settings.json
+        # with a BOM (PowerShell 5.1's `Out-File -Encoding utf8` always does),
+        # and json.load rejects a BOM outright — so the installer refused
+        # perfectly healthy files as "not valid JSON". The sig codec accepts
+        # both forms; the write below normalizes to BOM-less UTF-8.
+        with open(settings_path, encoding="utf-8-sig") as fh:
             try:
                 settings = _json.load(fh)
             except _json.JSONDecodeError:

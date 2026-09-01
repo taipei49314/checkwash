@@ -257,6 +257,29 @@ def test_hook_install_merges_existing_settings(repo):
     assert settings2 == settings
 
 
+def test_hook_install_reads_bom_settings(repo):
+    # PowerShell 5.1's `Out-File -Encoding utf8` writes a BOM; the installer
+    # used to refuse such a settings.json as invalid JSON (field finding,
+    # 2026-09-01). The merge must succeed and preserve the existing keys.
+    claude_dir = repo / ".claude"
+    claude_dir.mkdir()
+    (claude_dir / "settings.json").write_bytes(
+        '{"permissions": {"allow": ["Bash(pytest:*)"]}}'.encode("utf-8-sig")
+    )
+    result = _greenwash(repo, "hook", "install", "--agent", "claude-code")
+    assert result.returncode == 0, result.stderr
+    raw = (claude_dir / "settings.json").read_bytes()
+    assert not raw.startswith(b"\xef\xbb\xbf")  # write normalizes the BOM away
+    settings = json.loads(raw.decode("utf-8"))
+    assert settings["permissions"]["allow"] == ["Bash(pytest:*)"]
+    commands = [
+        h["command"]
+        for entry in settings["hooks"]["Stop"]
+        for h in entry["hooks"]
+    ]
+    assert "greenwash check --format hook-json" in commands
+
+
 def _greenwash_cp1252(repo, *args):
     # Forces the legacy-locale pipe encoding that crashed the term report
     # (confirmed red-team finding): exit codes must survive cp1252.
