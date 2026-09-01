@@ -1299,16 +1299,39 @@ def _module_skip_markers(tree: ast.Module, text, off: _Offsets) -> list[Marker]:
     return markers
 
 
+def _caught_types(type_expr: ast.AST | None) -> tuple[str, ...]:
+    """Dotted names of the exception types one catcher expression spells.
+
+    `None` (a bare `except`) is (); tuples expand to their elements; an
+    expression that is not a name chain — `E` resolved from an assignment
+    would need binding analysis, a call, a subscript — records as "?", which
+    no membership test matches: the aliased/dynamic spellings stay a named
+    residual on every path (issue #57 §3), priced in the matrix rather than
+    guessed at here.
+    """
+    if type_expr is None:
+        return ()
+    if isinstance(type_expr, ast.Tuple):
+        return tuple(_dotted(e) or "?" for e in type_expr.elts)
+    return (_dotted(type_expr) or "?",)
+
+
+def _catches_assertionerror(caught: tuple[str, ...]) -> bool:
+    """The one type-set truth: can this catcher swallow a failed assert?
+
+    A bare catcher, or any type whose leaf is in `_BROAD_EXCEPTIONS`
+    (Exception and BaseException are AssertionError's ancestors), catches it.
+    Both the `except` path and the `with` path decide through this predicate —
+    issue #57's whole point: the 2026-09-01 history was per-spelling patches
+    (except covered, then `pytest.raises` bypassed, then `suppress`, then the
+    tuple spelling) because the two paths kept separate type logic.
+    """
+    return not caught or any(c.rsplit(".", 1)[-1] in _BROAD_EXCEPTIONS for c in caught)
+
+
 def _handler_info(node: ast.ExceptHandler) -> tuple[tuple[str, ...], bool]:
-    caught: tuple[str, ...]
-    if node.type is None:
-        caught = ()
-    elif isinstance(node.type, ast.Tuple):
-        caught = tuple(_dotted(e) or "?" for e in node.type.elts)
-    else:
-        caught = (_dotted(node.type) or "?",)
-    is_broad = not caught or any(c.rsplit(".", 1)[-1] in _BROAD_EXCEPTIONS for c in caught)
-    return caught, is_broad
+    caught = _caught_types(node.type)
+    return caught, _catches_assertionerror(caught)
 
 
 def _is_oracle_call(node: ast.AST) -> bool:
@@ -1365,40 +1388,38 @@ def _wraps_bare_assert(body: list[ast.stmt]) -> bool:
     return False
 
 
-def _neutralizes_assertionerror(call: ast.AST) -> str | None:
-    """`suppress(AssertionError)` / `pytest.raises(AssertionError)` — the
-    with-context spellings that swallow or expect a failed assertion.
+_NEUTRALIZING_CONTEXTS = ("suppress", "raises", "assertRaises", "assertRaisesRegex")
 
-    `except AssertionError` is already a broad handler (AssertionError is in
-    `_BROAD_EXCEPTIONS`); these two carry the identical meaning in a `with`
-    statement and were the gap two red-team bypasses drove through
-    (2026-09-01). Matched on the trailing callee name so an alias can't dodge
-    it — `from contextlib import suppress as s` still resolves to `suppress`.
-    For `suppress` any positional AssertionError counts (it can suppress
-    several); for `raises` only the first argument is the expected type.
+
+def _neutralizes_assertionerror(call: ast.AST) -> str | None:
+    """A `with`-context that catches a failed assertion.
+
+    `suppress(...)` swallows it, `pytest.raises(...)` expects it, and the
+    unittest dialect — `self.assertRaises(...)` / `assertRaisesRegex(...)` as
+    a context manager — is `raises` with a different surface (issue #57 §1;
+    the regex variant still requires the assert to fail, the pattern only
+    constrains the message). Whether the named type set can catch an
+    AssertionError is decided by `_catches_assertionerror`, the same
+    predicate the `except` path uses, so `pytest.raises(Exception)` and
+    `raises(BaseException)` count exactly as `except Exception` always has
+    (issue #57 §2 — the asymmetry that produced the tuple hole). Matched on
+    the trailing callee name so an alias can't dodge it — `from contextlib
+    import suppress as s` still resolves to `suppress`. For `suppress` every
+    positional argument counts (it can suppress several); for the raises
+    family only the first argument is the expected type. A callee bound to a
+    bare name (`r = pytest.raises`) and an aliased type value
+    (`E = AssertionError`) stay named residuals, asserted silent in
+    tests/test_neutralization_matrix.py.
     """
     if not isinstance(call, ast.Call):
         return None
     leaf = (_dotted(call.func) or "").rsplit(".", 1)[-1]
-    if leaf == "suppress":
-        candidates = call.args
-    elif leaf == "raises":
-        candidates = call.args[:1]
-    else:
+    if leaf not in _NEUTRALIZING_CONTEXTS:
         return None
-    # A tuple of exception types is legal for both — `raises((AssertionError,
-    # ValueError))`, `suppress(AssertionError, KeyError)` — and the `except`
-    # path already expands tuples, so missing it here would reopen the same
-    # move one spelling over.
-    exprs: list[ast.AST] = []
-    for arg in candidates:
-        exprs.extend(arg.elts if isinstance(arg, ast.Tuple) else [arg])
-    for arg in exprs:
-        name = arg.id if isinstance(arg, ast.Name) else (
-            arg.attr if isinstance(arg, ast.Attribute) else None
-        )
-        if name == "AssertionError":
-            return leaf
+    candidates = call.args if leaf == "suppress" else call.args[:1]
+    caught = tuple(t for arg in candidates for t in _caught_types(arg))
+    if caught and _catches_assertionerror(caught):
+        return leaf
     return None
 
 
@@ -2840,10 +2861,12 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     swallowing.append(seg)
         elif isinstance(node, (ast.With, ast.AsyncWith)):
             # The with-context twins of `except AssertionError`:
-            # `suppress(AssertionError)` swallows a failed assert,
-            # `pytest.raises(AssertionError)` expects one. Both neutralise a
-            # live assertion and were the gap two red-team bypasses used
-            # (2026-09-01). Keyed on wrapping a bare `assert` so a contract
+            # `suppress(...)` swallows a failed assert, the raises family
+            # (`pytest.raises`, `self.assertRaises`, `assertRaisesRegex`)
+            # expects one — for any type set that can catch an
+            # AssertionError, same predicate as the except path (issue #57;
+            # the original two spellings were red-team bypasses,
+            # 2026-09-01). Keyed on wrapping a bare `assert` so a contract
             # test of a helper (a call, not an assert) is untouched. Emitted
             # to both lists: for a test file the engine reads swallowing, and
             # neutralising an assertion is the swallow.
