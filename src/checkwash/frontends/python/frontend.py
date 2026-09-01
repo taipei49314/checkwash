@@ -691,6 +691,163 @@ def _local_bindings(func) -> dict[str, tuple[str, ...]]:
     return _binding_maps(func, include_definitions=False)[1]
 
 
+_TRY_TYPES = tuple(
+    t for t in (getattr(ast, "Try", None), getattr(ast, "TryStar", None)) if t is not None
+)
+
+
+def _ordered_bindings(func) -> dict[str, list[tuple[tuple[int, int], bool, str]]]:
+    """name -> [(statement position, conditional?, canonical key)] in source
+    order, for the per-assertion reaching-definition computation.
+
+    `_binding_maps` deliberately joins every definition of a name because it
+    serves unit-level consumers; the reaching computation needs the same keys
+    with position and branch information kept. A binding inside an `if`/loop/
+    `try`/`match` arm may or may not execute, so it is conditional; a `with`
+    body and a `finally` always run. Bindings inside nested defs and lambdas
+    are skipped — they do not execute at the unit's own statement positions —
+    and a name bound only there stays absent, which consumers treat as
+    "fall back to the unit-level map". Walruses are scanned on simple
+    statements and recorded as conditional (short-circuit operands may not
+    evaluate); one inside a compound statement's header is a documented miss
+    with the same fallback.
+    """
+    out: dict[str, list[tuple[tuple[int, int], bool, str, tuple[str, ...]]]] = {}
+
+    def record(name: str, pos: tuple[int, int], conditional: bool, value: ast.AST) -> None:
+        try:
+            key = ast.unparse(value)
+        except (AttributeError, ValueError):  # pragma: no cover - defensive
+            key = ""
+        out.setdefault(name, []).append(
+            (pos, conditional, key, _referenced_names(value))
+        )
+
+    def walk(stmts: list[ast.stmt], conditional: bool) -> None:
+        for st in stmts:
+            pos = (st.lineno, st.col_offset)
+            if isinstance(st, ast.Assign):
+                for target in st.targets:
+                    for name in _assignment_name_targets(target):
+                        record(name, pos, conditional, st.value)
+            elif isinstance(st, (ast.AnnAssign, ast.AugAssign)) and st.value is not None:
+                for name in _assignment_name_targets(st.target):
+                    record(name, pos, conditional, st.value)
+            if isinstance(st, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            if isinstance(st, (ast.If, ast.While)):
+                walk(st.body, True)
+                walk(st.orelse, True)
+            elif isinstance(st, (ast.For, ast.AsyncFor)):
+                walk(st.body, True)
+                walk(st.orelse, True)
+            elif isinstance(st, _TRY_TYPES):
+                walk(st.body, True)
+                for handler in st.handlers:
+                    walk(handler.body, True)
+                walk(st.orelse, True)
+                walk(st.finalbody, conditional)
+            elif isinstance(st, (ast.With, ast.AsyncWith)):
+                walk(st.body, conditional)
+            elif isinstance(st, ast.Match):
+                for case in st.cases:
+                    walk(case.body, True)
+            else:
+                for sub in ast.walk(st):
+                    if isinstance(sub, ast.NamedExpr) and isinstance(sub.target, ast.Name):
+                        record(sub.target.id, pos, True, sub.value)
+    walk(func.body, False)
+    for entries in out.values():
+        entries.sort(key=lambda e: e[0])
+    return out
+
+
+def _reaching_entries(
+    pos: tuple[int, int],
+    name: str,
+    ordered: dict[str, list[tuple[tuple[int, int], bool, str, tuple[str, ...]]]],
+) -> list[tuple[tuple[int, int], bool, str, tuple[str, ...]]]:
+    """The entries that can reach position `pos` for `name`: the last
+    unconditional binding before it plus every conditional one after that."""
+    entries = ordered.get(name)
+    if not entries:
+        return []
+    prior = [e for e in entries if e[0] < pos]
+    if not prior:
+        return []
+    last_uncond = None
+    for i, e in enumerate(prior):
+        if not e[1]:
+            last_uncond = i
+    if last_uncond is None:
+        return prior
+    return [prior[last_uncond]] + [e for e in prior[last_uncond + 1 :] if e[1]]
+
+
+def _reaching_keys(
+    node: ast.AST,
+    names: set[str],
+    ordered: dict[str, list[tuple[tuple[int, int], bool, str]]],
+) -> dict[str, str]:
+    """The reaching-definition key per consumed name at this assertion.
+
+    The last unconditional binding before the assertion, joined with every
+    conditional binding between it and the assertion — the per-assertion form
+    of the "last unconditional binding is the one the assertion reads"
+    semantics SPEC §5 already states. A name bound in the unit only after the
+    assertion maps to "": equal on both sides of a tail append, different
+    when a definition moves across the assertion.
+    """
+    pos = (node.lineno, node.col_offset)
+    result: dict[str, str] = {}
+    for name in sorted(names):
+        if name not in ordered:
+            continue
+        reach = _reaching_entries(pos, name, ordered)
+        result[name] = "\x1f".join(e[2] for e in reach)
+    return result
+
+
+def _positional_closure(
+    node: ast.AST,
+    seeds: tuple[str, ...],
+    ordered: dict[str, list[tuple[tuple[int, int], bool, str, tuple[str, ...]]]],
+) -> set[str]:
+    """Names transitively read at this assertion's position.
+
+    `_resolve_through` follows the unit-level joined map, so `F` drags in
+    every name any definition of `F` ever references — and an assertion in
+    one case was charged with names only other cases read, which is how a
+    pure insertion kept firing after the direct keys were made positional
+    (sympy ed75b73d, R1). This closure follows only the definitions that
+    reach this position.
+    """
+    pos = (node.lineno, node.col_offset)
+    seen: set[str] = set()
+    queue = list(seeds)
+    while queue:
+        name = queue.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        for entry in _reaching_entries(pos, name, ordered):
+            queue.extend(n for n in entry[3] if n not in seen)
+    return seen
+
+
+def _reaching_sig(reaching: dict[str, str], direct: set[str]) -> str:
+    """Serialize the direct names' reaching entries for assertion pairing.
+
+    Direct names only: `F` resolved transitively drags in names that other
+    definitions of `F` reference, whose reaching keys legitimately differ
+    across an insertion — a polluted signature pushes untouched twins back
+    to the FIFO fallback the signature exists to avoid.
+    """
+    return "\x1e".join(
+        f"{name}\x1d{reaching[name]}" for name in sorted(direct) if name in reaching
+    )
+
+
 def _exclusive_bindings(func) -> tuple[str, ...]:
     """Multiply-bound names whose every binding sits in a different branch arm.
 
@@ -1704,6 +1861,7 @@ def _collect_unit(
     dead = _unreachable_ids(func)
     guards = _skip_call_guards(func, text)
     definition_bindings, bindings = _binding_maps(func)
+    ordered_bindings = _ordered_bindings(func) if definition_bindings else {}
     vacuous = _vacuous_bound_asserts(func)
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
@@ -1732,6 +1890,13 @@ def _collect_unit(
             own_assert_ids.add(id(node))
             c = _classify_assert(node, text)
             seg = text.seg(node) or ""
+            depends = _resolve_through(c.right_names, bindings)
+            direct = set(c.left_names) | set(c.right_names)
+            reach = _reaching_keys(
+                node,
+                _positional_closure(node, c.left_names + c.right_names, ordered_bindings),
+                ordered_bindings,
+            )
             assertions.append(
                 Assertion(
                     id=f"a{counter}",
@@ -1747,7 +1912,9 @@ def _collect_unit(
                     trivial=_is_trivial_subject(node.test) or id(node) in vacuous,
                     positive=c.positive,
                     left_names=c.left_names,
-                    right_depends_on=_resolve_through(c.right_names, bindings),
+                    right_depends_on=depends,
+                    reaching=reach,
+                    reaching_sig=_reaching_sig(reach, direct),
                 )
             )
             counter += 1
@@ -1791,6 +1958,15 @@ def _collect_unit(
             c = _classify_unittest_call(node, text)
             if c is not None:
                 seg = text.seg(node) or ""
+                depends = _resolve_through(c.right_names, bindings)
+                direct = set(c.left_names) | set(c.right_names)
+                reach = _reaching_keys(
+                    node,
+                    _positional_closure(
+                        node, c.left_names + c.right_names, ordered_bindings
+                    ),
+                    ordered_bindings,
+                )
                 assertions.append(
                     Assertion(
                         id=f"a{counter}",
@@ -1805,8 +1981,10 @@ def _collect_unit(
                         epsilon_kind=c.epsilon_kind,
                         positive=c.positive,
                         left_names=c.left_names,
-                        right_depends_on=_resolve_through(c.right_names, bindings),
+                        right_depends_on=depends,
                         trivial=c.trivial,
+                        reaching=reach,
+                        reaching_sig=_reaching_sig(reach, direct),
                     )
                 )
                 counter += 1
@@ -2249,6 +2427,36 @@ def _is_test_class(node: ast.ClassDef) -> bool:
     return False
 
 
+def _transitive_test_classes(tree: ast.Module) -> frozenset[str]:
+    """Module-level class names that are test containers once same-file base
+    chains are followed to a fixpoint.
+
+    SPEC §2: every `unittest.TestCase` subclass is collected, whatever it is
+    named. `_is_test_class` reads one hop of spelled bases, so routing
+    TestCase through a same-file class — tornado's `abstract_base_test`
+    refactor turned `class OverrideResolverTest(AsyncTestCase, _Mixin)` into
+    `class OverrideResolverTest(_Mixin)` with `_Mixin(AsyncTestCase)` — made
+    the subclass stop being a test container, and every lexical unit in it
+    "disappeared" while its def was byte-identical on both sides (R1 phantom,
+    tornado e6d3f49). Same-file bare-name bases only; a base imported from
+    another module is still the documented residual.
+    """
+    classes = {n.name: n for n in tree.body if isinstance(n, ast.ClassDef)}
+    test = {name for name, node in classes.items() if _is_test_class(node)}
+    changed = True
+    while changed:
+        changed = False
+        for name, node in classes.items():
+            if name in test:
+                continue
+            for base in node.bases:
+                if isinstance(base, ast.Name) and base.id in test:
+                    test.add(name)
+                    changed = True
+                    break
+    return frozenset(test)
+
+
 def _callees(node: ast.AST) -> tuple[str, ...]:
     names: set[str] = set()
     for sub in ast.walk(node):
@@ -2299,6 +2507,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # module, not per unit: a suite with 200 tests and 5 helpers would otherwise
     # rebuild the same map 200 times.
     module_scopes: dict[str, ast.AST] = {}
+    test_class_names: frozenset[str] = frozenset()
     if collect_tests:
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -2307,6 +2516,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 for target in node.targets:
                     if isinstance(target, ast.Name):
                         module_scopes[target.id] = node.value
+        test_class_names = _transitive_test_classes(tree)
 
     def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
         for child in ast.iter_child_nodes(node):
@@ -2333,7 +2543,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     qual + ".",
                     inherited + class_markers,
                     collectible
-                    and _is_test_class(child)
+                    and (_is_test_class(child) or child.name in test_class_names)
                     and not _test_attr_disabled(child.body),
                 )
             elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):

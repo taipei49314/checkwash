@@ -1,0 +1,25 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+note: a binding added after the last assertion that reads the name never
+note2: reaches any assertion - straight-line code runs top to bottom. The
+note3: unit-level multiset flagged it anyway. Reaching semantics leave it
+note4: alone: dead-after-the-oracle setup is noise, not an expectation
+note5: edit.
+origin: R1 issue 53, written with the reaching-definition fix
+=== before: tests/test_tail.py ===
+from calc import compute, later, one
+
+
+def test_total():
+    F = one()
+    assert compute(1) == F
+=== after: tests/test_tail.py ===
+from calc import compute, later, one
+
+
+def test_total():
+    F = one()
+    assert compute(1) == F
+    F = later()
+=== expect ===
+[]

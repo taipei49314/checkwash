@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 86a
+rule: EXPECTATION_DEFINITION_CHANGED
+note: the direction pin for the reaching-definition change - appending a
+note2: second unconditional binding between the honest definition and the
+note3: assertion changes what the assertion reads (last unconditional
+note4: binding wins), and must keep firing even though every before-side
+note5: definition survives verbatim. The multiset guard alone would pardon
+note6: this; reaching semantics must not.
+origin: R1 issue 53, written with the reaching-definition fix
+=== before: tests/test_hijack.py ===
+from calc import compute, evil, honest
+
+
+def test_total():
+    F = honest()
+    assert compute(1) == F
+=== after: tests/test_hijack.py ===
+from calc import compute, evil, honest
+
+
+def test_total():
+    F = honest()
+    F = evil()
+    assert compute(1) == F
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -43,6 +43,27 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
     a_asserts = list(after.side.assertions)
     pairs: list[tuple] = []  # (before, after, from_order_fallback)
 
+    # 0. exact (normalized text, reaching context) matches (multiset).
+    # Identical texts used to pair FIFO in source order, so inserting a new
+    # case mid-function shifted every later pairing by one: the untouched
+    # assertion paired with the inserted twin and their reaching definitions
+    # disagreed (R1, sympy's repeated-oracle shape). `reaching_sig` carries
+    # the direct names' reaching context; assertions without one ("" — the
+    # inherited ones) behave exactly as before.
+    a_by_ctx: dict[tuple[str, str], list] = {}
+    for a in a_asserts:
+        a_by_ctx.setdefault((normalize_text(a.text), a.reaching_sig), []).append(a)
+    b_ctx_rest = []
+    for b in b_asserts:
+        bucket = a_by_ctx.get((normalize_text(b.text), b.reaching_sig))
+        if bucket:
+            pairs.append((b, bucket.pop(0), False))
+        else:
+            b_ctx_rest.append(b)
+    b_asserts = b_ctx_rest
+    a_asserts = [a for bucket in a_by_ctx.values() for a in bucket]
+    a_asserts.sort(key=lambda x: x.span)
+
     # 1. exact normalized-text matches (multiset)
     a_by_text: dict[str, list] = {}
     for a in a_asserts:

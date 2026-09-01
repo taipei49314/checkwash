@@ -59,6 +59,29 @@ class Assertion:
     # know the difference. Extracting a concrete assert into a shared,
     # parametrised helper otherwise reads as substitution.
     inherited: bool = False
+    # Reaching definition keys for the names this assertion consumes, own-body
+    # assertions only (None for inherited ones): name -> the last unconditional
+    # binding at or before this assertion joined with every conditional binding
+    # after that one, in source order. SPEC §5's stated semantics — "the last
+    # unconditional binding is the one the assertion reads" — held
+    # per-assertion: `UnitSide.bindings` joins every definition of a name, so
+    # inserting one self-contained case into a long function changed "the"
+    # definition for every untouched assertion (sympy ed75b73d fired 13 times
+    # on a 23-line pure insertion; R1). A name bound in the unit only *after*
+    # the assertion maps to "", which is equal on both sides of a tail-append
+    # and different when a definition moves across the assertion. A name bound
+    # only inside a nested def is absent, and consumers fall back to the
+    # unit-level map.
+    reaching: dict[str, str] | None = None
+    # The pairing signature: the reaching entries of the names this assertion
+    # *directly* spells (left and right), serialized stably. Pairing needs a
+    # context key so a repeated oracle matches the twin that reads the same
+    # definitions — but the transitive closure must stay out of it: `F`
+    # resolved through the unit-level map drags in names other definitions of
+    # `F` reference, whose reaching keys legitimately differ across an
+    # insertion, and a polluted signature would push untouched twins back to
+    # the FIFO fallback this exists to avoid. "" for inherited assertions.
+    reaching_sig: str = ""
 
 
 @dataclass

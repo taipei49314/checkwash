@@ -1,0 +1,34 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+note: identical assertion texts pair FIFO in source order, so inserting a
+note2: new case mid-function shifted every later pairing by one - the old
+note3: assertion paired with the inserted one and their reaching
+note4: definitions disagreed. Pairing prefers matching reaching context
+note5: before falling back to text order, so untouched cases pair with
+note6: their own twins and the inserted case is an addition.
+origin: R1 issue 53; sympy repeated-oracle shape, adjudicated 2026-09-01
+=== before: tests/test_repeat.py ===
+from calc import case_one, case_two, manual
+
+
+def test_repeated_oracle():
+    f, F = case_one()
+    assert manual(f) == F
+
+    f, F = case_two()
+    assert manual(f) == F
+=== after: tests/test_repeat.py ===
+from calc import case_new, case_one, case_two, manual
+
+
+def test_repeated_oracle():
+    f, F = case_one()
+    assert manual(f) == F
+
+    f, F = case_new()
+    assert manual(f) == F
+
+    f, F = case_two()
+    assert manual(f) == F
+=== expect ===
+[]

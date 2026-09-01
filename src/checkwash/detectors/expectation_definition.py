@@ -155,6 +155,46 @@ def _names_in_binding_key(key: str) -> set[str]:
     return names
 
 
+def _binding_moved(b, a, unit, name: str) -> bool:
+    """Compare what this assertion actually reads for `name`.
+
+    Per-assertion reaching keys when both sides carry them: SPEC §5 already
+    states that the last unconditional binding is the one the assertion
+    reads, and holding that per assertion means inserting a self-contained
+    case no longer changes "the" definition for every untouched assertion
+    (sympy ed75b73d fired 13 times on a 23-line pure insertion; R1), while a
+    definition appended between the honest one and the assertion still
+    changes what it reads and still fires. The unit-level joined map remains
+    the fallback for assertions without reaching info — inherited ones, and
+    names bound only inside nested defs — which is the pre-reaching
+    behaviour verbatim.
+    """
+    b_map, a_map = b.reaching, a.reaching
+    if b_map is not None and a_map is not None:
+        if name not in b_map or name not in a_map:
+            # `consumed` came from the unit-level transitive closure, which
+            # charges the assertion with names that only *other* definitions
+            # of its expectation reference. The reaching maps hold the
+            # positional closure — what this assertion actually reads, at
+            # its own position — so a name absent from either side is not
+            # part of this assertion's oracle there. Any real edit to what
+            # it does read surfaces through a name that is in both maps.
+            return False
+        b_key, a_key = b_map[name], a_map[name]
+        if not b_key or not a_key:
+            # Bound in the unit, but nothing reaches this assertion for the
+            # name on at least one side: reading it there would be a
+            # NameError, not a green test.
+            return False
+    else:
+        b_key, a_key = unit.before.bindings[name], unit.after.bindings[name]
+    if b_key == a_key:
+        return False
+    return not _gated_alternative_added(
+        b_key, a_key, name in unit.after.exclusive_bindings
+    )
+
+
 def _name_closure(seeds: set[str], bindings: dict[str, str]) -> set[str]:
     """Binding-graph closure, same keep-intermediates rule as `_resolve_through`."""
     seen: set[str] = set()
@@ -218,12 +258,7 @@ def detect(ir: IR) -> list[Finding]:
                             name
                             for name in consumed & set(unit.after.bindings)
                             if name in unit.before.bindings
-                            and unit.before.bindings[name] != unit.after.bindings[name]
-                            and not _gated_alternative_added(
-                                unit.before.bindings[name],
-                                unit.after.bindings[name],
-                                name in unit.after.exclusive_bindings,
-                            )
+                            and _binding_moved(b, a, unit, name)
                         }
                         | {
                             name

@@ -1,0 +1,33 @@
+=== meta ===
+rule: TEST_DISABLED
+note: SPEC section 2 says every TestCase subclass is collected whatever it
+note2: is named, but base detection was single-hop - moving TestCase one
+note3: same-file hop away (tornado's abstract_base_test refactor: bases
+note4: (AsyncTestCase, Mixin) -> (Mixin) with Mixin now extending
+note5: AsyncTestCase) made the class stop being a test container and every
+note6: lexical unit in it "disappeared" while its def was byte-identical.
+origin: R1 issue 53; tornado e6d3f49 phantom, adjudicated 2026-09-01
+=== before: tests/test_resolver.py ===
+from support import AsyncTestCase, resolve
+
+
+class _ResolverMixin:
+    pass
+
+
+class OverrideResolverTest(AsyncTestCase, _ResolverMixin):
+    def test_resolve_multiaddr(self):
+        assert resolve("localhost") == "127.0.0.1"
+=== after: tests/test_resolver.py ===
+from support import AsyncTestCase, resolve
+
+
+class _ResolverMixin(AsyncTestCase):
+    pass
+
+
+class OverrideResolverTest(_ResolverMixin):
+    def test_resolve_multiaddr(self):
+        assert resolve("localhost") == "127.0.0.1"
+=== expect ===
+[]

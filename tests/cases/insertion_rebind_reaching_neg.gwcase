@@ -1,0 +1,35 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+note: a unit-level binding key joined every definition of a reused name, so
+note2: inserting a new self-contained case into a long test function changed
+note3: "the" definition of F for every untouched assertion - sympy ed75b73d
+note4: fired 13 times on a 23-line pure insertion. SPEC section 5 already
+note5: states the semantics: the last unconditional binding is the one the
+note6: assertion reads. Each assertion must compare its own reaching
+note7: definition, not the whole multiset.
+origin: R1 issue 53; sympy ed75b73d / aa1b43c3 phantoms, adjudicated 2026-09-01
+=== before: tests/test_manual.py ===
+from calc import compute, old_one, old_two
+
+
+def test_sequential_cases():
+    F = old_one()
+    assert compute(1) == F
+
+    F = old_two()
+    assert compute(2) == F
+=== after: tests/test_manual.py ===
+from calc import compute, new_mid, old_one, old_two
+
+
+def test_sequential_cases():
+    F = old_one()
+    assert compute(1) == F
+
+    F = new_mid()
+    assert compute(9) == F
+
+    F = old_two()
+    assert compute(2) == F
+=== expect ===
+[]

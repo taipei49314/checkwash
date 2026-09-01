@@ -244,22 +244,35 @@ def build_ir(
         """A test/conftest module parsed for its oracle carriers, or None.
 
         side 0 = base, 1 = head. A file outside the diff is identical on both
-        sides, so the head snapshot serves base and head alike; a file *added*
-        by the diff has no base half, which is what makes an extraction's
-        before side resolve to nothing — correctly.
+        sides, so one memo entry — and one head read — serves base and head
+        alike. The entry used to be keyed per side, which let the before pass
+        drain the shared read budget and the after pass resolve the same
+        helper to nothing: every inherited assert became a phantom
+        ASSERT_REMOVED on any edit to the importing file, black's trio being
+        16 of 74 field-run blocks (R1). A file *added* by the diff has no
+        base half, which is what makes an extraction's before side resolve
+        to nothing — correctly, so in-diff files keep their per-side halves.
+
+        Role is a pure function of the path and is checked before the read:
+        a prod module or a nonexistent sibling candidate must not spend the
+        budget on a file that could never carry an oracle.
         """
-        key = (opath, side)
+        in_diff = opath in raw_by_path
+        key = (opath, side if in_diff else -1)
         if key in oracle_memo:
             return oracle_memo[key]
         parsed: ParsedFile | None = None
-        if opath in raw_by_path:
+        if config.role_of(opath) not in ("test", "conftest"):
+            oracle_memo[key] = None
+            return None
+        if in_diff:
             data = raw_by_path[opath][side]
         elif head_reader is not None and oracle_head_reads[0] < _MAX_ORACLE_READS:
             oracle_head_reads[0] += 1
             data = head_reader(opath)
         else:
             data = None
-        if data is not None and config.role_of(opath) in ("test", "conftest"):
+        if data is not None:
             parsed = parse_python(
                 data, collect_tests=True, conftest=opath.endswith("conftest.py")
             )
