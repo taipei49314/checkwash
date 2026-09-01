@@ -74,9 +74,10 @@ jobs:
           /tmp/fresh/bin/pip install --quiet dist/*.whl
           /tmp/fresh/bin/pip freeze | tee /tmp/frozen.txt
           # Zero runtime dependencies is a claim on the README, so the frozen
-          # environment must contain greenwash and nothing else.
-          test "$(grep -civ '^greenwash' /tmp/frozen.txt)" = "0"
+          # environment must contain the checkwash distribution and nothing else.
+          test "$(grep -civ '^checkwash' /tmp/frozen.txt)" = "0"
           /tmp/fresh/bin/greenwash --version
+          /tmp/fresh/bin/checkwash --version
           /tmp/fresh/bin/greenwash demo > /dev/null
           /tmp/fresh/bin/greenwash check HEAD~1..HEAD --repo .
 

@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 21 detectors, 477 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 478 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -65,11 +65,13 @@ before you believe any number on this page. The single-file build is gated by
 Pick the surface that fits; the engine is identical behind all of them, and
 [docs/stability.md](docs/stability.md) says which parts of it are frozen.
 
-Not on PyPI yet — install from the repo:
+On PyPI the distribution is `checkwash` — `pipx install checkwash` — while the
+import and primary CLI keep the `greenwash` name (`checkwash` is also installed
+as a CLI alias). From the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/greenwash@v0.1.48
-# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.48
+pipx install git+https://github.com/taipei49314/greenwash@v0.1.49
+# or: uv tool install git+https://github.com/taipei49314/greenwash@v0.1.49
 
 greenwash check HEAD~1..HEAD    # a range
 greenwash check                 # HEAD vs the working tree
@@ -144,7 +146,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/greenwash/action@de3f03d017888a613d7f288d4510b99f86e0b11b # v0.1.47
+      - uses: taipei49314/greenwash/action@bda9f37e97f2bb9950413ceec9fee91f48985b67 # v0.1.48
 ```
 
 Hash pins and `persist-credentials: false` are required by
@@ -169,7 +171,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/greenwash
-    rev: v0.1.48
+    rev: v0.1.49
     hooks: [{ id: greenwash }]
 ```
 
@@ -198,7 +200,7 @@ greenwash hook install --agent claude-code
 greenwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/greenwash/action@de3f03d017888a613d7f288d4510b99f86e0b11b # v0.1.47
+- uses: taipei49314/greenwash/action@bda9f37e97f2bb9950413ceec9fee91f48985b67 # v0.1.48
 ```
 
 `greenwash check BASE...HEAD` (three dots) resolves through the merge base,
