@@ -1,9 +1,12 @@
 # External field run, 2026-09-01 — landing note
 
-**Status: preliminary.** Single-rater adjudication by the maintainer; a
-second-rater pass is in progress and will land beside this file. Per the
-report's own limitations section, nothing here enters the published
-benchmark numbers until formal adjudication completes.
+**Status: two-rater, pending owner resolution.** Rater 1 is the field-run
+maintainer (FINAL_REPORT.md); rater 2's full per-block pass is in
+[ADJUDICATION.md](ADJUDICATION.md) — 67 FP / 7 TP-policy / 0 UNCERTAIN,
+with 74/74 agreement on the tampering axis (zero true tampering). The
+disagreement list at the end of ADJUDICATION.md awaits the owner's final
+labels. Per the report's own limitations section, nothing here enters the
+published benchmark numbers until that resolution.
 
 ## What this is
 
@@ -34,8 +37,13 @@ written and are corrected here rather than by rewriting the record:
 
 ## What this run is for
 
-The maintainer's cost ranking (report section 4) is the detector roadmap
-input: (1) project-local base-class oracle resolution — rows 86/91,
-(2) move credit for file splits and helper removal — D2/D10/row 92,
-(3) collective assert-rewrite compensation. The E6/CI families earned a
-no-change verdict across all 2,300 commits.
+The maintainer's cost ranking (report section 4) was the initial detector
+roadmap input. The second-rater pass revises the ranking
+(ADJUDICATION.md, "Mechanism families"): the top target is now the
+**phantom-finding family** — unit/def-use identity breaking on pure
+insertions, base-class changes, and long test functions with reused
+variable names (19+ blocks, trivially reproducible from black's trio) —
+ahead of (2) move credit for file splits/tier moves — D2/D10/row 92,
+(3) uniform mechanical-rewrite collapse, and (4) the original row-86/91
+cross-file resolution. The E6/CI families earned a no-change verdict
+across all 2,300 commits.
