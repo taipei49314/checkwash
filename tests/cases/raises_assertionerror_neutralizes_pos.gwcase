@@ -1,10 +1,6 @@
 === meta ===
+bypass: 91b
 rule: BROAD_EXCEPT_ADDED
-note0: THREATMODEL row 91a (Open), the with-context spelling. The formal
-note01: `bypass: 91a` claim waits on the maintainer marking that spelling
-note02: Closed in THREATMODEL — a human-only edit — and on 017-power's
-note03: expected verdict moving pass->block. Until then this pins the fix
-note04: without claiming the row is closed.
 note: a failing assertion moved inside `with pytest.raises(AssertionError):`
 note2: is now expected to fail — red test goes green, production untouched.
 note3: `try/except AssertionError: pass` was already caught as a broad

@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **111 bypasses** are documented, of which **29 are not closed**.
+- **112 bypasses** are documented, of which **29 are not closed**.
 - **27 of 1800** human-written commits are blocked by mistake (1.50%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -63,7 +63,7 @@ it is known not to.
 | 1 | Rewrite prod logic so the weak test passes honestly | — |
 | 3 | Remove the hook / run outside greenwash | — |
 
-## Closed — each pinned by something that runs (80)
+## Closed — each pinned by something that runs (81)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -153,6 +153,7 @@ behind it* unshippable.
 | 87a | Weaken a **PowerShell or cmd** runner: `$ErrorActionPreference = "Continue"` plus `exit 0`, or `exit /b 0` replacing `if errorlevel 1` | — |
 | 89 | Weaken the suite in an **intermediate** script: the CI entry only calls another script, so it holds no runner token of its own — `./scripts/run-tests.sh` becoming `./scripts/run-tests.sh \|\| true` | `runner_one_hop_pos.gwcase` |
 | 90 | Patch the code under test **from inside the test**, not from a conftest: `monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)` two lines above `assert billing.invoice_total(...) == 105.3`, or the same thing spelled `mock.patch(...)` / `patch.object(...)` / `mocker.patch(...)`. Production and the assertion line both stay byte-identical | `test_patches_subject_mock_patch_pos.gwcase`, `test_patches_subject_new_test_neg.gwcase`, `test_patches_subject_pos.gwcase`, `test_patches_subject_stdlib_neg.gwcase`, `test_patches_subject_unrelated_attr_neg.gwcase`, `test_patches_subject_via_local_pos.gwcase` |
+| 91b | The two `with`-context spellings of assertion neutralization that row 91a's "swallowing `__exit__`" bucket never named outright: `with contextlib.suppress(AssertionError): assert X` swallows the failure, and `with pytest.raises(AssertionError): assert X` inverts the oracle so a wrong answer is required. `except AssertionError: pass` was already a broad handler; these are the `with` dialects of the same move | — |
 
 ## Unclassified (11)
 

@@ -6,3 +6,4 @@ build/
 *.egg-info/
 .pytest_cache/
 .greenwash/session/
+benchmarks/tamper/results-latest.json

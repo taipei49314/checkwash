@@ -1,8 +1,6 @@
 === meta ===
+bypass: 91b
 rule: BROAD_EXCEPT_ADDED
-note0: THREATMODEL row 91a (Open), the with-context spelling — see the
-note01: raises() twin. Formal `bypass: 91a` waits on the maintainer's
-note02: THREATMODEL edit and 017-power's expected verdict flip.
 note: `contextlib.suppress(AssertionError)` wrapping a live assertion
 note2: silently eats its failure — the third spelling of the same
 note3: neutralization (except / suppress / raises), and the one with no
