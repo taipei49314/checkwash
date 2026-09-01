@@ -1,0 +1,136 @@
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/e2e/test_cli.py/test_cross_process_byte_identical/4bcbe59cb290"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/e2e/test_cli.py/test_sarif_format_is_github_code_scanning_subset/94213b8ecdfc"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_cp1252_pipe_clean_diff_exits_zero/fb10590338f0"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_hook_install_local_targets_local_settings/f156affe539a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_hook_install_merges_existing_settings/c0c80570affe"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_hook_install_reads_bom_settings/9a50a307f720"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_hook_json_blocks_with_reason/abcd5df8da99"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_sarif_format_is_github_code_scanning_subset/f3fafa166eb0"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_term_header_counts_findings_at_active_threshold/509f9458c097"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_term_header_counts_findings_at_active_threshold/8f69e3a3d0f6"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/e2e/test_cli.py/test_term_report_renders/e2ca47829b79"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_packaging.py/test_dist_name_and_cli_alias/07154a660d6a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_packaging.py/test_dist_name_and_cli_alias/f2dce429e0c3"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_satellite_boundary.py/test_satellite_note_is_non_default/2b3624e63120"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_HARDCODED/tests/e2e/test_cli.py/test_hook_install_local_targets_local_settings/a67cc172845a"
+rule = "EXPECTED_VALUE_HARDCODED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_HARDCODED/tests/e2e/test_cli.py/test_hook_install_merges_existing_settings/cf4cbf4753a3"
+rule = "EXPECTED_VALUE_HARDCODED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_HARDCODED/tests/e2e/test_cli.py/test_hook_install_reads_bom_settings/3ac4a30285f4"
+rule = "EXPECTED_VALUE_HARDCODED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
