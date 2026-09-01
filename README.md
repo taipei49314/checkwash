@@ -70,8 +70,8 @@ import and primary CLI keep the `checkwash` name (`checkwash` is also installed
 as a CLI alias). From the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/checkwash@v0.2.6
-# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.6
+pipx install git+https://github.com/taipei49314/checkwash@v0.2.7
+# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.7
 
 checkwash check HEAD~1..HEAD    # a range
 checkwash check                 # HEAD vs the working tree
@@ -146,7 +146,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@2e8ad3742fb76b98b2b4e957837b7e6009f3b2b1 # v0.2.5
+      - uses: taipei49314/checkwash/action@04f666ea4053602fab6df31d3ce966829ef0aafa # v0.2.6
 ```
 
 Hash pins and `persist-credentials: false` are required by
@@ -157,7 +157,7 @@ SHA is deliberately the newest prior stable pin that `doctor` could verify at
 build time. Release N cannot embed its own commit SHA, so it adopts that SHA
 only after it already exists, in the next release. The result is an explicit
 one-release trust lag, not an arbitrary 40-hex claim. Verify this pin with
-`git rev-parse 'v0.2.5^{commit}'`; for another trusted release, substitute its
+`git rev-parse 'v0.2.6^{commit}'`; for another trusted release, substitute its
 version in `git rev-parse 'vX.Y.Z^{commit}'`.
 See [action/README.md](action/README.md).
 
@@ -171,7 +171,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/checkwash
-    rev: v0.2.6
+    rev: v0.2.7
     hooks: [{ id: checkwash }]
 ```
 
@@ -200,7 +200,7 @@ checkwash hook install --agent claude-code
 checkwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/checkwash/action@2e8ad3742fb76b98b2b4e957837b7e6009f3b2b1 # v0.2.5
+- uses: taipei49314/checkwash/action@04f666ea4053602fab6df31d3ce966829ef0aafa # v0.2.6
 ```
 
 `checkwash check BASE...HEAD` (three dots) resolves through the merge base,
