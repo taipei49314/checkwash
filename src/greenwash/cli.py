@@ -286,14 +286,29 @@ def _cmd_hook_install(args: argparse.Namespace) -> int:
     import json as _json
 
     if args.agent == "pre-commit":
+        if args.local:
+            print("error: --local applies to --agent claude-code only", file=sys.stderr)
+            return 2
         # Nothing to write for them — their config is theirs; print the block.
         sys.stdout.write(_PRECOMMIT_SNIPPET.format(version=__version__))
         return 0
 
-    settings_path = os.path.join(args.repo, ".claude", "settings.json")
+    # settings.local.json is Claude Code's machine-local file (conventionally
+    # git-ignored). It exists as a target because installing into the shared
+    # settings.json edits a guardrail file inside the repo — a change this
+    # tool's own GUARDRAIL_TOUCHED detector then flags on the next diff. A
+    # first-party installer should not force a guardrail commit just to try
+    # the gate: trial locally, share by choice.
+    filename = "settings.local.json" if args.local else "settings.json"
+    settings_path = os.path.join(args.repo, ".claude", filename)
     settings: dict = {}
     if os.path.exists(settings_path):
-        with open(settings_path, encoding="utf-8") as fh:
+        # utf-8-sig, not utf-8: Windows tooling routinely writes settings.json
+        # with a BOM (PowerShell 5.1's `Out-File -Encoding utf8` always does),
+        # and json.load rejects a BOM outright — so the installer refused
+        # perfectly healthy files as "not valid JSON". The sig codec accepts
+        # both forms; the write below normalizes to BOM-less UTF-8.
+        with open(settings_path, encoding="utf-8-sig") as fh:
             try:
                 settings = _json.load(fh)
             except _json.JSONDecodeError:
@@ -397,6 +412,11 @@ def build_parser() -> argparse.ArgumentParser:
     hook_install = hook_sub.add_parser("install", help="wire greenwash into an agent or tool")
     hook_install.add_argument("--agent", choices=["claude-code", "pre-commit"], required=True)
     hook_install.add_argument("--repo", default=".")
+    hook_install.add_argument(
+        "--local",
+        action="store_true",
+        help="write .claude/settings.local.json (machine-local, git-ignored) instead of the shared settings.json",
+    )
 
     sub.add_parser("demo", help="replay real tampering cases offline")
 
