@@ -66,5 +66,5 @@ is required. `doctor` cannot see whether this ran.
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v7.0.1
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v7.0.0
-git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.2.6^{}'
+git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.2.7^{}'
 ```
