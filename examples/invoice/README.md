@@ -15,11 +15,11 @@ python -m pytest -q          # 1 failed: 35.364999999999995 != 35.37
 python -c "from pathlib import Path; p=Path('tests/test_billing.py'); p.write_text(p.read_text().replace('== 35.37', '> 0'))"
 python -m pytest -q          # 1 passed  — CI is green, the bug is untouched
 
-greenwash check              # ✗ ASSERT_WEAKENED high: EXACT_VALUE -> BOUND,
+checkwash check              # ✗ ASSERT_WEAKENED high: EXACT_VALUE -> BOUND,
                              #   no production code changed. verdict: block.
 ```
 
 The honest fix — rounding `invoice_total` to cents — leaves the exact
-assertion in place and greenwash stays silent. That asymmetry is the whole
+assertion in place and checkwash stays silent. That asymmetry is the whole
 tool: a diff that makes the test pass by fixing the code is fine; a diff that
 makes it pass by gutting the oracle is not.

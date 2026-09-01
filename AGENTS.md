@@ -18,4 +18,4 @@ The judge is immutable; the player runs free.
 2. Never modify an existing fixture's expected output. If you believe the
    expectation is wrong, open an issue and stop.
 3. Read `STATE.md` first when taking over.
-4. Every PR runs greenwash on itself (dogfood, from M2).
+4. Every PR runs checkwash on itself (dogfood, from M2).
