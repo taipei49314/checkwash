@@ -30,12 +30,12 @@ def test_no_runtime_dependencies():
 
 
 def test_dist_name_and_cli_alias():
-    """The PyPI distribution is checkwash; the tool stays greenwash.
+    """Distribution, import, CLI, and SARIF identity are all checkwash.
 
     The greenwash name on PyPI was claimed by an unrelated package on
-    2026-08-28, so the distribution ships as checkwash (owner decision,
-    2026-09-01) while the import, the primary CLI, and the SARIF driver
-    identity keep the greenwash name. Both console scripts must point at
+    2026-08-28; v0.1.49 claimed the checkwash slot and v0.2.0 renamed
+    the whole identity (owner decisions, 2026-09-01). greenwash remains
+    a compatibility CLI alias only. Both console scripts must point at
     the same entry so neither install surface drifts."""
     project = _pyproject()["project"]
     assert project["name"] == "checkwash"

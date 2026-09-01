@@ -27,7 +27,7 @@ _PINS = {
     "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
     # The one-release trust lag: the newest stable tag's peeled commit, moved
     # forward with every release (v0.1.46 here, per the v0.1.47 round).
-    "taipei49314/greenwash/action": "bda9f37e97f2bb9950413ceec9fee91f48985b67",
+    "taipei49314/greenwash/action": "7e931075b8acb0a6c04b1bd705336baf66258a1d",
 }
 
 
