@@ -2784,12 +2784,22 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
             # test of a helper (a call, not an assert) is untouched. Emitted
             # to both lists: for a test file the engine reads swallowing, and
             # neutralising an assertion is the swallow.
-            if _wraps_bare_assert(node.body):
-                for item in node.items:
-                    if _neutralizes_assertionerror(item.context_expr):
-                        seg = _norm((text.seg(item.context_expr) or "").split("\n")[0])
-                        broad.append(seg)
-                        swallowing.append(seg)
+            #
+            # The cheap check first: `with` statements are everywhere in test
+            # files (`open`, `raises`, `patch`), and running the bare-assert
+            # walk on every one of them cost the macOS perf leg its budget
+            # (v0.2.4). `_neutralizes_assertionerror` is a name+args lookup;
+            # the walk runs only when a neutraliser is actually present.
+            neutralisers = [
+                item.context_expr
+                for item in node.items
+                if _neutralizes_assertionerror(item.context_expr)
+            ]
+            if neutralisers and _wraps_bare_assert(node.body):
+                for ctx in neutralisers:
+                    seg = _norm((text.seg(ctx) or "").split("\n")[0])
+                    broad.append(seg)
+                    swallowing.append(seg)
     broad.sort()
     swallowing.sort()
 

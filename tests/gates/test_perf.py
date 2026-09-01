@@ -4,9 +4,19 @@ greenwash is pitched as safe to run on a stop-hook, so the budget is part of
 the contract, not a nice-to-have. Thresholds are generous enough not to be
 flaky on a loaded laptop while still catching an order-of-magnitude
 regression.
+
+Budget checks compare the **median of three runs** against an unchanged
+threshold (maintainer decision, 2026-09-01). One measurement was one roll of
+the CI runner's dice: the macOS leg produced 4.01s on a docs-only commit
+whose engine bytes had measured green hours earlier — a 60% swing with no
+code change is infrastructure variance, and a gate that fails on it is the
+flaky-check defect this repo has already had to fix three times elsewhere.
+The median absorbs a single bad slice; a real regression still fails all
+three runs.
 """
 
 import datetime
+import statistics
 import time
 
 import pytest
@@ -37,15 +47,32 @@ def _test_module(n_tests: int, weaken: bool) -> bytes:
     return ("\n".join(lines) + "\n").encode()
 
 
+def _median_elapsed(changes, runs: int = 3):
+    """(median wall seconds, findings of the first run) for `analyze`.
+
+    The engine is deterministic, so every run does identical work; only the
+    runner's weather differs, which is exactly what the median removes.
+    """
+    samples = []
+    first_findings = None
+    for _ in range(runs):
+        start = time.perf_counter()
+        _ir, findings, _verdict = analyze(changes, Config(), Contract(), [], TODAY)
+        samples.append(time.perf_counter() - start)
+        if first_findings is None:
+            first_findings = findings
+    return statistics.median(samples), first_findings
+
+
 def test_large_single_diff_within_budget():
     before = _test_module(600, weaken=False)
     after = _test_module(600, weaken=True)
     changes = [FileChange("tests/test_big.py", "modified", before, after)]
-    start = time.perf_counter()
-    _ir, findings, _verdict = analyze(changes, Config(), Contract(), [], TODAY)
-    elapsed = time.perf_counter() - start
+    elapsed, findings = _median_elapsed(changes)
     assert findings, "sanity: the weakened assertions must be found"
-    assert elapsed < BUDGET_LARGE_DIFF_S, f"{elapsed:.2f}s over {BUDGET_LARGE_DIFF_S}s budget"
+    assert elapsed < BUDGET_LARGE_DIFF_S, (
+        f"median {elapsed:.2f}s over {BUDGET_LARGE_DIFF_S}s budget"
+    )
 
 
 def test_many_files_within_budget():
@@ -54,10 +81,10 @@ def test_many_files_within_budget():
         before = _test_module(4, weaken=False)
         after = _test_module(4, weaken=(i % 10 == 0))
         changes.append(FileChange(f"tests/test_mod_{i:03d}.py", "modified", before, after))
-    start = time.perf_counter()
-    _ir, _findings, _verdict = analyze(changes, Config(), Contract(), [], TODAY)
-    elapsed = time.perf_counter() - start
-    assert elapsed < BUDGET_MANY_FILES_S, f"{elapsed:.2f}s over {BUDGET_MANY_FILES_S}s budget"
+    elapsed, _findings = _median_elapsed(changes)
+    assert elapsed < BUDGET_MANY_FILES_S, (
+        f"median {elapsed:.2f}s over {BUDGET_MANY_FILES_S}s budget"
+    )
 
 
 @pytest.mark.parametrize("size", [200_000, 1_000_000])
