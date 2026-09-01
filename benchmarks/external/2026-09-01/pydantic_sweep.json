@@ -1,0 +1,975 @@
+{
+  "block_rate": 0.02,
+  "blocked_commits": [
+    {
+      "commit": "69fd688e2d2d8e6fa25f2b2ec30781b52553a388",
+      "findings": [
+        {
+          "message": "test_bool_unhashable_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_bool_unhashable_fails"
+        },
+        {
+          "message": "test_coerce_numbers_to_str: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_coerce_numbers_to_str"
+        },
+        {
+          "message": "test_coerce_numbers_to_str_disabled_in_strict_mode: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_coerce_numbers_to_str_disabled_in_strict_mode"
+        },
+        {
+          "message": "test_coerce_numbers_to_str_from_json: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_coerce_numbers_to_str_from_json"
+        },
+        {
+          "message": "test_coerce_numbers_to_str_raises_for_bool: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_coerce_numbers_to_str_raises_for_bool"
+        },
+        {
+          "message": "test_complex_field: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_complex_field"
+        },
+        {
+          "message": "test_confrozenset: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_confrozenset"
+        },
+        {
+          "message": "test_conlist: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_conlist"
+        },
+        {
+          "message": "test_conset: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_conset"
+        },
+        {
+          "message": "test_constrained_bytes_good: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_bytes_good"
+        },
+        {
+          "message": "test_constrained_bytes_strict_default: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_bytes_strict_default"
+        },
+        {
+          "message": "test_constrained_bytes_strict_false: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_bytes_strict_false"
+        },
+        {
+          "message": "test_constrained_bytes_strict_true: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_bytes_strict_true"
+        },
+        {
+          "message": "test_constrained_bytes_too_long: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_bytes_too_long"
+        },
+        {
+          "message": "test_constrained_list_constraints: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_list_constraints"
+        },
+        {
+          "message": "test_constrained_list_good: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_list_good"
+        },
+        {
+          "message": "test_constrained_list_item_type_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_list_item_type_fails"
+        },
+        {
+          "message": "test_constrained_list_too_long: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_list_too_long"
+        },
+        {
+          "message": "test_constrained_list_too_short: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_list_too_short"
+        },
+        {
+          "message": "test_constrained_set_constraints: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_set_constraints"
+        },
+        {
+          "message": "test_constrained_set_good: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_set_good"
+        },
+        {
+          "message": "test_constrained_set_item_type_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_set_item_type_fails"
+        },
+        {
+          "message": "test_constrained_set_too_long: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_set_too_long"
+        },
+        {
+          "message": "test_constrained_set_too_short: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_set_too_short"
+        },
+        {
+          "message": "test_constrained_str_good: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_str_good"
+        },
+        {
+          "message": "test_constrained_str_lower: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_str_lower"
+        },
+        {
+          "message": "test_constrained_str_max_length_0: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_str_max_length_0"
+        },
+        {
+          "message": "test_constrained_str_too_long: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_str_too_long"
+        },
+        {
+          "message": "test_constrained_str_upper: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_constrained_str_upper"
+        },
+        {
+          "message": "test_datetime_errors: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_datetime_errors"
+        },
+        {
+          "message": "test_datetime_successful: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_datetime_successful"
+        },
+        {
+          "message": "test_decimal: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_decimal"
+        },
+        {
+          "message": "test_decimal_allow_inf: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_decimal_allow_inf"
+        },
+        {
+          "message": "test_decimal_not_finite: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_decimal_not_finite"
+        },
+        {
+          "message": "test_decimal_strict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_decimal_strict"
+        },
+        {
+          "message": "test_default_union_class: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_default_union_class"
+        },
+        {
+          "message": "test_default_union_types: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_default_union_types"
+        },
+        {
+          "message": "test_default_union_types_left_to_right: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_default_union_types_left_to_right"
+        },
+        {
+          "message": "test_default_validators: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_default_validators"
+        },
+        {
+          "message": "test_defaultdict_default_factory_preserved: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_defaultdict_default_factory_preserved"
+        },
+        {
+          "message": "test_defaultdict_explicit_default_factory: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_defaultdict_explicit_default_factory"
+        },
+        {
+          "message": "test_defaultdict_infer_default_factory: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_defaultdict_infer_default_factory"
+        },
+        {
+          "message": "test_deque_generic_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_deque_generic_success"
+        },
+        {
+          "message": "test_deque_generic_success_strict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_deque_generic_success_strict"
+        },
+        {
+          "message": "test_deque_json: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_deque_json"
+        },
+        {
+          "message": "test_deque_model: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_deque_model"
+        },
+        {
+          "message": "test_deque_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_deque_success"
+        },
+        {
+          "message": "test_dict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_dict"
+        },
+        {
+          "message": "test_directory_path_validation_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_directory_path_validation_fails"
+        },
+        {
+          "message": "test_directory_path_validation_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_directory_path_validation_success"
+        },
+        {
+          "message": "test_enum_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_enum_fails"
+        },
+        {
+          "message": "test_enum_fails_error_msg: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_enum_fails_error_msg"
+        },
+        {
+          "message": "test_enum_successful: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_enum_successful"
+        },
+        {
+          "message": "test_file_path_validation_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_file_path_validation_fails"
+        },
+        {
+          "message": "test_file_path_validation_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_file_path_validation_success"
+        },
+        {
+          "message": "test_finite_float_config: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_finite_float_config"
+        },
+        {
+          "message": "test_finite_float_validation_error: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_finite_float_validation_error"
+        },
+        {
+          "message": "test_frozenset_field: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_frozenset_field"
+        },
+        {
+          "message": "test_frozenset_field_conversion: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_frozenset_field_conversion"
+        },
+        {
+          "message": "test_frozenset_strict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_frozenset_strict"
+        },
+        {
+          "message": "test_infinite_float_json_serialization: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_infinite_float_json_serialization"
+        },
+        {
+          "message": "test_infinite_float_validation: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_infinite_float_validation"
+        },
+        {
+          "message": "test_infinite_iterable_int: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_infinite_iterable_int"
+        },
+        {
+          "message": "test_int_enum_successful_for_str_int: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_int_enum_successful_for_str_int"
+        },
+        {
+          "message": "test_invalid_iterable: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_invalid_iterable"
+        },
+        {
+          "message": "test_iterable_any: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_iterable_any"
+        },
+        {
+          "message": "test_list_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_list_fails"
+        },
+        {
+          "message": "test_list_strict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_list_strict"
+        },
+        {
+          "message": "test_list_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_list_success"
+        },
+        {
+          "message": "test_list_type_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_list_type_fails"
+        },
+        {
+          "message": "test_literal_field: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_literal_field"
+        },
+        {
+          "message": "test_literal_multiple: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_literal_multiple"
+        },
+        {
+          "message": "test_literal_single: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_literal_single"
+        },
+        {
+          "message": "test_new_path_validation_parent_does_not_exist: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_new_path_validation_parent_does_not_exist"
+        },
+        {
+          "message": "test_new_path_validation_path_already_exists: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_new_path_validation_path_already_exists"
+        },
+        {
+          "message": "test_new_path_validation_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_new_path_validation_success"
+        },
+        {
+          "message": "test_number_ge: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_number_ge"
+        },
+        {
+          "message": "test_number_gt: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_number_gt"
+        },
+        {
+          "message": "test_number_le: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_number_le"
+        },
+        {
+          "message": "test_number_lt: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_number_lt"
+        },
+        {
+          "message": "test_number_multiple_of_float_invalid: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_number_multiple_of_float_invalid"
+        },
+        {
+          "message": "test_number_multiple_of_float_valid: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_number_multiple_of_float_valid"
+        },
+        {
+          "message": "test_number_multiple_of_int_invalid: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_number_multiple_of_int_invalid"
+        },
+        {
+          "message": "test_number_multiple_of_int_valid: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_number_multiple_of_int_valid"
+        },
+        {
+          "message": "test_ordered_dict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_ordered_dict"
+        },
+        {
+          "message": "test_ordered_dict_from_dict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_ordered_dict_from_dict"
+        },
+        {
+          "message": "test_ordered_dict_from_ordered_dict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_ordered_dict_from_ordered_dict"
+        },
+        {
+          "message": "test_ordered_dict_from_ordered_dict_typed: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_ordered_dict_from_ordered_dict_typed"
+        },
+        {
+          "message": "test_path_validation_strict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_path_validation_strict"
+        },
+        {
+          "message": "test_path_validation_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_path_validation_success"
+        },
+        {
+          "message": "test_pattern: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_pattern"
+        },
+        {
+          "message": "test_pattern_error: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_pattern_error"
+        },
+        {
+          "message": "test_python_re_respects_flags: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_python_re_respects_flags"
+        },
+        {
+          "message": "test_sequence_generator_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_sequence_generator_fails"
+        },
+        {
+          "message": "test_sequence_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_sequence_success"
+        },
+        {
+          "message": "test_sequence_with_nested_type: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_sequence_with_nested_type"
+        },
+        {
+          "message": "test_set_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_set_fails"
+        },
+        {
+          "message": "test_set_strict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_set_strict"
+        },
+        {
+          "message": "test_set_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_set_success"
+        },
+        {
+          "message": "test_set_type_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_set_type_fails"
+        },
+        {
+          "message": "test_smart_union_compounded_types_edge_case: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_smart_union_compounded_types_edge_case"
+        },
+        {
+          "message": "test_socket_exists: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_socket_exists"
+        },
+        {
+          "message": "test_socket_not_exists: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_socket_not_exists"
+        },
+        {
+          "message": "test_str_strip_whitespace: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_str_strip_whitespace"
+        },
+        {
+          "message": "test_str_to_lower: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_str_to_lower"
+        },
+        {
+          "message": "test_str_to_upper: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_str_to_upper"
+        },
+        {
+          "message": "test_strict_bool: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_bool"
+        },
+        {
+          "message": "test_strict_bytes: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_bytes"
+        },
+        {
+          "message": "test_strict_bytes_max_length: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_bytes_max_length"
+        },
+        {
+          "message": "test_strict_complex_field: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_complex_field"
+        },
+        {
+          "message": "test_strict_date: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_date"
+        },
+        {
+          "message": "test_strict_datetime: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_datetime"
+        },
+        {
+          "message": "test_strict_float: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_float"
+        },
+        {
+          "message": "test_strict_int: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_int"
+        },
+        {
+          "message": "test_strict_str: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_str"
+        },
+        {
+          "message": "test_strict_str_max_length: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_str_max_length"
+        },
+        {
+          "message": "test_strict_time: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_time"
+        },
+        {
+          "message": "test_strict_timedelta: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_strict_timedelta"
+        },
+        {
+          "message": "test_string_constraints_ascii_only: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_string_constraints_ascii_only"
+        },
+        {
+          "message": "test_string_too_long: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_string_too_long"
+        },
+        {
+          "message": "test_string_too_short: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_string_too_short"
+        },
+        {
+          "message": "test_tuple_fails: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_tuple_fails"
+        },
+        {
+          "message": "test_tuple_strict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_tuple_strict"
+        },
+        {
+          "message": "test_tuple_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_tuple_success"
+        },
+        {
+          "message": "test_tuple_variable_len_success: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_tuple_variable_len_success"
+        },
+        {
+          "message": "test_typing_coercion_counter: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_typing_coercion_counter"
+        },
+        {
+          "message": "test_typing_coercion_defaultdict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_typing_coercion_defaultdict"
+        },
+        {
+          "message": "test_typing_counter_value_validation: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_typing_counter_value_validation"
+        },
+        {
+          "message": "test_union_compound_types: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_union_compound_types"
+        },
+        {
+          "message": "test_union_typeddict: test unit disappeared",
+          "path": "tests/test_types.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_union_typeddict"
+        }
+      ]
+    },
+    {
+      "commit": "800f2f9089f432bc9274ab584d1dbd95ec35388f",
+      "findings": [
+        {
+          "message": "test_plugin_prebuilt_recursive_model_validator_runs_once: test unit disappeared",
+          "path": "tests/test_plugins.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_plugin_prebuilt_recursive_model_validator_runs_once"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 100,
+  "commits_blocked": 2,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 52,
+  "commits_with_opaque_prod_change": 19,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "f512b087202f58ec90a9d38c9102858567d72440",
+    "oldest_commit": "c18c773f9b48df16206c9f9c19c2bc1be77dd045"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "warn": 4
+    },
+    "ASSERT_WEAKENED": {
+      "warn": 2
+    },
+    "BROAD_EXCEPT_ADDED": {
+      "warn": 2
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 34
+    },
+    "EXPECTATION_DEFINITION_CHANGED": {
+      "warn": 6
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 2
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 1
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 17
+    },
+    "TEST_DISABLED": {
+      "high": 131,
+      "info": 100,
+      "warn": 55
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

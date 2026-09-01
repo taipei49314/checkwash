@@ -1,0 +1,136 @@
+{
+  "block_rate": 0.03,
+  "blocked_commits": [
+    {
+      "commit": "c52fe79c745d9a429c91b07796f86fb1b2122e2b",
+      "findings": [
+        {
+          "message": "test_handler_cancellation: assertion removed (strength UNKNOWN)",
+          "path": "tests/test_web_server.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_handler_cancellation"
+        },
+        {
+          "message": "test_no_handler_cancellation: assertion removed (strength TRUTHY)",
+          "path": "tests/test_web_server.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_no_handler_cancellation"
+        },
+        {
+          "message": "test_no_handler_cancellation: assertion removed (strength UNKNOWN)",
+          "path": "tests/test_web_server.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_no_handler_cancellation"
+        }
+      ]
+    },
+    {
+      "commit": "4602990f60241f759f861a3a4c1243ba2294ab53",
+      "findings": [
+        {
+          "message": "test_post_file_fields_descriptor_cost: disabling marker added (pytest.mark.skipif(notos.path.isdir(\"/proc/self/fd\")))",
+          "path": "tests/test_web_functional.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_post_file_fields_descriptor_cost"
+        }
+      ]
+    },
+    {
+      "commit": "069e9cfc913a937da353baaf8244ec8023d91eb3",
+      "findings": [
+        {
+          "message": "CI configuration changed; test command weakened: sudo dpkg --configure -a || true",
+          "path": ".github/workflows/ci-cd.yml",
+          "rule": "CI_WORKFLOW_TOUCHED",
+          "severity": "high",
+          "unit": null
+        }
+      ]
+    },
+    {
+      "commit": "79b5f5fa5bec861477b758d8d97d0975d5de256c",
+      "findings": [
+        {
+          "message": "test_when_timeout_smaller_second: assertion strength APPROX(70) -> BOUND(40)",
+          "path": "tests/test_helpers.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_when_timeout_smaller_second"
+        },
+        {
+          "message": "test_when_timeout_smaller_second_with_low_threshold: assertion strength EXACT_VALUE(90) -> BOUND(40)",
+          "path": "tests/test_helpers.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_when_timeout_smaller_second_with_low_threshold"
+        }
+      ]
+    },
+    {
+      "commit": "b2b7b50c1797b272a343dcd3567d24cb67cfebbe",
+      "findings": [
+        {
+          "message": "test_cookie_pattern_performance: test unit disappeared",
+          "path": "tests/test_cookie_helpers.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_cookie_pattern_performance"
+        }
+      ]
+    },
+    {
+      "commit": "cd0556b23ade56c51b1214cddcf5b5e6661a9796",
+      "findings": [
+        {
+          "message": "test_when_timeout_smaller_second: disabling marker added (pytest.mark.skipif(time.get_clock_info(\"monotonic\").resolution>0.001))",
+          "path": "tests/test_helpers.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_when_timeout_smaller_second"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 6,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 63,
+  "commits_with_opaque_prod_change": 25,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "deab03245130d057aae456cc7f36c0632ec5c254",
+    "oldest_commit": "0ed510d8dc9f6397878fe775ac7e2fbd0b13641f"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "high": 3
+    },
+    "ASSERT_WEAKENED": {
+      "high": 2
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "high": 1,
+      "warn": 45
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 1
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 4
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 3
+    },
+    "TEST_DISABLED": {
+      "high": 3,
+      "info": 1,
+      "warn": 1
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

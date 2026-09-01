@@ -1,0 +1,585 @@
+{
+  "block_rate": 0.065,
+  "blocked_commits": [
+    {
+      "commit": "ed75b73d4e56c5c0dabcc043e61c5cf59fc3d19a",
+      "findings": [
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F, F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        },
+        {
+          "message": "test_manualintegrate_bioche_substitution: the assertion is unchanged but its expectation is not — F1, F2 is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_bioche_substitution"
+        }
+      ]
+    },
+    {
+      "commit": "358d1f2873f696b0792e34b4d33a761d186bea45",
+      "findings": [
+        {
+          "message": "test_manualintegrate_owent: the assertion is unchanged but its expectation is not — F is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_owent"
+        }
+      ]
+    },
+    {
+      "commit": "472f042e3148e4463c02b09a4d54aed6dc1bef7e",
+      "findings": [
+        {
+          "message": "test_invertible: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.invertible(X), Q.fullrank(X) & Q.square(X)) -> ask(Q.invertible(X), Q.fullrank(X) & Q.square(X))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_invertible"
+        },
+        {
+          "message": "test_singular: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.singular(X), ~Q.invertible(X)) -> ask(Q.singular(X), ~Q.invertible(X))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_singular"
+        },
+        {
+          "message": "test_positive: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.positive(x**y), Q.zero(x) & Q.positive(y)) -> ask(Q.positive(x**y), Q.zero(x) & Q.positive(y))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_positive"
+        }
+      ]
+    },
+    {
+      "commit": "e332b8d3d4eb7f4d17c0ac2717bf809bb345efba",
+      "findings": [
+        {
+          "message": "test_diagonal: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.diagonal(X), Q.lower_triangular(X) & Q.upper_triangular(X)) -> ask(Q.diagonal(X), Q.lower_triangular(X) & Q.upper_triangular(X))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_diagonal"
+        },
+        {
+          "message": "test_composite_ask: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.negative(x) & Q.integer(x),\n        assumptions=Q.real(x) >> Q.positive(x)) -> ask(Q.negative(x) & Q.integer(x),\n        assumptions=Q.real(x) >> Q.positive(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_composite_ask"
+        },
+        {
+          "message": "test_composite_proposition: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.real(x) | Q.integer(x), Q.real(x) | Q.integer(x)) -> ask(Q.real(x) | Q.integer(x), Q.real(x) | Q.integer(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_composite_proposition"
+        },
+        {
+          "message": "test_functions_in_assumptions: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.negative(x), Equivalent(Q.real(x), Q.positive(x))) -> ask(Q.negative(x), Equivalent(Q.real(x), Q.positive(x)))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_functions_in_assumptions"
+        },
+        {
+          "message": "test_functions_in_assumptions: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.negative(x), Q.real(x) >> Q.positive(x)) -> ask(Q.negative(x), Q.real(x) >> Q.positive(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_functions_in_assumptions"
+        },
+        {
+          "message": "test_functions_in_assumptions: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.negative(x), Xor(Q.real(x), Q.negative(x))) -> ask(Q.negative(x), Xor(Q.real(x), Q.negative(x)))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_functions_in_assumptions"
+        },
+        {
+          "message": "test_integer: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.integer(x), Q.even(x) | Q.odd(x)) -> ask(Q.integer(x), Q.even(x) | Q.odd(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_integer"
+        },
+        {
+          "message": "test_nonzero: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.nonzero(x), Q.negative(x) | Q.positive(x)) -> ask(Q.nonzero(x), Q.negative(x) | Q.positive(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_nonzero"
+        },
+        {
+          "message": "test_tautology: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.real(x) | ~Q.real(x)) -> ask(Q.real(x) | ~Q.real(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_tautology"
+        },
+        {
+          "message": "test_tautology: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.real(x) & ~Q.real(x)) -> ask(Q.real(x) & ~Q.real(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_tautology"
+        },
+        {
+          "message": "test_zero: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.zero(x), Q.negative(x) | Q.positive(x)) -> ask(Q.zero(x), Q.negative(x) | Q.positive(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_zero"
+        },
+        {
+          "message": "test_zero: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.zero(x), Q.nonnegative(x) & Q.nonpositive(x)) -> ask(Q.zero(x), Q.nonnegative(x) & Q.nonpositive(x))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_zero"
+        },
+        {
+          "message": "test_zero: an assertion was replaced by an unrelated one of the same strength (_ask_recursive(Q.zero(x) | Q.zero(y), Q.zero(x*y)) -> ask(Q.zero(x) | Q.zero(y), Q.zero(x*y))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_zero"
+        }
+      ]
+    },
+    {
+      "commit": "bc87480ee6097a86b0efa3a6d35f7c64e93d647b",
+      "findings": [
+        {
+          "message": "test_MatrixSlice: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.symmetric(C), Q.symmetric(X)) -> assert _ask_recursive(Q.symmetric(C), Q.symmetric(X)) is Non); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_MatrixSlice"
+        },
+        {
+          "message": "test_MatrixSlice: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.upper_triangular(C), Q.upper_tri -> assert _ask_recursive(Q.upper_triangular(C), Q.upper_triangu); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_MatrixSlice"
+        },
+        {
+          "message": "test_MatrixSlice: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.orthogonal(C), Q.orthogonal(X)) -> assert _ask_recursive(Q.orthogonal(C), Q.orthogonal(X)) is N); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_MatrixSlice"
+        },
+        {
+          "message": "test_MatrixSlice: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.diagonal(C), Q.diagonal(X)) -> assert _ask_recursive(Q.diagonal(C), Q.diagonal(X)) is None); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_MatrixSlice"
+        },
+        {
+          "message": "test_MatrixSlice: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.invertible(C), Q.invertible(X)) -> assert _ask_recursive(Q.invertible(C), Q.invertible(X)) is N); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_MatrixSlice"
+        },
+        {
+          "message": "test_field_assumptions: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.integer_elements(X.I), Q.integer -> assert _ask_recursive(Q.integer_elements(X.I), Q.integer_ele); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_field_assumptions"
+        },
+        {
+          "message": "test_field_assumptions: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.integer_elements(X), Q.real_elem -> assert _ask_recursive(Q.integer_elements(X), Q.real_elements); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_field_assumptions"
+        },
+        {
+          "message": "test_orthogonal: assertion replaced — subject and polarity both changed (assert not _ask_recursive(predicate(X + Z), predicate(X) & p -> assert _ask_recursive(predicate(X + Z), predicate(X) & predi); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_orthogonal"
+        },
+        {
+          "message": "test_positive_definite: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.positive_definite(-X), Q.positiv -> assert _ask_recursive(Q.positive_definite(-X), Q.positive_de); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_positive_definite"
+        },
+        {
+          "message": "test_positive_definite: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.positive_definite(Y.T*X*Y), Q.po -> assert _ask_recursive(Q.positive_definite(Y.T*X*Y), Q.positi); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_positive_definite"
+        },
+        {
+          "message": "test_square: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.square(Y)) -> assert _ask_recursive(Q.square(Y)) is False); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_square"
+        },
+        {
+          "message": "test_relational: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.eq(x, 0), Q.nonzero(x)) -> assert _ask_recursive(Q.eq(x, 0), Q.nonzero(x)) is False); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_relational"
+        },
+        {
+          "message": "test_relational: assertion replaced — subject and polarity both changed (assert not _ask_recursive(Q.ne(x, 0), Q.zero(x)) -> assert _ask_recursive(Q.ne(x, 0), Q.zero(x)) is False); greenwash cannot verify the replacement is equivalent",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_relational"
+        }
+      ]
+    },
+    {
+      "commit": "8e7945f1a2d1be79b31230d4a2fa3b1b999d1b11",
+      "findings": [
+        {
+          "message": "test_generic_character_table: assertion removed (strength TRUTHY)",
+          "path": "sympy/combinatorics/tests/test_character_table.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_generic_character_table"
+        }
+      ]
+    },
+    {
+      "commit": "ceca5c6417a1a117509c1f918e1b3406da9a9b11",
+      "findings": [
+        {
+          "message": "test_owent_is_extended_real: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/functions/special/tests/test_error_functions.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_owent_is_extended_real"
+        },
+        {
+          "message": "test_owent_is_extended_real: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/functions/special/tests/test_error_functions.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_owent_is_extended_real"
+        }
+      ]
+    },
+    {
+      "commit": "e82e84d04b418f01c461a47bb812b1a901c80cc9",
+      "findings": [
+        {
+          "message": "test_issue_18527: an assertion was replaced by an unrelated one of the same strength (integrate(expr, x, manual=True) -> integrate(expr, xr, manual=True)); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/integrals/tests/test_integrals.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_issue_18527"
+        }
+      ]
+    },
+    {
+      "commit": "3ead05e1bf8b33922080642b726cb6932b2c14e4",
+      "findings": [
+        {
+          "message": "test_implicit_kinematics: an assertion was replaced by an unrelated one of the same strength (simplify(lhs_candidate - forcing_kin_implicit) -> simplify(\n        lhs_candidate - forcing_kin_implicit[[0, 1, 2, 3], :]\n    )); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/physics/mechanics/tests/test_kane.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_implicit_kinematics"
+        },
+        {
+          "message": "test_implicit_kinematics: assertion strength EXACT_VALUE(90) -> BOUND(40)",
+          "path": "sympy/physics/mechanics/tests/test_kane.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_implicit_kinematics"
+        }
+      ]
+    },
+    {
+      "commit": "98dff8175bb9dcb527f83f13858b748b305da386",
+      "findings": [
+        {
+          "message": "test_implicit_kinematics: an assertion was replaced by an unrelated one of the same strength (n_ops_implicit / n_ops_explicit -> simplify(\n        (mass_matrix_kin_explicit*KM.q.diff() - forcing_kin_explicit) -\n        Matrix(kinematic_eqs))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/physics/mechanics/tests/test_kane.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_implicit_kinematics"
+        }
+      ]
+    },
+    {
+      "commit": "a31843cd719319bbd1f4f456ee2e87a6a4cf1936",
+      "findings": [
+        {
+          "message": "test_diagonal: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_diagonal"
+        },
+        {
+          "message": "test_singular: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_matrices.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_singular"
+        },
+        {
+          "message": "test_composite_ask: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_composite_ask"
+        },
+        {
+          "message": "test_composite_proposition: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_composite_proposition"
+        },
+        {
+          "message": "test_functions_in_assumptions: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_functions_in_assumptions"
+        },
+        {
+          "message": "test_functions_in_assumptions: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_functions_in_assumptions"
+        },
+        {
+          "message": "test_functions_in_assumptions: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_functions_in_assumptions"
+        },
+        {
+          "message": "test_integer: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_integer"
+        },
+        {
+          "message": "test_nonzero: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_nonzero"
+        },
+        {
+          "message": "test_positive: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_positive"
+        },
+        {
+          "message": "test_tautology: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_tautology"
+        },
+        {
+          "message": "test_tautology: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_tautology"
+        },
+        {
+          "message": "test_zero: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_zero"
+        },
+        {
+          "message": "test_zero: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_zero"
+        },
+        {
+          "message": "test_zero: assertion strength EXACT_VALUE(90) -> NON_NULL(30)",
+          "path": "sympy/assumptions/tests/test_query.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "test_zero"
+        }
+      ]
+    },
+    {
+      "commit": "228ef30547162acd0bdc485c7da686edfbf81c6e",
+      "findings": [
+        {
+          "message": "test_manualintegrate_trig_substitution: an assertion was replaced by an unrelated one of the same strength (manualintegrate(1/(x**4 * sqrt(25-x**2)), x) -> (F.diff(x) - f).cancel()); the original assertion is gone and the strength lattice cannot see it",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "test_manualintegrate_trig_substitution"
+        }
+      ]
+    },
+    {
+      "commit": "aa1b43c33ec6f86e5841270061a9b08de326c1cd",
+      "findings": [
+        {
+          "message": "test_manualintegrate_owent: the assertion is unchanged but its expectation is not — F is defined differently now, so the test compares against a different value than it did",
+          "path": "sympy/integrals/tests/test_manual.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_manualintegrate_owent"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 13,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 120,
+  "commits_with_opaque_prod_change": 2,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "2b5181a272625dcd9d2e305219a5143da9f6b022",
+    "oldest_commit": "5567857a749751b5157f5d76d45ae449423b3c03"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "high": 1,
+      "info": 5,
+      "warn": 3
+    },
+    "ASSERT_SUBSTITUTED": {
+      "high": 20
+    },
+    "ASSERT_WEAKENED": {
+      "high": 31,
+      "warn": 1
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 9
+    },
+    "EXPECTATION_DEFINITION_CHANGED": {
+      "high": 15,
+      "warn": 74
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 6
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 4
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 6
+    },
+    "TEST_DISABLED": {
+      "info": 3,
+      "warn": 10
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

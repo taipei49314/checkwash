@@ -1,0 +1,56 @@
+{
+  "block_rate": 0.01,
+  "blocked_commits": [
+    {
+      "commit": "aaed3ad2c9913be9ee568d44969d734862d03e65",
+      "findings": [
+        {
+          "message": "CI configuration changed; test command weakened: continue-on-error: true",
+          "path": ".github/workflows/create-wheels.yaml",
+          "rule": "CI_WORKFLOW_TOUCHED",
+          "severity": "high",
+          "unit": null
+        }
+      ]
+    },
+    {
+      "commit": "7776cfbf469dbe88edbc2b9a8abc1b32b382f916",
+      "findings": [
+        {
+          "message": "CI configuration changed; test command weakened: continue-on-error: true",
+          "path": ".github/workflows/create-wheels.yaml",
+          "rule": "CI_WORKFLOW_TOUCHED",
+          "severity": "high",
+          "unit": null
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 2,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 106,
+  "commits_with_opaque_prod_change": 10,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "934c55201b9dce67cef6ad805b2fe833f7415abd",
+    "oldest_commit": "3cf6c1112e7aeb6337f68481bf2e631b63f1dd29"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "BROAD_EXCEPT_ADDED": {
+      "warn": 3
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "high": 2,
+      "warn": 57
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 1
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 407
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

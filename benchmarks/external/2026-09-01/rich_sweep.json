@@ -1,0 +1,92 @@
+{
+  "block_rate": 0.04,
+  "blocked_commits": [
+    {
+      "commit": "48293cde887c4f25a7bca022131b56495f370a88",
+      "findings": [
+        {
+          "message": "test_decode_newlines: expected value rewritten 'Hello\\nWorld\\n\\n' -> '\\nHello\\nWorld\\n\\n' with no change in assertion strength",
+          "path": "tests/test_ansi.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_decode_newlines"
+        }
+      ]
+    },
+    {
+      "commit": "823de916d9fa5ee5dec985a94c2ff37f24e9c052",
+      "findings": [
+        {
+          "message": "test_decode: the assertion is unchanged but its expectation is not — expected is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_ansi.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_decode"
+        },
+        {
+          "message": "test_decode_example: the assertion is unchanged but its expectation is not — expected is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_ansi.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_decode_example"
+        },
+        {
+          "message": "test_decode_issue_2688: the assertion is unchanged but its expectation is not — expected_text is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_ansi.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_decode_issue_2688"
+        }
+      ]
+    },
+    {
+      "commit": "9303d77e8d41c6f43c090420f921dd3fc66ebfd1",
+      "findings": [
+        {
+          "message": "test_markdown_render: the assertion is unchanged but its expectation is not — expected is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_markdown_no_hyperlinks.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_markdown_render"
+        }
+      ]
+    },
+    {
+      "commit": "1c5e03eb32020011f5b13174e186c588d09d749c",
+      "findings": [
+        {
+          "message": "test_render: the assertion is unchanged but its expectation is not — expected is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_columns.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_render"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 100,
+  "commits_blocked": 4,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 31,
+  "commits_with_opaque_prod_change": 0,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "ce51a2f8bf326878a94a382cb7102c85824f7e04",
+    "oldest_commit": "786e9de79413ff57ddccf382729ff4f14796db36"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 8
+    },
+    "EXPECTATION_DEFINITION_CHANGED": {
+      "high": 5,
+      "warn": 6
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "high": 1,
+      "warn": 1
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

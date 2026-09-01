@@ -1,0 +1,97 @@
+{
+  "block_rate": 0.01,
+  "blocked_commits": [
+    {
+      "commit": "bf1cf69e24e3ede7d7053c17d47e381be959880e",
+      "findings": [
+        {
+          "message": "test_preload_options: expected value rewritten 'No such option: --ini' -> 'No such option' with no change in assertion strength",
+          "path": "t/unit/app/test_preload_cli.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_preload_options"
+        }
+      ]
+    },
+    {
+      "commit": "c7018110173e8cfa3b2cc507608250c69a81132a",
+      "findings": [
+        {
+          "message": "test_worker_binds_consumed_queue_despite_earlier_queue_failure: test unit disappeared",
+          "path": "t/integration/test_native_delayed_delivery_binding.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_worker_binds_consumed_queue_despite_earlier_queue_failure"
+        },
+        {
+          "message": "test_rabbitmq_quorum_qos_visibility_race: test unit disappeared",
+          "path": "t/integration/test_quorum_queue_qos_cluster_simulation.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_rabbitmq_quorum_qos_visibility_race"
+        },
+        {
+          "message": "test_chord_unlock_stress_routing_to_quorum_queue: test unit disappeared",
+          "path": "t/integration/test_rabbitmq_chord_unlock_routing.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_chord_unlock_stress_routing_to_quorum_queue"
+        },
+        {
+          "message": "test_fallback_to_classic_queue_and_direct_exchange: test unit disappeared",
+          "path": "t/integration/test_rabbitmq_default_queue_type_fallback.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_fallback_to_classic_queue_and_direct_exchange"
+        },
+        {
+          "message": "test_countdown_task_with_retry: test unit disappeared",
+          "path": "t/integration/test_rabbitmq_quorum_queue_cycle_detection.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_countdown_task_with_retry"
+        },
+        {
+          "message": "test_non_eta_task_with_multiple_retries: test unit disappeared",
+          "path": "t/integration/test_rabbitmq_quorum_queue_cycle_detection.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_non_eta_task_with_multiple_retries"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 2,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 111,
+  "commits_with_opaque_prod_change": 6,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "e522ec899ebd78c3e8365cef5417f482736efefe",
+    "oldest_commit": "fe573ea3bb9ebe36807a328762eff9566a287bd5"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "BROAD_EXCEPT_ADDED": {
+      "warn": 18
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 51
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "high": 1
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 45
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 1
+    },
+    "TEST_DISABLED": {
+      "high": 6,
+      "info": 1
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

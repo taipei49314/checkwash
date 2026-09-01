@@ -1,0 +1,365 @@
+{
+  "block_rate": 0.06,
+  "blocked_commits": [
+    {
+      "commit": "b18bbeec78325cb83ac332e26c9b4497eb234649",
+      "findings": [
+        {
+          "message": "TestSeriesConstructors.test_constructor_maskedarray: assertion removed (strength PATTERN)",
+          "path": "pandas/tests/series/test_constructors.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "TestSeriesConstructors.test_constructor_maskedarray"
+        },
+        {
+          "message": "TestSeriesConstructors.test_constructor_maskedarray: assertion removed (strength PATTERN)",
+          "path": "pandas/tests/series/test_constructors.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "TestSeriesConstructors.test_constructor_maskedarray"
+        }
+      ]
+    },
+    {
+      "commit": "5fef3b9e11eb857d6e4f49e1de1cbab7c7775e10",
+      "findings": [
+        {
+          "message": "test_set_codes: assertion removed (strength TRUTHY)",
+          "path": "pandas/tests/indexes/multi/test_get_set.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_set_codes"
+        },
+        {
+          "message": "test_set_codes: assertion removed (strength TYPE_SHAPE)",
+          "path": "pandas/tests/indexes/multi/test_get_set.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_set_codes"
+        },
+        {
+          "message": "test_set_levels: assertion removed (strength TYPE_SHAPE)",
+          "path": "pandas/tests/indexes/multi/test_get_set.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_set_levels"
+        }
+      ]
+    },
+    {
+      "commit": "75f24bb2304b12cb64c16b67fcfde192a71bc629",
+      "findings": [
+        {
+          "message": "test_one_positional_argument_with_warning_message_analysis: test unit disappeared",
+          "path": "pandas/tests/util/test_deprecate_nonkeyword_arguments.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_one_positional_argument_with_warning_message_analysis"
+        },
+        {
+          "message": "test_three_arguments_with_name_in_warning: test unit disappeared",
+          "path": "pandas/tests/util/test_deprecate_nonkeyword_arguments.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_three_arguments_with_name_in_warning"
+        },
+        {
+          "message": "test_three_positional_argument_with_warning_message_analysis: test unit disappeared",
+          "path": "pandas/tests/util/test_deprecate_nonkeyword_arguments.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_three_positional_argument_with_warning_message_analysis"
+        }
+      ]
+    },
+    {
+      "commit": "f08f1cc72df6aaff3bc057ae2f6eed21816d6424",
+      "findings": [
+        {
+          "message": "TestJSONArray.test_series_constructor_no_data_with_index: test unit disappeared",
+          "path": "pandas/tests/extension/json/test_json.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestJSONArray.test_series_constructor_no_data_with_index"
+        },
+        {
+          "message": "TestJSONArray.test_series_constructor_scalar_na_with_index: test unit disappeared",
+          "path": "pandas/tests/extension/json/test_json.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestJSONArray.test_series_constructor_scalar_na_with_index"
+        }
+      ]
+    },
+    {
+      "commit": "eb5466f1be4e6374c0dc512ba3ae8c8f9b47b7d7",
+      "findings": [
+        {
+          "message": "TestPandasContainer.test_timedelta_to_json_fractional_precision: 2 parametrized case(s) deleted (4 -> 2)",
+          "path": "pandas/tests/io/json/test_pandas.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestPandasContainer.test_timedelta_to_json_fractional_precision"
+        }
+      ]
+    },
+    {
+      "commit": "b117da974745d364e9d07fb6a95fd098d8dbc063",
+      "findings": [
+        {
+          "message": "test_to_parquet_uuid_supported: disabling marker added (pytest.mark.xfail(pa_version_under26p0))",
+          "path": "pandas/tests/io/test_parquet.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_to_parquet_uuid_supported"
+        }
+      ]
+    },
+    {
+      "commit": "9f9b3dfbc0e721569bf80963786281e0ed0bb8e1",
+      "findings": [
+        {
+          "message": "test_match_arrow_dtype_flags: assertion removed (strength PATTERN)",
+          "path": "pandas/tests/strings/test_find_replace.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_match_arrow_dtype_flags"
+        },
+        {
+          "message": "test_match_arrow_dtype_flags: assertion removed (strength PATTERN)",
+          "path": "pandas/tests/strings/test_find_replace.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_match_arrow_dtype_flags"
+        },
+        {
+          "message": "test_str_contains_flags_unsupported: test unit disappeared",
+          "path": "pandas/tests/extension/test_arrow.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_str_contains_flags_unsupported"
+        },
+        {
+          "message": "test_str_replace_unsupported: test unit disappeared",
+          "path": "pandas/tests/extension/test_arrow.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_str_replace_unsupported"
+        }
+      ]
+    },
+    {
+      "commit": "f9204c7f720ae2ac6b235c4ac959db285decda69",
+      "findings": [
+        {
+          "message": "test_parallel_ragged_line_at_chunk_start_raises: disabling marker added (pytest.mark.skipif(WASM))",
+          "path": "pandas/tests/io/parser/test_parallel_read.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_parallel_ragged_line_at_chunk_start_raises"
+        },
+        {
+          "message": "test_parallel_ragged_line_at_chunk_start_skip_matches_serial: disabling marker added (pytest.mark.skipif(WASM))",
+          "path": "pandas/tests/io/parser/test_parallel_read.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_parallel_ragged_line_at_chunk_start_skip_matches_serial"
+        }
+      ]
+    },
+    {
+      "commit": "518f2a3cb9504555b40c1d5aaab4690245a7d265",
+      "findings": [
+        {
+          "message": "guardrail file changed (AGENTS.md) — agent constraints are part of the oracle",
+          "path": "AGENTS.md",
+          "rule": "GUARDRAIL_TOUCHED",
+          "severity": "critical",
+          "unit": null
+        }
+      ]
+    },
+    {
+      "commit": "8dc5f4793241b0b2fb10ddc34b835542a29f0b43",
+      "findings": [
+        {
+          "message": "TestDataFrameGroupByPlots.test_groupby_boxplot_subplots_false: the assertion is unchanged but its expectation is not — axes is defined differently now, so the test compares against a different value than it did",
+          "path": "pandas/tests/plotting/test_boxplot_method.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestDataFrameGroupByPlots.test_groupby_boxplot_subplots_false"
+        }
+      ]
+    },
+    {
+      "commit": "b3573cd8e9b5f0c09972f16d47f6473caf6d2640",
+      "findings": [
+        {
+          "message": "TestDatetimeArray.test_array_interface: assertion removed (strength EXACT_VALUE)",
+          "path": "pandas/tests/arrays/test_datetimelike.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "TestDatetimeArray.test_array_interface"
+        },
+        {
+          "message": "TestTimedeltaArray.test_array_interface: assertion removed (strength EXACT_VALUE)",
+          "path": "pandas/tests/arrays/test_datetimelike.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "TestTimedeltaArray.test_array_interface"
+        },
+        {
+          "message": "TestDataFramePlots.test_group_subplot_invalid_column_name: assertion removed (strength PATTERN)",
+          "path": "pandas/tests/plotting/frame/test_frame.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "TestDataFramePlots.test_group_subplot_invalid_column_name"
+        },
+        {
+          "message": "TestSeriesConstructors.test_constructor_raise_on_lossy_conversion_of_strings: assertion removed (strength PATTERN)",
+          "path": "pandas/tests/series/test_constructors.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "TestSeriesConstructors.test_constructor_raise_on_lossy_conversion_of_strings"
+        },
+        {
+          "message": "TestDataFrameSelectReindex.test_reindex_tzaware_fill_value: disabling marker added (pytest.mark.xfail(notIS64))",
+          "path": "pandas/tests/frame/methods/test_reindex.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestDataFrameSelectReindex.test_reindex_tzaware_fill_value"
+        },
+        {
+          "message": "TestParquetFastParquet.test_categorical: disabling marker added (pytest.mark.xfail(using_string_dtype()and_HAVE_PYARROWand_fp_version_lt_2026_5))",
+          "path": "pandas/tests/io/test_parquet.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestParquetFastParquet.test_categorical"
+        },
+        {
+          "message": "TestParquetFastParquet.test_partition_cols_string: disabling marker added (pytest.mark.xfail(using_string_dtype()and_HAVE_PYARROWand_fp_version_lt_2026_5))",
+          "path": "pandas/tests/io/test_parquet.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestParquetFastParquet.test_partition_cols_string"
+        },
+        {
+          "message": "TestParquetFastParquet.test_partition_cols_supported: disabling marker added (pytest.mark.xfail(using_string_dtype()and_HAVE_PYARROWand_fp_version_lt_2026_5))",
+          "path": "pandas/tests/io/test_parquet.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestParquetFastParquet.test_partition_cols_supported"
+        },
+        {
+          "message": "TestParquetFastParquet.test_partition_on_supported: disabling marker added (pytest.mark.xfail(using_string_dtype()and_HAVE_PYARROWand_fp_version_lt_2026_5))",
+          "path": "pandas/tests/io/test_parquet.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestParquetFastParquet.test_partition_on_supported"
+        },
+        {
+          "message": "TestParquetFastParquet.test_s3_roundtrip: disabling marker added (pytest.mark.xfail(using_string_dtype()and_HAVE_PYARROW))",
+          "path": "pandas/tests/io/test_parquet.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestParquetFastParquet.test_s3_roundtrip"
+        },
+        {
+          "message": "test_cross_engine_fp_pa: disabling marker added (pytest.mark.xfail(using_string_dtype()and_HAVE_PYARROWand_fp_version_lt_2026_5))",
+          "path": "pandas/tests/io/test_parquet.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_cross_engine_fp_pa"
+        },
+        {
+          "message": "TestDataFramePlots.test_boxplot_vertical: disabling marker added (pytest.mark.xfail)",
+          "path": "pandas/tests/plotting/frame/test_frame.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestDataFramePlots.test_boxplot_vertical"
+        },
+        {
+          "message": "TestDataFramePlots.test_boxplot_vertical_positions: disabling marker added (pytest.mark.xfail)",
+          "path": "pandas/tests/plotting/frame/test_frame.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestDataFramePlots.test_boxplot_vertical_positions"
+        },
+        {
+          "message": "TestDataFramePlots.test_boxplot_vertical_subplots: disabling marker added (pytest.mark.xfail)",
+          "path": "pandas/tests/plotting/frame/test_frame.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestDataFramePlots.test_boxplot_vertical_subplots"
+        }
+      ]
+    },
+    {
+      "commit": "6faf2dcd0c55fa7f41caaf5bed887890122d455a",
+      "findings": [
+        {
+          "message": "TestArrowArray.test_get_common_dtype: test unit disappeared",
+          "path": "pandas/tests/extension/test_arrow.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestArrowArray.test_get_common_dtype"
+        },
+        {
+          "message": "TestArrowArray.test_loc_setitem_with_expansion_preserves_ea_index_dtype: test unit disappeared",
+          "path": "pandas/tests/extension/test_arrow.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestArrowArray.test_loc_setitem_with_expansion_preserves_ea_index_dtype"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 12,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 145,
+  "commits_with_opaque_prod_change": 54,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "6de181b1211fa91a22bb61e5822a61c3fc953c13",
+    "oldest_commit": "1afd94cebfd14c1cb0bd1480ab6e882166c33e76"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "high": 11,
+      "warn": 13
+    },
+    "ASSERT_SUBSTITUTED": {
+      "warn": 2
+    },
+    "BROAD_EXCEPT_ADDED": {
+      "warn": 2
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 34
+    },
+    "EXPECTATION_DEFINITION_CHANGED": {
+      "high": 1,
+      "warn": 8
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 2
+    },
+    "GUARDRAIL_TOUCHED": {
+      "critical": 1
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 2
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 60
+    },
+    "TEST_DISABLED": {
+      "high": 23,
+      "info": 4,
+      "warn": 16
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

@@ -1,0 +1,59 @@
+{
+  "block_rate": 0.01,
+  "blocked_commits": [
+    {
+      "commit": "7d123d9537e2e7991a79586b355d210ff94897bd",
+      "findings": [
+        {
+          "message": "CI configuration changed; test command weakened: set +e",
+          "path": ".github/workflows/test.yml",
+          "rule": "CI_WORKFLOW_TOUCHED",
+          "severity": "high",
+          "unit": null
+        }
+      ]
+    },
+    {
+      "commit": "65ef53ae6ac110ae7d56f81a7723e58ab319f339",
+      "findings": [
+        {
+          "message": "test_callable_classification_is_shared_by_call: expected value 4096 equals a constant newly introduced in prod in this same diff",
+          "path": "tests/test_dependency_models.py",
+          "rule": "EXPECTED_VALUE_HARDCODED",
+          "severity": "high",
+          "unit": "test_callable_classification_is_shared_by_call"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 2,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 18,
+  "commits_with_opaque_prod_change": 14,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "49033471594ea5d99a80abdf1043231b7791ee49",
+    "oldest_commit": "3a8ab1f76bc6af6d84101cf21d8180c20f3e6538"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "warn": 2
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "high": 1,
+      "warn": 58
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 1
+    },
+    "EXPECTED_VALUE_HARDCODED": {
+      "high": 1
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 6
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

@@ -1,0 +1,33 @@
+{
+  "block_rate": 0.0,
+  "blocked_commits": [],
+  "commits_analysed": 100,
+  "commits_blocked": 0,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 15,
+  "commits_with_opaque_prod_change": 3,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "5460f467b02e49471c0fd6cfc9ca0adab6351f98",
+    "oldest_commit": "968863678bc09c0205fc916138c1a74e11f46e5b"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 68
+    },
+    "EXPECTATION_DEFINITION_CHANGED": {
+      "warn": 1
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 1
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 5
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 93
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

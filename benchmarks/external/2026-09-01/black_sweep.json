@@ -1,0 +1,530 @@
+{
+  "block_rate": 0.08,
+  "blocked_commits": [
+    {
+      "commit": "74371e2041a3120a049ced8f1cab0e7a6bc8ecd3",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        },
+        {
+          "message": "test_line_ranges_line_by_line: assertion removed (strength TRUTHY)",
+          "path": "tests/test_format.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_line_ranges_line_by_line"
+        },
+        {
+          "message": "test_simple_format: assertion removed (strength TRUTHY)",
+          "path": "tests/test_format.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_simple_format"
+        }
+      ]
+    },
+    {
+      "commit": "d7587ce9f52f36eb41bc505e529540fd8cbdcd3e",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "56ba38a484dae93f9793e70c4a136331284bdcc5",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "2d174df7cb16f5dbdbb188da15fdb2059adb30d6",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "6c136f979c14956eeddb4a20c3f2653bce7e9505",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "650983f7b32b15feeb0fa30c0ed1a8b6e2a9b28f",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "70e0956f1f23308d8bb69f2ca35259c34129c870",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "ebe6018e3254629788376e619207719fbe34a849",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "9fd9ea2835973981e3f5dc5b8eb76f2ded46aa61",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        }
+      ]
+    },
+    {
+      "commit": "c7fc2438cbd8ef66f2b9899e6b5094a8c89af63c",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        },
+        {
+          "message": "test_line_ranges_line_by_line: assertion removed (strength TRUTHY)",
+          "path": "tests/test_format.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_line_ranges_line_by_line"
+        },
+        {
+          "message": "test_simple_format: assertion removed (strength TRUTHY)",
+          "path": "tests/test_format.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_simple_format"
+        }
+      ]
+    },
+    {
+      "commit": "9e969ddc31863a5c353b3f4e8f69d2aca05e36ae",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python315: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python315"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        },
+        {
+          "message": "BlackTestCase.test_line_ranges_with_ipynb: assertion replaced — subject and polarity both changed (assert \"Cannot use --line-ranges with ipynb files\" in result -> assert result.stderr_bytes is not None); greenwash cannot verify the replacement is equivalent",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_line_ranges_with_ipynb"
+        },
+        {
+          "message": "BlackTestCase.test_line_ranges_with_multiple_sources: assertion replaced — subject and polarity both changed (assert \"Cannot use --line-ranges to format multiple files\" i -> assert result.stderr_bytes is not None); greenwash cannot verify the replacement is equivalent",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_line_ranges_with_multiple_sources"
+        },
+        {
+          "message": "BlackTestCase.test_code_option_safe: the assertion is unchanged but its expectation is not — result is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_black.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_code_option_safe"
+        }
+      ]
+    },
+    {
+      "commit": "69973fd6950985fbeb1090d96da717dc4d8380b0",
+      "findings": [
+        {
+          "message": "BlackDTestCase.test_cors_preflight: assertion polarity inverted (negative -> positive) — the test now proves the opposite",
+          "path": "tests/test_blackd.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "BlackDTestCase.test_cors_preflight"
+        },
+        {
+          "message": "BlackDTestCase.test_cors_preflight: assertion polarity inverted (negative -> positive) — the test now proves the opposite",
+          "path": "tests/test_blackd.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "BlackDTestCase.test_cors_preflight"
+        },
+        {
+          "message": "BlackDTestCase.test_cors_preflight: assertion polarity inverted (negative -> positive) — the test now proves the opposite",
+          "path": "tests/test_blackd.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "BlackDTestCase.test_cors_preflight"
+        },
+        {
+          "message": "BlackDTestCase.test_cors_preflight: expected value 403 equals a constant newly introduced in prod in this same diff",
+          "path": "tests/test_blackd.py",
+          "rule": "EXPECTED_VALUE_HARDCODED",
+          "severity": "high",
+          "unit": "BlackDTestCase.test_cors_preflight"
+        }
+      ]
+    },
+    {
+      "commit": "4937fe6cf241139ddbfc16b0bdbb5b422798909d",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        },
+        {
+          "message": "test_cache_isnt_written_if_no_jupyter_deps_dir: assertion removed (strength TRUTHY)",
+          "path": "tests/test_ipynb.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_cache_isnt_written_if_no_jupyter_deps_dir"
+        },
+        {
+          "message": "test_cache_isnt_written_if_no_jupyter_deps_single: assertion removed (strength TRUTHY)",
+          "path": "tests/test_ipynb.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_cache_isnt_written_if_no_jupyter_deps_single"
+        },
+        {
+          "message": "test_ipynb_and_pyi_flags: assertion removed (strength TRUTHY)",
+          "path": "tests/test_ipynb.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_ipynb_and_pyi_flags"
+        },
+        {
+          "message": "test_ipynb_diff_with_change: assertion removed (strength TRUTHY)",
+          "path": "tests/test_ipynb.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_ipynb_diff_with_change"
+        },
+        {
+          "message": "test_ipynb_diff_with_no_change: assertion removed (strength TRUTHY)",
+          "path": "tests/test_ipynb.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_ipynb_diff_with_no_change"
+        },
+        {
+          "message": "test_ipynb_flag: assertion removed (strength TRUTHY)",
+          "path": "tests/test_ipynb.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_ipynb_flag"
+        },
+        {
+          "message": "test_unparseable_notebook: assertion removed (strength TRUTHY)",
+          "path": "tests/test_ipynb.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "test_unparseable_notebook"
+        }
+      ]
+    },
+    {
+      "commit": "148efe4056f4a0b1531aa53206d8763f9deed6f0",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "fe875c0ed3415f564d0e0e04f007db1658a9934f",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    },
+    {
+      "commit": "6305bf1ae645ab7541be4f5028a86239316178eb",
+      "findings": [
+        {
+          "message": "BlackTestCase.test_check_diff_use_together: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_check_diff_use_together"
+        },
+        {
+          "message": "BlackTestCase.test_python37: assertion removed (strength TRUTHY)",
+          "path": "tests/test_black.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "BlackTestCase.test_python37"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 16,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 58,
+  "commits_with_opaque_prod_change": 6,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "8947c48ef2077c3a301b03c1e814dc2e3f78436e",
+    "oldest_commit": "6305bf1ae645ab7541be4f5028a86239316178eb"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "high": 50,
+      "warn": 2
+    },
+    "ASSERT_WEAKENED": {
+      "high": 5
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 214
+    },
+    "EXPECTATION_DEFINITION_CHANGED": {
+      "high": 1,
+      "warn": 3
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 10
+    },
+    "EXPECTED_VALUE_HARDCODED": {
+      "high": 1
+    },
+    "IMPORT_UNRESOLVED": {
+      "warn": 3
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 30
+    },
+    "TEST_DISABLED": {
+      "warn": 1
+    },
+    "TEST_FILE_UNPARSEABLE": {
+      "warn": 4
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

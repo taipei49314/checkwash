@@ -1,0 +1,237 @@
+{
+  "block_rate": 0.045,
+  "blocked_commits": [
+    {
+      "commit": "d6e55b5a65958abde3f63afae5f43d384a6c8efe",
+      "findings": [
+        {
+          "message": "ProcessTest.test_multi_process: assertion removed (strength EXACT_VALUE)",
+          "path": "tornado/test/process_test.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "ProcessTest.test_multi_process"
+        },
+        {
+          "message": "ProcessTest.test_multi_process: assertion removed (strength EXACT_VALUE)",
+          "path": "tornado/test/process_test.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "ProcessTest.test_multi_process"
+        },
+        {
+          "message": "ProcessTest.test_multi_process: assertion removed (strength NON_NULL)",
+          "path": "tornado/test/process_test.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "ProcessTest.test_multi_process"
+        },
+        {
+          "message": "ProcessTest.test_multi_process: assertion removed (strength EXACT_VALUE)",
+          "path": "tornado/test/process_test.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "ProcessTest.test_multi_process"
+        },
+        {
+          "message": "ProcessTest.test_multi_process: assertion removed (strength EXACT_VALUE)",
+          "path": "tornado/test/process_test.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "ProcessTest.test_multi_process"
+        },
+        {
+          "message": "ProcessTest.test_multi_process: assertion removed (strength NON_NULL)",
+          "path": "tornado/test/process_test.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "ProcessTest.test_multi_process"
+        }
+      ]
+    },
+    {
+      "commit": "de5e9432fb10f7081db089ec1ab75d1a48ab2772",
+      "findings": [
+        {
+          "message": "HTTPClientCommonTestCase.test_bind_source_ip: assertion strength PATTERN(60) -> TRUTHY(20)",
+          "path": "tornado/test/httpclient_test.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "HTTPClientCommonTestCase.test_bind_source_ip"
+        }
+      ]
+    },
+    {
+      "commit": "b7447c1bc27297996033a278035498aa63238e35",
+      "findings": [
+        {
+          "message": "CookieTest.test_set_cookie_deprecated: disabling marker added (unittest.skipIf(getattr(sys.flags,\"context_aware_warnings\",False)))",
+          "path": "tornado/test/web_test.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_deprecated"
+        }
+      ]
+    },
+    {
+      "commit": "cc61050e8f26697463142d99864b562e8470b41d",
+      "findings": [
+        {
+          "message": "GzipUnsupportedTest.test_gzip_unsupported: assertion strength EXACT_STRUCT(100) -> EXACT_VALUE(90)",
+          "path": "tornado/test/httpserver_test.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "unit": "GzipUnsupportedTest.test_gzip_unsupported"
+        }
+      ]
+    },
+    {
+      "commit": "afb23373a496de66cbc5ea069a7b74dcaea6c8cb",
+      "findings": [
+        {
+          "message": "TestIOLoopConfiguration.test_asyncio_main: disabling marker added (unittest.skipIf(sys.version_info>=(3,14)))",
+          "path": "tornado/test/ioloop_test.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestIOLoopConfiguration.test_asyncio_main"
+        }
+      ]
+    },
+    {
+      "commit": "ef8c6ab9bb14a4a966f052c27b9b63a7064e7f3f",
+      "findings": [
+        {
+          "message": "CookieTest.test_set_cookie_false_flags: an assertion was replaced by an unrelated one of the same strength (headers[0].lower() -> headers[0]); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tornado/test/web_test.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_false_flags"
+        },
+        {
+          "message": "CookieTest.test_set_cookie_false_flags: an assertion was replaced by an unrelated one of the same strength (headers[3].lower() -> headers[3]); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tornado/test/web_test.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_false_flags"
+        },
+        {
+          "message": "CookieTest.test_set_cookie_false_flags: an assertion was replaced by an unrelated one of the same strength (headers[1].lower() -> headers[1]); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tornado/test/web_test.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_false_flags"
+        },
+        {
+          "message": "CookieTest.test_set_cookie_false_flags: an assertion was replaced by an unrelated one of the same strength (headers[2].lower() -> headers[2]); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tornado/test/web_test.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_false_flags"
+        },
+        {
+          "message": "CookieTest.test_set_cookie_false_flags: expected value rewritten 'c=1; httponly; path=/' -> 'c=1; HttpOnly; Path=/' with no change in assertion strength",
+          "path": "tornado/test/web_test.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_false_flags"
+        },
+        {
+          "message": "CookieTest.test_set_cookie_false_flags: expected value rewritten 'd=1; path=/' -> 'd=1; Path=/' with no change in assertion strength",
+          "path": "tornado/test/web_test.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_false_flags"
+        },
+        {
+          "message": "CookieTest.test_set_cookie_false_flags: expected value rewritten 'b=1; path=/' -> 'b=1; Path=/' with no change in assertion strength",
+          "path": "tornado/test/web_test.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_false_flags"
+        },
+        {
+          "message": "CookieTest.test_set_cookie_false_flags: expected value rewritten 'a=1; path=/; secure' -> 'a=1; Path=/; Secure' with no change in assertion strength",
+          "path": "tornado/test/web_test.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "CookieTest.test_set_cookie_false_flags"
+        }
+      ]
+    },
+    {
+      "commit": "e6d3f49c38e600103ebf20b2f78a1904b64db6d4",
+      "findings": [
+        {
+          "message": "OverrideResolverTest.test_resolve_multiaddr: test unit disappeared",
+          "path": "tornado/test/netutil_test.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "OverrideResolverTest.test_resolve_multiaddr"
+        }
+      ]
+    },
+    {
+      "commit": "b6fbb5923afa8d73e50d37d1e6ffb4abd15437cb",
+      "findings": [
+        {
+          "message": "ExecInTest.test_no_inherit_future: an assertion was replaced by an unrelated one of the same strength (f.getvalue() -> output[0]); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tornado/test/util_test.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "ExecInTest.test_no_inherit_future"
+        }
+      ]
+    },
+    {
+      "commit": "50358ac952c34de3085d8721c2289491c44968d4",
+      "findings": [
+        {
+          "message": "OptionsTest.test_iter: an assertion was replaced by an unrelated one of the same strength (set([\"a\", \"b\", \"help\"]) -> set(iter(options))); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tornado/test/options_test.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "OptionsTest.test_iter"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 9,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 91,
+  "commits_with_opaque_prod_change": 5,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "47e09ae9ae036d1c64394086fb55cbf6ce02a6a4",
+    "oldest_commit": "50358ac952c34de3085d8721c2289491c44968d4"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "high": 6
+    },
+    "ASSERT_SUBSTITUTED": {
+      "high": 6
+    },
+    "ASSERT_WEAKENED": {
+      "high": 2
+    },
+    "BROAD_EXCEPT_ADDED": {
+      "warn": 1
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 54
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "high": 4,
+      "warn": 1
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 24
+    },
+    "TEST_DISABLED": {
+      "high": 3,
+      "info": 3
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}

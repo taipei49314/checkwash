@@ -1,0 +1,908 @@
+{
+  "block_rate": 0.03,
+  "blocked_commits": [
+    {
+      "commit": "3de7c82077ab773ca957c851e94c4b375721feb6",
+      "findings": [
+        {
+          "message": "test_password_prompt: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_auth.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_password_prompt"
+        },
+        {
+          "message": "TestBinaryRequestData.test_binary_file_form: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_binary.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestBinaryRequestData.test_binary_file_form"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_in_url: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_in_url"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_in_url: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_in_url"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_in_url: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_in_url"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_in_url_and_items_with_duplicates: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_in_url_and_items_with_duplicates"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_in_url_and_items_with_duplicates: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_in_url_and_items_with_duplicates"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_in_url_and_items_with_duplicates: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_in_url_and_items_with_duplicates"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_items: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_items"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_items: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_items"
+        },
+        {
+          "message": "TestQuerystring.test_query_string_params_items: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestQuerystring.test_query_string_params_items"
+        },
+        {
+          "message": "TestStdin.test_ignore_stdin: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestStdin.test_ignore_stdin"
+        },
+        {
+          "message": "TestStdin.test_ignore_stdin: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestStdin.test_ignore_stdin"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_GET_explicit_JSON_explicit_headers: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_GET_explicit_JSON_explicit_headers"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_GET_no_data_no_auto_headers: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_GET_no_data_no_auto_headers"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_GET_with_data_auto_JSON_headers: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_GET_with_data_auto_JSON_headers"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_POST_explicit_JSON_JSON_ACCEPT: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_POST_explicit_JSON_JSON_ACCEPT"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_POST_form_Content_Type_override: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_POST_form_Content_Type_override"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_POST_form_auto_Content_Type: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_POST_form_auto_Content_Type"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_POST_no_data_no_auto_headers: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_POST_no_data_no_auto_headers"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_POST_with_data_auto_JSON_headers: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_POST_with_data_auto_JSON_headers"
+        },
+        {
+          "message": "TestAutoContentTypeAndAcceptHeaders.test_print_overridable_when_stdout_redirected: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestAutoContentTypeAndAcceptHeaders.test_print_overridable_when_stdout_redirected"
+        },
+        {
+          "message": "TestImplicitHTTPMethod.test_implicit_GET: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestImplicitHTTPMethod.test_implicit_GET"
+        },
+        {
+          "message": "TestImplicitHTTPMethod.test_implicit_GET_with_headers: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestImplicitHTTPMethod.test_implicit_GET_with_headers"
+        },
+        {
+          "message": "TestImplicitHTTPMethod.test_implicit_POST_form: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestImplicitHTTPMethod.test_implicit_POST_form"
+        },
+        {
+          "message": "TestImplicitHTTPMethod.test_implicit_POST_json: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestImplicitHTTPMethod.test_implicit_POST_json"
+        },
+        {
+          "message": "TestImplicitHTTPMethod.test_implicit_POST_raw: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestImplicitHTTPMethod.test_implicit_POST_raw"
+        },
+        {
+          "message": "TestImplicitHTTPMethod.test_implicit_POST_stdin: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_defaults.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestImplicitHTTPMethod.test_implicit_POST_stdin"
+        },
+        {
+          "message": "test_unicode_form_item: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_form_item"
+        },
+        {
+          "message": "test_unicode_form_item_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_form_item_verbose"
+        },
+        {
+          "message": "test_unicode_form_item_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_form_item_verbose"
+        },
+        {
+          "message": "test_unicode_headers: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_headers"
+        },
+        {
+          "message": "test_unicode_headers_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_headers_verbose"
+        },
+        {
+          "message": "test_unicode_headers_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_headers_verbose"
+        },
+        {
+          "message": "test_unicode_json_item: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_json_item"
+        },
+        {
+          "message": "test_unicode_json_item_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_json_item_verbose"
+        },
+        {
+          "message": "test_unicode_json_item_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_json_item_verbose"
+        },
+        {
+          "message": "test_unicode_raw: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_raw"
+        },
+        {
+          "message": "test_unicode_raw_json_item: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_raw_json_item"
+        },
+        {
+          "message": "test_unicode_raw_json_item_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_raw_json_item_verbose"
+        },
+        {
+          "message": "test_unicode_raw_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_raw_verbose"
+        },
+        {
+          "message": "test_unicode_raw_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_raw_verbose"
+        },
+        {
+          "message": "test_unicode_url: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_url"
+        },
+        {
+          "message": "test_unicode_url_query_arg_item: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_url_query_arg_item"
+        },
+        {
+          "message": "test_unicode_url_query_arg_item_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_url_query_arg_item_verbose"
+        },
+        {
+          "message": "test_unicode_url_query_arg_item_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_url_query_arg_item_verbose"
+        },
+        {
+          "message": "test_unicode_url_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_encoding.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_unicode_url_verbose"
+        },
+        {
+          "message": "test_3xx_check_status_redirects_allowed_exits_0: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_exit_status.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_3xx_check_status_redirects_allowed_exits_0"
+        },
+        {
+          "message": "test_ok_response_exits_0: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_exit_status.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_ok_response_exits_0"
+        },
+        {
+          "message": "TestPrettyOptions.test_colors_option: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestPrettyOptions.test_colors_option"
+        },
+        {
+          "message": "TestPrettyOptions.test_force_pretty: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestPrettyOptions.test_force_pretty"
+        },
+        {
+          "message": "TestPrettyOptions.test_force_ugly: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestPrettyOptions.test_force_ugly"
+        },
+        {
+          "message": "TestPrettyOptions.test_format_option: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestPrettyOptions.test_format_option"
+        },
+        {
+          "message": "TestPrettyOptions.test_pretty_enabled_by_default: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestPrettyOptions.test_pretty_enabled_by_default"
+        },
+        {
+          "message": "TestPrettyOptions.test_pretty_enabled_by_default_unless_stdout_redirected: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestPrettyOptions.test_pretty_enabled_by_default_unless_stdout_redirected"
+        },
+        {
+          "message": "TestPrettyOptions.test_subtype_based_pygments_lexer_match: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestPrettyOptions.test_subtype_based_pygments_lexer_match"
+        },
+        {
+          "message": "TestVerboseFlag.test_verbose: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestVerboseFlag.test_verbose"
+        },
+        {
+          "message": "TestVerboseFlag.test_verbose_form: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestVerboseFlag.test_verbose_form"
+        },
+        {
+          "message": "TestVerboseFlag.test_verbose_json: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestVerboseFlag.test_verbose_json"
+        },
+        {
+          "message": "TestVerboseFlag.test_verbose_raw: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_output.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestVerboseFlag.test_verbose_raw"
+        },
+        {
+          "message": "test_follow_all_output_options_used_for_redirects: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_redirects.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_follow_all_output_options_used_for_redirects"
+        },
+        {
+          "message": "test_follow_all_redirects_shown: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_redirects.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_follow_all_redirects_shown"
+        },
+        {
+          "message": "test_follow_output_options_used_for_redirects: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_redirects.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_follow_output_options_used_for_redirects"
+        },
+        {
+          "message": "test_follow_redirect_with_repost: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_redirects.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_follow_redirect_with_repost"
+        },
+        {
+          "message": "test_follow_redirect_with_repost: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_redirects.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_follow_redirect_with_repost"
+        },
+        {
+          "message": "test_follow_without_all_redirects_hidden: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_redirects.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_follow_without_all_redirects_hidden"
+        },
+        {
+          "message": "test_verbose_follow_redirect_with_repost: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_redirects.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_verbose_follow_redirect_with_repost"
+        },
+        {
+          "message": "test_verbose_follow_redirect_with_repost: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_redirects.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_verbose_follow_redirect_with_repost"
+        },
+        {
+          "message": "test_Host_header_overwrite: the assertion is unchanged but its expectation is not — url is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_regressions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_Host_header_overwrite"
+        },
+        {
+          "message": "test_Host_header_overwrite: the assertion is unchanged but its expectation is not — url is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_regressions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_Host_header_overwrite"
+        },
+        {
+          "message": "TestSession.test_session_by_path: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_by_path"
+        },
+        {
+          "message": "TestSession.test_session_by_path: the assertion is unchanged but its expectation is not — r1 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_by_path"
+        },
+        {
+          "message": "TestSession.test_session_default_header_value_overwritten: the assertion is unchanged but its expectation is not — r1 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_default_header_value_overwritten"
+        },
+        {
+          "message": "TestSession.test_session_default_header_value_overwritten: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_default_header_value_overwritten"
+        },
+        {
+          "message": "TestSession.test_session_ignored_header_prefixes: the assertion is unchanged but its expectation is not — r1 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_ignored_header_prefixes"
+        },
+        {
+          "message": "TestSession.test_session_ignored_header_prefixes: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_ignored_header_prefixes"
+        },
+        {
+          "message": "TestSession.test_session_unicode: the assertion is unchanged but its expectation is not — r1 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_unicode"
+        },
+        {
+          "message": "TestSession.test_session_unicode: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_unicode"
+        },
+        {
+          "message": "TestSession.test_session_unicode: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_unicode"
+        },
+        {
+          "message": "TestSession.test_session_with_cookie_followed_by_another_header: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_with_cookie_followed_by_another_header"
+        },
+        {
+          "message": "TestSession.test_session_with_upload: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSession.test_session_with_upload"
+        },
+        {
+          "message": "TestSessionFlow.test_session_created_and_reused: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_created_and_reused"
+        },
+        {
+          "message": "TestSessionFlow.test_session_overwrite_header: the assertion is unchanged but its expectation is not — r3 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_overwrite_header"
+        },
+        {
+          "message": "TestSessionFlow.test_session_overwrite_header: the assertion is unchanged but its expectation is not — r3 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_overwrite_header"
+        },
+        {
+          "message": "TestSessionFlow.test_session_overwrite_header: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_overwrite_header"
+        },
+        {
+          "message": "TestSessionFlow.test_session_read_only: the assertion is unchanged but its expectation is not — r4 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_read_only"
+        },
+        {
+          "message": "TestSessionFlow.test_session_read_only: the assertion is unchanged but its expectation is not — r3 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_read_only"
+        },
+        {
+          "message": "TestSessionFlow.test_session_read_only: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_read_only"
+        },
+        {
+          "message": "TestSessionFlow.test_session_read_only: the assertion is unchanged but its expectation is not — r4 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_read_only"
+        },
+        {
+          "message": "TestSessionFlow.test_session_update: the assertion is unchanged but its expectation is not — r2 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_update"
+        },
+        {
+          "message": "TestSessionFlow.test_session_update: the assertion is unchanged but its expectation is not — r3 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_update"
+        },
+        {
+          "message": "TestSessionFlow.test_session_update: the assertion is unchanged but its expectation is not — r4 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_update"
+        },
+        {
+          "message": "TestSessionFlow.test_session_update: the assertion is unchanged but its expectation is not — r4 is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_sessions.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestSessionFlow.test_session_update"
+        },
+        {
+          "message": "test_encoded_stream: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_stream.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_encoded_stream"
+        },
+        {
+          "message": "test_pretty_redirected_stream: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_stream.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_pretty_redirected_stream"
+        },
+        {
+          "message": "test_redirected_stream: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_stream.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_redirected_stream"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_form_multipart_custom_boundary: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_form_multipart_custom_boundary"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_form_no_files_urlencoded: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_form_no_files_urlencoded"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_form_no_files_urlencoded: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_form_no_files_urlencoded"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_multipart: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_multipart"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_multipart: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_multipart"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_multipart_custom_content_type_boundary_added: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_multipart_custom_content_type_boundary_added"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_multipart_custom_content_type_boundary_preserved: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_multipart_custom_content_type_boundary_preserved"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_upload_custom_content_type: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_upload_custom_content_type"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_upload_custom_content_type: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_upload_custom_content_type"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_upload_multiple_fields_with_the_same_name: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_upload_multiple_fields_with_the_same_name"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_upload_ok: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_upload_ok"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_upload_ok: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_upload_ok"
+        },
+        {
+          "message": "TestMultipartFormDataFileUpload.test_upload_ok: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestMultipartFormDataFileUpload.test_upload_ok"
+        },
+        {
+          "message": "TestRequestBodyFromFilePath.test_request_body_from_file_by_path: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestRequestBodyFromFilePath.test_request_body_from_file_by_path"
+        },
+        {
+          "message": "TestRequestBodyFromFilePath.test_request_body_from_file_by_path_with_explicit_content_type: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestRequestBodyFromFilePath.test_request_body_from_file_by_path_with_explicit_content_type"
+        },
+        {
+          "message": "TestRequestBodyFromFilePath.test_request_body_from_file_by_path_with_explicit_content_type: the assertion is unchanged but its expectation is not — r is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_uploads.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "TestRequestBodyFromFilePath.test_request_body_from_file_by_path_with_explicit_content_type"
+        }
+      ]
+    },
+    {
+      "commit": "18bb49b268eb73b379bd3d01b1e70b9c54b21119",
+      "findings": [
+        {
+          "message": "test_plugins_upgrade: disabling marker added (pytest.mark.skip)",
+          "path": "tests/test_plugins_cli.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_plugins_upgrade"
+        }
+      ]
+    },
+    {
+      "commit": "8e56e9fc6449a1cdfd90596e3ccbb1a5b71950d1",
+      "findings": [
+        {
+          "message": "TestCookieStorage.test_existing_and_new_cookies_sent_in_request: an assertion was replaced by an unrelated one of the same strength (f'Cookie: {expected}' -> actual_request_cookie_set); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_sessions.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "unit": "TestCookieStorage.test_existing_and_new_cookies_sent_in_request"
+        }
+      ]
+    },
+    {
+      "commit": "419cc2c34ab54cb0cf81e966a49bd5262e44a806",
+      "findings": [
+        {
+          "message": "test_ciphers_none_can_be_selected: disabling marker added (pytest.mark.skipif(IS_PYOPENSSL))",
+          "path": "tests/test_ssl.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "test_ciphers_none_can_be_selected"
+        }
+      ]
+    },
+    {
+      "commit": "ff6f1887b0c316b43a8ab4f040f99d1ea862268b",
+      "findings": [
+        {
+          "message": "TestDownloads.test_actual_download: assertion removed (strength PATTERN)",
+          "path": "tests/test_downloads.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "TestDownloads.test_actual_download"
+        },
+        {
+          "message": "TestDownloads.test_actual_download: assertion removed (strength PATTERN)",
+          "path": "tests/test_downloads.py",
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "unit": "TestDownloads.test_actual_download"
+        },
+        {
+          "message": "TestQuietFlag.test_quiet_on_python_warnings: disabling marker added (pytest.mark.xfail)",
+          "path": "tests/test_output.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "unit": "TestQuietFlag.test_quiet_on_python_warnings"
+        }
+      ]
+    },
+    {
+      "commit": "c15794853188d56af7a1d53473e1ad821f3ec861",
+      "findings": [
+        {
+          "message": "test_plugins_installation: the assertion is unchanged but its expectation is not — lines is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_plugins_cli.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "unit": "test_plugins_installation"
+        }
+      ]
+    }
+  ],
+  "commits_analysed": 200,
+  "commits_blocked": 6,
+  "commits_skipped_no_parent": 0,
+  "commits_touching_tests": 32,
+  "commits_with_opaque_prod_change": 39,
+  "corpus": {
+    "greenwash_version": "0.1.49",
+    "newest_commit": "5b604c37c6c67e18e7c3e9aee6c88a8c22b98345",
+    "oldest_commit": "3b441fa57e21229ae2be9b871098127547d100de"
+  },
+  "engine_errors": 0,
+  "findings_by_rule": {
+    "ASSERT_REMOVED": {
+      "high": 2
+    },
+    "ASSERT_SUBSTITUTED": {
+      "high": 1
+    },
+    "BROAD_EXCEPT_ADDED": {
+      "warn": 1
+    },
+    "CI_WORKFLOW_TOUCHED": {
+      "warn": 79
+    },
+    "EXPECTATION_DEFINITION_CHANGED": {
+      "high": 113,
+      "warn": 3
+    },
+    "EXPECTED_VALUE_CHANGED": {
+      "warn": 2
+    },
+    "SUPPRESSION_ADDED": {
+      "warn": 13
+    },
+    "TEST_DISABLED": {
+      "high": 3,
+      "info": 3
+    }
+  },
+  "merge_commits": "excluded (rev-list --no-merges); a merge gate sees them too"
+}
