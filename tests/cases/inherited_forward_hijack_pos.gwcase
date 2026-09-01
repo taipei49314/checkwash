@@ -1,0 +1,39 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+note: the direction pin for per-call-site inherited reaching - the forwarded
+note2: argument channel is why the helper's parameter names cannot simply be
+note3: dropped from inherited assertions (the cheap fix issue 55 rejects):
+note4: rebinding F to the buggy mirror after the honest definition changes
+note5: what the call site forwards into the helper, and must keep firing with
+note6: the same reaching semantics as an own-body assertion (the last
+note7: unconditional binding before the call is the one it forwards).
+origin: issue 55, written with the per-call-site fix
+=== before: tests/test_forward.py ===
+from calc import compute, derivative, evil, honest
+
+
+def assert_is_result_of(f, F):
+    assert compute(f) == F
+    assert derivative(F).equals(f)
+
+
+def test_total():
+    f = 1
+    F = honest()
+    assert_is_result_of(f, F)
+=== after: tests/test_forward.py ===
+from calc import compute, derivative, evil, honest
+
+
+def assert_is_result_of(f, F):
+    assert compute(f) == F
+    assert derivative(F).equals(f)
+
+
+def test_total():
+    f = 1
+    F = honest()
+    F = evil()
+    assert_is_result_of(f, F)
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

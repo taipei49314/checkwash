@@ -12,7 +12,7 @@ tolerances, new skips, rewritten golden files, hardcoded expected values,
 self-relaxed CLAUDE.md, and CI configs or runner scripts that quietly stop
 failing.
 
-> Status: **pre-release.** 21 detectors, 489 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 491 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -221,7 +221,7 @@ Two harnesses, both reproducible from a clone
   production **twice** — correct and buggy — so that four pytest runs prove
   both sides still catch the bug before checkwash is asked anything. A block
   is then a false positive by construction, with no adjudication to argue
-  about. **checkwash blocks 25 of the 60** — down from 20 of the first 30
+  about. **checkwash blocks 24 of the 60** — down from 20 of the first 30
   before the reachable-assertion IR landed, and the residue decomposes into
   named families (cross-file helpers, unit-identity changes, and a
   deliberately-kept trade documented in THREATMODEL 92). The sweep corpus

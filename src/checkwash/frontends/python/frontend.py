@@ -1892,6 +1892,7 @@ def _executed_scopes(
     module_scopes: dict[str, ast.AST],
     max_depth: int = 4,
     caches: tuple[dict, dict] | None = None,
+    roots: tuple[str, ...] | None = None,
 ) -> list:
     """The unit, plus every same-file scope it actually reaches.
 
@@ -1899,6 +1900,12 @@ def _executed_scopes(
     runs* rather than *the assert statements written inside it*. Both halves
     matter: an assertion in an uninvoked nested `def` stops counting, and an
     assertion in a helper the unit calls starts.
+
+    With `roots`, the walk starts from those invocation names instead of
+    everything the unit invokes: the closure reachable through one entry
+    site. The union over a unit's entry roots equals the default walk —
+    per-root depth is counted from the root exactly as the default counts
+    it from the frontier.
     """
     scopes = _local_scopes(func, module_scopes)
     with_entered = {
@@ -1909,7 +1916,9 @@ def _executed_scopes(
     }
     out = [func]
     seen: set[int] = {id(func)}
-    frontier = [(name, 0) for name in _invocations(func, caches)]
+    frontier = [
+        (name, 0) for name in (_invocations(func, caches) if roots is None else roots)
+    ]
     while frontier:
         name, depth = frontier.pop()
         target = scopes.get(name)
@@ -1929,6 +1938,39 @@ def _executed_scopes(
                     frontier.extend((c, depth + 1) for c in _invocations(child, caches))
         frontier.extend((c, depth + 1) for c in _invocations(target, caches))
     return out
+
+
+def _helper_entry_sites(func, nodes_cache) -> list[tuple[ast.AST, str]]:
+    """(position node, invocation name) for every unit-level entry into a
+    same-file helper, in source order.
+
+    Mirrors `_invocations` node for node — a plain call, a `with` item's
+    context expression, a `for` iterator, and a bare-`Name` argument to an
+    `_INVOKES_ARGUMENT` call — but keeps *where* each entry happens instead
+    of collapsing to a name set. The position node is what the inherited
+    assertions' reaching keys are computed at: that is when the helper's
+    oracle executes relative to the unit's own bindings (issue #55).
+    """
+    sites: list[tuple[ast.AST, str]] = []
+    for node in _scope_nodes_cached(func, nodes_cache):
+        if isinstance(node, (ast.With, ast.AsyncWith)):
+            for item in node.items:
+                name = _callee_root(item.context_expr)
+                if name:
+                    sites.append((item.context_expr, name))
+        elif isinstance(node, ast.For):
+            name = _callee_root(node.iter)
+            if name:
+                sites.append((node.iter, name))
+        elif isinstance(node, ast.Call):
+            name = _callee_root(node)
+            if not name:
+                continue
+            sites.append((node, name))
+            if name.split(".")[-1] in _INVOKES_ARGUMENT:
+                sites.extend((node, a.id) for a in node.args if isinstance(a, ast.Name))
+    sites.sort(key=lambda s: (s[0].lineno, s[0].col_offset))
+    return sites
 
 
 def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
@@ -2167,39 +2209,58 @@ def _collect_unit(
     # zero assertions, nothing can be removed or weakened, and a replacement
     # `assert callable(assert_sum)` reads as an assertion *added* — by the
     # strength lattice the test got stronger (THREATMODEL 91).
-    for scope in executed:
-        if scope is func:
+    #
+    # Inherited once per unit-level entry site, not once per helper: each
+    # copy carries the reaching keys of its own call's position, so a pure
+    # insertion of one more case leaves every other site's copy identical
+    # (issue #55, sympy aa1b43c3 — the R1 residual), while rebinding a
+    # forwarded name between its honest definition and the call still
+    # changes what that site's copy reads. The span stays the helper-side
+    # assert — one edited helper line keeps collapsing to one finding
+    # downstream — so a site's copies differ by `reaching_sig` alone, and
+    # deleting one of N calls surfaces as a removed assertion instead of
+    # vanishing into a same-size set.
+    local_scopes = _local_scopes(func, module_scopes or {})
+    root_closures: dict[str, list] = {}
+    inherited_rows: dict[int, list] = {}
+    for site_node, root in _helper_entry_sites(func, nodes_cache):
+        if root not in local_scopes:
             continue
-        for node in _scope_nodes_cached(scope, nodes_cache):
-            if isinstance(node, ast.Assert) and id(node) in own_assert_ids:
+        closure = root_closures.get(root)
+        if closure is None:
+            closure = _executed_scopes(func, module_scopes or {}, caches=caches, roots=(root,))
+            root_closures[root] = closure
+        for scope in closure:
+            if scope is func:
                 continue
-            if isinstance(node, ast.Assert):
-                c = _classify_assert(node, text)
+            rows = inherited_rows.get(id(scope))
+            if rows is None:
+                rows = []
+                for node in _scope_nodes_cached(scope, nodes_cache):
+                    if isinstance(node, ast.Assert):
+                        if id(node) in own_assert_ids:
+                            continue
+                        c = _classify_assert(node, text)
+                        trivial = _is_trivial_subject(node.test) or id(node) in vacuous
+                    elif isinstance(node, ast.Call):
+                        c = _classify_unittest_call(node, text)
+                        if c is None:
+                            continue
+                        trivial = c.trivial
+                    else:
+                        continue
+                    rows.append((node, c, trivial))
+                inherited_rows[id(scope)] = rows
+            for node, c, trivial in rows:
                 seg = text.seg(node) or ""
-                assertions.append(
-                    Assertion(
-                        id=f"a{counter}",
-                        form=c.form,
-                        strength=c.strength,
-                        text=seg,
-                        span=off.span(node),
-                        left=c.left,
-                        right_literal=c.right_literal,
-                        right_value=c.right_value,
-                        epsilon=c.epsilon,
-                        epsilon_kind=c.epsilon_kind,
-                        trivial=_is_trivial_subject(node.test) or id(node) in vacuous,
-                        positive=c.positive,
-                        left_names=c.left_names,
-                        right_depends_on=c.right_names,
-                        inherited=True,
-                    )
+                direct = set(c.left_names) | set(c.right_names)
+                reach = _reaching_keys(
+                    site_node,
+                    _positional_closure(
+                        site_node, c.left_names + c.right_names, ordered_bindings
+                    ),
+                    ordered_bindings,
                 )
-                counter += 1
-                continue
-            c = _classify_unittest_call(node, text) if isinstance(node, ast.Call) else None
-            if c is not None:
-                seg = text.seg(node) or ""
                 assertions.append(
                     Assertion(
                         id=f"a{counter}",
@@ -2212,11 +2273,13 @@ def _collect_unit(
                         right_value=c.right_value,
                         epsilon=c.epsilon,
                         epsilon_kind=c.epsilon_kind,
+                        trivial=trivial,
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=c.right_names,
                         inherited=True,
-                        trivial=c.trivial,
+                        reaching=reach,
+                        reaching_sig=_reaching_sig(reach, direct),
                     )
                 )
                 counter += 1

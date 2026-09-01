@@ -164,10 +164,13 @@ def _binding_moved(b, a, unit, name: str) -> bool:
     case no longer changes "the" definition for every untouched assertion
     (sympy ed75b73d fired 13 times on a 23-line pure insertion; R1), while a
     definition appended between the honest one and the assertion still
-    changes what it reads and still fires. The unit-level joined map remains
-    the fallback for assertions without reaching info — inherited ones, and
-    names bound only inside nested defs — which is the pre-reaching
-    behaviour verbatim.
+    changes what it reads and still fires. Same-file inherited assertions
+    carry their unit-level call site's keys (issue #55), so a pure append of
+    one more case no longer moves "the" definition for every untouched call.
+    The unit-level joined map remains the fallback for assertions without
+    reaching info — cross-file and fixture-channel inherited ones, and names
+    bound only inside nested defs — which is the pre-reaching behaviour
+    verbatim.
     """
     b_map, a_map = b.reaching, a.reaching
     if b_map is not None and a_map is not None:

@@ -124,7 +124,7 @@
    "why": "normalize collapses spaces but never lowercases, so mixed case is preserved. Both suites require normalize('  Hello   WORLD  ') == 'hello world'. After the move, the test only calls the wrapper; the f"
   },
   "CASE_020_windows": {
-   "blocks": true,
+   "blocks": false,
    "rules": [
     "TEST_DISABLED"
    ],

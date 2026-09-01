@@ -48,8 +48,11 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
     # case mid-function shifted every later pairing by one: the untouched
     # assertion paired with the inserted twin and their reaching definitions
     # disagreed (R1, sympy's repeated-oracle shape). `reaching_sig` carries
-    # the direct names' reaching context; assertions without one ("" — the
-    # inherited ones) behave exactly as before.
+    # the direct names' reaching context — same-file inherited copies carry
+    # their call site's, which is how N copies of one helper assert match
+    # their own site's twin (issue #55); assertions without one ("" — the
+    # cross-file and fixture-channel inherited ones) behave exactly as
+    # before.
     a_by_ctx: dict[tuple[str, str], list] = {}
     for a in a_asserts:
         a_by_ctx.setdefault((normalize_text(a.text), a.reaching_sig), []).append(a)

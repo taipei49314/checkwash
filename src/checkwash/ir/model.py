@@ -59,8 +59,8 @@ class Assertion:
     # know the difference. Extracting a concrete assert into a shared,
     # parametrised helper otherwise reads as substitution.
     inherited: bool = False
-    # Reaching definition keys for the names this assertion consumes, own-body
-    # assertions only (None for inherited ones): name -> the last unconditional
+    # Reaching definition keys for the names this assertion consumes: name ->
+    # the last unconditional
     # binding at or before this assertion joined with every conditional binding
     # after that one, in source order. SPEC §5's stated semantics — "the last
     # unconditional binding is the one the assertion reads" — held
@@ -71,7 +71,10 @@ class Assertion:
     # the assertion maps to "", which is equal on both sides of a tail-append
     # and different when a definition moves across the assertion. A name bound
     # only inside a nested def is absent, and consumers fall back to the
-    # unit-level map.
+    # unit-level map. Same-file inherited assertions carry the keys of their
+    # unit-level call site — computed where the helper's oracle executes
+    # relative to the unit's own bindings (issue #55); cross-file and
+    # fixture-channel inherited assertions still carry None.
     reaching: dict[str, str] | None = None
     # The pairing signature: the reaching entries of the names this assertion
     # *directly* spells (left and right), serialized stably. Pairing needs a
@@ -80,7 +83,9 @@ class Assertion:
     # resolved through the unit-level map drags in names other definitions of
     # `F` reference, whose reaching keys legitimately differ across an
     # insertion, and a polluted signature would push untouched twins back to
-    # the FIFO fallback this exists to avoid. "" for inherited assertions.
+    # the FIFO fallback this exists to avoid. Same-file inherited copies get
+    # their call site's signature, which is what tells N copies of one helper
+    # assert apart; "" for cross-file and fixture-channel inherited ones.
     reaching_sig: str = ""
 
 

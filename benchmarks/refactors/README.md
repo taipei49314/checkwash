@@ -65,6 +65,13 @@ that cross the body boundary — extraction moves the slot, not the assertion.
 The disguised-attack arm in `../tamper/` is the proof that declining there
 gives nothing away.
 
+2026-09-01 (issue #55, per-call-site inherited reaching): helper-borne
+assertions are now inherited once per unit-level call site, so a merge whose
+survivor calls the helper once per absorbed test conserves the oracle count —
+CASE_020_windows (two tests become one function calling `check()` twice)
+stops blocking, and the current total is **24 of 60**. `expected.json` is the
+per-case truth; the family table above is kept as the v0.1.26 record.
+
 ## Files
 
 - `cases/CASE_NNN_<mod>/`, `cases/EXT_NNN_<mod>/` — `WHY.txt`, `PROD-GOOD/`, `PROD-BUG/`, `BEFORE/`, `AFTER/`

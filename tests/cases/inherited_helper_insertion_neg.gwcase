@@ -1,0 +1,50 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+note: R1 made own-body assertions compare their reaching definitions, but an
+note2: assertion inherited from a same-file helper carried no position, so it
+note3: fell back to the unit-level joined map - and a pure append of one more
+note4: case (sympy aa1b43c3, 4 added lines) still changed "the" definition of
+note5: F for every untouched call site. Inherited assertions now carry the
+note6: reaching keys of their unit-level call site: an append rebinds nothing
+note7: that reaches the existing calls, so nothing fires.
+origin: issue 55; sympy aa1b43c3, the R1 residual, adjudicated 2026-09-01
+=== before: tests/test_integrals.py ===
+from calc import compute, derivative, old_one, old_two
+
+
+def assert_is_result_of(f, F):
+    assert compute(f) == F
+    assert derivative(F).equals(f)
+
+
+def test_cases():
+    f = 1
+    F = old_one()
+    assert_is_result_of(f, F)
+
+    f = 2
+    F = old_two()
+    assert_is_result_of(f, F)
+=== after: tests/test_integrals.py ===
+from calc import compute, derivative, new_three, old_one, old_two
+
+
+def assert_is_result_of(f, F):
+    assert compute(f) == F
+    assert derivative(F).equals(f)
+
+
+def test_cases():
+    f = 1
+    F = old_one()
+    assert_is_result_of(f, F)
+
+    f = 2
+    F = old_two()
+    assert_is_result_of(f, F)
+
+    f = 3
+    F = new_three()
+    assert_is_result_of(f, F)
+=== expect ===
+[]
