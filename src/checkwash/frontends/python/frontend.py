@@ -1341,6 +1341,60 @@ def _contains_oracle(body: list[ast.stmt]) -> bool:
     return False
 
 
+def _wraps_bare_assert(body: list[ast.stmt]) -> bool:
+    """A bare `assert` statement runs directly in these statements.
+
+    Narrower than `_contains_oracle` on purpose: `_is_oracle_call` treats any
+    `assert*`-named call as an oracle, so a legitimate contract test —
+    `with pytest.raises(AssertionError): my_validator(bad)` — would look like
+    it wraps one. The neutralization signal keys only on a real `assert`
+    statement, which is what both reported bypasses wrap and what a contract
+    test of a helper never does. Nested scopes skipped, as everywhere else.
+    """
+    stack: list[ast.AST] = list(body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ast.Assert):
+            return True
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+            ):
+                continue
+            stack.append(child)
+    return False
+
+
+def _neutralizes_assertionerror(call: ast.AST) -> str | None:
+    """`suppress(AssertionError)` / `pytest.raises(AssertionError)` — the
+    with-context spellings that swallow or expect a failed assertion.
+
+    `except AssertionError` is already a broad handler (AssertionError is in
+    `_BROAD_EXCEPTIONS`); these two carry the identical meaning in a `with`
+    statement and were the gap two red-team bypasses drove through
+    (2026-09-01). Matched on the trailing callee name so an alias can't dodge
+    it — `from contextlib import suppress as s` still resolves to `suppress`.
+    For `suppress` any positional AssertionError counts (it can suppress
+    several); for `raises` only the first argument is the expected type.
+    """
+    if not isinstance(call, ast.Call):
+        return None
+    leaf = (_dotted(call.func) or "").rsplit(".", 1)[-1]
+    if leaf == "suppress":
+        candidates = call.args
+    elif leaf == "raises":
+        candidates = call.args[:1]
+    else:
+        return None
+    for arg in candidates:
+        name = arg.id if isinstance(arg, ast.Name) else (
+            arg.attr if isinstance(arg, ast.Attribute) else None
+        )
+        if name == "AssertionError":
+            return leaf
+    return None
+
+
 def _swallows(handler: ast.ExceptHandler) -> bool:
     """Does this handler make the caught failure disappear?
 
@@ -2714,6 +2768,21 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 broad.append(seg)
                 if guards_oracle and _swallows(handler):
                     swallowing.append(seg)
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            # The with-context twins of `except AssertionError`:
+            # `suppress(AssertionError)` swallows a failed assert,
+            # `pytest.raises(AssertionError)` expects one. Both neutralise a
+            # live assertion and were the gap two red-team bypasses used
+            # (2026-09-01). Keyed on wrapping a bare `assert` so a contract
+            # test of a helper (a call, not an assert) is untouched. Emitted
+            # to both lists: for a test file the engine reads swallowing, and
+            # neutralising an assertion is the swallow.
+            if _wraps_bare_assert(node.body):
+                for item in node.items:
+                    if _neutralizes_assertionerror(item.context_expr):
+                        seg = _norm((text.seg(item.context_expr) or "").split("\n")[0])
+                        broad.append(seg)
+                        swallowing.append(seg)
     broad.sort()
     swallowing.sort()
 
@@ -2962,10 +3031,25 @@ def conftest_patch_targets(data: bytes, first_party: frozenset[str]) -> list[str
 
 
 def _top_level_from_imports(tree: ast.Module) -> dict[str, tuple[str, str]]:
-    """Top-level absolute `from M import a as b`, local name -> (module, original)."""
+    """Top-level `from M import a as b`, local name -> (module, original).
+
+    Absolute imports (level 0), and same-directory package-relative imports
+    (`from .assertions import x`, level 1 with a single-component module).
+    The engine resolves a dotless module as a sibling `{tdir}/{module}.py`,
+    which is exactly where `.assertions` lives, so the relative spelling of a
+    verbatim assertion-helper extraction now resolves the same as the
+    absolute one — the two disagreed, and the relative form read as
+    ASSERT_REMOVED (red-team false positive, 2026-09-01). Deeper relative
+    imports (`from ..pkg import x`, or `from .sub.helpers import x`) resolve
+    against a parent the engine's sibling rule does not model, and stay a
+    documented residual.
+    """
     out: dict[str, tuple[str, str]] = {}
     for stmt in tree.body:
-        if isinstance(stmt, ast.ImportFrom) and stmt.module and not stmt.level:
+        if not isinstance(stmt, ast.ImportFrom) or not stmt.module:
+            continue
+        same_dir_relative = stmt.level == 1 and "." not in stmt.module
+        if stmt.level == 0 or same_dir_relative:
             for alias in stmt.names:
                 if alias.name != "*":
                     out[alias.asname or alias.name] = (stmt.module, alias.name)

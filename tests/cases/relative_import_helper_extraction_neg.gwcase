@@ -1,0 +1,29 @@
+=== meta ===
+rule: ASSERT_REMOVED
+note: an assertion extracted verbatim into a same-directory helper module
+note2: and invoked through a package-relative import (`from .assertions
+note3: import assert_adds`). The cross-file oracle merge only resolved
+note4: absolute imports, so the relative form made the oracle invisible and
+note5: the assertion read as removed. The absolute-import spelling of the
+note6: exact same extraction already passed; the two must agree.
+origin: red-team 2026-09-01 (false positive)
+=== before: tests/test_shop.py ===
+from shop import add
+
+
+def test_add():
+    assert add(2, 2) == 4
+=== after: tests/test_shop.py ===
+from .assertions import assert_adds
+
+
+def test_add():
+    assert_adds()
+=== after: tests/assertions.py ===
+from shop import add
+
+
+def assert_adds():
+    assert add(2, 2) == 4
+=== expect ===
+[]

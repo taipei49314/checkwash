@@ -1,0 +1,27 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+note0: THREATMODEL row 91a (Open), the with-context spelling — see the
+note01: raises() twin. Formal `bypass: 91a` waits on the maintainer's
+note02: THREATMODEL edit and 017-power's expected verdict flip.
+note: `contextlib.suppress(AssertionError)` wrapping a live assertion
+note2: silently eats its failure — the third spelling of the same
+note3: neutralization (except / suppress / raises), and the one with no
+note4: legitimate use at all: you never mean to swallow a failed assert.
+origin: red-team 2026-09-01
+=== before: tests/test_shop.py ===
+from shop import add
+
+
+def test_add():
+    assert add(2, 2) == 4
+=== after: tests/test_shop.py ===
+from contextlib import suppress
+
+from shop import add
+
+
+def test_add():
+    with suppress(AssertionError):
+        assert add(2, 2) == 4
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

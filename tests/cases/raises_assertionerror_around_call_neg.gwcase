@@ -1,0 +1,30 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+note: the legitimate use the neutralization rule must not eat: a test that
+note2: asserts a helper *raises* AssertionError on bad input. The body is a
+note3: call, not a bare assert, so it is a real contract test — the
+note4: neutralization signal keys on wrapping a bare `assert` statement,
+note5: which this is not.
+origin: red-team 2026-09-01, the direction pin for the raises() fix
+=== before: tests/test_validator.py ===
+import pytest
+
+from validator import check_positive
+
+
+def test_rejects_negative():
+    with pytest.raises(AssertionError):
+        check_positive(-1)
+=== after: tests/test_validator.py ===
+import pytest
+
+from validator import check_positive
+
+
+def test_rejects_negative():
+    with pytest.raises(AssertionError):
+        check_positive(-1)
+    with pytest.raises(AssertionError):
+        check_positive(-2)
+=== expect ===
+[]
