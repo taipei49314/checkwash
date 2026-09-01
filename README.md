@@ -70,8 +70,8 @@ import and primary CLI keep the `checkwash` name (`checkwash` is also installed
 as a CLI alias). From the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/checkwash@v0.2.1
-# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.1
+pipx install git+https://github.com/taipei49314/checkwash@v0.2.2
+# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.2
 
 checkwash check HEAD~1..HEAD    # a range
 checkwash check                 # HEAD vs the working tree
@@ -146,7 +146,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@6d472382aab56afdd8f254128a68de796565c674 # v0.2.0
+      - uses: taipei49314/checkwash/action@65d7bbcbe6e6768d6084d4e03ee3aceccb4eddcd # v0.2.1
 ```
 
 Hash pins and `persist-credentials: false` are required by
@@ -171,7 +171,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/checkwash
-    rev: v0.2.1
+    rev: v0.2.2
     hooks: [{ id: checkwash }]
 ```
 
@@ -200,7 +200,7 @@ checkwash hook install --agent claude-code
 checkwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/checkwash/action@6d472382aab56afdd8f254128a68de796565c674 # v0.2.0
+- uses: taipei49314/checkwash/action@65d7bbcbe6e6768d6084d4e03ee3aceccb4eddcd # v0.2.1
 ```
 
 `checkwash check BASE...HEAD` (three dots) resolves through the merge base,
