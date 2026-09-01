@@ -134,3 +134,35 @@ reason = "v0.2.0 identity rename: expected strings follow the renamed product co
 author = "play"
 created = "2026-09-01"
 expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_bench_command.py/test_not_a_checkout_fails_clearly/edbc472daf0a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_e5_split.py/test_e5_modules_are_the_implementations/69586467e8a2"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_zipapp.py/test_zipapp_builds_and_reports_its_version/aef6a487e66b"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_zipapp.py/test_zipapp_builds_and_reports_its_version/ca2aaebb439f"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
+author = "play"
+created = "2026-09-01"
+expires = "2026-11-30"
