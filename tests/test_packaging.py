@@ -199,7 +199,7 @@ def test_required_ruleset_payload_matches_documented_job_name():
     assert len(rules) == 1
     assert rules[0]["type"] == "required_status_checks"
     contexts = [c["context"] for c in rules[0]["parameters"]["required_status_checks"]]
-    assert contexts == ["greenwash"]
+    assert contexts == ["checkwash"]
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert "gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json" in readme
@@ -218,7 +218,7 @@ def test_readme_action_snippet_is_zizmor_blanket():
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     match = re.search(
-        r"```yaml\n(# \.github/workflows/greenwash\.yml\n.*?)```",
+        r"```yaml\n(# \.github/workflows/checkwash\.yml\n.*?)```",
         readme,
         flags=re.S,
     )
@@ -240,7 +240,7 @@ def test_readme_action_snippet_is_zizmor_blanket():
     from checkwash.doctor import _PINS
 
     greenwash = re.search(
-        r"^\s+- uses: taipei49314/greenwash/action@([0-9a-f]{40}) # (v\d+\.\d+\.\d+)$",
+        r"^\s+- uses: taipei49314/checkwash/action@([0-9a-f]{40}) # (v\d+\.\d+\.\d+)$",
         snippet,
         flags=re.M,
     )
@@ -253,31 +253,31 @@ def test_readme_action_snippet_is_zizmor_blanket():
         cwd=str(ROOT),
         text=True,
     ).strip()
-    greenwash_refs = [
-        ref for ref in uses if ref.startswith("taipei49314/greenwash/action@")
+    checkwash_refs = [
+        ref for ref in uses if ref.startswith("taipei49314/checkwash/action@")
     ]
-    assert greenwash_refs == [f"taipei49314/greenwash/action@{sha}"], (
+    assert checkwash_refs == [f"taipei49314/checkwash/action@{sha}"], (
         f"README Action pin is not {tag}'s peeled commit ({sha}). Verify the "
         "trusted release with `git rev-parse 'vX.Y.Z^{{commit}}'`."
     )
     assert "`git rev-parse 'vX.Y.Z^{commit}'`" in readme
     action_doc = (ROOT / "action" / "README.md").read_text(encoding="utf-8")
     assert (
-        f"git ls-remote https://github.com/taipei49314/greenwash.git "
+        f"git ls-remote https://github.com/taipei49314/checkwash.git "
         f"'refs/tags/{tag}^{{}}'"
     ) in action_doc
 
-    self_audit = (ROOT / ".github" / "workflows" / "greenwash.yml").read_text(
+    self_audit = (ROOT / ".github" / "workflows" / "checkwash.yml").read_text(
         encoding="utf-8"
     )
     assert self_audit == snippet, "README and self-audit workflow differ"
-    assert pin == _PINS["taipei49314/greenwash/action"]
+    assert pin == _PINS["taipei49314/checkwash/action"]
     assert uses == [
         f"{owner}@{_PINS[owner]}"
         for owner in (
             "actions/checkout",
             "actions/setup-python",
-            "taipei49314/greenwash/action",
+            "taipei49314/checkwash/action",
         )
     ]
     assert sha == pin, f"{tag} peels to {sha}, not trusted pin {pin}"

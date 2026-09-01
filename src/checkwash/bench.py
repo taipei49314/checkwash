@@ -172,7 +172,7 @@ def collect(
     report.checkout = checkout
     if checkout is None:
         report.errors.append(
-            "not a greenwash checkout — clone https://github.com/taipei49314/greenwash "
+            "not a checkwash checkout — clone https://github.com/taipei49314/checkwash "
             "and run `checkwash bench` from that tree (or pass --repo pointing at it)"
         )
         return report

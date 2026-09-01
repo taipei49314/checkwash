@@ -16,7 +16,7 @@ CI = ".github/workflows"
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 CANONICAL = re.search(
-    r"```yaml\n(# \.github/workflows/greenwash\.yml\n.*?)```", README, re.S
+    r"```yaml\n(# \.github/workflows/checkwash\.yml\n.*?)```", README, re.S
 ).group(1)
 
 
@@ -84,17 +84,17 @@ def _not_healthy(root: pathlib.Path, label: str) -> None:
 
 
 def _canonical_repo(tmp_path: pathlib.Path, body: str = CANONICAL, suffix: str = ".yml"):
-    return _repo(tmp_path, {f"{CI}/greenwash{suffix}": body})
+    return _repo(tmp_path, {f"{CI}/checkwash{suffix}": body})
 
 
 def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
     case_root = tmp_path / "canonical-cases"
     _healthy(_canonical_repo(case_root))
     _healthy(_canonical_repo(case_root, CANONICAL.replace(
-        "# .github/workflows/greenwash.yml", "# 稽核 workflow"
+        "# .github/workflows/checkwash.yml", "# 稽核 workflow"
     )))
 
-    for action in ("actions/checkout", "actions/setup-python", "taipei49314/greenwash/action"):
+    for action in ("actions/checkout", "actions/setup-python", "taipei49314/checkwash/action"):
         sha64 = re.sub(
             rf"(?<={re.escape(action)}@)([0-9a-f]{{40}})(?=\s|$)",
             r"\1" + "a" * 24,
@@ -103,10 +103,10 @@ def test_readme_canonical_gate_is_the_positive_fixture(tmp_path):
         _incomplete(_canonical_repo(case_root, sha64), action)
 
     for job_id in ("audit", "test", "green_wash", "Greenwash"):
-        renamed = CANONICAL.replace("\n  greenwash:\n", f"\n  {job_id}:\n")
+        renamed = CANONICAL.replace("\n  checkwash:\n", f"\n  {job_id}:\n")
         _incomplete(_canonical_repo(case_root, renamed), job_id)
 
-    path = tmp_path / "crlf" / CI / "greenwash.yaml"
+    path = tmp_path / "crlf" / CI / "checkwash.yaml"
     path.parent.mkdir(parents=True)
     path.write_bytes(("\ufeff" + CANONICAL.replace("\n", "\r\n")).encode("utf-8"))
     _init_repo(tmp_path / "crlf")
@@ -132,7 +132,7 @@ def test_local_actions_are_never_proven_gates(tmp_path):
     _incomplete(_repo(tmp_path / "current-dogfood", current), "current local dogfood")
 
     remote = re.search(
-        r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M
+        r"^      - uses: taipei49314/checkwash/action@[^\n]+", CANONICAL, re.M
     ).group(0)
     local_workflow = CANONICAL.replace(
         remote,
@@ -141,14 +141,14 @@ def test_local_actions_are_never_proven_gates(tmp_path):
         "          base: ${{ github.event.pull_request.base.sha || 'HEAD~1' }}",
     )
     fake_project = {
-        f"{CI}/greenwash.yml": local_workflow,
+        f"{CI}/checkwash.yml": local_workflow,
         "action/action.yml": current["action/action.yml"],
         "action/post_review.py": current["action/post_review.py"],
         "pyproject.toml": (
-            "[project]\nname = 'fake-greenwash'\nversion = '0'\n"
-            "[project.scripts]\ngreenwash = 'fake_greenwash:main'\n"
+            "[project]\nname = 'fake-checkwash'\nversion = '0'\n"
+            "[project.scripts]\ncheckwash = 'fake_checkwash:main'\n"
         ),
-        "fake_greenwash.py": "def main():\n    return 0\n",
+        "fake_checkwash.py": "def main():\n    return 0\n",
     }
     _incomplete(_repo(tmp_path / "fake-project", fake_project), "fake local project")
 
@@ -156,18 +156,18 @@ def test_local_actions_are_never_proven_gates(tmp_path):
 def test_direct_runs_and_text_spoofs_are_never_healthy(tmp_path):
     case_root = tmp_path / "spoof-cases"
     replacements = {
-        "echo": "      # uses: taipei49314/greenwash/action@" + "a" * 40 + "\n"
-        "      - run: echo 'greenwash check HEAD~1..HEAD'",
-        "shell-swallow": "      - run: greenwash check HEAD~1..HEAD || true",
-        "hook-json": "      - run: greenwash check HEAD~1..HEAD --format hook-json",
-        "emit-ir": "      - run: greenwash check HEAD~1..HEAD --emit-ir",
+        "echo": "      # uses: taipei49314/checkwash/action@" + "a" * 40 + "\n"
+        "      - run: echo 'checkwash check HEAD~1..HEAD'",
+        "shell-swallow": "      - run: checkwash check HEAD~1..HEAD || true",
+        "hook-json": "      - run: checkwash check HEAD~1..HEAD --format hook-json",
+        "emit-ir": "      - run: checkwash check HEAD~1..HEAD --emit-ir",
     }
-    gate = re.search(r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M).group(0)
+    gate = re.search(r"^      - uses: taipei49314/checkwash/action@[^\n]+", CANONICAL, re.M).group(0)
     for label, replacement in replacements.items():
         _incomplete(_canonical_repo(case_root, CANONICAL.replace(gate, replacement)), label)
 
     env_spoof = CANONICAL.replace(
-        "permissions:\n", "env:\n  GREENWASH_COMMAND: greenwash check HEAD~1..HEAD\n\npermissions:\n"
+        "permissions:\n", "env:\n  GREENWASH_COMMAND: checkwash check HEAD~1..HEAD\n\npermissions:\n"
     )
     _incomplete(_canonical_repo(case_root, env_spoof), "env spoof")
 
@@ -176,7 +176,7 @@ def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
     case_root = tmp_path / "step-cases"
     checkout = re.search(r"^      - uses: actions/checkout@[^\n]+(?:\n        with:\n(?:          [^\n]+\n?)+)", CANONICAL, re.M).group(0).rstrip()
     setup = re.search(r"^      - uses: actions/setup-python@[^\n]+(?:\n        with:\n(?:          [^\n]+\n?)+)", CANONICAL, re.M).group(0).rstrip()
-    gate = re.search(r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M).group(0)
+    gate = re.search(r"^      - uses: taipei49314/checkwash/action@[^\n]+", CANONICAL, re.M).group(0)
     cases = {
         "checkout-ref": CANONICAL.replace("          fetch-depth: 0", "          fetch-depth: 0\n          ref: main"),
         "wrong-repo": CANONICAL.replace("          fetch-depth: 0", "          fetch-depth: 0\n          repository: attacker/repo"),
@@ -187,33 +187,33 @@ def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
         "wrong-python": CANONICAL.replace('python-version: "3.12"', 'python-version: "3.11"'),
         "tagged-checkout": re.sub(r"actions/checkout@[0-9a-f]{40}", "actions/checkout@v4", CANONICAL),
         "uppercase-gate": re.sub(
-            r"taipei49314/greenwash/action@[0-9a-f]{40}",
-            "taipei49314/greenwash/action@" + "A" * 40,
+            r"taipei49314/checkwash/action@[0-9a-f]{40}",
+            "taipei49314/checkwash/action@" + "A" * 40,
             CANONICAL,
         ),
         "wrong-action-owner": CANONICAL.replace(
-            "taipei49314/greenwash/action@", "attacker/greenwash/action@"
+            "taipei49314/checkwash/action@", "attacker/checkwash/action@"
         ),
         "tagged-action": re.sub(
-            r"taipei49314/greenwash/action@[0-9a-f]{40}",
-            "taipei49314/greenwash/action@v0.1.41",
+            r"taipei49314/checkwash/action@[0-9a-f]{40}",
+            "taipei49314/checkwash/action@v0.1.41",
             CANONICAL,
         ),
         "missing-action-ref": re.sub(
-            r"taipei49314/greenwash/action@[0-9a-f]{40}",
-            "taipei49314/greenwash/action",
+            r"taipei49314/checkwash/action@[0-9a-f]{40}",
+            "taipei49314/checkwash/action",
             CANONICAL,
         ),
         "annotated-tag-object": re.sub(
-            r"taipei49314/greenwash/action@[0-9a-f]{40}",
-            "taipei49314/greenwash/action@7b3bc70d391ac79f4d95b834c930e8e8aa04d8eb",
+            r"taipei49314/checkwash/action@[0-9a-f]{40}",
+            "taipei49314/checkwash/action@7b3bc70d391ac79f4d95b834c930e8e8aa04d8eb",
             CANONICAL,
         ),
     }
     pins = {
         "checkout": "11d5960a326750d5838078e36cf38b85af677262",
         "setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
-        "greenwash": "7e931075b8acb0a6c04b1bd705336baf66258a1d",
+        "checkwash": "6d472382aab56afdd8f254128a68de796565c674",
     }
     for label, pin in pins.items():
         cases[f"zero-{label}"] = CANONICAL.replace(pin, "0" * 40)
@@ -243,24 +243,24 @@ def test_conditions_unsafe_context_and_event_shorthand_are_incomplete(tmp_path):
             "    runs-on: ubuntu-latest", "    continue-on-error: true\n    runs-on: ubuntu-latest"
         ),
         "step-if": CANONICAL.replace(
-            "      - uses: taipei49314/greenwash/action@",
-            "      - if: always()\n        uses: taipei49314/greenwash/action@",
+            "      - uses: taipei49314/checkwash/action@",
+            "      - if: always()\n        uses: taipei49314/checkwash/action@",
         ),
         "step-env": CANONICAL.replace(
-            "      - uses: taipei49314/greenwash/action@",
-            "      - env:\n          PATH: fake\n        uses: taipei49314/greenwash/action@",
+            "      - uses: taipei49314/checkwash/action@",
+            "      - env:\n          PATH: fake\n        uses: taipei49314/checkwash/action@",
         ),
         "step-continue": CANONICAL.replace(
-            "      - uses: taipei49314/greenwash/action@",
-            "      - continue-on-error: true\n        uses: taipei49314/greenwash/action@",
+            "      - uses: taipei49314/checkwash/action@",
+            "      - continue-on-error: true\n        uses: taipei49314/checkwash/action@",
         ),
         "step-shell": CANONICAL.replace(
-            "      - uses: taipei49314/greenwash/action@",
-            "      - shell: bash\n        uses: taipei49314/greenwash/action@",
+            "      - uses: taipei49314/checkwash/action@",
+            "      - shell: bash\n        uses: taipei49314/checkwash/action@",
         ),
         "step-working-directory": CANONICAL.replace(
-            "      - uses: taipei49314/greenwash/action@",
-            "      - working-directory: elsewhere\n        uses: taipei49314/greenwash/action@",
+            "      - uses: taipei49314/checkwash/action@",
+            "      - working-directory: elsewhere\n        uses: taipei49314/checkwash/action@",
         ),
         "remote-with": CANONICAL + "        with:\n          base: HEAD\n",
     }
@@ -288,7 +288,7 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
         "unseparated-with-value": CANONICAL.replace("fetch-depth: 0", "fetch-depth:0"),
         "duplicate-on": "on: push\n" + CANONICAL,
         "duplicate-jobs": CANONICAL + "\njobs:\n  other:\n    runs-on: ubuntu-latest\n",
-        "duplicate-job-id": CANONICAL + "  greenwash:\n    runs-on: ubuntu-latest\n",
+        "duplicate-job-id": CANONICAL + "  checkwash:\n    runs-on: ubuntu-latest\n",
         "duplicate-runs-on": CANONICAL.replace(
             "    runs-on: ubuntu-latest", "    runs-on: ubuntu-latest\n    runs-on: ubuntu-latest"
         ),
@@ -297,24 +297,24 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
         ),
         "duplicate-run": CANONICAL.replace(
             re.search(
-                r"^      - uses: taipei49314/greenwash/action@[^\n]+", CANONICAL, re.M
+                r"^      - uses: taipei49314/checkwash/action@[^\n]+", CANONICAL, re.M
             ).group(0),
-            "      - run: greenwash check HEAD~1..HEAD\n        run: echo swallowed",
+            "      - run: checkwash check HEAD~1..HEAD\n        run: echo swallowed",
         ),
         "duplicate-with-key": CANONICAL.replace(
             "          fetch-depth: 0", "          fetch-depth: 0\n          fetch-depth: 0"
         ),
         "alias": CANONICAL.replace("on: [pull_request]", "events: &events [pull_request]\non: *events"),
         "merge": CANONICAL.replace("    runs-on: ubuntu-latest", "    <<: *defaults\n    runs-on: ubuntu-latest"),
-        "flow-jobs": CANONICAL.split("jobs:\n", 1)[0] + "jobs: {greenwash: {runs-on: ubuntu-latest}}\n",
+        "flow-jobs": CANONICAL.split("jobs:\n", 1)[0] + "jobs: {checkwash: {runs-on: ubuntu-latest}}\n",
         "tab": CANONICAL.replace("    runs-on", "\truns-on"),
         "orphan-before-runs-on": CANONICAL.replace(
-            "  greenwash:\n    runs-on", "  greenwash:\n      orphan: value\n    runs-on"
+            "  checkwash:\n    runs-on", "  checkwash:\n      orphan: value\n    runs-on"
         ),
         "orphan-before-first-step": CANONICAL.replace(
             "    steps:\n      - uses:", "    steps:\n        orphan: value\n      - uses:"
         ),
-        "orphan-after-name": "name: greenwash\n  orphan: value\n" + CANONICAL,
+        "orphan-after-name": "name: checkwash\n  orphan: value\n" + CANONICAL,
         "orphan-after-flow-event": CANONICAL.replace(
             "on: [pull_request]\n", "on: [pull_request]\n  orphan: value\n"
         ),
@@ -360,7 +360,7 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
         ).encode("utf-8")
     for label, payload in raw_cases.items():
         root = case_root
-        path = root / CI / "greenwash.yml"
+        path = root / CI / "checkwash.yml"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(payload)
         _stage(root)
@@ -373,7 +373,7 @@ def test_fake_workflow_extensions_and_case_mismatches_are_not_healthy(tmp_path):
     assert not _levels(notes, "runs unconditionally")
 
     remote = _repo(tmp_path / "mixed-remote", {
-        ".GitHub/Workflows/greenwash.yml": CANONICAL,
+        ".GitHub/Workflows/checkwash.yml": CANONICAL,
     })
     _not_healthy(remote, "mixed-case workflow ancestors")
 
@@ -407,14 +407,14 @@ def _gitlink_repo(root: pathlib.Path, relative: str) -> pathlib.Path:
     nested = root / link_path
     nested.mkdir(parents=True)
     _git(nested, "init", "--quiet")
-    workflow = nested / (pathlib.Path(CI) / "greenwash.yml").relative_to(link_path)
+    workflow = nested / (pathlib.Path(CI) / "checkwash.yml").relative_to(link_path)
     workflow.parent.mkdir(parents=True, exist_ok=True)
     workflow.write_text(CANONICAL, encoding="utf-8")
     _stage(nested)
     _git(
         nested,
-        "-c", "user.name=greenwash-test",
-        "-c", "user.email=greenwash-test@example.invalid",
+        "-c", "user.name=checkwash-test",
+        "-c", "user.email=checkwash-test@example.invalid",
         "commit", "--quiet", "-m", "gitlink fixture",
     )
     _git(root, "--literal-pathspecs", "add", "-f", "--", link_path.as_posix())
@@ -427,14 +427,14 @@ def _gitlink_repo(root: pathlib.Path, relative: str) -> pathlib.Path:
 
 def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
     absent = tmp_path / "no-git-index"
-    absent_path = absent / CI / "greenwash.yml"
+    absent_path = absent / CI / "checkwash.yml"
     absent_path.parent.mkdir(parents=True)
     absent_path.write_text(CANONICAL, encoding="utf-8")
     _incomplete(absent, "workflow without Git index")
 
     untracked = tmp_path / "untracked"
     _init_repo(untracked)
-    untracked_path = untracked / CI / "greenwash.yml"
+    untracked_path = untracked / CI / "checkwash.yml"
     untracked_path.parent.mkdir(parents=True)
     untracked_path.write_text(CANONICAL, encoding="utf-8")
     _incomplete(untracked, "untracked workflow")
@@ -443,21 +443,21 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
         tmp_path / "index-worktree-mismatch",
         CANONICAL.replace("on: [pull_request]", "on: [push]"),
     )
-    (mismatched / CI / "greenwash.yml").write_text(CANONICAL, encoding="utf-8")
+    (mismatched / CI / "checkwash.yml").write_text(CANONICAL, encoding="utf-8")
     _incomplete(mismatched, "canonical worktree over a noncanonical index blob")
 
     reverse_mismatch = _canonical_repo(tmp_path / "worktree-index-mismatch")
-    (reverse_mismatch / CI / "greenwash.yml").write_text(
+    (reverse_mismatch / CI / "checkwash.yml").write_text(
         CANONICAL.replace("on: [pull_request]", "on: [push]"), encoding="utf-8"
     )
     _incomplete(reverse_mismatch, "noncanonical worktree over a canonical index blob")
 
     intent = tmp_path / "intent-to-add"
     _init_repo(intent)
-    intent_path = intent / CI / "greenwash.yml"
+    intent_path = intent / CI / "checkwash.yml"
     intent_path.parent.mkdir(parents=True)
     intent_path.write_text(CANONICAL, encoding="utf-8")
-    _git(intent, "--literal-pathspecs", "add", "-N", "--", f"{CI}/greenwash.yml")
+    _git(intent, "--literal-pathspecs", "add", "-N", "--", f"{CI}/checkwash.yml")
     _incomplete(intent, "intent-to-add workflow")
 
     for ancestor in (".github", ".github/workflows"):
@@ -468,7 +468,7 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
     target = file_root / "canonical-source.yml"
     target.parent.mkdir(parents=True)
     target.write_text(CANONICAL, encoding="utf-8")
-    workflow = file_root / CI / "greenwash.yml"
+    workflow = file_root / CI / "checkwash.yml"
     workflow.parent.mkdir(parents=True)
     _symlink(workflow, target)
     _incomplete(file_root, "linked workflow file")
@@ -476,7 +476,7 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
     github_root = tmp_path / "github-link"
     external_github = tmp_path / "external-github"
     (external_github / "workflows").mkdir(parents=True)
-    (external_github / "workflows/greenwash.yml").write_text(CANONICAL, encoding="utf-8")
+    (external_github / "workflows/checkwash.yml").write_text(CANONICAL, encoding="utf-8")
     github_root.mkdir()
     _symlink(github_root / ".github", external_github, directory=True)
     _incomplete(github_root, "linked .github ancestor")
@@ -484,7 +484,7 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
     directory_root = tmp_path / "directory-link"
     source_dir = directory_root / "workflow-source"
     source_dir.mkdir(parents=True)
-    (source_dir / "greenwash.yml").write_text(CANONICAL, encoding="utf-8")
+    (source_dir / "checkwash.yml").write_text(CANONICAL, encoding="utf-8")
     (directory_root / ".github").mkdir()
     _symlink(directory_root / CI, source_dir, directory=True)
     _incomplete(directory_root, "linked workflow directory")
@@ -514,7 +514,7 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
 
 def test_local_hook_without_ci_and_empty_repo_remain_problems(tmp_path):
     hooked = _repo(tmp_path / "hook", {
-        ".claude/settings.json": json.dumps({"hooks": {"Stop": "greenwash check"}})
+        ".claude/settings.json": json.dumps({"hooks": {"Stop": "checkwash check"}})
     })
     assert _levels(collect(hooked), "runs locally but not in CI") == ["problem"]
     assert _levels(collect(_repo(tmp_path / "empty", {"README.md": "hello"})), "no checkwash installation found") == ["problem"]
@@ -539,7 +539,7 @@ def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
         'rule = "ASSERT_WEAKENED"\nreason = "hand-edited decade"\nauthor = "audit"\n'
         'created = "2020-01-01"\nexpires = "2030-01-01"\n'
     )
-    notes = collect(_repo(root, {f"{CI}/greenwash.yml": CANONICAL, ".greenwash/allow.toml": allow}))
+    notes = collect(_repo(root, {f"{CI}/checkwash.yml": CANONICAL, ".greenwash/allow.toml": allow}))
     note = next(note for note in notes if "180 days" in note.title)
     assert "1 over the 180-day cap" in note.detail and "0 active" in note.detail
 

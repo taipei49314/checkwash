@@ -6,7 +6,7 @@ against the PR (or `HEAD~1` on a push).
 ## Caller workflow
 
 Copy the hash-pinned snippet in the root [README](../README.md).
-A tag pin (`actions/checkout@v4`, `taipei49314/greenwash/action@vX.Y.Z`)
+A tag pin (`actions/checkout@v4`, `taipei49314/checkwash/action@vX.Y.Z`)
 fails zizmor's default `unpinned-uses` policy. The SHA in the root snippet is
 also `doctor`'s built-in verified Greenwash pin: the peeled v0.1.46 commit, not
 the annotated tag object. A release cannot embed its own commit SHA, so release
@@ -39,7 +39,7 @@ permissions:
   contents: read
   pull-requests: write
 # ...
-- uses: taipei49314/greenwash/action@<sha>   # same 40-char SHA as the root README snippet
+- uses: taipei49314/checkwash/action@<sha>   # same 40-char SHA as the root README snippet
   with:
     comment-pr: true
 ```
@@ -66,5 +66,5 @@ is required. `doctor` cannot see whether this ran.
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v4.4.0
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v5.6.0
-git ls-remote https://github.com/taipei49314/greenwash.git 'refs/tags/v0.1.49^{}'
+git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.2.0^{}'
 ```

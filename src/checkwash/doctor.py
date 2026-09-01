@@ -27,7 +27,7 @@ _PINS = {
     "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
     # The one-release trust lag: the newest stable tag's peeled commit, moved
     # forward with every release (v0.1.46 here, per the v0.1.47 round).
-    "taipei49314/greenwash/action": "7e931075b8acb0a6c04b1bd705336baf66258a1d",
+    "taipei49314/checkwash/action": "6d472382aab56afdd8f254128a68de796565c674",
 }
 
 
@@ -276,7 +276,7 @@ def _healthy_job(body: list[str]) -> bool:
         return False
     props, with_values = gate
     remote = set(props) == {"uses"} and not with_values and props["uses"] == (
-        "taipei49314/greenwash/action@" + _PINS["taipei49314/greenwash/action"]
+        "taipei49314/checkwash/action@" + _PINS["taipei49314/checkwash/action"]
     )
     return remote
 

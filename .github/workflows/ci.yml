@@ -42,7 +42,7 @@ jobs:
           path: corpus-findings.json
 
   dogfood:
-    # greenwash runs on its own changes. The judge gets judged.
+    # checkwash runs on its own changes. The judge gets judged.
     #
     # This job used to be `if: github.event_name == 'pull_request'`, and this
     # repository has never had a pull request — so across every run in its
@@ -102,15 +102,15 @@ jobs:
           PYTHONUTF8: "1"
         run: |
           set -euo pipefail
-          greenwash --version
-          greenwash demo > /dev/null
+          checkwash --version
+          checkwash demo > /dev/null
           # The installed build gates this push exactly as dogfood does from
           # the checkout — its exit code counts. The first draft of this step
-          # swallowed that exit code with a shell or-fallback, and greenwash
+          # swallowed that exit code with a shell or-fallback, and checkwash
           # blocked the diff: E6 read the CI change as a weakened test
           # command. It was right, and this wording exists because the tool
           # corrected its author.
-          greenwash check HEAD~1..HEAD --repo .
+          checkwash check HEAD~1..HEAD --repo .
 
   byte-compare:
     # The cross-OS determinism gate: every OS/Python combination must emit
