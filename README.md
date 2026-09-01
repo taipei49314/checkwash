@@ -236,7 +236,7 @@ Two harnesses, both reproducible from a clone
   often checkwash would fail CI on a commit a human wrote. Every repo is
   at or under 4%; the progression from an initial 8.6%, and what moved each
   step, is in the benchmarks README.
-  A block is not automatically a mistake. All 37 were adjudicated commit by
+  A block is not automatically a mistake. All 42 were adjudicated commit by
   commit against the real diff: **27 false positives (1.50%)**, 15 legitimate
   policy blocks (0.83%) where the commit really does drop oracle coverage
   with nothing visible replacing it, 0 unclear. Three precision rounds
@@ -252,11 +252,13 @@ Two harnesses, both reproducible from a clone
   one adjudication *verdict* was overturned in the tool's favour when the
   duplicate search proved a "relocated" test actually reappears nowhere;
   each trade is reported as measured.
-  The block rate is a machine count and exact. The split is now a
-  three-rater judgement: two additional raters re-adjudicated all 35 blocks
-  blind, with 91–94% pairwise agreement and Fleiss' kappa 0.844; the
-  published category is the majority verdict, the four contested commits are
-  marked, and the per-commit reasoning of all three raters ships in
+  The block rate is a machine count and exact. The split is a multi-rater
+  judgement: two additional raters blind-re-adjudicated 35 of the 37
+  pre-promotion blocks, with 91–94% pairwise agreement and Fleiss' kappa
+  0.844, and the five blocks the 2026-08-25 promotion added were each
+  judged by two blind raters; the published category is the majority
+  verdict, the contested commits are marked, and the per-commit reasoning
+  of every rater ships in
   [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
   **1.33% of the corpus (24/1800) never got a real analysis**: those commits
   touch a production file checkwash genuinely cannot read — other-language

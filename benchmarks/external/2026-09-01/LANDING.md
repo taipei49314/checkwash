@@ -36,6 +36,15 @@ written and are corrected here rather than by rewriting the record:
    nothing — the latest asset is `checkwash.pyz`. To reproduce against the
    *tested* build, download `greenwash.pyz` from the v0.1.49 release
    specifically.
+3. **Engine era**: every number in these reports was produced by the
+   v0.1.49 engine. v0.2.2 (R1, issue #53) has since fixed the largest
+   false-positive family this adjudication identified, and the three
+   exemplar commits re-verify to zero findings on v0.2.3 (black
+   pure-insertion 3→0, tornado e6d3f49 1→0, sympy ed75b73d 13→0). **The
+   full 2,300-commit corpus has not been re-swept on the fixed engine, so
+   no updated block rate is claimed** — the 74/2,300 figure describes
+   v0.1.49, and any improvement beyond the three verified commits is
+   unmeasured until a re-sweep runs.
 
 ## What this run is for
 
