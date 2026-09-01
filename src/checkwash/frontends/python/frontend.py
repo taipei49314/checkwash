@@ -600,7 +600,12 @@ def _assignment_name_targets(target: ast.AST) -> list[str]:
 
 
 def _binding_maps(
-    func, *, include_definitions: bool = True
+    func,
+    *,
+    include_definitions: bool = True,
+    unparse_memo: dict[int, str] | None = None,
+    refs_memo: dict[int, tuple[str, ...]] | None = None,
+    flags: dict[str, bool] | None = None,
 ) -> tuple[dict[str, str], dict[str, tuple[str, ...]]]:
     """Collect definition keys and referenced names in one AST walk.
 
@@ -632,20 +637,49 @@ def _binding_maps(
     walrus_definitions: dict[str, list[str]] = {}
     assignment_references: dict[str, set[str]] = {}
     walrus_references: dict[str, set[str]] = {}
+
+    # `_ordered_bindings` visits the same value nodes for its position-keyed
+    # map; unparse and reference extraction are the expensive parts of both
+    # walks, so a caller working per unit shares the results through the two
+    # memos (the perf gate's 500-file budget is what noticed — 3.08s over
+    # 2.5s on the slowest CI leg when every value was unparsed twice).
+    def _key(value: ast.AST) -> str:
+        if unparse_memo is not None:
+            hit = unparse_memo.get(id(value))
+            if hit is not None:
+                return hit
+        try:
+            key = ast.unparse(value)
+        except (AttributeError, ValueError):  # pragma: no cover - defensive
+            key = ""
+        if unparse_memo is not None:
+            unparse_memo[id(value)] = key
+        return key
+
+    def _refs(value: ast.AST) -> tuple[str, ...]:
+        if refs_memo is not None:
+            hit = refs_memo.get(id(value))
+            if hit is not None:
+                return hit
+        refs = _referenced_names(value)
+        if refs_memo is not None:
+            refs_memo[id(value)] = refs
+        return refs
+
     for node in ast.walk(func):
         if isinstance(node, ast.Assign):
             targets, value = node.targets, node.value
         elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
             targets, value = [node.target], node.value
         elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            if flags is not None:
+                flags["walrus"] = True
             if include_definitions:
-                try:
-                    key = ast.unparse(node.value)
-                except (AttributeError, ValueError):  # pragma: no cover - defensive
-                    key = ""
-                walrus_definitions.setdefault(node.target.id, []).append(key)
+                walrus_definitions.setdefault(node.target.id, []).append(
+                    _key(node.value)
+                )
             walrus_references.setdefault(node.target.id, set()).update(
-                _referenced_names(node.value)
+                _refs(node.value)
             )
             continue
         else:
@@ -653,11 +687,8 @@ def _binding_maps(
         if value is None:
             continue
         if include_definitions:
-            try:
-                key = ast.unparse(value)
-            except (AttributeError, ValueError):  # pragma: no cover - defensive
-                key = ""
-        refs = set(_referenced_names(value))
+            key = _key(value)
+        refs = set(_refs(value))
         for target in targets:
             for name in _assignment_name_targets(target):
                 if include_definitions:
@@ -696,7 +727,13 @@ _TRY_TYPES = tuple(
 )
 
 
-def _ordered_bindings(func) -> dict[str, list[tuple[tuple[int, int], bool, str]]]:
+def _ordered_bindings(
+    func,
+    *,
+    unparse_memo: dict[int, str] | None = None,
+    refs_memo: dict[int, tuple[str, ...]] | None = None,
+    has_walrus: bool = True,
+) -> dict[str, list[tuple[tuple[int, int], bool, str, tuple[str, ...]]]]:
     """name -> [(statement position, conditional?, canonical key)] in source
     order, for the per-assertion reaching-definition computation.
 
@@ -715,13 +752,29 @@ def _ordered_bindings(func) -> dict[str, list[tuple[tuple[int, int], bool, str]]
     out: dict[str, list[tuple[tuple[int, int], bool, str, tuple[str, ...]]]] = {}
 
     def record(name: str, pos: tuple[int, int], conditional: bool, value: ast.AST) -> None:
-        try:
-            key = ast.unparse(value)
-        except (AttributeError, ValueError):  # pragma: no cover - defensive
-            key = ""
-        out.setdefault(name, []).append(
-            (pos, conditional, key, _referenced_names(value))
-        )
+        key = None
+        if unparse_memo is not None:
+            key = unparse_memo.get(id(value))
+        if key is None:
+            try:
+                key = ast.unparse(value)
+            except (AttributeError, ValueError):  # pragma: no cover - defensive
+                key = ""
+            if unparse_memo is not None:
+                unparse_memo[id(value)] = key
+        refs = None
+        if refs_memo is not None:
+            refs = refs_memo.get(id(value))
+        if refs is None:
+            refs = _referenced_names(value)
+            if refs_memo is not None:
+                refs_memo[id(value)] = refs
+        out.setdefault(name, []).append((pos, conditional, key, refs))
+
+    # Walruses are rare, and `_binding_maps` has already walked the whole
+    # unit: callers pass its verdict in so walrus-free code skips every
+    # per-statement scan without a pre-scan of its own (the perf gate's
+    # 500-file budget felt both spellings).
 
     def walk(stmts: list[ast.stmt], conditional: bool) -> None:
         for st in stmts:
@@ -752,7 +805,7 @@ def _ordered_bindings(func) -> dict[str, list[tuple[tuple[int, int], bool, str]]
             elif isinstance(st, ast.Match):
                 for case in st.cases:
                     walk(case.body, True)
-            else:
+            elif has_walrus:
                 for sub in ast.walk(st):
                     if isinstance(sub, ast.NamedExpr) and isinstance(sub.target, ast.Name):
                         record(sub.target.id, pos, True, sub.value)
@@ -1674,7 +1727,24 @@ def _scope_nodes(scope):
         stack.extend(ast.iter_child_nodes(node))
 
 
-def _invocations(scope) -> set[str]:
+def _scope_nodes_cached(scope, cache: dict[int, tuple] | None):
+    """`_scope_nodes`, memoised per scope for one file's parse.
+
+    A module helper invoked by many units used to be re-walked once per unit
+    per consumer — the single largest share of the perf gate's budget after
+    the reaching round pushed the slowest CI leg over it.
+    """
+    if cache is None:
+        return _scope_nodes(scope)
+    key = id(scope)
+    got = cache.get(key)
+    if got is None:
+        got = tuple(_scope_nodes(scope))
+        cache[key] = got
+    return got
+
+
+def _invocations(scope, caches: tuple[dict, dict] | None = None) -> set[str]:
     """Names this scope actually *invokes*.
 
     Mention is not invocation, and the distinction is the whole design:
@@ -1682,9 +1752,19 @@ def _invocations(scope) -> set[str]:
     all name the oracle without running it, which is precisely the edit these
     attacks make. Counting a bare `Name` argument as a call hides
     benchmarks/tamper 001.
+
+    `caches` is one file's `(scope-nodes, invocations)` memo pair: shared
+    module scopes are asked the same question by every unit that reaches
+    them, and the answer never changes within a parse.
     """
+    nodes_cache = inv_cache = None
+    if caches is not None:
+        nodes_cache, inv_cache = caches
+        hit = inv_cache.get(id(scope))
+        if hit is not None:
+            return set(hit)
     out: set[str] = set()
-    for node in _scope_nodes(scope):
+    for node in _scope_nodes_cached(scope, nodes_cache):
         if isinstance(node, (ast.With, ast.AsyncWith)):
             for item in node.items:
                 name = _callee_root(item.context_expr)
@@ -1701,6 +1781,8 @@ def _invocations(scope) -> set[str]:
             out.add(name)
             if name.split(".")[-1] in _INVOKES_ARGUMENT:
                 out.update(a.id for a in node.args if isinstance(a, ast.Name))
+    if inv_cache is not None:
+        inv_cache[id(scope)] = frozenset(out)
     return out
 
 
@@ -1744,7 +1826,12 @@ def _local_scopes(func, module_scopes: dict[str, ast.AST]) -> dict[str, ast.AST]
     return out
 
 
-def _executed_scopes(func, module_scopes: dict[str, ast.AST], max_depth: int = 4) -> list:
+def _executed_scopes(
+    func,
+    module_scopes: dict[str, ast.AST],
+    max_depth: int = 4,
+    caches: tuple[dict, dict] | None = None,
+) -> list:
     """The unit, plus every same-file scope it actually reaches.
 
     This is what makes `UnitSide.assertions` mean *the assertions this test
@@ -1761,7 +1848,7 @@ def _executed_scopes(func, module_scopes: dict[str, ast.AST], max_depth: int = 4
     }
     out = [func]
     seen: set[int] = {id(func)}
-    frontier = [(name, 0) for name in _invocations(func)]
+    frontier = [(name, 0) for name in _invocations(func, caches)]
     while frontier:
         name, depth = frontier.pop()
         target = scopes.get(name)
@@ -1778,8 +1865,8 @@ def _executed_scopes(func, module_scopes: dict[str, ast.AST], max_depth: int = 4
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     seen.add(id(child))
                     out.append(child)
-                    frontier.extend((c, depth + 1) for c in _invocations(child))
-        frontier.extend((c, depth + 1) for c in _invocations(target))
+                    frontier.extend((c, depth + 1) for c in _invocations(child, caches))
+        frontier.extend((c, depth + 1) for c in _invocations(target, caches))
     return out
 
 
@@ -1851,6 +1938,7 @@ def _collect_unit(
     off: _Offsets,
     inherited_markers: list[Marker] | None = None,
     module_scopes: dict[str, ast.AST] | None = None,
+    caches: tuple[dict, dict] | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -1860,16 +1948,34 @@ def _collect_unit(
     counter = 0
     dead = _unreachable_ids(func)
     guards = _skip_call_guards(func, text)
-    definition_bindings, bindings = _binding_maps(func)
-    ordered_bindings = _ordered_bindings(func) if definition_bindings else {}
+    _unparse_memo: dict[int, str] = {}
+    _refs_memo: dict[int, tuple[str, ...]] = {}
+    _flags: dict[str, bool] = {}
+    definition_bindings, bindings = _binding_maps(
+        func, unparse_memo=_unparse_memo, refs_memo=_refs_memo, flags=_flags
+    )
+    ordered_bindings = (
+        _ordered_bindings(
+            func,
+            unparse_memo=_unparse_memo,
+            refs_memo=_refs_memo,
+            has_walrus=_flags.get("walrus", False),
+        )
+        if definition_bindings
+        else {}
+    )
     vacuous = _vacuous_bound_asserts(func)
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
     # helper's assertions are this unit's oracle, a helper's `except` is not
     # this unit's handler. Only the assertion set follows reachability.
-    executed = _executed_scopes(func, module_scopes or {})
+    nodes_cache = caches[0] if caches is not None else None
+    executed = _executed_scopes(func, module_scopes or {}, caches=caches)
     reached_asserts = {
-        id(n) for scope in executed for n in _scope_nodes(scope) if isinstance(n, ast.Assert)
+        id(n)
+        for scope in executed
+        for n in _scope_nodes_cached(scope, nodes_cache)
+        if isinstance(n, ast.Assert)
     }
     # Asserts collected by this walk, so the executed-scopes pass below does
     # not add them a second time: an invoked *nested* def is both lexically
@@ -2003,7 +2109,7 @@ def _collect_unit(
     for scope in executed:
         if scope is func:
             continue
-        for node in _scope_nodes(scope):
+        for node in _scope_nodes_cached(scope, nodes_cache):
             if isinstance(node, ast.Assert) and id(node) in own_assert_ids:
                 continue
             if isinstance(node, ast.Assert):
@@ -2080,7 +2186,7 @@ def _collect_unit(
         ),
         param_columns=_param_columns(func),
         patches=tuple(sorted(patches)),
-        invoked=tuple(sorted(_invocations(func))),
+        invoked=tuple(sorted(_invocations(func, caches))),
         params=tuple(
             a.arg
             for a in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
@@ -2517,6 +2623,9 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     if isinstance(target, ast.Name):
                         module_scopes[target.id] = node.value
         test_class_names = _transitive_test_classes(tree)
+    # One file's worth of scope-walk memoisation: (scope-nodes, invocations),
+    # shared by every unit so a helper reached by many tests is walked once.
+    file_caches: tuple[dict, dict] = ({}, {})
 
     def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
         for child in ast.iter_child_nodes(node):
@@ -2527,7 +2636,9 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     symbol_calls[qual] = _callees(child)
                 if collect_tests and collectible and _is_test_name(child.name):
                     units.append(
-                        _collect_unit(child, qual, text, off, inherited, module_scopes)
+                        _collect_unit(
+                            child, qual, text, off, inherited, module_scopes, file_caches
+                        )
                     )
                 # Nested defs are never collected as pytest items.
                 visit(child, qual + ".", inherited, False)
