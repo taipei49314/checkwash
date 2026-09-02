@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **115 bypasses** are documented, of which **28 are not closed**.
+- **117 bypasses** are documented, of which **29 are not closed**.
 - **27 of 1800** human-written commits are blocked by mistake (1.50%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -43,7 +43,7 @@ it is known not to.
 | 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | — |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | `oracle_crossfile_import_neg.gwcase`, `oracle_crossfile_uncalled_pos.gwcase`, `oracle_fixture_checker_neg.gwcase`, `oracle_fixture_fanout_dedup.gwcase`, `oracle_fixture_teardown_refused_trade.gwcase`, `oracle_fixture_unrequested_pos.gwcase`, `oracle_helper_renamed_neg.gwcase`, `oracle_helper_uncalled_pos.gwcase`, `oracle_moved_into_helper_neg.gwcase`, `oracle_nested_never_invoked_pos.gwcase` |
 
-## Open by design — the cost of a deliberate trade (7)
+## Open by design — the cost of a deliberate trade (8)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -54,6 +54,7 @@ it is known not to.
 | 88 | Disarm the judge in the diff it would have judged: delete the greenwash job from the workflow, add an `if:` that is never true, or drop the required-status-check requirement | — |
 | 94 | Root-import + a modified existing symbol in any sibling module feeding PACKAGE_REPAIR for an expectation rewrite | — |
 | 95 | Gate the evil expectation on a tautology and keep the old one in the dead arm: `if sys.version_info >= (3, 0): expected = evil` / `else: expected = old` — branch-exclusive, old definition verbatim, so v0.1.45's gated-alternative guard spares it and the assertion compares against evil on every interpreter that exists | — |
+| 100 | Two commits: **create** checkwash's own config (`.checkwash/config.toml` or `.greenwash/config.toml`, the file did not exist) containing `[detectors] disable = [...]` or `fail_on = "critical"` — a created guardrail file was warn under D-030, verdict pass — then weaken the test on the next diff under the disabled rule: zero findings. Configuration is read base-side, so the planting commit is the only place to catch it, and at warn it never blocked under the default `fail_on` | `guardrail_config_created_disable_checkwash_pos.gwcase`, `guardrail_config_created_disable_greenwash_pos.gwcase`, `guardrail_config_created_failon_pos.gwcase` |
 
 ## Out of scope — the limits of the whole approach (3)
 
@@ -63,7 +64,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (84)
+## Closed — each pinned by something that runs (85)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -157,6 +158,7 @@ behind it* unshippable.
 | 91b | The two `with`-context spellings of assertion neutralization that row 91a's "swallowing `__exit__`" bucket never named outright: `with contextlib.suppress(AssertionError): assert X` swallows the failure, and `with pytest.raises(AssertionError): assert X` inverts the oracle so a wrong answer is required. `except AssertionError: pass` was already a broad handler; these are the `with` dialects of the same move | — |
 | 97 | Replace an independently derived **call-expression** expectation with a **literal of the current buggy output** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == 100.0` — no production change in the diff | `expected_call_to_literal_pos.gwcase` |
 | 98 | Replace an independently derived **call-expression** expectation with a **call to a same-bug twin** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == twin_total(items)` — twin unused at baseline, implements the identical bug | `expected_call_to_twin_pos.gwcase` |
+| 99 | Edit checkwash's own config under its renamed directory — `.checkwash/config.toml` — either a comment change in the same diff as a weakened assertion, or a committed `[detectors] disable`. The path matched no role and was classified production: the comment change granted `REPAIR_EVIDENCE` (verdict pass) and the planted disable produced zero findings; the same edits under `.greenwash/` were critical | `exemption_added_checkwash_pos.gwcase`, `guardrail_checkwash_config_and_weakening_pos.gwcase`, `guardrail_checkwash_config_pos.gwcase` |
 
 ## Unclassified (11)
 

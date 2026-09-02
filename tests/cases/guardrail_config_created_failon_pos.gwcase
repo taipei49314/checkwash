@@ -1,4 +1,5 @@
 === meta ===
+bypass: 100
 rule: GUARDRAIL_TOUCHED
 title: a created config that raises fail_on above the default relaxes the gate (issue #79)
 === after: .checkwash/config.toml ===

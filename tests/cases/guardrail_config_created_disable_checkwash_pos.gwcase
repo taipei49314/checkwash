@@ -1,4 +1,5 @@
 === meta ===
+bypass: 100
 rule: GUARDRAIL_TOUCHED
 title: creating checkwash's own config with a detector disabled relaxes the defaults
 origin: issue #79 — under v0.2.11 this diff was warn (GUARDRAIL_CREATED) and the next

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 99
 rule: GUARDRAIL_TOUCHED
 note: planting a detector disable in the renamed config directory is the two-commit escape from issue #68
 origin: issue #68 — under v0.2.10 this diff produced zero findings

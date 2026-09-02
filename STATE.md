@@ -34,8 +34,8 @@ tamper 49/80 and refactors 24/60 were re-verified in the release checkout.
 The sibling shape — pre-seeding `allow.toml` with the fingerprint of the
 weakening to come — remains D-003's accepted, visible trade (per-fingerprint,
 `EXEMPTION_ADDED` pinned at the top of the report); a `disable` is a blanket
-per-rule switch, which is the difference. THREATMODEL row and DECISIONS entry
-are the maintainer's pass. The trust lag advances the Action pin to v0.2.11.
+per-rule switch, which is the difference. THREATMODEL row 100 and DECISIONS D-054
+record it (maintainer pass, 2026-09-03). The trust lag advances the Action pin to v0.2.11.
 
 ## 2026-09-02: the rename residue round (v0.2.11)
 
