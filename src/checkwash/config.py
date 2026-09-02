@@ -22,6 +22,7 @@ DEFAULT_ROLES: dict[str, list[str]] = {
         ".cursorrules",
         ".claude/**",
         ".greenwash/**",
+        ".checkwash/**",
     ],
     # CI and test-runner configuration. pytest's own config decides which
     # files and functions are collected and what `addopts` filters them, so

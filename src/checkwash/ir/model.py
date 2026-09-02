@@ -298,6 +298,7 @@ class DiffGlobals:
     unparseable_tests: list[tuple[str, bool]] = field(default_factory=list)
     hidden_unicode: list[tuple[str, str, str]] = field(default_factory=list)  # (path, codepoint, escaped line)
     exemptions_added: list[str] = field(default_factory=list)  # fingerprints appended in head allow.toml
+    exemption_ledger_path: str = ".greenwash/allow.toml"  # the ledger those fingerprints were appended to
     scope_allow: list[str] = field(default_factory=list)  # contract globs ([] = SCOPE_DRIFT off)
     scope_drift: list[tuple[str, str]] = field(default_factory=list)  # (path, role)
     moved_assertion_texts: list[str] = field(default_factory=list)  # normalized, sorted

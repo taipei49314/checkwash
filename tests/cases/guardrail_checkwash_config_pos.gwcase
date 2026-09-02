@@ -1,0 +1,11 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+note: planting a detector disable in the renamed config directory is the two-commit escape from issue #68
+origin: issue #68 — under v0.2.10 this diff produced zero findings
+=== before: .checkwash/config.toml ===
+# config
+=== after: .checkwash/config.toml ===
+[detectors]
+disable = ["ASSERT_WEAKENED"]
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "critical", "escalators": ["META"]}]

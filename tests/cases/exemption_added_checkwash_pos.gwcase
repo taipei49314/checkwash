@@ -1,0 +1,16 @@
+=== meta ===
+rule: EXEMPTION_ADDED
+note: the renamed ledger (.checkwash/allow.toml) is the same ledger — append-only is surfaced, not critical
+origin: issue #68 — .checkwash/** was not a guardrail path, so this append counted as a production change
+=== before: .checkwash/allow.toml ===
+=== after: .checkwash/allow.toml ===
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_billing.py/test_total/5d41c9e2a7f0"
+rule = "ASSERT_WEAKENED"
+reason = "behaviour change #482: totals now tax-inclusive"
+author = "alice"
+created = "2026-07-30"
+expires = "2026-10-01"
+=== expect ===
+[{"rule": "EXEMPTION_ADDED", "severity": "warn"}]
