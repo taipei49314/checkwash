@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-02 (v0.2.9: EXPECTED_VALUE_CHANGED covers call→literal / call→call, issues #60/#61; `; true` swallow for CW-W2-75. Maintainer unfroze this named-defect round.)
+Updated: 2026-09-02 (v0.2.10: one-release trust lag advances to v0.2.9. No detector change. SUBJECT_NORMALIZED two-hop stays a priced residual.)
 
 ## 2026-08-29: the same bindings are walked once
 
@@ -1573,7 +1573,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.2.9 |
+| version | v0.2.10 |
 | detectors | 21 |
 | human-commit block rate | 42/1800 = 2.33% |
 | adjudicated false positive | 27/1800 = 1.50% |
