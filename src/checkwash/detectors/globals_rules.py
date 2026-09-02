@@ -141,15 +141,22 @@ def detect_conftest_prod_patch(ir: IR) -> list[Finding]:
     ]
 
 
+def _guardrail_message(ir: IR, path: str) -> str:
+    if path in ir.globals.guardrail_configs_created_loosening:
+        return (
+            f"guardrail file created ({path}) with a detector disabled or fail_on raised"
+            " — a config that did not exist was the defaults, and this relaxes them"
+        )
+    verb = "created" if path in ir.globals.guardrail_files_created else "changed"
+    return f"guardrail file {verb} ({path}) — agent constraints are part of the oracle"
+
+
 def detect_guardrail(ir: IR) -> list[Finding]:
     findings = [
         Finding(
             rule="GUARDRAIL_TOUCHED",
             severity="warn",  # gating E4 raises to critical
-            message=(
-                f"guardrail file {'created' if path in ir.globals.guardrail_files_created else 'changed'}"
-                f" ({path}) — agent constraints are part of the oracle"
-            ),
+            message=_guardrail_message(ir, path),
             path=path,
             unit=None,
             fingerprint=make_fingerprint("GUARDRAIL_TOUCHED", path, None, path),

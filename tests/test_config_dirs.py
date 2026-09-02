@@ -23,3 +23,33 @@ def test_both_config_directories_share_the_guardrail_role(rel):
 def test_default_roles_list_both_directories_as_guardrail():
     assert ".greenwash/**" in DEFAULT_ROLES["guardrail"]
     assert ".checkwash/**" in DEFAULT_ROLES["guardrail"]
+
+
+# --- issue #79: creation of checkwash's own config is a modification when its
+# --- content relaxes the defaults that were in force without it.
+
+from checkwash.engine import _created_config_loosens  # noqa: E402
+
+
+def test_created_config_loosens_when_it_disables_a_detector():
+    assert _created_config_loosens(b'[detectors]\ndisable = ["ASSERT_WEAKENED"]\n')
+
+
+def test_created_config_loosens_when_fail_on_rises_above_the_default():
+    assert _created_config_loosens(b'[gate]\nfail_on = "critical"\n')
+
+
+def test_created_config_that_tightens_does_not_loosen():
+    assert not _created_config_loosens(b'[gate]\nfail_on = "warn"\n')
+    assert not _created_config_loosens(b'[gate]\non_engine_error = "block"\n')
+
+
+def test_created_config_with_only_comments_or_nothing_does_not_loosen():
+    assert not _created_config_loosens(b"# checkwash config\n")
+    assert not _created_config_loosens(b"")
+    assert not _created_config_loosens(None)
+
+
+def test_unparseable_created_config_does_not_loosen():
+    # Defaults stay in force; the parse error is surfaced on the next diff.
+    assert not _created_config_loosens(b"not = = toml\n")

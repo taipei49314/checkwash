@@ -1,0 +1,10 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+title: a created config that only tightens is still a new constraint, reported at warn (D-030)
+origin: issue #79 — the exception is scoped to loosening content, not to the file
+=== after: .checkwash/config.toml ===
+[gate]
+fail_on = "warn"
+on_engine_error = "block"
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "warn", "escalators": ["GUARDRAIL_CREATED"]}]
