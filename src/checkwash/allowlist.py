@@ -1,4 +1,4 @@
-"""Exemption records (.greenwash/allow.toml, read from the BASE side — SPEC §6)."""
+"""Exemption records (.checkwash/allow.toml, or the legacy .greenwash/allow.toml; read from the BASE side — SPEC §6)."""
 
 from __future__ import annotations
 
@@ -19,15 +19,18 @@ class AllowEntry:
     expires: str
 
 
-def load_allowlist(data: bytes | None) -> tuple[list[AllowEntry], str | None]:
+def load_allowlist(data: bytes | None, path: str = ".greenwash/allow.toml") -> tuple[list[AllowEntry], str | None]:
     """-> (entries, error). A corrupt ledger voids every exemption in the
     repo, so it must be reported rather than swallowed (SPEC §6)."""
     if not data:
         return [], None
+    # utf-8-sig, not utf-8: PowerShell 5.1 Set-Content -Encoding utf8 writes a BOM,
+    # which tomllib rejects at line 1 column 1 and which then discarded the whole
+    # file in favour of defaults. Every other reader already strips it (issue #71).
     try:
-        raw = tomllib.loads(data.decode("utf-8", errors="replace"))
+        raw = tomllib.loads(data.decode("utf-8-sig", errors="replace"))
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
-        return [], f".greenwash/allow.toml could not be parsed ({exc}); no exemptions are active"
+        return [], f"{path} could not be parsed ({exc}); no exemptions are active"
     entries: list[AllowEntry] = []
     for item in raw.get("allow", []):
         if not isinstance(item, dict):

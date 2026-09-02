@@ -18,13 +18,13 @@ are always read from the **base** side.
 ## 2. File roles
 
 Paths are normalized to forward slashes before matching. Default role globs
-(overridable in `.greenwash/config.toml`, read from base side):
+(overridable in `.checkwash/config.toml`, or the legacy `.greenwash/config.toml`; read from base side):
 
 | role      | default globs |
 |-----------|---------------|
 | conftest  | `**/conftest.py` |
 | test      | `tests/**`, `**/test_*.py`, `**/*_test.py` |
-| guardrail | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.claude/**`, `.greenwash/**` |
+| guardrail | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.claude/**`, `.greenwash/**`, `.checkwash/**` |
 | ci        | `.github/workflows/**`, `.gitlab-ci.yml`, `.pre-commit-config.yaml`, `pytest.ini`, `tox.ini`, `setup.cfg`, `**/pyproject.toml`, `.circleci/**`, `.buildkite/**`, `**/Jenkinsfile`, `.travis.yml`, `.drone.yml`, `appveyor.yml`, `azure-pipelines.yml`, `bitbucket-pipelines.yml`, `noxfile.py`, `**/justfile`, `**/Justfile`, `**/.justfile`, `**/JUSTFILE` |
 | snapshot  | `**/__snapshots__/**`, `**/golden/**`, `**/*.golden`, `**/*.snap` |
 | lockfile  | `poetry.lock`, `uv.lock`, `package-lock.json`, `pnpm-lock.yaml`, `requirements*.txt`, `requirements*.in` |

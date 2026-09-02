@@ -161,10 +161,10 @@ def detect_guardrail(ir: IR) -> list[Finding]:
             rule="EXEMPTION_ADDED",
             severity="warn",
             message=f"this diff exempts itself: {fingerprint} — review the reason",
-            path=".greenwash/allow.toml",
+            path=ir.globals.exemption_ledger_path,
             unit=None,
             after=Evidence(text=fingerprint, span=(0, 0)),
-            fingerprint=make_fingerprint("EXEMPTION_ADDED", ".greenwash/allow.toml", None, fingerprint),
+            fingerprint=make_fingerprint("EXEMPTION_ADDED", ir.globals.exemption_ledger_path, None, fingerprint),
         )
         for fingerprint in ir.globals.exemptions_added
     )

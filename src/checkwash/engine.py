@@ -600,6 +600,7 @@ def build_ir(
                 appended = _classify_allowlist_change(change.before, change.after)
                 if appended is not None:
                     g.exemptions_added.extend(appended)
+                    g.exemption_ledger_path = path
                 else:
                     g.guardrail_files_changed.append(path)
             else:

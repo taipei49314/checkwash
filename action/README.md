@@ -1,6 +1,6 @@
-# greenwash GitHub Action
+# checkwash GitHub Action
 
-Composite action that installs this repository and runs `greenwash check`
+Composite action that installs this repository and runs `checkwash check`
 against the PR (or `HEAD~1` on a push).
 
 ## Caller workflow
@@ -8,8 +8,8 @@ against the PR (or `HEAD~1` on a push).
 Copy the hash-pinned snippet in the root [README](../README.md).
 A tag pin (`actions/checkout@v4`, `taipei49314/checkwash/action@vX.Y.Z`)
 fails zizmor's default `unpinned-uses` policy. The SHA in the root snippet is
-also `doctor`'s built-in verified Greenwash pin: the peeled v0.1.46 commit, not
-the annotated tag object. A release cannot embed its own commit SHA, so release
+also `doctor`'s built-in verified checkwash pin: the peeled commit of the trusted
+tag named in the `git ls-remote` line below, not the annotated tag object. A release cannot embed its own commit SHA, so release
 N advances this pin only after it exists, in release N+1. This deliberate
 one-release trust lag is why the Action pin can differ from the CLI install tag.
 
@@ -66,5 +66,5 @@ is required. `doctor` cannot see whether this ran.
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v7.0.1
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v7.0.0
-git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.2.9^{}'
+git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.2.10^{}'
 ```

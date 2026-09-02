@@ -606,3 +606,30 @@ def test_config_value_warning_is_visible_not_fatal(repo):
     payload = json.loads(result.stdout)
     assert any("on_engine_error" in e for e in payload["config_errors"]), payload
     assert any("fail_on" in e for e in payload["config_errors"]), payload
+
+
+def test_allow_writes_the_ledger_that_check_reads_under_the_new_name(repo):
+    """Issue #69: with `.checkwash/allow.toml` present, `allow` wrote
+    `.greenwash/allow.toml`, which `check` never opened — the documented
+    exemption flow silently did nothing."""
+    (repo / ".checkwash").mkdir()
+    (repo / ".checkwash" / "allow.toml").write_text("# reviewed exemptions" + chr(10), encoding="utf-8")
+    _git(repo, "add", ".checkwash")
+    _git(repo, "commit", "-m", "ledger under the new name")
+    _weaken(repo)
+    blocked = _checkwash(repo, "check")
+    assert blocked.returncode == 1, blocked.stdout
+    assert "then commit .checkwash/allow.toml" in blocked.stdout
+    fingerprint = blocked.stdout.split('checkwash allow "', 1)[1].split('"', 1)[0]
+    recorded = _checkwash(repo, "allow", fingerprint, "--reason", "reviewed")
+    assert recorded.returncode == 0, recorded.stderr
+    assert ".checkwash" in recorded.stdout
+    assert (repo / ".checkwash" / "allow.toml").read_text(encoding="utf-8").count("[[allow]]") == 1
+    assert not (repo / ".greenwash").exists()
+    # The ledger goes in through review; the weakened test stays in the working tree.
+    _git(repo, "add", ".checkwash/allow.toml")
+    _git(repo, "commit", "-m", "record the exemption")
+    exempt = _checkwash(repo, "check")
+    assert exempt.returncode == 0, exempt.stdout
+    assert "allowlisted findings: 1" in exempt.stdout
+    assert "see .checkwash/allow.toml" in exempt.stdout

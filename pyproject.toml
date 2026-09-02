@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "checkwash"
-version = "0.2.10"
+version = "0.2.11"
 description = "Your agent deleted the failing test to make CI green. checkwash catches it before merge."
 readme = "README.md"
 license = "Apache-2.0"
@@ -28,7 +28,7 @@ dependencies = []
 dev = ["pytest>=8"]
 
 [project.scripts]
-greenwash = "checkwash.cli:main"
+greenwash = "checkwash.cli:main"  # legacy alias (pre-rename callers and Actions pinned before v0.2.11); kept at least one more release
 checkwash = "checkwash.cli:main"
 
 [project.urls]

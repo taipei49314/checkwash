@@ -1,0 +1,22 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+note: a comment edit in .checkwash/config.toml must not count as the production change that repairs a weakened assertion
+origin: issue #68 — under v0.2.10 this diff was ASSERT_WEAKENED warn (held by REPAIR_EVIDENCE), verdict pass
+=== before: .checkwash/config.toml ===
+# config
+=== after: .checkwash/config.toml ===
+# config changed
+=== before: tests/test_mod.py ===
+from src.mod import f
+
+
+def test_f():
+    assert f() == 1
+=== after: tests/test_mod.py ===
+from src.mod import f
+
+
+def test_f():
+    assert f() > -999
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "critical", "escalators": ["META"]}, {"rule": "ASSERT_WEAKENED", "severity": "high"}]

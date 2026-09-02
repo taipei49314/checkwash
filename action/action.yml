@@ -1,4 +1,4 @@
-name: greenwash
+name: checkwash
 description: >-
   Deterministic, zero-LLM detector for PR diffs that tamper with the test
   oracle. Blocks on high-severity findings; every finding carries verbatim
@@ -33,23 +33,23 @@ runs:
       shell: bash
       env:
         PYTHONUTF8: "1"
-        GREENWASH_BASE: ${{ inputs.base }}
-        GREENWASH_FAIL_ON: ${{ inputs.fail-on }}
-        GREENWASH_PR_BASE: ${{ github.event.pull_request.base.sha }}
+        CHECKWASH_BASE: ${{ inputs.base }}
+        CHECKWASH_FAIL_ON: ${{ inputs.fail-on }}
+        CHECKWASH_PR_BASE: ${{ github.event.pull_request.base.sha }}
       run: |
-        BASE="$GREENWASH_BASE"
-        if [ -z "$BASE" ] && [ -n "$GREENWASH_PR_BASE" ]; then
-          BASE="$GREENWASH_PR_BASE"
+        BASE="$CHECKWASH_BASE"
+        if [ -z "$BASE" ] && [ -n "$CHECKWASH_PR_BASE" ]; then
+          BASE="$CHECKWASH_PR_BASE"
         fi
         if [ -z "$BASE" ]; then
           BASE="HEAD~1"
         fi
         git fetch --quiet --deepen=200 origin || true
         set +e
-        greenwash check "$BASE...HEAD" --fail-on "$GREENWASH_FAIL_ON" --format term | tee "$GITHUB_STEP_SUMMARY"
+        checkwash check "$BASE...HEAD" --fail-on "$CHECKWASH_FAIL_ON" --format term | tee "$GITHUB_STEP_SUMMARY"
         code=${PIPESTATUS[0]}
         echo "base=$BASE" >> "$GITHUB_OUTPUT"
-        echo "fail_on=$GREENWASH_FAIL_ON" >> "$GITHUB_OUTPUT"
+        echo "fail_on=$CHECKWASH_FAIL_ON" >> "$GITHUB_OUTPUT"
         echo "exit_code=$code" >> "$GITHUB_OUTPUT"
         set -e
         exit $code
@@ -58,8 +58,8 @@ runs:
       shell: bash
       env:
         PYTHONUTF8: "1"
-        GREENWASH_BASE: ${{ steps.check.outputs.base }}
-        GREENWASH_FAIL_ON: ${{ steps.check.outputs.fail_on }}
+        CHECKWASH_BASE: ${{ steps.check.outputs.base }}
+        CHECKWASH_FAIL_ON: ${{ steps.check.outputs.fail_on }}
         GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -70,7 +70,7 @@ runs:
           exit 0
         fi
         tmp="$(mktemp)"
-        greenwash check "$GREENWASH_BASE...HEAD" --fail-on "$GREENWASH_FAIL_ON" --format json > "$tmp"
+        checkwash check "$CHECKWASH_BASE...HEAD" --fail-on "$CHECKWASH_FAIL_ON" --format json > "$tmp"
         python "${{ github.action_path }}/post_review.py" "$tmp"
         status=$?
         rm -f "$tmp"
