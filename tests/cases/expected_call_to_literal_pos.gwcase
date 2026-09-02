@@ -1,0 +1,33 @@
+=== meta ===
+bypass: 97
+rule: EXPECTED_VALUE_CHANGED
+title: call-expression expectation replaced by a literal of the current output
+origin: issue #60 / smallestlie CW-W0-03
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+from reference import reference_total
+
+
+def test_total():
+    assert invoice_total([20.0, 80.0], 0.05) == reference_total([20.0, 80.0], 0.05)
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+from reference import reference_total
+
+
+def test_total():
+    assert invoice_total([20.0, 80.0], 0.05) == 100.0
+=== before: billing.py ===
+def invoice_total(items, tax_rate=0.05):
+    return round(sum(items), 2)
+=== after: billing.py ===
+def invoice_total(items, tax_rate=0.05):
+    return round(sum(items), 2)
+=== before: reference.py ===
+def reference_total(items, tax_rate=0.05):
+    return round(sum(items) * (1 + tax_rate), 2)
+=== after: reference.py ===
+def reference_total(items, tax_rate=0.05):
+    return round(sum(items) * (1 + tax_rate), 2)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

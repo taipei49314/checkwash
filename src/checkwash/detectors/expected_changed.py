@@ -13,9 +13,27 @@ no production change that explains it (SPEC §5 E1).
 
 from __future__ import annotations
 
+import re
+
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.astutil import same_expr
-from checkwash.ir.model import IR
+from checkwash.ir.model import Assertion, IR
+
+
+def _surface_expected_names(assertion: Assertion) -> tuple[str, ...]:
+    """Names the expected side spells on the assertion *line*.
+
+    `right_depends_on` follows bindings, so editing `expected = ...` while
+    leaving `== expected` intact is EXPECTATION_DEFINITION_CHANGED. This
+    keeps only names that still appear once the subject is stripped out.
+    """
+    rest = assertion.text or ""
+    if assertion.left:
+        rest = rest.replace(assertion.left, "", 1)
+    return tuple(
+        n for n in assertion.right_depends_on
+        if re.search(rf"\b{re.escape(n)}\b", rest)
+    )
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -35,18 +53,51 @@ def detect(ir: IR) -> list[Finding]:
                 # Only unweakened pairs: a drop is ASSERT_WEAKENED's business.
                 if pair.strength_change is None or pair.strength_change < 0:
                     continue
-                if b.right_value is None or a.right_value is None:
-                    continue
-                if b.right_value == a.right_value:
+                b_lit, a_lit = b.right_value, a.right_value
+                if b_lit is not None and a_lit is not None:
+                    # Original literal→literal path. Subject is *not* required
+                    # to match: overlap with ASSERT_SUBSTITUTED is recorded
+                    # (assert_substituted_literal_pos).
+                    if b_lit == a_lit:
+                        continue
+                    message = (
+                        f"expected value rewritten {b_lit} -> {a_lit} "
+                        "with no change in assertion strength"
+                    )
+                elif b_lit is None and a_lit is not None:
+                    # Issue #60: independently derived call → literal of the
+                    # current output. Subject must hold or this is substitution.
+                    if not same_expr(b.left, a.left):
+                        continue
+                    message = (
+                        f"independent expected call replaced by literal {a_lit} "
+                        "with no change in assertion strength"
+                    )
+                elif b_lit is None and a_lit is None:
+                    # Issue #61: call → a different call. Surface names on
+                    # the assertion line, not transitive deps (those belong
+                    # to EXPECTATION_DEFINITION_CHANGED) and not the whole
+                    # assertion text (a unittest method rename is not this).
+                    if not same_expr(b.left, a.left):
+                        continue
+                    before_names = _surface_expected_names(b)
+                    after_names = _surface_expected_names(a)
+                    if not before_names or before_names == after_names:
+                        continue
+                    message = (
+                        "expected call rewritten to a different call "
+                        f"{list(before_names)} -> {list(after_names)} "
+                        "with no change in assertion strength"
+                    )
+                else:
+                    # literal → expression is EXPECTED_VALUE_DERIVED, an
+                    # honest named-constant extract, or a parametrize move.
                     continue
                 findings.append(
                     Finding(
                         rule="EXPECTED_VALUE_CHANGED",
                         severity="warn",
-                        message=(
-                            f"{unit.qualname}: expected value rewritten "
-                            f"{b.right_value} -> {a.right_value} with no change in assertion strength"
-                        ),
+                        message=f"{unit.qualname}: {message}",
                         path=file.path,
                         unit=unit.qualname,
                         before=Evidence(text=b.text, span=b.span),

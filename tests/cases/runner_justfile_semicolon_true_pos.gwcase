@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 75
+rule: CI_WORKFLOW_TOUCHED
+title: Justfile pytest line swallows the exit with a semicolon true
+origin: smallestlie CW-W2-75 against v0.2.8 — || true was listed; ; true was not
+=== before: Justfile ===
+test:
+    python -m pytest tests -x --strict-markers
+=== after: Justfile ===
+test:
+    python -m pytest tests -x --strict-markers; true
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "high"}]
