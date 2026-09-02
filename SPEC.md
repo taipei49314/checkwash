@@ -416,3 +416,98 @@ ignored: the diagnostic goes to stderr and to `config_errors` in the JSON
 payload, and with `on_engine_error = "block"` the run exits 2. A hardened
 gate must not quietly revert to defaults, and a corrupt ledger must not
 quietly void every exemption in the repo.
+
+## 10. Corpora: tuning versus held-out
+
+Every false-positive rate this project publishes is a measurement on a set
+of real commits, and it is only as honest as the answer to one question:
+**had the people shaping the detectors read those diffs before the number
+was taken?** This section names the two answers and fixes what each may be
+called. It exists because the README said "none seen during development" of
+a corpus that had been re-run after every precision round since 2026-07-30
+(corrected 2026-09-02, PR #66), and because nothing in this file,
+THREATMODEL or DECISIONS had defined the distinction.
+
+### 10.1 Definitions
+
+- **Tuning corpus (in-sample).** A repository is in-sample once any of the
+  following has happened: a window of its history was swept during a
+  precision round; a blocked diff from it was read by anyone shaping a rule,
+  credit, fixture or threshold; a finding from it was triaged into an issue,
+  a THREATMODEL row or a DECISIONS entry. In-sample is a property of the
+  *repository* and it is permanent: a fresh window from the same repository
+  is still in-sample, because the detectors were shaped on its conventions.
+  Today: wave 0 (`attrs`, `click`, `flask`, `httpx`, `rich`, `starlette`;
+  in-sample since 2026-07-30), the three 2026-08-07 integrations
+  (`requests`, `jinja`, `pydantic`; `docs/integrations.md`), and every
+  repository of the 2026-09-01 field run (`benchmarks/external/2026-09-01/`,
+  spent by the rounds that closed issues #53 and #55). Of wave 1, the
+  repositories that also appear in that field run (`aiohttp`, `pandas`,
+  `sqlalchemy`) are spent; the rest are unspent until the corpus catalogue
+  records otherwise.
+- **Held-out corpus.** A repository that no engine version has swept during
+  development and none of whose diffs anyone shaping the detectors has read.
+- **Spending.** A held-out set is spent the moment its blocks are
+  adjudicated or its findings read. Sweeping it and publishing the raw block
+  rate does not spend it; opening the diffs does. Spent sets do not come
+  back.
+
+### 10.2 Rules
+
+1. **Label it or it is not a claim.** Every published rate names its class
+   — `in-sample` or `held-out` — and the engine version it was measured on;
+   a held-out rate also names its draw date. README, the authoritative table
+   in STATE and `benchmarks/RESULTS.md` carry the label next to the number.
+   A rate without the label is a typo to fix, not a result to cite.
+2. **Draw before you look.** A held-out set is drawn and recorded *before*
+   any engine runs on it: repository, remote, pinned commit, window (the
+   newest N non-merge commits at draw time), the engine version to be
+   measured, and the pre-registered expectation (rule 5). The record is
+   committed to `checkwash-corpus` (`records/holdout/<date>/`) before the
+   sweep. Nothing in the catalogue's wave 0, nothing spent from wave 1,
+   nothing in `records/field-runs/` and nothing from a prior draw is
+   eligible.
+3. **One measurement, then it is tuning corpus.** Sweep, publish the raw
+   block rate with its label, *then* adjudicate. Adjudication spends the set:
+   the catalogue records the spend date, and every later number on those
+   repositories is in-sample. The adjudicated false-positive rate is
+   published as "held-out, adjudicated (now spent)".
+4. **A held-out number belongs to its engine version.** When detector logic
+   changes after the last held-out measurement — a rule, a credit, a lattice
+   value or an alignment parameter; not a pin, a rename or a docs change —
+   that number is stale: it stays published with its version, and no
+   release may present it as the current out-of-sample rate. A release that
+   wants to state one draws afresh (rule 2). Trust-lag and rename releases
+   such as v0.2.10 and v0.2.11 do not stale it.
+5. **Prediction first.** The draw record states, before the sweep, the
+   expected direction against the in-sample rate. Both held-out measurements
+   so far came out worse than in-sample — by half a point (2026-08-07) and by
+   more (2026-09-01) — and that is the prior. A held-out result *better* than
+   in-sample is an anomaly to explain (window, repository shape, opaque
+   share), never good news to headline.
+6. **The check must be able to fail.** The labels are pinned by tests the
+   way `tests/test_state_claims.py` pins the authoritative table, and the
+   catalogue is the single record of what is spent. A number that cannot be
+   traced to a labelled, dated record is removed, not defended.
+
+### 10.3 Transition (2026-09-02)
+
+No held-out number exists for the current engine. The 2026-08-07 figure
+(three repositories, 667 commits) and the 2026-09-01 figure (thirteen
+repositories, 2,300 commits, engine v0.1.49) are both stale under rule 4 and
+both spent under 10.1; they remain published with their dates and versions
+as history. The README "Honest cost" row still states its out-of-sample
+figure without an engine version, and STATE's authoritative table carries
+no class label: rule 1 applies to them from the next number published, and
+the label tests of rule 6 land with the first draw under rule 2. Until that
+draw, the only rate this project may call current is the in-sample 42/1800,
+labelled as in-sample.
+
+### 10.4 What this does not promise
+
+Held-out measures precision on commits nobody tuned on. It does not measure
+recall against an adversary — the tamper, disguised-refactor and decoy arms
+under `benchmarks/` do that, and they are in-sample by construction. It does
+not make the in-sample rate wrong: 42/1800 is the honest answer to "how often
+does it block the repositories it knows best", and it stays published as
+exactly that.
