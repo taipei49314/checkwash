@@ -1,6 +1,8 @@
+# Version updates are switched off (open-pull-requests-limit: 0 per ecosystem); Dependabot security updates continue. estate-consolidation T-27, 2026-09-02.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
+    open-pull-requests-limit: 0
     directory: "/"
     schedule:
       interval: "weekly"
@@ -8,6 +10,7 @@ updates:
       actions:
         patterns: ["*"]
   - package-ecosystem: "pip"
+    open-pull-requests-limit: 0
     directory: "/"
     schedule:
       interval: "weekly"
