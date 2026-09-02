@@ -1,4 +1,5 @@
 === meta ===
+bypass: 99
 rule: EXEMPTION_ADDED
 note: the renamed ledger (.checkwash/allow.toml) is the same ledger — append-only is surfaced, not critical
 origin: issue #68 — .checkwash/** was not a guardrail path, so this append counted as a production change

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 100
 rule: GUARDRAIL_TOUCHED
 title: the legacy directory name is the same config (issue #79 twin)
 === after: .greenwash/config.toml ===

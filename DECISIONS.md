@@ -1699,6 +1699,80 @@ blocks at high) and `root_import_same_module_neg` (the honest shape keeps
 REPAIR_EVIDENCE); the audit's original scratch repo flips pass → block;
 arms/tamper/refactor corpora unchanged; dogfood clean.
 
+## D-054 (2026-09-03): a created config that relaxes the defaults is a modification — issue #79
+
+*Owner decision, option A of two; THREATMODEL row 100.*
+
+D-030 made a **created** guardrail file warn instead of critical because
+`checkwash hook install --agent claude-code` writes `.claude/settings.json`
+and the tool was blocking its own installer's output. Its sentence — "a
+constraint that did not exist has not been relaxed" — is true of a hook
+file and false of checkwash's own `config.toml`: with no file the defaults
+are in force, and a new file that disables a detector or raises `fail_on`
+relaxes them. The owner reproduced the consequence on v0.2.11 in both
+configuration directories: create the config with `[detectors] disable`
+(warn, pass), weaken the test on the next diff (nothing). Because
+configuration is read base-side, the planting commit is the only place the
+plant can be caught, and at warn it never blocked under the default
+`fail_on`. Same-commit plants were already blocked, which is why the
+one-commit reproduction of issue #68 did not surface this.
+
+Ruling: creation of `.checkwash/config.toml` / `.greenwash/config.toml` is
+E4 like a modification **iff** the created content loosens the defaults —
+any `detectors.disable` entry, or `gate.fail_on` above `high`. Everything
+else keeps D-030: tightening-only or comment-only creations warn with
+`GUARDRAIL_CREATED`; hook and instruction files warn; an unparseable created
+config warns (defaults stay in force; the parse error surfaces on the next
+diff). Implementation: `engine._created_config_loosens` reads the head-side
+bytes through `load_config`; `DiffGlobals.guardrail_configs_created_loosening`
+carries the verdict; the finding's message names what the file did. SPEC §4
+carries the exception in the `GUARDRAIL_TOUCHED` row.
+
+Option B — also rating `roles` overrides in a created config critical — was
+declined: a role table can widen or narrow the test set and the tool cannot
+tell a monorepo's first honest table from a narrowing one, so B would block
+every adoption PR to close a shape nobody has demonstrated. It is recorded
+as the open residual on row 100, next to the D-003 sibling (pre-seeding
+`allow.toml` with the fingerprint of the weakening to come), which stays a
+visible per-fingerprint `EXEMPTION_ADDED` because it is reviewable and
+narrow where a `disable` is blanket.
+
+Measured: three positive fixtures and one control, two end-to-end tests,
+five predicate tests; no existing fixture expectation changed; the six-repo
+sweep cannot move (no corpus repository carries either directory) and was
+not re-run. Shipped in v0.2.12.
+
+## D-053 (2026-09-02): corpora are tuning or held-out, and a rate says which — SPEC §10
+
+*Owner instruction; the policy section itself is SPEC §10.*
+
+The README had said the 1800-commit corpus was "none seen during
+development". It was unseen exactly once — the first measurement
+(8.56%, 2026-07-30) — and had been re-run after every precision round
+since, with the blocked diffs read and rules shaped on them; 23 of the 42
+rule ids postdate that first sweep. Nothing in SPEC, THREATMODEL or this
+log had defined the difference between a corpus the detectors were tuned on
+and one nobody had read, and each out-of-sample set so far (2026-08-07,
+2026-09-01) was consumed into a fix round after one use.
+
+Ruling, as SPEC §10: in-sample is a property of the repository and is
+permanent once any window was swept in a precision round, any blocked diff
+read, or any finding triaged; held-out is never swept and never read;
+adjudicating or reading spends a set, publishing a raw block rate does not.
+Every published rate carries its class and engine version (held-out also
+its draw date); held-out sets are drawn and recorded in `checkwash-corpus`
+before any engine runs on them; one measurement, then adjudication spends
+them; a held-out number belongs to its engine version and goes stale when
+detector logic changes (pins, renames and docs do not stale it); the
+prediction — "worse than in-sample" is the prior — is written before the
+sweep; the labels are pinned by tests and an untraceable number is removed.
+Transition stated in §10.3: no held-out number exists for the current
+engine, the two earlier figures are stale and spent, and the README and
+STATE labels plus their tests land with the first draw.
+
+Wording fixed the same day in README (#66) and the archived launch notes
+(#67). Not done yet: the first draw, and the label tests.
+
 ## D-052 (2026-09-02): supply-chain weakening declined as scope creep — issue #54
 
 *Maintainer-delegated scope ruling (THREATMODEL row 96).*

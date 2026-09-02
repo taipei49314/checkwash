@@ -1,4 +1,5 @@
 === meta ===
+bypass: 99
 rule: GUARDRAIL_TOUCHED
 note: a comment edit in .checkwash/config.toml must not count as the production change that repairs a weakened assertion
 origin: issue #68 — under v0.2.10 this diff was ASSERT_WEAKENED warn (held by REPAIR_EVIDENCE), verdict pass
