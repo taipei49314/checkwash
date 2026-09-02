@@ -134,8 +134,11 @@ def load_config(data: bytes | None, path: str = ".greenwash/config.toml") -> tup
     cfg = Config()
     if not data:
         return cfg, None, []
+    # utf-8-sig, not utf-8: PowerShell 5.1 Set-Content -Encoding utf8 writes a BOM,
+    # which tomllib rejects at line 1 column 1 and which then discarded the whole
+    # file in favour of defaults. Every other reader already strips it (issue #71).
     try:
-        raw = tomllib.loads(data.decode("utf-8", errors="replace"))
+        raw = tomllib.loads(data.decode("utf-8-sig", errors="replace"))
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
         return cfg, f"{path} could not be parsed ({exc}); defaults are in effect", []
     warnings: list[str] = []

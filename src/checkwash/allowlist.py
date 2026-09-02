@@ -24,8 +24,11 @@ def load_allowlist(data: bytes | None, path: str = ".greenwash/allow.toml") -> t
     repo, so it must be reported rather than swallowed (SPEC §6)."""
     if not data:
         return [], None
+    # utf-8-sig, not utf-8: PowerShell 5.1 Set-Content -Encoding utf8 writes a BOM,
+    # which tomllib rejects at line 1 column 1 and which then discarded the whole
+    # file in favour of defaults. Every other reader already strips it (issue #71).
     try:
-        raw = tomllib.loads(data.decode("utf-8", errors="replace"))
+        raw = tomllib.loads(data.decode("utf-8-sig", errors="replace"))
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
         return [], f"{path} could not be parsed ({exc}); no exemptions are active"
     entries: list[AllowEntry] = []
