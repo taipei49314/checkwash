@@ -214,7 +214,7 @@ And the datapoint that cuts against the loudest version of the pitch: under natu
 
 ## Day one, in three commands, all offline
 
-Not on PyPI yet — `pipx install greenwash` does not work.
+On PyPI since 0.2.1 (2026-09-01): `pipx install checkwash`. The block below is this draft's original tag-pinned install, pre-rename name and tag, kept as the snapshot:
 
 ```bash
 pipx install git+https://github.com/taipei49314/greenwash@v0.1.43
@@ -286,7 +286,7 @@ The failures ship too: a public bypass table with six rows marked Open (plus fou
 
 It is a tripwire that raises the cost of cheating, not a guarantee. An agent that rewrites production so a weak test passes honestly is undecidable at the diff layer and is documented as limit #1. Not the first tool in this space either — swarm-orchestrator, AgentLint and mumei are credited in the README.
 
-Not on PyPI yet:
+On PyPI since 0.2.1 (`pipx install checkwash`); this draft's original tag-pinned install, kept as the snapshot:
 
 ```bash
 pipx install git+https://github.com/taipei49314/greenwash@v0.1.43
@@ -346,7 +346,7 @@ The cadence is real and each release has a dated section saying what moved and w
 Correct, and `RESULTS.md` stamps it. The v0.1.11 and v0.1.12 changes were checked against the corpus by targeted queries instead of a re-sweep, and the reasoning is in the decision log: the tightenings to the unreadable-file exemption are bounded above by an experiment run the same day that disabled that exemption entirely and moved the block set by zero commits in all six repos, so no subset of it can cost more; and zero of the 1800 commits add a `conftest.py`, contain long-form errexit, or touch any of the runner filenames added. That is an argument, not a measurement, and you are entitled to weigh it as one. [If the pre-launch re-sweep in §7 has been run, replace this paragraph with the result.]
 
 **16. "Not on PyPI, install from a git tag, pre-release, Python only. This isn't shippable."**
-All true and all in the README. `pipx install greenwash` does not work; PyPI needs release hygiene that hasn't happened. It is pure stdlib with zero runtime dependencies and Apache-2.0, so the install is small and auditable, and the tag pinned in every doc is diff-checked against the working tree by a test. Python only in v0.1; a JS/TS frontend is where the unreadable-file blind spot narrows, since "file greenwash cannot read" currently includes every other language. If you want a stable dependency, wait. If you want to break something, the table has open rows.
+True when this draft was written. Since 0.2.1 (2026-09-01) checkwash publishes to PyPI from the release workflow through trusted publishing, so `pipx install checkwash` works and the git tag stays the reproducible alternative. It is pure stdlib with zero runtime dependencies and Apache-2.0, so the install is small and auditable, and the tag pinned in every doc is diff-checked against the working tree by a test. Python only in v0.1; a JS/TS frontend is where the unreadable-file blind spot narrows, since "file greenwash cannot read" currently includes every other language. If you want a stable dependency, wait. If you want to break something, the table has open rows.
 
 **17. "What stops the agent from deleting the hook or editing your config?"**
 Deleting the hook: nothing, and it is documented as out of scope — pair it with a CI required check, which is why the Action ships. Editing the config in the same diff is covered: `.greenwash/config.toml`, `allow.toml` and the task contract are read from the base side, a malformed config is reported rather than silently reverting to defaults, and the 180-day exemption cap is enforced on read so hand-editing a longer one does not work.
