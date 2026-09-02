@@ -29,6 +29,25 @@ MAX_GIT_PROCESSES = 24  # two commits' worth of plumbing, not two per file
 FILES = 150
 
 
+# The one git failure this fixture retries. On `macos-latest` runners, git
+# intermittently cannot write a loose object into its own database while the
+# fixture is adding 150 generated files — "error: <file>: failed to insert
+# into database / fatal: updating files failed", exit 128 — and a re-run of
+# the identical job passes (2026-08-13 macOS 3.11; 2026-09-02 macOS 3.12 on
+# PR #73 and macOS 3.11 on the post-merge run of #77; issue #78). That is the
+# runner's temp volume, not the code under test, but `test` is a required
+# check, so it turned green changes red until someone read the log.
+#
+# Retry, never skip: a perf gate that passes when its subject is absent is the
+# "green because it did not run" pattern docs/RELEASING.md warns about. Only
+# this stderr is retried, a bounded number of times, each attempt printed;
+# after the budget it fails exactly as before. Every other failure raises on
+# the first attempt.
+GIT_OBJECT_STORE_FAILURE = b"failed to insert into database"
+GIT_ATTEMPTS = 3
+GIT_RETRY_PAUSE_S = 0.5
+
+
 def _git(repo, *args):
     """Run git in the scratch repo, and say why when it fails.
 
@@ -43,16 +62,28 @@ def _git(repo, *args):
     recognise makes every command in it fail this way, and the runner's
     `/private/var/folders/...` is exactly that shape.
     """
-    proc = subprocess.run(
-        ["git", "-c", f"safe.directory={repo}", "-C", str(repo), *args],
-        capture_output=True,
-    )
-    if proc.returncode != 0:
-        raise AssertionError(
-            f"git {' '.join(args)} failed ({proc.returncode}) in {repo}\n"
-            f"stdout: {proc.stdout.decode('utf-8', 'replace')}\n"
-            f"stderr: {proc.stderr.decode('utf-8', 'replace')}"
+    for attempt in range(1, GIT_ATTEMPTS + 1):
+        proc = subprocess.run(
+            ["git", "-c", f"safe.directory={repo}", "-C", str(repo), *args],
+            capture_output=True,
         )
+        if proc.returncode == 0:
+            return
+        transient = proc.returncode == 128 and GIT_OBJECT_STORE_FAILURE in proc.stderr
+        if not transient or attempt == GIT_ATTEMPTS:
+            raise AssertionError(
+                f"git {' '.join(args)} failed ({proc.returncode}) in {repo}"
+                f" (attempt {attempt} of {GIT_ATTEMPTS})\n"
+                f"stdout: {proc.stdout.decode('utf-8', 'replace')}\n"
+                f"stderr: {proc.stderr.decode('utf-8', 'replace')}"
+            )
+        print(
+            f"git {' '.join(args)} attempt {attempt} of {GIT_ATTEMPTS} failed (128) in {repo}:"
+            f" object store write failed on the runner; retrying\n"
+            f"stderr: {proc.stderr.decode('utf-8', 'replace').strip()}",
+            file=sys.stderr,
+        )
+        time.sleep(GIT_RETRY_PAUSE_S * attempt)
 
 
 @pytest.fixture(scope="module")
@@ -137,3 +168,55 @@ def test_blobs_are_read_in_a_batch_not_one_process_each(big_repo):
         f"{len(calls)} git processes for {len(changes)} changed files "
         f"({calls.count('show')} of them `show`) — blob reads are not batched"
     )
+
+
+# --- the retry itself is tested with a fake git, so the policy above is
+# --- pinned rather than described (issue #78).
+
+class _FakeGit:
+    def __init__(self, outcomes):
+        self.outcomes = list(outcomes)
+        self.calls = 0
+
+    def __call__(self, argv, capture_output=True):
+        self.calls += 1
+        code, stderr = self.outcomes.pop(0)
+        return subprocess.CompletedProcess(argv, code, stdout=b"", stderr=stderr)
+
+
+def _install_fake_git(monkeypatch, outcomes):
+    fake = _FakeGit(outcomes)
+    monkeypatch.setattr(subprocess, "run", fake)
+    monkeypatch.setattr(time, "sleep", lambda _s: None)
+    return fake
+
+
+def test_git_retries_once_on_object_store_failure_then_succeeds(monkeypatch, tmp_path):
+    fake = _install_fake_git(monkeypatch, [
+        (128, b"error: src/app/mod_72.py: failed to insert into database\nfatal: updating files failed\n"),
+        (0, b""),
+    ])
+    _git(tmp_path, "add", "-A")
+    assert fake.calls == 2
+
+
+def test_git_gives_up_after_the_retry_budget(monkeypatch, tmp_path):
+    fake = _install_fake_git(monkeypatch, [
+        (128, b"error: tests/test_mod_103.py: failed to insert into database\n")
+    ] * GIT_ATTEMPTS)
+    with pytest.raises(AssertionError) as raised:
+        _git(tmp_path, "add", "-A")
+    assert fake.calls == GIT_ATTEMPTS
+    assert "failed to insert into database" in str(raised.value)
+    assert f"attempt {GIT_ATTEMPTS} of {GIT_ATTEMPTS}" in str(raised.value)
+
+
+def test_git_does_not_retry_other_failures(monkeypatch, tmp_path):
+    fake = _install_fake_git(monkeypatch, [
+        (128, b"fatal: not a git repository (or any of the parent directories): .git\n"),
+        (0, b""),
+    ])
+    with pytest.raises(AssertionError) as raised:
+        _git(tmp_path, "status")
+    assert fake.calls == 1
+    assert "not a git repository" in str(raised.value)
