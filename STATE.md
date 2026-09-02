@@ -1,6 +1,41 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-02 (v0.2.11: five rename-residue and first-run defects closed, issues #68–#72 — `.checkwash/**` is a guardrail path, one config-directory resolver for allow/doctor/the hint, bare `hook` exits 2, BOM-tolerant config, Action identity is checkwash. Trust lag advances to v0.2.10. No detector logic change.)
+Updated: 2026-09-03 (v0.2.12: creating checkwash's own config with a detector disabled or `fail_on` raised is a modification, not a new constraint — issue #79, the two-commit plant. Trust lag advances to v0.2.11. No other detector change.)
+
+## 2026-09-03: a created config that relaxes the defaults is a modification (v0.2.12)
+
+The owner's finding, reproduced on v0.2.11 in both configuration directories
+(issue #79): commit one creates `.checkwash/config.toml` containing
+`[detectors] disable = ["ASSERT_WEAKENED"]` — `GUARDRAIL_TOUCHED` at **warn**
+under D-030's created-is-warn rule, verdict pass — and commit two weakens a
+test under the disabled rule with zero findings. The same-commit form blocks,
+because configuration is read from the base side; that is exactly why the
+planting commit is the only place the plant can be caught, and at warn it
+never blocked under the default `fail_on`.
+
+D-030's sentence — "a constraint that did not exist has not been relaxed" —
+is true of a hook file and false of checkwash's own config: with no file the
+defaults were in force, and a new file that disables a detector or raises
+`fail_on` relaxes them. Option A, the owner's decision: a created
+`.checkwash/config.toml` / `.greenwash/config.toml` whose content disables any
+detector or sets `fail_on` above `high` is E4 like any modification —
+critical, `META`. Tightening-only or comment-only creations stay warn with
+`GUARDRAIL_CREATED`; hook and instruction files keep D-030's warn; `roles`
+overrides in a created config stay warn and are a stated residual, because a
+monorepo's first role table cannot be told from a narrowing one without
+blocking every adoption PR. SPEC §4's row carries the exception.
+
+Measured: fixtures for the disable plant in both directories, the raised
+`fail_on`, and the tightening control; two end-to-end tests (the plant blocks
+at commit one, the tightening stays warn); five predicate tests. No existing
+fixture expectation changed, and no number in the table moved: no corpus
+repository carries either directory, so the six-repo sweep was not re-run;
+tamper 49/80 and refactors 24/60 were re-verified in the release checkout.
+The sibling shape — pre-seeding `allow.toml` with the fingerprint of the
+weakening to come — remains D-003's accepted, visible trade (per-fingerprint,
+`EXEMPTION_ADDED` pinned at the top of the report); a `disable` is a blanket
+per-rule switch, which is the difference. THREATMODEL row and DECISIONS entry
+are the maintainer's pass. The trust lag advances the Action pin to v0.2.11.
 
 ## 2026-09-02: the rename residue round (v0.2.11)
 
@@ -1608,7 +1643,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.2.11 |
+| version | v0.2.12 |
 | detectors | 21 |
 | human-commit block rate | 42/1800 = 2.33% |
 | adjudicated false positive | 27/1800 = 1.50% |

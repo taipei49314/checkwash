@@ -492,7 +492,16 @@ def apply_gates(
                 # the order it gives them — produced a blocking verdict on the
                 # tool's own artefact (field integration 2026-08-07). Still
                 # reported, at warn: a new `.cursorrules` is worth seeing.
-                if f.path in ir.globals.guardrail_files_created:
+                #
+                # The exception is checkwash's own config (issue #79): with no
+                # file the defaults were in force, so a created config.toml
+                # that disables a detector or raises fail_on has relaxed a
+                # constraint that existed. Read from the base side, that file
+                # governs the *next* diff, and its creation was the only place
+                # to catch the two-commit plant — at warn it never blocked.
+                created = f.path in ir.globals.guardrail_files_created
+                loosening = f.path in ir.globals.guardrail_configs_created_loosening
+                if created and not loosening:
                     f.escalators.append("GUARDRAIL_CREATED")
                 else:
                     f.severity = "critical"

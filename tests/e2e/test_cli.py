@@ -633,3 +633,32 @@ def test_allow_writes_the_ledger_that_check_reads_under_the_new_name(repo):
     assert exempt.returncode == 0, exempt.stdout
     assert "allowlisted findings: 1" in exempt.stdout
     assert "see .checkwash/allow.toml" in exempt.stdout
+
+
+def test_creating_own_config_with_a_detector_disabled_blocks_the_planting_commit(repo):
+    """Issue #79: the two-commit plant. Under v0.2.11 the planting commit was
+    warn (GUARDRAIL_CREATED) and the next diff weakened a test under the
+    disabled rule with zero findings. The plant is the only place to catch it."""
+    (repo / ".checkwash").mkdir()
+    (repo / ".checkwash" / "config.toml").write_text(
+        "[detectors]" + chr(10) + 'disable = ["ASSERT_WEAKENED"]' + chr(10), encoding="utf-8"
+    )
+    _git(repo, "add", ".checkwash")
+    _git(repo, "commit", "-m", "plant")
+    planted = _checkwash(repo, "check", "HEAD~1..HEAD")
+    assert planted.returncode == 1, planted.stdout
+    assert "GUARDRAIL_TOUCHED   CRITICAL" in planted.stdout
+    assert "detector disabled" in planted.stdout
+
+
+def test_creating_own_config_that_only_tightens_stays_warn(repo):
+    """D-030 keeps its meaning: a new constraint is worth seeing, not blocking."""
+    (repo / ".checkwash").mkdir()
+    (repo / ".checkwash" / "config.toml").write_text(
+        "[gate]" + chr(10) + 'fail_on = "warn"' + chr(10), encoding="utf-8"
+    )
+    _git(repo, "add", ".checkwash")
+    _git(repo, "commit", "-m", "tighten")
+    tightened = _checkwash(repo, "check", "HEAD~1..HEAD")
+    assert tightened.returncode == 0, tightened.stdout
+    assert "GUARDRAIL_TOUCHED   WARN" in tightened.stdout

@@ -1,0 +1,11 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+title: creating checkwash's own config with a detector disabled relaxes the defaults
+origin: issue #79 — under v0.2.11 this diff was warn (GUARDRAIL_CREATED) and the next
+origin2: diff weakened a test under the disabled rule with zero findings; the same-commit
+origin3: form blocks because config is read base-side, so the plant is the only catch
+=== after: .checkwash/config.toml ===
+[detectors]
+disable = ["ASSERT_WEAKENED"]
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "critical", "escalators": ["META"]}]

@@ -149,6 +149,28 @@ def _scan_hidden_unicode(g: DiffGlobals, path: str, before: bytes | None, after:
             )
             g.hidden_unicode.append((path, f"U+{ord(hit):04X}", escaped.strip()[:200]))
 
+_OWN_CONFIG_PATHS = (".checkwash/config.toml", ".greenwash/config.toml")
+
+
+def _created_config_loosens(after: bytes | None) -> bool:
+    """A checkwash config that did not exist was the defaults. A new one that
+    disables a detector or raises `fail_on` above the default relaxes them:
+    the two-commit plant of issue #79 (create the config at warn, weaken the
+    test on the next diff under the disabled rule). Such a creation is E4 like
+    any modification. A file that only tightens, or only comments, is not; an
+    unparseable one is not either — the defaults stay in force and the parse
+    error surfaces on the next diff. `roles` overrides are a stated residual:
+    a monorepo's first role table cannot be told from a narrowing one."""
+    from checkwash.config import SEVERITY_ORDER, load_config
+
+    cfg, err, _warnings = load_config(after)
+    if err:
+        return False
+    if cfg.disabled_detectors:
+        return True
+    return SEVERITY_ORDER[cfg.fail_on] > SEVERITY_ORDER["high"]
+
+
 def _classify_allowlist_change(before: bytes | None, after: bytes | None) -> list[str] | None:
     """Fingerprints of appended entries if the change is append-only and
     schema-valid, else None (→ guardrail critical). SPEC §6 / DECISIONS D-003."""
@@ -607,6 +629,8 @@ def build_ir(
                 g.guardrail_files_changed.append(path)
             if not change.before:
                 g.guardrail_files_created.append(path)
+                if path in _OWN_CONFIG_PATHS and _created_config_loosens(change.after):
+                    g.guardrail_configs_created_loosening.append(path)
         elif role == "ci":
             g.ci_files_changed.append(path)
             if change.status == "deleted" and _is_ci_workflow(path) and _runs_tests(change.before):

@@ -1,0 +1,8 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+title: the legacy directory name is the same config (issue #79 twin)
+=== after: .greenwash/config.toml ===
+[detectors]
+disable = ["ASSERT_WEAKENED"]
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "critical", "escalators": ["META"]}]
