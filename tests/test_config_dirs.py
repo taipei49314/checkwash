@@ -11,6 +11,7 @@ the same diff, and a committed `[detectors] disable` produced zero findings).
 import pytest
 
 from checkwash.config import DEFAULT_ROLES, Config
+from checkwash.engine import _created_config_loosens
 
 
 @pytest.mark.parametrize("rel", ["config.toml", "allow.toml", "nested/anything.txt"])
@@ -27,9 +28,6 @@ def test_default_roles_list_both_directories_as_guardrail():
 
 # --- issue #79: creation of checkwash's own config is a modification when its
 # --- content relaxes the defaults that were in force without it.
-
-from checkwash.engine import _created_config_loosens  # noqa: E402
-
 
 def test_created_config_loosens_when_it_disables_a_detector():
     assert _created_config_loosens(b'[detectors]\ndisable = ["ASSERT_WEAKENED"]\n')
