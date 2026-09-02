@@ -230,10 +230,18 @@ Two harnesses, both reproducible from a clone
   [benchmarks/refactors/](benchmarks/refactors/README.md).
 - **Human-commit block rate — 42 / 1800 = 2.33%.** Six active OSS projects
   (flask, httpx, attrs, click, rich, starlette), 300 consecutive
-  human-reviewed commits each, none seen during development. That is how
-  often checkwash would fail CI on a commit a human wrote. Every repo is
-  at or under 4%; the progression from an initial 8.6%, and what moved each
-  step, is in the benchmarks README.
+  human-reviewed commits each. This is the corpus the detectors were tuned
+  against, not a held-out set: it was unseen only at the first measurement
+  (8.6%, 2026-07-30); every precision round since has been re-run on the
+  same 1800 commits, with the blocked diffs read and the rules shaped
+  accordingly. That is how often checkwash would fail CI on a commit a
+  human wrote, on the repos it knows best. Every repo is at or under 4%;
+  the progression, and what moved each step, is in the benchmarks README.
+  Out of sample it does worse, and that is published too: 11 false
+  positives on 667 commits (1.65%, three projects, 2026-08-07,
+  [docs/integrations.md](docs/integrations.md)) and 67 adjudicated false
+  positives on 2300 commits (2.91%, thirteen projects, engine v0.1.49,
+  2026-09-01, [benchmarks/external/2026-09-01/FINAL_REPORT.md](benchmarks/external/2026-09-01/FINAL_REPORT.md)).
   A block is not automatically a mistake. All 42 were adjudicated commit by
   commit against the real diff: **27 false positives (1.50%)**, 15 legitimate
   policy blocks (0.83%) where the commit really does drop oracle coverage
