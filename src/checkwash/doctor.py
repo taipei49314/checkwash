@@ -10,6 +10,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from checkwash.config import resolve_config_file
 from checkwash.allowlist import MAX_EXPIRY_DAYS, summarize_allowlist
 
 
@@ -412,12 +413,14 @@ def collect(root: Path) -> list[Note]:
         "A change that deletes or disables the checkwash job disarms it in the same diff. "
         "Protect the workflow file with code owners or required review on .github/**.",
     ))
-    cfg = root / ".greenwash" / "config.toml"
-    allow = root / ".greenwash" / "allow.toml"
+    cfg_rel = resolve_config_file(str(root), "config.toml")
+    allow_rel = resolve_config_file(str(root), "allow.toml")
+    cfg = root.joinpath(*cfg_rel.split("/"))
+    allow = root.joinpath(*allow_rel.split("/"))
     notes.append(Note(
         "info", "configuration is read from the BASE side of the diff",
-        f"config: {'present' if cfg.exists() else 'absent (defaults)'}; "
-        f"allowlist: {'present' if allow.exists() else 'absent'}. A new allowlist entry "
+        f"config: {'present (' + cfg_rel + ')' if cfg.exists() else 'absent (defaults)'}; "
+        f"allowlist: {'present (' + allow_rel + ')' if allow.exists() else 'absent'}. A new allowlist entry "
         "takes effect on the next diff and must be committed.",
     ))
     ledger = summarize_allowlist(allow.read_bytes() if allow.exists() else None, datetime.date.today())
@@ -425,11 +428,11 @@ def collect(root: Path) -> list[Note]:
         notes.append(Note("warn", "allow.toml could not be parsed; no exemptions are active", ledger.parse_error))
     else:
         detail = (
-            f"{ledger.entries} entries in .greenwash/allow.toml; {ledger.active} active today, "
+            f"{ledger.entries} entries in {allow_rel}; {ledger.active} active today, "
             f"{ledger.expired} expired, {ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap (ignored on read)."
             if ledger.present else
             f"no allow.toml yet. `checkwash allow` writes one; expiry is capped at "
-            f"{MAX_EXPIRY_DAYS} days. Commit it and put `.greenwash/` in CODEOWNERS."
+            f"{MAX_EXPIRY_DAYS} days. Commit it and put `{allow_rel.split('/')[0]}/` in CODEOWNERS."
         )
         notes.append(Note("info", f"allowlist expiry is capped at {MAX_EXPIRY_DAYS} days", detail))
     notes.append(Note(

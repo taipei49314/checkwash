@@ -18,7 +18,7 @@ import sys
 
 from checkwash import __version__
 from checkwash.allowlist import MAX_EXPIRY_DAYS, load_allowlist
-from checkwash.config import SEVERITY_ORDER, load_config
+from checkwash.config import SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
 from checkwash.deps import MANIFESTS, parse_manifest, project_names
 from checkwash.engine import analyze
@@ -149,16 +149,12 @@ def _cmd_check(args: argparse.Namespace) -> int:
                             return hits
             return hits
 
-    config, config_error, config_warnings = load_config(
-        read_base_file(repo, config_side, ".checkwash/config.toml")
-        or read_base_file(repo, config_side, ".greenwash/config.toml")
-    )
+    config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
+    config, config_error, config_warnings = load_config(config_data, path=config_path)
     if args.fail_on:
         config.fail_on = args.fail_on
-    allow_entries, allow_error = load_allowlist(
-        read_base_file(repo, config_side, ".checkwash/allow.toml")
-        or read_base_file(repo, config_side, ".greenwash/allow.toml")
-    )
+    allow_path, allow_data = read_base_config_file(repo, config_side, "allow.toml")
+    allow_entries, allow_error = load_allowlist(allow_data, path=allow_path)
     # A config that silently fails to parse used to revert a hardened gate to
     # defaults with no diagnostic anywhere (confirmed red-team finding).
     # Value-level warnings are visible in the same channels but never fatal:
@@ -250,7 +246,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
             _write_machine("{}\n")
         return 0
     else:
-        _write_term(render(ir, findings, verdict, config.fail_on, errors=diagnostics))
+        _write_term(render(
+            ir, findings, verdict, config.fail_on, errors=diagnostics,
+            ledger_path=resolve_config_file(repo, "allow.toml"),
+        ))
     return 1 if verdict == "block" else 0
 
 
@@ -371,7 +370,7 @@ def _cmd_allow(args: argparse.Namespace) -> int:
     if (datetime.date.fromisoformat(expires) - today).days > MAX_EXPIRY_DAYS:
         print(f"error: expiry exceeds {MAX_EXPIRY_DAYS} days", file=sys.stderr)
         return 2
-    path = os.path.join(args.repo, ".greenwash", "allow.toml")
+    path = os.path.join(args.repo, *resolve_config_file(args.repo, "allow.toml").split("/"))
     os.makedirs(os.path.dirname(path), exist_ok=True)
     entry = (
         "\n[[allow]]\n"

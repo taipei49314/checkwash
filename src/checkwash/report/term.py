@@ -58,6 +58,7 @@ def render(
     fail_on: str,
     stream=None,
     errors: list[str] | None = None,
+    ledger_path: str = ".greenwash/allow.toml",
 ) -> str:
     stream = stream or sys.stdout
     color = _use_color(stream)
@@ -114,7 +115,7 @@ def render(
             # the identical block, with nothing saying why (field integration
             # 2026-08-07). The reader of a blocking report is exactly the
             # person who needs the second half of the sentence.
-            lines.append("    then commit .greenwash/allow.toml — it is read from the base side")
+            lines.append(f"    then commit {ledger_path} — it is read from the base side")
         lines.append("")
 
     for message in errors or []:
@@ -124,7 +125,7 @@ def render(
     if suppressed:
         lines.append(
             f"allowlisted findings: {len(suppressed)} "
-            f"(see .greenwash/allow.toml; expiry cap {MAX_EXPIRY_DAYS} days; "
+            f"(see {ledger_path}; expiry cap {MAX_EXPIRY_DAYS} days; "
             "takes effect after commit)"
         )
     counts = {"critical": 0, "high": 0, "warn": 0, "info": 0}

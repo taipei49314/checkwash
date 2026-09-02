@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 from checkwash import __version__
 from checkwash.allowlist import load_allowlist
-from checkwash.config import load_config
+from checkwash.config import load_config, read_base_config_file
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS, parse_manifest, project_names
 from checkwash.engine import analyze
@@ -99,16 +99,12 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
             # A root commit has no parent: nothing to diff, not an error.
             result.skipped += 1
             continue
-        config, _err, _warn = load_config(
-            read_base_file(repo, parent, ".checkwash/config.toml")
-            or read_base_file(repo, parent, ".greenwash/config.toml")
-        )
+        config_path, config_data = read_base_config_file(repo, parent, "config.toml")
+        config, _err, _warn = load_config(config_data, path=config_path)
         if fail_on:
             config.fail_on = fail_on
-        allow, _aerr = load_allowlist(
-            read_base_file(repo, parent, ".checkwash/allow.toml")
-            or read_base_file(repo, parent, ".greenwash/allow.toml")
-        )
+        allow_path, allow_data = read_base_config_file(repo, parent, "allow.toml")
+        allow, _aerr = load_allowlist(allow_data, path=allow_path)
 
         declared: set[str] = set()
         self_modules: set[str] = set()

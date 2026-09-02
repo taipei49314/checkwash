@@ -1,4 +1,4 @@
-"""Configuration (.greenwash/config.toml, read from the BASE side — SPEC §1).
+"""Configuration (.checkwash/config.toml, or the legacy .greenwash/config.toml; read from the BASE side — SPEC §1).
 
 Detector logic is not configurable; detectors can only be disabled whole.
 """
@@ -6,6 +6,7 @@ Detector logic is not configurable; detectors can only be disabled whole.
 from __future__ import annotations
 
 import fnmatch
+import os
 import tomllib
 from dataclasses import dataclass, field
 
@@ -116,7 +117,7 @@ def _match(path: str, pattern: str) -> bool:
     return False
 
 
-def load_config(data: bytes | None) -> tuple[Config, str | None, list[str]]:
+def load_config(data: bytes | None, path: str = ".greenwash/config.toml") -> tuple[Config, str | None, list[str]]:
     """-> (config, error, warnings). A malformed config is never silently
     ignored: a hardened `fail_on` reverting to defaults must be visible
     (SPEC §6).
@@ -136,7 +137,7 @@ def load_config(data: bytes | None) -> tuple[Config, str | None, list[str]]:
     try:
         raw = tomllib.loads(data.decode("utf-8", errors="replace"))
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
-        return cfg, f".greenwash/config.toml could not be parsed ({exc}); defaults are in effect", []
+        return cfg, f"{path} could not be parsed ({exc}); defaults are in effect", []
     warnings: list[str] = []
     roles = raw.get("roles")
     if isinstance(roles, dict):
@@ -174,3 +175,40 @@ def load_config(data: bytes | None) -> tuple[Config, str | None, list[str]]:
         elif disable is not None:
             warnings.append("config.toml: detectors.disable must be a list of rule IDs; ignored")
     return cfg, None, warnings
+
+
+# The two names of the directory checkwash owns. `check` and `sweep` read the
+# base-side file under `.checkwash/` first and fall back to `.greenwash/`.
+# Every surface that writes, inspects or names that directory must resolve it
+# the same way, or `allow` writes a ledger `check` never opens (issue #69).
+CONFIG_DIRS = (".checkwash", ".greenwash")
+DEFAULT_CONFIG_DIR = ".greenwash"  # what the docs hand a repository that has neither
+
+
+def resolve_config_file(repo: str, name: str) -> str:
+    """Repository-relative path of the `name` (config.toml or allow.toml) that
+    `check` will read from this working tree, in the base-side read order: the
+    file under `.checkwash/` if it exists, else under `.greenwash/` if it
+    exists, else under whichever directory exists (`.checkwash/` first), else
+    the documented default. `allow` writes here, `doctor` reports here, and the
+    block hint names this path."""
+    for d in CONFIG_DIRS:
+        if os.path.isfile(os.path.join(repo, d, name)):
+            return f"{d}/{name}"
+    for d in CONFIG_DIRS:
+        if os.path.isdir(os.path.join(repo, d)):
+            return f"{d}/{name}"
+    return f"{DEFAULT_CONFIG_DIR}/{name}"
+
+
+def read_base_config_file(repo: str, side: str, name: str) -> tuple[str, bytes | None]:
+    """(path, bytes) of the base-side `name` the engine reads: the first of
+    `.checkwash/<name>`, `.greenwash/<name>` that exists on `side`; the
+    documented default path and None when neither does."""
+    from checkwash.gitio.git import read_base_file
+
+    for d in CONFIG_DIRS:
+        data = read_base_file(repo, side, f"{d}/{name}")
+        if data is not None:
+            return f"{d}/{name}", data
+    return f"{DEFAULT_CONFIG_DIR}/{name}", None

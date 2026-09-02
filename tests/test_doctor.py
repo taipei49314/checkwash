@@ -552,3 +552,23 @@ def test_doctor_is_a_registered_subcommand():
     source = pathlib.Path(cli_module.__file__).read_text(encoding="utf-8")
     fallback = source.split("elif argv[0] not in (", 1)[1].split("):", 1)[0]
     assert '"doctor"' in fallback
+
+
+def test_doctor_sees_the_renamed_config_directory(tmp_path):
+    """Issue #69: only `.checkwash/` present used to read as config absent, allowlist absent."""
+    allow = (
+        "[[allow]]" + chr(10)
+        + 'fingerprint = "ASSERT_WEAKENED/tests/x.py/t/deadbeefdead"' + chr(10)
+        + 'rule = "ASSERT_WEAKENED"' + chr(10) + 'reason = "reviewed"' + chr(10) + 'author = "audit"' + chr(10)
+        + 'created = "2026-01-01"' + chr(10) + 'expires = "2026-03-01"' + chr(10)
+    )
+    notes = collect(_repo(tmp_path, {
+        f"{CI}/checkwash.yml": CANONICAL,
+        ".checkwash/config.toml": "# config" + chr(10),
+        ".checkwash/allow.toml": allow,
+    }))
+    base_side = next(note for note in notes if "BASE side" in note.title)
+    assert "present (.checkwash/config.toml)" in base_side.detail
+    assert "present (.checkwash/allow.toml)" in base_side.detail
+    cap = next(note for note in notes if "180 days" in note.title)
+    assert "1 entries in .checkwash/allow.toml" in cap.detail
