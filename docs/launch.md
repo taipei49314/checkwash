@@ -94,7 +94,7 @@ Neither was found by reading the code. Both are rows in a public bypass table (6
 
 ## 1. How often does it block a commit a human wrote?
 
-That is the number that decides whether it survives contact with a real team. Six active OSS Python projects, 300 consecutive non-merge commits each, none seen during development.
+That is the number that decides whether it survives contact with a real team. Six active OSS Python projects, 300 consecutive non-merge commits each. They are the corpus the detectors were tuned against, not a held-out set: unseen only at the first measurement (8.56%), and every precision round since has re-run the same 1800 commits.
 
 | repo | commits | touching tests | blocked | rate |
 |---|---:|---:|---:|---:|
@@ -277,7 +277,7 @@ Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and 
 
 What is measured, all from a harness in `benchmarks/`:
 
-- **1800 human-reviewed commits** (flask, httpx, attrs, click, rich, starlette; 300 consecutive each, none seen during development): **blocks 35 = 1.94%**. Worst repo click at 4.00%, best 0.67%. Down from 8.56% at first measurement, with the full progression published — including the row where closing a recall hole *raised* the rate to 3.00%.
+- **1800 human-reviewed commits** (flask, httpx, attrs, click, rich, starlette; 300 consecutive each; the tuning corpus, unseen only at the first measurement): **blocks 35 = 1.94%**. Worst repo click at 4.00%, best 0.67%. Down from 8.56% at first measurement, with the full progression published — including the row where closing a recall hole *raised* the rate to 3.00%.
 - All 35 adjudicated against the real diff: **20 false positives (1.11%)**, 15 legitimate policy blocks (0.83%), 0 unclear. Two raters re-adjudicated blind; Fleiss' kappa 0.844, four contested commits, no three-way splits. All three raters' reasoning ships in the repo.
 - **32 of 1800 (1.78%)** never got a real analysis: they touch a production file greenwash cannot read, which suppresses escalation for the whole diff. Published as a blind spot with a count. Re-swept with that exemption disabled outright: 35 blocked before, 35 after, in all six repos.
 - **12/12** on recorded agent tampering diffs, **0/12** false blocks on the honest arm — but the first measurement of that corpus caught **0 of 12**, because pytest's own `.pyc` output was granting repair evidence. And under natural conditions, 0 of 12 agents touched a test at all.
