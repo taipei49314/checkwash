@@ -80,17 +80,22 @@ release. PyPI uses OIDC (`id-token: write`) and no stored token.
 
 ## PyPI
 
-Not automated by default, on purpose. The `pypi` job publishes through trusted
-publishing, so no token is stored anywhere by anyone. Three steps, all the
-maintainer's:
+Gated on a repository variable, on purpose — and **the gate is open**:
+`PYPI_ENABLED` has been `true` since 2026-09-01, so every GitHub Release
+since 0.2.1 has also published to PyPI (`pipx install checkwash`). Cutting a
+release *is* publishing to PyPI; there is no separate step, and the wheel and
+sdist on PyPI are the same bytes the `build` job attached to the release
+(checked on 0.2.11, 2026-09-02). The `pypi` job publishes through trusted
+publishing, so no token is stored anywhere by anyone. The three steps that
+opened the gate, all the maintainer's:
 
 1. Register checkwash as a trusted publisher on PyPI for this repository and
    the `release` workflow.
 2. Set the repository variable `PYPI_ENABLED` to `true`.
 3. Keep the `pypi` environment for its deployment protection rules.
 
-Until (2), the job is skipped and releases are GitHub-only, which is what the
-README promises.
+Without (2) the job is skipped and releases are GitHub-only. To go back to
+GitHub-only releases, unset the variable; nothing else has to change.
 
 **This paragraph used to say something false, and it is worth knowing why.**
 It claimed the job was gated behind an environment "that does not exist until
