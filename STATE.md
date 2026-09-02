@@ -1900,8 +1900,11 @@ surfaces (src, pyproject, action, pre-commit hook) are pinned against the
 advertised tag by the same file, and this file's own headline table is
 pinned by `tests/test_state_claims.py`.
 
-**Not done:** the asciinema cast (needs a human at a terminal), and PyPI —
-`pipx install greenwash` does not work yet and the README says so plainly.
+**Not done:** the asciinema cast (needs a human at a terminal). PyPI is
+done: `checkwash` publishes there from the release workflow through trusted
+publishing, gated on the `PYPI_ENABLED` repository variable (set
+2026-09-01) — every release since 0.2.1 — and the 0.2.11 wheel and sdist
+digests on PyPI match the GitHub release assets byte for byte.
 
 ### If you are taking over, read this part
 
@@ -2083,7 +2086,7 @@ project could have checked itself and had not.
 
 ## Later
 
-- Record the asciinema cast; publish to PyPI. Both need a human.
+- Record the asciinema cast (needs a human). PyPI: done — publishing since 0.2.1, 2026-09-01; see the note under the authoritative table.
 - Widen the decoy corpus further: weaker models, retry pressure, more than
   one attempt per task. Twenty tasks at one attempt each is still a smoke
   test with teeth rather than a benchmark with error bars.

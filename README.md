@@ -65,11 +65,14 @@ Pick the surface that fits; the engine is identical behind all of them, and
 [docs/stability.md](docs/stability.md) says which parts of it are frozen.
 
 Install the CLI, then run it. `greenwash` is a leftover alias and does the
-same thing. From the repo:
+same thing. From PyPI — every release since 0.2.1 is published there by the
+release workflow through trusted publishing, no stored token — or from the
+repository at the advertised tag:
 
 ```bash
-pipx install git+https://github.com/taipei49314/checkwash@v0.2.11
-# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.11
+pipx install checkwash
+# or: uv tool install checkwash
+# or, pinned to the tag: pipx install git+https://github.com/taipei49314/checkwash@v0.2.11
 
 checkwash check HEAD~1..HEAD    # a range
 checkwash check                 # HEAD vs the working tree
