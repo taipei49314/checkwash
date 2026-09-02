@@ -409,7 +409,7 @@ def build_parser() -> argparse.ArgumentParser:
     sweep_p.add_argument("--repo", default=".")
 
     hook = sub.add_parser("hook", help="integration helpers")
-    hook_sub = hook.add_subparsers(dest="hook_command")
+    hook_sub = hook.add_subparsers(dest="hook_command", required=True)
     hook_install = hook_sub.add_parser("install", help="wire checkwash into an agent or tool")
     hook_install.add_argument("--agent", choices=["claude-code", "pre-commit"], required=True)
     hook_install.add_argument("--repo", default=".")
@@ -523,10 +523,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "allow":
             return _cmd_allow(args)
         if args.command == "hook":
-            if getattr(args, "hook_command", None) == "install":
-                return _cmd_hook_install(args)
-            parser.parse_args(["hook", "--help"])
-            return 2
+            # The subparser is required, so argparse has already rejected a
+            # missing subcommand with usage on stderr and exit 2. This used to
+            # print `hook --help` instead, which argparse exits 0 for, so a CI
+            # step that omitted `install` reported success (issue #70).
+            return _cmd_hook_install(args)
         if args.command == "sweep":
             result = sweep(args.repo, args.revs, args.limit, _today(), args.fail_on)
             _write_machine(result.to_json())
