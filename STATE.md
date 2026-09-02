@@ -1,6 +1,41 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-02 (v0.2.10: one-release trust lag advances to v0.2.9. No detector change. SUBJECT_NORMALIZED two-hop stays a priced residual.)
+Updated: 2026-09-02 (v0.2.11: five rename-residue and first-run defects closed, issues #68–#72 — `.checkwash/**` is a guardrail path, one config-directory resolver for allow/doctor/the hint, bare `hook` exits 2, BOM-tolerant config, Action identity is checkwash. Trust lag advances to v0.2.10. No detector logic change.)
+
+## 2026-09-02: the rename residue round (v0.2.11)
+
+Five defects, none in a detector, each reproduced on v0.2.10 before anything
+was built (issues #68–#72; T-44 in the estate ledger):
+
+- **`.checkwash/**` was not a guardrail path.** `check` and `sweep` read
+  `.checkwash/config.toml` first, but only `.greenwash/**` carried the role,
+  so a comment edit in `.checkwash/config.toml` counted as a production
+  change and granted `REPAIR_EVIDENCE` to a weakened assertion in the same
+  diff (verdict pass), and a committed `[detectors] disable` produced zero
+  findings. One glob, the matching SPEC §2 cell, `.checkwash` twins of the
+  guardrail and exemption fixtures, and a test that pins the two directories
+  to one role. `EXEMPTION_ADDED` now reports the ledger actually appended.
+- **`allow`, `doctor` and the block hint were hardwired to `.greenwash/`.**
+  With `.checkwash/allow.toml` present, following the printed instruction
+  recorded an exemption in a ledger `check` never opened. One resolver
+  (`config.resolve_config_file` / `read_base_config_file`) now serves every
+  surface, and the diagnostics name the file actually read.
+- **A bare `checkwash hook` exited 0** — usage printed through argparse
+  `--help`. It is a usage error, exit 2 (SPEC §9).
+- **A UTF-8 BOM on `config.toml` or `allow.toml` failed to parse** and the
+  gate reverted to defaults: fail-closed, but the user's configuration was
+  gone. Both readers decode `utf-8-sig`, as every other reader already did.
+- **The composite Action still called itself `greenwash`** and ran
+  `greenwash check`, alive only through the console-script alias. Renamed;
+  the alias stays at least one more release, marked legacy in pyproject.
+
+No detector logic changed and no number in the table moved: no corpus
+repository carries either configuration directory, so the six-repo sweep was
+not re-run; tamper 49/80 and refactors 24/60 were re-verified in the release
+checkout. The one-release trust lag advances the Action pin to v0.2.10. Not
+changed on purpose: the docs still hand a fresh repository `.greenwash/`;
+making `.checkwash/` the documented default is a docs-and-SPEC decision for
+the maintainer.
 
 ## 2026-08-29: the same bindings are walked once
 
@@ -1573,7 +1608,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.2.10 |
+| version | v0.2.11 |
 | detectors | 21 |
 | human-commit block rate | 42/1800 = 2.33% |
 | adjudicated false positive | 27/1800 = 1.50% |
