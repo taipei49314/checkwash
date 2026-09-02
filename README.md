@@ -14,7 +14,7 @@ Typical catches: `assert total == 105.3` becoming `assert total > 0`, a new
 `pytest.mark.skip`, a deleted test, a looser float tolerance, a rewritten
 golden file, or a CI script that stops failing.
 
-> Status: **pre-release.** 21 detectors, 535 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 538 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.
@@ -68,8 +68,8 @@ Install the CLI, then run it. `greenwash` is a leftover alias and does the
 same thing. From the repo:
 
 ```bash
-pipx install git+https://github.com/taipei49314/checkwash@v0.2.8
-# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.8
+pipx install git+https://github.com/taipei49314/checkwash@v0.2.9
+# or: uv tool install git+https://github.com/taipei49314/checkwash@v0.2.9
 
 checkwash check HEAD~1..HEAD    # a range
 checkwash check                 # HEAD vs the working tree
@@ -144,7 +144,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@15437ba384471cab40f2d79af7847debe59872ec # v0.2.7
+      - uses: taipei49314/checkwash/action@1d2638fbf21750d73611d606cda922f21a118b32 # v0.2.8
 ```
 
 Hash pins and `persist-credentials: false` are required by
@@ -155,7 +155,7 @@ SHA is deliberately the newest prior stable pin that `doctor` could verify at
 build time. Release N cannot embed its own commit SHA, so it adopts that SHA
 only after it already exists, in the next release. The result is an explicit
 one-release trust lag, not an arbitrary 40-hex claim. Verify this pin with
-`git rev-parse 'v0.2.7^{commit}'`; for another trusted release, substitute its
+`git rev-parse 'v0.2.8^{commit}'`; for another trusted release, substitute its
 version in `git rev-parse 'vX.Y.Z^{commit}'`.
 See [action/README.md](action/README.md).
 
@@ -169,7 +169,7 @@ request, so it never executed once while the README told people to use it.
 ```yaml
 repos:
   - repo: https://github.com/taipei49314/checkwash
-    rev: v0.2.8
+    rev: v0.2.9
     hooks: [{ id: checkwash }]
 ```
 
@@ -198,7 +198,7 @@ checkwash hook install --agent claude-code
 checkwash hook install --agent pre-commit
 
 # GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/checkwash/action@15437ba384471cab40f2d79af7847debe59872ec # v0.2.7
+- uses: taipei49314/checkwash/action@1d2638fbf21750d73611d606cda922f21a118b32 # v0.2.8
 ```
 
 `checkwash check BASE...HEAD` (three dots) resolves through the merge base,

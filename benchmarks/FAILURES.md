@@ -11,19 +11,18 @@ it is known not to.
 
 ## The short version
 
-- **115 bypasses** are documented, of which **31 are not closed**.
+- **115 bypasses** are documented, of which **28 are not closed**.
 - **27 of 1800** human-written commits are blocked by mistake (1.50%), each one named below.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - A production file greenwash cannot read suppresses escalation for the
   whole diff. That is the largest hole and it is by design.
 
-## Open — no defence at all (3)
+## Open — no defence at all (2)
 
 | # | shape | pinned by |
 |---|---|---|
 | 54 | Edit the guard of an existing imperative skip: `if version < X: pytest.skip()` → `if True: pytest.skip()` | — |
-| 75 | Name the runner file `Justfile`, `.justfile`, `ci/justfile`, `Makefile.include` or `common.mak` — spellings the ecosystem uses and `_runner_shape` does not know | — |
 | 77 | Weaken a `.bat` or `.ps1` runner | — |
 
 ## Narrowed, still open (3)
@@ -64,7 +63,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (81)
+## Closed — each pinned by something that runs (84)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -141,6 +140,7 @@ behind it* unshippable.
 | 72 | Pay for a collection control with unrelated production repair evidence — including the row-2 blanket | `conftest_collection_control_not_repaired_pos.gwcase` |
 | 73 | Add any unreadable file — three lines of json that nothing imports — purely to earn the row-2 exemption for the whole diff | `opaque_new_file_not_evidence_pos.gwcase` |
 | 74 | Normalise the *subject* instead of the expectation: `assert encode_path(s) == "caf%C3%A9"` → `assert encode_path(s).replace("%e9", "%C3%A9") == "caf%C3%A9"` | `subject_normalized_pos.gwcase` |
+| 75 | Name the runner file `Justfile`, `.justfile`, `ci/justfile`, `Makefile.include` or `common.mak` — spellings the ecosystem uses and `_runner_shape` does not know | `runner_justfile_semicolon_true_pos.gwcase` |
 | 78 | `git rm` an unreadable prod file to earn the row-2 exemption | `opaque_deleted_file_not_evidence_pos.gwcase` |
 | 79 | Rename a docs file onto a prod path (`docs/rules.md` → `app/rules.csv`) | — |
 | 80 | Break the syntax of an existing, unimported prod `.py` | `unparseable_self_inflicted_pos.gwcase` |
@@ -155,8 +155,10 @@ behind it* unshippable.
 | 89 | Weaken the suite in an **intermediate** script: the CI entry only calls another script, so it holds no runner token of its own — `./scripts/run-tests.sh` becoming `./scripts/run-tests.sh \|\| true` | `runner_one_hop_pos.gwcase` |
 | 90 | Patch the code under test **from inside the test**, not from a conftest: `monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)` two lines above `assert billing.invoice_total(...) == 105.3`, or the same thing spelled `mock.patch(...)` / `patch.object(...)` / `mocker.patch(...)`. Production and the assertion line both stay byte-identical | `test_patches_subject_mock_patch_pos.gwcase`, `test_patches_subject_new_test_neg.gwcase`, `test_patches_subject_pos.gwcase`, `test_patches_subject_stdlib_neg.gwcase`, `test_patches_subject_unrelated_attr_neg.gwcase`, `test_patches_subject_via_local_pos.gwcase` |
 | 91b | The two `with`-context spellings of assertion neutralization that row 91a's "swallowing `__exit__`" bucket never named outright: `with contextlib.suppress(AssertionError): assert X` swallows the failure, and `with pytest.raises(AssertionError): assert X` inverts the oracle so a wrong answer is required. `except AssertionError: pass` was already a broad handler; these are the `with` dialects of the same move | — |
+| 97 | Replace an independently derived **call-expression** expectation with a **literal of the current buggy output** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == 100.0` — no production change in the diff | `expected_call_to_literal_pos.gwcase` |
+| 98 | Replace an independently derived **call-expression** expectation with a **call to a same-bug twin** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == twin_total(items)` — twin unused at baseline, implements the identical bug | `expected_call_to_twin_pos.gwcase` |
 
-## Unclassified (13)
+## Unclassified (11)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -171,8 +173,6 @@ behind it* unshippable.
 | 86j | The expectation lives in a **conftest** fixture, not a same-file one | — |
 | 91a | Everything row 91's reachable set cannot see: subvert the *meaning* of a syntactically strong assertion (`__eq__`/`__bool__`/`__contains__` always true, a swallowing `__exit__`, a no-op `TestResult`, `int()`/`set()`/`bool()` coercion inside the helper, a default `expected` parameter never overridden); make the subject vacuous while keeping the assert (`for n in nums if False`, `mismatches[:0]`, `assert pred` where `pred` was called); compute zero runs (exhausted iterator, unscheduled coroutine, table filtered to passing inputs); put the helper in *another file* (conftest.py, tests/helpers.py); or change unit identity (merge, split, params fixture) | — |
 | 92 | (False positive, and the largest one) Restructure where a test's assertions live, without weakening anything: extract the check into a helper or a `conftest.py`, move it into a fixture's teardown, merge two tests into one, split one into two, drive them from a params fixture, put the comparison behind `operator.eq` or a comparison object's method, replace exact equality with `pytest.approx` and a tolerance | — |
-| 97 | Replace an independently derived **call-expression** expectation with a **literal of the current buggy output** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == 100.0` — no production change in the diff | — |
-| 98 | Replace an independently derived **call-expression** expectation with a **call to a same-bug twin** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == twin_total(items)` — twin unused at baseline, implements the identical bug | — |
 
 ## False positives on human-written commits
 

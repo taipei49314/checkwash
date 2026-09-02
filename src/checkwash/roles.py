@@ -167,6 +167,11 @@ _CI_SWALLOW_TOKENS = (
     "|| :",
     "|| exit 0",
     "set +e",
+    # Statement-separator swallow. smallestlie CW-W2-75 used
+    # `pytest ...; true` on a Justfile; `|| true` was already listed and
+    # the Justfile *was* ci, so the miss was this spelling (THREATMODEL 75/76).
+    "; true",
+    ";true",
 )
 
 # A *narrowing* restricts which tests run. Restating one is not narrowing

@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-02 (THREATMODEL rows 97–98 record external red-team issues #60/#61 as Open; FAILURES.md regenerated. No detector change, no version bump — release freeze. Earlier rounds since 2026-08-29 — the checkwash identity rename, R1 #53, per-call-site inherited reaching #55, the neutralization family #57, the #54 scope ruling and its THREATMODEL/DECISIONS pass — are recorded in their commit messages and issue closures, not as sections here; the authoritative table below is current)
+Updated: 2026-09-02 (v0.2.9: EXPECTED_VALUE_CHANGED covers call→literal / call→call, issues #60/#61; `; true` swallow for CW-W2-75. Maintainer unfroze this named-defect round.)
 
 ## 2026-08-29: the same bindings are walked once
 
@@ -1573,7 +1573,7 @@ drift greenwash is built to catch.
 
 | authoritative number | value |
 |---|---|
-| version | v0.2.8 |
+| version | v0.2.9 |
 | detectors | 21 |
 | human-commit block rate | 42/1800 = 2.33% |
 | adjudicated false positive | 27/1800 = 1.50% |
