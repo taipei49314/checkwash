@@ -19,3 +19,8 @@ The judge is immutable; the player runs free.
    expectation is wrong, open an issue and stop.
 3. Read `STATE.md` first when taking over.
 4. Every PR runs checkwash on itself (dogfood, from M2).
+5. Releases happen only at the weekly release slot (estate T-57, 2026-09-03).
+   Between slots: no version bump, no tag, no GitHub Release. The tag ruleset
+   rejects `v*` creation outside the slot; `docs/RELEASING.md` has the slot
+   procedure. Downstream re-pins (smallestlie, checkwash-corpus) follow the
+   slot, never a mid-week commit.
