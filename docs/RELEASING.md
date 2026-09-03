@@ -25,9 +25,38 @@ git tag -a v0.1.14 -m "..."
 pytest                                  # tag parity is now checkable, and checked
 checkwash check --repo .                # the judge judges itself
 
-# 6. push both, together
+# 6. unlock the tag ruleset for this push only (it rejects v* creation,
+#    update and deletion at every other moment; see "The release slot")
+printf '{"enforcement":"disabled"}' | gh api repos/taipei49314/checkwash/rulesets/22162219 --method PUT --input -
+
+# 7. push both, together
 git push origin main --follow-tags
+
+# 8. lock it again, immediately, before the GitHub Release is cut
+printf '{"enforcement":"active"}' | gh api repos/taipei49314/checkwash/rulesets/22162219 --method PUT --input -
 ```
+
+## The release slot
+
+Since 2026-09-03 (estate T-57) releases happen only at a weekly release slot.
+Between slots nothing is bumped, tagged or released, and the tag ruleset
+`release tags: cut only at the release slot` (id 22162219, empty bypass list)
+rejects any `v*` tag creation, update or deletion with `GH013` — for everyone,
+owner included. Steps 6 and 8 above are the only sanctioned way through it;
+both commands are recorded in the slot's ledger row. The ruleset cannot tell an
+agent holding the owner's token from the owner, so it does not stop a
+deliberate actor; it turns tagging from a one-liner into a visible three-step.
+
+What the slot changes in the README, and what already guards it:
+
+- `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
+  `tests/test_packaging.py::test_readme_install_refs_match_version`
+- the Action pin is the newest *prior* stable tag (one-release trust lag) —
+  `tests/test_packaging.py::test_pinned_tag_ships_the_current_source`
+- STATE.md's authoritative `version` row —
+  `tests/test_state_claims.py::test_version_row_matches_package`
+
+Nothing else in this repository states the current version by hand.
 
 ## Why the gate does not get an escape hatch
 
