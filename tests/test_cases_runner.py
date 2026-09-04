@@ -21,14 +21,19 @@ def test_case(case_path):
     contract = parse_contract(case.task) if case.task else Contract()
     known = (known_baseline() | set(case.env)) if case.env is not None else None
     head = {p: c.encode("utf-8") for p, c in case.head.items()}
+    changes = case_to_changes(case)
+    after = {c.path: c.after for c in changes if c.after is not None}
+    snapshot = {**head, **after}
     ir, findings, _verdict = analyze(
-        case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,
+        changes, Config(), contract, [], TODAY, known_modules=known,
         head_reader=head.get if head else None,
         head_searcher=(
             (lambda needles: [p for p, data in sorted(head.items())
                               if any(n.encode("utf-8") in data for n in needles)])
             if head else None
         ),
+        head_path_lister=lambda: sorted(snapshot),
+        head_batch_reader=lambda paths: {p: snapshot.get(p) for p in paths},
     )
     visible = [f for f in findings if not f.allowlisted]
     mismatch = match_expectations(case.expect, visible)

@@ -137,4 +137,35 @@ def detect(ir: IR) -> list[Finding]:
                         ),
                     )
                 )
+    # File-level spelling of the same event: import resolution replaced the
+    # subject provider before any test unit ran.  Keep the existing rule ID so
+    # this follows the already-audited oracle policy; a new rule ID would need
+    # a maintainer-only gating-table change.  Unit=None is intentional: the
+    # newly added stand-in package must not cite its own symbols as repair
+    # evidence for the replacement it caused.
+    for path, module, before, after, test_path, trigger in ir.globals.runtime_subject_shadows:
+        if before == after:
+            message = (
+                f"{test_path}: the already-winning provider {after} for imported "
+                f"subject {module} changed after matching an alternate first-party "
+                "provider — the oracle now runs against the changed stand-in"
+            )
+        else:
+            message = (
+                f"{test_path}: imported subject {module} now resolves to {after} "
+                f"instead of {before} ({trigger}) — the oracle runs against a stand-in"
+            )
+        findings.append(
+            Finding(
+                rule="TEST_PATCHES_SUBJECT",
+                severity="warn",
+                message=message,
+                path=path,
+                unit=None,
+                after=Evidence(text=f"{module} -> {after}", span=(0, 0)),
+                fingerprint=make_fingerprint(
+                    "TEST_PATCHES_SUBJECT", path, None, f"{module}:{before}->{after}"
+                ),
+            )
+        )
     return findings

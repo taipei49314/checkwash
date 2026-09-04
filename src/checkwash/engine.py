@@ -56,6 +56,7 @@ from checkwash.roles import (
     collectable,
     is_artifact,
 )
+from checkwash.shadow import find_runtime_subject_shadows
 
 __all__ = [
     "EngineError",
@@ -216,6 +217,8 @@ def build_ir(
     self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
+    head_path_lister=None,
+    head_batch_reader=None,
 ) -> IR:
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
@@ -232,6 +235,47 @@ def build_ir(
             sorted(set(known_modules) - set(self_modules or ()) - repo_roots - known_baseline())
         )
     ir = IR(base=base_label, head=head_label, globals=g)
+    # Resolve provider replacement before collecting repair evidence. Once a
+    # head path is known to be the stand-in the existing oracle now executes,
+    # neither that leaf nor its package initializers may pay for another
+    # finding in the same diff. The finding itself is emitted later by the
+    # existing TEST_PATCHES_SUBJECT detector; policy remains in gating.py.
+    shadow_hits = find_runtime_subject_shadows(
+        changes,
+        config,
+        g.third_party_roots,
+        head_path_lister=head_path_lister,
+        head_batch_reader=head_batch_reader,
+        head_searcher=head_searcher,
+        include_equivalent=True,
+    )
+    g.runtime_subject_shadows = [
+        (
+            hit.finding_path,
+            hit.module,
+            hit.before_provider,
+            hit.after_provider,
+            hit.test_path,
+            hit.trigger,
+        )
+        for hit in shadow_hits
+        if hit.reportable
+    ]
+    shadow_evidence_paths = {
+        path
+        for hit in shadow_hits
+        for path in (
+            hit.after_provider,
+            *hit.after_chain,
+            *hit.related_evidence_paths,
+            *hit.control_paths,
+            # A search-order edit is the mechanism of replacement, not a
+            # production repair. Most controls already have ci/conftest roles;
+            # retaining their paths also covers supported spellings such as
+            # `.pytest.ini` without changing the frozen role table.
+            hit.trigger,
+        )
+    }
     removed_texts: Counter[str] = Counter()
     added_texts: Counter[str] = Counter()
     base_literals: set[str] = set()
@@ -502,7 +546,12 @@ def build_ir(
         elif role == "prod":
             g.prod_files_changed.append(path)
             package = _module_of(path)
-            if is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
+            if path in shadow_evidence_paths:
+                # This file made the oracle run against a stand-in. Treating
+                # its symbols/callers/literals as repair would let that same
+                # stand-in excuse a second oracle edit in this diff (#95).
+                pass
+            elif is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
                 for q in sorted(set(before_parsed.symbols) | set(after_parsed.symbols)):
                     if before_parsed.symbols.get(q) != after_parsed.symbols.get(q):
                         g.prod_symbols_changed.append(f"{_module_of(path)}::{q}")
@@ -826,6 +875,8 @@ def analyze(
     self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
+    head_path_lister=None,
+    head_batch_reader=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -837,6 +888,8 @@ def analyze(
         self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
+        head_path_lister=head_path_lister,
+        head_batch_reader=head_batch_reader,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

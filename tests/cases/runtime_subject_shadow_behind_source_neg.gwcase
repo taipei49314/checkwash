@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a competing provider behind the production source does not replace it
+origin: provider presence is insufficient; the runtime search order must select it
+=== before: pytest.ini ===
+[pytest]
+pythonpath = src
+=== after: pytest.ini ===
+[pytest]
+pythonpath = src .
+=== after: app/normalize.py ===
+def normalize(value):
+    return " ".join(value.split()).lower()
+=== head: src/app/normalize.py ===
+def normalize(value):
+    return value.strip().lower()
+=== head: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize("A  B") == "a b"
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "pytest.ini"}]

@@ -1,0 +1,15 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a new test written against a new module did not have its subject replaced
+origin: TEST_PATCHES_SUBJECT requires an oracle subject that existed on the base side
+=== after: app/normalize.py ===
+def normalize(value):
+    return value.strip().lower()
+=== after: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize(" A ") == "a"
+=== expect ===
+[]

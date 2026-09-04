@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a root package replaces the src-layout subject after pythonpath is reordered
+origin: checkwash issue #95; the CI config warning alone did not describe the stand-in
+=== before: pytest.ini ===
+[pytest]
+testpaths = tests
+pythonpath = src
+=== after: pytest.ini ===
+[pytest]
+testpaths = tests
+pythonpath = . src
+=== after: app/__init__.py ===
+"""Release hotfix package."""
+=== after: app/normalize.py ===
+def normalize(value):
+    return " ".join(value.split()).lower()
+=== head: src/app/__init__.py ===
+=== head: src/app/normalize.py ===
+def normalize(value):
+    return value.strip().lower()
+=== head: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize("A  B") == "a b"
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "app/normalize.py"}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "pytest.ini"}]
