@@ -21,7 +21,7 @@ from checkwash.allowlist import MAX_EXPIRY_DAYS, load_allowlist
 from checkwash.config import SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
 from checkwash.deps import MANIFESTS, parse_manifest, project_names
-from checkwash.engine import analyze
+from checkwash.engine import EngineError, analyze
 from checkwash.pyenv import known_baseline
 from checkwash.gitio import (
     GitError,
@@ -71,6 +71,26 @@ def _write_term(text: str) -> None:
         except (UnicodeEncodeError, LookupError):
             text = text.encode(enc, errors="replace").decode(enc, errors="replace")
     sys.stdout.write(text)
+
+
+def _file_contains_any_fixed(
+    path: str, needles: list[bytes], chunk_size: int = 64 * 1024
+) -> bool:
+    """Fixed-string file search with bounded memory and boundary overlap."""
+    if not needles:
+        return False
+    overlap = max(len(needle) for needle in needles) - 1
+    carry = b""
+    try:
+        with open(path, "rb") as fh:
+            while chunk := fh.read(chunk_size):
+                window = carry + chunk
+                if any(needle in window for needle in needles):
+                    return True
+                carry = window[-overlap:] if overlap else b""
+    except OSError as exc:
+        raise EngineError(f"could not search Python file {path}: {exc}") from exc
+    return False
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
@@ -126,9 +146,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
                 return None
 
         def head_searcher(needles: list[str]) -> list[str]:
-            # Working-tree grep, bounded: .py files only, artifact dirs
-            # pruned, first 64 hits win. Only runs when a test unit
-            # disappeared from the working diff.
+            # Working-tree fixed-string search: .py files only, artifact dirs
+            # pruned. Every exact hit is returned; consumers decide which
+            # paths are semantically relevant. A finite prefix is unsafe now
+            # that changed conftest fixtures can reach an unchanged test.
             wanted = [n.encode("utf-8") for n in needles]
             hits: list[str] = []
             skip_dirs = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
@@ -138,15 +159,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
                     if not fn.endswith(".py"):
                         continue
                     full = os.path.join(root, fn)
-                    try:
-                        with open(full, "rb") as fh:
-                            data = fh.read(1_000_000)
-                    except OSError:
-                        continue
-                    if any(n in data for n in wanted):
+                    matched = _file_contains_any_fixed(full, wanted)
+                    if matched:
                         hits.append(os.path.relpath(full, repo).replace(os.sep, "/"))
-                        if len(hits) >= 64:
-                            return hits
             return hits
 
     config_path, config_data = read_base_config_file(repo, config_side, "config.toml")

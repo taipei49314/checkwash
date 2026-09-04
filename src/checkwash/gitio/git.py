@@ -142,9 +142,20 @@ def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
         args += ["-e", needle]
     args.append(rev)
     try:
-        out = _run(repo, args)
-    except GitError:
+        proc = subprocess.run(
+            ["git", "-C", repo, *args],
+            capture_output=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise GitError("git executable not found") from exc
+    if proc.returncode == 1:
         return []
+    if proc.returncode != 0:
+        raise GitError(
+            f"git grep failed: {proc.stderr.decode('utf-8', 'replace').strip()}"
+        )
+    out = proc.stdout
     paths = []
     for tok in out.split(b"\0"):
         if b":" in tok:

@@ -14,6 +14,29 @@ from typing import Any
 from checkwash import IR_VERSION
 
 
+@dataclass(frozen=True)
+class ValueOrigin:
+    """One statically resolved source of an assertion operand's value.
+
+    ``key`` is the stable identity used to pair the source across a diff;
+    ``value`` is canonical Python source (or a unit-separator-joined parallel
+    column).  The frontend derives these from the operand that the assertion
+    classifier already designated as subject/expectation, never from a
+    spelling such as ``expected`` or ``want``.
+    """
+
+    key: str
+    label: str
+    kind: str
+    value: str
+    exclusive: bool = False
+    # Parallel sources retain whole row identities so reordering and honest
+    # row additions are distinguishable from changing an existing row's
+    # oracle then hiding the old value in padding. Each item is
+    # ``<all-other-cells>\x1e<this-cell>``; consumers compare it as a multiset.
+    parallel_rows: tuple[str, ...] = ()
+
+
 @dataclass
 class Assertion:
     id: str
@@ -87,6 +110,30 @@ class Assertion:
     # their call site's signature, which is what tells N copies of one helper
     # assert apart; "" for cross-file and fixture-channel inherited ones.
     reaching_sig: str = ""
+    # Canonical provenance of the value on the expectation side, plus the
+    # provenance keys consumed by the subject. EXPECTATION_DEFINITION_CHANGED
+    # compares only common expected origins that are not shared with the
+    # subject. This is the single channel for locals, parametrized columns,
+    # fixtures, module/class bindings, table columns and helper actuals.
+    expected_origins: tuple[ValueOrigin, ...] = ()
+    subject_origins: tuple[ValueOrigin, ...] = ()
+
+
+@dataclass(frozen=True)
+class CallArgument:
+    """A call-site actual, canonicalized while its lexical scope is known."""
+
+    keyword: str | None
+    value: str
+    origins: tuple[ValueOrigin, ...] = ()
+
+
+@dataclass(frozen=True)
+class CallSite:
+    """A unit-level helper invocation retained for cross-file specialization."""
+
+    callee: str
+    arguments: tuple[CallArgument, ...] = ()
 
 
 @dataclass
@@ -143,12 +190,17 @@ class UnitSide:
     # already had one produced no event at all (THREATMODEL 81). The path set
     # is what makes it one.
     collect_ignored: tuple[str, ...] = ()
-    # Names this unit's own body invokes (invocation, not mention) and the
-    # unit's parameter names. The cross-file oracle merge is an engine step —
+    # Names this unit's own body invokes (invocation, not mention) and its
+    # statically proven pytest fixture requests (defaulted and direct-
+    # parametrized arguments excluded). The cross-file oracle merge is an engine step —
     # it needs to know what the unit calls (import channel) and what it
     # requests (fixture channel) without re-walking the AST there.
     invoked: tuple[str, ...] = ()
     params: tuple[str, ...] = ()
+    # Parametrized names whose values are routed through fixtures. Direct
+    # parametrize names are not fixture requests; ``indirect=True`` (or an
+    # explicit name list) makes only these names use both sources.
+    indirect_params: tuple[str, ...] = ()
     # Stand-ins this unit installs: (dotted target, patched attribute), sorted.
     # `monkeypatch.setattr`, `mock.patch`, `patch.object`, `mocker.patch` —
     # every dialect flattened to the same pair, because a rule that knows one
@@ -169,6 +221,11 @@ class UnitSide:
     # rich c8abbb3bd2 (adjudicated false positive, 2026-08-25) is the first
     # shape; the guard that spares it must not spare the second.
     exclusive_bindings: tuple[str, ...] = ()
+    # Calls with their actual values/origins. ``invoked`` remains the compact
+    # name set used by older consumers; this richer form lets the engine bind
+    # an imported helper's assertion parameters by position/keyword without
+    # guessing which argument is named like an expectation.
+    call_sites: tuple[CallSite, ...] = ()
 
     @property
     def disabled(self) -> bool:
@@ -245,9 +302,9 @@ class FileIR:
     # execution order.
     module_constants: dict[str, str] = field(default_factory=dict)
     module_constants_before: dict[str, str] = field(default_factory=dict)
-    # Same-file `@pytest.fixture` name -> canonical text of what it returns or
-    # yields. A fixture is not a collected unit, so without this an expectation
-    # supplied by one is invisible. Conftest fixtures are out of scope.
+    # This file's `@pytest.fixture` public name -> canonical text of what it
+    # returns or yields. Ancestor-conftest values are applied directly to
+    # assertion origins during the engine's cross-file merge.
     fixture_defs: dict[str, str] = field(default_factory=dict)
     fixture_defs_before: dict[str, str] = field(default_factory=dict)
     # Same-file helper name -> callee leaves. Repair evidence follows one

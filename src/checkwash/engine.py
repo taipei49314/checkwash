@@ -44,7 +44,7 @@ from checkwash.frontends.python.frontend import (
 )
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.diffalign import align_file
-from checkwash.ir.model import IR, DiffGlobals, normalize_text
+from checkwash.ir.model import IR, DiffGlobals, ValueOrigin, normalize_text
 from checkwash.pyenv import known_baseline
 from checkwash.roles import (
     _MAX_ORACLE_READS,
@@ -253,16 +253,105 @@ def build_ir(
     one_hop = _one_hop_runners(changes, config, head_reader)
     ci_base = _ci_base_surface(changes, config, one_hop)
 
+    # A conftest fixture can move an oracle while every consuming test file is
+    # byte-identical. Bring only semantically proven consumers into alignment:
+    # an exact HEAD name search finds candidates, then the Python frontend
+    # must prove a collected unit actually requests the changed fixture (and
+    # that parametrization/same-file fixtures do not shadow the request).
+    # Identical synthetic halves carry no test edit of their own; they exist
+    # solely so the before/head fixture origins can be compared.
+    analysis_changes = list(changes)
+    fixture_search_hits: set[str] = set()
+    if head_searcher is not None and head_reader is not None:
+        changed_by_conftest: dict[str, set[str]] = {}
+        for change in changes:
+            cpath = change.path.replace("\\", "/")
+            if (
+                config.role_of(cpath) != "conftest"
+                or change.before is None
+                or change.after is None
+            ):
+                continue
+            before_fixture = parse_python(
+                change.before, collect_tests=True, conftest=True
+            )
+            after_fixture = parse_python(
+                change.after, collect_tests=True, conftest=True
+            )
+            if not before_fixture.parse_ok or not after_fixture.parse_ok:
+                continue
+            names = {
+                name
+                for name in before_fixture.fixture_defs.keys()
+                & after_fixture.fixture_defs.keys()
+                if before_fixture.fixture_defs[name]
+                != after_fixture.fixture_defs[name]
+            }
+            if names:
+                changed_by_conftest[cpath] = names
+        if changed_by_conftest:
+            needles = sorted(set().union(*changed_by_conftest.values()))
+            fixture_search_hits = {
+                path.replace("\\", "/") for path in head_searcher(needles)
+            }
+            changed_paths = {
+                change.path.replace("\\", "/") for change in analysis_changes
+            }
+            for path in sorted(fixture_search_hits):
+                if path in changed_paths:
+                    continue
+                if config.role_of(path) != "test" or not collectable(path):
+                    continue
+                relevant = set()
+                for cpath, names in changed_by_conftest.items():
+                    cdir = cpath.rsplit("/", 1)[0] if "/" in cpath else ""
+                    if not cdir or path.startswith(f"{cdir}/"):
+                        relevant.update(names)
+                if not relevant:
+                    continue
+                data = head_reader(path)
+                if data is None:
+                    raise EngineError(
+                        f"HEAD search reported fixture consumer {path!r}, "
+                        "but its contents could not be read"
+                    )
+                parsed = parse_python(data, collect_tests=True)
+                if not parsed.parse_ok:
+                    raise EngineError(
+                        f"HEAD search reported fixture consumer {path!r}, "
+                        "but it could not be parsed"
+                    )
+                if not any(
+                    relevant
+                    & (
+                        set(unit.side.params)
+                        - set(parsed.fixture_defs)
+                    )
+                    for unit in parsed.units
+                ):
+                    continue
+                analysis_changes.append(
+                    FileChange(
+                        path=path,
+                        status="modified",
+                        before=data,
+                        after=data,
+                    )
+                )
+                changed_paths.add(path)
+
     # Cross-file oracle resolution (A5-x) parses helper files straight from
     # the change bytes, memoised — never from the loop's parse cache, so it
     # cannot depend on the order sorted() happens to visit paths in.
     raw_by_path: dict[str, tuple[bytes | None, bytes | None]] = {
-        c.path.replace("\\", "/"): (c.before, c.after) for c in changes
+        c.path.replace("\\", "/"): (c.before, c.after) for c in analysis_changes
     }
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
     oracle_head_reads = [0]
 
-    def _oracle_file(opath: str, side: int) -> ParsedFile | None:
+    def _oracle_file(
+        opath: str, side: int, *, fixture_ancestor: bool = False
+    ) -> ParsedFile | None:
         """A test/conftest module parsed for its oracle carriers, or None.
 
         side 0 = base, 1 = head. A file outside the diff is identical on both
@@ -289,7 +378,9 @@ def build_ir(
             return None
         if in_diff:
             data = raw_by_path[opath][side]
-        elif head_reader is not None and oracle_head_reads[0] < _MAX_ORACLE_READS:
+        elif head_reader is not None and (
+            fixture_ancestor or oracle_head_reads[0] < _MAX_ORACLE_READS
+        ):
             oracle_head_reads[0] += 1
             data = head_reader(opath)
         else:
@@ -299,7 +390,17 @@ def build_ir(
                 data, collect_tests=True, conftest=opath.endswith("conftest.py")
             )
             if not parsed.parse_ok:
+                if fixture_ancestor and opath in fixture_search_hits:
+                    raise EngineError(
+                        f"HEAD search reported ancestor conftest {opath!r}, "
+                        "but it could not be parsed"
+                    )
                 parsed = None
+        if data is None and fixture_ancestor and opath in fixture_search_hits:
+            raise EngineError(
+                f"HEAD search reported ancestor conftest {opath!r}, "
+                "but its contents could not be read"
+            )
         oracle_memo[key] = parsed
         return parsed
 
@@ -309,8 +410,8 @@ def build_ir(
         Two channels, both pre-registered in docs/defence-design.md A5-x:
         a unit-invoked name bound by a top-level `from M import f` whose module
         is a same-directory test/conftest sibling contributes f's own asserts;
-        a fixture the unit requests by parameter name (same file or same-dir
-        conftest) contributes everything lexically inside it. A fixture nobody
+        a statically proven fixture request contributes the matching fixture's
+        body from the test module or nearest ancestor conftest. A fixture nobody
         requests contributes nothing — moving the oracle into one stays a
         removal. Each side resolves independently, so a helper added by the
         diff has no base half and an extraction's before side stays bare.
@@ -326,10 +427,129 @@ def build_ir(
         tdir = tpath.rsplit("/", 1)[0] if "/" in tpath else ""
         conftest_path = f"{tdir}/conftest.py" if tdir else "conftest.py"
 
+        def ancestor_conftests():
+            directory = tdir
+            while True:
+                yield f"{directory}/conftest.py" if directory else "conftest.py"
+                if not directory:
+                    return
+                directory = directory.rsplit("/", 1)[0] if "/" in directory else ""
+
+        def effective_fixture(name):
+            if name in parsed.fixture_defs:
+                return None  # already represented; same-file wins
+            if parsed.dynamic_fixture_aliases:
+                raise EngineError(
+                    f"cannot resolve dynamically named fixture in {tpath!r} "
+                    f"while tracing {name!r}"
+                )
+            for cpath in ancestor_conftests():
+                if cpath not in raw_by_path and cpath not in fixture_search_hits:
+                    continue
+                fixture_file = _oracle_file(
+                    cpath,
+                    side,
+                    fixture_ancestor=cpath in fixture_search_hits,
+                )
+                if fixture_file is None:
+                    continue
+                if fixture_file.dynamic_fixture_aliases:
+                    raise EngineError(
+                        f"cannot resolve dynamically named fixture in {cpath!r} "
+                        f"while tracing {name!r}"
+                    )
+                if name in fixture_file.fixture_defs:
+                    return fixture_file.fixture_defs[name]
+            return None
+
+        def apply_fixture_origin(uside, name, value):
+            key = f"fixture:{name}"
+            replacement = ValueOrigin(
+                key=key,
+                label=name,
+                kind="fixture",
+                value=value,
+            )
+
+            def updated(origins):
+                return tuple(
+                    replacement if origin.key == key else origin
+                    for origin in origins
+                )
+
+            for assertion in uside.assertions:
+                assertion.expected_origins = updated(assertion.expected_origins)
+                assertion.subject_origins = updated(assertion.subject_origins)
+            uside.call_sites = tuple(
+                replace(
+                    site,
+                    arguments=tuple(
+                        replace(argument, origins=updated(argument.origins))
+                        for argument in site.arguments
+                    ),
+                )
+                for site in uside.call_sites
+            )
+
+        def specialize(helper_name, assertion, params, site):
+            positional = [arg for arg in site.arguments if arg.keyword is None]
+            keywords = {
+                arg.keyword: arg for arg in site.arguments if arg.keyword is not None
+            }
+            actuals = {
+                formal: (
+                    positional[index]
+                    if index < len(positional)
+                    else keywords.get(formal)
+                )
+                for index, formal in enumerate(params)
+            }
+
+            def origins(names):
+                found = {}
+                for name in names:
+                    actual = actuals.get(name)
+                    if actual is None:
+                        continue
+                    for origin in actual.origins:
+                        found[origin.key] = origin
+                    index = params.index(name)
+                    origin = ValueOrigin(
+                        key=f"actual:{helper_name}:{index}",
+                        label=f"{helper_name} argument {index + 1}",
+                        kind="actual",
+                        value=actual.value,
+                    )
+                    found[origin.key] = origin
+                return tuple(found[key] for key in sorted(found))
+
+            expected = origins(assertion.right_depends_on)
+            subject = origins(assertion.left_names)
+            context = "\x1c".join(
+                f"{name}={actuals[name].value}"
+                for name in sorted(actuals)
+                if actuals[name] is not None
+            )
+            return replace(
+                assertion,
+                expected_origins=expected,
+                subject_origins=subject,
+                reaching_sig=context,
+            )
+
         for unit in parsed.units:
             uside = unit.side
             extra = []
             requested = list(uside.params)
+            for name in requested:
+                if (
+                    name in uside.param_columns
+                    and name not in uside.indirect_params
+                ):
+                    continue
+                value = effective_fixture(name)
+                if value is not None:
+                    apply_fixture_origin(uside, name, value)
             conftest = None
             if requested and any(p not in parsed.fixture_asserts for p in requested):
                 conftest = _oracle_file(conftest_path, side)
@@ -356,13 +576,23 @@ def build_ir(
                     candidate = f"{tdir}/{module}.py" if tdir else f"{module}.py"
                 helper = _oracle_file(candidate, side)
                 if helper is not None:
-                    extra.extend(helper.helper_asserts.get(orig, ()))
+                    assertions = helper.helper_asserts.get(orig, ())
+                    params = helper.helper_params.get(orig, ())
+                    sites = [site for site in uside.call_sites if site.callee == n]
+                    if assertions and params and sites:
+                        for site in sites:
+                            extra.extend(
+                                specialize(orig, assertion, params, site)
+                                for assertion in assertions
+                            )
+                    else:
+                        extra.extend(assertions)
             if extra:
                 uside.assertions.extend(replace(a) for a in extra)
                 for i, a in enumerate(uside.assertions):
                     a.id = f"a{i}"
 
-    for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
+    for change in sorted(_expand_renames(analysis_changes, config), key=lambda c: c.path):
         path = change.path.replace("\\", "/")
         if is_artifact(path):
             continue  # generated output is not evidence of anything
@@ -399,6 +629,20 @@ def build_ir(
                 before_parsed = parse_javascript(change.before)
             if change.after is not None:
                 after_parsed = parse_javascript(change.after)
+
+        if (
+            is_python
+            and collect
+            and before_parsed is not None
+            and after_parsed is not None
+            and before_parsed.parse_ok
+            and after_parsed.parse_ok
+            and before_parsed.dynamic_fixture_defs
+            != after_parsed.dynamic_fixture_defs
+        ):
+            raise EngineError(
+                f"cannot resolve changed dynamically named fixture in {path!r}"
+            )
 
         if after_parsed is not None and after_parsed.parse_ok:
             after_by_path[path] = after_parsed

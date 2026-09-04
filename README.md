@@ -14,7 +14,7 @@ Typical catches: `assert total == 105.3` becoming `assert total > 0`, a new
 `pytest.mark.skip`, a deleted test, a looser float tolerance, a rewritten
 golden file, or a CI script that stops failing.
 
-> Status: **pre-release.** 21 detectors, 575 tests, zero runtime dependencies.
+> Status: **pre-release.** 21 detectors, 681 tests, zero runtime dependencies.
 > Every number below comes out of a reproducible harness in
 > [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
 > that a harness hasn't produced on a clean checkout.

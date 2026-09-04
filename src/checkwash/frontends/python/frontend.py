@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ast
 import bisect
+import copy
 import hashlib
 import operator
 import re
@@ -16,7 +17,16 @@ from dataclasses import dataclass, field
 
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
-from checkwash.ir.model import Assertion, Handler, Marker, UnitSide, normalize_text
+from checkwash.ir.model import (
+    Assertion,
+    CallArgument,
+    CallSite,
+    Handler,
+    Marker,
+    UnitSide,
+    ValueOrigin,
+    normalize_text,
+)
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
 
@@ -118,6 +128,8 @@ class ParsedFile:
     # it, nested defs included — the returned closure is what a unit calls,
     # and the post-`yield` teardown runs unconditionally.
     helper_asserts: dict[str, tuple] = field(default_factory=dict)
+    # Plain formal order for imported-helper call-site specialization.
+    helper_params: dict[str, tuple[str, ...]] = field(default_factory=dict)
     # Non-test, non-fixture top-level defs -> callee leaves. Repair evidence
     # follows one hop through a helper the unit actually invokes (T1.9).
     helper_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)
@@ -125,6 +137,15 @@ class ParsedFile:
     autouse_fixtures: tuple[str, ...] = ()
     # Same-file `@pytest.fixture` name -> canonical text of what it produces.
     fixture_defs: dict[str, str] = field(default_factory=dict)
+    # At least one fixture spells ``name=`` with an expression that cannot be
+    # resolved through statically ordered module string aliases.
+    # Ancestor resolution cannot prove whether it overrides a requested name.
+    dynamic_fixture_aliases: bool = False
+    # Canonical definitions of those dynamically named fixtures, including
+    # same-file bindings used by the alias expression. The engine compares
+    # sides so changing an unresolvable fixture fails closed, while an
+    # unchanged unrelated fixture does not poison every edit in the module.
+    dynamic_fixture_defs: tuple[str, ...] = ()
     # Top-level absolute `from M import a as b` bindings, local -> (module,
     # original). Relative and star imports are not recorded.
     from_imports: dict[str, tuple[str, str]] = field(default_factory=dict)
@@ -374,6 +395,11 @@ class _Classified:
     # compensation. Computed here so every construction site can pass it
     # through without re-deriving nodes it no longer holds.
     trivial: bool = False
+    # Dotted attribute references on the already-classified subject and
+    # expectation sides. Names alone collapse ``self.want`` to ``self`` and
+    # cannot connect a class attribute to the value it supplies.
+    left_attrs: tuple[str, ...] = ()
+    right_attrs: tuple[str, ...] = ()
 
 
 # The polarity of the None family follows the bare lattice: `is None` is the
@@ -501,13 +527,24 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # EXPECTED_VALUE_CHANGED. Strength is APPROX on both sides, so the
         # rewrite was completely invisible before (audit 2026-08-19).
         expected = approx.args[0] if approx.args else None
+        subject = None
+        if isinstance(test, ast.Compare) and test.comparators:
+            if test.left is approx:
+                subject = test.comparators[-1]
+            elif any(comparator is approx for comparator in test.comparators):
+                subject = test.left
         return _Classified(
             "approx",
             S.APPROX,
+            left=text.seg(subject) if subject is not None else None,
             right_literal=_literal_repr(expected, text) if expected is not None else None,
             right_value=_literal_value(expected) if expected is not None else None,
             epsilon=eps,
             epsilon_kind=kind,
+            left_names=_referenced_names(subject),
+            right_names=_referenced_names(expected),
+            left_attrs=_referenced_attributes(subject),
+            right_attrs=_referenced_attributes(expected),
         )
     if isinstance(test, ast.Compare) and test.ops:
         left = test.left
@@ -560,14 +597,26 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # needs them to tell a renamed constant from a recomputed expectation.
         c.left_names = _referenced_names(subject_node)
         c.right_names = _referenced_names(expect_node)
+        c.left_attrs = _referenced_attributes(subject_node)
+        c.right_attrs = _referenced_attributes(expect_node)
         return c
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
         # `assert not x` is the negated form of `assert x`.
         inner = _classify_assert_expr(test.operand, text)
         return _Classified(
-            inner.form, inner.strength, inner.left, inner.right_literal,
-            inner.right_value, inner.epsilon, inner.epsilon_kind, not inner.positive,
-            inner.left_names, inner.right_names,
+            form=inner.form,
+            strength=inner.strength,
+            left=inner.left,
+            right_literal=inner.right_literal,
+            right_value=inner.right_value,
+            epsilon=inner.epsilon,
+            epsilon_kind=inner.epsilon_kind,
+            positive=not inner.positive,
+            left_names=inner.left_names,
+            right_names=inner.right_names,
+            trivial=inner.trivial,
+            left_attrs=inner.left_attrs,
+            right_attrs=inner.right_attrs,
         )
     if isinstance(test, ast.Call):
         name = _dotted(test.func)
@@ -1038,6 +1087,22 @@ def _referenced_names(node) -> tuple[str, ...]:
     return tuple(sorted({n.id for n in ast.walk(node) if isinstance(n, ast.Name)}))
 
 
+def _referenced_attributes(node) -> tuple[str, ...]:
+    """Dotted attribute references in a subtree, sorted and unique."""
+    if node is None:
+        return ()
+    return tuple(
+        sorted(
+            {
+                dotted
+                for n in ast.walk(node)
+                if isinstance(n, ast.Attribute)
+                and (dotted := _dotted(n)) is not None
+            }
+        )
+    )
+
+
 def _classify_compare_op(
     op, left, comparators, text, left_text, right_lit, right_val, pos, subject=None
 ) -> _Classified:
@@ -1175,6 +1240,8 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         # unittest dialect (THREATMODEL 20/25/46, audit 2026-08-19).
         _is_trivial_subject(subject_node)
         and (expect_node is None or _is_trivial_subject(expect_node)),
+        _referenced_attributes(subject_node),
+        _referenced_attributes(expect_node),
     )
 
 
@@ -1632,6 +1699,40 @@ def _xfail_is_strict(mark: ast.AST) -> bool:
 _PARAMETRIZE = ("pytest.mark.parametrize", "mark.parametrize", "parametrize")
 
 
+def _parallel_row_cells(
+    row: ast.AST,
+    arity: int,
+    *,
+    scalar: bool,
+) -> list[ast.AST]:
+    """Split a parallel row only when its consumer unpacks the value.
+
+    Pytest and Python iteration both treat a tuple/list as one composite value
+    for a scalar parameter/target. Splitting that value first makes the row
+    look malformed and drops its ``ValueOrigin``. A one-name tuple target
+    still unpacks and therefore deliberately takes the other path.
+    """
+    if scalar:
+        return [row]
+    if isinstance(row, (ast.List, ast.Tuple)):
+        return list(row.elts)
+    return [row]
+
+
+def _param_row_cells(
+    row: ast.AST,
+    arity: int,
+    *,
+    force_tuple: bool,
+) -> list[ast.AST]:
+    if isinstance(row, ast.Call) and _dotted(row.func) in (
+        "pytest.param",
+        "param",
+    ):
+        return list(row.args[:arity])
+    return _parallel_row_cells(row, arity, scalar=force_tuple)
+
+
 def _param_cell_value(cell):
     """The value inside a parametrize cell, seen through `pytest.param`.
 
@@ -1644,6 +1745,24 @@ def _param_cell_value(cell):
     if isinstance(cell, ast.Call) and _dotted(cell.func) in ("pytest.param", "param") and cell.args:
         return cell.args[0]
     return cell
+
+
+def _parametrize_force_tuple(
+    names_node: ast.AST, names: list[str]
+) -> bool | None:
+    """Scalar-row policy, or ``None`` when supported pytest versions differ."""
+    if (
+        isinstance(names_node, ast.Constant)
+        and isinstance(names_node.value, str)
+        and len(names) == 1
+    ):
+        if names_node.value.rstrip().endswith(","):
+            # Pytest releases supported by this project disagree on whether
+            # this spelling is scalar or tuple-style. Without a target pytest
+            # version, either provenance interpretation can be wrong.
+            return None
+        return True
+    return False
 
 
 def _param_columns(func) -> dict[str, str]:
@@ -1676,10 +1795,13 @@ def _param_columns(func) -> dict[str, str]:
             ]
         else:
             continue
+        force_tuple = _parametrize_force_tuple(names_node, names)
+        if force_tuple is None:
+            continue
         for row in dec.args[1].elts:
-            cells = row.elts if isinstance(row, (ast.List, ast.Tuple)) else [row]
-            if len(names) == 1 and not isinstance(row, (ast.List, ast.Tuple)):
-                cells = [row]
+            cells = _param_row_cells(row, len(names), force_tuple=force_tuple)
+            if len(cells) != len(names):
+                continue
             for name, cell in zip(names, cells):
                 try:
                     out.setdefault(name, []).append(ast.unparse(_param_cell_value(cell)))
@@ -1688,13 +1810,501 @@ def _param_columns(func) -> dict[str, str]:
     return {name: "".join(vals) for name, vals in sorted(out.items())}
 
 
-def _fixture_definitions(tree: ast.Module) -> dict[str, str]:
-    """Same-file `@pytest.fixture` name -> canonical text of what it produces.
+def _param_value_origins(func) -> dict[str, ValueOrigin]:
+    """Parametrize columns with row identity retained for multiset policy."""
+    rows_by_name: dict[str, list[str]] = {}
+    values_by_name: dict[str, list[str]] = {}
+    for dec in func.decorator_list:
+        if not isinstance(dec, ast.Call) or _dotted(dec.func) not in _PARAMETRIZE:
+            continue
+        if len(dec.args) < 2 or not isinstance(dec.args[1], (ast.List, ast.Tuple)):
+            continue
+        names_node = dec.args[0]
+        if isinstance(names_node, ast.Constant) and isinstance(names_node.value, str):
+            names = [n.strip() for n in names_node.value.split(",") if n.strip()]
+        elif isinstance(names_node, (ast.List, ast.Tuple)):
+            names = [
+                e.value
+                for e in names_node.elts
+                if isinstance(e, ast.Constant) and isinstance(e.value, str)
+            ]
+        else:
+            continue
+        force_tuple = _parametrize_force_tuple(names_node, names)
+        if force_tuple is None:
+            continue
+        for row in dec.args[1].elts:
+            cells = _param_row_cells(row, len(names), force_tuple=force_tuple)
+            if len(cells) != len(names):
+                continue
+            rendered = [_canonical_expr(_param_cell_value(cell)) for cell in cells]
+            if any(not value for value in rendered):
+                continue
+            for index, name in enumerate(names):
+                identity = "\x1d".join(
+                    f"{other}:{rendered[other]}"
+                    for other in range(len(rendered))
+                    if other != index
+                )
+                values_by_name.setdefault(name, []).append(rendered[index])
+                rows_by_name.setdefault(name, []).append(
+                    f"{identity}\x1e{rendered[index]}"
+                )
+    return {
+        name: ValueOrigin(
+            key=f"parametrize:{name}",
+            label=name,
+            kind="parallel",
+            value="\x1f".join(values_by_name[name]),
+            parallel_rows=tuple(rows),
+        )
+        for name, rows in sorted(rows_by_name.items())
+    }
+
+
+def _parametrize_argnames(dec: ast.Call) -> tuple[str, ...]:
+    if not dec.args:
+        return ()
+    names_node = dec.args[0]
+    if isinstance(names_node, ast.Constant) and isinstance(names_node.value, str):
+        return tuple(n.strip() for n in names_node.value.split(",") if n.strip())
+    if isinstance(names_node, (ast.List, ast.Tuple)):
+        return tuple(
+            element.value
+            for element in names_node.elts
+            if isinstance(element, ast.Constant)
+            and isinstance(element.value, str)
+        )
+    return ()
+
+
+def _ambiguous_parametrize_names(func) -> set[str]:
+    """Direct parameters whose row shape has no version-independent meaning."""
+    out: set[str] = set()
+    for dec in func.decorator_list:
+        if (
+            not isinstance(dec, ast.Call)
+            or _dotted(dec.func) not in _PARAMETRIZE
+            or not dec.args
+        ):
+            continue
+        names = list(_parametrize_argnames(dec))
+        if _parametrize_force_tuple(dec.args[0], names) is None:
+            out.update(names)
+    return out
+
+
+def _param_indirect_names(func) -> tuple[str, ...]:
+    """Statically proven indirect parametrize names (bool or name list)."""
+    out: set[str] = set()
+    for dec in func.decorator_list:
+        if not isinstance(dec, ast.Call) or _dotted(dec.func) not in _PARAMETRIZE:
+            continue
+        names = set(_parametrize_argnames(dec))
+        keyword = next((kw for kw in dec.keywords if kw.arg == "indirect"), None)
+        if keyword is None:
+            continue
+        value = keyword.value
+        if isinstance(value, ast.Constant) and value.value is True:
+            out.update(names)
+        elif isinstance(value, (ast.List, ast.Tuple, ast.Set)):
+            out.update(
+                element.value
+                for element in value.elts
+                if isinstance(element, ast.Constant)
+                and isinstance(element.value, str)
+                and element.value in names
+            )
+    return tuple(sorted(out))
+
+
+def _fixture_request_params(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    param_names: set[str],
+    indirect_names: set[str],
+) -> tuple[str, ...]:
+    """Pytest ``getfuncargnames`` semantics relevant to fixture requests."""
+    positional = list(func.args.posonlyargs) + list(func.args.args)
+    defaulted = {
+        arg.arg for arg in positional[len(positional) - len(func.args.defaults) :]
+    }
+    defaulted.update(
+        arg.arg
+        for arg, default in zip(func.args.kwonlyargs, func.args.kw_defaults)
+        if default is not None
+    )
+    ordered = positional + list(func.args.kwonlyargs)
+    return tuple(
+        arg.arg
+        for arg in ordered
+        if arg.arg not in ("self", "cls")
+        and arg.arg not in defaulted
+        and (arg.arg not in param_names or arg.arg in indirect_names)
+    )
+
+
+def _fixture_alias_bindings(tree: ast.Module) -> dict[int, dict[str, ast.AST]]:
+    """Known module string bindings at each fixture-decorator evaluation.
+
+    A function body is dormant, but its decorators, defaults and annotations
+    run while the module is imported. Eager comprehensions run too, and a
+    walrus inside one binds in the containing (module) scope. Replaying those
+    expression-level stores keeps ``name=PUBLIC_NAME`` from resolving to a
+    stale earlier assignment. Conditional or otherwise unprovable stores
+    invalidate the name; callers then retain the fail-closed dynamic path.
+    """
+    # Keep the straight-line collector as the authoritative list of ordinary
+    # assignment targets; the replay below adds execution-time expression
+    # stores and, unlike the file-wide map, snapshots each fixture in order.
+    straight_names = set(_assigned_value_nodes(tree.body))
+    future_annotations = any(
+        isinstance(stmt, ast.ImportFrom)
+        and stmt.module == "__future__"
+        and any(alias.name == "annotations" for alias in stmt.names)
+        for stmt in tree.body
+    )
+    state: dict[str, ast.AST] = {}
+    snapshots: dict[int, dict[str, ast.AST]] = {}
+
+    def forget(name: str) -> None:
+        state.pop(name, None)
+
+    def bind(name: str, value: ast.AST) -> None:
+        resolved = _fixture_alias_value(value, state)
+        if resolved is None:
+            forget(name)
+        else:
+            state[name] = ast.Constant(value=resolved)
+
+    def namedexpr_targets(node: ast.AST) -> set[str]:
+        class Walruses(ast.NodeVisitor):
+            def __init__(self) -> None:
+                self.names: set[str] = set()
+
+            def visit_NamedExpr(self, child):  # noqa: N802 - ast visitor API
+                if isinstance(child.target, ast.Name):
+                    self.names.add(child.target.id)
+                self.visit(child.value)
+
+            def visit_Lambda(self, child):  # noqa: N802 - dormant body
+                for default in child.args.defaults:
+                    self.visit(default)
+                for default in child.args.kw_defaults:
+                    if default is not None:
+                        self.visit(default)
+
+        visitor = Walruses()
+        visitor.visit(node)
+        return visitor.names
+
+    def literal_nonempty(node: ast.AST) -> bool | None:
+        try:
+            value = ast.literal_eval(node)
+        except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+            return None
+        if not isinstance(value, (str, bytes, tuple, list, set, dict)):
+            return None
+        return bool(value)
+
+    def scan_expr(node: ast.AST | None, certain: bool = True) -> None:
+        if node is None:
+            return
+        if not certain:
+            for name in namedexpr_targets(node):
+                forget(name)
+            return
+        if isinstance(node, ast.Lambda):
+            for default in node.args.defaults:
+                scan_expr(default)
+            for default in node.args.kw_defaults:
+                scan_expr(default)
+            return
+        if isinstance(node, ast.NamedExpr):
+            scan_expr(node.value)
+            if isinstance(node.target, ast.Name):
+                bind(node.target.id, node.value)
+            return
+        if isinstance(node, ast.BoolOp):
+            if node.values:
+                scan_expr(node.values[0])
+            for value in node.values[1:]:
+                scan_expr(value, certain=False)
+            return
+        if isinstance(node, ast.IfExp):
+            scan_expr(node.test)
+            scan_expr(node.body, certain=False)
+            scan_expr(node.orelse, certain=False)
+            return
+        if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)):
+            generators = node.generators
+            if generators:
+                scan_expr(generators[0].iter)
+            cardinality = [literal_nonempty(generator.iter) for generator in generators]
+            if any(nonempty is False for nonempty in cardinality):
+                return
+            guaranteed = bool(generators) and all(
+                nonempty is True and not generator.ifs
+                for generator, nonempty in zip(generators, cardinality)
+            )
+            if guaranteed:
+                for generator in generators[1:]:
+                    scan_expr(generator.iter)
+                if isinstance(node, ast.DictComp):
+                    scan_expr(node.key)
+                    scan_expr(node.value)
+                else:
+                    scan_expr(node.elt)
+            else:
+                for name in namedexpr_targets(node):
+                    forget(name)
+            return
+        if isinstance(node, ast.GeneratorExp):
+            if node.generators:
+                scan_expr(node.generators[0].iter)
+            # Generator bodies are lazy; a surrounding consumer may or may
+            # not run them before the fixture definition.
+            for name in namedexpr_targets(node.elt):
+                forget(name)
+            for generator in node.generators:
+                for condition in generator.ifs:
+                    for name in namedexpr_targets(condition):
+                        forget(name)
+            return
+        for child in ast.iter_child_nodes(node):
+            scan_expr(child)
+
+    def uncertain_statement(stmt: ast.stmt) -> None:
+        class Stores(ast.NodeVisitor):
+            def visit_Name(self, node):  # noqa: N802 - ast visitor API
+                if isinstance(node.ctx, (ast.Store, ast.Del)):
+                    forget(node.id)
+
+            def visit_FunctionDef(self, node):  # noqa: N802 - no body
+                forget(node.name)
+                for decorator in node.decorator_list:
+                    self.visit(decorator)
+                for default in node.args.defaults:
+                    self.visit(default)
+                for default in node.args.kw_defaults:
+                    if default is not None:
+                        self.visit(default)
+                for arg in (
+                    *node.args.posonlyargs,
+                    *node.args.args,
+                    *node.args.kwonlyargs,
+                ):
+                    if arg.annotation is not None:
+                        self.visit(arg.annotation)
+                if node.returns is not None:
+                    self.visit(node.returns)
+
+            visit_AsyncFunctionDef = visit_FunctionDef
+
+            def visit_ClassDef(self, node):  # noqa: N802 - no body
+                forget(node.name)
+                for decorator in node.decorator_list:
+                    self.visit(decorator)
+                for base in node.bases:
+                    self.visit(base)
+                for keyword in node.keywords:
+                    self.visit(keyword.value)
+
+            def visit_Lambda(self, node):  # noqa: N802 - dormant body
+                for default in node.args.defaults:
+                    self.visit(default)
+                for default in node.args.kw_defaults:
+                    if default is not None:
+                        self.visit(default)
+
+            def visit_comprehension(self, node):
+                # Its target is local to the comprehension. Only expression
+                # walruses can escape to the module scope.
+                self.visit(node.iter)
+                for condition in node.ifs:
+                    self.visit(condition)
+
+            def visit_Import(self, node):  # noqa: N802 - ast visitor API
+                for alias in node.names:
+                    forget(alias.asname or alias.name.split(".", 1)[0])
+
+            def visit_ImportFrom(self, node):  # noqa: N802 - ast visitor API
+                for alias in node.names:
+                    if alias.name == "*":
+                        state.clear()
+                    else:
+                        forget(alias.asname or alias.name)
+
+        Stores().visit(stmt)
+
+    def scan_stmt(stmt: ast.stmt) -> None:
+        if isinstance(stmt, ast.Assign):
+            scan_expr(stmt.value)
+            names = [
+                name
+                for target in stmt.targets
+                for name in _assignment_name_targets(target)
+            ]
+            for name in names:
+                if name in straight_names:
+                    bind(name, stmt.value)
+            return
+        if isinstance(stmt, ast.AnnAssign):
+            if not future_annotations:
+                scan_expr(stmt.annotation)
+            scan_expr(stmt.value)
+            for name in _assignment_name_targets(stmt.target):
+                if stmt.value is None:
+                    forget(name)
+                elif name in straight_names:
+                    bind(name, stmt.value)
+            return
+        if isinstance(stmt, ast.AugAssign):
+            scan_expr(stmt.value)
+            for name in _assignment_name_targets(stmt.target):
+                forget(name)
+            return
+        if isinstance(stmt, ast.Expr):
+            scan_expr(stmt.value)
+            return
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for decorator in stmt.decorator_list:
+                target = decorator.func if isinstance(decorator, ast.Call) else decorator
+                if _dotted(target) in ("pytest.fixture", "fixture"):
+                    snapshots[id(stmt)] = dict(state)
+                scan_expr(decorator)
+            for default in stmt.args.defaults:
+                scan_expr(default)
+            for default in stmt.args.kw_defaults:
+                scan_expr(default)
+            if not future_annotations:
+                for arg in (
+                    *stmt.args.posonlyargs,
+                    *stmt.args.args,
+                    *stmt.args.kwonlyargs,
+                ):
+                    scan_expr(arg.annotation)
+                scan_expr(stmt.returns)
+            forget(stmt.name)
+            return
+        if isinstance(stmt, ast.ClassDef):
+            for decorator in stmt.decorator_list:
+                scan_expr(decorator)
+            for base in stmt.bases:
+                scan_expr(base)
+            for keyword in stmt.keywords:
+                scan_expr(keyword.value)
+            forget(stmt.name)
+            return
+        if isinstance(stmt, ast.Import):
+            for alias in stmt.names:
+                forget(alias.asname or alias.name.split(".", 1)[0])
+            return
+        if isinstance(stmt, ast.ImportFrom):
+            for alias in stmt.names:
+                if alias.name == "*":
+                    state.clear()
+                else:
+                    forget(alias.asname or alias.name)
+            return
+        if isinstance(stmt, ast.If):
+            scan_expr(stmt.test)
+            try:
+                branch = stmt.body if bool(ast.literal_eval(stmt.test)) else stmt.orelse
+            except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+                for child in (*stmt.body, *stmt.orelse):
+                    uncertain_statement(child)
+            else:
+                for child in branch:
+                    scan_stmt(child)
+            return
+        # Loops, try/with/match and deletes are execution-dependent or can
+        # abort part-way. Any module binding they may touch becomes unknown.
+        uncertain_statement(stmt)
+
+    for statement in tree.body:
+        scan_stmt(statement)
+    return snapshots
+
+
+def _fixture_alias_value(
+    value: ast.AST,
+    bindings: dict[str, ast.AST],
+    seen: frozenset[str] = frozenset(),
+) -> str | None:
+    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+        return value.value
+    if isinstance(value, ast.Name) and value.id not in seen:
+        target = bindings.get(value.id)
+        if target is not None:
+            return _fixture_alias_value(target, bindings, seen | {value.id})
+    return None
+
+
+def _fixture_public_name(
+    node,
+    alias_bindings: dict[int, dict[str, ast.AST]] | None = None,
+) -> str | None:
+    """Runtime fixture name, including statically fixed string aliases."""
+    for decorator in node.decorator_list:
+        if not isinstance(decorator, ast.Call):
+            continue
+        if _dotted(decorator.func) not in ("pytest.fixture", "fixture"):
+            continue
+        keyword = next((kw for kw in decorator.keywords if kw.arg == "name"), None)
+        if keyword is None:
+            return node.name
+        bindings = (alias_bindings or {}).get(id(node), {})
+        return _fixture_alias_value(keyword.value, bindings)
+    return node.name
+
+
+def _dynamic_fixture_definitions(
+    tree: ast.Module,
+    alias_bindings: dict[int, dict[str, ast.AST]],
+) -> tuple[str, ...]:
+    """Canonical changed-fixture evidence for unresolvable public names."""
+    assigned = _assigned_value_nodes(tree.body)
+    out: list[str] = []
+    for node in tree.body:
+        if (
+            not _is_fixture_def(node)
+            or _fixture_public_name(node, alias_bindings) is not None
+        ):
+            continue
+        alias = next(
+            (
+                keyword.value
+                for decorator in node.decorator_list
+                if isinstance(decorator, ast.Call)
+                and _dotted(decorator.func) in ("pytest.fixture", "fixture")
+                for keyword in decorator.keywords
+                if keyword.arg == "name"
+            ),
+            None,
+        )
+        dependencies = tuple(
+            f"{name}={value}"
+            for name in _referenced_names(alias)
+            if (value := _canonical_expr(assigned.get(name)))
+        )
+        try:
+            definition = ast.unparse(node)
+        except (AttributeError, ValueError):  # pragma: no cover - defensive
+            definition = ""
+        out.append("\x1f".join((definition, *dependencies)))
+    return tuple(out)
+
+
+def _fixture_definitions(
+    tree: ast.Module,
+    alias_bindings: dict[int, dict[str, ast.AST]],
+) -> dict[str, str]:
+    """Fixture public name -> canonical text of what it produces.
 
     A fixture is not a collected unit, so nothing in the IR saw its body. An
     expectation supplied by one could be edited with the assertion untouched
-    and every rule silent. Conftest fixtures are deliberately out of scope and
-    recorded as a residual rather than half-implemented.
+    and every rule silent. The parser records one file; the engine resolves a
+    requested name through same-file and ancestor-conftest scopes.
     """
     out: dict[str, str] = {}
     for node in tree.body:
@@ -1705,6 +2315,9 @@ def _fixture_definitions(tree: ast.Module) -> dict[str, str]:
             for d in node.decorator_list
         ):
             continue
+        public_name = _fixture_public_name(node, alias_bindings)
+        if public_name is None:
+            continue
         produced = []
         for sub in ast.walk(node):
             if isinstance(sub, (ast.Return, ast.Yield)) and sub.value is not None:
@@ -1713,7 +2326,7 @@ def _fixture_definitions(tree: ast.Module) -> dict[str, str]:
                 except (AttributeError, ValueError):  # pragma: no cover - defensive
                     produced.append("")
         if produced:
-            out[node.name] = "|".join(produced)
+            out[public_name] = "|".join(produced)
     return dict(sorted(out.items()))
 
 
@@ -1994,6 +2607,455 @@ def _helper_entry_sites(func, nodes_cache) -> list[tuple[ast.AST, str]]:
     return sites
 
 
+def _canonical_expr(node: ast.AST | None) -> str:
+    if node is None:
+        return ""
+    try:
+        return ast.unparse(node)
+    except (AttributeError, ValueError):  # pragma: no cover - defensive
+        return ""
+
+
+def _assigned_value_nodes(body: list[ast.stmt]) -> dict[str, ast.AST]:
+    """Straight-scope name -> last assigned expression node."""
+    out: dict[str, ast.AST] = {}
+    for stmt in body:
+        if isinstance(stmt, ast.Assign):
+            names = [t.id for t in stmt.targets if isinstance(t, ast.Name)]
+            value = stmt.value
+        elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None:
+            names = [stmt.target.id] if isinstance(stmt.target, ast.Name) else []
+            value = stmt.value
+        else:
+            continue
+        for name in names:
+            out[name] = value
+    return out
+
+
+def _module_value_origins(tree: ast.Module) -> tuple[dict[str, ast.AST], dict[str, ValueOrigin]]:
+    nodes = _assigned_value_nodes(tree.body)
+    origins = {
+        name: ValueOrigin(
+            key=f"module:{name}",
+            label=name,
+            kind="module",
+            value=value,
+        )
+        for name, node in sorted(nodes.items())
+        if (value := _canonical_expr(node))
+    }
+    return nodes, origins
+
+
+def _class_value_origins(tree: ast.Module) -> dict[str, ValueOrigin]:
+    out: dict[str, ValueOrigin] = {}
+    for cls in tree.body:
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        for name, node in sorted(_assigned_value_nodes(cls.body).items()):
+            value = _canonical_expr(node)
+            if value:
+                key = f"class:{cls.name}.{name}"
+                out[f"{cls.name}.{name}"] = ValueOrigin(
+                    key=key,
+                    label=f"{cls.name}.{name}",
+                    kind="class",
+                    value=value,
+                )
+    return out
+
+
+def _table_columns(
+    name: str,
+    value: ast.AST,
+    targets: list[str],
+    *,
+    scalar_target: bool,
+) -> dict[str, ValueOrigin]:
+    """Loop target -> module-table column, when every row is statically shaped."""
+    if not isinstance(value, (ast.List, ast.Tuple)) or not targets:
+        return {}
+    columns: list[list[str]] = [[] for _ in targets]
+    for row in value.elts:
+        cells = _parallel_row_cells(row, len(targets), scalar=scalar_target)
+        if len(cells) != len(targets):
+            return {}
+        rendered = [_canonical_expr(cell) for cell in cells]
+        if any(not cell for cell in rendered):
+            return {}
+        for column, cell in zip(columns, rendered):
+            column.append(cell)
+    return {
+        target: ValueOrigin(
+            key=f"table:module:{name}:{index}",
+            label=f"{name}[{index}]",
+            kind="parallel",
+            value="\x1f".join(columns[index]),
+            parallel_rows=tuple(
+                f"{identity}\x1e{columns[index][row]}"
+                for row in range(len(value.elts))
+                for identity in (
+                    "\x1d".join(
+                        f"{other}:{columns[other][row]}"
+                        for other in range(len(targets))
+                        if other != index
+                    ),
+                )
+            ),
+        )
+        for index, target in enumerate(targets)
+    }
+
+
+def _target_names(target: ast.AST) -> list[str]:
+    if isinstance(target, ast.Name):
+        return [target.id]
+    if isinstance(target, (ast.Tuple, ast.List)):
+        names: list[str] = []
+        for child in target.elts:
+            names.extend(_target_names(child))
+        return names
+    return []
+
+
+def _table_origins_at(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    module_values: dict[str, ast.AST],
+) -> dict[int, dict[str, ValueOrigin]]:
+    """Active module-table loop columns at each node in a collected unit."""
+    out: dict[int, dict[str, ValueOrigin]] = {}
+
+    def walk(node: ast.AST, active: dict[str, ValueOrigin], root: bool = False) -> None:
+        out[id(node)] = active
+        if isinstance(node, _SCOPE_NODES) and not root:
+            return
+        if isinstance(node, (ast.For, ast.AsyncFor)):
+            walk(node.iter, active)
+            walk(node.target, active)
+            inside = dict(active)
+            if isinstance(node.iter, ast.Name) and node.iter.id in module_values:
+                inside.update(
+                    _table_columns(
+                        node.iter.id,
+                        module_values[node.iter.id],
+                        _target_names(node.target),
+                        scalar_target=isinstance(node.target, ast.Name),
+                    )
+                )
+            for stmt in node.body:
+                walk(stmt, inside)
+            for stmt in node.orelse:
+                walk(stmt, active)
+            return
+        for child in ast.iter_child_nodes(node):
+            walk(child, active)
+
+    walk(func, {}, True)
+    return out
+
+
+def _class_origin_for_ref(
+    ref: str,
+    class_name: str | None,
+    class_origins: dict[str, ValueOrigin],
+) -> ValueOrigin | None:
+    parts = ref.split(".")
+    if len(parts) == 2 and parts[0] in ("self", "cls") and class_name:
+        return class_origins.get(f"{class_name}.{parts[1]}")
+    if len(parts) == 2:
+        return class_origins.get(ref)
+    return None
+
+
+def _value_origins(
+    node: ast.AST,
+    *,
+    names: tuple[str, ...],
+    attrs: tuple[str, ...],
+    ordered_bindings,
+    param_origins: dict[str, ValueOrigin],
+    indirect_params: tuple[str, ...],
+    fixture_origins: dict[str, ValueOrigin],
+    module_origins: dict[str, ValueOrigin],
+    class_origins: dict[str, ValueOrigin],
+    class_name: str | None,
+    table_at: dict[int, dict[str, ValueOrigin]],
+    exclusive_bindings: tuple[str, ...],
+) -> tuple[ValueOrigin, ...]:
+    """Resolve one classified operand to canonical sources, without name heuristics."""
+    closure = _positional_closure(node, names, ordered_bindings)
+    reach = _reaching_keys(node, closure, ordered_bindings)
+    active_tables = table_at.get(id(node), {})
+    out: dict[str, ValueOrigin] = {}
+    for name in sorted(closure):
+        origin = active_tables.get(name)
+        if origin is None and name in reach and reach[name]:
+            origin = ValueOrigin(
+                key=f"binding:{name}",
+                label=name,
+                kind="binding",
+                value=reach[name],
+                exclusive=name in exclusive_bindings,
+            )
+        if origin is not None:
+            out[origin.key] = origin
+            continue
+        param_origin = param_origins.get(name)
+        if param_origin is not None:
+            out[param_origin.key] = param_origin
+            if name not in indirect_params:
+                continue
+        origin = fixture_origins.get(name)
+        if origin is None:
+            origin = module_origins.get(name)
+        if origin is not None:
+            out[origin.key] = origin
+    for ref in attrs:
+        origin = _class_origin_for_ref(ref, class_name, class_origins)
+        if origin is not None:
+            out[origin.key] = origin
+    return tuple(out[key] for key in sorted(out))
+
+
+class _SubstituteActuals(ast.NodeTransformer):
+    def __init__(self, values: dict[str, ast.AST]) -> None:
+        self.values = values
+
+    def visit_Name(self, node: ast.Name):  # noqa: N802 - ast visitor API
+        if isinstance(node.ctx, ast.Load) and node.id in self.values:
+            return copy.deepcopy(self.values[node.id])
+        return node
+
+
+def _substitute_actuals(node: ast.AST, values: dict[str, ast.AST]) -> ast.AST:
+    return ast.fix_missing_locations(_SubstituteActuals(values).visit(copy.deepcopy(node)))
+
+
+def _call_bindings(
+    scope: ast.AST,
+    call: ast.Call,
+    parent: dict[str, ast.AST] | None = None,
+) -> dict[str, ast.AST]:
+    """Bind a plain Python call to formals by position/keyword, or decline."""
+    args = getattr(scope, "args", None)
+    if args is None or any(isinstance(arg, ast.Starred) for arg in call.args):
+        return {}
+    if any(keyword.arg is None for keyword in call.keywords):
+        return {}
+    parent = parent or {}
+    positional = list(args.posonlyargs) + list(args.args)
+    names = [arg.arg for arg in positional]
+    values: dict[str, ast.AST] = {}
+    for formal, actual in zip(names, call.args):
+        values[formal] = _substitute_actuals(actual, parent)
+    for keyword in call.keywords:
+        if keyword.arg in names or keyword.arg in {arg.arg for arg in args.kwonlyargs}:
+            values[keyword.arg] = _substitute_actuals(keyword.value, parent)
+    defaults = [None] * (len(positional) - len(args.defaults)) + list(args.defaults)
+    for formal, default in zip(names, defaults):
+        if formal not in values and default is not None:
+            values[formal] = default
+    for formal, default in zip(args.kwonlyargs, args.kw_defaults):
+        if formal.arg not in values and default is not None:
+            values[formal.arg] = default
+    return values
+
+
+def _scope_actuals(
+    root: str,
+    site: ast.Call,
+    local_scopes: dict[str, ast.AST],
+    caches,
+) -> dict[int, dict[str, ast.AST]]:
+    """Actual-expression environment at each helper scope, up to depth four."""
+    target = local_scopes.get(root)
+    if target is None:
+        return {}
+    out = {id(target): _call_bindings(target, site)}
+    frontier = [(target, out[id(target)], 0)]
+    seen = {id(target)}
+    nodes_cache = caches[0] if caches is not None else None
+    while frontier:
+        scope, env, depth = frontier.pop(0)
+        if depth >= 3:
+            continue
+        for node in _scope_nodes_cached(scope, nodes_cache):
+            if not isinstance(node, ast.Call):
+                continue
+            child_name = _callee_root(node)
+            child = local_scopes.get(child_name or "")
+            if child is None or id(child) in seen:
+                continue
+            child_env = _call_bindings(child, node, env)
+            seen.add(id(child))
+            out[id(child)] = child_env
+            frontier.append((child, child_env, depth + 1))
+    return out
+
+
+def _helper_argument_origins(
+    names: tuple[str, ...],
+    actuals: dict[str, ast.AST],
+    *,
+    scope: ast.AST,
+    site: ast.Call,
+    ordered_bindings,
+    param_origins,
+    indirect_params,
+    fixture_origins,
+    module_origins,
+    class_origins,
+    class_name,
+    table_at,
+    exclusive_bindings,
+) -> tuple[ValueOrigin, ...]:
+    formals = list(getattr(getattr(scope, "args", None), "posonlyargs", ())) + list(
+        getattr(getattr(scope, "args", None), "args", ())
+    ) + list(getattr(getattr(scope, "args", None), "kwonlyargs", ()))
+    indexes = {formal.arg: index for index, formal in enumerate(formals)}
+    out: dict[str, ValueOrigin] = {}
+    for name in names:
+        actual = actuals.get(name)
+        if actual is None:
+            continue
+        nested = _value_origins(
+            site,
+            names=_referenced_names(actual),
+            attrs=_referenced_attributes(actual),
+            ordered_bindings=ordered_bindings,
+            param_origins=param_origins,
+            indirect_params=indirect_params,
+            fixture_origins=fixture_origins,
+            module_origins=module_origins,
+            class_origins=class_origins,
+            class_name=class_name,
+            table_at=table_at,
+            exclusive_bindings=exclusive_bindings,
+        )
+        for origin in nested:
+            out[origin.key] = origin
+        value = _canonical_expr(actual)
+        if value:
+            index = indexes.get(name, -1)
+            key = f"actual:{getattr(scope, 'name', '<lambda>')}:{index}"
+            out[key] = ValueOrigin(
+                key=key,
+                label=f"{getattr(scope, 'name', 'helper')} argument {index + 1}",
+                kind="actual",
+                value=value,
+            )
+    return tuple(out[key] for key in sorted(out))
+
+
+def _helper_context_sig(
+    scope: ast.AST,
+    actuals: dict[str, ast.AST],
+) -> str:
+    """Pair repeated helper calls by the multiset of bound actual values."""
+    return "\x1c".join(
+        f"{name}={_canonical_expr(actuals[name])}"
+        for name in sorted(actuals)
+    )
+
+
+def _call_site(
+    call: ast.Call,
+    callee: str,
+    *,
+    ordered_bindings,
+    param_origins,
+    indirect_params,
+    fixture_origins,
+    module_origins,
+    class_origins,
+    class_name,
+    table_at,
+    exclusive_bindings,
+) -> CallSite:
+    arguments: list[CallArgument] = []
+    for actual in call.args:
+        if isinstance(actual, ast.Starred):
+            return CallSite(callee=callee)
+        origins = _value_origins(
+            call,
+            names=_referenced_names(actual),
+            attrs=_referenced_attributes(actual),
+            ordered_bindings=ordered_bindings,
+            param_origins=param_origins,
+            indirect_params=indirect_params,
+            fixture_origins=fixture_origins,
+            module_origins=module_origins,
+            class_origins=class_origins,
+            class_name=class_name,
+            table_at=table_at,
+            exclusive_bindings=exclusive_bindings,
+        )
+        arguments.append(
+            CallArgument(keyword=None, value=_canonical_expr(actual), origins=origins)
+        )
+    for keyword in call.keywords:
+        if keyword.arg is None:
+            return CallSite(callee=callee)
+        origins = _value_origins(
+            call,
+            names=_referenced_names(keyword.value),
+            attrs=_referenced_attributes(keyword.value),
+            ordered_bindings=ordered_bindings,
+            param_origins=param_origins,
+            indirect_params=indirect_params,
+            fixture_origins=fixture_origins,
+            module_origins=module_origins,
+            class_origins=class_origins,
+            class_name=class_name,
+            table_at=table_at,
+            exclusive_bindings=exclusive_bindings,
+        )
+        arguments.append(
+            CallArgument(
+                keyword=keyword.arg,
+                value=_canonical_expr(keyword.value),
+                origins=origins,
+            )
+        )
+    return CallSite(callee=callee, arguments=tuple(arguments))
+
+
+def _provenance_refs(c: _Classified, node: ast.AST):
+    """Return (subject names/attrs, expectation names/attrs).
+
+    Classification normally puts those operands on left/right respectively.
+    Membership is the one structural exception: in ``needle in result.items``
+    the produced attribute/subscript is the subject and the needle is the
+    oracle. This is syntax-directed and intentionally does not inspect names.
+    """
+    subject = (c.left_names, c.left_attrs)
+    expectation = (c.right_names, c.right_attrs)
+    produced_haystack = False
+    if isinstance(node, ast.Assert) and isinstance(node.test, ast.Compare):
+        test = node.test
+        produced_haystack = bool(
+            test.ops
+            and isinstance(test.ops[0], (ast.In, ast.NotIn))
+            and test.comparators
+            and isinstance(test.comparators[-1], (ast.Attribute, ast.Subscript))
+            and c.right_literal is None
+            and c.right_names
+        )
+    elif isinstance(node, ast.Call):
+        method = (_dotted(node.func) or "").rsplit(".", 1)[-1]
+        produced_haystack = bool(
+            method in ("assertIn", "assertNotIn")
+            and len(node.args) > 1
+            and isinstance(node.args[1], (ast.Attribute, ast.Subscript))
+            and c.right_literal is None
+            and c.right_names
+        )
+    if produced_haystack:
+        subject, expectation = expectation, subject
+    return subject, expectation
+
+
 def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
     """Ids of `assert data == <literal>` where `data` was bound to the same
     literal earlier in the same statement list and nothing between touches it.
@@ -2063,6 +3125,10 @@ def _collect_unit(
     inherited_markers: list[Marker] | None = None,
     module_scopes: dict[str, ast.AST] | None = None,
     caches: tuple[dict, dict] | None = None,
+    module_values: dict[str, ast.AST] | None = None,
+    module_origins: dict[str, ValueOrigin] | None = None,
+    fixture_origins: dict[str, ValueOrigin] | None = None,
+    class_origins: dict[str, ValueOrigin] | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -2088,6 +3154,57 @@ def _collect_unit(
         if definition_bindings
         else {}
     )
+    exclusive_bindings = (
+        _exclusive_bindings(func)
+        if any("\x1f" in key for key in definition_bindings.values())
+        else ()
+    )
+    param_columns = _param_columns(func)
+    param_origins = _param_value_origins(func)
+    indirect_params = _param_indirect_names(func)
+    table_at = _table_origins_at(func, module_values or {})
+    class_name = (
+        qualname.rsplit(".", 1)[0].rsplit(".", 1)[-1]
+        if "." in qualname
+        else None
+    )
+    module_origins = module_origins or {}
+    requested_params = _fixture_request_params(
+        func,
+        set(param_origins) | _ambiguous_parametrize_names(func),
+        set(indirect_params),
+    )
+    fixture_origins = dict(fixture_origins or {})
+    for name in requested_params:
+        if name not in fixture_origins:
+            fixture_origins[name] = ValueOrigin(
+                key=f"fixture:{name}",
+                label=name,
+                kind="fixture",
+                value="",
+            )
+    class_origins = class_origins or {}
+
+    def origins_for(node: ast.AST, c: _Classified):
+        subject_refs, expectation_refs = _provenance_refs(c, node)
+        common = dict(
+            ordered_bindings=ordered_bindings,
+            param_origins=param_origins,
+            indirect_params=indirect_params,
+            fixture_origins=fixture_origins,
+            module_origins=module_origins,
+            class_origins=class_origins,
+            class_name=class_name,
+            table_at=table_at,
+            exclusive_bindings=exclusive_bindings,
+        )
+        subject = _value_origins(
+            node, names=subject_refs[0], attrs=subject_refs[1], **common
+        )
+        expectation = _value_origins(
+            node, names=expectation_refs[0], attrs=expectation_refs[1], **common
+        )
+        return subject, expectation
     vacuous = _vacuous_bound_asserts(func)
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
@@ -2127,6 +3244,7 @@ def _collect_unit(
                 _positional_closure(node, c.left_names + c.right_names, ordered_bindings),
                 ordered_bindings,
             )
+            subject_origins, expected_origins = origins_for(node, c)
             assertions.append(
                 Assertion(
                     id=f"a{counter}",
@@ -2145,6 +3263,8 @@ def _collect_unit(
                     right_depends_on=depends,
                     reaching=reach,
                     reaching_sig=_reaching_sig(reach, direct),
+                    expected_origins=expected_origins,
+                    subject_origins=subject_origins,
                 )
             )
             counter += 1
@@ -2197,6 +3317,7 @@ def _collect_unit(
                     ),
                     ordered_bindings,
                 )
+                subject_origins, expected_origins = origins_for(node, c)
                 assertions.append(
                     Assertion(
                         id=f"a{counter}",
@@ -2215,6 +3336,8 @@ def _collect_unit(
                         trivial=c.trivial,
                         reaching=reach,
                         reaching_sig=_reaching_sig(reach, direct),
+                        expected_origins=expected_origins,
+                        subject_origins=subject_origins,
                     )
                 )
                 counter += 1
@@ -2247,6 +3370,11 @@ def _collect_unit(
     for site_node, root in _helper_entry_sites(func, nodes_cache):
         if root not in local_scopes:
             continue
+        actuals_by_scope = (
+            _scope_actuals(root, site_node, local_scopes, caches)
+            if isinstance(site_node, ast.Call)
+            else {}
+        )
         closure = root_closures.get(root)
         if closure is None:
             closure = _executed_scopes(func, module_scopes or {}, caches=caches, roots=(root,))
@@ -2282,6 +3410,46 @@ def _collect_unit(
                     ),
                     ordered_bindings,
                 )
+                subject_refs, expectation_refs = _provenance_refs(c, node)
+                actuals = actuals_by_scope.get(id(scope), {})
+
+                def inherited_origins(refs):
+                    names, attrs = refs
+                    found = {
+                        origin.key: origin
+                        for origin in _helper_argument_origins(
+                            names,
+                            actuals,
+                            scope=scope,
+                            site=site_node,
+                            ordered_bindings=ordered_bindings,
+                            param_origins=param_origins,
+                            indirect_params=indirect_params,
+                            fixture_origins=fixture_origins,
+                            module_origins=module_origins,
+                            class_origins=class_origins,
+                            class_name=class_name,
+                            table_at=table_at,
+                            exclusive_bindings=exclusive_bindings,
+                        )
+                    }
+                    # Unbound helper names are lexical module/class sources,
+                    # never same-spelled locals at the caller.
+                    for name in names:
+                        if name not in actuals and name in module_origins:
+                            origin = module_origins[name]
+                            found[origin.key] = origin
+                    for ref in attrs:
+                        origin = _class_origin_for_ref(
+                            ref, class_name, class_origins
+                        )
+                        if origin is not None:
+                            found[origin.key] = origin
+                    return tuple(found[key] for key in sorted(found))
+
+                subject_origins = inherited_origins(subject_refs)
+                expected_origins = inherited_origins(expectation_refs)
+                context = _helper_context_sig(scope, actuals)
                 assertions.append(
                     Assertion(
                         id=f"a{counter}",
@@ -2300,7 +3468,13 @@ def _collect_unit(
                         right_depends_on=c.right_names,
                         inherited=True,
                         reaching=reach,
-                        reaching_sig=_reaching_sig(reach, direct),
+                        reaching_sig="\x1b".join(
+                            part
+                            for part in (_reaching_sig(reach, direct), context)
+                            if part
+                        ),
+                        expected_origins=expected_origins,
+                        subject_origins=subject_origins,
                     )
                 )
                 counter += 1
@@ -2311,6 +3485,24 @@ def _collect_unit(
     assertions.sort(key=lambda a: a.span)
     for i, a in enumerate(assertions):
         a.id = f"a{i}"
+
+    call_sites = tuple(
+        _call_site(
+            node,
+            root,
+            ordered_bindings=ordered_bindings,
+            param_origins=param_origins,
+            indirect_params=indirect_params,
+            fixture_origins=fixture_origins,
+            module_origins=module_origins,
+            class_origins=class_origins,
+            class_name=class_name,
+            table_at=table_at,
+            exclusive_bindings=exclusive_bindings,
+        )
+        for node, root in _helper_entry_sites(func, nodes_cache)
+        if isinstance(node, ast.Call)
+    )
 
     side = UnitSide(
         span=off.span(func),
@@ -2324,19 +3516,13 @@ def _collect_unit(
         # Exclusivity can only matter for a multiply-bound name. Most test
         # units bind each local once, so avoid another full statement walk
         # when the definition map already proves the result must be empty.
-        exclusive_bindings=(
-            _exclusive_bindings(func)
-            if any("" in key for key in definition_bindings.values())
-            else ()
-        ),
-        param_columns=_param_columns(func),
+        exclusive_bindings=exclusive_bindings,
+        param_columns=param_columns,
         patches=tuple(sorted(patches)),
         invoked=tuple(sorted(_invocations(func, caches))),
-        params=tuple(
-            a.arg
-            for a in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
-            if a.arg not in ("self", "cls")
-        ),
+        params=requested_params,
+        indirect_params=indirect_params,
+        call_sites=call_sites,
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
@@ -2759,7 +3945,30 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # rebuild the same map 200 times.
     module_scopes: dict[str, ast.AST] = {}
     test_class_names: frozenset[str] = frozenset()
+    module_values: dict[str, ast.AST] = {}
+    module_origins: dict[str, ValueOrigin] = {}
+    fixture_defs: dict[str, str] = {}
+    dynamic_fixture_defs: tuple[str, ...] = ()
+    fixture_alias_bindings: dict[int, dict[str, ast.AST]] = {}
+    fixture_origins: dict[str, ValueOrigin] = {}
+    class_origins: dict[str, ValueOrigin] = {}
     if collect_tests:
+        module_values, module_origins = _module_value_origins(tree)
+        fixture_alias_bindings = _fixture_alias_bindings(tree)
+        fixture_defs = _fixture_definitions(tree, fixture_alias_bindings)
+        dynamic_fixture_defs = _dynamic_fixture_definitions(
+            tree, fixture_alias_bindings
+        )
+        fixture_origins = {
+            name: ValueOrigin(
+                key=f"fixture:{name}",
+                label=name,
+                kind="fixture",
+                value=value,
+            )
+            for name, value in sorted(fixture_defs.items())
+        }
+        class_origins = _class_value_origins(tree)
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 module_scopes[node.name] = node
@@ -2782,7 +3991,17 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 if collect_tests and collectible and _is_test_name(child.name):
                     units.append(
                         _collect_unit(
-                            child, qual, text, off, inherited, module_scopes, file_caches
+                            child,
+                            qual,
+                            text,
+                            off,
+                            inherited,
+                            module_scopes,
+                            file_caches,
+                            module_values,
+                            module_origins,
+                            fixture_origins,
+                            class_origins,
                         )
                     )
                 # Nested defs are never collected as pytest items.
@@ -2897,11 +4116,15 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
 
     units.sort(key=lambda u: u.span)
     if collect_tests:
-        helper_asserts, fixture_asserts, autouse = _module_oracle_scopes(tree, text, off)
+        helper_asserts, fixture_asserts, autouse = _module_oracle_scopes(
+            tree, text, off, fixture_alias_bindings
+        )
         helper_calls = _module_helper_calls(tree)
+        helper_params = _module_helper_params(tree)
     else:
         helper_asserts, fixture_asserts, autouse = {}, {}, ()
         helper_calls = {}
+        helper_params = {}
     return ParsedFile(
         parse_ok=True,
         units=units,
@@ -2914,8 +4137,11 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         swallowing_handlers=tuple(swallowing),
         constants=_top_level_constants(tree, text),
         from_imports=_top_level_from_imports(tree),
-        fixture_defs=_fixture_definitions(tree) if collect_tests else {},
+        fixture_defs=fixture_defs,
+        dynamic_fixture_aliases=bool(dynamic_fixture_defs),
+        dynamic_fixture_defs=dynamic_fixture_defs,
         helper_asserts=helper_asserts,
+        helper_params=helper_params,
         helper_calls=helper_calls,
         fixture_asserts=fixture_asserts,
         autouse_fixtures=autouse,
@@ -2931,6 +4157,23 @@ def _module_helper_calls(tree: ast.Module) -> dict[str, tuple[str, ...]]:
         if _is_test_name(node.name) or _is_fixture_def(node):
             continue
         out[node.name] = _callees(node)
+    return out
+
+
+def _module_helper_params(tree: ast.Module) -> dict[str, tuple[str, ...]]:
+    """Plain formal order for non-test, non-fixture module helpers."""
+    out: dict[str, tuple[str, ...]] = {}
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if _is_test_name(node.name) or _is_fixture_def(node):
+            continue
+        out[node.name] = tuple(
+            arg.arg
+            for arg in (
+                node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+            )
+        )
     return out
 
 
@@ -2976,7 +4219,12 @@ def _classified_asserts(nodes, text, off) -> tuple:
     return tuple(out)
 
 
-def _module_oracle_scopes(tree: ast.Module, text, off):
+def _module_oracle_scopes(
+    tree: ast.Module,
+    text,
+    off,
+    fixture_alias_bindings: dict[int, dict[str, ast.AST]],
+):
     """(helper_asserts, fixture_asserts, autouse_fixtures) for a test module.
 
     Helpers contribute their **own** direct asserts — one hop across the file
@@ -2991,15 +4239,18 @@ def _module_oracle_scopes(tree: ast.Module, text, off):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
         if _is_fixture_def(node):
+            public_name = _fixture_public_name(node, fixture_alias_bindings)
+            if public_name is None:
+                continue
             found = _classified_asserts(ast.walk(node), text, off)
             if found:
-                fixtures[node.name] = found
+                fixtures[public_name] = found
             for d in node.decorator_list:
                 if isinstance(d, ast.Call) and any(
                     kw.arg == "autouse" and isinstance(kw.value, ast.Constant) and kw.value.value
                     for kw in d.keywords
                 ):
-                    autouse.append(node.name)
+                    autouse.append(public_name)
         elif not _is_test_name(node.name):
             found = _classified_asserts(_scope_nodes(node), text, off)
             if found:
