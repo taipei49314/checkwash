@@ -1,7 +1,8 @@
 # checkwash
 
 [![CI](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml/badge.svg)](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/checkwash.svg)](https://pypi.org/project/checkwash/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/taipei49314/checkwash/blob/main/LICENSE)
 
 **Check whether a code change weakens your tests.**
 
@@ -37,7 +38,7 @@ You can also [download the file in your browser](https://github.com/taipei49314/
 | **Block · exit 1** | Read the finding and the diff. It may be weakened verification or a false positive. |
 | **Error · exit 2** | Resolve the input or analysis error before relying on the result. |
 
-For JSON/SARIF output and more examples, see the [usage guide](docs/releases/v0.2.12-public-launch.md#try-it-on-a-change-you-understand).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.12-public-launch.md#try-it-on-a-change-you-understand).
 
 ## Know the limits
 
@@ -47,8 +48,8 @@ test patterns. Known gaps remain.
 
 Legitimate refactors can be flagged: the dedicated honest-refactor corpus
 records **24 blocks out of 60 (40%)**. Try it on your own changes before making
-it required. [Coverage and limitations](docs/stability.md#coverage-and-adoption-cost)
-· [Known gaps](docs/adversarial-catalog-2026-09.md)
+it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
+· [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
 
 ## Use it in CI
 
@@ -57,7 +58,7 @@ repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
 The recommended Action is pinned to **v0.2.11**; the CLI above is **v0.2.12**.
-Record which version you use. [Full setup and exemptions](docs/enterprise.md)
+Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
 <details>
@@ -103,7 +104,7 @@ can inspect the local workflow, but cannot verify live branch protection.
 so the documented Action adopts a verified pin from the prior release.
 It does not include every change in CLI v0.2.12. To verify another trusted
 release, use `git rev-parse 'vX.Y.Z^{commit}'`.
-[Action reference](action/README.md)
+[Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
 </details>
 
@@ -146,22 +147,22 @@ Review methods vary: the three-rater agreement study covers an older
 35-diff cohort, not all 42 blocks. The dedicated **24/60 refactor** result
 above is a separate population; the general-commit rate does not predict it.
 
-[Measurements and source data](benchmarks/README.md)
-· [Generated results](benchmarks/RESULTS.md)
-· [Failure ledger](benchmarks/FAILURES.md)
+[Measurements and source data](https://github.com/taipei49314/checkwash/blob/main/benchmarks/README.md)
+· [Generated results](https://github.com/taipei49314/checkwash/blob/main/benchmarks/RESULTS.md)
+· [Failure ledger](https://github.com/taipei49314/checkwash/blob/main/benchmarks/FAILURES.md)
 
 </details>
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.2.12 guide](docs/releases/v0.2.12-public-launch.md) |
-| JSON/SARIF contracts and upgrades | [Stability](docs/stability.md) |
-| Required checks and reviewed exemptions | [Enterprise setup](docs/enterprise.md) |
-| Contributing or reporting a problem | [Contributing](CONTRIBUTING.md) · [Issues](https://github.com/taipei49314/checkwash/issues) · [Security reports](SECURITY.md) |
-| Readiness for 1.0 | [Criteria — not met](docs/stability.md#what-must-change-before-10) |
+| Installation checks, versions and first use | [v0.2.12 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.12-public-launch.md) |
+| JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
+| Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
+| Contributing or reporting a problem | [Contributing](https://github.com/taipei49314/checkwash/blob/main/CONTRIBUTING.md) · [Issues](https://github.com/taipei49314/checkwash/issues) · [Security reports](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md) |
+| Readiness for 1.0 | [Criteria — not met](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#what-must-change-before-10) |
 
 Related projects: [checkwash-corpus](https://github.com/taipei49314/checkwash-corpus)
 and [smallestlie](https://github.com/taipei49314/smallestlie) hold evaluation work.
 
 Alpha pre-release. 21 detectors, 578 tests in the current source tree.
-Zero runtime dependencies. [Apache-2.0](LICENSE).
+Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).
