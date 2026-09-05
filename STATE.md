@@ -1,6 +1,25 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-06 (public-launch documentation and measurement provenance; engine version remains v0.2.12).
+Updated: 2026-09-06 (v0.2.13 public documentation, package metadata and trusted-pin maintenance).
+
+## 2026-09-06: public package-page correction (v0.2.13)
+
+The owner authorized a one-time documentation/metadata release outside the
+weekly slot, including GitHub Release, matching PyPI publication and family
+pin updates. The ordinary release cadence resumes after this release.
+
+The short README, corrected measurement provenance and explicit alpha limits
+now ship in the package description. Its document links use absolute GitHub
+URLs so they resolve on PyPI. The package summary describes known patterns
+instead of promising every weakening will be caught. Existing v0.2.12 metadata
+and assets remain historical; they are not replaced.
+
+The Action and local doctor's trusted pin advance to released v0.2.12
+(`e05c37f0e1673cdf218ec62fcfb7c6712cce704b`). Package/CLI version and this
+trusted-pin constant are the only source changes; detector logic, frozen
+policies, fixtures and benchmark records are unchanged. No new research
+measurement is claimed. The historical 24/60 refactor result and 1.0 NOT MET
+status remain visible. [Release and first-use guide](docs/releases/v0.2.13-public-launch.md).
 
 ## 2026-09-06: public-launch evidence labels, without a new engine measurement
 
@@ -1663,7 +1682,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.2.12 |
+| version | v0.2.13 |
 | detectors | 21 |
 | human-commit block rate | 42/1800 = 2.33% |
 | adjudicated false positive | 27/1800 = 1.50% |

@@ -1,17 +1,17 @@
-# checkwash 路線圖：v0.2.12 現況與歷史計畫
+# checkwash 路線圖：v0.2.13 現況與歷史計畫
 
 ## 2026-09 公開發布狀態
 
-**對外版本：v0.2.12，alpha。1.0 條件：尚未達成。** 本次先完成文件、
+**對外版本：v0.2.13，alpha。1.0 條件：尚未達成。** 本次先完成文件、
 採用路徑與發布證據的校正。THREATMODEL row 77 的文件與 9 月 catalog
 依已有證據標示範圍；舊 checklist 的完成勾選不能證明剩餘失敗面已關閉。發布範圍見
-[v0.2.12 公開發布稿](releases/v0.2.12-public-launch.md)，現有失敗面見
+[v0.2.13 公開發布稿](releases/v0.2.13-public-launch.md)，現有失敗面見
 [9 月 catalog](adversarial-catalog-2026-09.md)。
 
 | 面向 | 可以引用的狀態 | 限制與下一步 |
 |---|---|---|
-| 採用 | CLI / zipapp 是 v0.2.12；文件中的 Action SHA 依一版信任落差固定於 v0.2.11 | 安裝本身不阻擋合併；必須設定 required context `checkwash`，並記錄各表面的版本 |
-| 歷史人類 corpus | v0.1.46 六 repo sweep：42/1800 blocks（2.33%）；對應 adjudication：27/1800 FP（1.50%） | 已用於調整引擎，不能當 held-out；不能改標為 v0.2.12 新量測 |
+| 採用 | CLI / zipapp 是 v0.2.13；文件中的 Action SHA 依一版信任落差固定於 v0.2.12 | 安裝本身不阻擋合併；必須設定 required context `checkwash`，並記錄各表面的版本 |
+| 歷史人類 corpus | v0.1.46 六 repo sweep：42/1800 blocks（2.33%）；對應 adjudication：27/1800 FP（1.50%） | 已用於調整引擎，不能當 held-out；不能改標為 v0.2.13 新量測 |
 | 重構 corpus | 24/60 blocks（40%） | 與一般 commit 的 1.50% 是不同問題；下一季主線為重構誤報 |
 | 語言覆蓋 | Python 主體，加上有限的 JS/TS test/it 與 expect matcher 掃描 | 非完整 JS parser；未解析的 production 語意仍有邊界 |
 | 1.0 | [stability.md](stability.md#what-must-change-before-10) 明列未達成條件 | 需要採用觀測、可接受的重構成本、明確的 catalog 範圍及相容性證據 |
@@ -23,7 +23,7 @@
 ## 歷史計畫（2026-08-11 起，保留後續完成註記）
 
 以下是 pre-rename 的 greenwash 計畫與演進紀錄。舊名稱、版本錨點、方向性
-數字、目標句與「下週」均屬當時脈絡，不是 v0.2.12 的現況或保證。
+數字、目標句與「下週」均屬當時脈絡，不是 v0.2.13 的現況或保證。
 已完成的功能項目只代表該工作包完成，不代表 1.0 驗收通過。
 
 > **目標：** 把 greenwash 從「方法論已強的 pre-release」推到**品類級 / 企業可引用**的頂級水平。  

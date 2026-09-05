@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "checkwash"
-version = "0.2.12"
-description = "Your agent deleted the failing test to make CI green. checkwash catches it before merge."
+version = "0.2.13"
+description = "Flags known patterns of weakened tests and CI checks in a Git diff."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
