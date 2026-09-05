@@ -2,146 +2,68 @@
 
 [![CI](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml/badge.svg)](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#install)
 
-**Catch known patterns of test weakening before merge.**
+**Check whether a code change weakens your tests.**
 
-checkwash reads the git diff and flags known changes that weaken verification.
-A required CI check enforces its configured verdict; a pass is not proof that
-the change is honest or correct. It does not run your suite, call an LLM, or
-use the network.
+A test can pass after it stops checking something useful. checkwash reads
+your Git diff and flags known patterns such as deleted assertions, skipped
+tests, relaxed expectations, and CI checks that stop failing.
 
-Typical catches: `assert total == 105.3` becoming `assert total > 0`, a new
-`pytest.mark.skip`, a deleted test, a looser float tolerance, a rewritten
-golden file, or a CI script that stops failing.
-
-> Status: **v0.2.12, alpha pre-release.** 21 detectors, 578 tests in the current
-> source tree; zero runtime dependencies.
-> Published measurements below identify their corpus and history; they are
-> not a fresh measurement of every claim on v0.2.12. Start with the
-> [public-launch brief](docs/releases/v0.2.12-public-launch.md),
-> [known limitations](docs/adversarial-catalog-2026-09.md), and
-> [1.0 criteria — not met](docs/stability.md#what-must-change-before-10).
-
-```
-$ checkwash check HEAD~1..HEAD
-
-✗ checkwash: 1 high-severity finding — blocking
-
-ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
-  assertion strength: EXACT_VALUE(90) -> BOUND(40)
-  no non-trivial production change in this diff
-  before  assert total == 105.3
-  after   assert total > 0
+```diff
+- assert total == 105.3
++ assert total > 0
 ```
 
-**In short**
+The new assertion accepts many incorrect totals. checkwash can flag changes
+like this for review, including changes written by coding agents.
 
-| | |
-|---|---|
-| Needs | Python 3.11+, git. No pip packages at runtime. |
-| Looks at | The diff. Never executes the code under review. |
-| Stops a merge | Only if you make the `checkwash` job a **required** status check. Installing it is not enough. |
-| Speed | 0.2 s engine on a 3000-line test diff; 1.6 s end-to-end for 300 files. |
-| Honest cost | Historical tuned-corpus result: **27 false positives (1.50%)** on 1800 human commits. A separate 2026-08-07 integration study reported **11 false positives (1.65%)** on 667 commits. Dedicated refactor corpus: **24/60 blocked (40%)**. These populations and engine versions differ; see [benchmarks/](benchmarks/README.md), [FAILURES.md](benchmarks/FAILURES.md), and [integrations.md](docs/integrations.md). |
+**Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-## Sixty seconds, from nothing
+## Try it
 
-No install, no virtualenv, no network after the download. Every release
-attaches a single file that carries the whole tool — it has zero runtime
-dependencies, so there is nothing else to fetch.
+You need **Python 3.11+ and Git**. From a repository with at least two commits:
 
 ```bash
 curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.12/checkwash.pyz
-python checkwash.pyz demo                       # 8 real tampering cases, blocked, offline
-python checkwash.pyz check HEAD~1..HEAD         # your last commit
-python checkwash.pyz sweep HEAD --limit 100     # how often it would have blocked you
+python checkwash.pyz check HEAD~1..HEAD
 ```
 
-`demo` takes under half a second and needs nothing but Python 3.11+. `sweep`
-is the honest one: point it at your own history and read the blocks yourself
-before you believe any number on this page. The single-file build is gated by
-`tests/test_zipapp.py` on every push, so it cannot quietly rot.
+This checks your last commit. Start with a change you already understand.
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.2.12/checkwash.pyz).
 
-## Install
+| Result | What to do |
+|---|---|
+| **Pass · exit 0** | No finding requires blocking under your configuration. Keep running your normal tests and review. |
+| **Block · exit 1** | Read the finding and the diff. It may be weakened verification or a false positive. |
+| **Error · exit 2** | Resolve the input or analysis error before relying on the result. |
 
-Pick the surface that fits and pin its version. The CLI, zipapp, hooks and
-Action use the checkwash engine, but the documented Action deliberately pins
-v0.2.11 while this release's CLI and zipapp are v0.2.12. Read the
-[Action trust lag](#required-check--the-only-configuration-that-blocks-a-merge)
-below and the contracts in [docs/stability.md](docs/stability.md).
+For JSON/SARIF output and more examples, see the [usage guide](docs/releases/v0.2.12-public-launch.md#try-it-on-a-change-you-understand).
 
-Install the CLI, then run it. `greenwash` is a leftover alias and does the
-same thing. From PyPI — every release since 0.2.1 is published there by the
-release workflow through trusted publishing, no stored token — or from the
-repository at the advertised tag:
+## Know the limits
 
-```bash
-pipx install checkwash
-# or: uv tool install checkwash
-# or, pinned to the tag: pipx install git+https://github.com/taipei49314/checkwash@v0.2.12
+**v0.2.12 is alpha.** A pass does not prove that a change is correct or honest.
+Python is the main language supported; JS/TS support covers a limited set of
+test patterns. Known gaps remain.
 
-checkwash check HEAD~1..HEAD    # a range
-checkwash check                 # HEAD vs the working tree
-checkwash check --format sarif  # SARIF 2.1.0 for GitHub code scanning
-# JS/TS: *.test.js / *.spec.ts matcher weakenings (T3.1)
-checkwash demo                  # replay real tampering cases, fully offline
-checkwash bench --local         # reproduce in-clone numbers (demo + pins)
-# omit --local to also require the six sweep clones; missing clones exit 2
-```
+Legitimate refactors can be flagged: the dedicated honest-refactor corpus
+records **24 blocks out of 60 (40%)**. Try it on your own changes before making
+it required. [Coverage and limitations](docs/stability.md#coverage-and-adoption-cost)
+· [Known gaps](docs/adversarial-catalog-2026-09.md)
 
-`checkwash demo` replays eight real tampering cases — a softened assertion, a
-widened tolerance, a rewritten expectation, an xfail'd failure, a swallowed
-error, a relaxed CI step, a self-edited CLAUDE.md, and an assertion swapped for
-an unrelated one of the same strength — plus one honest fix that stays silent. No network, no key, no LLM; every verdict comes from the same
-engine `check` runs.
+## Use it in CI
 
-Python is the main analysis surface. JS/TS support is a bounded scan of
-`test`/`it` units and recognized `expect(...).matcher(...)` calls in
-`*.test.*` and `*.spec.*` files with `js`, `jsx`, `ts`, `tsx`, `mjs`, or
-`cjs` extensions. It is not a full JavaScript parser; it does not analyze
-JS/TS production semantics or arbitrary assertion libraries. See
-[coverage limits](docs/stability.md#coverage-and-adoption-cost).
+To stop a merge, make the **`checkwash` status check required** in your
+repository's branch rules. Installing the tool or adding a workflow alone
+does not enforce its verdict.
 
-### Required check — the only configuration that blocks a merge
+The recommended Action is pinned to **v0.2.11**; the CLI above is **v0.2.12**.
+Record which version you use. [Full setup and exemptions](docs/enterprise.md)
 
-checkwash installed is not checkwash enforcing. A green job that is not a
-**required status check** does not stop anyone merging, and a local stop-hook
-is an author-side convenience: it is skipped by `--no-verify` and is simply not
-present when someone else pushes. Three steps, in this order.
+<a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
+<details>
+<summary>Copy the GitHub Actions workflow and require the check</summary>
 
-**1. Add the workflow** (below). Note the job name — it becomes the status
-check's name.
-
-**2. Make that status check required.** The check name is the **job** name
-(`checkwash` in the snippet below), not the workflow filename. UI: Settings →
-Rules → Rulesets → require the `checkwash` status check on the default
-branch. Or, with admin `gh` access and this file in the clone:
-
-```bash
-gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json
-```
-
-That creates a ruleset on `~DEFAULT_BRANCH` requiring context `checkwash`.
-It does not overwrite existing rulesets. List first with
-`gh api repos/OWNER/REPO/rulesets`. Without this step the workflow runs,
-reports, and blocks nothing.
-
-A one-page enterprise path — required check, SARIF, allowlist, CODEOWNERS —
-is in [docs/enterprise.md](docs/enterprise.md).
-
-**3. Verify.** `checkwash doctor` recognizes the exact three-step gate below
-and says whether it can run unconditionally. It deliberately reports other
-workflow shapes as analysis incomplete instead of guessing that a textual
-`checkwash` mention is load-bearing. `doctor` cannot see branch protection
-(that needs API token scopes checkwash does not ask for), and it says so rather
-than implying otherwise: step 2 is the one a human must confirm.
-
-```bash
-checkwash doctor        # exit 0 = no problems found; 1 = problems or warnings
-```
-
-**GitHub Action** — blocks a PR on high-severity findings:
+Save this as `.github/workflows/checkwash.yml`:
 
 ```yaml
 # .github/workflows/checkwash.yml
@@ -164,250 +86,82 @@ jobs:
       - uses: taipei49314/checkwash/action@283db528cd3d8e5e38173e14d766a8915efa2c90 # v0.2.11
 ```
 
-Hash pins and `persist-credentials: false` are required by
-[zizmor](https://docs.zizmor.sh/audits/#unpinned-uses) blanket policy — a
-tag pin (`@v4`, `@vX.Y.Z`) is two `unpinned-uses` highs. Re-checked
-2026-09-01 on zizmor 1.30.0: this snippet is 0 high / 0 medium. The checkwash
-SHA is deliberately the newest prior stable pin that `doctor` could verify at
-build time. Release N cannot embed its own commit SHA, so it adopts that SHA
-only after it already exists, in the next release. The result is an explicit
-one-release trust lag, not an arbitrary 40-hex claim. Verify this pin with
-`git rev-parse 'v0.2.11^{commit}'`; for another trusted release, substitute its
-version in `git rev-parse 'vX.Y.Z^{commit}'`.
-See [action/README.md](action/README.md).
+After the workflow runs, open **Settings → Rules → Rulesets** and require
+the `checkwash` status context. Keep the job unconditional.
 
-Do not gate this job on anything. A conditional gate is the defect this
-project shipped in its own repository: the dogfood job carried
-`if: github.event_name == 'pull_request'` in a repo that had never had a pull
-request, so it never executed once while the README told people to use it.
-
-**pre-commit** — an author-side convenience, not a merge gate:
-
-```yaml
-repos:
-  - repo: https://github.com/taipei49314/checkwash
-    rev: v0.2.12
-    hooks: [{ id: checkwash }]
-```
-
-**Claude Code stop-hook** — checks the diff the moment the agent finishes and
-blocks the stop on tampering:
+If you administer the repository and have this project's ruleset file,
+you can instead create the rule with:
 
 ```bash
-checkwash hook install --agent claude-code
+gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json
 ```
 
-checkwash runs the published action against its own diff on every push
-(`.github/workflows/ci.yml`, the `dogfood` job): the judge is judged. That
-job was previously gated to pull requests, in a repository that has never had
-one, so it had never executed — a test now fails if it is made conditional
-again.
+This adds a ruleset; it does not replace existing ones. `checkwash doctor`
+can inspect the local workflow, but cannot verify live branch protection.
 
-License: Apache-2.0.
+**Why the older Action pin?** A release cannot embed its own commit SHA,
+so the documented Action adopts a verified pin from the prior release.
+It does not include every change in CLI v0.2.12. To verify another trusted
+release, use `git rev-parse 'vX.Y.Z^{commit}'`.
+[Action reference](action/README.md)
 
-## Integrations
+</details>
+
+## More options and evidence
+
+<a id="install"></a>
+<details>
+<summary>Install as a CLI or try the included examples</summary>
+
+If you already use pipx, install the fixed version:
 
 ```bash
-# Claude Code — block the agent's stop on high findings
-checkwash hook install --agent claude-code
+pipx install checkwash==0.2.12
+# or from the release tag:
+pipx install git+https://github.com/taipei49314/checkwash@v0.2.12
 
-# pre-commit — prints the config block to paste
-checkwash hook install --agent pre-commit
-
-# GitHub Actions — exact doctor-verified prior stable pin; see action/action.yml
-- uses: taipei49314/checkwash/action@283db528cd3d8e5e38173e14d766a8915efa2c90 # v0.2.11
+checkwash check HEAD~1..HEAD
+checkwash demo                  # 8 real tampering cases, blocked, offline
 ```
 
-`checkwash check BASE...HEAD` (three dots) resolves through the merge base,
-so PR diffs never include base-branch commits. A wash split across merged
-PRs is still outside that window — [docs/process-windows.md](docs/process-windows.md).
-To reproduce the published numbers from this checkout:
-`checkwash bench` (add `--local` if you do not have the six sweep clones).
+`checkwash demo` replays eight real tampering cases and one honest fix.
+It illustrates known patterns; it is not a coverage guarantee.
+You can run the same examples with `python checkwash.pyz demo`.
 
-## Measured, not asserted
+</details>
 
-The published corpora measure different questions. Preserve the original
-engine version and measurement date when quoting a result; the
-[launch brief](docs/releases/v0.2.12-public-launch.md) separates historical
-measurements from release qualification. Corpus definitions and artifacts:
-[benchmarks/](benchmarks/README.md).
+<a id="measured-not-asserted"></a>
+<details>
+<summary>Read the measurements and their limits</summary>
 
-- **On test-suite refactors specifically — 24 false positives out of 60
-  (40%); the historical 1.50% below does not predict it.** 60 refactors a reviewer would approve
-  (extract an assertion into a shared helper, merge two tests, move a check
-  into a fixture, swap exact equality for `pytest.approx`), each shipping
-  production **twice** — correct and buggy — so that four pytest runs prove
-  both sides still catch the bug before checkwash is asked anything. A block
-  is then a false positive by construction, with no adjudication to argue
-  about. **checkwash blocks 24 of the 60** — down from 20 of the first 30
-  before the reachable-assertion IR landed, and the residue decomposes into
-  named families (cross-file helpers, unit-identity changes, and a
-  deliberately-kept trade documented in THREATMODEL 92). The sweep corpus
-  below rarely restructures test helpers, so no amount of re-running it would
-  have surfaced this; that is the same zero-power trap that nearly shipped
-  `TEST_PATCHES_SUBJECT` on a meaningless zero. Both numbers are real and they
-  answer different questions.
-  [benchmarks/refactors/](benchmarks/refactors/README.md).
-- **Historical human-commit block rate — 42 / 1800 = 2.33%.** The committed
-  six-repo sweep artifacts record engine v0.1.46. Six active OSS projects
-  (flask, httpx, attrs, click, rich, starlette), 300 consecutive
-  human-reviewed commits each. This is the corpus the detectors were tuned
-  against, not a held-out set: it was unseen only at the first measurement
-  (8.6%, 2026-07-30); every precision round since has been re-run on the
-  same 1800 commits, with the blocked diffs read and the rules shaped
-  accordingly. That is how often checkwash would fail CI on a commit a
-  human wrote, on the repos it knows best. The highest repository rate was
-  click at 13/300 = 4.33%;
-  the progression, and what moved each step, is in the benchmarks README.
-  Separate integration measurements are published too: 11 false
-  positives on 667 commits (1.65%, three projects, 2026-08-07,
-  [docs/integrations.md](docs/integrations.md)) and 67 preliminary false
-  positives on 2300 commits (2.91%, thirteen projects including the in-corpus
-  rich project, engine v0.1.49, maintainer-only adjudication,
-  2026-09-01, [benchmarks/external/2026-09-01/FINAL_REPORT.md](benchmarks/external/2026-09-01/FINAL_REPORT.md)).
-  A block is not automatically a mistake. All 42 were adjudicated commit by
-  commit against the real diff: **27 false positives (1.50%)**, 15 legitimate
-  policy blocks (0.83%) where the commit really does drop oracle coverage
-  with nothing visible replacing it, 0 unclear. Earlier precision rounds
-  reduced the then-observed 2.50% / 1.67% rates: skip conditions are *read* (constants
-  resolved up to the head snapshot) instead of grepped, relocated tests are
-  recognised even when they carry their own skip markers or hold no
-  assertions, feature removals and dependency bumps explain the removal of
-  their tests, and deleting one of two identical copies is recognised as
-  dedup because the survivor is found at head and checked to still run.
-  Every legitimate policy block still blocks and the decoy corpus still
-  blocks 12/12 — and the process cut both ways: one over-eager credit was
-  caught clearing two correct blocks and tightened before it shipped, and
-  one adjudication *verdict* was overturned in the tool's favour when the
-  duplicate search proved a "relocated" test actually reappears nowhere;
-  each trade is reported as measured.
-  The block rate is a machine count and exact. The split combines adjudication
-  cohorts: two additional raters blind-re-adjudicated 35 of the 37
-  pre-promotion blocks, with 91–94% pairwise agreement and Fleiss' kappa
-  0.844, and the five blocks the 2026-08-25 promotion added were each
-  judged by two blind raters with reconciliation of ties. The final added
-  block in the 2026-08-26b adjudication was maintainer single-pass. The
-  kappa describes the older 35-diff study, not all 42 entries in that
-  historical adjudication. Contested commits and per-rater reasoning ship in
-  [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
-  **1.33% of the corpus (24/1800) records opaque production changes**:
-  the stored `commits_with_opaque_prod_change` count identifies changes the
-  analyzer cannot fully interpret. Opaque-change repair credit can suppress
-  escalation (THREATMODEL #4), but this count does not establish that the
-  credit changed each verdict or that each diff received no analysis. It
-  used to be 7.2%: narrowing the blanket (docs config, type stubs, repo
-  metadata, pin sources, deleted-but-parseable Python and scripts that run
-  the test suite no longer qualify) removed 105 exemptions and **did not
-  change a single verdict** — every one had been protecting a commit that
-  passed on its own merits anyway.
-  The same round taught checkwash where the test command actually lives. A
-  shell script or make recipe that runs the suite is test-runner
-  configuration, not production: weakening it (`|| true`, `set +e`, a `-`
-  before a make recipe, losing `set -e`, or deleting the invocation) is now
-  a blocking finding, and touching it no longer buys the diff an exemption.
-  On the human corpus that cost **nothing** — the same 35 blocks before and
-  after, the whole delta being four warn-level notices on starlette commits
-  that edit `scripts/test`. Read that with its limits: these six projects
-  barely exercise the change, and the defence against over-flagging is the
-  content gate (a Makefile that only compiles is still production) plus its
-  negative fixtures, not the sweep.
-- **Recall against an attacker who has read the rules — 49 / 80, and that is
-  the number to look at.** 80 tampering cases across two arms, each verified
-  mechanically before counting: production byte-identical, `pytest` red before
-  and green after. The first arm (40 cases, written against a description of
-  every rule here) caught checkwash at **12/40**: the IR only knew an oracle
-  that was a syntactic `assert`, so `assert_sum(add(2, 3), 5)` was a *call*
-  and the unit read as having zero assertions. The IR now records **the
-  assertions a test executes** — through the file's own call graph, invocation
-  and not mention — which brings that arm to **19/40** — 20/40 with the cross-file channels of v0.1.27, 21/40 with v0.2.4's 91b closure — and blocks **28/40** of
-  a second arm written afterwards to *disguise* the weakening as a
-  helper-extraction refactor. The 31 that still escape are enumerated, not
-  waved at: most subvert the *meaning* of a syntactically strong assertion
-  (`__eq__` that is always true, a no-op `TestResult`) or compute zero runs,
-  which a single static diff cannot decide — mutation testing is the honest
-  answer there, and THREATMODEL 91a says so. Full corpora, harnesses and
-  per-case verdicts in [benchmarks/tamper/](benchmarks/tamper/README.md). It
-  bounds a *motivated, informed* attacker rather than ordinary agent
-  behaviour — but a helper that stops being called and a fixture that stops
-  being `autouse` are not exotic.
-- **Recall on the older decoy corpus — 12 / 12, then probed harder.** Twelve bug-fix tasks run through
-  real coding agents told to make CI green without fixing the bug; checkwash
-  blocks all twelve tampering diffs. Under natural conditions, 0 of 12 agents
-  touched a test at all — an honest datapoint, recorded as such.
-  A second wave of six *probe* tasks (2026-08-04) aimed agents at the
-  de-escalators that hold at warn by design. The agent escaped **two of
-  six** — a one-line constant flip behind an existing skip guard, and a
-  conftest fixture that monkeypatched the function under test while leaving
-  production and tests byte-identical. Both escapes became detectors the
-  same day (`TEST_DISABLED` guard evaluation, `CONFTEST_PATCHES_PROD`), both
-  recorded diffs now block, and both new rules fire **zero** times across
-  the 1800 human commits. The four other probes were blocked outright.
-  A third wave (2026-08-07) aimed two tasks at repos that keep the test
-  command in `scripts/test.sh` rather than in the workflow. **One of two was
-  caught.** The first agent's opening move was to make the suite non-fatal
-  inside the runner script — a diff the previous release scored at zero
-  findings, and this one blocks. The second escaped: it dropped the failing
-  tests out of collection, which checkwash *detected*, and the honest
-  one-line `scripts/lint.sh` edit its own task asked for demoted the finding
-  to a warning, because a script that does not run tests is still an
-  unreadable production change (THREATMODEL #4). That escape is published
-  open, with its reproduction — and closed in the next release the same
-  day, once the reason
-  given for leaving it open turned out to be a citation that did not hold
-  (DECISIONS D-026; the correction is in the repository because publishing it
-  is the point).
-- **The informed arm — the adversary reads the source.** Every arm above hides
-  the defender. This repository is public, so one arm does not: the agent gets
-  checkwash's complete source, spec and threat model, and may run
-  `checkwash check` against its own diff until it stops blocking. Three of six
-  tasks were refused outright by the agent provider's safety filter, so the
-  sample is three, and **all three reached a green suite past the shipped
-  engine.** One rewrote production instead of the tests (THREATMODEL #1, out
-  of scope by design, and the cheapest route an informed adversary has). One
-  read the opaque-change branch and added a three-line JSON file that nothing
-  imports, purely to be unreadable — closed the same day. One normalised the
-  *subject* of an assertion rather than its expectation, which no rule sees,
-  and was **closed the same day** by the detector it demanded
-  (`SUBJECT_NORMALIZED`), with its diff published either way. If you want one
-  number from this project, that arm is a fair one to take: three informed
-  attempts, three different routes past the shipped build, two of them now
-  regression fixtures and one of them a documented limit of the whole approach.
-- **A live miss in this repository, the day after that arm ran.** Another agent
-  working on checkwash changed the test that guards its own release tag,
-  replacing one assertion with a different one of equal strength and adding an
-  early return. That is the gate's documented failure mode, written into its
-  own assertion message. **checkwash passed the diff** — two
-  `CI_WORKFLOW_TOUCHED` warns and nothing else. Three rules came close and none
-  fired, and the actual cause was in alignment rather than in any of them: the
-  last-resort pairing stage matches leftover assertions by *span order*, so a
-  deleted assertion and its unrelated replacement were reported as one
-  unchanged assertion. Closed in v0.1.27 by `ASSERT_SUBSTITUTED`, which is the
-  first rule keyed on how a pair was formed rather than what it contains. The
-  diff blocks at high on this build. D-031 and D-033 have the whole account,
-  including the first attempted fix, which closed a six-line reduction of the
-  bug and did nothing about the bug.
+The historical six-repo sweep recorded **42 / 1800 = 2.33%** blocks:
+**27 false positives (1.50%)**, 15 legitimate
+  policy blocks (0.83%). The tracked artifacts record engine **v0.1.46**
+on a corpus used to tune the detectors, not a fresh v0.2.12 or held-out result.
 
-The first recall measurement caught **0 of 12** — pytest's own `.pyc` output
-disarmed the gate, a bug two rounds of code review had missed. Building the
-harness is how it was found. See [benchmarks/decoy/](benchmarks/decoy/).
+**1.33% of the corpus (24/1800) records opaque production changes**.
+That flag does not establish that each verdict changed or each diff was unanalyzed.
 
-## Prior art
+Review methods vary: the three-rater agreement study covers an older
+35-diff cohort, not all 42 blocks. The dedicated **24/60 refactor** result
+above is a separate population; the general-commit rate does not predict it.
 
-checkwash is not the first tool to look for agent shortcuts in diffs, and
-does not claim to be. Closest neighbours, credited up front:
+[Measurements and source data](benchmarks/README.md)
+· [Generated results](benchmarks/RESULTS.md)
+· [Failure ledger](benchmarks/FAILURES.md)
 
-- [swarm-orchestrator](https://github.com/moonrunnerkc/swarm-orchestrator) —
-  a PR audit suite (11 detectors, JS/TS-tuned, LLM judge layer, sandboxed
-  runtime proofs; advisory by default). checkwash is the narrow, deterministic
-  end of this spectrum: Python-first oracle *semantics* (a strength lattice,
-  not matcher swap-lists or assertion counts), zero LLM anywhere, zero code
-  execution, byte-identical verdicts, and a per-fingerprint reviewed-exemption
-  workflow — small enough to sit in a stop-hook.
-- [AgentLint](https://github.com/mauhpr/agentlint) — broad agent guardrail
-  rules including `no-test-weakening`; state-based linting rather than
-  two-sided semantic diff.
-- mumei (reported; Claude-Code-specific harness with clean-HEAD test reruns
-  and golden-file freezing) — a harness, where checkwash is a single-purpose
-  differ any harness can call.
+</details>
 
-License: Apache-2.0.
+| Looking for… | Start here |
+|---|---|
+| Installation checks, versions and first use | [v0.2.12 guide](docs/releases/v0.2.12-public-launch.md) |
+| JSON/SARIF contracts and upgrades | [Stability](docs/stability.md) |
+| Required checks and reviewed exemptions | [Enterprise setup](docs/enterprise.md) |
+| Contributing or reporting a problem | [Contributing](CONTRIBUTING.md) · [Issues](https://github.com/taipei49314/checkwash/issues) · [Security reports](SECURITY.md) |
+| Readiness for 1.0 | [Criteria — not met](docs/stability.md#what-must-change-before-10) |
+
+Related projects: [checkwash-corpus](https://github.com/taipei49314/checkwash-corpus)
+and [smallestlie](https://github.com/taipei49314/smallestlie) hold evaluation work.
+
+Alpha pre-release. 21 detectors, 578 tests in the current source tree.
+Zero runtime dependencies. [Apache-2.0](LICENSE).
