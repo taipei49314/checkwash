@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "properties": {
+        "checkwash.base": "d5bda6e",
+        "checkwash.head": "d5bda6e"
+      },
+      "results": [],
+      "tool": {
+        "driver": {
+          "informationUri": "https://github.com/taipei49314/checkwash",
+          "name": "checkwash",
+          "rules": [],
+          "semanticVersion": "0.2.12"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}

@@ -1,0 +1,16 @@
+usage: checkwash [-h] [--version]
+                 {check,sweep,hook,demo,doctor,bench,allow} ...
+
+positional arguments:
+  {check,sweep,hook,demo,doctor,bench,allow}
+    check               analyse a diff for verification-layer tampering
+    sweep               measure finding rates over a repo's commit history
+    hook                integration helpers
+    demo                replay real tampering cases offline
+    doctor              is this installation able to block anything?
+    bench               reproduce published numbers from this checkout
+    allow               record a reviewed exemption
+
+options:
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit

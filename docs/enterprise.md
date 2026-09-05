@@ -1,7 +1,9 @@
 # Enterprise checklist
 
-One page for a security or platform team that wants greenwash as a required
-gate, with a reviewed exemption path.
+One page for a security or platform team evaluating checkwash v0.2.12
+(alpha) as a required gate, with a reviewed exemption path. Start with a
+review of its [coverage and adoption cost](stability.md#coverage-and-adoption-cost),
+then protect the deployed check and its policy files.
 
 ## 1. Required check
 
@@ -9,13 +11,18 @@ A job that runs and is not required does not block a merge. Three steps in
 the [README](../README.md):
 
 1. Add the hash-pinned workflow.
-2. Require status context `greenwash` (job name, not filename):
+2. Require status context `checkwash` (job name, not filename):
 
    ```bash
    gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json
    ```
 
-3. `greenwash doctor` — it cannot see branch protection; confirm step 2.
+3. `checkwash doctor` — it cannot see branch protection; confirm step 2.
+
+The README's Action is hash-pinned to **v0.2.11** under the one-release
+trust-lag policy. Installing the v0.2.12 CLI does not update that Action;
+record both deployed versions. A required check enforces that version's
+configured verdict, not a guarantee that the change is correct.
 
 Optional PR line comments (T2.2): set `comment-pr: true` and add
 `pull-requests: write`. The engine does not talk to the network; the
@@ -24,7 +31,7 @@ Action posts a review and soft-fails if the token cannot write.
 ## 2. SARIF (optional)
 
 ```bash
-greenwash check BASE...HEAD --format sarif > greenwash.sarif
+checkwash check BASE...HEAD --format sarif > checkwash.sarif
 ```
 
 SARIF 2.1.0 for GitHub code scanning. It is a projection of findings, not a
@@ -35,18 +42,22 @@ still outside that window — [process-windows.md](process-windows.md).
 ## 3. Allowlist — reviewed, time-boxed, base-side
 
 ```bash
-greenwash allow "ASSERT_WEAKENED/tests/test_x.py/test_x/abcd1234ef56" \
+checkwash allow "ASSERT_WEAKENED/tests/test_x.py/test_x/abcd1234ef56" \
   --reason "literal tracks a documented API rename in #1234"
-# then commit .greenwash/allow.toml
+# then commit the ledger path printed by the command
 ```
 
+- Both `.checkwash/allow.toml` and `.greenwash/allow.toml` are supported.
+  An existing file is selected in that order; otherwise the writer uses an
+  existing configuration directory (`.checkwash/` first), or `.greenwash/`
+  when neither exists. Reads from the base use the same per-file precedence.
 - `--reason` is required and cannot be empty.
 - Default expiry is 90 days; the hard cap is **180 days** on write *and*
   on read. A hand-edited ten-year window is ignored.
 - The ledger is read from the **base** of the diff. An agent cannot exempt
   the change under review. The entry applies to the *next* diff after it
   lands.
-- `greenwash doctor` reports how many entries are active, expired, or
+- `checkwash doctor` reports how many entries are active, expired, or
   over the cap. The term report footer prints `allow_cap=180d`.
 
 ## 4. CODEOWNERS
@@ -56,12 +67,14 @@ Put the ledger and the gate behind people who can say no:
 ```
 # .github/CODEOWNERS
 .greenwash/              @org/security-reviewers
+.checkwash/              @org/security-reviewers
 .github/workflows/       @org/security-reviewers
 action/required-ruleset.json @org/security-reviewers
 ```
 
 A CODEOWNERS file is not a merge gate unless the branch rule also requires
-a code-owner review.
+a code-owner review. Protect both supported configuration directories even
+if the repository currently uses only one.
 
 ## 5. Perf SLO
 

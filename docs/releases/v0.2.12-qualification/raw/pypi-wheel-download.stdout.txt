@@ -1,0 +1,6 @@
+Collecting checkwash==0.2.12
+  Downloading checkwash-0.2.12-py3-none-any.whl.metadata (22 kB)
+Downloading checkwash-0.2.12-py3-none-any.whl (194 kB)
+   ---------------------------------------- 194.7/194.7 kB 1.7 MB/s eta 0:00:00
+Saved <WORKSPACE>\wheelhouse\checkwash-0.2.12-py3-none-any.whl
+Successfully downloaded checkwash

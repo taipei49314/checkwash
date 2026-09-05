@@ -1,6 +1,6 @@
 # Process windows: what a single-diff tool cannot see
 
-greenwash judges one range. A cheat split across two pull requests is
+checkwash judges one range. A cheat split across two pull requests can be
 outside that range, and no detector in this repository can close that
 gap. The roadmap names this **L0-C** (docs/ROADMAP-top-tier.md,
 docs/redteam-residual-after-p0.md): multi-commit / multi-PR laundering
@@ -13,10 +13,10 @@ covers L0-C.
 
 | invocation | window |
 |---|---|
-| `greenwash check` | `HEAD` vs the working tree |
-| `greenwash check HEAD~1..HEAD` | one commit |
-| `greenwash check origin/main...HEAD` | the pull request: merge-base to HEAD |
-| `greenwash sweep HEAD --limit 300` | 300 consecutive non-merge commits |
+| `checkwash check` | `HEAD` vs the working tree |
+| `checkwash check HEAD~1..HEAD` | one commit |
+| `checkwash check origin/main...HEAD` | the pull request: merge-base to HEAD |
+| `checkwash sweep HEAD --limit 300` | 300 consecutive non-merge commits, each checked against its parent |
 
 `check BASE...HEAD` (three dots) is the PR shape. Two dots
 (`BASE..HEAD`) pull in base-branch commits the PR did not introduce.
@@ -49,7 +49,7 @@ that already merged.
 **On every pull request** (CI, required check):
 
 ```bash
-greenwash check origin/main...HEAD
+checkwash check origin/main...HEAD
 ```
 
 The Action already checks out with `fetch-depth: 0` so the merge base
@@ -58,19 +58,20 @@ exists. Do not gate the job on the last commit only.
 **On a long-lived branch or a stack**, treat the stack as one window:
 
 ```bash
-greenwash check $(git merge-base origin/main HEAD)...HEAD
+checkwash check $(git merge-base origin/main HEAD)...HEAD
 ```
 
 **On a repository's history**, after a merge or as a periodic check:
 
 ```bash
-greenwash sweep HEAD --limit 300 --repo .
+checkwash sweep HEAD --limit 300 --repo .
 ```
 
-`sweep` is measurement, not a merge gate. It reports how often the
-engine would have blocked, including the commits a per-PR gate would
-have seen twice (the PR, then the merge). It does not invent a
-cross-PR identity for a helper introduced last month.
+`sweep` is measurement, not a merge gate. It examines consecutive non-merge
+commits separately; it neither analyzes merge commits nor combines a PR's
+history into one verdict. Those per-commit results can differ from the
+required check's combined PR diff. It does not create a cross-PR identity
+for a helper introduced last month.
 
 **Optional integration:** run `sweep` on the PR branch's unique
 commits as an advisory job, next to the required `check`. That

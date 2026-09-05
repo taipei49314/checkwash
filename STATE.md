@@ -1,6 +1,19 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-03 (v0.2.12: creating checkwash's own config with a detector disabled or `fail_on` raised is a modification, not a new constraint — issue #79, the two-commit plant. Trust lag advances to v0.2.11. No other detector change.)
+Updated: 2026-09-06 (public-launch documentation and measurement provenance; engine version remains v0.2.12).
+
+## 2026-09-06: public-launch evidence labels, without a new engine measurement
+
+The release remains v0.2.12. This documentation pass distinguishes the
+released engine from historical evaluation records and corrects THREATMODEL
+row 77's stale Windows-runner status by linking the existing row 87a evidence.
+It adds no detector behavior and makes no broader Windows-language claim.
+
+The authoritative table below now labels its sources explicitly. The tracked
+six-repository sweep and its matching adjudication are historical, in-sample
+records; regenerating their Markdown reports does not rerun the engine or
+turn those records into a fresh v0.2.12 result. Original JSON dates, engine
+metadata, verdicts, and the release-history entries below are preserved.
 
 ## 2026-09-03: a created config that relaxes the defaults is a modification (v0.2.12)
 
@@ -1633,13 +1646,20 @@ real measure of the blind spot.
 
 ## The numbers that matter right now (authoritative — every other number in this file is history)
 
-This table is the only place this file states the current numbers, and
-`tests/test_state_claims.py` fails if any row drifts from what the
-harnesses actually say. Every later section narrates how a number *moved*;
-when a section and this table disagree, the section is describing the past.
-This rule exists because on 2026-08-04 the owner caught this very file
-carrying three generations of "current" numbers at once — the exact claim
-drift greenwash is built to catch.
+This is the authoritative inventory of release metadata and recorded
+measurements, with different provenance for each. The version and detector
+count describe the release. The human-history rates and opaque share come
+from `benchmarks/sweeps/`, whose JSON metadata records engine **0.1.46**;
+their matching adjudication is `adjudication-2026-08-26b.json`, dated
+**2026-08-26**. They are historical **in-sample** results after repeated
+tuning on these same repositories, not a fresh v0.2.12 sweep or an estimate
+for unseen projects. The v0.2.11 and v0.2.12 entries above record that the
+six-repository sweep was not rerun for those releases.
+
+`tests/test_state_claims.py` checks these values against the tracked records;
+that consistency check does not refresh their measurement date. The classic
+decoy row is also a recorded historical arm. Other dated sections narrate
+how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
@@ -1648,14 +1668,26 @@ drift greenwash is built to catch.
 | human-commit block rate | 42/1800 = 2.33% |
 | adjudicated false positive | 27/1800 = 1.50% |
 | legitimate policy block | 15/1800 = 0.83% |
-| opaque exemption share | 24/1800 = 1.33% |
+| recorded opaque production changes | 24/1800 = 1.33% |
 | classic adversarial decoys blocked | 12/12 |
 
-The split is the majority of three raters (two blind re-adjudications;
-Fleiss' kappa 0.844). The probe arm (2026-08-04) additionally recorded 4/6
-cheats blocked at harvest, 2/6 escaped and closed the same day — both
-recorded escape diffs block under this version — and 0/6 false blocks on
-the natural arm.
+The opaque row counts the stored `commits_with_opaque_prod_change` flags;
+it does not count verdicts changed by an exemption or wholly unanalyzed diffs.
+
+The adjudication combines cohorts with different review procedures. The
+**35-diff cohort** re-adjudicated on 2026-08-04 had three recorded raters
+(two blind additional passes), Fleiss' kappa **0.844**, and four diffs with
+any disagreement. Those agreement statistics apply only to that cohort,
+not to all 42 historical blocks. The 2026-08-25 promotion added a separate
+five-block cohort with two blind raters and reconciliation; later files
+carry earlier verdicts forward or remove blocks as documented. The
+2026-08-26 module-constants addition was one maintainer single-pass
+judgment. See each adjudication file's method and per-commit fields.
+
+The historical probe arm (2026-08-04) separately recorded 4/6 cheats blocked
+at harvest, 2/6 escaped and closed the same day, and 0/6 false blocks on the
+natural arm. These are versioned arm records, not measurements made by
+this documentation pass.
 
 Two catches from 2026-08-03/04 matter more than any clear: the first cut of
 the feature-removal credit cleared two adjudicated-correct blocks and was

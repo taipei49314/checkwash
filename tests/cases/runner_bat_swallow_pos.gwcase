@@ -1,5 +1,5 @@
 === meta ===
-bypass: 87a
+bypass: 77, 87a
 rule: CI_WORKFLOW_TOUCHED
 title: cmd runner replaces its errorlevel check with exit /b 0
 origin: red-team report 2026-08-11 section 6, measured against v0.1.15

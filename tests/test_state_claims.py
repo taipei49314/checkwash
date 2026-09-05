@@ -66,7 +66,7 @@ def test_block_rate_row_matches_sweeps():
 def test_opaque_row_matches_sweeps():
     total, _, opaque = _sweeps()
     want = f"{opaque}/{total} = {opaque / total:.2%}"
-    assert _table()["opaque exemption share"] == want
+    assert _table()["recorded opaque production changes"] == want
 
 
 def test_split_rows_match_adjudication():
@@ -177,7 +177,7 @@ def test_readme_headline_numbers_match_the_harnesses():
         "block rate": f"{blocked} / {total} = {blocked / total:.2%}",
         "false positives": f"**{fp} false positives ({fp / total:.2%})**",
         "policy blocks": f"{sc} legitimate\n  policy blocks ({sc / total:.2%})",
-        "opaque share": f"**{opaque / total:.2%} of the corpus ({opaque}/{total}) never got a real analysis**",
+        "opaque share": f"**{opaque / total:.2%} of the corpus ({opaque}/{total}) records opaque production changes**",
     }
     missing = [f"{name}: expected README to contain {want!r}" for name, want in expected.items()
                if want not in text]

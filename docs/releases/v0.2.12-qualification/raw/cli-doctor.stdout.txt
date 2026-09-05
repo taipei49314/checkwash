@@ -1,0 +1,32 @@
+OK    1 CI job(s) invoke checkwash
+      .github/workflows/checkwash.yml :: checkwash
+
+OK    at least one checkwash gate runs unconditionally
+      .github/workflows/checkwash.yml :: checkwash
+
+note  checkwash cannot tell whether the check is *required*
+      Branch protection lives behind GitHub API token scopes this tool does not
+      ask for. A green job that is not a required status check does not prevent a
+      merge. Make the job's status check required. The README step 2 command is:
+      gh api repos/OWNER/REPO/rulesets --method POST --input
+      action/required-ruleset.json
+
+note  checkwash cannot block when it does not run
+      A change that deletes or disables the checkwash job disarms it in the same
+      diff. Protect the workflow file with code owners or required review on
+      .github/**.
+
+note  configuration is read from the BASE side of the diff
+      config: absent (defaults); allowlist: absent. A new allowlist entry takes
+      effect on the next diff and must be committed.
+
+note  allowlist expiry is capped at 180 days
+      no allow.toml yet. `checkwash allow` writes one; expiry is capped at 180
+      days. Commit it and put `.greenwash/` in CODEOWNERS.
+
+note  use a three-dot range for pull requests
+      `checkwash check BASE...HEAD` resolves through the merge base. A two-dot
+      range drags in base-branch commits; a single range cannot see a wash split
+      across PRs.
+
+summary: 0 problem(s), 0 warning(s). checkwash cannot verify branch protection; see the note above.

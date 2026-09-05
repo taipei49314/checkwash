@@ -1,0 +1,6 @@
+[main (root-commit) 2706e62] Initial benign qualification sample
+ 4 files changed, 26 insertions(+)
+ create mode 100644 .github/workflows/checkwash.yml
+ create mode 100644 README.md
+ create mode 100644 src/greeting.py
+ create mode 100644 tests/test_greeting.py
