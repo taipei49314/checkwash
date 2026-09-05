@@ -18,10 +18,11 @@ Base `1 failed`, head `1 passed`, `invoice_total` still ignoring `tax`. Every
 rule declined, because every rule was looking at the assertion (THREATMODEL 86a,
 reproduced 2026-08-09).
 
-What makes it visible is `UnitSide.bindings`: the defining expression of each
-local name, keyed structurally so reformatting is not a change. If the
-expectation resolves to a local binding and that binding's definition moved
-while the subject and the assertion did not, the oracle moved.
+What makes it visible is one canonical `ValueOrigin` channel. The frontend
+resolves whichever operand the assertion classifier designated as the oracle
+through locals, parametrized/table rows, fixtures, module/class bindings and
+helper actuals. The detector applies one comparison predicate to those sources
+and excludes any origin the classified subject also consumes.
 
 **This rule blocks through the same repair-evidence path as every oracle
 rule, and both that promotion and the years it spent at `info` were decided by
@@ -66,31 +67,18 @@ it exactly as they do its peer oracle rules.
 
 from __future__ import annotations
 
-import ast
+from collections import Counter
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.model import IR, normalize_text
-
-
-def _column_values_edited(before: str, after: str) -> bool:
-    """Did a parametrize column's *values* change, as opposed to its rows?
-
-    Adding or deleting rows changes the column text too, and that event already
-    has an owner: `TEST_DISABLED` reports deleted rows at high, because in
-    pytest's model each row is a test item. Reporting the same edit again here
-    is two findings for one change, which is how a report stops being read.
-    Only a same-length column with different cells is an expectation edit.
-    """
-    b, a = before.split(""), after.split("")
-    return len(b) == len(a) and b != a
 
 
 def _gated_alternative_added(before_key: str, after_key: str, exclusive: bool) -> bool:
     """Did the diff add a branch-exclusive alternative and keep every old
     definition verbatim?
 
-    The binding-channel port of `_column_values_edited`'s principle — additions
-    are not expectation edits — with the correction the port needs: parametrize
+    The binding-channel port of the parallel-row principle — additions are not
+    expectation edits — with the correction the port needs: parametrize
     rows are parallel test items, bindings are sequential rebinds where the
     last one reaches the assertion. So "the old definition survives" proves
     nothing on a straight line (`expected = honest` followed by
@@ -111,105 +99,49 @@ def _gated_alternative_added(before_key: str, after_key: str, exclusive: bool) -
     """
     if not exclusive:
         return False
-    from collections import Counter
 
     before = Counter(before_key.split(""))
     after = Counter(after_key.split(""))
     return sum(after.values()) > sum(before.values()) and before <= after
 
 
-def _haystack_is_produced(text: str) -> bool:
-    """True when a membership haystack is an attribute/subscript of a local.
-
-    `assert expected in result.output` — the container is produced by the
-    test, the needle is the oracle. `assert x in allowed` — the container
-    is a bare name and *is* the oracle. T1.10.
-    """
-    try:
-        tree = ast.parse(text)
-    except SyntaxError:
+def _value_origin_moved(before, after) -> bool:
+    """The one comparison policy for every expectation value source."""
+    if before.kind != after.kind:
         return False
-    if not tree.body or not isinstance(tree.body[0], ast.Assert):
-        return False
-    test = tree.body[0].test
-    if not isinstance(test, ast.Compare) or not test.ops:
-        return False
-    if not isinstance(test.ops[0], (ast.In, ast.NotIn)):
-        return False
-    haystack = test.comparators[-1] if test.comparators else None
-    return isinstance(haystack, (ast.Attribute, ast.Subscript))
-
-
-def _names_in_binding_key(key: str) -> set[str]:
-    names: set[str] = set()
-    for part in key.split(""):
-        if not part:
-            continue
-        try:
-            tree = ast.parse(part, mode="eval")
-        except SyntaxError:
-            continue
-        names.update(
-            n.id for n in ast.walk(tree) if isinstance(n, ast.Name)
+    if after.kind == "parallel":
+        b_rows = Counter(
+            before.parallel_rows
+            or tuple(f"\x1e{value}" for value in before.value.split("\x1f"))
         )
-    return names
+        a_rows = Counter(
+            after.parallel_rows
+            or tuple(f"\x1e{value}" for value in after.value.split("\x1f"))
+        )
+        # Row identity is made from every *other* column, including the
+        # subject. It therefore cannot say whether ``(1, 5), (2, 8)`` becoming
+        # ``(2, 5), (1, 8)`` edited the subject or swapped two expectations:
+        # the resulting row multiset is identical. Project away that unstable
+        # identity and compare only the classified expectation carrier. A
+        # subset in either direction is an addition/deletion boundary; only
+        # incomparable value multisets prove that an oracle value was replaced.
+        def values(rows):
+            out = Counter()
+            for record, count in rows.items():
+                _identity, _separator, value = record.rpartition("\x1e")
+                out[value] += count
+            return out
 
-
-def _binding_moved(b, a, unit, name: str) -> bool:
-    """Compare what this assertion actually reads for `name`.
-
-    Per-assertion reaching keys when both sides carry them: SPEC §5 already
-    states that the last unconditional binding is the one the assertion
-    reads, and holding that per assertion means inserting a self-contained
-    case no longer changes "the" definition for every untouched assertion
-    (sympy ed75b73d fired 13 times on a 23-line pure insertion; R1), while a
-    definition appended between the honest one and the assertion still
-    changes what it reads and still fires. Same-file inherited assertions
-    carry their unit-level call site's keys (issue #55), so a pure append of
-    one more case no longer moves "the" definition for every untouched call.
-    The unit-level joined map remains the fallback for assertions without
-    reaching info — cross-file and fixture-channel inherited ones, and names
-    bound only inside nested defs — which is the pre-reaching behaviour
-    verbatim.
-    """
-    b_map, a_map = b.reaching, a.reaching
-    if b_map is not None and a_map is not None:
-        if name not in b_map or name not in a_map:
-            # `consumed` came from the unit-level transitive closure, which
-            # charges the assertion with names that only *other* definitions
-            # of its expectation reference. The reaching maps hold the
-            # positional closure — what this assertion actually reads, at
-            # its own position — so a name absent from either side is not
-            # part of this assertion's oracle there. Any real edit to what
-            # it does read surfaces through a name that is in both maps.
-            return False
-        b_key, a_key = b_map[name], a_map[name]
-        if not b_key or not a_key:
-            # Bound in the unit, but nothing reaches this assertion for the
-            # name on at least one side: reading it there would be a
-            # NameError, not a green test.
-            return False
-    else:
-        b_key, a_key = unit.before.bindings[name], unit.after.bindings[name]
-    if b_key == a_key:
+        b_values = values(b_rows)
+        a_values = values(a_rows)
+        return not (b_values <= a_values or a_values <= b_values)
+    if before.value == after.value:
         return False
-    return not _gated_alternative_added(
-        b_key, a_key, name in unit.after.exclusive_bindings
-    )
-
-
-def _name_closure(seeds: set[str], bindings: dict[str, str]) -> set[str]:
-    """Binding-graph closure, same keep-intermediates rule as `_resolve_through`."""
-    seen: set[str] = set()
-    queue = list(seeds)
-    while queue:
-        name = queue.pop()
-        if name in seen:
-            continue
-        seen.add(name)
-        if name in bindings:
-            queue.extend(_names_in_binding_key(bindings[name]) - seen)
-    return seen
+    if after.kind == "binding":
+        return not _gated_alternative_added(
+            before.value, after.value, after.exclusive
+        )
+    return True
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -233,67 +165,19 @@ def detect(ir: IR) -> list[Finding]:
                     continue
                 if normalize_text(b.text) != normalize_text(a.text):
                     continue
-                # Three places an expectation can live, all of them outside
-                # the assertion line: a local binding, a parametrize column, or
-                # a same-file fixture. Which parametrize column is the
-                # *expectation* is not decided by position or by being named
-                # `expected` — it is whichever column the expectation side
-                # actually consumes. Editing the input column is not editing
-                # the oracle, and a name heuristic would get that wrong.
-                consumed = set(a.right_depends_on)
-                subject_seeds = set(a.left_names)
-                # Membership whose haystack is `result.output`: the classifier
-                # leaves that side as expect only when the needle is also a
-                # name. A literal needle has already been flipped
-                # (`right_literal` set, `right_depends_on` empty). Swapping
-                # that again blames the producer — T1.11.
-                if (
-                    _haystack_is_produced(a.text)
-                    and a.right_literal is None
-                    and a.right_depends_on
-                ):
-                    consumed, subject_seeds = subject_seeds, consumed
-                subject_names = _name_closure(subject_seeds, unit.after.bindings)
+                before_origins = {origin.key: origin for origin in b.expected_origins}
+                after_origins = {origin.key: origin for origin in a.expected_origins}
+                subject_keys = {
+                    origin.key
+                    for origin in (*b.subject_origins, *a.subject_origins)
+                }
                 moved = sorted(
-                    name
-                    for name in (
-                        {
-                            name
-                            for name in consumed & set(unit.after.bindings)
-                            if name in unit.before.bindings
-                            and _binding_moved(b, a, unit, name)
-                        }
-                        | {
-                            name
-                            for name in consumed & set(unit.after.param_columns)
-                            if name in unit.before.param_columns
-                            and _column_values_edited(
-                                unit.before.param_columns[name],
-                                unit.after.param_columns[name],
-                            )
-                        }
-                        | {
-                            # The fourth source: a same-file top-level
-                            # constant, canonical on both sides, last-wins
-                            # like module execution. The subject-closure
-                            # filter below still applies — a constant the
-                            # subject also consumes is a shared producer
-                            # (T1.10), not an oracle. THREATMODEL 86a's
-                            # largest blind bucket until D-051.
-                            name
-                            for name in consumed & set(file.module_constants)
-                            if name in file.module_constants_before
-                            and file.module_constants_before[name]
-                            != file.module_constants[name]
-                        }
-                        | {
-                            name
-                            for name in consumed & set(file.fixture_defs)
-                            if name in file.fixture_defs_before
-                            and file.fixture_defs_before[name] != file.fixture_defs[name]
-                        }
+                    after_origins[key].label
+                    for key in before_origins.keys() & after_origins.keys()
+                    if key not in subject_keys
+                    and _value_origin_moved(
+                        before_origins[key], after_origins[key]
                     )
-                    if name not in subject_names
                 )
                 if not moved:
                     continue
