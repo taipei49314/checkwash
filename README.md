@@ -52,7 +52,7 @@ attaches a single file that carries the whole tool — it has zero runtime
 dependencies, so there is nothing else to fetch.
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/latest/download/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.12/checkwash.pyz
 python checkwash.pyz demo                       # 8 real tampering cases, blocked, offline
 python checkwash.pyz check HEAD~1..HEAD         # your last commit
 python checkwash.pyz sweep HEAD --limit 100     # how often it would have blocked you
