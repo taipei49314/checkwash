@@ -21,7 +21,13 @@ from checkwash.config import load_config, read_base_config_file
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS, parse_manifest, project_names
 from checkwash.engine import analyze
-from checkwash.gitio import GitError, grep_head_paths, list_range_changes, read_base_file
+from checkwash.gitio import (
+    GitError,
+    grep_head_paths,
+    head_path_exists,
+    list_range_changes,
+    read_base_file,
+)
 from checkwash.pyenv import known_baseline
 
 
@@ -123,6 +129,7 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
                 head_label=sha, known_modules=known, self_modules=self_modules,
                 head_reader=lambda p, _sha=sha: read_base_file(repo, _sha, p),
                 head_searcher=lambda needles, _sha=sha: grep_head_paths(repo, _sha, needles),
+                head_exists=lambda p, _sha=sha: head_path_exists(repo, _sha, p),
             )
         except Exception:  # noqa: BLE001 - a sweep must survive one bad commit
             result.errors += 1

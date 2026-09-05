@@ -12,13 +12,16 @@ from checkwash.engine import FileChange
 
 
 class GitError(Exception):
-    pass
+    def __init__(self, message: str, *, returncode: int | None = None):
+        super().__init__(message)
+        self.returncode = returncode
 
 
-def _run(repo: str, args: list[str]) -> bytes:
+def _run(repo: str, args: list[str], *, stdin: bytes | None = None) -> bytes:
     try:
         proc = subprocess.run(
             ["git", "-C", repo, *args],
+            input=stdin,
             capture_output=True,
             check=False,
         )
@@ -26,7 +29,8 @@ def _run(repo: str, args: list[str]) -> bytes:
         raise GitError("git executable not found") from exc
     if proc.returncode != 0:
         raise GitError(
-            f"git {' '.join(args[:2])} failed: {proc.stderr.decode('utf-8', 'replace').strip()}"
+            f"git {' '.join(args[:2])} failed: {proc.stderr.decode('utf-8', 'replace').strip()}",
+            returncode=proc.returncode,
         )
     return proc.stdout
 
@@ -48,6 +52,22 @@ def _read_blob(repo: str, rev: str, path: str) -> bytes | None:
 
 def read_base_file(repo: str, base: str, path: str) -> bytes | None:
     return _read_blob(repo, base, path)
+
+
+def head_path_exists(repo: str, rev: str, path: str) -> bool:
+    """Whether ``path`` exists at ``rev``, without hiding repository errors.
+
+    ``git show`` uses the same non-zero status for a missing path and several
+    fatal read failures. ``ls-tree`` instead returns success with empty output
+    for a genuine miss, while a bad revision or repository error still raises
+    ``GitError`` through ``_run``.
+    """
+    out = _run(repo, ["ls-tree", "--name-only", "-z", rev, "--", path])
+    return any(
+        token.decode("utf-8", "surrogateescape") == path
+        for token in out.split(b"\0")
+        if token
+    )
 
 
 def read_blobs(repo: str, specs: list[tuple[str, str]]) -> dict[tuple[str, str], bytes | None]:
@@ -123,8 +143,11 @@ def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
     """Paths at `rev` whose content contains any needle (fixed strings).
 
     One subprocess for the whole batch; used by the duplicate-unit search to
-    find surviving copies of deleted tests without reading the tree. git grep
-    exits 1 on no match, which is an answer, not an error.
+    find surviving copies of deleted tests without reading the tree. Patterns
+    are sent through stdin instead of one ``-e`` argument per needle.  The
+    latter crosses CreateProcess' command-line limit on Windows for a large
+    diff even though neither any individual pattern nor the result is large.
+    ``git grep`` exits 1 on no match, which is an answer, not an error.
 
     `-z` keeps the `rev:path` record shape but NUL-terminates it and — the
     load-bearing half — disables path quoting. With the default
@@ -137,14 +160,25 @@ def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
     """
     if not needles:
         return []
-    args = ["grep", "-l", "-F", "-z"]
-    for needle in needles:
-        args += ["-e", needle]
-    args.append(rev)
-    try:
-        out = _run(repo, args)
-    except GitError:
+    # git grep is line-oriented, so a fixed string containing LF cannot match
+    # one source line.  Do not turn such a needle into two broader patterns in
+    # the newline-delimited pattern stream.
+    patterns = tuple(
+        dict.fromkeys(needle for needle in needles if "\n" not in needle)
+    )
+    if not patterns:
         return []
+    stdin = b"".join(
+        needle.encode("utf-8", "surrogateescape") + b"\n"
+        for needle in patterns
+    )
+    args = ["grep", "-l", "-F", "-z", "-f", "-", rev]
+    try:
+        out = _run(repo, args, stdin=stdin)
+    except GitError as exc:
+        if exc.returncode == 1:
+            return []
+        raise
     paths = []
     for tok in out.split(b"\0"):
         if b":" in tok:

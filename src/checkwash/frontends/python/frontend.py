@@ -9,14 +9,22 @@ from __future__ import annotations
 
 import ast
 import bisect
+import copy
 import hashlib
+import keyword
 import operator
 import re
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.model import Assertion, Handler, Marker, UnitSide, normalize_text
+from checkwash.standins import (
+    StandinInstall,
+    install_applies,
+    install_reaches_expressions,
+)
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
 
@@ -123,11 +131,20 @@ class ParsedFile:
     helper_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)
     fixture_asserts: dict[str, tuple] = field(default_factory=dict)
     autouse_fixtures: tuple[str, ...] = ()
+    # Top-level fixture -> fixtures it requests by parameter name.
+    fixture_dependencies: dict[str, tuple[str, ...]] = field(default_factory=dict)
     # Same-file `@pytest.fixture` name -> canonical text of what it produces.
     fixture_defs: dict[str, str] = field(default_factory=dict)
     # Top-level absolute `from M import a as b` bindings, local -> (module,
     # original). Relative and star imports are not recorded.
     from_imports: dict[str, tuple[str, str]] = field(default_factory=dict)
+    # Canonical local import binding -> target path, used to tie a stand-in to
+    # the exact module reached by an oracle (not merely an attr label another
+    # module might share). Ownership is judged later with diff context.
+    import_bindings: dict[str, str] = field(default_factory=dict)
+    # Module/fixture/hook installations. Test-body installations live on the
+    # affected UnitSide directly; these scopes must first be mapped to units.
+    standin_installs: tuple[StandinInstall, ...] = ()
     suppressions: list[str] = field(default_factory=list)
     literals: frozenset[str] = frozenset()
     broad_handlers: tuple[str, ...] = ()  # normalized texts of broad except handlers, module-wide
@@ -376,6 +393,94 @@ class _Classified:
     trivial: bool = False
 
 
+class _CanonicalImportNames(ast.NodeTransformer):
+    def __init__(self, imports: Mapping[str, str]):
+        self.imports = imports
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
+        dotted = _dotted(node)
+        if dotted is None:
+            return self.generic_visit(node)
+        root, dot, suffix = dotted.partition(".")
+        source = self.imports.get(root)
+        if source is None:
+            return self.generic_visit(node)
+        target = source + (dot + suffix if dot else "")
+        try:
+            replacement = ast.parse(target, mode="eval").body
+        except (SyntaxError, ValueError, MemoryError):
+            return self.generic_visit(node)
+        return ast.copy_location(replacement, node)
+
+
+def _canonical_ast(
+    node: ast.AST | None,
+    imports: Mapping[str, str] | None = None,
+) -> str:
+    """Cross-version-stable code form for internal semantic identities."""
+    if node is None:
+        return ""
+    rendered = node
+    if imports:
+        rendered = _CanonicalImportNames(imports).visit(copy.deepcopy(node))
+    try:
+        return ast.unparse(rendered)
+    except (AttributeError, ValueError):  # pragma: no cover - defensive
+        return ""
+
+
+_UNITTEST_UNARY_ORACLES = frozenset(
+    {"assertTrue", "assertFalse", "assertIsNone", "assertIsNotNone"}
+)
+
+
+def _standin_oracle_key(
+    node: ast.AST,
+    classified: _Classified,
+    imports: Mapping[str, str] | None = None,
+) -> str:
+    """Canonical full oracle syntax used only for stand-in effect pairing."""
+    if isinstance(node, ast.Assert):
+        semantic = _canonical_ast(node.test, imports)
+    elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        method = node.func.attr
+        if method in _UNITTEST_UNARY_ORACLES:
+            args = node.args[:1]
+        elif method in ("assertAlmostEqual", "assertNotAlmostEqual"):
+            # Third positional arg is ``places``; the fourth is only ``msg``.
+            args = node.args[:3]
+        else:
+            # Every other reached unittest oracle in the curated dialect is
+            # unary or binary. Extra positional arguments are assertion text
+            # or callable arguments on raises-style forms, neither of which
+            # changes the subject/expectation identity used here.
+            args = node.args[:2]
+        keywords = sorted(
+            (
+                keyword.arg or "**",
+                _canonical_ast(keyword.value, imports),
+            )
+            for keyword in node.keywords
+            if keyword.arg != "msg"
+        )
+        semantic = "\x1e".join(
+            (
+                method,
+                *(_canonical_ast(arg, imports) for arg in args),
+                *(f"{name}={value}" for name, value in keywords),
+            )
+        )
+    else:
+        semantic = _canonical_ast(node, imports)
+    return "\x1d".join(
+        (
+            classified.form,
+            "1" if classified.positive else "0",
+            semantic,
+        )
+    )
+
+
 # The polarity of the None family follows the bare lattice: `is None` is the
 # positive form there (op `Is` → positive), so assertIsNone must be too.
 # assertIsNone used to sit in this set while bare `is None` was positive, so a
@@ -501,13 +606,31 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # EXPECTED_VALUE_CHANGED. Strength is APPROX on both sides, so the
         # rewrite was completely invisible before (audit 2026-08-19).
         expected = approx.args[0] if approx.args else None
+        subject: ast.AST | None = None
+        positive = True
+        if (
+            isinstance(test, ast.Compare)
+            and len(test.ops) == 1
+            and len(test.comparators) == 1
+        ):
+            if test.left is approx:
+                subject = test.comparators[0]
+            elif test.comparators[0] is approx:
+                subject = test.left
+            positive = not isinstance(
+                test.ops[0], (ast.NotEq, ast.IsNot, ast.NotIn)
+            )
         return _Classified(
             "approx",
             S.APPROX,
+            left=text.seg(subject) if subject is not None else None,
             right_literal=_literal_repr(expected, text) if expected is not None else None,
             right_value=_literal_value(expected) if expected is not None else None,
             epsilon=eps,
             epsilon_kind=kind,
+            positive=positive,
+            left_names=_referenced_names(subject),
+            right_names=_referenced_names(expected),
         )
     if isinstance(test, ast.Compare) and test.ops:
         left = test.left
@@ -667,6 +790,18 @@ def _binding_maps(
         return refs
 
     for node in ast.walk(func):
+        if (
+            flags is not None
+            and node is not func
+            and isinstance(
+                node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            )
+        ):
+            # A nested named scope binds its name without an assignment RHS.
+            # Keep it out of the frozen unit-level definition map, but make
+            # sure the positional binding walk runs so an oracle can prove
+            # that local provider is live at its exact statement position.
+            flags["named_scope"] = True
         if isinstance(node, ast.Assign):
             targets, value = node.targets, node.value
         elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
@@ -727,6 +862,11 @@ _TRY_TYPES = tuple(
 )
 
 
+def _named_scope_binding_key(node: ast.AST) -> str:
+    """Stable internal reaching key for a lexical ``def``/``class``."""
+    return f"<{type(node).__name__}>"
+
+
 def _ordered_bindings(
     func,
     *,
@@ -779,6 +919,24 @@ def _ordered_bindings(
     def walk(stmts: list[ast.stmt], conditional: bool) -> None:
         for st in stmts:
             pos = (st.lineno, st.col_offset)
+            if isinstance(
+                st, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                if not conditional:
+                    # Only a definitely executed named definition is positive
+                    # local-provider/callable evidence. Correlating an
+                    # unknown branch's definition with an oracle in the same
+                    # branch would need path identities that IR v1 does not
+                    # carry, so that shape deliberately fails silent.
+                    out.setdefault(st.name, []).append(
+                        (
+                            pos,
+                            False,
+                            _named_scope_binding_key(st),
+                            (),
+                        )
+                    )
+                continue
             if isinstance(st, ast.Assign):
                 for target in st.targets:
                     for name in _assignment_name_targets(target):
@@ -786,9 +944,16 @@ def _ordered_bindings(
             elif isinstance(st, (ast.AnnAssign, ast.AugAssign)) and st.value is not None:
                 for name in _assignment_name_targets(st.target):
                     record(name, pos, conditional, st.value)
-            if isinstance(st, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                continue
-            if isinstance(st, (ast.If, ast.While)):
+            if isinstance(st, ast.If):
+                truth = _static_truth(st.test)
+                if truth is True:
+                    walk(st.body, conditional)
+                elif truth is False:
+                    walk(st.orelse, conditional)
+                else:
+                    walk(st.body, True)
+                    walk(st.orelse, True)
+            elif isinstance(st, ast.While):
                 walk(st.body, True)
                 walk(st.orelse, True)
             elif isinstance(st, (ast.For, ast.AsyncFor)):
@@ -1226,6 +1391,85 @@ def _decorator_markers(
     return markers
 
 
+def _canonical_import_path(
+    node: ast.AST, import_bindings: dict[str, str] | None = None
+) -> str | None:
+    """Resolve one dotted expression through a statically imported root."""
+    dotted = _dotted(node)
+    if dotted is None:
+        return None
+    root, dot, suffix = dotted.partition(".")
+    source = (import_bindings or {}).get(root)
+    return source + (dot + suffix if dot else "") if source is not None else dotted
+
+
+def _usefixtures_names(
+    node: ast.AST, import_bindings: dict[str, str] | None = None
+) -> tuple[str, ...]:
+    """Literal fixtures requested by a pytest usefixtures decorator/call."""
+    if not isinstance(node, ast.Call):
+        return ()
+    target = _canonical_import_path(node.func, import_bindings)
+    if target not in ("pytest.mark.usefixtures", "mark.usefixtures"):
+        return ()
+    return tuple(
+        arg.value
+        for arg in node.args
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+    )
+
+
+def _decorator_usefixtures(
+    node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+    import_bindings: dict[str, str] | None = None,
+) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            {
+                name
+                for decorator in node.decorator_list
+                for name in _usefixtures_names(decorator, import_bindings)
+            }
+        )
+    )
+
+
+def _module_usefixtures(
+    tree: ast.Module, import_bindings: dict[str, str] | None = None
+) -> tuple[str, ...]:
+    names: set[str] = set()
+    for stmt in tree.body:
+        if not isinstance(stmt, ast.Assign) or not any(
+            isinstance(target, ast.Name) and target.id == "pytestmark"
+            for target in stmt.targets
+        ):
+            continue
+        values = (
+            stmt.value.elts
+            if isinstance(stmt.value, (ast.List, ast.Tuple))
+            else (stmt.value,)
+        )
+        for value in values:
+            names.update(_usefixtures_names(value, import_bindings))
+    return tuple(sorted(names))
+
+
+def _module_pytestmark_values(tree: ast.Module) -> tuple[ast.AST, ...]:
+    """Individual marks installed through a module-level ``pytestmark``."""
+    values: list[ast.AST] = []
+    for stmt in tree.body:
+        if not isinstance(stmt, ast.Assign) or not any(
+            isinstance(target, ast.Name) and target.id == "pytestmark"
+            for target in stmt.targets
+        ):
+            continue
+        if isinstance(stmt.value, (ast.List, ast.Tuple)):
+            values.extend(stmt.value.elts)
+        else:
+            values.append(stmt.value)
+    return tuple(values)
+
+
 def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Marker]:
     """Module-level `pytestmark = pytest.mark.skip(...)` (single or list)."""
     markers: list[Marker] = []
@@ -1436,7 +1680,7 @@ def _swallows(handler: ast.ExceptHandler) -> bool:
     return not _contains_oracle(handler.body)
 
 
-def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
+def _unreachable_ids(func: ast.AST) -> set[int]:
     """Node ids under statements that can never execute.
 
     `return` (or `raise`) parked at the top of a test body leaves every
@@ -1632,6 +1876,131 @@ def _xfail_is_strict(mark: ast.AST) -> bool:
 _PARAMETRIZE = ("pytest.mark.parametrize", "mark.parametrize", "parametrize")
 
 
+def _call_argument(call: ast.Call, position: int, keyword: str) -> ast.AST | None:
+    if len(call.args) > position:
+        return call.args[position]
+    return next((item.value for item in call.keywords if item.arg == keyword), None)
+
+
+def _is_parametrize(
+    dec: ast.AST, import_bindings: dict[str, str] | None = None
+) -> bool:
+    return isinstance(dec, ast.Call) and (
+        _canonical_import_path(dec.func, import_bindings) in _PARAMETRIZE
+    )
+
+
+def _parametrize_names(dec: ast.Call) -> list[str]:
+    names_node = _call_argument(dec, 0, "argnames")
+    if names_node is None:
+        return []
+    if isinstance(names_node, ast.Constant) and isinstance(names_node.value, str):
+        return [name.strip() for name in names_node.value.split(",") if name.strip()]
+    if isinstance(names_node, (ast.List, ast.Tuple)):
+        return [
+            elt.value
+            for elt in names_node.elts
+            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+        ]
+    return []
+
+
+def _parametrize_provider_modes(
+    marks, import_bindings: dict[str, str] | None = None
+) -> dict[str, bool]:
+    """Literal parametrize arguments mapped to direct-provider status.
+
+    Pytest's ``indirect`` flag changes provider identity without changing the
+    function signature. Unknown/dynamic values are conservatively retained as
+    fixture requests: treating one as direct could hide an operative fixture.
+    The same representation is used for module, class, and function marks so
+    inherited provider metadata cannot diverge from function-local handling.
+    """
+    providers: dict[str, bool] = {}
+    for dec in marks:
+        if not _is_parametrize(dec, import_bindings):
+            continue
+        assert isinstance(dec, ast.Call)
+        names = _parametrize_names(dec)
+        if not names:
+            continue
+        indirect_node = _call_argument(dec, 2, "indirect")
+        if indirect_node is None or (
+            isinstance(indirect_node, ast.Constant) and indirect_node.value is False
+        ):
+            modes = {name: True for name in names}
+        elif isinstance(indirect_node, ast.Constant) and indirect_node.value is True:
+            modes = {name: False for name in names}
+        elif isinstance(indirect_node, (ast.List, ast.Tuple)) and all(
+            isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+            for elt in indirect_node.elts
+        ):
+            indirect = {elt.value for elt in indirect_node.elts}
+            modes = {name: name not in indirect for name in names}
+        else:
+            modes = {name: False for name in names}
+
+        for name, direct in modes.items():
+            # Duplicate parametrization of one argument is rejected by pytest.
+            # If malformed source nevertheless contains it, retaining any
+            # indirect interpretation is the fail-closed provider choice.
+            providers[name] = providers.get(name, True) and direct
+    return providers
+
+
+def _merge_parametrize_provider_modes(
+    inherited: dict[str, bool], local: dict[str, bool]
+) -> dict[str, bool]:
+    """Merge nested mark scopes without letting an indirect mode disappear."""
+    merged = dict(inherited)
+    for name, direct in local.items():
+        merged[name] = merged.get(name, True) and direct
+    return merged
+
+
+def _direct_parametrize_names(
+    func,
+    import_bindings: dict[str, str] | None = None,
+    inherited: dict[str, bool] | None = None,
+) -> set[str]:
+    providers = _merge_parametrize_provider_modes(
+        inherited or {},
+        _parametrize_provider_modes(func.decorator_list, import_bindings),
+    )
+    return {name for name, direct in providers.items() if direct}
+
+
+def _parameter_default_providers(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    imports: dict[str, str],
+) -> dict[str, tuple[str, str]]:
+    """Statically evaluated Python defaults keyed by parameter name.
+
+    Defaults execute in the enclosing module scope, so an imported object can
+    be canonicalized before the parameter shadows its spelling.  An
+    unresolved local expression retains canonical source as positive provider
+    identity; malformed/unparseable expressions fail silent.
+    """
+    positional = func.args.posonlyargs + func.args.args
+    pairs = list(zip(positional[-len(func.args.defaults) :], func.args.defaults))
+    pairs.extend(
+        (argument, value)
+        for argument, value in zip(func.args.kwonlyargs, func.args.kw_defaults)
+        if value is not None
+    )
+    out: dict[str, tuple[str, str]] = {}
+    for argument, value in pairs:
+        provider = _resolved_value_identity(value, imports)
+        if provider is None:
+            try:
+                provider = ast.unparse(value)
+            except (AttributeError, ValueError):  # pragma: no cover - defensive
+                continue
+        if provider:
+            out[argument.arg] = ("default", provider)
+    return out
+
+
 def _param_cell_value(cell):
     """The value inside a parametrize cell, seen through `pytest.param`.
 
@@ -1646,7 +2015,9 @@ def _param_cell_value(cell):
     return cell
 
 
-def _param_columns(func) -> dict[str, str]:
+def _param_columns(
+    func, import_bindings: dict[str, str] | None = None
+) -> dict[str, str]:
     """parametrize argname -> canonical text of that column, row by row.
 
     The expectation of a parametrized test does not live in the test at all; it
@@ -1662,21 +2033,16 @@ def _param_columns(func) -> dict[str, str]:
     """
     out: dict[str, list[str]] = {}
     for dec in func.decorator_list:
-        if not isinstance(dec, ast.Call) or _dotted(dec.func) not in _PARAMETRIZE:
+        if not _is_parametrize(dec, import_bindings):
             continue
-        if len(dec.args) < 2 or not isinstance(dec.args[1], (ast.List, ast.Tuple)):
+        assert isinstance(dec, ast.Call)
+        values = _call_argument(dec, 1, "argvalues")
+        if not isinstance(values, (ast.List, ast.Tuple)):
             continue
-        names_node = dec.args[0]
-        if isinstance(names_node, ast.Constant) and isinstance(names_node.value, str):
-            names = [n.strip() for n in names_node.value.split(",") if n.strip()]
-        elif isinstance(names_node, (ast.List, ast.Tuple)):
-            names = [
-                e.value for e in names_node.elts
-                if isinstance(e, ast.Constant) and isinstance(e.value, str)
-            ]
-        else:
+        names = _parametrize_names(dec)
+        if not names:
             continue
-        for row in dec.args[1].elts:
+        for row in values.elts:
             cells = row.elts if isinstance(row, (ast.List, ast.Tuple)) else [row]
             if len(names) == 1 and not isinstance(row, (ast.List, ast.Tuple)):
                 cells = [row]
@@ -1688,7 +2054,10 @@ def _param_columns(func) -> dict[str, str]:
     return {name: "".join(vals) for name, vals in sorted(out.items())}
 
 
-def _fixture_definitions(tree: ast.Module) -> dict[str, str]:
+def _fixture_definitions(
+    tree: ast.Module,
+    definition_imports: dict[int, dict[str, str]] | None = None,
+) -> dict[str, str]:
     """Same-file `@pytest.fixture` name -> canonical text of what it produces.
 
     A fixture is not a collected unit, so nothing in the IR saw its body. An
@@ -1697,13 +2066,17 @@ def _fixture_definitions(tree: ast.Module) -> dict[str, str]:
     recorded as a residual rather than half-implemented.
     """
     out: dict[str, str] = {}
+    live = _module_callable_scopes(tree)
     for node in tree.body:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        if not any(
-            _dotted(d.func if isinstance(d, ast.Call) else d) in ("pytest.fixture", "fixture")
-            for d in node.decorator_list
-        ):
+        if live.get(node.name) is not node:
+            continue
+        exact = (definition_imports or {}).get(id(node))
+        if not _is_fixture_def(node, exact):
+            continue
+        fixture_name = _fixture_public_name(node, exact)
+        if fixture_name is None:
             continue
         produced = []
         for sub in ast.walk(node):
@@ -1713,11 +2086,14 @@ def _fixture_definitions(tree: ast.Module) -> dict[str, str]:
                 except (AttributeError, ValueError):  # pragma: no cover - defensive
                     produced.append("")
         if produced:
-            out[node.name] = "|".join(produced)
+            out[fixture_name] = "|".join(produced)
     return dict(sorted(out.items()))
 
 
-def _param_case_count(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None:
+def _param_case_count(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    import_bindings: dict[str, str] | None = None,
+) -> int | None:
     """pytest test-item count contributed by @pytest.mark.parametrize rows.
 
     Deleting rows deletes test items; in pytest's model each row IS a test
@@ -1725,18 +2101,18 @@ def _param_case_count(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int | Non
     """
     total: int | None = None
     for dec in func.decorator_list:
-        if not isinstance(dec, ast.Call):
+        if not _is_parametrize(dec, import_bindings):
             continue
-        if _dotted(dec.func) not in ("pytest.mark.parametrize", "mark.parametrize", "parametrize"):
-            continue
-        if len(dec.args) < 2 or not isinstance(dec.args[1], (ast.List, ast.Tuple)):
+        assert isinstance(dec, ast.Call)
+        values = _call_argument(dec, 1, "argvalues")
+        if not isinstance(values, (ast.List, ast.Tuple)):
             continue
         # A row is a test item only if it still runs. Counting `len(elts)`
         # meant wrapping every row in `pytest.param(..., marks=pytest.mark.skip)`
         # left the count unchanged while the whole parametrized test stopped
         # executing — deleting the same rows blocked, skipping them did not
         # (reader audit 2026-08-02).
-        rows = sum(0 if _param_row_disabled(e) else 1 for e in dec.args[1].elts)
+        rows = sum(0 if _param_row_disabled(e) else 1 for e in values.elts)
         total = rows if total is None else total * rows
     return total
 
@@ -1885,16 +2261,36 @@ def _is_contextmanager(node) -> bool:
     )
 
 
-def _local_scopes(func, module_scopes: dict[str, ast.AST]) -> dict[str, ast.AST]:
+def _local_scopes(
+    func,
+    module_scopes: dict[str, ast.AST],
+    lexical_facts: tuple[set[str], set[str], set[str]] | None = None,
+) -> dict[str, ast.AST]:
     """Callable names visible to this unit: the module's, plus its own nested
     defs and lambdas, plus names bound to a deferred call (`partial`)."""
-    out = dict(module_scopes)
+    lexical, _globals, _nonlocals = (
+        lexical_facts
+        if lexical_facts is not None
+        else _lexical_scope_names(func)
+    )
+    # Any lexical binding shadows a module helper for the entire function,
+    # including parameters supplied by fixtures or parametrize.  Supported
+    # local callables are added back below with their own positional proof.
+    out = {
+        name: target
+        for name, target in module_scopes.items()
+        if name not in lexical
+    }
     for node in ast.walk(func):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node is not func:
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node is not func
+            and node.name in lexical
+        ):
             out[node.name] = node
         elif isinstance(node, ast.Assign):
             for target in node.targets:
-                if not isinstance(target, ast.Name):
+                if not isinstance(target, ast.Name) or target.id not in lexical:
                     continue
                 if isinstance(node.value, ast.Lambda):
                     out[target.id] = node.value
@@ -1908,12 +2304,260 @@ def _local_scopes(func, module_scopes: dict[str, ast.AST]) -> dict[str, ast.AST]
     return out
 
 
+def _module_callable_scopes(tree: ast.Module) -> dict[str, ast.AST]:
+    """Definitely live same-file callables after module execution.
+
+    Tests run only after the module body has completed.  A raw census of all
+    top-level definitions therefore keeps stale helpers after a later import,
+    assignment, or delete of the same name.  This small final-binding walk
+    follows straight-line statements and statically selected ``if`` arms;
+    any path-dependent compound binding removes the candidate so uncertainty
+    cannot project an obsolete helper into a test call site.
+    """
+    live: dict[str, ast.AST] = {}
+
+    def remove(names: set[str]) -> None:
+        for name in names:
+            live.pop(name, None)
+
+    def walk(statements: list[ast.stmt]) -> None:
+        for stmt in statements:
+            if isinstance(
+                stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                live[stmt.name] = stmt
+                continue
+            if isinstance(stmt, (ast.Import, ast.ImportFrom)):
+                remove(set(_import_bindings((stmt,))))
+                continue
+            if isinstance(stmt, ast.Assign):
+                names = {
+                    name
+                    for target in stmt.targets
+                    for name in _bound_target_names(target)
+                }
+                remove(names)
+                if isinstance(stmt.value, ast.Lambda):
+                    for target in stmt.targets:
+                        if isinstance(target, ast.Name):
+                            live[target.id] = stmt.value
+                continue
+            if isinstance(stmt, ast.AnnAssign):
+                if stmt.value is not None:
+                    names = _bound_target_names(stmt.target)
+                    remove(names)
+                    if isinstance(stmt.target, ast.Name) and isinstance(
+                        stmt.value, ast.Lambda
+                    ):
+                        live[stmt.target.id] = stmt.value
+                continue
+            if isinstance(stmt, (ast.AugAssign, ast.Delete)):
+                targets = (
+                    (stmt.target,)
+                    if isinstance(stmt, ast.AugAssign)
+                    else tuple(stmt.targets)
+                )
+                remove(
+                    {
+                        name
+                        for target in targets
+                        for name in _bound_target_names(target)
+                    }
+                )
+                continue
+            if isinstance(stmt, ast.If):
+                truth = _static_truth(stmt.test)
+                if truth is True:
+                    walk(stmt.body)
+                elif truth is False:
+                    walk(stmt.orelse)
+                else:
+                    remove(_lexical_scope_names(stmt)[0])
+                continue
+            # Loops, try/match arms, context-manager targets, and walruses can
+            # all leave different final objects on different paths.  Dropping
+            # their bound names is the safe final-binding join.
+            remove(_lexical_scope_names(stmt)[0])
+
+    walk(tree.body)
+    return live
+
+
+def _local_callable_at_binding(
+    scope: ast.AST,
+    name: str,
+    position: tuple[int, int],
+    key: str,
+) -> ast.AST | None:
+    """The callable node established by one positional local binding.
+
+    ``_local_scopes`` is only a name index.  Two sequential definitions can
+    legally reuse one name, so its final AST node cannot identify what an
+    earlier call executed.  Match the reaching entry's position as well as
+    its stable key, without descending into a nested lexical scope.
+    """
+
+    def canonical(node: ast.AST) -> str | None:
+        try:
+            return ast.unparse(node)
+        except (AttributeError, ValueError):  # pragma: no cover - defensive
+            return None
+
+    def walk(statements: list[ast.stmt]) -> ast.AST | None:
+        for stmt in statements:
+            stmt_position = (
+                getattr(stmt, "lineno", 0) or 0,
+                getattr(stmt, "col_offset", 0) or 0,
+            )
+            if isinstance(
+                stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                if (
+                    stmt_position == position
+                    and stmt.name == name
+                    and key == _named_scope_binding_key(stmt)
+                ):
+                    return stmt
+                continue
+            value = None
+            targets: tuple[ast.AST, ...] = ()
+            if isinstance(stmt, ast.Assign):
+                value, targets = stmt.value, tuple(stmt.targets)
+            elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None:
+                value, targets = stmt.value, (stmt.target,)
+            if (
+                stmt_position == position
+                and isinstance(value, ast.Lambda)
+                and any(name in _bound_target_names(target) for target in targets)
+                and canonical(value) == key
+            ):
+                return value
+            for field in ("body", "orelse", "finalbody"):
+                nested = getattr(stmt, field, None)
+                if isinstance(nested, list):
+                    found = walk(
+                        [child for child in nested if isinstance(child, ast.stmt)]
+                    )
+                    if found is not None:
+                        return found
+            for handler in getattr(stmt, "handlers", ()):
+                found = walk(handler.body)
+                if found is not None:
+                    return found
+            for case in getattr(stmt, "cases", ()):
+                found = walk(case.body)
+                if found is not None:
+                    return found
+        return None
+
+    body = getattr(scope, "body", None)
+    return walk(body) if isinstance(body, list) else None
+
+
+def _live_scope_target(
+    scope: ast.AST,
+    site: ast.AST,
+    name: str,
+    scopes: dict[str, ast.AST],
+    ordered_cache: dict[int, dict] | None = None,
+    ordered_bindings: dict | None = None,
+    lexical_cache: dict[int, tuple[set[str], set[str], set[str]]] | None = None,
+) -> ast.AST | None:
+    """Resolve a same-file callable at one invocation position.
+
+    Module names are live unless the caller lexically shadows them (already
+    reflected by ``_local_scopes``) or explicitly rebinds a ``global``/
+    ``nonlocal`` name.  A supported local callable additionally needs one
+    definite reaching binding at this call site; a later definition,
+    conditional definition, or intervening rebind fails toward silence.
+    """
+    target = scopes.get(name)
+    if target is None:
+        return None
+    if not isinstance(
+        scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+    ):
+        return target
+    lexical_facts = (
+        lexical_cache.get(id(scope)) if lexical_cache is not None else None
+    )
+    if lexical_facts is None:
+        lexical_facts = _lexical_scope_names(scope)
+        if lexical_cache is not None:
+            lexical_cache[id(scope)] = lexical_facts
+    lexical, globals_, nonlocals = lexical_facts
+    if name not in lexical | globals_ | nonlocals:
+        return target
+    ordered = ordered_bindings
+    if ordered is None:
+        if ordered_cache is not None:
+            ordered = ordered_cache.get(id(scope))
+        if ordered is None:
+            ordered = _ordered_bindings(scope)
+            if ordered_cache is not None:
+                ordered_cache[id(scope)] = ordered
+    entries = _reaching_entries(
+        (
+            getattr(site, "lineno", 0) or 0,
+            getattr(site, "col_offset", 0) or 0,
+        ),
+        name,
+        ordered,
+    )
+    if not entries:
+        # A global declaration does not itself replace the module helper; a
+        # later global assignment must not leak backward to an earlier call.
+        return target if name not in lexical else None
+    if len(entries) != 1 or entries[0][1]:
+        return None
+    key = entries[0][2]
+    live_local = _local_callable_at_binding(
+        scope, name, entries[0][0], key
+    )
+    if live_local is not None:
+        return live_local
+    # ``_local_scopes`` maps a recognized ``partial(name, ...)`` binding to
+    # its deferred target.  Retain that existing spelling only while the
+    # reaching definition is still itself a definite partial call.
+    try:
+        value = ast.parse(key, mode="eval").body
+    except (SyntaxError, ValueError, MemoryError):
+        return None
+    callee = _callee_root(value) if isinstance(value, ast.Call) else None
+    if callee and callee.split(".")[-1] in _DEFERS_ARGUMENT:
+        partial_bindings = 0
+        for _position, conditional, candidate_key, _refs in ordered.get(
+            name, ()
+        ):
+            try:
+                candidate = ast.parse(candidate_key, mode="eval").body
+            except (SyntaxError, ValueError, MemoryError):
+                continue
+            candidate_callee = (
+                _callee_root(candidate)
+                if isinstance(candidate, ast.Call)
+                else None
+            )
+            if (
+                not conditional
+                and candidate_callee
+                and candidate_callee.split(".")[-1] in _DEFERS_ARGUMENT
+            ):
+                partial_bindings += 1
+        if partial_bindings != 1:
+            return None
+        return target
+    return None
+
+
 def _executed_scopes(
     func,
     module_scopes: dict[str, ast.AST],
-    max_depth: int = 4,
     caches: tuple[dict, dict] | None = None,
     roots: tuple[str, ...] | None = None,
+    root_sites: tuple[tuple[ast.AST, str], ...] | None = None,
+    local_scopes: dict[str, ast.AST] | None = None,
+    edge_entries: dict[int, list[tuple[ast.AST, ast.AST]]] | None = None,
 ) -> list:
     """The unit, plus every same-file scope it actually reaches.
 
@@ -1924,40 +2568,92 @@ def _executed_scopes(
 
     With `roots`, the walk starts from those invocation names instead of
     everything the unit invokes: the closure reachable through one entry
-    site. The union over a unit's entry roots equals the default walk —
-    per-root depth is counted from the root exactly as the default counts
-    it from the frontier.
+    site. The union over a unit's entry roots equals the default walk. The
+    finite same-file callable graph is bounded by ``seen`` rather than an
+    arbitrary depth cutoff, which also terminates recursive helper cycles.
     """
-    scopes = _local_scopes(func, module_scopes)
-    with_entered = {
-        _callee_root(item.context_expr)
-        for node in _scope_nodes(func)
-        if isinstance(node, (ast.With, ast.AsyncWith))
-        for item in node.items
-    }
+    scopes = (
+        local_scopes
+        if local_scopes is not None
+        else _local_scopes(func, module_scopes)
+    )
+    nodes_cache = caches[0] if caches is not None else None
+    module_scope_ids = {id(target) for target in module_scopes.values()}
+    ordered_cache: dict[int, dict] = {}
+    lexical_cache: dict[int, tuple[set[str], set[str], set[str]]] = {}
+
+    def entered_names(scope: ast.AST) -> set[str | None]:
+        return {
+            _callee_root(item.context_expr)
+            for node in _scope_nodes_cached(scope, nodes_cache)
+            if isinstance(node, (ast.With, ast.AsyncWith))
+            for item in node.items
+        }
+
     out = [func]
     seen: set[int] = {id(func)}
+    wanted = set(roots) if roots is not None else None
+    entry_sites = (
+        root_sites
+        if root_sites is not None
+        else tuple(_helper_entry_sites(func, nodes_cache))
+    )
     frontier = [
-        (name, 0) for name in (_invocations(func, caches) if roots is None else roots)
+        (func, site, name, scopes)
+        for site, name in entry_sites
+        if wanted is None or name in wanted
     ]
     while frontier:
-        name, depth = frontier.pop()
-        target = scopes.get(name)
-        if target is None or depth >= max_depth or id(target) in seen:
+        parent, site, name, visible = frontier.pop()
+        target = _live_scope_target(
+            parent,
+            site,
+            name,
+            visible,
+            ordered_cache,
+            lexical_cache=lexical_cache,
+        )
+        if target is None:
             continue
         # A @contextmanager runs its body only when entered: building the
         # generator and never using `with` runs nothing (tamper 004).
-        if _is_contextmanager(target) and name not in with_entered:
+        if _is_contextmanager(target) and name not in entered_names(parent):
+            continue
+        if edge_entries is not None:
+            edge_entries.setdefault(id(target), []).append((parent, site))
+        if id(target) in seen:
             continue
         seen.add(id(target))
         out.append(target)
+        target_entry_sites = tuple(
+            _helper_entry_sites(target, nodes_cache)
+        )
+        if not target_entry_sites and not isinstance(target, ast.ClassDef):
+            continue
+        inherited = (
+            module_scopes if id(target) in module_scope_ids else visible
+        )
+        target_scopes = _local_scopes(target, inherited)
         if isinstance(target, ast.ClassDef):
             for child in target.body:
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     seen.add(id(child))
+                    if edge_entries is not None:
+                        edge_entries.setdefault(id(child), []).append(
+                            (parent, site)
+                        )
                     out.append(child)
-                    frontier.extend((c, depth + 1) for c in _invocations(child, caches))
-        frontier.extend((c, depth + 1) for c in _invocations(target, caches))
+                    child_scopes = _local_scopes(child, module_scopes)
+                    frontier.extend(
+                        (child, child_site, child_name, child_scopes)
+                        for child_site, child_name in _helper_entry_sites(
+                            child, nodes_cache
+                        )
+                    )
+        frontier.extend(
+            (target, child_site, child_name, target_scopes)
+            for child_site, child_name in target_entry_sites
+        )
     return out
 
 
@@ -2063,10 +2759,28 @@ def _collect_unit(
     inherited_markers: list[Marker] | None = None,
     module_scopes: dict[str, ast.AST] | None = None,
     caches: tuple[dict, dict] | None = None,
+    import_bindings: dict[str, str] | None = None,
+    module_import_origins: tuple[
+        tuple[str, str, str, int, int], ...
+    ] = (),
+    fixture_uses: tuple[str, ...] = (),
+    parametrize_providers: dict[str, bool] | None = None,
+    collect_standins: bool = True,
+    module_standin_bindings: dict[str, str] | None = None,
+    definition_imports: dict[str, str] | None = None,
+    definition_import_maps: dict[int, dict[str, str]] | None = None,
+    module_monkeypatch_receivers: frozenset[str] = frozenset(),
+    module_api_values: Mapping[str, str] | None = None,
+    module_api_definition_values: Mapping[int, Mapping[str, str]] | None = None,
+    transparent_fixture_receivers: frozenset[str] = frozenset(),
+    fixture_layers: tuple[
+        tuple[str, dict[str, tuple[str, ...]], tuple[str, ...]], ...
+    ] = (),
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
     patches: set[tuple[str, str]] = set()
+    body = text.seg(func) or ""
     markers = _decorator_markers(func, text, off) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
@@ -2085,7 +2799,7 @@ def _collect_unit(
             refs_memo=_refs_memo,
             has_walrus=_flags.get("walrus", False),
         )
-        if definition_bindings
+        if definition_bindings or _flags.get("named_scope", False)
         else {}
     )
     vacuous = _vacuous_bound_asserts(func)
@@ -2094,7 +2808,34 @@ def _collect_unit(
     # helper's assertions are this unit's oracle, a helper's `except` is not
     # this unit's handler. Only the assertion set follows reachability.
     nodes_cache = caches[0] if caches is not None else None
-    executed = _executed_scopes(func, module_scopes or {}, caches=caches)
+    lexical_facts = _lexical_scope_names(func)
+    invoked_names = _invocations(func, caches)
+    # Most tests call production imports and no same-file helper.  Building
+    # the callable index and walking the helper closure in that case only
+    # re-traverses the unit AST: a local helper can be reachable only through
+    # a name that is either module-visible or lexically bound in this scope.
+    may_reach_local_scope = bool(invoked_names) and (
+        not invoked_names.isdisjoint(module_scopes or {})
+        or not invoked_names.isdisjoint(lexical_facts[0])
+    )
+    if may_reach_local_scope:
+        local_scopes = _local_scopes(
+            func,
+            module_scopes or {},
+            lexical_facts,
+        )
+        executed = _executed_scopes(
+            func,
+            module_scopes or {},
+            caches=caches,
+            local_scopes=local_scopes,
+        )
+    else:
+        local_scopes = {}
+        executed = [func]
+    direct_scope_ids = {
+        id(node) for node in _scope_nodes_cached(func, nodes_cache)
+    }
     reached_asserts = {
         id(n)
         for scope in executed
@@ -2106,10 +2847,121 @@ def _collect_unit(
     # inside `func` (this walk sees it) and an executed scope (that loop sees
     # it), and double-counting an oracle invents an assertion to "remove".
     own_assert_ids: set[int] = set()
+    # A consumer can be reached by a stand-in installed in conftest even when
+    # this file installs nothing itself. Preserve function-local import aliases
+    # for that reachability check. The lexical guard avoids an extra scope walk
+    # for the overwhelmingly common no-local-import unit without making the
+    # stand-in-install prefilter a reachability boundary.
+    if (
+        collect_standins
+        or not lexical_facts[0].isdisjoint(import_bindings or {})
+        or _scope_needs_import_environments(
+            func, body, import_bindings or {}
+        )
+    ):
+        import_environments, imported = _scope_import_environments(
+            func,
+            import_bindings or {},
+            definition_base=definition_imports,
+        )
+    else:
+        # A raw-source proof says this scope neither imports nor shadows a
+        # module binding. Reuse the module environment directly and avoid a
+        # per-test control-flow walk. Empty remains a known-empty map; it is
+        # not permission to borrow bindings back from the file later.
+        import_environments = {}
+        imported = {
+            name: target
+            for name, target in sorted((import_bindings or {}).items())
+        }
+    runtime_import_environments = (
+        _scope_runtime_import_environments(
+            func, imported, import_environments
+        )
+        if re.search(
+            r"\b(?:from|import)\b|\bimport_module\b|\bsys\s*\.\s*modules\b",
+            body,
+        )
+        else {}
+    )
+
+    def oracle_import_metadata(node: ast.AST):
+        exact = _imports_at(node, imported, import_environments)
+        runtime = runtime_import_environments.get(id(node), ())
+        module = _visible_module_import_origins(
+            module_import_origins,
+            exact,
+            runtime,
+        )
+        return exact, runtime, module
+
+    params = tuple(
+        argument.arg
+        for argument in (
+            func.args.posonlyargs + func.args.args + func.args.kwonlyargs
+        )
+        if argument.arg not in ("self", "cls")
+    )
+    decorator_imports = definition_imports or import_bindings or {}
+    default_providers = _parameter_default_providers(
+        func, definition_imports or {}
+    )
+    direct_parametrize = _direct_parametrize_names(
+        func, decorator_imports, parametrize_providers
+    )
+    requested_fixtures = (
+        (set(params) - direct_parametrize - set(default_providers))
+        | set(fixture_uses)
+    )
+    if collect_standins:
+        receiver_bindings = {
+            name: value
+            for name, value in (module_standin_bindings or {}).items()
+            if name not in transparent_fixture_receivers
+        }
+        immediate_patch_receivers = _mocker_fixture_receivers(
+            func, requested_fixtures, receiver_bindings
+        )
+        lexical_scope_names = lexical_facts[0]
+        monkeypatch_receivers = _pytest_fixture_receivers(
+            func,
+            requested_fixtures,
+            "monkeypatch",
+            receiver_bindings,
+        ) | frozenset(
+            name
+            for name in module_monkeypatch_receivers
+            if name not in lexical_scope_names
+        )
+        api_facts = _standin_api_facts(
+            func,
+            imported,
+            import_environments,
+            monkeypatch_receivers=monkeypatch_receivers,
+            mocker_receivers=immediate_patch_receivers,
+            inherited_values=module_api_values,
+            definition_time_values=(
+                (module_api_definition_values or {}).get(
+                    id(func), module_api_values or {}
+                )
+            ),
+        )
+    else:
+        immediate_patch_receivers = frozenset()
+        api_facts = _StandinApiFacts()
+    standin_nodes: list[ast.AST] = []
 
     for node in ast.walk(func):
         if id(node) in dead:
             continue
+        if (
+            collect_standins
+            and id(node) in direct_scope_ids
+            and isinstance(
+                node, (ast.Assign, ast.AnnAssign, ast.NamedExpr, ast.Call)
+            )
+        ):
+            standin_nodes.append(node)
         # An assert written inside a nested `def` that nothing calls is present
         # in the source and absent from the run. Counting it as live is what
         # let `verify()` be defined and never invoked (tamper 020) — and it is
@@ -2126,6 +2978,9 @@ def _collect_unit(
                 node,
                 _positional_closure(node, c.left_names + c.right_names, ordered_bindings),
                 ordered_bindings,
+            )
+            oracle_imports, oracle_runtime_imports, oracle_module_imports = (
+                oracle_import_metadata(node)
             )
             assertions.append(
                 Assertion(
@@ -2145,6 +3000,22 @@ def _collect_unit(
                     right_depends_on=depends,
                     reaching=reach,
                     reaching_sig=_reaching_sig(reach, direct),
+                    standin_imports=oracle_imports,
+                    standin_runtime_imports=oracle_runtime_imports,
+                    standin_module_imports=oracle_module_imports,
+                    standin_position=(
+                        (
+                            getattr(node, "lineno", 0) or 0,
+                            getattr(node, "col_offset", 0) or 0,
+                        )
+                        if id(node) in direct_scope_ids
+                        else None
+                    ),
+                    standin_oracle_key=_standin_oracle_key(
+                        node,
+                        c,
+                        oracle_imports,
+                    ),
                 )
             )
             counter += 1
@@ -2153,11 +3024,9 @@ def _collect_unit(
             if name:
                 calls.add(name)
                 calls.add(name.rsplit(".", 1)[-1])
-                # Folded into this walk rather than given its own: a second
-                # full `ast.walk` per unit put the 500-file budget over by
-                # 0.18 s, and the dotted name is already computed here.
-                # Unreachable code is skipped above, which is right — a patch
-                # that never executes installs nothing.
+                # Preserve the exact IR-v1/local-spelling patch census.  The
+                # richer stand-in lifetime pass below is intentionally a
+                # separate internal channel.
                 pair = _patch_call_target(node, name)
                 if pair is not None:
                     patches.add(pair)
@@ -2172,6 +3041,11 @@ def _collect_unit(
                     # match= and getting blocked for "removing" it.
                     match_kw = next((kw for kw in node.keywords if kw.arg == "match"), None)
                     seg = text.seg(node) or name
+                    (
+                        oracle_imports,
+                        oracle_runtime_imports,
+                        oracle_module_imports,
+                    ) = oracle_import_metadata(node)
                     assertions.append(
                         Assertion(
                             id=f"a{counter}",
@@ -2181,6 +3055,17 @@ def _collect_unit(
                             span=off.span(node),
                             right_literal=(
                                 _literal_repr(match_kw.value, text) if match_kw is not None else None
+                            ),
+                            standin_imports=oracle_imports,
+                            standin_runtime_imports=oracle_runtime_imports,
+                            standin_module_imports=oracle_module_imports,
+                            standin_position=(
+                                (
+                                    getattr(node, "lineno", 0) or 0,
+                                    getattr(node, "col_offset", 0) or 0,
+                                )
+                                if id(node) in direct_scope_ids
+                                else None
                             ),
                         )
                     )
@@ -2197,6 +3082,11 @@ def _collect_unit(
                     ),
                     ordered_bindings,
                 )
+                (
+                    oracle_imports,
+                    oracle_runtime_imports,
+                    oracle_module_imports,
+                ) = oracle_import_metadata(node)
                 assertions.append(
                     Assertion(
                         id=f"a{counter}",
@@ -2215,6 +3105,22 @@ def _collect_unit(
                         trivial=c.trivial,
                         reaching=reach,
                         reaching_sig=_reaching_sig(reach, direct),
+                        standin_imports=oracle_imports,
+                        standin_runtime_imports=oracle_runtime_imports,
+                        standin_module_imports=oracle_module_imports,
+                        standin_position=(
+                            (
+                                getattr(node, "lineno", 0) or 0,
+                                getattr(node, "col_offset", 0) or 0,
+                            )
+                            if id(node) in direct_scope_ids
+                            else None
+                        ),
+                        standin_oracle_key=_standin_oracle_key(
+                            node,
+                            c,
+                            oracle_imports,
+                        ),
                     )
                 )
                 counter += 1
@@ -2224,6 +3130,106 @@ def _collect_unit(
             handlers.append(
                 Handler(caught=caught, is_broad=is_broad, text=seg.split("\n")[0], span=off.span(node))
             )
+
+    raw_installs = [
+        (node, install)
+        for node in standin_nodes
+        for install in _standin_install_targets(
+            node,
+            _imports_at(node, imported, import_environments),
+            api_facts,
+        )
+    ]
+    effective_installs: list[StandinInstall] = []
+    if raw_installs:
+        patch_contexts = {
+            **_standin_patch_contexts(func),
+            **api_facts.call_contexts,
+        }
+        patch_activations = _standin_patch_activations(
+            func,
+            patch_contexts,
+            imported,
+            import_environments,
+            immediate_receivers=immediate_patch_receivers,
+            api_facts=api_facts,
+        )
+        direct_restore_boundaries = _straight_line_restores(
+            func,
+            imported,
+            scope="test",
+            dead=dead,
+            environments=import_environments,
+            api_facts=api_facts,
+        )
+        for node, (target, attr, kind) in raw_installs:
+            if (
+                _patch_call_is_operative(
+                    node,
+                    patch_activations,
+                    imported,
+                    import_environments,
+                    immediate_patch_receivers,
+                    api_facts,
+                )
+                and _context_install_is_live(
+                    node,
+                    (target, attr, kind),
+                    patch_contexts,
+                    patch_activations,
+                    imported,
+                    scope="test",
+                    text=text,
+                    bindings=definition_bindings,
+                    dead=dead,
+                    environments=import_environments,
+                )
+                # A test-body sys.modules swap is operative only when a
+                # literal runtime import happens after it. A top-level import
+                # already captured the old module object.
+                and (
+                    kind != "module"
+                    or _module_reimported_after(
+                        func,
+                        node,
+                        target,
+                        imported,
+                        import_environments,
+                    )
+                )
+            ):
+                effective_installs.append(
+                    _standin_record(
+                        node,
+                        (target, attr, kind),
+                        text,
+                        scope="test",
+                        active_until=(
+                            direct_restore_boundaries.get(id(node))
+                            or (
+                                (
+                                    getattr(
+                                        patch_contexts[id(node)],
+                                        "end_lineno",
+                                        0,
+                                    )
+                                    or 0,
+                                    getattr(
+                                        patch_contexts[id(node)],
+                                        "end_col_offset",
+                                        0,
+                                    )
+                                    or 0,
+                                )
+                                if id(node) in patch_contexts
+                                else None
+                            )
+                        ),
+                        api_fixture_receiver=(
+                            api_facts.call_fixture_receivers.get(id(node))
+                        ),
+                    )
+                )
 
     # The other half: assertions the unit runs that are not written inside it.
     # `assert_sum(add(2, 3), 5)` is a *call*, so without this the unit records
@@ -2241,16 +3247,630 @@ def _collect_unit(
     # downstream — so a site's copies differ by `reaching_sig` alone, and
     # deleting one of N calls surfaces as a removed assertion instead of
     # vanishing into a same-size set.
-    local_scopes = _local_scopes(func, module_scopes or {})
-    root_closures: dict[str, list] = {}
+    lexical_parents: dict[int, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+
+    def map_nested_scopes(
+        node: ast.AST,
+        parent: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                lexical_parents.setdefault(id(child), parent)
+                map_nested_scopes(child, child)
+            elif not isinstance(child, (ast.ClassDef, ast.Lambda)):
+                map_nested_scopes(child, parent)
+
+    if collect_standins and len(executed) > 1:
+        for root_scope in {
+            id(scope): scope
+            for scope in executed
+            if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }.values():
+            map_nested_scopes(root_scope, root_scope)
+
+    def helper_base_imports(
+        scope: ast.FunctionDef | ast.AsyncFunctionDef,
+        unit_site: ast.AST,
+    ) -> dict[str, str]:
+        """Live closure imports where a nested helper is invoked."""
+        parent = lexical_parents.get(id(scope))
+        if parent is None:
+            return dict(import_bindings or {})
+        if parent is func:
+            parent_environments, parent_imports = (
+                import_environments,
+                imported,
+            )
+        else:
+            parent_environments, parent_imports = _scope_import_environments(
+                parent,
+                helper_base_imports(parent, unit_site),
+            )
+        parent_dead = _unreachable_ids(parent)
+        sites = [
+            node
+            for node, root in _helper_entry_sites(parent, nodes_cache)
+            if root == scope.name and id(node) not in parent_dead
+        ]
+        if not sites:
+            # A scope-name collision or an unresolved dynamic invocation is
+            # not positive import provenance.
+            return {}
+        environments = [
+            _imports_at(node, parent_imports, parent_environments)
+            for node in sites
+        ]
+        return {
+            name: target
+            for name, target in environments[0].items()
+            if all(other.get(name) == target for other in environments[1:])
+        }
+
+    root_closures: dict[
+        tuple[int, int],
+        tuple[list, dict[int, list[tuple[ast.AST, ast.AST]]]],
+    ] = {}
+    live_scope_lexical_cache: dict[
+        int, tuple[set[str], set[str], set[str]]
+    ] = {}
     inherited_rows: dict[int, list] = {}
-    for site_node, root in _helper_entry_sites(func, nodes_cache):
+    helper_oracle_import_cache: dict[
+        tuple[int, tuple[tuple[str, str], ...]],
+        tuple[
+            dict[int, dict[str, str]],
+            dict[str, str],
+            dict[int, tuple[tuple[str, str, str, int, int], ...]],
+        ],
+    ] = {}
+    helper_install_rows: dict[
+        tuple,
+        tuple[
+            tuple[
+                ast.AST,
+                tuple[str, str, str],
+                bool,
+                bool,
+                tuple[tuple[int, int], ...],
+                str | None,
+            ],
+            ...,
+        ],
+    ] = {}
+    helper_install_facts: dict[tuple, _StandinApiFacts] = {}
+
+    def helper_oracle_import_metadata(
+        scope: ast.FunctionDef | ast.AsyncFunctionDef,
+        oracle: ast.AST,
+        unit_site: ast.AST,
+    ):
+        """Definition provenance for an oracle projected to a call site."""
+        base_imports = helper_base_imports(scope, unit_site)
+        cache_key = (id(scope), tuple(sorted(base_imports.items())))
+        cached = helper_oracle_import_cache.get(cache_key)
+        if cached is None:
+            helper_environments, helper_imports = (
+                _scope_import_environments(
+                    scope,
+                    base_imports,
+                    definition_base=(definition_import_maps or {}).get(
+                        id(scope), base_imports
+                    ),
+                )
+            )
+            helper_runtime_imports = _scope_runtime_import_environments(
+                scope,
+                helper_imports,
+                helper_environments,
+            )
+            cached = (
+                helper_environments,
+                helper_imports,
+                helper_runtime_imports,
+            )
+            helper_oracle_import_cache[cache_key] = cached
+        helper_environments, helper_imports, helper_runtime_imports = cached
+        exact_imports = _imports_at(
+            oracle,
+            helper_imports,
+            helper_environments,
+        )
+        runtime_imports = helper_runtime_imports.get(id(oracle), ())
+        module_imports = _visible_module_import_origins(
+            module_import_origins,
+            exact_imports,
+            runtime_imports,
+        )
+        return exact_imports, runtime_imports, module_imports
+
+    def helper_call_parameter_values(
+        scope: ast.FunctionDef | ast.AsyncFunctionDef,
+        site_node: ast.AST,
+        caller_facts: _StandinApiFacts,
+    ) -> dict[str, str | None]:
+        """Exact API/fixture values explicitly forwarded to one helper call.
+
+        Unknown explicit values are retained as ``None`` so they suppress a
+        default API origin. Starred arguments cannot be paired soundly; they
+        conservatively invalidate every parameter they may fill.
+        """
+        if (
+            not isinstance(site_node, ast.Call)
+            or _callee_root(site_node) != scope.name
+        ):
+            return {}
+        origins = caller_facts.call_argument_origins.get(id(site_node))
+        if origins is None:
+            return {}
+        positional_origins, keyword_origins = origins
+        positional_parameters = scope.args.posonlyargs + scope.args.args
+        keyword_parameters = {
+            argument.arg
+            for argument in (*scope.args.args, *scope.args.kwonlyargs)
+        }
+        values: dict[str, str | None] = {}
+        position = 0
+        for argument, origin in zip(site_node.args, positional_origins):
+            if isinstance(argument, ast.Starred):
+                for parameter in positional_parameters[position:]:
+                    values[parameter.arg] = None
+                position = len(positional_parameters)
+                continue
+            if position < len(positional_parameters):
+                values[positional_parameters[position].arg] = origin
+                position += 1
+        for (name, origin), keyword in zip(
+            keyword_origins, site_node.keywords
+        ):
+            if name is None or keyword.arg is None:
+                for parameter in keyword_parameters:
+                    values.setdefault(parameter, None)
+            elif name in keyword_parameters:
+                values[name] = origin
+        return values
+
+    def helper_runtime_overrides(
+        scope: ast.FunctionDef | ast.AsyncFunctionDef,
+        site_node: ast.AST,
+        caller_scope: ast.AST,
+        caller_facts: _StandinApiFacts,
+    ) -> dict[str, str | None]:
+        """Exact explicit arguments plus live lexical closure values."""
+        values = helper_call_parameter_values(
+            scope, site_node, caller_facts
+        )
+        if lexical_parents.get(id(scope)) is not caller_scope:
+            return values
+        live = caller_facts.call_value_environments.get(id(site_node))
+        caller_locals = _lexical_scope_names(caller_scope)[0]
+        scope_locals, scope_globals, _scope_nonlocals = (
+            _lexical_scope_names(scope)
+        )
+        referenced = {
+            node.id
+            for node in _scope_nodes_cached(scope, nodes_cache)
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+        }
+        closed_names = (
+            caller_locals & referenced
+        ) - scope_locals - scope_globals
+        for name in closed_names:
+            # Absence is meaningful: an unknown outer-local value must shadow
+            # a same-named real module API rather than borrowing it back.
+            values.setdefault(name, (live or {}).get(name))
+        return values
+
+    def invoked_helper_installs(
+        scope: ast.FunctionDef | ast.AsyncFunctionDef,
+        site_node: ast.AST,
+        caller_scope: ast.AST,
+        caller_facts: _StandinApiFacts,
+    ) -> tuple[tuple, _StandinApiFacts, tuple]:
+        """Operative installs in one helper, projected later to its call site.
+
+        A helper has its own lexical imports, patch lifetimes and restoration
+        boundary.  Reusing the test root's environment/context would accept a
+        shadowed alias and miss ``patch(...).start()`` inside the helper.  The
+        result is cached by scope plus enclosing live import environment; only
+        the cheap call-site projection varies between invocations.
+        """
+        base_imports = helper_base_imports(scope, site_node)
+        runtime_overrides = helper_runtime_overrides(
+            scope, site_node, caller_scope, caller_facts
+        )
+        lexical_child = lexical_parents.get(id(scope)) is caller_scope
+        definition_values = (
+            caller_facts.definition_values.get(id(scope), {})
+            if lexical_child
+            else None
+        )
+        if not lexical_child:
+            definition_values = (
+                (module_api_definition_values or {}).get(
+                    id(scope), module_api_values or {}
+                )
+            )
+        cache_key = (
+            id(scope),
+            tuple(sorted(base_imports.items())),
+            tuple(
+                sorted(
+                    (name, origin or "<unknown>")
+                    for name, origin in runtime_overrides.items()
+                )
+            ),
+            tuple(sorted(definition_values.items())),
+        )
+        cached = helper_install_rows.get(cache_key)
+        if cached is not None:
+            return cached, helper_install_facts[cache_key], cache_key
+
+        helper_environments, helper_imports = _scope_import_environments(
+            scope,
+            base_imports,
+            definition_base=(definition_import_maps or {}).get(
+                id(scope), base_imports
+            ),
+        )
+        helper_dead = _unreachable_ids(scope)
+        helper_nodes = tuple(_scope_nodes_cached(scope, nodes_cache))
+        helper_api_facts = _standin_api_facts(
+            scope,
+            helper_imports,
+            helper_environments,
+            monkeypatch_receivers=frozenset(
+                name
+                for name in module_monkeypatch_receivers
+                if name not in _lexical_scope_names(scope)[0]
+            ),
+            inherited_values=module_api_values,
+            definition_time_values=definition_values,
+            parameter_values=runtime_overrides,
+        )
+        helper_install_facts[cache_key] = helper_api_facts
+        candidates = [
+            (node, install)
+            for node in helper_nodes
+            if isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr, ast.Call))
+            and id(node) not in helper_dead
+            for install in _standin_install_targets(
+                node,
+                _imports_at(node, helper_imports, helper_environments),
+                helper_api_facts,
+            )
+        ]
+        if not candidates:
+            helper_install_rows[cache_key] = ()
+            return (), helper_api_facts, cache_key
+
+        contexts = {
+            **_standin_patch_contexts(scope),
+            **helper_api_facts.call_contexts,
+        }
+        activations = _standin_patch_activations(
+            scope,
+            contexts,
+            helper_imports,
+            helper_environments,
+            api_facts=helper_api_facts,
+        )
+        restored = _straight_line_restores(
+            scope,
+            helper_imports,
+            scope="test",
+            dead=helper_dead,
+            environments=helper_environments,
+            api_facts=helper_api_facts,
+        )
+        helper_bindings = _binding_definitions(scope)
+        global_names = {
+            name
+            for node in helper_nodes
+            if isinstance(node, ast.Global)
+            for name in node.names
+        }
+
+        oracle_nodes = [
+            node
+            for node in helper_nodes
+            if isinstance(node, ast.Assert)
+            or (
+                isinstance(node, ast.Call)
+                and _classify_unittest_call(node, text) is not None
+            )
+        ]
+
+        def invoked_oracle_nodes(
+            entry_sites: tuple[tuple[ast.AST, str], ...] | None,
+        ) -> tuple[ast.AST, ...]:
+            """Oracles in helpers entered while this lifecycle is active."""
+            closure = _executed_scopes(
+                scope,
+                module_scopes or {},
+                caches=caches,
+                root_sites=entry_sites,
+            )
+            return tuple(
+                node
+                for reached_scope in closure[1:]
+                for node in _scope_nodes_cached(reached_scope, nodes_cache)
+                if isinstance(node, ast.Assert)
+                or (
+                    isinstance(node, ast.Call)
+                    and _classify_unittest_call(node, text) is not None
+                )
+            )
+
+        def oracle_spans_for(
+            install_node: ast.AST,
+        ) -> tuple[bool, tuple[tuple[int, int], ...]]:
+            lifecycle = activations.get(id(install_node))
+            if lifecycle == "decorator":
+                eligible = [
+                    *oracle_nodes,
+                    *invoked_oracle_nodes(None),
+                ]
+                persists = False
+            elif lifecycle == "context":
+                context = contexts.get(id(install_node))
+                inside = (
+                    {
+                        id(candidate)
+                        for candidate in _standin_scope_nodes(
+                            _scope_body_nodes(context.body)
+                        )
+                    }
+                    if context is not None
+                    else set()
+                )
+                direct_eligible = [
+                    oracle for oracle in oracle_nodes if id(oracle) in inside
+                ]
+                entry_sites = tuple(
+                    (node, root)
+                    for node, root in _helper_entry_sites(scope, nodes_cache)
+                    if id(node) in inside
+                )
+                eligible = [
+                    *direct_eligible,
+                    *invoked_oracle_nodes(entry_sites),
+                ]
+                persists = False
+            else:
+                end = (
+                    getattr(install_node, "end_lineno", 0) or 0,
+                    getattr(install_node, "end_col_offset", 0) or 0,
+                )
+                restore_boundary = restored.get(id(install_node))
+                eligible = [
+                    oracle
+                    for oracle in oracle_nodes
+                    if (
+                        getattr(oracle, "lineno", 0) or 0,
+                        getattr(oracle, "col_offset", 0) or 0,
+                    )
+                    > end
+                    and (
+                        id(install_node) not in restored
+                        or (
+                            getattr(oracle, "lineno", 0) or 0,
+                            getattr(oracle, "col_offset", 0) or 0,
+                        )
+                        < restored[id(install_node)]
+                    )
+                ]
+                entry_sites = tuple(
+                    (node, root)
+                    for node, root in _helper_entry_sites(scope, nodes_cache)
+                    if (
+                        getattr(node, "lineno", 0) or 0,
+                        getattr(node, "col_offset", 0) or 0,
+                    )
+                    > end
+                    and (
+                        restore_boundary is None
+                        or (
+                            getattr(node, "lineno", 0) or 0,
+                            getattr(node, "col_offset", 0) or 0,
+                        )
+                        < restore_boundary
+                    )
+                )
+                if entry_sites:
+                    eligible.extend(invoked_oracle_nodes(entry_sites))
+                persists = id(install_node) not in restored
+            return persists, tuple(
+                sorted({off.span(oracle) for oracle in eligible})
+            )
+
+        oracle_lifetimes = {
+            id(node): oracle_spans_for(node) for node, _install in candidates
+        }
+        kept = tuple(
+            (
+                node,
+                install,
+                install[2] == "module"
+                and _module_reimported_after(
+                    scope,
+                    node,
+                    install[0],
+                    helper_imports,
+                    helper_environments,
+                ),
+                *oracle_lifetimes[id(node)],
+                helper_api_facts.call_fixture_receivers.get(id(node)),
+            )
+            for node, install in candidates
+            if (install[2] != "binding" or install[1] in global_names)
+            and _patch_call_is_operative(
+                node,
+                activations,
+                helper_imports,
+                helper_environments,
+                api_facts=helper_api_facts,
+            )
+            and (
+                _context_install_is_live(
+                    node,
+                    install,
+                    contexts,
+                    activations,
+                    helper_imports,
+                    scope="test",
+                    text=text,
+                    bindings=helper_bindings,
+                    dead=helper_dead,
+                    environments=helper_environments,
+                )
+                or (
+                    activations.get(id(node)) == "context"
+                    and bool(oracle_lifetimes[id(node)][1])
+                )
+            )
+        )
+        helper_install_rows[cache_key] = kept
+        return kept, helper_api_facts, cache_key
+
+    helper_entry_sites = (
+        _helper_entry_sites(func, nodes_cache) if local_scopes else ()
+    )
+    for site_node, root in helper_entry_sites:
+        if id(site_node) in dead:
+            continue
         if root not in local_scopes:
             continue
-        closure = root_closures.get(root)
-        if closure is None:
-            closure = _executed_scopes(func, module_scopes or {}, caches=caches, roots=(root,))
-            root_closures[root] = closure
+        live_target = _live_scope_target(
+            func,
+            site_node,
+            root,
+            local_scopes,
+            ordered_bindings=ordered_bindings,
+            lexical_cache=live_scope_lexical_cache,
+        )
+        if live_target is None:
+            continue
+        closure_key = (id(site_node), id(live_target))
+        cached_closure = root_closures.get(closure_key)
+        if cached_closure is None:
+            edge_entries: dict[
+                int, list[tuple[ast.AST, ast.AST]]
+            ] = {}
+            child_sites = tuple(
+                _helper_entry_sites(live_target, nodes_cache)
+            )
+            if (
+                not child_sites
+                and not isinstance(live_target, ast.ClassDef)
+                and not _is_contextmanager(live_target)
+            ):
+                # The target has no transitive fanout, so the expensive
+                # per-root scope reconstruction cannot add anything.  This
+                # keeps a unit calling many flat helpers linear. Classes
+                # still need the general walk to expand their method scopes.
+                closure = [func, live_target]
+                edge_entries[id(live_target)] = [(func, site_node)]
+            else:
+                closure = _executed_scopes(
+                    func,
+                    module_scopes or {},
+                    caches=caches,
+                    roots=(root,),
+                    root_sites=((site_node, root),),
+                    edge_entries=edge_entries,
+                )
+            cached_closure = (closure, edge_entries)
+            root_closures[closure_key] = cached_closure
+        closure, edge_entries = cached_closure
+        scope_by_id = {id(scope): scope for scope in closure}
+        outgoing_edges: dict[
+            int, list[tuple[ast.AST, ast.AST]]
+        ] = {}
+        for target_id, incoming_edges in edge_entries.items():
+            target_scope = scope_by_id.get(target_id)
+            if target_scope is None or target_scope is func:
+                continue
+            for caller_scope, invocation_site in incoming_edges:
+                if id(caller_scope) not in scope_by_id:
+                    continue
+                outgoing_edges.setdefault(id(caller_scope), []).append(
+                    (target_scope, invocation_site)
+                )
+        for edges in outgoing_edges.values():
+            edges.sort(
+                key=lambda edge: (
+                    getattr(edge[1], "lineno", 0) or 0,
+                    getattr(edge[1], "col_offset", 0) or 0,
+                    getattr(edge[0], "name", ""),
+                )
+            )
+
+        # Expand each lexical AST only once above, but evaluate it once per
+        # distinct incoming provenance state.  This preserves both real/fake
+        # calls to the same helper while identical calls and recursive cycles
+        # terminate on the helper analysis cache key.
+        if collect_standins:
+            analysis_queue: list[tuple[ast.AST, _StandinApiFacts]] = [
+                (func, api_facts)
+            ]
+            seen_helper_states: set[tuple] = set()
+            queue_index = 0
+            while queue_index < len(analysis_queue):
+                caller_scope, caller_facts = analysis_queue[queue_index]
+                queue_index += 1
+                for scope, invocation_site in outgoing_edges.get(
+                    id(caller_scope), ()
+                ):
+                    if not isinstance(
+                        scope, (ast.FunctionDef, ast.AsyncFunctionDef)
+                    ):
+                        continue
+                    (
+                        helper_rows,
+                        helper_api_facts,
+                        analysis_key,
+                    ) = invoked_helper_installs(
+                        scope,
+                        invocation_site,
+                        caller_scope,
+                        caller_facts,
+                    )
+                    if analysis_key in seen_helper_states:
+                        continue
+                    seen_helper_states.add(analysis_key)
+                    analysis_queue.append((scope, helper_api_facts))
+                    for (
+                        install_node,
+                        install,
+                        internally_reimported,
+                        persists_after_owner,
+                        owner_oracle_spans,
+                        api_fixture_receiver,
+                    ) in helper_rows:
+                        if (
+                            install[2] == "module"
+                            and not internally_reimported
+                            and not _module_reimported_after(
+                                func,
+                                site_node,
+                                install[0],
+                                imported,
+                                import_environments,
+                            )
+                        ):
+                            continue
+                        effective_installs.append(
+                            _standin_record(
+                                install_node,
+                                install,
+                                text,
+                                scope="test",
+                                owner=getattr(scope, "name", None),
+                                position_node=site_node,
+                                persists_after_owner=persists_after_owner,
+                                owner_oracle_spans=owner_oracle_spans,
+                                api_fixture_receiver=api_fixture_receiver,
+                            )
+                        )
         for scope in closure:
             if scope is func:
                 continue
@@ -2282,6 +3902,15 @@ def _collect_unit(
                     ),
                     ordered_bindings,
                 )
+                (
+                    oracle_imports,
+                    oracle_runtime_imports,
+                    oracle_module_imports,
+                ) = helper_oracle_import_metadata(
+                    scope,
+                    node,
+                    site_node,
+                )
                 assertions.append(
                     Assertion(
                         id=f"a{counter}",
@@ -2301,24 +3930,47 @@ def _collect_unit(
                         inherited=True,
                         reaching=reach,
                         reaching_sig=_reaching_sig(reach, direct),
+                        standin_imports=oracle_imports,
+                        standin_runtime_imports=oracle_runtime_imports,
+                        standin_module_imports=oracle_module_imports,
+                        standin_runtime_imports_projected=True,
+                        standin_position=(
+                            getattr(site_node, "lineno", 0) or 0,
+                            getattr(site_node, "col_offset", 0) or 0,
+                        ),
+                        standin_oracle_key=_standin_oracle_key(
+                            node,
+                            c,
+                            oracle_imports,
+                        ),
                     )
                 )
                 counter += 1
 
-    body = text.seg(func) or ""
     body_hash = hashlib.sha256(normalize_text(body).encode("utf-8")).hexdigest() if body else ""
 
     assertions.sort(key=lambda a: a.span)
     for i, a in enumerate(assertions):
         a.id = f"a{i}"
 
+    param_columns = _param_columns(func, decorator_imports)
+    parameter_providers = dict(default_providers)
+    lexical_names = tuple(sorted(lexical_facts[0]))
+    ambiguous_providers = set(default_providers) & direct_parametrize
+    for name in ambiguous_providers:
+        parameter_providers[name] = ("ambiguous", "")
+    for name in direct_parametrize - ambiguous_providers:
+        parameter_providers[name] = (
+            "parametrize",
+            param_columns.get(name, "<parametrize>"),
+        )
     side = UnitSide(
         span=off.span(func),
         assertions=assertions,
         calls=tuple(sorted(calls)),
         markers=sorted(markers, key=lambda m: m.span),
         handlers=sorted(handlers, key=lambda h: h.span),
-        param_cases=_param_case_count(func),
+        param_cases=_param_case_count(func, decorator_imports),
         body_hash=body_hash,
         bindings=definition_bindings,
         # Exclusivity can only matter for a multiply-bound name. Most test
@@ -2329,14 +3981,28 @@ def _collect_unit(
             if any("" in key for key in definition_bindings.values())
             else ()
         ),
-        param_columns=_param_columns(func),
+        param_columns=param_columns,
         patches=tuple(sorted(patches)),
-        invoked=tuple(sorted(_invocations(func, caches))),
-        params=tuple(
-            a.arg
-            for a in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
-            if a.arg not in ("self", "cls")
+        standin_installs=tuple(
+            sorted(
+                effective_installs,
+                key=lambda install: (
+                    install.effect_identity,
+                    install.finding_target,
+                    install.text,
+                ),
+            )
         ),
+        invoked=tuple(sorted(invoked_names)),
+        params=params,
+        fixtures=tuple(
+            sorted(requested_fixtures)
+        ),
+        standin_imports=imported,
+        standin_module_bindings=dict(module_standin_bindings or {}),
+        standin_parameter_providers=parameter_providers,
+        standin_lexical_names=lexical_names,
+        standin_fixture_layers=fixture_layers,
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
@@ -2718,8 +4384,52 @@ def _callees(node: ast.AST) -> tuple[str, ...]:
     return tuple(sorted(names))
 
 
+def _definition_import_maps(tree: ast.Module) -> dict[int, dict[str, str]]:
+    """Live imports when module/class definitions and decorators execute."""
+    out: dict[int, dict[str, str]] = {}
+
+    def walk_container(root: ast.AST, base: dict[str, str]) -> None:
+        environments, final = _scope_import_environments(
+            root, base, definition_base=base
+        )
+        body = getattr(root, "body", ())
+        if not isinstance(body, list):
+            return
+
+        def walk_statements(statements: list[ast.stmt]) -> None:
+            for stmt in statements:
+                exact = _imports_at(stmt, final, environments)
+                if isinstance(
+                    stmt,
+                    (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+                ):
+                    out[id(stmt)] = dict(exact)
+                    walk_container(stmt, exact)
+                    continue
+                for field in ("body", "orelse", "finalbody"):
+                    nested = getattr(stmt, field, None)
+                    if isinstance(nested, list):
+                        walk_statements(
+                            [node for node in nested if isinstance(node, ast.stmt)]
+                        )
+                for handler in getattr(stmt, "handlers", ()):
+                    walk_statements(handler.body)
+                for case in getattr(stmt, "cases", ()):
+                    walk_statements(case.body)
+
+        walk_statements(body)
+
+    walk_container(tree, {})
+    return out
+
+
 def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> ParsedFile:
     raw = normalize_source(data)
+    # This gate is intentionally before ast.parse and every per-test walk.
+    # Files with no installation-shaped source pay none of the stand-in
+    # lifetime machinery; the structured predicate remains authoritative for
+    # candidates that pass this conservative source-only screen.
+    standin_source_hint = collect_tests and _raw_may_contain_standin(raw)
     try:
         tree = ast.parse(raw)
     except SyntaxError:
@@ -2760,44 +4470,274 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     module_scopes: dict[str, ast.AST] = {}
     test_class_names: frozenset[str] = frozenset()
     if collect_tests:
-        for node in tree.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                module_scopes[node.name] = node
-            elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Lambda):
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        module_scopes[target.id] = node.value
+        module_scopes = _module_callable_scopes(tree)
         test_class_names = _transitive_test_classes(tree)
+    import_bindings = _standin_import_bindings(tree) if collect_tests else {}
+    module_import_origins = (
+        _module_native_import_origins(tree, import_bindings)
+        if collect_tests
+        else ()
+    )
+    definition_import_maps = (
+        _definition_import_maps(tree)
+        if collect_tests
+        and any(
+            isinstance(
+                node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            )
+            and (
+                node.decorator_list
+                or (
+                    isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and (node.args.defaults or any(node.args.kw_defaults))
+                )
+            )
+            for node in ast.walk(tree)
+        )
+        else {}
+    )
+    module_binding_statements = (
+        tuple(_definite_module_statements(tree.body)) if collect_tests else ()
+    )
+    module_import_locals = {
+        name
+        for stmt in module_binding_statements
+        if isinstance(stmt, (ast.Import, ast.ImportFrom))
+        for name in _import_bindings((stmt,))
+    }
+    module_standin_bindings = (
+        _module_local_bindings(tree, definition_import_maps)
+        if any(
+            isinstance(
+                stmt,
+                (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.ClassDef),
+            )
+            or (
+                isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and (
+                    not _is_test_name(stmt.name)
+                    or _is_fixture_def(
+                        stmt,
+                        definition_import_maps.get(id(stmt), import_bindings),
+                    )
+                    or stmt.name in module_import_locals
+                )
+            )
+            for stmt in module_binding_statements
+        )
+        else {}
+    )
+    fixture_dependencies = (
+        _module_fixture_dependencies(tree, definition_import_maps)
+        if collect_tests
+        else {}
+    )
+    transparent_fixture_receivers = (
+        _transparent_fixture_receivers(tree, definition_import_maps)
+        if collect_tests
+        else frozenset()
+    )
+    module_autouse_fixtures = (
+        _module_autouse_fixtures(tree, definition_import_maps)
+        if collect_tests
+        else ()
+    )
+    module_fixture_uses = (
+        _module_usefixtures(tree, import_bindings) if collect_tests else ()
+    )
+    module_parametrize_providers = (
+        _parametrize_provider_modes(
+            _module_pytestmark_values(tree), import_bindings
+        )
+        if collect_tests
+        else {}
+    )
+    assigned_standin_call_aliases: set[str] = set()
+    collect_standins = (
+        _has_standin_install(
+            tree, import_bindings, assigned_standin_call_aliases
+        )
+        if collect_tests and standin_source_hint
+        else False
+    )
+    module_monkeypatch_receivers: frozenset[str] = frozenset()
+    module_api_values: dict[str, str] = {}
+    module_api_definition_values: dict[int, dict[str, str]] = {}
+    if collect_standins:
+        module_api_environments, module_api_imports = (
+            _scope_import_environments(tree, {})
+        )
+        module_api_facts = _standin_api_facts(
+            tree, module_api_imports, module_api_environments
+        )
+        module_api_values = dict(module_api_facts.final_values)
+        module_api_definition_values = {
+            node_id: dict(values)
+            for node_id, values in module_api_facts.definition_values.items()
+        }
+        module_monkeypatch_receivers = frozenset(
+            name
+            for name, origin in module_api_facts.final_values.items()
+            if origin == "monkeypatch"
+            or origin.startswith("monkeypatch_instance:")
+        )
     # One file's worth of scope-walk memoisation: (scope-nodes, invocations),
     # shared by every unit so a helper reached by many tests is walked once.
     file_caches: tuple[dict, dict] = ({}, {})
 
-    def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
+    def visit(
+        node: ast.AST,
+        prefix: str,
+        inherited: list[Marker],
+        inherited_fixtures: tuple[str, ...],
+        inherited_parametrize: dict[str, bool],
+        inherited_fixture_layers: tuple[
+            tuple[str, dict[str, tuple[str, ...]], tuple[str, ...]], ...
+        ],
+        collectible: bool,
+    ) -> None:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{prefix}{child.name}"
+                child_definition_imports = definition_import_maps.get(
+                    id(child), import_bindings
+                )
                 if want_symbols:
                     symbols[qual] = _fingerprint(child)
                     symbol_calls[qual] = _callees(child)
                 if collect_tests and collectible and _is_test_name(child.name):
+                    unit_raw = "\n".join(
+                        (
+                            *(text.seg(decorator) or "" for decorator in child.decorator_list),
+                            text.seg(child) or "",
+                        )
+                    )
                     units.append(
                         _collect_unit(
-                            child, qual, text, off, inherited, module_scopes, file_caches
+                            child,
+                            qual,
+                            text,
+                            off,
+                            inherited,
+                            module_scopes,
+                            file_caches,
+                            import_bindings,
+                            module_import_origins,
+                            tuple(
+                                sorted(
+                                    set(inherited_fixtures)
+                                    | set(
+                                        _decorator_usefixtures(
+                                            child, child_definition_imports
+                                        )
+                                    )
+                                )
+                            ),
+                            inherited_parametrize,
+                            collect_standins=(
+                                collect_standins
+                                and (
+                                    _raw_unit_may_contain_standin(
+                                        unit_raw,
+                                        import_bindings,
+                                        assigned_standin_call_aliases,
+                                    )
+                                    or any(
+                                        name in module_scopes
+                                        for name in _invocations(
+                                            child, file_caches
+                                        )
+                                    )
+                                )
+                            ),
+                            module_standin_bindings=module_standin_bindings,
+                            definition_imports=child_definition_imports,
+                            definition_import_maps=definition_import_maps,
+                            module_monkeypatch_receivers=(
+                                module_monkeypatch_receivers
+                            ),
+                            module_api_values=module_api_values,
+                            module_api_definition_values=(
+                                module_api_definition_values
+                            ),
+                            transparent_fixture_receivers=(
+                                transparent_fixture_receivers
+                            ),
+                            fixture_layers=inherited_fixture_layers,
                         )
                     )
                 # Nested defs are never collected as pytest items.
-                visit(child, qual + ".", inherited, False)
+                visit(
+                    child,
+                    qual + ".",
+                    inherited,
+                    inherited_fixtures,
+                    inherited_parametrize,
+                    inherited_fixture_layers,
+                    False,
+                )
             elif isinstance(child, ast.ClassDef):
                 qual = f"{prefix}{child.name}"
+                child_definition_imports = definition_import_maps.get(
+                    id(child), import_bindings
+                )
                 if want_symbols:
                     symbols[qual] = _fingerprint(child)
                 # Class-level skip decorators disable every test inside the
                 # class — they must reach each unit (confirmed red-team FN).
                 class_markers = _decorator_markers(child, text, off) if collect_tests else []
+                class_fixtures = (
+                    tuple(
+                        sorted(
+                            set(inherited_fixtures)
+                            | set(
+                                _decorator_usefixtures(
+                                    child, child_definition_imports
+                                )
+                            )
+                        )
+                    )
+                    if collect_tests
+                    else inherited_fixtures
+                )
+                class_parametrize = (
+                    _merge_parametrize_provider_modes(
+                        inherited_parametrize,
+                        _parametrize_provider_modes(
+                            child.decorator_list, child_definition_imports
+                        ),
+                    )
+                    if collect_tests
+                    else inherited_parametrize
+                )
+                class_fixture_dependencies = (
+                    _module_fixture_dependencies(
+                        child,
+                        definition_import_maps,
+                        class_scope=True,
+                    )
+                    if collect_tests
+                    else {}
+                )
+                class_fixture_layers = inherited_fixture_layers
+                if class_fixture_dependencies:
+                    class_fixture_layers = (
+                        *class_fixture_layers,
+                        (
+                            qual,
+                            class_fixture_dependencies,
+                            _module_autouse_fixtures(
+                                child, definition_import_maps
+                            ),
+                        ),
+                    )
                 visit(
                     child,
                     qual + ".",
                     inherited + class_markers,
+                    class_fixtures,
+                    class_parametrize,
+                    class_fixture_layers,
                     collectible
                     and (_is_test_class(child) or child.name in test_class_names)
                     and not _test_attr_disabled(child.body),
@@ -2812,11 +4752,88 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     if isinstance(target, ast.Name):
                         symbols[f"{prefix}{target.id}"] = _fingerprint(child)
             else:
-                visit(child, prefix, inherited, collectible)
+                visit(
+                    child,
+                    prefix,
+                    inherited,
+                    inherited_fixtures,
+                    inherited_parametrize,
+                    inherited_fixture_layers,
+                    collectible,
+                )
 
-    visit(tree, "", module_markers, True)
+    visit(
+        tree,
+        "",
+        module_markers,
+        module_fixture_uses,
+        module_parametrize_providers,
+        (),
+        True,
+    )
+    standin_installs = (
+        _module_standin_installs(
+            tree,
+            text,
+            import_bindings,
+            definition_imports=definition_import_maps,
+            include_hooks=conftest,
+        )
+        if collect_tests and collect_standins
+        else ()
+    )
     if conftest:
         units = [_conftest_unit(tree, text, off)]
+    elif collect_tests and standin_installs:
+        for unit in units:
+            def class_install_applies(install: StandinInstall) -> bool:
+                if install.scope == "class":
+                    owner = install.owner or ""
+                    return bool(owner) and unit.qualname.startswith(owner + ".")
+                if install.scope == "class_fixture":
+                    owner = install.owner or ""
+                    class_name = owner.rpartition(".")[0]
+                    return (
+                        bool(class_name)
+                        and unit.qualname.startswith(class_name + ".")
+                        and install_applies(
+                            install,
+                            unit.side,
+                            fixture_dependencies,
+                            module_autouse_fixtures,
+                        )
+                    )
+                return install_applies(
+                    install,
+                    unit.side,
+                    fixture_dependencies,
+                    module_autouse_fixtures,
+                )
+
+            applicable = [
+                install
+                for install in standin_installs
+                if (
+                    install.kind != "module"
+                    or install.scope in ("fixture", "class", "class_fixture")
+                    or (
+                        install.scope == "module"
+                        and _module_imported_after_install(tree, install)
+                    )
+                )
+                and class_install_applies(install)
+            ]
+            if applicable:
+                inherited = {
+                    install.effect_identity: install
+                    for install in (
+                        *(unit.side.standin_installs or ()),
+                        *applicable,
+                    )
+                }
+                unit.side.standin_installs = tuple(
+                    inherited[key] for key in sorted(inherited)
+                )
 
     # Two defs sharing a name shadow each other at runtime, and name-keyed
     # alignment produced phantom findings on comment-only diffs (triage,
@@ -2897,8 +4914,15 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
 
     units.sort(key=lambda u: u.span)
     if collect_tests:
-        helper_asserts, fixture_asserts, autouse = _module_oracle_scopes(tree, text, off)
-        helper_calls = _module_helper_calls(tree)
+        helper_asserts, fixture_asserts, autouse = _module_oracle_scopes(
+            tree,
+            text,
+            off,
+            definition_import_maps,
+            import_bindings,
+            module_import_origins,
+        )
+        helper_calls = _module_helper_calls(tree, definition_import_maps)
     else:
         helper_asserts, fixture_asserts, autouse = {}, {}, ()
         helper_calls = {}
@@ -2914,40 +4938,270 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         swallowing_handlers=tuple(swallowing),
         constants=_top_level_constants(tree, text),
         from_imports=_top_level_from_imports(tree),
-        fixture_defs=_fixture_definitions(tree) if collect_tests else {},
+        import_bindings=import_bindings,
+        standin_installs=standin_installs,
+        fixture_defs=(
+            _fixture_definitions(tree, definition_import_maps)
+            if collect_tests
+            else {}
+        ),
         helper_asserts=helper_asserts,
         helper_calls=helper_calls,
         fixture_asserts=fixture_asserts,
         autouse_fixtures=autouse,
+        fixture_dependencies=fixture_dependencies,
     )
 
 
-def _module_helper_calls(tree: ast.Module) -> dict[str, tuple[str, ...]]:
+def _module_helper_calls(
+    tree: ast.Module,
+    definition_imports: dict[int, dict[str, str]] | None = None,
+) -> dict[str, tuple[str, ...]]:
     """Callee leaves of same-file helpers. One hop, no fixtures, no tests."""
     out: dict[str, tuple[str, ...]] = {}
-    for node in tree.body:
+    for name, node in _module_callable_scopes(tree).items():
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        if _is_test_name(node.name) or _is_fixture_def(node):
+        exact = (definition_imports or {}).get(id(node))
+        if _is_test_name(name) or _is_fixture_def(node, exact):
             continue
-        out[node.name] = _callees(node)
+        out[name] = _callees(node)
     return out
 
 
-def _is_fixture_def(node) -> bool:
-    return isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
-        _dotted(d.func if isinstance(d, ast.Call) else d) in ("pytest.fixture", "fixture")
-        for d in node.decorator_list
+def _pytest_definition_decorator(
+    node: ast.AST,
+    member: str,
+    imports: dict[str, str] | None = None,
+) -> ast.AST | None:
+    """One decorator positively resolved to ``pytest.<member>``."""
+    if not isinstance(
+        node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+    ):
+        return None
+    for decorator in node.decorator_list:
+        target = decorator.func if isinstance(decorator, ast.Call) else decorator
+        if imports is None:
+            canonical = _dotted(target)
+            accepted = canonical in (f"pytest.{member}", member)
+        else:
+            accepted = _live_import_path(target, imports) == f"pytest.{member}"
+        if accepted:
+            return decorator
+    return None
+
+
+def _is_fixture_def(
+    node: ast.AST, imports: dict[str, str] | None = None
+) -> bool:
+    return (
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and _pytest_definition_decorator(node, "fixture", imports) is not None
     )
 
 
-def _classified_asserts(nodes, text, off) -> tuple:
+def _fixture_public_name(
+    node: ast.AST, imports: dict[str, str] | None = None
+) -> str | None:
+    """Literal pytest fixture name, including ``@fixture(name=...)``."""
+    decorator = _pytest_definition_decorator(node, "fixture", imports)
+    if decorator is None:
+        return None
+    assert isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    if isinstance(decorator, ast.Call):
+        names = [kw.value for kw in decorator.keywords if kw.arg == "name"]
+        if not names:
+            return node.name
+        if len(names) != 1:
+            return None
+        if isinstance(names[0], ast.Constant) and names[0].value is None:
+            return node.name
+        value = _string_literal(names[0])
+        if value and value.isidentifier() and not keyword.iskeyword(value):
+            return value
+        # A dynamic/empty/invalid exported name is not evidence for either
+        # spelling.  Falling back to the Python carrier would silently invent
+        # a fixture registration pytest may not expose under that name.
+        return None
+    return node.name
+
+
+def _fixture_is_autouse(
+    node: ast.AST, imports: dict[str, str] | None = None
+) -> bool:
+    decorator = _pytest_definition_decorator(node, "fixture", imports)
+    if not isinstance(decorator, ast.Call):
+        return False
+    return any(
+        kw.arg == "autouse"
+        and isinstance(kw.value, ast.Constant)
+        and kw.value.value is True
+        for kw in decorator.keywords
+    )
+
+
+def _hook_registration(
+    node: ast.AST, imports: dict[str, str] | None = None
+) -> tuple[str, bool] | None:
+    """Effective pytest hook name and whether it is a wrapper."""
+    if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return None
+    decorator = _pytest_definition_decorator(node, "hookimpl", imports)
+    if decorator is None:
+        return (node.name, False) if node.name.startswith("pytest_") else None
+    effective = node.name
+    wrapper = False
+    if isinstance(decorator, ast.Call):
+        specnames = [
+            keyword.value
+            for keyword in decorator.keywords
+            if keyword.arg == "specname"
+        ]
+        if specnames:
+            if len(specnames) != 1:
+                return None
+            literal = _string_literal(specnames[0])
+            if literal is None or not literal.startswith("pytest_"):
+                return None
+            effective = literal
+        wrapper = any(
+            keyword.arg in ("hookwrapper", "wrapper")
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value is True
+            for keyword in decorator.keywords
+        )
+    return (effective, wrapper)
+
+
+def _is_runtest_call_wrapper(
+    node: ast.AST, imports: dict[str, str] | None = None
+) -> bool:
+    return _hook_registration(node, imports) == ("pytest_runtest_call", True)
+
+
+def _module_autouse_fixtures(
+    tree: ast.Module,
+    definition_imports: dict[int, dict[str, str]] | None = None,
+) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            fixture_name
+            for node in _module_callable_scopes(tree).values()
+            if _fixture_is_autouse(
+                node, (definition_imports or {}).get(id(node))
+            )
+            if (
+                fixture_name := _fixture_public_name(
+                    node, (definition_imports or {}).get(id(node))
+                )
+            )
+            is not None
+        )
+    )
+
+
+def _module_fixture_dependencies(
+    tree: ast.Module | ast.ClassDef,
+    definition_imports: dict[int, dict[str, str]] | None = None,
+    *,
+    class_scope: bool = False,
+) -> dict[str, tuple[str, ...]]:
+    out: dict[str, tuple[str, ...]] = {}
+    for node in _module_callable_scopes(tree).values():
+        exact = (definition_imports or {}).get(id(node))
+        if not _is_fixture_def(node, exact):
+            continue
+        fixture_name = _fixture_public_name(node, exact)
+        if fixture_name is None:
+            continue
+        out[fixture_name] = tuple(
+            sorted(
+                _required_injected_parameters(
+                    node,
+                    class_member=class_scope,
+                    definition_imports=exact,
+                )
+            )
+        )
+    return {name: out[name] for name in sorted(out)}
+
+
+def _transparent_fixture_receivers(
+    tree: ast.Module,
+    definition_imports: dict[int, dict[str, str]] | None = None,
+) -> frozenset[str]:
+    """Conventional fixture overrides that return the injected receiver.
+
+    A same-name fixture normally shadows pytest's built-in provider.  The
+    exact one-statement forwarding wrappers below are different: pytest
+    injects the previous provider and the wrapper exports that identical
+    object.  No other return/yield shape is promoted to receiver provenance.
+    """
+    transparent: set[str] = set()
+    for node in _module_callable_scopes(tree).values():
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        exact = (definition_imports or {}).get(id(node))
+        if not _is_fixture_def(node, exact):
+            continue
+        fixture_name = _fixture_public_name(node, exact)
+        if fixture_name not in ("monkeypatch", "mocker"):
+            continue
+        if fixture_name not in _required_injected_parameters(
+            node, definition_imports=exact
+        ):
+            continue
+        body = [
+            stmt
+            for stmt in node.body
+            if not (
+                isinstance(stmt, ast.Expr)
+                and isinstance(stmt.value, ast.Constant)
+                and isinstance(stmt.value.value, str)
+            )
+        ]
+        forwarded: ast.AST | None = None
+        if len(body) == 1 and isinstance(body[0], ast.Return):
+            forwarded = body[0].value
+        elif (
+            len(body) == 1
+            and isinstance(body[0], ast.Expr)
+            and isinstance(body[0].value, ast.Yield)
+        ):
+            forwarded = body[0].value.value
+        if isinstance(forwarded, ast.Name) and forwarded.id == fixture_name:
+            transparent.add(fixture_name)
+    return frozenset(transparent)
+
+
+def _classified_asserts(
+    nodes,
+    text,
+    off,
+    *,
+    imports: Mapping[str, str],
+    import_environments: dict[int, dict[str, str]],
+    runtime_import_environments: dict[
+        int, tuple[tuple[str, str, str, int, int], ...]
+    ],
+    module_import_origins: tuple[
+        tuple[str, str, str, int, int], ...
+    ],
+) -> tuple:
+    """Classified carrier asserts with their definition-time provenance."""
     out = []
     for node in nodes:
         if not isinstance(node, ast.Assert):
             continue
         c = _classify_assert(node, text)
         seg = text.seg(node) or ""
+        exact_imports = _imports_at(node, dict(imports), import_environments)
+        runtime_imports = runtime_import_environments.get(id(node), ())
+        module_imports = _visible_module_import_origins(
+            module_import_origins,
+            exact_imports,
+            runtime_imports,
+        )
         bare = (
             isinstance(node.test, ast.Compare)
             and len(node.test.comparators) == 1
@@ -2971,12 +5225,33 @@ def _classified_asserts(nodes, text, off) -> tuple:
                 left_names=c.left_names,
                 right_depends_on=c.right_names,
                 inherited=True,
+                standin_imports=exact_imports,
+                standin_runtime_imports=runtime_imports,
+                standin_module_imports=module_imports,
+                standin_position=(
+                    getattr(node, "lineno", 0) or 0,
+                    getattr(node, "col_offset", 0) or 0,
+                ),
+                standin_oracle_key=_standin_oracle_key(
+                    node,
+                    c,
+                    exact_imports,
+                ),
             )
         )
     return tuple(out)
 
 
-def _module_oracle_scopes(tree: ast.Module, text, off):
+def _module_oracle_scopes(
+    tree: ast.Module,
+    text,
+    off,
+    definition_imports: dict[int, dict[str, str]] | None = None,
+    import_bindings: dict[str, str] | None = None,
+    module_import_origins: tuple[
+        tuple[str, str, str, int, int], ...
+    ] = (),
+):
     """(helper_asserts, fixture_asserts, autouse_fixtures) for a test module.
 
     Helpers contribute their **own** direct asserts — one hop across the file
@@ -2987,23 +5262,115 @@ def _module_oracle_scopes(tree: ast.Module, text, off):
     helpers: dict[str, tuple] = {}
     fixtures: dict[str, tuple] = {}
     autouse: list[str] = []
-    for node in tree.body:
+
+    def carrier_environments(
+        root: ast.FunctionDef | ast.AsyncFunctionDef,
+        definition_base: dict[str, str] | None,
+    ):
+        """Import provenance for a carrier and its lexical closures."""
+        all_import_environments: dict[int, dict[str, str]] = {}
+        all_runtime_imports: dict[
+            int, tuple[tuple[str, str, str, int, int], ...]
+        ] = {}
+
+        def direct_nested_functions(scope: ast.AST):
+            stack = list(ast.iter_child_nodes(scope))
+            while stack:
+                child = stack.pop()
+                if isinstance(
+                    child, (ast.FunctionDef, ast.AsyncFunctionDef)
+                ):
+                    yield child
+                    continue
+                if isinstance(child, (ast.ClassDef, ast.Lambda)):
+                    continue
+                stack.extend(ast.iter_child_nodes(child))
+
+        def visit_scope(
+            scope: ast.FunctionDef | ast.AsyncFunctionDef,
+            base: dict[str, str],
+            scope_definition_base: dict[str, str] | None,
+            initial_runtime: tuple[
+                tuple[str, str, str, int, int], ...
+            ] = (),
+        ) -> dict[str, str]:
+            environments, imported = _scope_import_environments(
+                scope,
+                base,
+                definition_base=scope_definition_base,
+            )
+            runtime = _scope_runtime_import_environments(
+                scope,
+                imported,
+                environments,
+                initial_rows=initial_runtime,
+            )
+            all_import_environments.update(environments)
+            all_runtime_imports.update(runtime)
+            for child in direct_nested_functions(scope):
+                child_base = _imports_at(child, imported, environments)
+                visit_scope(
+                    child,
+                    child_base,
+                    (definition_imports or {}).get(
+                        id(child), child_base
+                    ),
+                    runtime.get(id(child), ()),
+                )
+            return imported
+
+        imported = visit_scope(
+            root,
+            dict(import_bindings or {}),
+            definition_base,
+        )
+        return all_import_environments, imported, all_runtime_imports
+
+    for carrier, node in _module_callable_scopes(tree).items():
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        if _is_fixture_def(node):
-            found = _classified_asserts(ast.walk(node), text, off)
-            if found:
-                fixtures[node.name] = found
-            for d in node.decorator_list:
-                if isinstance(d, ast.Call) and any(
-                    kw.arg == "autouse" and isinstance(kw.value, ast.Constant) and kw.value.value
-                    for kw in d.keywords
-                ):
-                    autouse.append(node.name)
-        elif not _is_test_name(node.name):
-            found = _classified_asserts(_scope_nodes(node), text, off)
-            if found:
-                helpers[node.name] = found
+        exact = (definition_imports or {}).get(id(node))
+        fixture = _is_fixture_def(node, exact)
+        if fixture:
+            fixture_name = _fixture_public_name(node, exact)
+            if fixture_name is None:
+                continue
+            if _fixture_is_autouse(node, exact):
+                autouse.append(fixture_name)
+            assert_nodes = tuple(
+                candidate
+                for candidate in ast.walk(node)
+                if isinstance(candidate, ast.Assert)
+            )
+        else:
+            if _is_test_name(carrier):
+                continue
+            assert_nodes = tuple(
+                candidate
+                for candidate in _scope_nodes(node)
+                if isinstance(candidate, ast.Assert)
+            )
+        if not assert_nodes:
+            continue
+
+        (
+            import_environments,
+            carrier_imports,
+            runtime_import_environments,
+        ) = carrier_environments(node, exact)
+        found = _classified_asserts(
+            assert_nodes,
+            text,
+            off,
+            imports=carrier_imports,
+            import_environments=import_environments,
+            runtime_import_environments=runtime_import_environments,
+            module_import_origins=module_import_origins,
+        )
+        if fixture:
+            fixtures[fixture_name] = found
+        else:
+            helpers[carrier] = found
     return helpers, fixtures, tuple(sorted(autouse))
 
 
@@ -3024,32 +5391,555 @@ def _top_level_constants(tree: ast.Module, text) -> dict[str, str]:
     return out
 
 
+_SETATTR_CALLS = frozenset({"setattr", "set_attribute"})
 _PATCH_CALLS = ("setattr", "setitem", "set_attribute")
+_STANDIN_COMPOUND_STATEMENTS = (
+    ast.If,
+    ast.For,
+    ast.AsyncFor,
+    ast.While,
+    ast.Try,
+    ast.TryStar,
+    ast.With,
+    ast.AsyncWith,
+    ast.Match,
+)
 
 
-def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | None:
-    """One patch dialect -> (target, attribute), or None if this is not one.
+@dataclass
+class _StandinApiFacts:
+    """Internal, position-aware proof for stand-in API spellings."""
 
-    Called from `_collect_unit`'s single walk, which covers the decorator list
-    too — that is where half of these live: `@mock.patch("pkg.mod.attr")` is
-    the same installation as the `monkeypatch.setattr` two lines into the body.
+    call_kinds: dict[int, str] = field(default_factory=dict)
+    call_contexts: dict[int, ast.With | ast.AsyncWith] = field(
+        default_factory=dict
+    )
+    call_fixture_receivers: dict[int, str] = field(default_factory=dict)
+    # Exact proven receiver origin for method calls. Constructed
+    # MonkeyPatch objects carry an instance-specific origin so ``undo()``
+    # closes only installations made through that same object.
+    call_receiver_origins: dict[int, str] = field(default_factory=dict)
+    # Runtime API origins of each call's explicit arguments. ``None`` keeps an
+    # explicit but unproven value distinct from an omitted argument so helper
+    # defaults cannot leak through a call-site override.
+    call_argument_origins: dict[
+        int,
+        tuple[
+            tuple[str | None, ...],
+            tuple[tuple[str | None, str | None], ...],
+        ],
+    ] = field(default_factory=dict)
+    # Runtime API environment at each exact call site.  This is separate from
+    # argument origins because a nested helper closes over its lexical
+    # parent's live locals even when none of them are explicit arguments.
+    call_value_environments: dict[int, dict[str, str]] = field(
+        default_factory=dict
+    )
+    final_values: dict[str, str] = field(default_factory=dict)
+    # API values live immediately before a named scope is defined. Decorators
+    # and defaults execute in this environment, before the new scope's local
+    # bindings exist; its body instead starts from the separately shadowed
+    # runtime environment below.
+    definition_values: dict[int, dict[str, str]] = field(default_factory=dict)
 
-    Accepted: `monkeypatch.setattr`/`setitem` (including through
-    `monkeypatch.context()`, whose receiver is named by the `with` clause and
-    so cannot be pinned to the fixture name), `patch(...)`, `mock.patch(...)`,
-    `mocker.patch(...)`, and `patch.object(...)` in any of those spellings.
 
-    The builtin `setattr(obj, "name", v)` is deliberately NOT one: it has no
-    receiver, and mutating an object the test owns is configuration, not the
-    installation of a stand-in. Reading it as one would fire on every fixture
-    that sets up its subject.
+_CALLABLE_API_PATHS = {
+    "builtins.setattr": "builtin_setattr",
+    "builtins.getattr": "builtin_getattr",
+    "builtins.vars": "builtin_vars",
+    "operator.setitem": "operator_setitem",
+    "unittest.mock.patch": "mock_patch",
+    "unittest.mock.patch.object": "mock_patch_object",
+    "unittest.mock.patch.dict": "mock_patch_dict",
+    "pytest.MonkeyPatch": "monkeypatch_constructor",
+}
+
+
+def _standin_api_facts(
+    root: ast.AST,
+    imports: dict[str, str],
+    environments: dict[int, dict[str, str]] | None = None,
+    *,
+    monkeypatch_receivers: frozenset[str] = frozenset(),
+    mocker_receivers: frozenset[str] = frozenset(),
+    inherited_values: Mapping[str, str] | None = None,
+    definition_time_values: Mapping[str, str] | None = None,
+    parameter_values: Mapping[str, str | None] | None = None,
+) -> _StandinApiFacts:
+    """Resolve supported APIs without trusting a coincidental method name.
+
+    The value environment is deliberately tiny: builtin callables plus the
+    two patching receiver families.  Unknown branches retain an origin only
+    when every path agrees, so ambiguity cannot become ownership evidence.
+    """
+    facts = _StandinApiFacts()
+    builtin_values: dict[str, str] = {
+        name: kind
+        for name, kind in {
+            "setattr": "builtin_setattr",
+            "getattr": "builtin_getattr",
+            "vars": "builtin_vars",
+        }.items()
+    }
+    values = dict(builtin_values)
+    values.update(inherited_values or {})
+    definition_environment = dict(builtin_values)
+    definition_environment.update(
+        inherited_values or {}
+        if definition_time_values is None
+        else definition_time_values
+    )
+    if isinstance(root, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+        lexical = _lexical_scope_names(root)[0]
+        for name in lexical:
+            values.pop(name, None)
+    values.update(
+        {name: "fixture:monkeypatch" for name in monkeypatch_receivers}
+    )
+    values.update({name: "fixture:mocker" for name in mocker_receivers})
+
+    def monkeypatch_origin(origin: str | None) -> bool:
+        return bool(
+            origin == "monkeypatch"
+            or origin == "fixture:monkeypatch"
+            or (origin or "").startswith("monkeypatch_instance:")
+            or (origin or "").startswith("monkeypatch_context:")
+            or (origin or "").startswith("fixture:monkeypatch_context:")
+        )
+
+    def mocker_origin(origin: str | None) -> bool:
+        return origin in ("mocker", "fixture:mocker")
+
+    def fixture_receiver_for_call(
+        node: ast.Call, state: dict[str, str]
+    ) -> str | None:
+        callable_origin = expression_origin(node.func, state)
+        if (callable_origin or "").startswith("fixture:mocker"):
+            return "mocker"
+        if (callable_origin or "").startswith("fixture:monkeypatch"):
+            return "monkeypatch"
+        if isinstance(node.func, ast.Attribute):
+            receiver = expression_origin(node.func.value, state)
+            if (receiver or "").startswith("fixture:mocker"):
+                return "mocker"
+            if (receiver or "").startswith("fixture:monkeypatch"):
+                return "monkeypatch"
+        return None
+
+    def exact_imports(node: ast.AST) -> dict[str, str]:
+        return _imports_at(node, imports, environments)
+
+    def expression_origin(node: ast.AST, state: dict[str, str]) -> str | None:
+        if isinstance(node, ast.NamedExpr):
+            return expression_origin(node.value, state)
+        if isinstance(node, ast.Name):
+            origin = state.get(node.id)
+            if origin is not None:
+                return origin
+            imported = _live_import_path(node, exact_imports(node))
+            return _CALLABLE_API_PATHS.get(imported or "")
+        imported = _live_import_path(node, exact_imports(node))
+        if imported in _CALLABLE_API_PATHS:
+            return _CALLABLE_API_PATHS[imported]
+        if isinstance(node, ast.Attribute):
+            base = expression_origin(node.value, state)
+            if mocker_origin(base) and node.attr == "patch":
+                return (
+                    "fixture:mocker_patch_namespace"
+                    if base == "fixture:mocker"
+                    else "mocker_patch_namespace"
+                )
+            if base == "mock_patch" and node.attr == "object":
+                return "mock_patch_object"
+            if base == "mock_patch" and node.attr == "dict":
+                return "mock_patch_dict"
+            if base in (
+                "mocker_patch_namespace",
+                "fixture:mocker_patch_namespace",
+            ) and node.attr == "object":
+                return (
+                    "fixture:mocker_patch_object"
+                    if base.startswith("fixture:")
+                    else "mocker_patch_object"
+                )
+        if isinstance(node, ast.Call):
+            kind = classify_call(node, state)
+            if kind == "monkeypatch_constructor":
+                return f"monkeypatch_instance:{id(node)}"
+            if kind == "monkeypatch_context":
+                dependency = fixture_receiver_for_call(node, state)
+                prefix = (
+                    "fixture:monkeypatch_context:"
+                    if dependency == "monkeypatch"
+                    else "monkeypatch_context:"
+                )
+                return f"{prefix}{id(node)}"
+        return None
+
+    def classify_call(node: ast.Call, state: dict[str, str]) -> str | None:
+        imported = _live_import_path(node.func, exact_imports(node))
+        if imported in _CALLABLE_API_PATHS:
+            return _CALLABLE_API_PATHS[imported]
+        callable_origin = expression_origin(node.func, state)
+        if callable_origin in {
+            "builtin_setattr",
+            "builtin_getattr",
+            "builtin_vars",
+            "operator_setitem",
+            "mock_patch",
+            "mock_patch_object",
+            "mock_patch_dict",
+            "monkeypatch_constructor",
+            "mocker_patch_namespace",
+            "mocker_patch_object",
+            "fixture:mocker_patch_namespace",
+            "fixture:mocker_patch_object",
+        }:
+            if callable_origin in (
+                "mocker_patch_namespace",
+                "fixture:mocker_patch_namespace",
+            ):
+                return "mocker_patch"
+            if callable_origin in (
+                "mocker_patch_object",
+                "fixture:mocker_patch_object",
+            ):
+                return "mocker_patch_object"
+            return callable_origin
+        if not isinstance(node.func, ast.Attribute):
+            return None
+        receiver = expression_origin(node.func.value, state)
+        if monkeypatch_origin(receiver):
+            if node.func.attr in ("setattr", "set_attribute"):
+                return "monkeypatch_setattr"
+            if node.func.attr == "setitem":
+                return "monkeypatch_setitem"
+            if node.func.attr == "context":
+                return "monkeypatch_context"
+            if node.func.attr == "undo":
+                return "monkeypatch_undo"
+        if mocker_origin(receiver) and node.func.attr == "patch":
+            return "mocker_patch"
+        if (
+            receiver
+            in ("mocker_patch_namespace", "fixture:mocker_patch_namespace")
+            and node.func.attr == "object"
+        ):
+            return "mocker_patch_object"
+        return None
+
+    def scan_expression(
+        node: ast.AST,
+        state: dict[str, str],
+        active_contexts: dict[str, ast.With | ast.AsyncWith] | None = None,
+    ) -> None:
+        for candidate in ast.walk(node):
+            if not isinstance(candidate, ast.Call):
+                continue
+            prior_values = facts.call_value_environments.get(id(candidate))
+            facts.call_value_environments[id(candidate)] = (
+                dict(state)
+                if prior_values is None
+                else merge([prior_values, state])
+            )
+            facts.call_argument_origins[id(candidate)] = (
+                tuple(
+                    expression_origin(
+                        argument.value if isinstance(argument, ast.Starred) else argument,
+                        state,
+                    )
+                    for argument in candidate.args
+                ),
+                tuple(
+                    (keyword.arg, expression_origin(keyword.value, state))
+                    for keyword in candidate.keywords
+                ),
+            )
+            kind = classify_call(candidate, state)
+            if kind is None:
+                continue
+            facts.call_kinds[id(candidate)] = kind
+            if isinstance(candidate.func, ast.Attribute):
+                receiver_origin = expression_origin(
+                    candidate.func.value, state
+                )
+                if receiver_origin is not None:
+                    facts.call_receiver_origins[id(candidate)] = (
+                        receiver_origin
+                    )
+            dependency = fixture_receiver_for_call(candidate, state)
+            if dependency is not None:
+                facts.call_fixture_receivers[id(candidate)] = dependency
+            if kind in ("monkeypatch_setattr", "monkeypatch_setitem"):
+                receiver = (
+                    expression_origin(candidate.func.value, state)
+                    if isinstance(candidate.func, ast.Attribute)
+                    else None
+                )
+                context = (active_contexts or {}).get(receiver or "")
+                if context is not None:
+                    facts.call_contexts[id(candidate)] = context
+
+    def bind_target(
+        target: ast.AST, origin: str | None, state: dict[str, str]
+    ) -> None:
+        if isinstance(target, (ast.Name, ast.arg)):
+            name = target.id if isinstance(target, ast.Name) else target.arg
+            if origin is None:
+                state.pop(name, None)
+            else:
+                state[name] = origin
+            return
+        if isinstance(target, (ast.Tuple, ast.List)):
+            for element in target.elts:
+                bind_target(element, None, state)
+
+    def bind_assignment(
+        target: ast.AST, value: ast.AST, state: dict[str, str]
+    ) -> None:
+        """Propagate API origins through statically paired unpacking."""
+        if (
+            isinstance(target, (ast.Tuple, ast.List))
+            and isinstance(value, (ast.Tuple, ast.List))
+            and len(target.elts) == len(value.elts)
+        ):
+            for target_element, value_element in zip(
+                target.elts, value.elts
+            ):
+                bind_assignment(target_element, value_element, state)
+            return
+        bind_target(target, expression_origin(value, state), state)
+
+    def merge(states: list[dict[str, str]]) -> dict[str, str]:
+        if not states:
+            return {}
+        return {
+            name: origin
+            for name, origin in states[0].items()
+            if all(other.get(name) == origin for other in states[1:])
+        }
+
+    def process(
+        statements: list[ast.stmt],
+        incoming: dict[str, str],
+        active_contexts: dict[str, ast.With | ast.AsyncWith] | None = None,
+    ) -> dict[str, str]:
+        current = dict(incoming)
+        for stmt in statements:
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                prior_definition = facts.definition_values.get(id(stmt))
+                facts.definition_values[id(stmt)] = (
+                    dict(current)
+                    if prior_definition is None
+                    else merge([prior_definition, current])
+                )
+                for decorator in stmt.decorator_list:
+                    scan_expression(decorator, current, active_contexts)
+                if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    for default in (*stmt.args.defaults, *stmt.args.kw_defaults):
+                        if default is not None:
+                            scan_expression(default, current, active_contexts)
+                current.pop(stmt.name, None)
+                continue
+            if isinstance(stmt, (ast.Import, ast.ImportFrom)):
+                for name, path in _import_bindings((stmt,), {}).items():
+                    origin = _CALLABLE_API_PATHS.get(path)
+                    if origin is None:
+                        current.pop(name, None)
+                    else:
+                        current[name] = origin
+                continue
+            if isinstance(stmt, ast.Assign):
+                scan_expression(stmt.value, current, active_contexts)
+                for target in stmt.targets:
+                    scan_expression(target, current, active_contexts)
+                if isinstance(stmt.value, ast.NamedExpr):
+                    bind_target(
+                        stmt.value.target,
+                        expression_origin(stmt.value.value, current),
+                        current,
+                    )
+                for target in stmt.targets:
+                    bind_assignment(target, stmt.value, current)
+                continue
+            if isinstance(stmt, ast.AnnAssign):
+                scan_expression(stmt.target, current, active_contexts)
+                if stmt.value is not None:
+                    scan_expression(stmt.value, current, active_contexts)
+                    origin = expression_origin(stmt.value, current)
+                else:
+                    origin = None
+                bind_target(stmt.target, origin, current)
+                continue
+            if isinstance(stmt, ast.AugAssign):
+                scan_expression(stmt.target, current, active_contexts)
+                scan_expression(stmt.value, current, active_contexts)
+                bind_target(stmt.target, None, current)
+                continue
+            if isinstance(stmt, ast.Delete):
+                for target in stmt.targets:
+                    scan_expression(target, current, active_contexts)
+                    bind_target(target, None, current)
+                continue
+            if isinstance(stmt, ast.If):
+                scan_expression(stmt.test, current, active_contexts)
+                if isinstance(stmt.test, ast.NamedExpr):
+                    bind_target(
+                        stmt.test.target,
+                        expression_origin(stmt.test.value, current),
+                        current,
+                    )
+                truth = _static_truth(stmt.test)
+                if truth is True:
+                    current = process(stmt.body, current, active_contexts)
+                elif truth is False:
+                    current = process(stmt.orelse, current, active_contexts)
+                else:
+                    current = merge(
+                        [
+                            process(stmt.body, current, active_contexts),
+                            process(stmt.orelse, current, active_contexts)
+                            if stmt.orelse
+                            else dict(current),
+                        ]
+                    )
+                continue
+            if isinstance(stmt, (ast.With, ast.AsyncWith)):
+                entered = dict(current)
+                entered_contexts = dict(active_contexts or {})
+                for item in stmt.items:
+                    scan_expression(item.context_expr, entered, active_contexts)
+                    origin = expression_origin(item.context_expr, entered)
+                    bind_target(item.optional_vars, origin, entered)
+                    if (
+                        origin is not None
+                        and (
+                            origin.startswith("monkeypatch_context:")
+                            or origin.startswith("fixture:monkeypatch_context:")
+                        )
+                    ):
+                        entered_contexts[origin] = stmt
+                current = process(
+                    stmt.body,
+                    entered,
+                    entered_contexts,
+                )
+                continue
+            if isinstance(stmt, (ast.For, ast.AsyncFor, ast.While)):
+                if isinstance(stmt, (ast.For, ast.AsyncFor)):
+                    scan_expression(stmt.iter, current, active_contexts)
+                    entered = dict(current)
+                    bind_target(stmt.target, None, entered)
+                else:
+                    scan_expression(stmt.test, current, active_contexts)
+                    if isinstance(stmt.test, ast.NamedExpr):
+                        bind_target(
+                            stmt.test.target,
+                            expression_origin(stmt.test.value, current),
+                            current,
+                        )
+                    entered = dict(current)
+                body_end = process(stmt.body, entered, active_contexts)
+                current = merge([current, body_end])
+                current = process(stmt.orelse, current, active_contexts)
+                continue
+            if isinstance(stmt, (ast.Try, ast.TryStar)):
+                normal = process(stmt.body, current, active_contexts)
+                normal = process(stmt.orelse, normal, active_contexts)
+                paths = [normal]
+                for handler in stmt.handlers:
+                    handler_state = dict(current)
+                    if handler.name:
+                        handler_state.pop(handler.name, None)
+                    paths.append(
+                        process(handler.body, handler_state, active_contexts)
+                    )
+                current = process(
+                    stmt.finalbody, merge(paths), active_contexts
+                )
+                continue
+            if isinstance(stmt, ast.Match):
+                scan_expression(stmt.subject, current, active_contexts)
+                paths = [dict(current)]
+                for case in stmt.cases:
+                    paths.append(
+                        process(case.body, current, active_contexts)
+                    )
+                current = merge(paths)
+                continue
+            scan_expression(stmt, current, active_contexts)
+            if (
+                isinstance(stmt, ast.Expr)
+                and isinstance(stmt.value, ast.NamedExpr)
+            ):
+                bind_target(
+                    stmt.value.target,
+                    expression_origin(stmt.value.value, current),
+                    current,
+                )
+        return current
+
+    if isinstance(root, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        for decorator in root.decorator_list:
+            scan_expression(decorator, definition_environment)
+        for default in (*root.args.defaults, *root.args.kw_defaults):
+            if default is not None:
+                scan_expression(default, definition_environment)
+        # Defaults execute in the enclosing definition-time environment, but
+        # their resulting objects are the parameter values seen by the body.
+        # Carry only exact supported API origins; ordinary/defaulted fixture
+        # lookalikes remain unknown.
+        runtime_values = dict(values)
+        positional = root.args.posonlyargs + root.args.args
+        for argument, default in zip(
+            positional[-len(root.args.defaults) :], root.args.defaults
+        ):
+            bind_target(
+                argument,
+                expression_origin(default, definition_environment),
+                runtime_values,
+            )
+        for argument, default in zip(
+            root.args.kwonlyargs, root.args.kw_defaults
+        ):
+            if default is not None:
+                bind_target(
+                    argument,
+                    expression_origin(default, definition_environment),
+                    runtime_values,
+                )
+        for parameter, origin in (parameter_values or {}).items():
+            if origin is None:
+                runtime_values.pop(parameter, None)
+            else:
+                runtime_values[parameter] = origin
+        values = runtime_values
+    if isinstance(root, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        facts.final_values = process(root.body, values)
+    elif isinstance(root, ast.stmt):
+        facts.final_values = process([root], values)
+    else:
+        scan_expression(root, values)
+        facts.final_values = dict(values)
+    return facts
+
+
+def _patch_call_target(
+    node: ast.Call, dotted: str | None
+) -> tuple[str, str] | None:
+    """The frozen IR-v1 patch spelling, retained byte-for-byte in spirit.
+
+    Rich stand-in analysis lives beside this helper.  `UnitSide.patches` and
+    TEST_PATCHES_SUBJECT allowlist fingerprints historically used this local
+    spelling, so canonicalising it would be an unannounced schema/identity
+    migration.
     """
     if not dotted or not node.args:
         return None
     parts = dotted.split(".")
     tail = parts[-1]
     if tail in _PATCH_CALLS:
-        if len(parts) < 2:  # the builtin, not a patcher
+        if len(parts) < 2:
             return None
     elif tail == "object":
         if len(parts) < 2 or parts[-2] != "patch":
@@ -3057,14 +5947,11 @@ def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | 
     elif tail != "patch":
         return None
 
-    # Which form this is depends on the first argument, not on the arity:
-    # `monkeypatch.setattr("pkg.mod.attr", v)` and
-    # `monkeypatch.setattr(mod, "attr", v)` are both three-argument calls.
     first = node.args[0]
     if isinstance(first, ast.Constant) and isinstance(first.value, str):
         target = first.value
         if "." not in target:
-            return None  # unqualified: neither a module nor an attribute
+            return None
         return (target, target.rsplit(".", 1)[1])
     if len(node.args) < 2:
         return None
@@ -3077,14 +5964,2462 @@ def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | 
     return (f"{base}.{attr.value}", attr.value)
 
 
-def conftest_patch_targets(data: bytes, first_party: frozenset[str]) -> list[str]:
-    """`monkeypatch.setattr(...)` calls in a conftest aimed at first-party code.
+_STANDIN_RAW_CALL_RE = re.compile(
+    # Bare tokens intentionally include import declarations: once
+    # ``patch``/``setitem`` is imported as an arbitrary alias, source text at
+    # the call site no longer contains the original verb. False positives
+    # only enable the structured pass; omitting the import token would turn
+    # the raw performance gate into a detection boundary.
+    r"(?:\b(?:setattr|setitem|set_attribute|vars|patch)\b|"
+    r"\bsys\s*\.\s*modules\b|__dict__)"
+)
+# Broad on purpose: this is only an enable gate. Matching every genuine
+# assignment, including a parenthesised target split across lines, is more
+# important than avoiding harmless structured passes for defaults/keywords.
+_STANDIN_RAW_ASSIGN_RE = re.compile(r"(?::=|(?<![=!<>:])=(?!=))")
+_SCOPE_IMPORT_FLOW_RE = re.compile(
+    r"\b(?:del|for|with|except|match|case|global|nonlocal)\b|"
+    r"(?::=|(?:\*\*|//|<<|>>|[+\-*/%@&|^])=)"
+)
 
-    A fixture that swaps the module under test for an adapter makes every
-    assertion in the suite check the stand-in, with production and test files
-    both byte-identical — a real agent escaped exactly this way (decoy probe
-    arm 2026-08-04). Third-party and stdlib targets (faking time, network,
-    env) are normal hygiene and are not reported.
+
+def _raw_may_contain_standin(raw: str) -> bool:
+    """Source-only conservative gate for the expensive lifetime passes.
+
+    It runs before AST parsing.  Calls/mappings have distinctive tokens;
+    direct attribute, unpacking, and imported-name assignments take the
+    assignment arm.  A false positive only enables the structured pass, while
+    the intentionally broad assignment pattern keeps false negatives out of
+    the security boundary.
+    """
+    return bool(
+        _STANDIN_RAW_CALL_RE.search(raw)
+        or ("=" in raw and _STANDIN_RAW_ASSIGN_RE.search(raw))
+    )
+
+
+def _raw_unit_may_contain_standin(
+    raw: str,
+    imports: dict[str, str],
+    assigned_call_aliases: Collection[str] = (),
+) -> bool:
+    """Raw unit gate, including verbs imported under arbitrary aliases."""
+    if _raw_may_contain_standin(raw):
+        return True
+    aliases = set(assigned_call_aliases) | {
+        local
+        for local, target in imports.items()
+        if target.rsplit(".", 1)[-1]
+        in {*_SETATTR_CALLS, "setitem", "patch"}
+    }
+    # Do not reproduce Python's callable grammar in this performance gate.
+    # Parenthesisation and explicit continuation admit indefinitely many
+    # equivalent spellings; seeing a known imported verb anywhere in the
+    # unit is the conservative proof that the structured AST pass is needed.
+    # A false positive only costs that pass, while a false negative suppresses
+    # the finding altogether.
+    return any(
+        re.search(rf"\b{re.escape(alias)}\b", raw)
+        for alias in aliases
+    )
+
+
+def _scope_needs_import_environments(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    raw: str,
+    base: dict[str, str],
+) -> bool:
+    """Conservative raw gate for the assertion-position import walk."""
+    if re.search(r"\b(?:from|import)\b", raw):
+        return True
+    if not base:
+        return False
+    args = func.args
+    parameters = {
+        arg.arg
+        for arg in (
+            args.posonlyargs
+            + args.args
+            + args.kwonlyargs
+            + ([args.vararg] if args.vararg is not None else [])
+            + ([args.kwarg] if args.kwarg is not None else [])
+        )
+    }
+    if parameters.intersection(base):
+        return True
+    if _SCOPE_IMPORT_FLOW_RE.search(raw):
+        return True
+    # A nested definition binds its name in this lexical scope. Match only
+    # imported names, so the root test definition itself stays on the fast
+    # path and ordinary helpers do not defeat the gate.
+    return any(
+        re.search(
+            rf"\b(?:async\s+def|def|class)\s+{re.escape(name)}\b",
+            raw,
+        )
+        for name in base
+    )
+
+
+def _standin_import_bindings(tree: ast.Module) -> dict[str, str]:
+    """Definitely live module import locals -> canonical targets."""
+    _environments, final = _scope_import_environments(tree, {})
+    return final
+
+
+def _import_bindings(
+    nodes, base: dict[str, str] | None = None
+) -> dict[str, str]:
+    out: dict[str, str] = dict(base or {})
+    for stmt in nodes:
+        if isinstance(stmt, ast.Import):
+            for alias in stmt.names:
+                local = alias.asname or alias.name.split(".", 1)[0]
+                out[local] = alias.name if alias.asname else local
+        elif isinstance(stmt, ast.ImportFrom):
+            module = "." * stmt.level + (stmt.module or "")
+            for alias in stmt.names:
+                if alias.name == "*":
+                    continue
+                local = alias.asname or alias.name
+                if stmt.module:
+                    out[local] = f"{module}.{alias.name}"
+                else:
+                    out[local] = f"{module}{alias.name}"
+    return {name: out[name] for name in sorted(out)}
+
+
+def _scope_import_bindings(
+    root: ast.AST, base: dict[str, str]
+) -> dict[str, str]:
+    _environments, final = _scope_import_environments(root, base)
+    return final
+
+
+def _bound_target_names(target: ast.AST | None) -> set[str]:
+    if isinstance(target, ast.Name):
+        return {target.id}
+    if isinstance(target, ast.Starred):
+        return _bound_target_names(target.value)
+    if isinstance(target, (ast.Tuple, ast.List)):
+        return {
+            name
+            for element in target.elts
+            for name in _bound_target_names(element)
+        }
+    return set()
+
+
+def _pattern_bound_names(pattern: ast.AST) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(pattern):
+        if isinstance(node, ast.MatchAs) and node.name:
+            names.add(node.name)
+        elif isinstance(node, ast.MatchStar) and node.name:
+            names.add(node.name)
+        elif isinstance(node, ast.MatchMapping) and node.rest:
+            names.add(node.rest)
+    return names
+
+
+def _lexical_scope_names(root: ast.AST) -> tuple[set[str], set[str], set[str]]:
+    """(locals, globals, nonlocals) for one Python lexical scope."""
+    local: set[str] = set()
+    global_names: set[str] = set()
+    nonlocal_names: set[str] = set()
+    if isinstance(root, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+        args = root.args
+        local.update(
+            arg.arg
+            for arg in (
+                args.posonlyargs
+                + args.args
+                + args.kwonlyargs
+                + ([args.vararg] if args.vararg is not None else [])
+                + ([args.kwarg] if args.kwarg is not None else [])
+            )
+        )
+
+    def visit(node: ast.AST, *, is_root: bool = False) -> None:
+        if not is_root and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            local.add(node.name)
+            return
+        if not is_root and isinstance(node, ast.Lambda):
+            return
+        if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            # Comprehension targets live in their implicit scope.  NamedExpr
+            # leakage is a deliberately conservative residual.
+            return
+        if isinstance(node, ast.Global):
+            global_names.update(node.names)
+            return
+        if isinstance(node, ast.Nonlocal):
+            nonlocal_names.update(node.names)
+            return
+        if isinstance(node, ast.Import):
+            local.update(alias.asname or alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            local.update(
+                alias.asname or alias.name
+                for alias in node.names
+                if alias.name != "*"
+            )
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            local.add(node.name)
+        elif isinstance(node, ast.Match):
+            for case in node.cases:
+                local.update(_pattern_bound_names(case.pattern))
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            local.add(node.id)
+        for child in ast.iter_child_nodes(node):
+            visit(child)
+
+    visit(root, is_root=True)
+    local.difference_update(global_names | nonlocal_names)
+    return local, global_names, nonlocal_names
+
+
+def _scope_import_environments(
+    root: ast.AST,
+    base: dict[str, str],
+    *,
+    definition_base: dict[str, str] | None = None,
+) -> tuple[dict[int, dict[str, str]], dict[str, str]]:
+    """Import bindings at each executable node and after the scope.
+
+    Python makes every assigned/imported function name lexical from entry, but
+    the value bound to it still changes in statement order.  The per-node map
+    is therefore required: a parameter/local assignment must not borrow a
+    module import, while an import followed by a live oracle must remain
+    visible even if an unrelated rebind occurs later.  Unknown branches merge
+    only bindings identical on every path, failing toward silence.
+    """
+    environments: dict[int, dict[str, str]] = {}
+    outer = dict(base if definition_base is None else definition_base)
+    initial = dict(base)
+    local, _globals, nonlocals = _lexical_scope_names(root)
+    if isinstance(root, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+        for name in local | nonlocals:
+            initial.pop(name, None)
+
+    def stamp(node: ast.AST, env: dict[str, str]) -> None:
+        environments[id(node)] = dict(env)
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                continue
+            stamp(child, env)
+
+    def merge(paths: list[dict[str, str]]) -> dict[str, str]:
+        if not paths:
+            return {}
+        return {
+            name: value
+            for name, value in paths[0].items()
+            if all(path.get(name) == value for path in paths[1:])
+        }
+
+    def drop(env: dict[str, str], names: set[str]) -> dict[str, str]:
+        out = dict(env)
+        for name in names:
+            out.pop(name, None)
+        return out
+
+    if isinstance(root, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        # Decorators and defaults execute in the enclosing scope before the
+        # function's lexical locals exist. A later local named ``mock`` must
+        # not make an already-evaluated ``@mock.patch`` disappear.
+        for decorator in root.decorator_list:
+            stamp(decorator, outer)
+        for value in (*root.args.defaults, *root.args.kw_defaults):
+            if value is not None:
+                stamp(value, outer)
+
+    def process(statements, incoming: dict[str, str]) -> dict[str, str]:
+        current = dict(incoming)
+        for stmt in statements:
+            environments[id(stmt)] = dict(current)
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                for decorator in stmt.decorator_list:
+                    stamp(decorator, current)
+                if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    for value in (*stmt.args.defaults, *stmt.args.kw_defaults):
+                        if value is not None:
+                            stamp(value, current)
+                current.pop(stmt.name, None)
+                continue
+
+            stamp(stmt, current)
+            if isinstance(stmt, (ast.Import, ast.ImportFrom)):
+                current = _import_bindings((stmt,), current)
+            elif isinstance(stmt, ast.Assign):
+                current = drop(
+                    current,
+                    {
+                        name
+                        for target in stmt.targets
+                        for name in _bound_target_names(target)
+                    },
+                )
+            elif isinstance(stmt, (ast.AnnAssign, ast.AugAssign)):
+                current = drop(current, _bound_target_names(stmt.target))
+            elif isinstance(stmt, ast.Delete):
+                current = drop(
+                    current,
+                    {name for target in stmt.targets for name in _bound_target_names(target)},
+                )
+            elif isinstance(stmt, ast.If):
+                truth = _static_truth(stmt.test)
+                if truth is True:
+                    current = process(stmt.body, current)
+                elif truth is False:
+                    current = process(stmt.orelse, current)
+                else:
+                    current = merge(
+                        [
+                            process(stmt.body, dict(current)),
+                            process(stmt.orelse, dict(current)) if stmt.orelse else dict(current),
+                        ]
+                    )
+            elif isinstance(stmt, (ast.For, ast.AsyncFor)):
+                entered = drop(current, _bound_target_names(stmt.target))
+                body_end = process(stmt.body, entered)
+                current = merge([current, body_end])
+                current = process(stmt.orelse, current)
+            elif isinstance(stmt, ast.While):
+                body_end = process(stmt.body, dict(current))
+                current = merge([current, body_end])
+                current = process(stmt.orelse, current)
+            elif isinstance(stmt, (ast.With, ast.AsyncWith)):
+                entered = dict(current)
+                for item in stmt.items:
+                    entered = drop(entered, _bound_target_names(item.optional_vars))
+                current = process(stmt.body, entered)
+            elif isinstance(stmt, (ast.Try, ast.TryStar)):
+                normal = process(stmt.body, dict(current))
+                normal = process(stmt.orelse, normal)
+                paths = [normal]
+                for handler in stmt.handlers:
+                    handler_env = dict(current)
+                    if handler.name:
+                        handler_env.pop(handler.name, None)
+                    handler_end = process(handler.body, handler_env)
+                    if handler.name:
+                        handler_end.pop(handler.name, None)
+                    paths.append(handler_end)
+                current = process(stmt.finalbody, merge(paths))
+            elif isinstance(stmt, ast.Match):
+                paths = [dict(current)]
+                for case in stmt.cases:
+                    case_env = drop(current, _pattern_bound_names(case.pattern))
+                    paths.append(process(case.body, case_env))
+                current = merge(paths)
+
+            # Assignment expressions bind for following statements.  Their
+            # within-expression evaluation order is left as a conservative
+            # residual; removing the import avoids a false ownership claim.
+            named = {
+                child.target.id
+                for child in ast.walk(stmt)
+                if isinstance(child, ast.NamedExpr)
+                and isinstance(child.target, ast.Name)
+            }
+            if named:
+                current = drop(current, named)
+        return {name: current[name] for name in sorted(current)}
+
+    if isinstance(
+        root,
+        (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+    ):
+        body = root.body
+    elif isinstance(root, ast.stmt):
+        # Class-body collection passes an individual compound member here.
+        # Treating ``If.body`` as a whole scope silently discarded its live
+        # ``else`` (and likewise Try handlers / Match cases).  Process the
+        # compound statement itself so its ordinary branch semantics apply.
+        body = [root]
+    else:
+        stamp(root, initial)
+        body = []
+    final = process(body, initial)
+    environments[id(root)] = dict(initial)
+    return environments, final
+
+
+def _native_import_rows(
+    stmt: ast.Import | ast.ImportFrom,
+    *,
+    include_dotted: bool = False,
+) -> dict[str, tuple[str, str, str, int, int]]:
+    """Bindings established by one runtime native import statement.
+
+    ``binding`` mirrors the canonical import map while ``loaded`` records the
+    module Python must freshly resolve. Dotted ``import app.billing`` is not
+    positive evidence here: a stale ``app.billing`` attribute on the already
+    imported parent package can win even after ``sys.modules['app.billing']``
+    changes. ``from app.billing import name`` is narrow enough because its
+    source module itself is the replaced entry; ``from app import billing``
+    intentionally records only ``app`` and therefore does not claim the child
+    replacement reached the binding.
+    """
+    position = (
+        getattr(stmt, "lineno", 0) or 0,
+        getattr(stmt, "col_offset", 0) or 0,
+    )
+    canonical = _import_bindings((stmt,), {})
+    rows: dict[str, tuple[str, str, str, int, int]] = {}
+    if isinstance(stmt, ast.Import):
+        for alias in stmt.names:
+            if "." in alias.name and not include_dotted:
+                continue
+            local = alias.asname or alias.name.split(".", 1)[0]
+            binding = canonical.get(local)
+            if binding is not None:
+                rows[local] = (
+                    local,
+                    binding,
+                    alias.name,
+                    *position,
+                )
+    else:
+        for alias in stmt.names:
+            if alias.name == "*":
+                continue
+            local = alias.asname or alias.name
+            binding = canonical.get(local)
+            if binding is not None:
+                source_module = ("." * stmt.level) + (stmt.module or "")
+                if not source_module:
+                    continue
+                rows[local] = (
+                    local,
+                    binding,
+                    source_module,
+                    *position,
+                )
+    return rows
+
+
+def _scope_runtime_import_environments(
+    root: ast.Module | ast.FunctionDef | ast.AsyncFunctionDef,
+    imports: dict[str, str] | None = None,
+    import_environments: dict[int, dict[str, str]] | None = None,
+    *,
+    include_dotted: bool = False,
+    initial_rows: tuple[
+        tuple[str, str, str, int, int], ...
+    ] = (),
+) -> dict[int, tuple[tuple[str, str, str, int, int], ...]]:
+    """Definitely fresh function-local imports at each AST position.
+
+    Module imports deliberately do not seed this map: they ran during
+    collection and therefore cannot prove that a later fixture/test-body
+    ``sys.modules`` swap affects the oracle. Unknown control-flow joins retain
+    a row only when every path has the same fresh origin.  A literal
+    ``importlib.import_module``/``sys.modules[...]`` assignment is also a
+    fresh capture; its empty ``binding`` field means liveness is carried by
+    this flow map rather than by the ordinary import environment. The module
+    origin pass reuses this walker with ``include_dotted=True`` and reads only
+    its final, non-empty native binding rows.
+    """
+    environments: dict[
+        int, tuple[tuple[str, str, str, int, int], ...]
+    ] = {}
+
+    def freeze(rows: dict[str, tuple[str, str, str, int, int]]):
+        return tuple(rows[name] for name in sorted(rows))
+
+    def stamp(
+        node: ast.AST,
+        rows: dict[str, tuple[str, str, str, int, int]],
+    ) -> None:
+        environments[id(node)] = freeze(rows)
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child,
+                (
+                    ast.FunctionDef,
+                    ast.AsyncFunctionDef,
+                    ast.ClassDef,
+                    ast.Lambda,
+                ),
+            ):
+                continue
+            stamp(child, rows)
+
+    def merge(
+        paths: list[dict[str, tuple[str, str, str, int, int]]],
+    ) -> dict[str, tuple[str, str, str, int, int]]:
+        if not paths:
+            return {}
+        return {
+            name: row
+            for name, row in paths[0].items()
+            if all(path.get(name) == row for path in paths[1:])
+        }
+
+    def drop(
+        rows: dict[str, tuple[str, str, str, int, int]],
+        names: set[str],
+    ) -> dict[str, tuple[str, str, str, int, int]]:
+        kept = dict(rows)
+        for name in names:
+            kept.pop(name, None)
+        return kept
+
+    def process(
+        statements: list[ast.stmt],
+        incoming: dict[str, tuple[str, str, str, int, int]],
+        conditional: bool = False,
+    ) -> dict[str, tuple[str, str, str, int, int]]:
+        current = dict(incoming)
+        for stmt in statements:
+            environments[id(stmt)] = freeze(current)
+            if isinstance(
+                stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                current.pop(stmt.name, None)
+                continue
+            stamp(stmt, current)
+            if isinstance(stmt, (ast.Import, ast.ImportFrom)):
+                # A conditional re-import invalidates an earlier definite
+                # origin even when it cannot contribute a new definite row.
+                # Dropping every Python binding also covers dotted imports,
+                # which runtime sys.modules evidence intentionally omits.
+                current = drop(
+                    current,
+                    set(_import_bindings((stmt,), {})),
+                )
+                if not conditional:
+                    current.update(
+                        _native_import_rows(
+                            stmt,
+                            include_dotted=include_dotted,
+                        )
+                    )
+            elif isinstance(stmt, ast.Assign):
+                assigned = {
+                    name
+                    for target in stmt.targets
+                    for name in _bound_target_names(target)
+                }
+                propagated = (
+                    current.get(stmt.value.id)
+                    if isinstance(stmt.value, ast.Name)
+                    else None
+                )
+                loaded = None
+                if isinstance(stmt.value, (ast.Call, ast.Subscript)):
+                    loaded = _resolved_module_expr(
+                        stmt.value,
+                        _imports_at(
+                            stmt,
+                            imports or {},
+                            import_environments,
+                        ),
+                    )
+                current = drop(current, assigned)
+                if not conditional and (propagated is not None or loaded):
+                    position = (
+                        getattr(stmt.value, "lineno", 0) or 0,
+                        getattr(stmt.value, "col_offset", 0) or 0,
+                    )
+                    for name in assigned:
+                        current[name] = (
+                            (name, "", loaded, *position)
+                            if loaded is not None
+                            else (name, *propagated[1:])
+                        )
+            elif isinstance(stmt, (ast.AnnAssign, ast.AugAssign)):
+                assigned = _bound_target_names(stmt.target)
+                propagated = (
+                    current.get(stmt.value.id)
+                    if isinstance(stmt, ast.AnnAssign)
+                    and isinstance(stmt.value, ast.Name)
+                    else None
+                )
+                loaded = None
+                if (
+                    isinstance(stmt, ast.AnnAssign)
+                    and isinstance(stmt.value, (ast.Call, ast.Subscript))
+                ):
+                    loaded = _resolved_module_expr(
+                        stmt.value,
+                        _imports_at(
+                            stmt,
+                            imports or {},
+                            import_environments,
+                        ),
+                    )
+                current = drop(current, assigned)
+                if not conditional and (propagated is not None or loaded):
+                    position_node = stmt.value
+                    position = (
+                        getattr(position_node, "lineno", 0) or 0,
+                        getattr(position_node, "col_offset", 0) or 0,
+                    )
+                    for name in assigned:
+                        current[name] = (
+                            (name, "", loaded, *position)
+                            if loaded is not None
+                            else (name, *propagated[1:])
+                        )
+            elif isinstance(stmt, ast.Delete):
+                current = drop(
+                    current,
+                    {
+                        name
+                        for target in stmt.targets
+                        for name in _bound_target_names(target)
+                    },
+                )
+            elif isinstance(stmt, ast.If):
+                truth = _static_truth(stmt.test)
+                if truth is True:
+                    current = process(stmt.body, current, conditional)
+                elif truth is False:
+                    current = process(stmt.orelse, current, conditional)
+                else:
+                    current = merge(
+                        [
+                            process(stmt.body, dict(current), True),
+                            (
+                                process(stmt.orelse, dict(current), True)
+                                if stmt.orelse
+                                else dict(current)
+                            ),
+                        ]
+                    )
+            elif isinstance(stmt, (ast.For, ast.AsyncFor)):
+                entered = drop(current, _bound_target_names(stmt.target))
+                body_end = process(stmt.body, entered, True)
+                current = merge([current, body_end])
+                current = process(stmt.orelse, current, True)
+            elif isinstance(stmt, ast.While):
+                body_end = process(stmt.body, dict(current), True)
+                current = merge([current, body_end])
+                current = process(stmt.orelse, current, True)
+            elif isinstance(stmt, (ast.With, ast.AsyncWith)):
+                entered = dict(current)
+                for item in stmt.items:
+                    entered = drop(
+                        entered, _bound_target_names(item.optional_vars)
+                    )
+                current = process(stmt.body, entered, conditional)
+            elif isinstance(stmt, (ast.Try, ast.TryStar)):
+                normal = process(stmt.body, dict(current), True)
+                normal = process(stmt.orelse, normal, True)
+                paths = [normal]
+                for handler in stmt.handlers:
+                    handler_env = dict(current)
+                    if handler.name:
+                        handler_env.pop(handler.name, None)
+                    handler_end = process(handler.body, handler_env, True)
+                    if handler.name:
+                        handler_end.pop(handler.name, None)
+                    paths.append(handler_end)
+                current = process(
+                    stmt.finalbody, merge(paths), conditional
+                )
+            elif isinstance(stmt, ast.Match):
+                paths = [dict(current)]
+                for case in stmt.cases:
+                    case_env = drop(
+                        current, _pattern_bound_names(case.pattern)
+                    )
+                    paths.append(process(case.body, case_env, True))
+                current = merge(paths)
+
+            named = {
+                child.target.id
+                for child in ast.walk(stmt)
+                if isinstance(child, ast.NamedExpr)
+                and isinstance(child.target, ast.Name)
+            }
+            if named:
+                current = drop(current, named)
+        return current
+
+    initial = {row[0]: row for row in initial_rows}
+    if isinstance(root, (ast.FunctionDef, ast.AsyncFunctionDef)) and initial:
+        local, globals_, _nonlocals = _lexical_scope_names(root)
+        initial = drop(initial, local | globals_)
+    final = process(root.body, initial)
+    # Function callers need the entry state at the root; module-origin
+    # collection uses the same flow walker and reads its final state here.
+    environments[id(root)] = (
+        freeze(final) if isinstance(root, ast.Module) else freeze(initial)
+    )
+    return environments
+
+
+def _module_native_import_origins(
+    tree: ast.Module,
+    live_imports: Mapping[str, str],
+) -> tuple[tuple[str, str, str, int, int], ...]:
+    """Final definite collection-time native import origins.
+
+    Canonical import liveness and origin provenance intentionally remain two
+    checks.  The shared control-flow walker supplies the exact statement that
+    established a binding; the ordinary module import map rejects propagated
+    aliases and any later assignment/delete that stopped being an import.
+    """
+    if not live_imports:
+        return ()
+    environments = _scope_runtime_import_environments(
+        tree,
+        dict(live_imports),
+        include_dotted=True,
+    )
+    return tuple(
+        row
+        for row in environments.get(id(tree), ())
+        if row[1] and live_imports.get(row[0]) == row[1]
+    )
+
+
+def _visible_module_import_origins(
+    origins: tuple[tuple[str, str, str, int, int], ...],
+    live_imports: Mapping[str, str],
+    runtime_imports: tuple[tuple[str, str, str, int, int], ...],
+) -> tuple[tuple[str, str, str, int, int], ...]:
+    """Collection-time origins still visible at one function oracle.
+
+    The canonical per-node environment removes lexical shadows and ordinary
+    rebindings.  A same-spelled function-local import can leave that canonical
+    target unchanged, so its separate runtime provenance must explicitly
+    displace the collection-time row.
+    """
+    runtime_locals = {row[0] for row in runtime_imports}
+    return tuple(
+        row
+        for row in origins
+        if row[0] not in runtime_locals
+        and live_imports.get(row[0]) == row[1]
+    )
+
+
+def _module_local_bindings(
+    tree: ast.Module,
+    definition_imports: dict[int, dict[str, str]] | None = None,
+) -> dict[str, str]:
+    """Final straight-line module bindings that are not imports.
+
+    The value is a canonical provider when the assignment is tied to an
+    imported object, ``"<fixture>"`` for a same-file fixture definition, and
+    otherwise ``""``.  This small internal channel lets the
+    aligned sides distinguish ``from app import f`` from a later ``f = fake``
+    even when the import line itself was removed. Statically chosen branches
+    participate; path-dependent writes stay out so uncertainty cannot become
+    positive ownership proof.
+    """
+    environments, imports = _scope_import_environments(tree, {})
+    local: dict[str, str] = {}
+
+    def bind(target: ast.AST, value: ast.AST | None, env: dict[str, str]) -> None:
+        if (
+            isinstance(target, (ast.Tuple, ast.List))
+            and isinstance(value, (ast.Tuple, ast.List))
+            and len(target.elts) == len(value.elts)
+        ):
+            for target_element, value_element in zip(target.elts, value.elts):
+                bind(target_element, value_element, env)
+            return
+        provider = _resolved_value_identity(value, env) if value is not None else None
+        for name in _bound_target_names(target):
+            local[name] = provider or ""
+
+    for stmt in _definite_module_statements(tree.body):
+        env = _imports_at(stmt, imports, environments)
+        if isinstance(stmt, (ast.Import, ast.ImportFrom)):
+            for name in _import_bindings((stmt,)):
+                local.pop(name, None)
+        elif isinstance(stmt, ast.Assign):
+            for target in stmt.targets:
+                bind(target, stmt.value, env)
+        elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None:
+            bind(stmt.target, stmt.value, env)
+        elif isinstance(stmt, ast.AugAssign):
+            bind(stmt.target, None, env)
+        elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            local[stmt.name] = ""
+        elif isinstance(stmt, ast.Delete):
+            for target in stmt.targets:
+                for name in _bound_target_names(target):
+                    local.pop(name, None)
+    # Pytest discovers fixture metadata on the final module attribute, not at
+    # the textual decorator alone.  Reuse the callable final-binding join so a
+    # later carrier rebind/import/delete revokes the proof, while a literal
+    # exported ``name=`` remains available even though it is not a Python
+    # module variable.
+    for carrier, node in _module_callable_scopes(tree).items():
+        exact = (definition_imports or {}).get(id(node))
+        fixture_name = _fixture_public_name(node, exact)
+        if fixture_name is None:
+            continue
+        local[fixture_name] = "<fixture>"
+        if fixture_name == carrier:
+            local[carrier] = "<fixture>"
+    return {name: local[name] for name in sorted(local)}
+
+
+def _definite_module_statements(statements):
+    """Module statements reached through only statically chosen branches."""
+    for stmt in statements:
+        yield stmt
+        if not isinstance(stmt, ast.If):
+            continue
+        truth = _static_truth(stmt.test)
+        if truth is True:
+            yield from _definite_module_statements(stmt.body)
+        elif truth is False:
+            yield from _definite_module_statements(stmt.orelse)
+
+
+def _module_imported_after_install(
+    tree: ast.Module, install: StandinInstall
+) -> bool:
+    """A definite module import follows a sys.modules replacement."""
+    for stmt in _definite_module_statements(tree.body):
+        position = (
+            getattr(stmt, "lineno", 0) or 0,
+            getattr(stmt, "col_offset", 0) or 0,
+        )
+        if position <= install.position:
+            continue
+        if isinstance(stmt, ast.Import) and any(
+            "." not in alias.name and alias.name == install.target
+            for alias in stmt.names
+        ):
+            return True
+        if isinstance(stmt, ast.ImportFrom):
+            source_module = ("." * stmt.level) + (stmt.module or "")
+            if source_module == install.target:
+                return True
+    return False
+
+
+def _string_literal(node: ast.AST | None) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _valid_module_target(value: str, *, allow_relative: bool = True) -> bool:
+    """Whether a canonical import/module target is structurally safe.
+
+    Python syntax already validates ordinary Import nodes; string-based patch
+    and importlib/sys.modules forms are attacker-controlled.  Reject slashes,
+    drives, traversal, empty components, and non-identifiers before a target
+    can be turned into a repository ownership path.
+    """
+    if not value or "\x00" in value or "/" in value or "\\" in value or ":" in value:
+        return False
+    stripped = value.lstrip(".")
+    if not stripped or (stripped != value and not allow_relative):
+        return False
+    return all(
+        part.isidentifier() and not keyword.iskeyword(part)
+        for part in stripped.split(".")
+    )
+
+
+def _live_import_path(node: ast.AST, imports: dict[str, str]) -> str | None:
+    """Resolve a dotted expression only through its live imported root.
+
+    ``_canonical_import_path`` deliberately preserves an unresolved spelling
+    for syntax families where a bare conventional name is useful.  Stand-in
+    ownership cannot use that fallback: a parameter or local named ``sys`` or
+    ``importlib`` is not the corresponding standard-library module.  The
+    position-keyed import environment is therefore positive evidence here.
+    """
+    dotted = _dotted(node)
+    if dotted is None:
+        return None
+    root, dot, suffix = dotted.partition(".")
+    source = imports.get(root)
+    if source is None:
+        return None
+    return source + (dot + suffix if dot else "")
+
+
+def _resolved_module_expr(node: ast.AST, imports: dict[str, str]) -> str | None:
+    """Resolve only expressions structurally tied to an imported module."""
+    dotted = _dotted(node)
+    if dotted:
+        if dotted == "request.module" or dotted.startswith("request.module."):
+            return dotted
+        root, dot, suffix = dotted.partition(".")
+        source = imports.get(root)
+        if source is not None:
+            resolved = source + (dot + suffix if dot else "")
+            return resolved if _valid_module_target(resolved) else None
+    if isinstance(node, ast.Call):
+        call = _live_import_path(node.func, imports)
+        if call == "importlib.import_module" and node.args:
+            literal = _string_literal(node.args[0])
+            return (
+                literal
+                if literal is not None and _valid_module_target(literal)
+                else None
+            )
+    if (
+        isinstance(node, ast.Subscript)
+        and _live_import_path(node.value, imports) == "sys.modules"
+    ):
+        literal = _string_literal(node.slice)
+        return (
+            literal
+            if literal is not None
+            and _valid_module_target(literal, allow_relative=False)
+            else None
+        )
+    return None
+
+
+def _mapping_module(
+    node: ast.AST,
+    imports: dict[str, str],
+    api_facts: _StandinApiFacts | None = None,
+) -> tuple[str, str] | None:
+    """Return (kind, module) for a supported module mapping expression."""
+    if _live_import_path(node, imports) == "sys.modules":
+        return ("module", "sys.modules")
+    if (
+        isinstance(node, ast.Call)
+        and _standin_call_kind(node, imports, api_facts) == "builtin_vars"
+        and node.args
+    ):
+        module = _resolved_module_expr(node.args[0], imports)
+        if module is not None:
+            return ("attribute", module)
+    if isinstance(node, ast.Attribute) and node.attr == "__dict__":
+        module = _resolved_module_expr(node.value, imports)
+        if module is not None:
+            return ("attribute", module)
+    return None
+
+
+def _direct_install(path: str) -> tuple[str, str, str] | None:
+    path = path.strip()
+    if "." not in path or not _valid_module_target(path, allow_relative=False):
+        return None
+    return (path, path.rsplit(".", 1)[1], "attribute")
+
+
+def _lvalue_install(
+    node: ast.AST,
+    imports: dict[str, str],
+    api_facts: _StandinApiFacts | None = None,
+) -> tuple[str, str, str] | None:
+    """A structured assignment target -> canonical install identity."""
+    if isinstance(node, ast.Name):
+        # Only a binding live immediately before the write is replaced.  An
+        # outer import hidden by a parameter/function-local name is not an
+        # origin: borrowing it here turns ordinary local setup into a patch.
+        # Removed-import replacements are compared across aligned sides in
+        # ``new_unit_standin_installs`` instead.
+        target = imports.get(node.id)
+        if (
+            target is None
+            or "." not in target.lstrip(".")
+            or not _valid_module_target(target)
+        ):
+            return None
+        return (target, node.id, "binding")
+    if isinstance(node, ast.Attribute):
+        module = _resolved_module_expr(node.value, imports)
+        if module is None:
+            return None
+        target = f"{module}.{node.attr}"
+        return (
+            (target, node.attr, "attribute")
+            if _valid_module_target(target)
+            else None
+        )
+    if isinstance(node, ast.Subscript):
+        mapped = _mapping_module(node.value, imports, api_facts)
+        key = _string_literal(node.slice)
+        if mapped is None or key is None:
+            return None
+        kind, module = mapped
+        if kind == "module":
+            return (
+                (key, "*", "module")
+                if _valid_module_target(key, allow_relative=False)
+                else None
+            )
+        if not key.isidentifier():
+            return None
+        return (f"{module}.{key}", key, "attribute")
+    return None
+
+
+def _lvalue_installs(
+    node: ast.AST,
+    imports: dict[str, str],
+    api_facts: _StandinApiFacts | None = None,
+) -> tuple[tuple[str, str, str], ...]:
+    if isinstance(node, (ast.Tuple, ast.List)):
+        return tuple(
+            install
+            for element in node.elts
+            for install in _lvalue_installs(element, imports, api_facts)
+        )
+    install = _lvalue_install(node, imports, api_facts)
+    return (install,) if install is not None else ()
+
+
+def _assignment_installs(
+    target: ast.AST,
+    value: ast.AST | None,
+    imports: dict[str, str],
+    api_facts: _StandinApiFacts | None = None,
+) -> tuple[tuple[str, str, str], ...]:
+    """Assignment targets paired to values where unpacking makes that legal."""
+    if (
+        isinstance(target, (ast.Tuple, ast.List))
+        and isinstance(value, (ast.Tuple, ast.List))
+        and len(target.elts) == len(value.elts)
+    ):
+        return tuple(
+            install
+            for target_element, value_element in zip(target.elts, value.elts)
+            for install in _assignment_installs(
+                target_element,
+                value_element,
+                imports,
+                api_facts,
+            )
+        )
+    return tuple(
+        kept
+        for install in _lvalue_installs(target, imports, api_facts)
+        if (
+            kept := _not_self_install(
+                install, value, imports, api_facts
+            )
+        )
+        is not None
+    )
+
+
+def _standin_call_argument(
+    node: ast.Call, position: int, *keyword_names: str
+) -> ast.AST | None:
+    if position < len(node.args):
+        # Supplying the same argument positionally and by keyword is not a
+        # legal invocation; do not manufacture a semantic call from it.
+        if any(keyword.arg in keyword_names for keyword in node.keywords):
+            return None
+        return node.args[position]
+    matches = [
+        keyword.value
+        for keyword in node.keywords
+        if keyword.arg in keyword_names
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _standin_call_kind(
+    node: ast.AST,
+    imports: dict[str, str],
+    api_facts: _StandinApiFacts | None,
+) -> str | None:
+    if not isinstance(node, ast.Call):
+        return None
+    if api_facts is not None:
+        return api_facts.call_kinds.get(id(node))
+    imported = _live_import_path(node.func, imports)
+    if imported in _CALLABLE_API_PATHS:
+        return _CALLABLE_API_PATHS[imported]
+    if isinstance(node.func, ast.Name) and node.func.id in (
+        "setattr",
+        "getattr",
+        "vars",
+    ):
+        return f"builtin_{node.func.id}"
+    return None
+
+
+def _resolved_value_identity(
+    node: ast.AST,
+    imports: dict[str, str],
+    api_facts: _StandinApiFacts | None = None,
+) -> str | None:
+    """Canonical identity used only to reject semantic self-assignment."""
+    resolved = _resolved_module_expr(node, imports)
+    if resolved is not None:
+        return resolved
+    if (
+        isinstance(node, ast.Call)
+        and _standin_call_kind(node, imports, api_facts)
+        == "builtin_getattr"
+        and len(node.args) >= 2
+    ):
+        module = _resolved_module_expr(node.args[0], imports)
+        attr = _string_literal(node.args[1])
+        if module is not None and attr is not None:
+            return f"{module}.{attr}"
+    if isinstance(node, ast.Subscript):
+        install = _lvalue_install(node, imports, api_facts)
+        if install is not None:
+            return install[0]
+    return None
+
+
+def _not_self_install(
+    install: tuple[str, str, str] | None,
+    value: ast.AST | None,
+    imports: dict[str, str],
+    api_facts: _StandinApiFacts | None = None,
+) -> tuple[str, str, str] | None:
+    if install is None:
+        return None
+    if (
+        value is not None
+        and _resolved_value_identity(value, imports, api_facts) == install[0]
+    ):
+        return None
+    return install
+
+
+def _standin_install_targets(
+    node: ast.AST,
+    imports: dict[str, str],
+    api_facts: _StandinApiFacts | None = None,
+) -> tuple[tuple[str, str, str], ...]:
+    """Flatten supported stand-in spellings to ``(target, attr, kind)``.
+
+    The predicate intentionally starts from the target, not from the verb.
+    Builtin ``setattr`` is supported when its object is an imported module,
+    while the same call on a locally-created object remains ordinary test
+    setup.  This is the narrow distinction issue #85 could not express when
+    the old frontend simply denied builtin ``setattr`` wholesale.
+    """
+    found: list[tuple[str, str, str]] = []
+    if isinstance(node, ast.Assign):
+        for target in node.targets:
+            found.extend(
+                _assignment_installs(
+                    target, node.value, imports, api_facts
+                )
+            )
+    elif isinstance(node, ast.AnnAssign) and node.value is not None:
+        found.extend(
+            _assignment_installs(
+                node.target, node.value, imports, api_facts
+            )
+        )
+    elif isinstance(node, ast.NamedExpr):
+        found.extend(
+            _assignment_installs(
+                node.target, node.value, imports, api_facts
+            )
+        )
+    elif isinstance(node, ast.Call):
+        api_kind = _standin_call_kind(node, imports, api_facts)
+
+        if api_kind in ("builtin_setattr", "monkeypatch_setattr"):
+            allow_keywords = api_kind != "builtin_setattr"
+            first = _standin_call_argument(
+                node, 0, *(('target', 'obj', 'object') if allow_keywords else ())
+            )
+            if first is None:
+                return ()
+            literal = _string_literal(first)
+            if literal is not None:
+                install = _direct_install(literal)
+                value = _standin_call_argument(
+                    node, 1, *(('value',) if allow_keywords else ())
+                )
+            else:
+                name = _standin_call_argument(
+                    node, 1, *(('name', 'attribute') if allow_keywords else ())
+                )
+                attr = _string_literal(name)
+                module = _resolved_module_expr(first, imports)
+                install = (
+                    (f"{module}.{attr}", attr, "attribute")
+                    if module is not None
+                    and attr is not None
+                    and attr.isidentifier()
+                    else None
+                )
+                value = _standin_call_argument(
+                    node, 2, *(('value',) if allow_keywords else ())
+                )
+            install = _not_self_install(
+                install, value, imports, api_facts
+            )
+            if install is not None:
+                found.append(install)
+
+        elif api_kind in ("operator_setitem", "monkeypatch_setitem"):
+            mapping = _standin_call_argument(node, 0, "dic", "mapping")
+            name = _standin_call_argument(node, 1, "name", "key")
+            mapped = (
+                _mapping_module(mapping, imports, api_facts)
+                if mapping is not None
+                else None
+            )
+            key = _string_literal(name)
+            install = None
+            if mapped is not None and key is not None:
+                kind, module = mapped
+                if kind == "module":
+                    install = (
+                        (key, "*", "module")
+                        if _valid_module_target(key, allow_relative=False)
+                        else None
+                    )
+                elif key.isidentifier():
+                    install = (f"{module}.{key}", key, "attribute")
+            value = _standin_call_argument(node, 2, "value")
+            install = _not_self_install(
+                install, value, imports, api_facts
+            )
+            if install is not None:
+                found.append(install)
+
+        elif api_kind in ("mock_patch_object", "mocker_patch_object"):
+            object_arg = _standin_call_argument(node, 0, "target")
+            attribute_arg = _standin_call_argument(node, 1, "attribute")
+            module = (
+                _resolved_module_expr(object_arg, imports)
+                if object_arg is not None
+                else None
+            )
+            attr = _string_literal(attribute_arg)
+            install = (
+                (f"{module}.{attr}", attr, "attribute")
+                if module is not None and attr is not None and attr.isidentifier()
+                else None
+            )
+            value = _standin_call_argument(node, 2, "new")
+            install = _not_self_install(
+                install, value, imports, api_facts
+            )
+            if install is not None:
+                found.append(install)
+
+        elif api_kind in ("mock_patch", "mocker_patch"):
+            target_arg = _standin_call_argument(node, 0, "target")
+            literal = _string_literal(target_arg)
+            install = _direct_install(literal) if literal is not None else None
+            value = _standin_call_argument(node, 1, "new")
+            install = _not_self_install(
+                install, value, imports, api_facts
+            )
+            if install is not None:
+                found.append(install)
+
+        elif api_kind == "mock_patch_dict":
+            mapping = _standin_call_argument(node, 0, "in_dict")
+            values = _standin_call_argument(node, 1, "values")
+            mapped = (
+                _mapping_module(mapping, imports, api_facts)
+                if mapping is not None
+                else None
+            )
+            if mapped == ("module", "sys.modules") and isinstance(values, ast.Dict):
+                for key, value in zip(values.keys, values.values):
+                    module = _string_literal(key)
+                    install = (
+                        (module, "*", "module")
+                        if module is not None
+                        and _valid_module_target(module, allow_relative=False)
+                        else None
+                    )
+                    install = _not_self_install(
+                        install, value, imports, api_facts
+                    )
+                    if install is not None:
+                        found.append(install)
+
+    return tuple(sorted(set(found)))
+
+
+def _standin_record(
+    node: ast.AST,
+    install: tuple[str, str, str],
+    text: _Offsets,
+    *,
+    scope: str,
+    owner: str | None = None,
+    autouse: bool = False,
+    position_node: ast.AST | None = None,
+    active_until: tuple[int, int] | None = None,
+    persists_after_owner: bool = True,
+    owner_oracle_spans: tuple[tuple[int, int], ...] = (),
+    api_fixture_receiver: str | None = None,
+) -> StandinInstall:
+    target, attr, kind = install
+    legacy = (
+        _patch_call_target(node, _dotted(node.func))
+        if isinstance(node, ast.Call)
+        else None
+    )
+    display_target = (
+        legacy[0]
+        if legacy is not None and legacy[1] == attr
+        else attr if kind == "binding" else None
+    )
+    seg = _norm((text.seg(node) or target).split("\n", 1)[0])
+    effective_position = position_node if position_node is not None else node
+    return StandinInstall(
+        target=target,
+        attr=attr,
+        text=seg,
+        scope=scope,
+        owner=owner,
+        autouse=autouse,
+        kind=kind,
+        position=(
+            getattr(effective_position, "lineno", 0) or 0,
+            getattr(effective_position, "col_offset", 0) or 0,
+        ),
+        display_target=display_target,
+        active_until=active_until,
+        persists_after_owner=persists_after_owner,
+        owner_oracle_spans=owner_oracle_spans,
+        api_fixture_receiver=api_fixture_receiver,
+    )
+
+
+def _has_standin_install(
+    tree: ast.Module,
+    imports: dict[str, str],
+    assigned_call_aliases: set[str] | None = None,
+) -> bool:
+    """Cheap once-per-file guard for the heavier stand-in lifetime passes.
+
+    Most test diffs contain no installation at all. Previously every test
+    function still paid for four additional scope walks (local imports,
+    patch contexts, activations, and restores). One conservative whole-file
+    inventory is enough to skip that machinery. This predicate is deliberately
+    broader than the structured detector: false positives only pay for the
+    full analysis, while a false negative would suppress a finding.
+
+    Keep import aliases as sets, not one cross-scope binding map. Two nested
+    scopes may reuse an alias for different modules; merging them with normal
+    dict overwrite semantics would make an early-exit decision depend on AST
+    traversal order and could hide the binding from the scope that owns it.
+    """
+    imported_names = set(imports)
+    standin_call_aliases = {
+        local
+        for local, target in imports.items()
+        if target.rsplit(".", 1)[-1] in {*_SETATTR_CALLS, "setitem", "patch"}
+    }
+    standin_call_aliases.update({"setattr"})
+    assigned_names: set[str] = set()
+    called_names: set[str] = set()
+    alias_edges: dict[str, set[str]] = {}
+    obvious = False
+
+    def register_alias(name: str, value: ast.AST) -> None:
+        value_name = value.id if isinstance(value, ast.Name) else None
+        value_dotted = _dotted(value)
+        if value_dotted and (
+            value_dotted.rsplit(".", 1)[-1]
+            in (*_SETATTR_CALLS, "setitem", "patch")
+            or value_dotted.endswith(".patch.object")
+            or value_dotted.endswith(".patch.dict")
+        ):
+            standin_call_aliases.add(name)
+        elif value_name is not None:
+            alias_edges.setdefault(name, set()).add(value_name)
+
+    def register_paired_aliases(target: ast.AST, value: ast.AST) -> None:
+        if (
+            isinstance(target, (ast.Tuple, ast.List))
+            and isinstance(value, (ast.Tuple, ast.List))
+            and len(target.elts) == len(value.elts)
+        ):
+            for target_element, value_element in zip(
+                target.elts, value.elts
+            ):
+                register_paired_aliases(target_element, value_element)
+        elif isinstance(target, ast.Name):
+            register_alias(target.id, value)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported_names.update(
+                alias.asname or alias.name.split(".", 1)[0]
+                for alias in node.names
+            )
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                local = alias.asname or alias.name
+                imported_names.add(local)
+                if alias.name in (*_SETATTR_CALLS, "setitem", "patch"):
+                    standin_call_aliases.add(local)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            positional = node.args.posonlyargs + node.args.args
+            for argument, default in zip(
+                positional[-len(node.args.defaults) :], node.args.defaults
+            ):
+                register_alias(argument.arg, default)
+            for argument, default in zip(
+                node.args.kwonlyargs, node.args.kw_defaults
+            ):
+                if default is not None:
+                    register_alias(argument.arg, default)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
+            if isinstance(node, ast.Assign):
+                targets = node.targets
+                value = node.value
+            else:
+                targets = (node.target,)
+                value = node.value
+            value_name = value.id if isinstance(value, ast.Name) else None
+            value_dotted = _dotted(value)
+            direct_callable = bool(
+                value_dotted
+                and (
+                    value_dotted.rsplit(".", 1)[-1]
+                    in (*_SETATTR_CALLS, "setitem", "patch")
+                    or value_dotted.endswith(".patch.object")
+                    or value_dotted.endswith(".patch.dict")
+                )
+            )
+            for target in targets:
+                register_paired_aliases(target, value)
+                if any(
+                    isinstance(part, (ast.Attribute, ast.Subscript))
+                    for part in ast.walk(target)
+                ):
+                    obvious = True
+                assigned_names.update(
+                    part.id
+                    for part in ast.walk(target)
+                    if isinstance(part, ast.Name)
+                )
+                for name in _assignment_name_targets(target):
+                    if direct_callable:
+                        standin_call_aliases.add(name)
+                    elif value_name is not None:
+                        alias_edges.setdefault(name, set()).add(value_name)
+        elif isinstance(node, ast.Call):
+            dotted = _dotted(node.func) or ""
+            tail = dotted.rsplit(".", 1)[-1]
+            if tail in (*_SETATTR_CALLS, "setitem", "patch", "object", "dict"):
+                obvious = True
+            if any(
+                ((_dotted(argument) or "").endswith(".patch"))
+                for argument in (
+                    *node.args,
+                    *(keyword.value for keyword in node.keywords),
+                )
+            ):
+                # Exact provenance is checked by the structured pass. This is
+                # only the conservative file gate for an API callable passed
+                # into a helper, e.g. ``verify(mock.patch)``.
+                obvious = True
+            if isinstance(node.func, ast.Name):
+                called_names.add(node.func.id)
+
+    changed = True
+    while changed:
+        changed = False
+        for alias, sources in alias_edges.items():
+            if alias in standin_call_aliases:
+                continue
+            if sources.intersection(standin_call_aliases):
+                standin_call_aliases.add(alias)
+                changed = True
+
+    if assigned_call_aliases is not None:
+        assigned_call_aliases.update(standin_call_aliases)
+
+    return obvious or bool(
+        assigned_names.intersection(imported_names)
+        or called_names.intersection(standin_call_aliases)
+    )
+
+
+def _scope_body_nodes(statements) -> tuple[ast.AST, ...]:
+    return tuple(statements)
+
+
+def _standin_scope_nodes(roots: tuple[ast.AST, ...]):
+    for root in roots:
+        yield root
+        yield from _scope_nodes(root)
+
+
+def _standin_patch_contexts(root: ast.AST) -> dict[int, ast.With | ast.AsyncWith]:
+    """Patch-call id -> lexical context manager that owns its lifetime."""
+    out: dict[int, ast.With | ast.AsyncWith] = {}
+    for node in (root, *_scope_nodes(root)):
+        if not isinstance(node, (ast.With, ast.AsyncWith)):
+            continue
+        for item in node.items:
+            # Entering ``factory(patch(...))`` enters the factory's context,
+            # not the nested patcher object merely passed as an argument.
+            # Only the context expression itself can be the patch lifecycle.
+            if isinstance(item.context_expr, ast.Call):
+                out[id(item.context_expr)] = node
+    return out
+
+
+def _pytest_mocker_patch_call(
+    node: ast.AST, immediate_receivers: frozenset[str]
+) -> bool:
+    """Whether pytest-mock proves this patch call is immediate.
+
+    ``mocker.patch`` deliberately mirrors ``unittest.mock.patch`` spelling,
+    but returns the installed mock rather than a dormant patcher.  The caller
+    supplies only receiver names proven to be live pytest fixture requests;
+    a coincidental local named ``mocker`` earns no lifecycle shortcut.
+    """
+    if not isinstance(node, ast.Call):
+        return False
+    dotted = _dotted(node.func) or ""
+    parts = dotted.split(".") if dotted else []
+    return bool(
+        parts
+        and parts[0] in immediate_receivers
+        and (
+            parts[1:] == ["patch"]
+            or parts[1:] == ["patch", "object"]
+        )
+    )
+
+
+def _required_injected_parameters(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    *,
+    class_member: bool = False,
+    definition_imports: Mapping[str, str] | None = None,
+) -> frozenset[str]:
+    """Signature names pytest must provide rather than Python defaults.
+
+    This mirrors pytest's ``getfuncargnames`` contract: only required
+    positional-or-keyword and keyword-only parameters are fixture requests.
+    Positional-only parameters cannot be supplied by pytest's keyword-based
+    fixture injection, even when they have no default. Module fixtures may
+    legitimately request fixtures named ``self``, ``cls``, or ``request``;
+    those spellings have no special meaning outside a class. For a class
+    member pytest binds the first mandatory argument regardless of its name,
+    except for an actual ``staticmethod`` (and, matching pytest, when any
+    positional-only parameter makes the normal binding shortcut inapplicable).
+    """
+    all_positional = func.args.posonlyargs + func.args.args
+    defaulted = {
+        argument.arg
+        for argument in all_positional[-len(func.args.defaults) :]
+    } if func.args.defaults else set()
+    defaulted.update(
+        argument.arg
+        for argument, value in zip(
+            func.args.kwonlyargs, func.args.kw_defaults
+        )
+        if value is not None
+    )
+    required = [
+        argument.arg
+        for argument in (*func.args.args, *func.args.kwonlyargs)
+        if argument.arg not in defaulted
+    ]
+    static_method = any(
+        (
+            _live_import_path(decorator, definition_imports or {})
+            or _dotted(decorator)
+            or ""
+        )
+        in ("staticmethod", "builtins.staticmethod")
+        for decorator in func.decorator_list
+        if not isinstance(decorator, ast.Call)
+    )
+    if (
+        class_member
+        and not static_method
+        and not func.args.posonlyargs
+        and required
+    ):
+        required = required[1:]
+    return frozenset(required)
+
+
+def _pytest_fixture_receivers(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    requested: Collection[str],
+    receiver: str,
+    module_bindings: Mapping[str, str] | None = None,
+) -> frozenset[str]:
+    """One conventional pytest fixture receiver proven at scope entry.
+
+    The position-aware API flow drops this origin at an actual local write.
+    Rejecting the receiver merely because a write exists *later* in the scope
+    lets a tail assignment erase an earlier live installation.
+    """
+    if (
+        receiver not in requested
+        or (module_bindings or {}).get(receiver) == "<fixture>"
+    ):
+        return frozenset()
+    return frozenset({receiver})
+
+
+def _mocker_fixture_receivers(
+    func: ast.FunctionDef | ast.AsyncFunctionDef,
+    requested: Collection[str],
+    module_bindings: Mapping[str, str] | None = None,
+) -> frozenset[str]:
+    """Proven pytest-mock receiver names for one collected/fixture scope."""
+    return _pytest_fixture_receivers(
+        func, requested, "mocker", module_bindings
+    )
+
+
+def _is_patch_constructor(
+    node: ast.AST,
+    imports: dict[str, str],
+    immediate_receivers: frozenset[str] = frozenset(),
+    api_facts: _StandinApiFacts | None = None,
+) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    if _pytest_mocker_patch_call(node, immediate_receivers):
+        return False
+    return _standin_call_kind(node, imports, api_facts) in {
+        "mock_patch",
+        "mock_patch_object",
+        "mock_patch_dict",
+    }
+
+
+def _imports_at(
+    node: ast.AST,
+    fallback: dict[str, str],
+    environments: dict[int, dict[str, str]] | None,
+) -> dict[str, str]:
+    return (
+        environments.get(id(node), fallback)
+        if environments is not None
+        else fallback
+    )
+
+
+def _standin_patch_activations(
+    root: ast.AST,
+    contexts: dict[int, ast.With | ast.AsyncWith],
+    imports: dict[str, str],
+    environments: dict[int, dict[str, str]] | None = None,
+    *,
+    decorator_root: bool = False,
+    immediate_receivers: frozenset[str] = frozenset(),
+    api_facts: _StandinApiFacts | None = None,
+) -> dict[int, str]:
+    """Patch constructors proven entered as decorator/context/or `.start()`."""
+    active = {node_id: "context" for node_id in contexts}
+    if decorator_root and _is_patch_constructor(
+        root,
+        _imports_at(root, imports, environments),
+        immediate_receivers,
+        api_facts,
+    ):
+        active[id(root)] = "decorator"
+    for node in (root, *_scope_nodes(root)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            for decorator in node.decorator_list:
+                # A patcher nested inside another decorator call is just an
+                # argument unless that wrapper explicitly enters it, which
+                # static syntax cannot prove.
+                if _is_patch_constructor(
+                    decorator,
+                    _imports_at(decorator, imports, environments),
+                    immediate_receivers,
+                    api_facts,
+                ):
+                    active.setdefault(id(decorator), "decorator")
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "start"
+        ):
+            constructor = node.func.value
+            if _is_patch_constructor(
+                constructor,
+                _imports_at(constructor, imports, environments),
+                immediate_receivers,
+                api_facts,
+            ):
+                active[id(constructor)] = "start"
+    return active
+
+
+def _patch_call_is_operative(
+    node: ast.AST,
+    activations: dict[int, str],
+    imports: dict[str, str],
+    environments: dict[int, dict[str, str]] | None = None,
+    immediate_receivers: frozenset[str] = frozenset(),
+    api_facts: _StandinApiFacts | None = None,
+) -> bool:
+    return not _is_patch_constructor(
+        node,
+        _imports_at(node, imports, environments),
+        immediate_receivers,
+        api_facts,
+    ) or id(node) in activations
+
+
+def _target_loaded(
+    nodes: tuple[ast.AST, ...],
+    install: tuple[str, str, str],
+    imports: dict[str, str],
+    environments: dict[int, dict[str, str]] | None = None,
+) -> bool:
+    target, attr, _kind = install
+    for node in _standin_scope_nodes(nodes):
+        node_imports = _imports_at(node, imports, environments)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+            if target.startswith("request.module.") and node.id == attr:
+                return True
+            if node_imports.get(node.id) == target:
+                return True
+        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
+            if _resolved_module_expr(node, node_imports) == target:
+                return True
+        elif isinstance(node, ast.Call):
+            if _resolved_module_expr(node, node_imports) == target:
+                return True
+    return False
+
+
+def _module_reimported_after(
+    root: ast.AST,
+    install_node: ast.AST,
+    target: str,
+    imports: dict[str, str],
+    environments: dict[int, dict[str, str]] | None = None,
+) -> bool:
+    """A later literal runtime import of ``target`` feeds a later oracle."""
+
+    def start(node: ast.AST) -> tuple[int, int]:
+        return (
+            getattr(node, "lineno", 0) or 0,
+            getattr(node, "col_offset", 0) or 0,
+        )
+
+    install_end = (
+        getattr(install_node, "end_lineno", 0) or 0,
+        getattr(install_node, "end_col_offset", 0) or 0,
+    )
+    nodes = tuple(_scope_nodes(root))
+    assertions = tuple(node for node in nodes if isinstance(node, ast.Assert))
+    oracles = tuple(
+        node
+        for node in nodes
+        if isinstance(node, ast.Assert) or _is_oracle_call(node)
+    )
+    if isinstance(root, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        native_environments = _scope_runtime_import_environments(
+            root, imports, environments
+        )
+        for assertion in oracles:
+            assertion_imports = _imports_at(
+                assertion, imports, environments
+            )
+            for local, binding, loaded, line, column in (
+                native_environments.get(id(assertion), ())
+            ):
+                position = (line, column)
+                if (
+                    position > install_end
+                    and start(assertion) > position
+                    and assertion_imports.get(local) == binding
+                    and loaded == target
+                ):
+                    # Subject consumption is checked against the expanded
+                    # assertion in ``install_reaches_expressions``.  This
+                    # predicate is only the temporal admission gate.
+                    return True
+    for call in nodes:
+        if (
+            not isinstance(call, ast.Call)
+            or start(call) <= install_end
+            or _resolved_module_expr(
+                call, _imports_at(call, imports, environments)
+            )
+            != target
+        ):
+            continue
+        for assertion in assertions:
+            if any(child is call for child in ast.walk(assertion.test)):
+                return True
+        bound: set[str] = set()
+        for assignment in nodes:
+            if isinstance(assignment, ast.Assign):
+                targets, value = assignment.targets, assignment.value
+            elif isinstance(assignment, ast.AnnAssign) and assignment.value is not None:
+                targets, value = (assignment.target,), assignment.value
+            elif isinstance(assignment, ast.NamedExpr):
+                targets, value = (assignment.target,), assignment.value
+            else:
+                continue
+            if not any(child is call for child in ast.walk(value)):
+                continue
+            for assignment_target in targets:
+                bound.update(_assignment_name_targets(assignment_target))
+        if bound and any(
+            start(assertion) > start(call)
+            and any(
+                isinstance(child, ast.Name)
+                and isinstance(child.ctx, ast.Load)
+                and child.id in bound
+                for child in ast.walk(assertion.test)
+            )
+            for assertion in assertions
+        ):
+            return True
+    return False
+
+
+def _contains_scope_yield(
+    nodes: tuple[ast.AST, ...], dead: set[int] | None = None
+) -> bool:
+    return any(
+        isinstance(node, (ast.Yield, ast.YieldFrom))
+        and (dead is None or id(node) not in dead)
+        for node in _standin_scope_nodes(nodes)
+    )
+
+
+def _context_install_is_live(
+    node: ast.AST,
+    install: tuple[str, str, str],
+    contexts: dict[int, ast.With | ast.AsyncWith],
+    activations: dict[int, str],
+    imports: dict[str, str],
+    *,
+    scope: str,
+    text=None,
+    bindings: dict[str, str] | None = None,
+    dead: set[int] | None = None,
+    environments: dict[int, dict[str, str]] | None = None,
+) -> bool:
+    lifecycle = activations.get(id(node))
+    if lifecycle == "decorator":
+        return scope in ("test", "class")
+    if lifecycle == "start":
+        return True
+    context = contexts.get(id(node))
+    if context is None:
+        return True
+    body = _scope_body_nodes(context.body)
+    if scope in ("fixture", "class_fixture", "hookwrapper"):
+        # A patch context containing the fixture's yield remains entered while
+        # the test runs. If it exits before yield, it restored the target.
+        return _contains_scope_yield(body, dead)
+    if scope == "test":
+        # Retain the install and let its exclusive ``active_until`` window
+        # meet the complete executed-oracle inventory.  A lexical-only scan
+        # here misses an assertion in a helper invoked inside the context;
+        # an outside assertion is still rejected by the shared window check.
+        return True
+    # Module and hook scopes finish before a consumer test oracle executes.
+    return False
+
+
+def _straight_line_restores(
+    root: ast.AST,
+    imports: dict[str, str],
+    *,
+    scope: str,
+    dead: set[int] | None = None,
+    environments: dict[int, dict[str, str]] | None = None,
+    api_facts: _StandinApiFacts | None = None,
+) -> dict[int, tuple[int, int]]:
+    """Install-node ids mapped to their definite restoration boundary.
+
+    This deliberately models only straight-line statements. Conditional and
+    dynamically-computed restores remain named residuals rather than being
+    guessed. In a fixture, the first yield is the oracle boundary: teardown
+    restores after it do not cancel the stand-in while the test was running.
+    Fresh imports are tracked per live local binding by
+    ``_scope_runtime_import_environments``.  The ``sys.modules`` effect itself
+    always ends at deletion; a later unrelated import must not borrow an
+    earlier unused capture to keep that effect globally alive.
+    """
+    body = getattr(root, "body", ())
+    if not isinstance(body, list):
+        return {}
+
+    originals: dict[str, str] = {}
+    # Every still-reachable stand-in instance for a target. MonkeyPatch keeps
+    # a private undo stack, so a later receiver may temporarily cover an
+    # earlier installation and then reveal it again. A single latest row loses
+    # that state in both directions.
+    active: dict[
+        tuple[str, str], dict[int, tuple[str, str | None]]
+    ] = {}
+    current: dict[tuple[str, str], int | None] = {}
+    receiver_stacks: dict[
+        str,
+        list[tuple[tuple[str, str], int, int | None]],
+    ] = {}
+    boundaries: dict[int, tuple[int, int]] = {}
+
+    def close_pair(
+        pair: tuple[str, str],
+        boundary: tuple[int, int],
+        *,
+        keep: int | None = None,
+    ) -> None:
+        rows = active.get(pair)
+        if not rows:
+            return
+        for node_id in tuple(rows):
+            if node_id == keep:
+                continue
+            boundaries.setdefault(node_id, boundary)
+            rows.pop(node_id, None)
+        if not rows:
+            active.pop(pair, None)
+
+    def saved_original_replacement(call: ast.Call) -> ast.AST | None:
+        """Replacement operand of a positively proven MonkeyPatch setattr."""
+        if (
+            api_facts is None
+            or api_facts.call_kinds.get(id(call)) != "monkeypatch_setattr"
+        ):
+            return None
+        target = _standin_call_argument(
+            call, 0, "target", "obj", "object"
+        )
+        if target is None:
+            return None
+        if _string_literal(target) is not None:
+            return _standin_call_argument(call, 1, "value")
+        return _standin_call_argument(call, 2, "value")
+
+    for stmt in body:
+        if dead is not None and id(stmt) in dead:
+            continue
+        stmt_nodes = (stmt,)
+        if scope == "module" and isinstance(stmt, _SCOPE_NODES):
+            continue
+        if scope in ("fixture", "class_fixture", "hookwrapper") and _contains_scope_yield(
+            stmt_nodes, dead
+        ):
+            break
+
+        if isinstance(stmt, _STANDIN_COMPOUND_STATEMENTS):
+            # Conditional writes/imports are not straight-line proof of either
+            # restoration or capture.
+            continue
+
+        boundary = (
+            getattr(stmt, "lineno", 0) or 0,
+            getattr(stmt, "col_offset", 0) or 0,
+        )
+
+        writes = {
+            (target, attr): (node, (target, attr, kind))
+            for node in _standin_scope_nodes(stmt_nodes)
+            for target, attr, kind in _standin_install_targets(
+                node,
+                _imports_at(node, imports, environments),
+                api_facts,
+            )
+        }
+        restore_pairs: set[tuple[str, str]] = set()
+        undo_receiver: str | None = None
+        if (
+            isinstance(stmt, ast.Expr)
+            and isinstance(stmt.value, ast.Call)
+            and api_facts is not None
+            and api_facts.call_kinds.get(id(stmt.value))
+            == "monkeypatch_undo"
+        ):
+            undo_receiver = api_facts.call_receiver_origins.get(id(stmt.value))
+        if isinstance(stmt, (ast.Import, ast.ImportFrom)):
+            rebound = _import_bindings((stmt,), {})
+            for pair, rows in active.items():
+                if rebound.get(pair[1]) == pair[0] and any(
+                    kind == "binding" for kind, _receiver in rows.values()
+                ):
+                    restore_pairs.add(pair)
+        elif isinstance(stmt, ast.Delete):
+            for target_node in stmt.targets:
+                if not isinstance(target_node, ast.Subscript):
+                    continue
+                mapped = _mapping_module(
+                    target_node.value,
+                    _imports_at(target_node, imports, environments),
+                    api_facts,
+                )
+                module = _string_literal(target_node.slice)
+                pair = (module or "", "*")
+                if (
+                    mapped == ("module", "sys.modules")
+                    and module is not None
+                    and pair in active
+                    and any(
+                        kind == "module"
+                        for kind, _receiver in active[pair].values()
+                    )
+                ):
+                    restore_pairs.add(pair)
+
+        assignment: tuple[list[ast.AST], ast.AST] | None = None
+        if isinstance(stmt, ast.Assign):
+            assignment = (list(stmt.targets), stmt.value)
+        elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None:
+            assignment = ([stmt.target], stmt.value)
+
+        if assignment is not None:
+            targets, value = assignment
+            original = originals.get(value.id) if isinstance(value, ast.Name) else None
+            if original is not None:
+                for target_node in targets:
+                    install = _lvalue_install(
+                        target_node,
+                        _imports_at(target_node, imports, environments),
+                        api_facts,
+                    )
+                    if install is not None and install[0] == original:
+                        restore_pairs.add((install[0], install[1]))
+
+            # Save an original imported object before any later mutation. A
+            # reassignment to an unknown value invalidates the alias.
+            value_identity = _resolved_value_identity(
+                value,
+                _imports_at(value, imports, environments),
+                api_facts,
+            )
+            # Reading the target after its replacement captures the stand-in,
+            # not the original.  Treating that value as a restore token lets
+            # ``saved = target; target = saved`` erase the live installation.
+            if value_identity is not None and any(
+                pair[0] == value_identity for pair in active
+            ):
+                value_identity = None
+            for target_node in targets:
+                if not isinstance(target_node, ast.Name) or target_node.id in imports:
+                    continue
+                if value_identity is not None:
+                    originals[target_node.id] = value_identity
+                elif isinstance(value, ast.Name) and value.id in originals:
+                    originals[target_node.id] = originals[value.id]
+                else:
+                    originals.pop(target_node.id, None)
+
+        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+            replacement = saved_original_replacement(stmt.value)
+            original = (
+                originals.get(replacement.id)
+                if isinstance(replacement, ast.Name)
+                else None
+            )
+            if original is not None:
+                restore_pairs.update(
+                    pair for pair in writes if pair[0] == original
+                )
+
+        if undo_receiver is not None:
+            for pair, node_id, previous in reversed(
+                receiver_stacks.pop(undo_receiver, [])
+            ):
+                boundaries.setdefault(node_id, boundary)
+                if previous is None:
+                    close_pair(pair, boundary)
+                    current[pair] = None
+                else:
+                    close_pair(pair, boundary, keep=previous)
+                    current[pair] = (
+                        previous
+                        if previous in active.get(pair, {})
+                        else None
+                    )
+        for pair in restore_pairs:
+            if pair in writes:
+                # The restoration assignment is syntactically a write but
+                # semantically reinstalls the saved original. Give that node
+                # an empty active window so it cannot become a second stand-in.
+                boundaries[id(writes[pair][0])] = boundary
+            close_pair(pair, boundary)
+            current[pair] = None
+        for pair in set(writes) - restore_pairs:
+            node, install = writes[pair]
+            node_id = id(node)
+            receiver = (
+                api_facts.call_receiver_origins.get(node_id)
+                if api_facts is not None
+                else None
+            )
+            previous = current.get(pair)
+            active.setdefault(pair, {})[node_id] = (install[2], receiver)
+            current[pair] = node_id
+            if receiver is not None:
+                receiver_stacks.setdefault(receiver, []).append(
+                    (pair, node_id, previous)
+                )
+
+    return boundaries
+
+
+def _module_standin_installs(
+    tree: ast.Module,
+    text: _Offsets,
+    imports: dict[str, str],
+    *,
+    definition_imports: dict[int, dict[str, str]] | None = None,
+    include_hooks: bool,
+) -> tuple[StandinInstall, ...]:
+    """Structured installations that execute outside an individual test.
+
+    Module/class bodies, fixtures, and pytest hooks have different execution
+    conditions.  Keeping the scope on the record lets the engine map a
+    conftest install only to tests it can actually affect. Ordinary helper and
+    test function bodies are not scanned here; `_collect_unit` owns the latter.
+    """
+    out: list[StandinInstall] = []
+    module_environments, module_imports = _scope_import_environments(tree, {})
+
+    def record(
+        root: ast.AST,
+        scope: str,
+        owner: str | None = None,
+        autouse: bool = False,
+        *,
+        allow_binding: bool = True,
+        dead: set[int] | None = None,
+        decorator_root: bool = False,
+        base_imports: dict[str, str] | None = None,
+        definition_base: dict[str, str] | None = None,
+        immediate_receivers: frozenset[str] = frozenset(),
+        monkeypatch_receivers: frozenset[str] = frozenset(),
+    ) -> None:
+        environments, scope_imports = _scope_import_environments(
+            root,
+            imports if base_imports is None else base_imports,
+            definition_base=definition_base,
+        )
+        nodes = (root, *_scope_nodes(root))
+        api_facts = _standin_api_facts(
+            root,
+            scope_imports,
+            environments,
+            monkeypatch_receivers=monkeypatch_receivers,
+            mocker_receivers=immediate_receivers,
+        )
+        yield_boundary = min(
+            (
+                (getattr(node, "lineno", 0), getattr(node, "col_offset", 0))
+                for node in nodes
+                if isinstance(node, (ast.Yield, ast.YieldFrom))
+                and (dead is None or id(node) not in dead)
+            ),
+            default=None,
+        )
+        raw_installs = [
+            (node, install)
+            for node in nodes
+            if isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr, ast.Call))
+            and (dead is None or id(node) not in dead)
+            and not (
+                scope in ("fixture", "class_fixture", "hookwrapper")
+                and yield_boundary is not None
+                and (
+                    getattr(node, "lineno", 0),
+                    getattr(node, "col_offset", 0),
+                )
+                > yield_boundary
+            )
+            for install in _standin_install_targets(
+                node,
+                _imports_at(node, scope_imports, environments),
+                api_facts,
+            )
+            if allow_binding or install[2] != "binding"
+        ]
+        if not raw_installs:
+            return
+
+        contexts = {
+            **_standin_patch_contexts(root),
+            **api_facts.call_contexts,
+        }
+        activations = _standin_patch_activations(
+            root,
+            contexts,
+            scope_imports,
+            environments,
+            decorator_root=decorator_root,
+            immediate_receivers=immediate_receivers,
+            api_facts=api_facts,
+        )
+        restored = _straight_line_restores(
+            root,
+            scope_imports,
+            scope=scope,
+            dead=dead,
+            environments=environments,
+            api_facts=api_facts,
+        )
+        global_names = {
+            name
+            for node in nodes
+            if isinstance(node, ast.Global)
+            for name in node.names
+        }
+        for node, (target, attr, kind) in raw_installs:
+            if (
+                id(node) in restored
+                or not _patch_call_is_operative(
+                    node,
+                    activations,
+                    scope_imports,
+                    environments,
+                    immediate_receivers,
+                    api_facts,
+                )
+                or not _context_install_is_live(
+                    node,
+                    (target, attr, kind),
+                    contexts,
+                    activations,
+                    scope_imports,
+                    scope=scope,
+                    dead=dead,
+                    environments=environments,
+                )
+            ):
+                continue
+            if kind == "binding" and scope in (
+                "fixture",
+                "class_fixture",
+                "hook",
+                "hookwrapper",
+            ):
+                # A name assigned inside a fixture/hook is local unless
+                # explicitly global, so it cannot replace the binding a
+                # separate test function reaches.
+                if attr not in global_names:
+                    continue
+            out.append(
+                _standin_record(
+                    node,
+                    (target, attr, kind),
+                    text,
+                    scope=scope,
+                    owner=owner,
+                    autouse=autouse,
+                    api_fixture_receiver=(
+                        api_facts.call_fixture_receivers.get(id(node))
+                    ),
+                )
+            )
+
+    module_dead = _unreachable_ids(tree)
+    live_callables = _module_callable_scopes(tree)
+    local_fixture_names = {
+        fixture_name
+        for node in live_callables.values()
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        if (
+            fixture_name := _fixture_public_name(
+                node, (definition_imports or {}).get(id(node))
+            )
+        )
+        is not None
+    }
+    local_fixture_bindings = {
+        name: "<fixture>" for name in local_fixture_names
+    }
+    module_api_facts = _standin_api_facts(
+        tree, module_imports, module_environments
+    )
+    module_monkeypatch_receivers = frozenset(
+        name
+        for name, origin in module_api_facts.final_values.items()
+        if origin == "monkeypatch"
+        or origin.startswith("monkeypatch_instance:")
+    )
+    for stmt in _definite_module_statements(tree.body):
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if live_callables.get(stmt.name) is not stmt:
+                continue
+            exact = (definition_imports or {}).get(
+                id(stmt),
+                _imports_at(stmt, module_imports, module_environments),
+            )
+            if _is_fixture_def(stmt, exact):
+                autouse = _fixture_is_autouse(stmt, exact)
+                fixture_name = _fixture_public_name(stmt, exact)
+                if fixture_name is None and not autouse:
+                    continue
+                # A fixture may deliberately extend the provider it
+                # overrides: ``def monkeypatch(monkeypatch): ...`` resolves
+                # the parameter through the next outer/plugin provider, not
+                # recursively to itself.  Other same-file fixture names still
+                # shadow the conventional pytest API receiver.
+                receiver_shadow_bindings = {
+                    name: value
+                    for name, value in local_fixture_bindings.items()
+                    if name != fixture_name
+                }
+                record(
+                    stmt,
+                    "fixture",
+                    fixture_name or stmt.name,
+                    autouse,
+                    dead=_unreachable_ids(stmt),
+                    definition_base=exact,
+                    immediate_receivers=_mocker_fixture_receivers(
+                        stmt,
+                        _required_injected_parameters(stmt),
+                        receiver_shadow_bindings,
+                    ),
+                    monkeypatch_receivers=(
+                        _pytest_fixture_receivers(
+                            stmt,
+                            _required_injected_parameters(stmt),
+                            "monkeypatch",
+                            receiver_shadow_bindings,
+                        )
+                        | frozenset(
+                            name
+                            for name in module_monkeypatch_receivers
+                            if name not in _lexical_scope_names(stmt)[0]
+                        )
+                    ),
+                )
+            elif include_hooks:
+                registration = _hook_registration(stmt, exact)
+                if registration is not None:
+                    hook_name, wrapper = registration
+                    record(
+                        stmt,
+                        "hookwrapper" if wrapper else "hook",
+                        hook_name,
+                        dead=_unreachable_ids(stmt),
+                        definition_base=exact,
+                        monkeypatch_receivers=frozenset(
+                            name
+                            for name in module_monkeypatch_receivers
+                            if name not in _lexical_scope_names(stmt)[0]
+                        ),
+                    )
+            continue
+        if isinstance(stmt, ast.ClassDef):
+            class_base_imports = _imports_at(
+                stmt,
+                module_imports,
+                module_environments,
+            )
+            class_environments, class_imports = _scope_import_environments(
+                stmt,
+                class_base_imports,
+            )
+            if not include_hooks:
+                for decorator in stmt.decorator_list:
+                    record(
+                        decorator,
+                        "class",
+                        stmt.name,
+                        allow_binding=False,
+                        decorator_root=True,
+                        base_imports=class_base_imports,
+                        definition_base=class_base_imports,
+                        monkeypatch_receivers=(
+                            module_monkeypatch_receivers
+                        ),
+                    )
+                for member in stmt.body:
+                    member_exact = (definition_imports or {}).get(
+                        id(member),
+                        _imports_at(member, class_imports, class_environments),
+                    )
+                    if _is_fixture_def(member, member_exact):
+                        fixture_name = _fixture_public_name(
+                            member, member_exact
+                        )
+                        autouse = _fixture_is_autouse(member, member_exact)
+                        if fixture_name is None and not autouse:
+                            continue
+                        record(
+                            member,
+                            "class_fixture",
+                            f"{stmt.name}.{fixture_name or member.name}",
+                            autouse,
+                            dead=_unreachable_ids(member),
+                            definition_base=member_exact,
+                            immediate_receivers=_mocker_fixture_receivers(
+                                member,
+                                _required_injected_parameters(
+                                    member,
+                                    class_member=True,
+                                    definition_imports=member_exact,
+                                ),
+                                local_fixture_bindings,
+                            ),
+                            monkeypatch_receivers=(
+                                _pytest_fixture_receivers(
+                                    member,
+                                    _required_injected_parameters(
+                                        member,
+                                        class_member=True,
+                                        definition_imports=member_exact,
+                                    ),
+                                    "monkeypatch",
+                                    local_fixture_bindings,
+                                )
+                                | frozenset(
+                                    name
+                                    for name in module_monkeypatch_receivers
+                                    if name
+                                    not in _lexical_scope_names(member)[0]
+                                )
+                            ),
+                        )
+            # Class-body statements execute at import, but bare-name writes
+            # land in the class namespace and decorators/method bodies have
+            # their own lifetimes. Imported-module attribute writes remain
+            # supportable without treating the whole class as module scope.
+            class_dead = _unreachable_ids(stmt)
+            for member in stmt.body:
+                if not isinstance(
+                    member, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+                ):
+                    record(
+                        member,
+                        "module",
+                        allow_binding=False,
+                        dead=class_dead,
+                        base_imports=_imports_at(
+                            member,
+                            class_imports,
+                            class_environments,
+                        ),
+                        monkeypatch_receivers=(
+                            module_monkeypatch_receivers
+                        ),
+                    )
+            continue
+    # Module statements need their actual statement-order environment.  A
+    # final import map would let an import/rebind later in the file leak back
+    # into an earlier write (and lose an earlier class decorator after a later
+    # rebind).
+    record(tree, "module", dead=module_dead, base_imports={})
+
+    return tuple(sorted(set(out), key=lambda install: install.effect_identity + (install.text,)))
+
+
+def conftest_patch_targets(data: bytes, first_party: frozenset[str]) -> list[str]:
+    """Frozen IR-v1 census of first-party conftest patch calls.
+
+    This intentionally retains the original raw-call semantics and spelling.
+    The new lifetime/reachability discriminator is carried separately by
+    ParsedFile.standin_installs and DiffGlobals.conftest_standin_patches.
     """
     raw = normalize_source(data)
     try:
@@ -3092,23 +8427,19 @@ def conftest_patch_targets(data: bytes, first_party: frozenset[str]) -> list[str
     except (SyntaxError, RecursionError, ValueError, MemoryError):
         return []
     text = _Offsets(raw)
-    # Names bound by an import *of first-party code*: `import app.pathnorm`,
-    # `from app.pathnorm import normalize`, `from .helpers import x`. A
-    # stdlib or third-party import (`import time`) binds a name too, and
-    # patching that is hygiene, not tampering.
     local = {
-        (a.asname or a.name.split(".")[0])
-        for s in tree.body
-        if isinstance(s, ast.Import)
-        for a in s.names
-        if a.name.split(".")[0] in first_party
+        (alias.asname or alias.name.split(".")[0])
+        for stmt in tree.body
+        if isinstance(stmt, ast.Import)
+        for alias in stmt.names
+        if alias.name.split(".")[0] in first_party
     }
     local |= {
-        (a.asname or a.name)
-        for s in tree.body
-        if isinstance(s, ast.ImportFrom)
-        and (s.level or (s.module or "").split(".")[0] in first_party)
-        for a in s.names
+        (alias.asname or alias.name)
+        for stmt in tree.body
+        if isinstance(stmt, ast.ImportFrom)
+        and (stmt.level or (stmt.module or "").split(".")[0] in first_party)
+        for alias in stmt.names
     }
     out: list[str] = []
     for node in ast.walk(tree):
@@ -3120,11 +8451,13 @@ def conftest_patch_targets(data: bytes, first_party: frozenset[str]) -> list[str
         if not (isinstance(base, ast.Name) and base.id == "monkeypatch"):
             continue
         target = node.args[0]
-        # `monkeypatch.setattr(request.module, "name", ...)` reaches into the
-        # test module itself, which is always first-party.
         dotted = _dotted(target) or ""
         root = dotted.split(".")[0]
-        is_first_party = root in first_party or dotted.startswith("request.module") or root in local
+        is_first_party = (
+            root in first_party
+            or dotted.startswith("request.module")
+            or root in local
+        )
         if isinstance(target, ast.Constant) and isinstance(target.value, str):
             is_first_party = target.value.split(".")[0] in first_party
         if is_first_party:

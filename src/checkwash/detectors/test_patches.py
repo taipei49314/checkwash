@@ -1,38 +1,59 @@
-"""TEST_PATCHES_SUBJECT: the test replaced the thing its own assertion checks.
+"""TEST_PATCHES_SUBJECT: a stand-in newly reaches an existing test oracle.
 
-`CONFTEST_PATCHES_PROD` reads conftest files only, so the same swap one scope
-lower was silent — ranked #2 of the attacks left open after P0, ★★★★★ silence,
-and prod and the assertion line both stay byte-identical:
+The v0.1.25 gap was first described as the test-local counterpart of
+``CONFTEST_PATCHES_PROD``: production and the assertion could remain
+byte-identical while a new assignment made the oracle exercise a stand-in.
+That history still explains the rule, but the current family uses one shared
+effect/reach model for test-local installs and applicable conftest installs.
 
-    def test_invoice_total(monkeypatch):
-        monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)
-        assert billing.invoice_total(items, 0.053) == 105.3   # the stand-in
+The discriminator is an **effect x oracle semantic multiset**, not whether a
+patch spelling was newly added.  For each aligned unit, ``O[q]`` counts each
+occurrence of a complete canonical oracle shape and ``R[e,q]`` counts the
+occurrences reached by semantic effect ``e``.  The event lower bound is::
 
-**The problem here is not detection, it is discrimination.** In a conftest,
-patching first-party code is exceptional: one autouse fixture swaps the module
-under test for the whole suite. Inside a test function it is *the normal way to
-write a unit test*, and the acceptance line for this work — "new first-party
-patch target in a test unit" — taken literally, fires on every commit that adds
-a mock. So three conditions, all required:
+    max(0, R_head[e,q] - R_base[e,q] - max(0, O_head[q] - O_base[q]))
 
-1. **The unit existed before.** A brand-new test that mocks is a test that was
-   written with a mock; only an existing oracle can have a stand-in inserted
-   under it.
-2. **The patch is new**, base side against head side.
-3. **The patched attribute is reached by this unit's own assertions.** This is
-   the discriminator and it is the whole design. Replacing `billing.RETRY_DELAY`
-   under an assertion about charging makes the test fast. Replacing
-   `billing.invoice_total` under `assert billing.invoice_total(...) == 105.3`
-   replaces the subject of the oracle.
+New identical oracle occurrences are spent first.  Moving an existing
+assignment before another existing oracle, or expanding a patch context into
+a persistent installation, is therefore visible; merely adding an identical
+already-reached oracle is not.  A finding still requires positive repository
+ownership and exact canonical subject reach.  Replacing
+``billing.RETRY_DELAY`` under an assertion about charging remains routine;
+replacing ``billing.invoice_total`` under an oracle for that call does not.
 
-Like every oracle rule it earns severity from repair evidence (SPEC §5 E1):
-swapping a collaborator out is routine when production moved under the test.
+The bounded model tracks lexical patch/MonkeyPatch contexts, helper-scoped
+decorators, and definite straight-line restore endpoints.  Fixture and hook
+decorators are resolved through aliases at definition time, including literal
+``name=`` / ``specname=``.  ``mocker.patch`` and MonkeyPatch methods require a
+proven live fixture receiver (or a proven ``pytest.MonkeyPatch`` construction),
+not a coincidental local name.  Conftest applicability is resolved separately
+on base and head through ancestor/nearest-provider fixture graphs, including
+autouse, literal parameters/``usefixtures``, and transitive dependencies; an
+unchanged dormant fixture can thus become newly applicable without gaining a
+new install line.
 
-Residuals, open by design and not quietly: a stub installed by a fixture the
-unit merely requests; targets built at runtime; `respx`/`responses` and the
-other HTTP-mock dialects; an attribute reached only through a helper; and an
-attribute named on the *expectation* side of a non-literal comparison, where
-the IR keeps names but not the expression.
+Residuals are explicit.  xunit ``setUp`` / ``setup_method`` activation is not
+modelled.  Dynamic ``request.getfixturevalue`` and plugin-only fixtures are
+outside the repository graph, as are fixture providers inherited through a
+test class's Python base-class MRO.  Computed or branch-dependent restores,
+stored patcher ``start``/``stop``, cross-ordered undo between multiple
+``MonkeyPatch`` objects that resurrects an effect in a disjoint interval, and
+``ExitStack.enter_context`` have no definite lifetime.  Arbitrary
+interprocedural return/receiver provenance is not inferred; dynamic, starred,
+or transitively forwarded helper arguments require an exact binding.
+Unchanged tests are discovered for a changed conftest only through
+literal target-leaf/attribute needles.  After a ``sys.modules`` replacement,
+dotted native ``import app.billing as billing`` and from-parent
+``from app import billing`` are not definite positives; exact leaf imports and
+literal ``importlib.import_module`` remain modelled.  A deeply nested conftest
+is normally registered too late for ``pytest_sessionstart``, so only initial
+conftests (the repository root or an immediate ``test*`` directory) are
+treated as applicable.  Runtime-computed targets, ``respx``/``responses``,
+and other HTTP-mock dialects also remain outside this bounded proof.
+
+Like every oracle rule, severity still comes from repair evidence (SPEC §5
+E1): swapping a collaborator out is routine when production moved with the
+test.
 """
 
 from __future__ import annotations
@@ -43,15 +64,14 @@ from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import IR
 from checkwash.pyenv import known_baseline
+from checkwash.standins import (
+    install_reaches,
+    new_unit_standin_installs,
+    target_is_repo_owned,
+)
 
 
-def _names_in(expr: str | None) -> set[str]:
-    """Names and attribute labels in an expression.
-
-    `left_names` collects `ast.Name` ids only, so `billing.invoice_total(x)`
-    yields `billing` and not the attribute that actually names the code under
-    test — which is the half a patch target is matched on.
-    """
+def _legacy_names_in(expr: str | None) -> set[str]:
     node = parse_expr(expr) if expr else None
     if node is None:
         return set()
@@ -60,44 +80,28 @@ def _names_in(expr: str | None) -> set[str]:
     }
 
 
-def _reached(side) -> set[str]:
-    """Every name this unit's assertions touch, through one hop of bindings.
-
-    The direct set alone was not enough, and the corpus is what said so: across
-    128 real patch sites the reach test rejected every one — correctly — but it
-    also showed that
-
-        result = billing.invoice_total(items, 0.053)
-        assert result == 105.3
-
-    puts the patched attribute nowhere in the assertion. That is the *more*
-    natural way to write this attack than naming the call inside the `assert`,
-    so the first version of this rule missed the shape it exists for.
-
-    One hop, the same bound `SUBJECT_NORMALIZED` draws, and a name bound more
-    than once is refused rather than guessed at: `bindings` joins every
-    right-hand side of such a name, and substituting that invented a false
-    positive once already (flask `daf1510a4b`, D-042).
-    """
+def _legacy_reached(side) -> set[str]:
+    """Frozen IR-v1 reachability for producers without internal metadata."""
     names: set[str] = set()
-    for a in side.assertions:
-        names.update(a.left_names)
-        names.update(a.right_depends_on)
-        names |= _names_in(a.left)
+    for assertion in side.assertions:
+        names.update(assertion.left_names)
+        names.update(assertion.right_depends_on)
+        names |= _legacy_names_in(assertion.left)
     hop: set[str] = set()
     for name in names:
         definition = side.bindings.get(name)
         if definition is not None and "\x1f" not in definition:
-            hop |= _names_in(definition)
+            hop |= _legacy_names_in(definition)
     return names | hop
 
 
 def detect(ir: IR) -> list[Finding]:
-    # Stdlib and the test ecosystem are denied here rather than through the
-    # manifest set: faking time, sockets and the environment is hygiene, and
-    # the list is a frozen vendored snapshot, so the judgement does not move
-    # with the interpreter running the analysis (SPEC §8).
-    deny = known_baseline() | set(ir.globals.third_party_roots)
+    # Ownership is positive evidence assembled by the engine. In particular,
+    # an undeclared external import is not promoted merely because no manifest
+    # entry denied it, while a relative import remains local even when its leaf
+    # shares a stdlib name.
+    owned = set(ir.globals.first_party_roots)
+    legacy_deny = known_baseline() | set(ir.globals.third_party_roots)
     findings: list[Finding] = []
     for file in ir.files:
         if file.role not in ("test", "conftest"):
@@ -106,21 +110,75 @@ def detect(ir: IR) -> list[Finding]:
             # Condition 1.
             if unit.before is None or unit.after is None:
                 continue
-            was = {target for target, _attr in unit.before.patches}
-            candidates = [
-                (target, attr)
-                for target, attr in unit.after.patches
-                if target not in was  # condition 2
-                and target.split(".")[0] not in deny
+            if (
+                unit.before.standin_installs is None
+                or unit.after.standin_installs is None
+            ):
+                # Exact compatibility path for externally constructed IR-v1:
+                # target-only newness, deny-list ownership, and name-based
+                # reach. Richer parsed sides never enter this branch.
+                was = {target for target, _attr in unit.before.patches}
+                reached = _legacy_reached(unit.after)
+                for target, attr in unit.after.patches:
+                    if (
+                        target in was
+                        or target.split(".")[0] in legacy_deny
+                        or attr not in reached
+                    ):
+                        continue
+                    findings.append(
+                        Finding(
+                            rule="TEST_PATCHES_SUBJECT",
+                            severity="warn",
+                            message=(
+                                f"{unit.qualname}: this test now replaces {target}, which its own "
+                                "assertions check — the oracle runs against the stand-in"
+                            ),
+                            path=file.path,
+                            unit=unit.qualname,
+                            after=Evidence(text=target, span=(0, 0)),
+                            fingerprint=make_fingerprint(
+                                "TEST_PATCHES_SUBJECT",
+                                file.path,
+                                unit.qualname,
+                                target,
+                            ),
+                        )
+                    )
+                continue
+            owned_candidates = [
+                install
+                for install in new_unit_standin_installs(
+                    unit.before, unit.after
+                )
+                if target_is_repo_owned(install.target, owned)
             ]
-            # Only now: `_reached` parses every assertion subject in the unit,
-            # and the overwhelming majority of units install no stand-in at all.
+            by_effect = {}
+            for install in sorted(
+                owned_candidates,
+                key=lambda candidate: (
+                    candidate.effect_identity,
+                    candidate.target,
+                    candidate.finding_target,
+                    candidate.text,
+                ),
+            ):
+                by_effect.setdefault(install.effect_identity, install)
+            candidates = list(by_effect.values())
             if not candidates:
                 continue
-            reached = _reached(unit.after)
-            for target, attr in candidates:
-                if attr not in reached:  # condition 3
+            for install in candidates:
+                if not install_reaches(
+                    install,
+                    unit.after,
+                    (
+                        unit.after.standin_imports
+                        if unit.after.standin_imports is not None
+                        else file.standin_imports or {}
+                    ),
+                ):  # condition 3
                     continue
+                target = install.finding_target
                 findings.append(
                     Finding(
                         rule="TEST_PATCHES_SUBJECT",

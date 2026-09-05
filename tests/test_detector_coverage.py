@@ -30,8 +30,28 @@ def _all_findings():
         case = parse_case(case_path.read_text(encoding="utf-8"))
         contract = parse_contract(case.task) if case.task else Contract()
         known = (known_baseline() | set(case.env)) if case.env is not None else None
+        head = {path: content.encode("utf-8") for path, content in case.head.items()}
         _ir, findings, _verdict = analyze(
-            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known
+            case_to_changes(case),
+            Config(),
+            contract,
+            [],
+            TODAY,
+            known_modules=known,
+            # Family fixtures intentionally keep the production subject and,
+            # for conftest, the reached test oracle outside the diff. Mirror
+            # the golden runner instead of silently discarding those `head`
+            # sections and declaring the detector uncovered.
+            head_reader=head.get if head else None,
+            head_searcher=(
+                lambda needles: [
+                    path
+                    for path, data in sorted(head.items())
+                    if any(needle.encode("utf-8") in data for needle in needles)
+                ]
+                if head
+                else None
+            ),
         )
         for f in findings:
             rules_fired.add(f.rule)
