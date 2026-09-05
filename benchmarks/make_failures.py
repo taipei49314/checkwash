@@ -31,11 +31,25 @@ _ROW_CELLS = re.compile(r"(?<!\\)\|")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 ADJUDICATION = "adjudication-2026-08-26b.json"
+BLIND_RATER_FILES = (
+    "adjudication-rater-B-2026-08-04.json",
+    "adjudication-rater-C-2026-08-04.json",
+)
 
 
 def _load(*parts: str) -> dict:
     with open(os.path.join(*parts), encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def inter_rater_cohort_size() -> int:
+    cohorts = [
+        {(v["repo"], v["commit"]) for v in _load(HERE, name)}
+        for name in BLIND_RATER_FILES
+    ]
+    if cohorts[0] != cohorts[1]:
+        raise SystemExit("blind-rater files describe different cohorts; review provenance")
+    return len(cohorts[0])
 
 
 def bypass_rows() -> list[tuple[str, str, str]]:
@@ -83,9 +97,12 @@ def fixture_claims() -> dict[str, list[str]]:
         if not name.endswith(".gwcase"):
             continue
         head = open(os.path.join(cases, name), encoding="utf-8").read().split("=== before", 1)[0]
-        for m in re.finditer(r"^bypass:\s*([\d,\s]+)$", head, re.M):
-            for num in re.findall(r"\d+", m.group(1)):
-                claims.setdefault(num, []).append(name)
+        for line in head.splitlines():
+            if not line.startswith("bypass:"):
+                continue
+            for num in re.split(r"[,\s]+", line.partition(":")[2].strip()):
+                if re.fullmatch(r"\d+[a-z]*", num):
+                    claims.setdefault(num, []).append(name)
     return claims
 
 
@@ -119,15 +136,29 @@ def main() -> None:
     adj = _load(HERE, ADJUDICATION)
     fp = [v for v in adj["verdicts"] if v["category"] == "false_positive"]
     total = 0
+    versions = set()
+    swept = set()
     for name in sorted(os.listdir(os.path.join(HERE, "sweeps"))):
         if name.endswith(".json"):
-            total += _load(HERE, "sweeps", name)["commits_analysed"]
-    w(f"- **{len(fp)} of {total}** human-written commits are blocked by mistake "
-      f"({len(fp) / total:.2%}), each one named below.")
+            sweep = _load(HERE, "sweeps", name)
+            total += sweep["commits_analysed"]
+            versions.add(sweep.get("corpus", {}).get("greenwash_version", "unrecorded"))
+            swept.update((name[:-5], b["commit"]) for b in sweep["blocked_commits"])
+    judged = {(v["repo"], v["commit"]) for v in adj["verdicts"]}
+    if swept != judged:
+        raise SystemExit(
+            f"{ADJUDICATION} does not describe the tracked sweep; "
+            "review the measurement provenance before regenerating FAILURES.md"
+        )
+    w(f"- The **historical in-sample adjudication** labels **{len(fp)} of {total}** "
+      f"human-written commits as blocked by mistake ({len(fp) / total:.2%}), "
+      f"each one named below. The sweep JSONs record engine "
+      f"{', '.join(sorted(versions))}; the adjudication is dated "
+      f"{adj.get('date', 'unrecorded')}. This is not a new current-release measurement.")
     w("- **2 false positives were shipped and corrected**, both found by")
     w("  adversarial review rather than by this project's own review.")
-    w("- A production file greenwash cannot read suppresses escalation for the")
-    w("  whole diff. That is the largest hole and it is by design.")
+    w("- Opaque-change repair credit can keep oracle findings below the blocking")
+    w("  threshold. THREATMODEL #4 defines its scope and remaining limitations.")
     w("")
 
     order = ["open", "narrowed, still open", "closed in part", "open by design", "out of scope", "closed", "other"]
@@ -162,11 +193,19 @@ def main() -> None:
 
     w("## False positives on human-written commits")
     w("")
-    w(f"Every commit in the 1800-commit corpus that greenwash blocks and should")
-    w(f"not. Adjudicated by three raters; the reasoning for all three ships in")
-    w(f"`{ADJUDICATION}` and the two blind re-adjudications beside it.")
+    w(f"These are the false-positive labels in `{ADJUDICATION}`, dated")
+    w(f"{adj.get('date', 'unrecorded')}, matched to the historical tracked sweep.")
+    w("They are not a fresh list of the current engine's false positives.")
+    cohort_size = inter_rater_cohort_size()
+    w("The review methods differ by cohort: the 2026-08-04 blind passes cover")
+    w(f"{cohort_size} diffs; the later promotion round used two blind raters and")
+    w("reconciliation; additional judgments include maintainer single-pass")
+    w("review. Consult each file's method and per-commit fields. The agreement")
+    w(f"statistics from the {cohort_size}-diff cohort do not apply to every later block.")
+    w("A/B/C below are the recorded calls where present: `—` means no call")
+    w("is recorded in that field, while `?` means an explicitly unclear call.")
     w("")
-    w("| commit | three raters | why the block is wrong |")
+    w("| commit | recorded A/B/C calls | why the block is wrong |")
     w("|---|---|---|")
     for v in sorted(fp, key=lambda v: (v.get("repo", ""), v.get("commit", ""))):
         commit = v.get("commit", "?")[:10]
@@ -175,7 +214,7 @@ def main() -> None:
         # showing only the winning verdict would be the rounding-in-our-favour
         # this document exists to refuse.
         short = {"false_positive": "FP", "spec_correct": "policy", "unclear": "?"}
-        calls = [short.get(v.get(k, "?"), v.get(k, "?")) for k in ("rater_a", "rater_b", "rater_c")]
+        calls = [short.get(v.get(k), v.get(k) or "—") for k in ("rater_a", "rater_b", "rater_c")]
         why = (v.get("reason") or "").replace("\n", " ").replace("|", r"\|").strip()
         w(f"| {repo} `{commit}` | {'/'.join(calls)} | {why[:260]} |")
     w("")

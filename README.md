@@ -4,20 +4,24 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#install)
 
-**Your agent deleted the failing test to make CI green. checkwash catches it before merge.**
+**Catch known patterns of test weakening before merge.**
 
-It reads the git diff. If the tests got weaker and the production code was
-not actually fixed, it blocks. It does not run your suite, call an LLM, or
+checkwash reads the git diff and flags known changes that weaken verification.
+A required CI check enforces its configured verdict; a pass is not proof that
+the change is honest or correct. It does not run your suite, call an LLM, or
 use the network.
 
 Typical catches: `assert total == 105.3` becoming `assert total > 0`, a new
 `pytest.mark.skip`, a deleted test, a looser float tolerance, a rewritten
 golden file, or a CI script that stops failing.
 
-> Status: **pre-release.** 21 detectors, 575 tests, zero runtime dependencies.
-> Every number below comes out of a reproducible harness in
-> [benchmarks/](benchmarks/README.md) — none is hand-typed, and nothing ships
-> that a harness hasn't produced on a clean checkout.
+> Status: **v0.2.12, alpha pre-release.** 21 detectors, 578 tests in the current
+> source tree; zero runtime dependencies.
+> Published measurements below identify their corpus and history; they are
+> not a fresh measurement of every claim on v0.2.12. Start with the
+> [public-launch brief](docs/releases/v0.2.12-public-launch.md),
+> [known limitations](docs/adversarial-catalog-2026-09.md), and
+> [1.0 criteria — not met](docs/stability.md#what-must-change-before-10).
 
 ```
 $ checkwash check HEAD~1..HEAD
@@ -39,7 +43,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
 | Looks at | The diff. Never executes the code under review. |
 | Stops a merge | Only if you make the `checkwash` job a **required** status check. Installing it is not enough. |
 | Speed | 0.2 s engine on a 3000-line test diff; 1.6 s end-to-end for 300 files. |
-| Honest cost | On 1800 human commits: **27 false positives (1.50%)**. Out of sample, worse: **11 false positives (1.65%)** on 667 commits it was not tuned on. Published: [benchmarks/](benchmarks/README.md), [THREATMODEL.md](THREATMODEL.md), [FAILURES.md](benchmarks/FAILURES.md), [integrations.md](docs/integrations.md). |
+| Honest cost | Historical tuned-corpus result: **27 false positives (1.50%)** on 1800 human commits. A separate 2026-08-07 integration study reported **11 false positives (1.65%)** on 667 commits. Dedicated refactor corpus: **24/60 blocked (40%)**. These populations and engine versions differ; see [benchmarks/](benchmarks/README.md), [FAILURES.md](benchmarks/FAILURES.md), and [integrations.md](docs/integrations.md). |
 
 ## Sixty seconds, from nothing
 
@@ -48,7 +52,7 @@ attaches a single file that carries the whole tool — it has zero runtime
 dependencies, so there is nothing else to fetch.
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/latest/download/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.12/checkwash.pyz
 python checkwash.pyz demo                       # 8 real tampering cases, blocked, offline
 python checkwash.pyz check HEAD~1..HEAD         # your last commit
 python checkwash.pyz sweep HEAD --limit 100     # how often it would have blocked you
@@ -61,8 +65,11 @@ before you believe any number on this page. The single-file build is gated by
 
 ## Install
 
-Pick the surface that fits; the engine is identical behind all of them, and
-[docs/stability.md](docs/stability.md) says which parts of it are frozen.
+Pick the surface that fits and pin its version. The CLI, zipapp, hooks and
+Action use the checkwash engine, but the documented Action deliberately pins
+v0.2.11 while this release's CLI and zipapp are v0.2.12. Read the
+[Action trust lag](#required-check--the-only-configuration-that-blocks-a-merge)
+below and the contracts in [docs/stability.md](docs/stability.md).
 
 Install the CLI, then run it. `greenwash` is a leftover alias and does the
 same thing. From PyPI — every release since 0.2.1 is published there by the
@@ -88,6 +95,13 @@ widened tolerance, a rewritten expectation, an xfail'd failure, a swallowed
 error, a relaxed CI step, a self-edited CLAUDE.md, and an assertion swapped for
 an unrelated one of the same strength — plus one honest fix that stays silent. No network, no key, no LLM; every verdict comes from the same
 engine `check` runs.
+
+Python is the main analysis surface. JS/TS support is a bounded scan of
+`test`/`it` units and recognized `expect(...).matcher(...)` calls in
+`*.test.*` and `*.spec.*` files with `js`, `jsx`, `ts`, `tsx`, `mjs`, or
+`cjs` extensions. It is not a full JavaScript parser; it does not analyze
+JS/TS production semantics or arbitrary assertion libraries. See
+[coverage limits](docs/stability.md#coverage-and-adoption-cost).
 
 ### Required check — the only configuration that blocks a merge
 
@@ -212,11 +226,14 @@ To reproduce the published numbers from this checkout:
 
 ## Measured, not asserted
 
-Two harnesses, both reproducible from a clone
-([benchmarks/](benchmarks/README.md)):
+The published corpora measure different questions. Preserve the original
+engine version and measurement date when quoting a result; the
+[launch brief](docs/releases/v0.2.12-public-launch.md) separates historical
+measurements from release qualification. Corpus definitions and artifacts:
+[benchmarks/](benchmarks/README.md).
 
-- **On test-suite refactors specifically — 25 false positives out of 60, and
-  the 1.17% below does not predict it.** 60 refactors a reviewer would approve
+- **On test-suite refactors specifically — 24 false positives out of 60
+  (40%); the historical 1.50% below does not predict it.** 60 refactors a reviewer would approve
   (extract an assertion into a shared helper, merge two tests, move a check
   into a fixture, swap exact equality for `pytest.approx`), each shipping
   production **twice** — correct and buggy — so that four pytest runs prove
@@ -231,25 +248,28 @@ Two harnesses, both reproducible from a clone
   `TEST_PATCHES_SUBJECT` on a meaningless zero. Both numbers are real and they
   answer different questions.
   [benchmarks/refactors/](benchmarks/refactors/README.md).
-- **Human-commit block rate — 42 / 1800 = 2.33%.** Six active OSS projects
+- **Historical human-commit block rate — 42 / 1800 = 2.33%.** The committed
+  six-repo sweep artifacts record engine v0.1.46. Six active OSS projects
   (flask, httpx, attrs, click, rich, starlette), 300 consecutive
   human-reviewed commits each. This is the corpus the detectors were tuned
   against, not a held-out set: it was unseen only at the first measurement
   (8.6%, 2026-07-30); every precision round since has been re-run on the
   same 1800 commits, with the blocked diffs read and the rules shaped
   accordingly. That is how often checkwash would fail CI on a commit a
-  human wrote, on the repos it knows best. Every repo is at or under 4%;
+  human wrote, on the repos it knows best. The highest repository rate was
+  click at 13/300 = 4.33%;
   the progression, and what moved each step, is in the benchmarks README.
-  Out of sample it does worse, and that is published too: 11 false
+  Separate integration measurements are published too: 11 false
   positives on 667 commits (1.65%, three projects, 2026-08-07,
-  [docs/integrations.md](docs/integrations.md)) and 67 adjudicated false
-  positives on 2300 commits (2.91%, thirteen projects, engine v0.1.49,
+  [docs/integrations.md](docs/integrations.md)) and 67 preliminary false
+  positives on 2300 commits (2.91%, thirteen projects including the in-corpus
+  rich project, engine v0.1.49, maintainer-only adjudication,
   2026-09-01, [benchmarks/external/2026-09-01/FINAL_REPORT.md](benchmarks/external/2026-09-01/FINAL_REPORT.md)).
   A block is not automatically a mistake. All 42 were adjudicated commit by
   commit against the real diff: **27 false positives (1.50%)**, 15 legitimate
   policy blocks (0.83%) where the commit really does drop oracle coverage
-  with nothing visible replacing it, 0 unclear. Three precision rounds
-  brought this down from 2.50% / 1.67%: skip conditions are *read* (constants
+  with nothing visible replacing it, 0 unclear. Earlier precision rounds
+  reduced the then-observed 2.50% / 1.67% rates: skip conditions are *read* (constants
   resolved up to the head snapshot) instead of grepped, relocated tests are
   recognised even when they carry their own skip markers or hold no
   assertions, feature removals and dependency bumps explain the removal of
@@ -261,19 +281,20 @@ Two harnesses, both reproducible from a clone
   one adjudication *verdict* was overturned in the tool's favour when the
   duplicate search proved a "relocated" test actually reappears nowhere;
   each trade is reported as measured.
-  The block rate is a machine count and exact. The split is a multi-rater
-  judgement: two additional raters blind-re-adjudicated 35 of the 37
+  The block rate is a machine count and exact. The split combines adjudication
+  cohorts: two additional raters blind-re-adjudicated 35 of the 37
   pre-promotion blocks, with 91–94% pairwise agreement and Fleiss' kappa
   0.844, and the five blocks the 2026-08-25 promotion added were each
-  judged by two blind raters; the published category is the majority
-  verdict, the contested commits are marked, and the per-commit reasoning
-  of every rater ships in
+  judged by two blind raters with reconciliation of ties. The final added
+  block in the 2026-08-26b adjudication was maintainer single-pass. The
+  kappa describes the older 35-diff study, not all 42 entries in that
+  historical adjudication. Contested commits and per-rater reasoning ship in
   [benchmarks/](benchmarks/README.md) precisely so you can disagree with it.
-  **1.33% of the corpus (24/1800) never got a real analysis**: those commits
-  touch a production file checkwash genuinely cannot read — other-language
-  code, templates, data files, unparseable Python — which suppresses
-  escalation for the whole diff (THREATMODEL #4). That share of the pass
-  rate rests on a documented blind spot, measured rather than assumed. It
+  **1.33% of the corpus (24/1800) records opaque production changes**:
+  the stored `commits_with_opaque_prod_change` count identifies changes the
+  analyzer cannot fully interpret. Opaque-change repair credit can suppress
+  escalation (THREATMODEL #4), but this count does not establish that the
+  credit changed each verdict or that each diff received no analysis. It
   used to be 7.2%: narrowing the blanket (docs config, type stubs, repo
   metadata, pin sources, deleted-but-parseable Python and scripts that run
   the test suite no longer qualify) removed 105 exemptions and **did not

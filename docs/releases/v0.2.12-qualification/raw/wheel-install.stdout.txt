@@ -1,0 +1,3 @@
+Processing <WORKSPACE>\wheelhouse\checkwash-0.2.12-py3-none-any.whl
+Installing collected packages: checkwash
+Successfully installed checkwash-0.2.12

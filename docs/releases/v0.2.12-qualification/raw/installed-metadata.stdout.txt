@@ -1,0 +1,38 @@
+{
+  "distribution_name": "checkwash",
+  "distribution_version": "0.2.12",
+  "module_version": "0.2.12",
+  "module_path": "<WORKSPACE>\\venv\\Lib\\site-packages\\checkwash\\__init__.py",
+  "prefix": "<WORKSPACE>\\venv",
+  "base_prefix": "<PYTHON_HOME>",
+  "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "requires_dist": [
+    "pytest>=8; extra == 'dev'"
+  ],
+  "entrypoints": [
+    {
+      "name": "checkwash",
+      "value": "checkwash.cli:main",
+      "group": "console_scripts"
+    },
+    {
+      "name": "greenwash",
+      "value": "checkwash.cli:main",
+      "group": "console_scripts"
+    }
+  ],
+  "installed_distributions": [
+    {
+      "name": "checkwash",
+      "version": "0.2.12"
+    },
+    {
+      "name": "pip",
+      "version": "24.0"
+    },
+    {
+      "name": "setuptools",
+      "version": "65.5.0"
+    }
+  ]
+}

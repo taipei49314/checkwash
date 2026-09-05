@@ -1,0 +1,559 @@
+{
+  "schema_version": 1,
+  "source_receipt_sha256": "6130e88bb6afefb4da7b4137378c67fcf78f65893874ce78b040f1bda255baeb",
+  "published_receipt": {
+    "path": "receipt.json",
+    "sha256": "d30a13850d5ced9a41a0a9d4c47c3750bb7107f49a72819d660b6e0741ccbac8"
+  },
+  "published_summary": {
+    "path": "SUMMARY.md",
+    "sha256": "c6bdda85188d1fca43e1217a672124305711b023d7703a4464cd04362bfded80"
+  },
+  "publication_builder": {
+    "path": "build_public.py",
+    "sha256": "7f145df5cbb5006ca13494082a0b028a56d7124e5e50b71a9bf111630ec8e010"
+  },
+  "command_count": 33,
+  "check_count": 15,
+  "captured_file_count": 67,
+  "changed_file_count": 4,
+  "new_qualification_runs": 0,
+  "files": [
+    {
+      "published_path": "raw/cli-benign-doc-diff-json.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-benign-doc-diff-json.stdout.txt",
+      "original_sha256": "bcbf73a62754a56c276a0d262cfc260d016130c13000cce5dbcf3b1298182324",
+      "published_sha256": "bcbf73a62754a56c276a0d262cfc260d016130c13000cce5dbcf3b1298182324",
+      "original_bytes": 302,
+      "published_bytes": 302,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-benign-doc-diff-sarif.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-benign-doc-diff-sarif.stdout.txt",
+      "original_sha256": "4e2a73a042752dd136b7c7324351dea2fe5705a72ad75400376597807efca3dc",
+      "published_sha256": "4e2a73a042752dd136b7c7324351dea2fe5705a72ad75400376597807efca3dc",
+      "original_bytes": 459,
+      "published_bytes": 459,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-doctor.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-doctor.stdout.txt",
+      "original_sha256": "1d166697a8e66a04e4f9f08b451d6d6deb44a7d307f057fe8c7307bddd96ba53",
+      "published_sha256": "1d166697a8e66a04e4f9f08b451d6d6deb44a7d307f057fe8c7307bddd96ba53",
+      "original_bytes": 1555,
+      "published_bytes": 1555,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-help.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-help.stdout.txt",
+      "original_sha256": "578b20d89f230cd3a3e21f65ee91dcc0d944497b5068b7503622b6ded12ee094",
+      "published_sha256": "578b20d89f230cd3a3e21f65ee91dcc0d944497b5068b7503622b6ded12ee094",
+      "original_bytes": 754,
+      "published_bytes": 754,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-invalid-revision.stderr.txt",
+      "original_sha256": "9c56b3019b512177a3f63dadb0dc3c1bcfbaee34165983bede7f6a6b28fb1a6b",
+      "published_sha256": "9c56b3019b512177a3f63dadb0dc3c1bcfbaee34165983bede7f6a6b28fb1a6b",
+      "original_bytes": 276,
+      "published_bytes": 276,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-invalid-revision.stdout.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-unchanged-json.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-unchanged-json.stdout.txt",
+      "original_sha256": "01c96e423b6af78d65a2dda1d549fa6e4e3ebd121150c76cb4ca76019e4ca98a",
+      "published_sha256": "01c96e423b6af78d65a2dda1d549fa6e4e3ebd121150c76cb4ca76019e4ca98a",
+      "original_bytes": 302,
+      "published_bytes": 302,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-unchanged-sarif.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-unchanged-sarif.stdout.txt",
+      "original_sha256": "f5566ed10d650233ff06b722a95acbaa2f2a0c21f9ee103006cde4540775cf04",
+      "published_sha256": "f5566ed10d650233ff06b722a95acbaa2f2a0c21f9ee103006cde4540775cf04",
+      "original_bytes": 459,
+      "published_bytes": 459,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-version.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/cli-version.stdout.txt",
+      "original_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "published_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "original_bytes": 18,
+      "published_bytes": 18,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/git-version.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/git-version.stdout.txt",
+      "original_sha256": "89afc1eb914736d10aa73f8c5002e779dbde9d247c5e17cdbcd229ce597a9719",
+      "published_sha256": "89afc1eb914736d10aa73f8c5002e779dbde9d247c5e17cdbcd229ce597a9719",
+      "original_bytes": 29,
+      "published_bytes": 29,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/installed-metadata.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/installed-metadata.stdout.txt",
+      "original_sha256": "23d4bf86c037957fde96af31fe58e5caef4f2d926fcffbaeb80263a97357672f",
+      "published_sha256": "d7a1ad650f070b86e227ec399dd993b89081375c101e025706ff406fe77875f2",
+      "original_bytes": 1134,
+      "published_bytes": 923,
+      "sanitized": true
+    },
+    {
+      "published_path": "raw/legacy-alias-version.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/legacy-alias-version.stdout.txt",
+      "original_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "published_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "original_bytes": 18,
+      "published_bytes": 18,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pypi-0.2.12.json",
+      "original_sha256": "722456791a00481b867a3789cbe034b18f4cc6cd98b20cfac68dc304c9fa348b",
+      "published_sha256": "722456791a00481b867a3789cbe034b18f4cc6cd98b20cfac68dc304c9fa348b",
+      "original_bytes": 24915,
+      "published_bytes": 24915,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pypi-wheel-download.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pypi-wheel-download.stdout.txt",
+      "original_sha256": "f92cd32a1740f0d3cd152ac491343dfde25d1070a2b41933c158e387dde8d13e",
+      "published_sha256": "38dcccdceeef34e60bfeb59f1a80dc9ca0694dae0952d1675cd06649cb7b37a7",
+      "original_bytes": 405,
+      "published_bytes": 332,
+      "sanitized": true
+    },
+    {
+      "published_path": "raw/python-version.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/python-version.stdout.txt",
+      "original_sha256": "1f030e2374c48927a42b38f9777ffd50867049caefe9431e68eda591c97efa31",
+      "published_sha256": "1f030e2374c48927a42b38f9777ffd50867049caefe9431e68eda591c97efa31",
+      "original_bytes": 15,
+      "published_bytes": 15,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-benign-doc-diff-json.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-benign-doc-diff-json.stdout.txt",
+      "original_sha256": "bcbf73a62754a56c276a0d262cfc260d016130c13000cce5dbcf3b1298182324",
+      "published_sha256": "bcbf73a62754a56c276a0d262cfc260d016130c13000cce5dbcf3b1298182324",
+      "original_bytes": 302,
+      "published_bytes": 302,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-benign-doc-diff-sarif.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-benign-doc-diff-sarif.stdout.txt",
+      "original_sha256": "4e2a73a042752dd136b7c7324351dea2fe5705a72ad75400376597807efca3dc",
+      "published_sha256": "4e2a73a042752dd136b7c7324351dea2fe5705a72ad75400376597807efca3dc",
+      "original_bytes": 459,
+      "published_bytes": 459,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-doctor.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-doctor.stdout.txt",
+      "original_sha256": "1d166697a8e66a04e4f9f08b451d6d6deb44a7d307f057fe8c7307bddd96ba53",
+      "published_sha256": "1d166697a8e66a04e4f9f08b451d6d6deb44a7d307f057fe8c7307bddd96ba53",
+      "original_bytes": 1555,
+      "published_bytes": 1555,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-help.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-help.stdout.txt",
+      "original_sha256": "578b20d89f230cd3a3e21f65ee91dcc0d944497b5068b7503622b6ded12ee094",
+      "published_sha256": "578b20d89f230cd3a3e21f65ee91dcc0d944497b5068b7503622b6ded12ee094",
+      "original_bytes": 754,
+      "published_bytes": 754,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-invalid-revision.stderr.txt",
+      "original_sha256": "9c56b3019b512177a3f63dadb0dc3c1bcfbaee34165983bede7f6a6b28fb1a6b",
+      "published_sha256": "9c56b3019b512177a3f63dadb0dc3c1bcfbaee34165983bede7f6a6b28fb1a6b",
+      "original_bytes": 276,
+      "published_bytes": 276,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-invalid-revision.stdout.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-unchanged-json.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-unchanged-json.stdout.txt",
+      "original_sha256": "01c96e423b6af78d65a2dda1d549fa6e4e3ebd121150c76cb4ca76019e4ca98a",
+      "published_sha256": "01c96e423b6af78d65a2dda1d549fa6e4e3ebd121150c76cb4ca76019e4ca98a",
+      "original_bytes": 302,
+      "published_bytes": 302,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-unchanged-sarif.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-unchanged-sarif.stdout.txt",
+      "original_sha256": "f5566ed10d650233ff06b722a95acbaa2f2a0c21f9ee103006cde4540775cf04",
+      "published_sha256": "f5566ed10d650233ff06b722a95acbaa2f2a0c21f9ee103006cde4540775cf04",
+      "original_bytes": 459,
+      "published_bytes": 459,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-version.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/pyz-version.stdout.txt",
+      "original_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "published_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "original_bytes": 18,
+      "published_bytes": 18,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-commit-docs.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-commit-docs.stdout.txt",
+      "original_sha256": "7f24a08fef322ad0cb874ce8e300e0b6835687a8baefd47d0c1deabe20024e4f",
+      "published_sha256": "7f24a08fef322ad0cb874ce8e300e0b6835687a8baefd47d0c1deabe20024e4f",
+      "original_bytes": 91,
+      "published_bytes": 91,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-commit-initial.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-commit-initial.stdout.txt",
+      "original_sha256": "cbc1aace4eb419c318744b3237e6c7d15780e5f4518b592c6b70ab0b96c28106",
+      "published_sha256": "cbc1aace4eb419c318744b3237e6c7d15780e5f4518b592c6b70ab0b96c28106",
+      "original_bytes": 261,
+      "published_bytes": 261,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-diff-stat.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-diff-stat.stdout.txt",
+      "original_sha256": "c54f3118b0c7467cb1dbdcdbd76da58560dee59a18556d84ea57ca94a9e1ca5c",
+      "published_sha256": "c54f3118b0c7467cb1dbdcdbd76da58560dee59a18556d84ea57ca94a9e1ca5c",
+      "original_bytes": 65,
+      "published_bytes": 65,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-final-status.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-final-status.stdout.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-history.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-history.stdout.txt",
+      "original_sha256": "c17523629b3792df6f2e1c38ced46fa44a96102a3b5d898392c8eee1560932ba",
+      "published_sha256": "c17523629b3792df6f2e1c38ced46fa44a96102a3b5d898392c8eee1560932ba",
+      "original_bytes": 147,
+      "published_bytes": 147,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-init.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-init.stdout.txt",
+      "original_sha256": "672ce2deb4633c4fc02c95d19a943fff3fa33dfa19be4859730059f792d15fdf",
+      "published_sha256": "2be3666653d257859cb0885afe012dafc8be037c0ee8676ba3c5a9853d8e6a2a",
+      "original_bytes": 139,
+      "published_bytes": 66,
+      "sanitized": true
+    },
+    {
+      "published_path": "raw/repo-local-email.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-local-email.stdout.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-local-name.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-local-name.stdout.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-stage-docs.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-stage-docs.stdout.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-stage-initial.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/repo-stage-initial.stdout.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/venv-create.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/venv-create.stdout.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/wheel-install.stderr.txt",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "published_bytes": 0,
+      "sanitized": false
+    },
+    {
+      "published_path": "raw/wheel-install.stdout.txt",
+      "original_sha256": "0a751ae805ee7c3ffa689384607a326aaa00a84d475b3d1645c31d3398ea1fca",
+      "published_sha256": "a894dd6e05a57dd03e65e051481f250e5506e1960d15979dfaf1b3bb7665100a",
+      "original_bytes": 225,
+      "published_bytes": 152,
+      "sanitized": true
+    }
+  ]
+}

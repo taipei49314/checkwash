@@ -1,0 +1,1 @@
+Initialized empty Git repository in <WORKSPACE>/benign-repo/.git/

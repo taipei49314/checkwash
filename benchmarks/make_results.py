@@ -1,7 +1,7 @@
 """Generate benchmarks/RESULTS.md from sweep JSONs + the triage file.
 
-Every number in RESULTS.md comes from here, so the document cannot drift from
-the measurements. Run after a sweep round:
+Render the recorded sweep and its matching adjudication without running the
+engine. Regeneration preserves the measurements' original provenance:
 
     python benchmarks/make_results.py <sweep_dir> [--label "..."]
 """
@@ -17,6 +17,23 @@ REPOS = ["flask", "httpx", "attrs", "click", "rich", "starlette"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 # The adjudication is tied to one sweep. Bump both together, never one.
 ADJUDICATION = "adjudication-2026-08-26b.json"
+BLIND_RATER_FILES = (
+    "adjudication-rater-B-2026-08-04.json",
+    "adjudication-rater-C-2026-08-04.json",
+)
+
+
+def inter_rater_cohort_size() -> int:
+    """Read the cohort size from the two recorded blind passes, not the
+    later adjudication's total. Later snapshots carry these statistics."""
+    cohorts = []
+    for name in BLIND_RATER_FILES:
+        with open(os.path.join(HERE, name), encoding="utf-8") as fh:
+            verdicts = json.load(fh)
+        cohorts.append({(v["repo"], v["commit"]) for v in verdicts})
+    if cohorts[0] != cohorts[1]:
+        raise SystemExit("blind-rater files describe different cohorts; review provenance")
+    return len(cohorts[0])
 
 
 def load_round(directory: str) -> dict:
@@ -51,7 +68,7 @@ def load_round(directory: str) -> dict:
 
 def main() -> None:
     directory = sys.argv[1]
-    label = "final"
+    label = "historical tracked sweep"
     if "--label" in sys.argv:
         label = sys.argv[sys.argv.index("--label") + 1]
     r = load_round(directory)
@@ -70,14 +87,25 @@ def main() -> None:
     w("here comes out of that script; nothing is hand-typed. Re-run it and the")
     w("file regenerates identically from the same inputs.")
     w("")
-    w("## False-positive corpus")
+    versions = sorted({
+        d.get("corpus", {}).get("greenwash_version", "unrecorded")
+        for d in r["per_repo"].values()
+    })
+    w(f"**Historical provenance:** the input sweep JSONs record engine version(s) "
+      f"{', '.join(versions)}. This report renders those records; it does not run "
+      "the current engine or refresh their measurement date. The original JSON "
+      "metadata and adjudication dates remain unchanged.")
+    w("")
+    w("## Human-history corpus (in-sample)")
     w("")
     w("Human-authored, human-reviewed history from six active OSS Python")
-    w("projects, 300 consecutive non-merge commits each. greenwash never saw")
-    w("these repos during development.")
+    w("projects, 300 consecutive non-merge commits each. After the first")
+    w("measurement on 2026-07-30, these same diffs were repeatedly reviewed")
+    w("and used to tune the analyzer. The recorded result is in-sample,")
+    w("not a held-out estimate for unseen repositories or a fresh v0.2.12 sweep.")
     w("")
     w("```bash")
-    w("greenwash sweep HEAD --limit 300 --repo <path>   # per repo")
+    w("checkwash sweep HEAD --limit 300 --repo <path>   # measurement command, not run by this generator")
     w("```")
     w("")
     w(f"**Blocked (would fail CI at the default `fail_on = high`): "
@@ -95,11 +123,12 @@ def main() -> None:
     w(f"Engine errors: {r['errors']}.")
     w("")
     if r["total"]:
-        w(f"**Commits that received the blanket opaque-change exemption: "
-          f"{r['opaque']}/{r['total']} = {r['opaque'] / r['total']:.1%}.** A prod file greenwash "
-          f"cannot read — non-Python, deleted, unparseable — suppresses E1 for the whole diff "
-          f"(THREATMODEL #4). That is a documented blind spot, not analysis, and this is how "
-          f"often it is load-bearing on this corpus. Read the pass rate with it in mind.")
+        w(f"**Recorded commits with opaque production changes: "
+          f"{r['opaque']}/{r['total']} = {r['opaque'] / r['total']:.1%}.** This is the "
+          f"stored `commits_with_opaque_prod_change` count. Opaque-change repair credit "
+          f"can keep oracle findings below the blocking threshold (THREATMODEL #4); "
+          f"the count alone does not show that the credit changed each verdict, or "
+          f"measure the current engine's analysis coverage.")
         w("")
     if r["rule_blocks"]:
         w("Blocking findings by rule (commits containing at least one):")
@@ -166,6 +195,9 @@ def main() -> None:
         w("")
         w(f"Raw per-commit verdicts and reasoning: `{ADJUDICATION}`.")
         w("")
+        w(f"Recorded adjudication date: **{adj.get('date', 'unrecorded')}**. "
+          f"Source: {adj.get('source', 'unrecorded')}.")
+        w("")
         w(f"How they were judged: {adj.get('method', 'unrecorded')}.")
         w("")
         # Derived from the adjudication file, never hardcoded. This paragraph
@@ -189,7 +221,12 @@ def main() -> None:
             agree = ", ".join(f"{k} {v:.1%}" for k, v in sorted(pair.items()))
             cohen = ir.get("cohen_kappa") or {}
             ck = ", ".join(f"{k} {v:.2f}" for k, v in sorted(cohen.items()))
-            w(f"It has been judged {ir['raters']} times. {ir.get('method', '')}".rstrip())
+            cohort_size = inter_rater_cohort_size()
+            w(f"An earlier **{cohort_size}-diff cohort** was judged {ir['raters']} times. "
+              f"{ir.get('method', '')}".rstrip())
+            w(f"The following agreement statistics describe only that cohort, not "
+              f"all {n} blocks in this later snapshot. The two blind-pass files are "
+              f"`{BLIND_RATER_FILES[0]}` and `{BLIND_RATER_FILES[1]}`.")
             w("")
             w(f"- pairwise agreement: {agree}")
             if ck:
@@ -197,7 +234,7 @@ def main() -> None:
             if ir.get("fleiss_kappa") is not None:
                 w(f"- Fleiss' kappa across all {ir['raters']}: **{ir['fleiss_kappa']:.3f}**")
             if ir.get("items_with_any_disagreement") is not None:
-                w(f"- commits with any disagreement: {ir['items_with_any_disagreement']} of {n}")
+                w(f"- commits with any disagreement: {ir['items_with_any_disagreement']} of {cohort_size}")
             if ir.get("reconciliation"):
                 w(f"- reconciliation: {ir['reconciliation']}")
             w("")
@@ -210,6 +247,11 @@ def main() -> None:
                     f"{pr.get('note', '')}".rstrip()
                 )
                 w("")
+            w("Later adjudication files carry earlier verdicts forward and may remove")
+            w("previously blocked commits. Additional judgments, including maintainer")
+            w("single-pass review, are identified in their method and per-commit fields;")
+            w("do not treat the historical split as one uniformly three-rater cohort.")
+            w("")
         else:
             w("Each commit was judged once, with no second opinion and no")
             w("inter-rater agreement measured. What would make the split solid is")
@@ -235,6 +277,9 @@ def main() -> None:
     w("")
     w("## Honest limits of this number")
     w("")
+    w("- **Historical and in-sample.** Regenerating this page neither runs the")
+    w("  current release nor creates a new held-out result. Keep the recorded")
+    w("  engine version, corpus, date, and adjudication attached to the rates.")
     w("- **It is a block rate, not a false-positive rate.** Some of these blocks")
     w("  are correct: the commit really did drop oracle coverage with nothing")
     w("  visible replacing it, and a reviewer would allowlist it. The decomposed")

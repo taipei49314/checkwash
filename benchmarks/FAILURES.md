@@ -11,26 +11,25 @@ it is known not to.
 
 ## The short version
 
-- **117 bypasses** are documented, of which **29 are not closed**.
-- **27 of 1800** human-written commits are blocked by mistake (1.50%), each one named below.
+- **117 bypasses** are documented, of which **28 are not closed**.
+- The **historical in-sample adjudication** labels **27 of 1800** human-written commits as blocked by mistake (1.50%), each one named below. The sweep JSONs record engine 0.1.46; the adjudication is dated 2026-08-26. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
-- A production file greenwash cannot read suppresses escalation for the
-  whole diff. That is the largest hole and it is by design.
+- Opaque-change repair credit can keep oracle findings below the blocking
+  threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (2)
+## Open — no defence at all (1)
 
 | # | shape | pinned by |
 |---|---|---|
 | 54 | Edit the guard of an existing imperative skip: `if version < X: pytest.skip()` → `if True: pytest.skip()` | — |
-| 77 | Weaken a `.bat` or `.ps1` runner | — |
 
 ## Narrowed, still open (3)
 
 | # | shape | pinned by |
 |---|---|---|
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
-| 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | — |
+| 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
 | 93 | Buy repair evidence with an alpha-rename inside the called symbol — `total` → `subtotal` changes the AST fingerprint and nothing else | — |
 
 ## Closed in part (5)
@@ -39,8 +38,8 @@ it is known not to.
 |---|---|---|
 | 76 | Disarm with `set -o errexit` / `set +o errexit` (long form), an unspaced or-fallback, an or-fallback into `echo`, or `if ! runner; then ... fi` | `runner_script_errexit_longform_pos.gwcase` |
 | 84 | Launder the oracle anywhere but the subject: hoist the wrapper to a preceding statement, wrap the *argument*, or make the expected side an inline re-implementation of the buggy behaviour | `subject_argument_wrap_pos.gwcase`, `subject_hoisted_wrap_pos.gwcase` |
-| 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | — |
-| 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | — |
+| 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | `expectation_derived_inline_pos.gwcase`, `expectation_derived_pos.gwcase` |
+| 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | `assert_substituted_literal_pos.gwcase`, `assert_substituted_own_version_bump_pos.gwcase`, `assert_substituted_pos.gwcase` |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | `oracle_crossfile_import_neg.gwcase`, `oracle_crossfile_uncalled_pos.gwcase`, `oracle_fixture_checker_neg.gwcase`, `oracle_fixture_fanout_dedup.gwcase`, `oracle_fixture_teardown_refused_trade.gwcase`, `oracle_fixture_unrequested_pos.gwcase`, `oracle_helper_renamed_neg.gwcase`, `oracle_helper_uncalled_pos.gwcase`, `oracle_moved_into_helper_neg.gwcase`, `oracle_nested_never_invoked_pos.gwcase` |
 
 ## Open by design — the cost of a deliberate trade (8)
@@ -64,7 +63,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (85)
+## Closed — each pinned by something that runs (86)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -142,6 +141,7 @@ behind it* unshippable.
 | 73 | Add any unreadable file — three lines of json that nothing imports — purely to earn the row-2 exemption for the whole diff | `opaque_new_file_not_evidence_pos.gwcase` |
 | 74 | Normalise the *subject* instead of the expectation: `assert encode_path(s) == "caf%C3%A9"` → `assert encode_path(s).replace("%e9", "%C3%A9") == "caf%C3%A9"` | `subject_normalized_pos.gwcase` |
 | 75 | Name the runner file `Justfile`, `.justfile`, `ci/justfile`, `Makefile.include` or `common.mak` — spellings the ecosystem uses and `_runner_shape` does not know | `runner_justfile_semicolon_true_pos.gwcase` |
+| 77 | Weaken a `.bat` or `.ps1` runner | `runner_bat_swallow_pos.gwcase`, `runner_ps1_swallow_pos.gwcase` |
 | 78 | `git rm` an unreadable prod file to earn the row-2 exemption | `opaque_deleted_file_not_evidence_pos.gwcase` |
 | 79 | Rename a docs file onto a prod path (`docs/rules.md` → `app/rules.csv`) | — |
 | 80 | Break the syntax of an existing, unimported prod `.py` | `unparseable_self_inflicted_pos.gwcase` |
@@ -149,13 +149,13 @@ behind it* unshippable.
 | 82 | Put the collection control in a **new** `conftest.py` | `conftest_added_file_kills_suite_pos.gwcase` |
 | 83 | Reach `collect_ignore` from an `except ImportError:` handler, or assign through a slice (`collect_ignore[:] = [...]`) | `collect_ignore_slice_pos.gwcase` |
 | 86 | Put the tests in a `unittest.TestCase` subclass that is not named `Test*` — `class BillingTests(unittest.TestCase)` — and weaken anything inside it | `unittest_class_aliased_base_pos.gwcase`, `unittest_class_not_named_test_pos.gwcase` |
-| 86c | Substitute an assertion where **neither** expectation is a literal — `assert ok == success` -> `assert pinned == wanted` | — |
-| 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | — |
+| 86c | Substitute an assertion where **neither** expectation is a literal — `assert ok == success` -> `assert pinned == wanted` | `assert_substituted_both_nonliteral_pos.gwcase` |
+| 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | `unittest_len_modernize_neg.gwcase` |
 | 87 | An **unrecognised runner file** does not merely hide its own weakening — it *buys* the opaque exemption. Weaken an assertion and weaken the test command in `common.mak`, `Makefile.include`, `Justfile` (capital J) or `ci/justfile`, with no production change | `runner_common_mak_pos.gwcase`, `runner_justfile_capital_pos.gwcase`, `runner_justfile_nested_pos.gwcase`, `runner_makefile_include_pos.gwcase` |
-| 87a | Weaken a **PowerShell or cmd** runner: `$ErrorActionPreference = "Continue"` plus `exit 0`, or `exit /b 0` replacing `if errorlevel 1` | — |
+| 87a | Weaken a **PowerShell or cmd** runner: `$ErrorActionPreference = "Continue"` plus `exit 0`, or `exit /b 0` replacing `if errorlevel 1` | `runner_bat_swallow_pos.gwcase`, `runner_ps1_swallow_pos.gwcase`, `runner_sh_or_echo_pos.gwcase` |
 | 89 | Weaken the suite in an **intermediate** script: the CI entry only calls another script, so it holds no runner token of its own — `./scripts/run-tests.sh` becoming `./scripts/run-tests.sh \|\| true` | `runner_one_hop_pos.gwcase` |
 | 90 | Patch the code under test **from inside the test**, not from a conftest: `monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)` two lines above `assert billing.invoice_total(...) == 105.3`, or the same thing spelled `mock.patch(...)` / `patch.object(...)` / `mocker.patch(...)`. Production and the assertion line both stay byte-identical | `test_patches_subject_mock_patch_pos.gwcase`, `test_patches_subject_new_test_neg.gwcase`, `test_patches_subject_pos.gwcase`, `test_patches_subject_stdlib_neg.gwcase`, `test_patches_subject_unrelated_attr_neg.gwcase`, `test_patches_subject_via_local_pos.gwcase` |
-| 91b | The two `with`-context spellings of assertion neutralization that row 91a's "swallowing `__exit__`" bucket never named outright: `with contextlib.suppress(AssertionError): assert X` swallows the failure, and `with pytest.raises(AssertionError): assert X` inverts the oracle so a wrong answer is required. `except AssertionError: pass` was already a broad handler; these are the `with` dialects of the same move | — |
+| 91b | The two `with`-context spellings of assertion neutralization that row 91a's "swallowing `__exit__`" bucket never named outright: `with contextlib.suppress(AssertionError): assert X` swallows the failure, and `with pytest.raises(AssertionError): assert X` inverts the oracle so a wrong answer is required. `except AssertionError: pass` was already a broad handler; these are the `with` dialects of the same move | `raises_assertionerror_neutralizes_pos.gwcase`, `raises_assertionerror_tuple_neutralizes_pos.gwcase`, `suppress_assertionerror_neutralizes_pos.gwcase` |
 | 97 | Replace an independently derived **call-expression** expectation with a **literal of the current buggy output** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == 100.0` — no production change in the diff | `expected_call_to_literal_pos.gwcase` |
 | 98 | Replace an independently derived **call-expression** expectation with a **call to a same-bug twin** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == twin_total(items)` — twin unused at baseline, implements the identical bug | `expected_call_to_twin_pos.gwcase` |
 | 99 | Edit checkwash's own config under its renamed directory — `.checkwash/config.toml` — either a comment change in the same diff as a weakened assertion, or a committed `[detectors] disable`. The path matched no role and was classified production: the comment change granted `REPAIR_EVIDENCE` (verdict pass) and the planted disable produced zero findings; the same edits under `.greenwash/` were critical | `exemption_added_checkwash_pos.gwcase`, `guardrail_checkwash_config_and_weakening_pos.gwcase`, `guardrail_checkwash_config_pos.gwcase` |
@@ -178,16 +178,23 @@ behind it* unshippable.
 
 ## False positives on human-written commits
 
-Every commit in the 1800-commit corpus that greenwash blocks and should
-not. Adjudicated by three raters; the reasoning for all three ships in
-`adjudication-2026-08-26b.json` and the two blind re-adjudications beside it.
+These are the false-positive labels in `adjudication-2026-08-26b.json`, dated
+2026-08-26, matched to the historical tracked sweep.
+They are not a fresh list of the current engine's false positives.
+The review methods differ by cohort: the 2026-08-04 blind passes cover
+35 diffs; the later promotion round used two blind raters and
+reconciliation; additional judgments include maintainer single-pass
+review. Consult each file's method and per-commit fields. The agreement
+statistics from the 35-diff cohort do not apply to every later block.
+A/B/C below are the recorded calls where present: `—` means no call
+is recorded in that field, while `?` means an explicitly unclear call.
 
-| commit | three raters | why the block is wrong |
+| commit | recorded A/B/C calls | why the block is wrong |
 |---|---|---|
 | attrs `ce89f5d11f` | FP/FP/FP | "Fix message passing in frozen errors" makes FrozenError set its message via __init__/super().__init__(msg); the test adds `match="can't set attribute"` to both pytest.raises blocks AND keeps/duplicates the exact-value check as `assert e.value.msg == e.value.a |
 | attrs `f520d9a89f` | FP/FP/FP | "Only soft-deprecate hash (#1330)" removes the `warnings.warn(DeprecationWarning(...))` calls from both `attrs()` and `make_class()` in src/attr/_make.py in the same diff, so the two `test_hash_is_deprecated` tests (which assert `pytest.deprecated_call()`) tes |
 | click `1557e26522` | FP/FP/FP | "Check for warning exception with idiomatic context manager" replaces `assert result.exit_code == 1` / `isinstance(result.exception, UserWarning)` / `"used more than once" in str(...)` with `with pytest.warns(UserWarning, match="used more than once"): runner.i |
-| click `5989375dc3` | FP/?/? | "ParamType typing improvements" adds typing across src/click/types.py (220 lines), core.py and termui.py; the typed code now imports abc and uuid at runtime, and the same diff adds exactly "abc" and "uuid" to ALLOWED_IMPORTS in tests/test_imports.py - the modu |
+| click `5989375dc3` | FP/—/— | "ParamType typing improvements" adds typing across src/click/types.py (220 lines), core.py and termui.py; the typed code now imports abc and uuid at runtime, and the same diff adds exactly "abc" and "uuid" to ALLOWED_IMPORTS in tests/test_imports.py - the modu |
 | click `777a89e232` | FP/FP/FP | "Add regular and stress tests for ``CliRunner`` stream lifecycle and ownership" deletes the 25-line tests/test_testing_logging.py but adds a 538-line tests/test_stream_lifecycle.py in the same diff whose "Category 3: Logging interaction (issues #824, #3110)" s |
 | click `bbe1eb6d41` | FP/FP/FP | "Remove duplicate test" drops the single line `assert value is not True` from test_unset_sentinel, but the same test body (unchanged, immediately below) contains `real_values` including `True` and loops `assert value != real_value; assert value is not real_val |
 | click `bd131e1ab6` | FP/FP/FP | "Fix test_edit to work with BSD sed" changes the test's own input from `"a\nb"` to `"a\nb\n"` in the same hunk, so the expected value necessarily becomes `"aTest\nbTest\n"`. It remains a single exact `==` comparison (greenwash itself notes "no change in assert |
@@ -196,19 +203,19 @@ not. Adjudicated by three raters; the reasoning for all three ships in
 | click `e3c0898975` | FP/FP/FP | "add codespell pre-commit hook" is a spelling fix that edits the fixture and the assertion in lockstep: the sentinel is changed at its definition (default=/help="you won't see me") and in the matching `assert "you won't see me" not in result.output`. The asser |
 | flask `06ea505ce2` | FP/FP/FP | "separate copy per call" moves `original.copy()` from decoration time into the wrapper in src/flask/ctx.py, and the same diff deletes the greenlet dependency from pyproject.toml while replacing both `TestGreenletContextCopying` tests with `test_copy_context_th |
 | flask `53b8f08218` | FP/FP/FP | "push preserved contexts in correct order" changes src/flask/testing.py from `while self._new_contexts: cm = self._new_contexts.pop()` to a forward `for cm in self._new_contexts`, and the flagged test is renamed test_redirect_keep_session -> test_redirect_sess |
-| flask `c2705ffd9c` | ?/?/? | "merge app and request context" is a large honest refactor: the request context variable folds into _cv_app, so tests/test_testing.py rewrites `assert _cv_request.get(None) is req_ctx` to `assert _cv_app.get(None) is req_ctx` (same identity check against the r |
+| flask `c2705ffd9c` | —/—/— | "merge app and request context" is a large honest refactor: the request context variable folds into _cv_app, so tests/test_testing.py rewrites `assert _cv_request.get(None) is req_ctx` to `assert _cv_app.get(None) is req_ctx` (same identity check against the r |
 | httpx `71a1589928` | FP/FP/FP | "Use httpx public API for 'test_content' tests" swaps every `encode_request(...)` call for `httpx.Request(method, url, ...)` in the same hunks; the Host header appears in the expectations because a real Request populates it, which is why `{'Transfer-Encoding': |
 | httpx `7947b56076` | FP/FP/FP | "Drop private import of 'encode_request' in test_multipart" rewrites the test to use the public `httpx.Request` API with a fixed BOUNDARY. Both oracles survive in the same hunk: the exact dict equality `request.headers == {Host, Content-Type, Transfer-Encoding |
 | httpx `9fd6f0ca66` | FP/FP/policy | "Ensure JSON representation is compact" changes encode_json to `json_dumps(json, ensure_ascii=False, separators=(",", ":"), allow_nan=False)` in httpx/_content.py in the same diff, which directly explains Content-Length 18 -> 17. The flagged edit `response.jso |
 | httpx `bddd774ce0` | FP/FP/FP | "Revert \"Raise `TypeError` on invalid query params. (#2523)\"" deletes the `raise TypeError(f"Expected str, int, float, bool, or None...")` from primitive_value_to_str in httpx/_utils.py in the same diff, so test_invalid_query_params (a `pytest.raises(TypeErr |
 | httpx `cca62060cb` | FP/FP/FP | "Drop private imports from test_decoders.py (#2570)" rewrites the decoder tests onto the public API, and the same diff compensates: test_byte_chunker/test_text_chunker are replaced by new chunk_size=7 cases in tests/models/test_responses.py (test_iter_raw_with |
 | httpx `db9072f998` | FP/FP/FP | "Add URL parsing tests from WHATWG (#3188)" rewrites `validate_path` in httpx/_urlparse.py — the `//` and `:` checks are re-guarded under `not has_scheme and not has_authority` and both messages are reworded to "Relative URLs cannot have a path starting with . |
-| httpx `e4241c6155` | ?/?/? | "Drop private imports from test_proxies.py (#2850)" replaces `pattern = URLPattern(proxy_key); assert pattern in client._mounts` with `assert proxy_key in client_patterns`, where client_patterns is derived from client._mounts in the same unit. Same membership  |
-| rich `1c5e03eb32` | FP/FP/? | "fix for padding width" (issue #3871) rewrites rich/table.py::Table._get_padding_width to honour pad_edge=False, and refreshes the inline golden in tests/test_columns.py::test_render to match. The assertion `assert render() == expected` is byte-identical on bo |
+| httpx `e4241c6155` | —/—/— | "Drop private imports from test_proxies.py (#2850)" replaces `pattern = URLPattern(proxy_key); assert pattern in client._mounts` with `assert proxy_key in client_patterns`, where client_patterns is derived from client._mounts in the same unit. Same membership  |
+| rich `1c5e03eb32` | FP/FP/— | "fix for padding width" (issue #3871) rewrites rich/table.py::Table._get_padding_width to honour pad_edge=False, and refreshes the inline golden in tests/test_columns.py::test_render to match. The assertion `assert render() == expected` is byte-identical on bo |
 | rich `48293cde88` | policy/FP/FP | [majority of three blind raters overturned the original single-rater call: A=spec_correct, B=false_positive, C=false_positive] "fix tests" is a one-line, test-only diff that rewrites `Text.from_ansi("\nHello\nWorld\n\n").plain` from `"Hello\nWorld\n\n"` to `"\ |
-| rich `7022e20224` | FP/FP/? | "Test fixes"; flagged unit tests/test_progress.py::test_columns, whose expected ANSI golden is repaired. The base golden was not a rendering of any code: it contained `\x1b[32m 0/m0:00:07\x1b[0m` - an SGR sequence severed mid-parameter - and was missing the en |
-| rich `823de916d9` | FP/policy/? | "test fixes", test-only (tests/test_ansi.py, +5/-3), updating three expectations after 69cee6e "preserve newlines" changed AnsiDecoder.decode four commits earlier. All three assertions are byte-identical across the diff and all three expectations got LONGER an |
-| rich `9303d77e8d` | FP/policy/? | "markdown test", one file +1/-1: the expected golden in tests/test_markdown_no_hyperlinks.py::test_markdown_render joins "Two spaces at the end of a line" + "produces a line break." onto one rendered line. Verified at the judged commit that the MARKDOWN fixtur |
+| rich `7022e20224` | FP/FP/— | "Test fixes"; flagged unit tests/test_progress.py::test_columns, whose expected ANSI golden is repaired. The base golden was not a rendering of any code: it contained `\x1b[32m 0/m0:00:07\x1b[0m` - an SGR sequence severed mid-parameter - and was missing the en |
+| rich `823de916d9` | FP/policy/— | "test fixes", test-only (tests/test_ansi.py, +5/-3), updating three expectations after 69cee6e "preserve newlines" changed AnsiDecoder.decode four commits earlier. All three assertions are byte-identical across the diff and all three expectations got LONGER an |
+| rich `9303d77e8d` | FP/policy/— | "markdown test", one file +1/-1: the expected golden in tests/test_markdown_no_hyperlinks.py::test_markdown_render joins "Two spaces at the end of a line" + "produces a line break." onto one rendered line. Verified at the judged commit that the MARKDOWN fixtur |
 | starlette `02b6ed7b18` | FP/FP/FP | "Return explicit origin in CORS response when credentials are allowed (#3137)" replaces the `has_cookie` condition in starlette/middleware/cors.py with `self.allow_credentials`, so the cookie-triggered behavior the flagged tests asserted no longer exists; test |
 | starlette `90b805fda7` | FP/FP/FP | "Set `Content-Type` instead of `Content-Range` on multi-range responses (#3142)" changes starlette/responses.py to write the multipart boundary into content-type rather than content-range, so the flagged assert in test_file_response_multi_small_chunk_size nece |
 

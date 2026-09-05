@@ -1,0 +1,1178 @@
+{
+  "scope": "benign installed-public-asset qualification",
+  "started_utc": "2026-09-05T19:38:24Z",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "parent_python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "new_runs": "Windows / CPython 3.11.9 only",
+  "not_run": [
+    "Linux",
+    "macOS",
+    "Python 3.12",
+    "Python 3.13",
+    "demo",
+    "bench",
+    "sweeps",
+    "tamper/adversarial fixtures",
+    "code under analysis",
+    "remote Actions",
+    "branch-ruleset enforcement",
+    "real participant trial"
+  ],
+  "historical_ci": "Not evaluated here; separate from these new runs.",
+  "commands": [
+    {
+      "name": "python-version",
+      "argv": [
+        "<PYTHON>",
+        "--version"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.0,
+      "stdout": "raw/python-version.stdout.txt",
+      "stderr": "raw/python-version.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "1f030e2374c48927a42b38f9777ffd50867049caefe9431e68eda591c97efa31",
+      "stdout_published_sha256": "1f030e2374c48927a42b38f9777ffd50867049caefe9431e68eda591c97efa31",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "git-version",
+      "argv": [
+        "git",
+        "--version"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.031,
+      "stdout": "raw/git-version.stdout.txt",
+      "stderr": "raw/git-version.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "89afc1eb914736d10aa73f8c5002e779dbde9d247c5e17cdbcd229ce597a9719",
+      "stdout_published_sha256": "89afc1eb914736d10aa73f8c5002e779dbde9d247c5e17cdbcd229ce597a9719",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "venv-create",
+      "argv": [
+        "<PYTHON>",
+        "-m",
+        "venv",
+        "<WORKSPACE>\\venv"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 7.344,
+      "stdout": "raw/venv-create.stdout.txt",
+      "stderr": "raw/venv-create.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pypi-wheel-download",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\python.exe",
+        "-m",
+        "pip",
+        "download",
+        "--disable-pip-version-check",
+        "--no-deps",
+        "--only-binary=:all:",
+        "--index-url",
+        "https://pypi.org/simple",
+        "--dest",
+        "<WORKSPACE>\\wheelhouse",
+        "checkwash==0.2.12"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 2.578,
+      "stdout": "raw/pypi-wheel-download.stdout.txt",
+      "stderr": "raw/pypi-wheel-download.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "f92cd32a1740f0d3cd152ac491343dfde25d1070a2b41933c158e387dde8d13e",
+      "stdout_published_sha256": "38dcccdceeef34e60bfeb59f1a80dc9ca0694dae0952d1675cd06649cb7b37a7",
+      "stdout_sanitized": true,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "wheel-install",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\python.exe",
+        "-m",
+        "pip",
+        "install",
+        "--disable-pip-version-check",
+        "--no-deps",
+        "--no-index",
+        "<WORKSPACE>\\wheelhouse\\checkwash-0.2.12-py3-none-any.whl"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 1.016,
+      "stdout": "raw/wheel-install.stdout.txt",
+      "stderr": "raw/wheel-install.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "0a751ae805ee7c3ffa689384607a326aaa00a84d475b3d1645c31d3398ea1fca",
+      "stdout_published_sha256": "a894dd6e05a57dd03e65e051481f250e5506e1960d15979dfaf1b3bb7665100a",
+      "stdout_sanitized": true,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "installed-metadata",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\python.exe",
+        "-c",
+        "import importlib.metadata as m,json,sys,checkwash; d=m.distribution('checkwash'); print(json.dumps({'distribution_name':d.metadata['Name'],'distribution_version':d.version,'module_version':checkwash.__version__,'module_path':checkwash.__file__,'prefix':sys.prefix,'base_prefix':sys.base_prefix,'python_version':sys.version,'requires_dist':d.requires or [],'entrypoints':[{'name':e.name,'value':e.value,'group':e.group} for e in d.entry_points],'installed_distributions':sorted([{'name':x.metadata['Name'],'version':x.version} for x in m.distributions()],key=lambda x:x['name'].lower())},indent=2))"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.109,
+      "stdout": "raw/installed-metadata.stdout.txt",
+      "stderr": "raw/installed-metadata.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "23d4bf86c037957fde96af31fe58e5caef4f2d926fcffbaeb80263a97357672f",
+      "stdout_published_sha256": "d7a1ad650f070b86e227ec399dd993b89081375c101e025706ff406fe77875f2",
+      "stdout_sanitized": true,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-init",
+      "argv": [
+        "git",
+        "init",
+        "-b",
+        "main"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.047,
+      "stdout": "raw/repo-init.stdout.txt",
+      "stderr": "raw/repo-init.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "672ce2deb4633c4fc02c95d19a943fff3fa33dfa19be4859730059f792d15fdf",
+      "stdout_published_sha256": "2be3666653d257859cb0885afe012dafc8be037c0ee8676ba3c5a9853d8e6a2a",
+      "stdout_sanitized": true,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-local-name",
+      "argv": [
+        "git",
+        "config",
+        "--local",
+        "user.name",
+        "Checkwash Qualification"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.016,
+      "stdout": "raw/repo-local-name.stdout.txt",
+      "stderr": "raw/repo-local-name.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-local-email",
+      "argv": [
+        "git",
+        "config",
+        "--local",
+        "user.email",
+        "qualification@example.invalid"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.031,
+      "stdout": "raw/repo-local-email.stdout.txt",
+      "stderr": "raw/repo-local-email.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-stage-initial",
+      "argv": [
+        "git",
+        "add",
+        "."
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.031,
+      "stdout": "raw/repo-stage-initial.stdout.txt",
+      "stderr": "raw/repo-stage-initial.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-commit-initial",
+      "argv": [
+        "git",
+        "-c",
+        "core.hooksPath=NUL",
+        "commit",
+        "-m",
+        "Initial benign qualification sample"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.047,
+      "stdout": "raw/repo-commit-initial.stdout.txt",
+      "stderr": "raw/repo-commit-initial.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "cbc1aace4eb419c318744b3237e6c7d15780e5f4518b592c6b70ab0b96c28106",
+      "stdout_published_sha256": "cbc1aace4eb419c318744b3237e6c7d15780e5f4518b592c6b70ab0b96c28106",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-stage-docs",
+      "argv": [
+        "git",
+        "add",
+        "README.md"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.015,
+      "stdout": "raw/repo-stage-docs.stdout.txt",
+      "stderr": "raw/repo-stage-docs.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-commit-docs",
+      "argv": [
+        "git",
+        "-c",
+        "core.hooksPath=NUL",
+        "commit",
+        "-m",
+        "Clarify sample documentation"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.047,
+      "stdout": "raw/repo-commit-docs.stdout.txt",
+      "stderr": "raw/repo-commit-docs.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "7f24a08fef322ad0cb874ce8e300e0b6835687a8baefd47d0c1deabe20024e4f",
+      "stdout_published_sha256": "7f24a08fef322ad0cb874ce8e300e0b6835687a8baefd47d0c1deabe20024e4f",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-history",
+      "argv": [
+        "git",
+        "log",
+        "--format=%H %s",
+        "-2"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.031,
+      "stdout": "raw/repo-history.stdout.txt",
+      "stderr": "raw/repo-history.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "c17523629b3792df6f2e1c38ced46fa44a96102a3b5d898392c8eee1560932ba",
+      "stdout_published_sha256": "c17523629b3792df6f2e1c38ced46fa44a96102a3b5d898392c8eee1560932ba",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-diff-stat",
+      "argv": [
+        "git",
+        "diff",
+        "--stat",
+        "HEAD~1..HEAD"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.016,
+      "stdout": "raw/repo-diff-stat.stdout.txt",
+      "stderr": "raw/repo-diff-stat.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "c54f3118b0c7467cb1dbdcdbd76da58560dee59a18556d84ea57ca94a9e1ca5c",
+      "stdout_published_sha256": "c54f3118b0c7467cb1dbdcdbd76da58560dee59a18556d84ea57ca94a9e1ca5c",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "legacy-alias-version",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\greenwash.exe",
+        "--version"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.234,
+      "stdout": "raw/legacy-alias-version.stdout.txt",
+      "stderr": "raw/legacy-alias-version.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "stdout_published_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "cli-version",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\checkwash.exe",
+        "--version"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.157,
+      "stdout": "raw/cli-version.stdout.txt",
+      "stderr": "raw/cli-version.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "stdout_published_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "cli-help",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\checkwash.exe",
+        "--help"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.125,
+      "stdout": "raw/cli-help.stdout.txt",
+      "stderr": "raw/cli-help.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "578b20d89f230cd3a3e21f65ee91dcc0d944497b5068b7503622b6ded12ee094",
+      "stdout_published_sha256": "578b20d89f230cd3a3e21f65ee91dcc0d944497b5068b7503622b6ded12ee094",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "cli-unchanged-json",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\checkwash.exe",
+        "check",
+        "HEAD..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "json"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.422,
+      "stdout": "raw/cli-unchanged-json.stdout.txt",
+      "stderr": "raw/cli-unchanged-json.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "01c96e423b6af78d65a2dda1d549fa6e4e3ebd121150c76cb4ca76019e4ca98a",
+      "stdout_published_sha256": "01c96e423b6af78d65a2dda1d549fa6e4e3ebd121150c76cb4ca76019e4ca98a",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "cli-unchanged-sarif",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\checkwash.exe",
+        "check",
+        "HEAD..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "sarif"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.406,
+      "stdout": "raw/cli-unchanged-sarif.stdout.txt",
+      "stderr": "raw/cli-unchanged-sarif.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "f5566ed10d650233ff06b722a95acbaa2f2a0c21f9ee103006cde4540775cf04",
+      "stdout_published_sha256": "f5566ed10d650233ff06b722a95acbaa2f2a0c21f9ee103006cde4540775cf04",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "cli-benign-doc-diff-json",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\checkwash.exe",
+        "check",
+        "HEAD~1..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "json"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.453,
+      "stdout": "raw/cli-benign-doc-diff-json.stdout.txt",
+      "stderr": "raw/cli-benign-doc-diff-json.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "bcbf73a62754a56c276a0d262cfc260d016130c13000cce5dbcf3b1298182324",
+      "stdout_published_sha256": "bcbf73a62754a56c276a0d262cfc260d016130c13000cce5dbcf3b1298182324",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "cli-benign-doc-diff-sarif",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\checkwash.exe",
+        "check",
+        "HEAD~1..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "sarif"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.422,
+      "stdout": "raw/cli-benign-doc-diff-sarif.stdout.txt",
+      "stderr": "raw/cli-benign-doc-diff-sarif.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "4e2a73a042752dd136b7c7324351dea2fe5705a72ad75400376597807efca3dc",
+      "stdout_published_sha256": "4e2a73a042752dd136b7c7324351dea2fe5705a72ad75400376597807efca3dc",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "cli-invalid-revision",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\checkwash.exe",
+        "check",
+        "QUALIFICATION_REVISION_DOES_NOT_EXIST..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "json"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 2,
+      "timed_out": false,
+      "exit_code": 2,
+      "elapsed_seconds": 0.156,
+      "stdout": "raw/cli-invalid-revision.stdout.txt",
+      "stderr": "raw/cli-invalid-revision.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "9c56b3019b512177a3f63dadb0dc3c1bcfbaee34165983bede7f6a6b28fb1a6b",
+      "stderr_published_sha256": "9c56b3019b512177a3f63dadb0dc3c1bcfbaee34165983bede7f6a6b28fb1a6b",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "cli-doctor",
+      "argv": [
+        "<WORKSPACE>\\venv\\Scripts\\checkwash.exe",
+        "doctor",
+        "--repo",
+        "<WORKSPACE>\\benign-repo"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.172,
+      "stdout": "raw/cli-doctor.stdout.txt",
+      "stderr": "raw/cli-doctor.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "1d166697a8e66a04e4f9f08b451d6d6deb44a7d307f057fe8c7307bddd96ba53",
+      "stdout_published_sha256": "1d166697a8e66a04e4f9f08b451d6d6deb44a7d307f057fe8c7307bddd96ba53",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pyz-version",
+      "argv": [
+        "<PYTHON>",
+        "<ASSET_DIR>\\checkwash.pyz",
+        "--version"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.187,
+      "stdout": "raw/pyz-version.stdout.txt",
+      "stderr": "raw/pyz-version.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "stdout_published_sha256": "ba7ccc5d0a34104545a1179e70dacb989a25044f6ec0843a7e5c9795be6ce437",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pyz-help",
+      "argv": [
+        "<PYTHON>",
+        "<ASSET_DIR>\\checkwash.pyz",
+        "--help"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.188,
+      "stdout": "raw/pyz-help.stdout.txt",
+      "stderr": "raw/pyz-help.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "578b20d89f230cd3a3e21f65ee91dcc0d944497b5068b7503622b6ded12ee094",
+      "stdout_published_sha256": "578b20d89f230cd3a3e21f65ee91dcc0d944497b5068b7503622b6ded12ee094",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pyz-unchanged-json",
+      "argv": [
+        "<PYTHON>",
+        "<ASSET_DIR>\\checkwash.pyz",
+        "check",
+        "HEAD..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "json"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.437,
+      "stdout": "raw/pyz-unchanged-json.stdout.txt",
+      "stderr": "raw/pyz-unchanged-json.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "01c96e423b6af78d65a2dda1d549fa6e4e3ebd121150c76cb4ca76019e4ca98a",
+      "stdout_published_sha256": "01c96e423b6af78d65a2dda1d549fa6e4e3ebd121150c76cb4ca76019e4ca98a",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pyz-unchanged-sarif",
+      "argv": [
+        "<PYTHON>",
+        "<ASSET_DIR>\\checkwash.pyz",
+        "check",
+        "HEAD..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "sarif"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.454,
+      "stdout": "raw/pyz-unchanged-sarif.stdout.txt",
+      "stderr": "raw/pyz-unchanged-sarif.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "f5566ed10d650233ff06b722a95acbaa2f2a0c21f9ee103006cde4540775cf04",
+      "stdout_published_sha256": "f5566ed10d650233ff06b722a95acbaa2f2a0c21f9ee103006cde4540775cf04",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pyz-benign-doc-diff-json",
+      "argv": [
+        "<PYTHON>",
+        "<ASSET_DIR>\\checkwash.pyz",
+        "check",
+        "HEAD~1..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "json"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.469,
+      "stdout": "raw/pyz-benign-doc-diff-json.stdout.txt",
+      "stderr": "raw/pyz-benign-doc-diff-json.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "bcbf73a62754a56c276a0d262cfc260d016130c13000cce5dbcf3b1298182324",
+      "stdout_published_sha256": "bcbf73a62754a56c276a0d262cfc260d016130c13000cce5dbcf3b1298182324",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pyz-benign-doc-diff-sarif",
+      "argv": [
+        "<PYTHON>",
+        "<ASSET_DIR>\\checkwash.pyz",
+        "check",
+        "HEAD~1..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "sarif"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.468,
+      "stdout": "raw/pyz-benign-doc-diff-sarif.stdout.txt",
+      "stderr": "raw/pyz-benign-doc-diff-sarif.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "4e2a73a042752dd136b7c7324351dea2fe5705a72ad75400376597807efca3dc",
+      "stdout_published_sha256": "4e2a73a042752dd136b7c7324351dea2fe5705a72ad75400376597807efca3dc",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pyz-invalid-revision",
+      "argv": [
+        "<PYTHON>",
+        "<ASSET_DIR>\\checkwash.pyz",
+        "check",
+        "QUALIFICATION_REVISION_DOES_NOT_EXIST..HEAD",
+        "--repo",
+        "<WORKSPACE>\\benign-repo",
+        "--format",
+        "json"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 2,
+      "timed_out": false,
+      "exit_code": 2,
+      "elapsed_seconds": 0.203,
+      "stdout": "raw/pyz-invalid-revision.stdout.txt",
+      "stderr": "raw/pyz-invalid-revision.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "9c56b3019b512177a3f63dadb0dc3c1bcfbaee34165983bede7f6a6b28fb1a6b",
+      "stderr_published_sha256": "9c56b3019b512177a3f63dadb0dc3c1bcfbaee34165983bede7f6a6b28fb1a6b",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "pyz-doctor",
+      "argv": [
+        "<PYTHON>",
+        "<ASSET_DIR>\\checkwash.pyz",
+        "doctor",
+        "--repo",
+        "<WORKSPACE>\\benign-repo"
+      ],
+      "cwd": "<WORKSPACE>",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.234,
+      "stdout": "raw/pyz-doctor.stdout.txt",
+      "stderr": "raw/pyz-doctor.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "1d166697a8e66a04e4f9f08b451d6d6deb44a7d307f057fe8c7307bddd96ba53",
+      "stdout_published_sha256": "1d166697a8e66a04e4f9f08b451d6d6deb44a7d307f057fe8c7307bddd96ba53",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    },
+    {
+      "name": "repo-final-status",
+      "argv": [
+        "git",
+        "status",
+        "--porcelain"
+      ],
+      "cwd": "<WORKSPACE>\\benign-repo",
+      "timeout_seconds": 60,
+      "expected_exit": 0,
+      "timed_out": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.016,
+      "stdout": "raw/repo-final-status.stdout.txt",
+      "stderr": "raw/repo-final-status.stderr.txt",
+      "passed": true,
+      "stdout_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sanitized": false,
+      "stderr_original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sanitized": false
+    }
+  ],
+  "checks": [
+    {
+      "name": "official-pyz-digest",
+      "passed": true,
+      "detail": {
+        "path": "<ASSET_DIR>\\checkwash.pyz",
+        "expected_sha256": "1fed863c3d8d240a3da63eed5ae01954f60fe31b53ffb6a1ecef7a267193baf3",
+        "actual_sha256": "1fed863c3d8d240a3da63eed5ae01954f60fe31b53ffb6a1ecef7a267193baf3"
+      }
+    },
+    {
+      "name": "downloaded-wheel-matches-pypi-digest",
+      "passed": true,
+      "detail": {
+        "filename": "checkwash-0.2.12-py3-none-any.whl",
+        "expected_sha256": "66baf258949791ef5f773463d5227857e5f248b5d159e0497048da87736532b7",
+        "actual_sha256": "66baf258949791ef5f773463d5227857e5f248b5d159e0497048da87736532b7"
+      }
+    },
+    {
+      "name": "installed-dist-and-import-version",
+      "passed": true,
+      "detail": {
+        "distribution_name": "checkwash",
+        "distribution_version": "0.2.12",
+        "module_version": "0.2.12",
+        "module_path": "<WORKSPACE>\\venv\\Lib\\site-packages\\checkwash\\__init__.py",
+        "prefix": "<WORKSPACE>\\venv",
+        "base_prefix": "<PYTHON_HOME>",
+        "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+        "requires_dist": [
+          "pytest>=8; extra == 'dev'"
+        ],
+        "entrypoints": [
+          {
+            "name": "checkwash",
+            "value": "checkwash.cli:main",
+            "group": "console_scripts"
+          },
+          {
+            "name": "greenwash",
+            "value": "checkwash.cli:main",
+            "group": "console_scripts"
+          }
+        ],
+        "installed_distributions": [
+          {
+            "name": "checkwash",
+            "version": "0.2.12"
+          },
+          {
+            "name": "pip",
+            "version": "24.0"
+          },
+          {
+            "name": "setuptools",
+            "version": "65.5.0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "zero-runtime-dependencies",
+      "passed": true,
+      "detail": {
+        "runtime_requirements": [],
+        "all_metadata_requirements": [
+          "pytest>=8; extra == 'dev'"
+        ]
+      }
+    },
+    {
+      "name": "console-entrypoints",
+      "passed": true,
+      "detail": {
+        "checkwash": "checkwash.cli:main",
+        "greenwash": "checkwash.cli:main"
+      }
+    },
+    {
+      "name": "cli-version-output",
+      "passed": true,
+      "detail": "checkwash 0.2.12"
+    },
+    {
+      "name": "cli-unchanged-json-contract",
+      "passed": true,
+      "detail": {
+        "version": "0.2.12",
+        "verdict": "pass",
+        "findings": 0,
+        "config_errors": [],
+        "keys": [
+          "checkwash_findings_version",
+          "config_errors",
+          "findings",
+          "run",
+          "skipped_files",
+          "summary",
+          "verdict"
+        ]
+      }
+    },
+    {
+      "name": "cli-unchanged-sarif-contract",
+      "passed": true,
+      "detail": {
+        "sarif_version": "2.1.0",
+        "run_count": 1,
+        "results": 0
+      }
+    },
+    {
+      "name": "cli-benign-doc-diff-json-contract",
+      "passed": true,
+      "detail": {
+        "version": "0.2.12",
+        "verdict": "pass",
+        "findings": 0,
+        "config_errors": [],
+        "keys": [
+          "checkwash_findings_version",
+          "config_errors",
+          "findings",
+          "run",
+          "skipped_files",
+          "summary",
+          "verdict"
+        ]
+      }
+    },
+    {
+      "name": "cli-benign-doc-diff-sarif-contract",
+      "passed": true,
+      "detail": {
+        "sarif_version": "2.1.0",
+        "run_count": 1,
+        "results": 0
+      }
+    },
+    {
+      "name": "pyz-version-output",
+      "passed": true,
+      "detail": "checkwash 0.2.12"
+    },
+    {
+      "name": "pyz-unchanged-json-contract",
+      "passed": true,
+      "detail": {
+        "version": "0.2.12",
+        "verdict": "pass",
+        "findings": 0,
+        "config_errors": [],
+        "keys": [
+          "checkwash_findings_version",
+          "config_errors",
+          "findings",
+          "run",
+          "skipped_files",
+          "summary",
+          "verdict"
+        ]
+      }
+    },
+    {
+      "name": "pyz-unchanged-sarif-contract",
+      "passed": true,
+      "detail": {
+        "sarif_version": "2.1.0",
+        "run_count": 1,
+        "results": 0
+      }
+    },
+    {
+      "name": "pyz-benign-doc-diff-json-contract",
+      "passed": true,
+      "detail": {
+        "version": "0.2.12",
+        "verdict": "pass",
+        "findings": 0,
+        "config_errors": [],
+        "keys": [
+          "checkwash_findings_version",
+          "config_errors",
+          "findings",
+          "run",
+          "skipped_files",
+          "summary",
+          "verdict"
+        ]
+      }
+    },
+    {
+      "name": "pyz-benign-doc-diff-sarif-contract",
+      "passed": true,
+      "detail": {
+        "sarif_version": "2.1.0",
+        "run_count": 1,
+        "results": 0
+      }
+    }
+  ],
+  "network": [
+    {
+      "url": "https://pypi.org/pypi/checkwash/0.2.12/json",
+      "status": 200,
+      "timeout_seconds": 30,
+      "elapsed_seconds": 0.562,
+      "raw": "raw/pypi-0.2.12.json",
+      "original_sha256": "722456791a00481b867a3789cbe034b18f4cc6cd98b20cfac68dc304c9fa348b",
+      "published_sha256": "722456791a00481b867a3789cbe034b18f4cc6cd98b20cfac68dc304c9fa348b",
+      "sanitized": false
+    }
+  ],
+  "pypi_artifacts": [
+    {
+      "filename": "checkwash-0.2.12-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/5e/ea/ba5c585aca9fad47f805d03046423348d786a05f983e25bb1b80d0cf5e31/checkwash-0.2.12-py3-none-any.whl",
+      "sha256": "66baf258949791ef5f773463d5227857e5f248b5d159e0497048da87736532b7",
+      "size": 194719,
+      "packagetype": "bdist_wheel"
+    },
+    {
+      "filename": "checkwash-0.2.12.tar.gz",
+      "url": "https://files.pythonhosted.org/packages/59/c8/2f75bcfd0a407155980378cd3fa6288f85757307e334fdfaa466a9cae041/checkwash-0.2.12.tar.gz",
+      "sha256": "fe03df63a18c4cf97e557298ea7a536b4bb7f9f4b0043c1523eea6c6b32219d0",
+      "size": 748874,
+      "packagetype": "sdist"
+    }
+  ],
+  "installed": {
+    "distribution_name": "checkwash",
+    "distribution_version": "0.2.12",
+    "module_version": "0.2.12",
+    "module_path": "<WORKSPACE>\\venv\\Lib\\site-packages\\checkwash\\__init__.py",
+    "prefix": "<WORKSPACE>\\venv",
+    "base_prefix": "<PYTHON_HOME>",
+    "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "requires_dist": [
+      "pytest>=8; extra == 'dev'"
+    ],
+    "entrypoints": [
+      {
+        "name": "checkwash",
+        "value": "checkwash.cli:main",
+        "group": "console_scripts"
+      },
+      {
+        "name": "greenwash",
+        "value": "checkwash.cli:main",
+        "group": "console_scripts"
+      }
+    ],
+    "installed_distributions": [
+      {
+        "name": "checkwash",
+        "version": "0.2.12"
+      },
+      {
+        "name": "pip",
+        "version": "24.0"
+      },
+      {
+        "name": "setuptools",
+        "version": "65.5.0"
+      }
+    ]
+  },
+  "benign_repository": {
+    "path": "<WORKSPACE>\\benign-repo",
+    "history": "d5bda6e7eab8f1d7ae5d31296f00096a99b7716e Clarify sample documentation\n2706e62f70c70e27a6ce32c20846d888800a48d9 Initial benign qualification sample\n",
+    "change": "README-only wording clarification; production and test files byte-identical; no code/tests executed",
+    "remote": "none"
+  },
+  "completed_utc": "2026-09-05T19:38:41Z",
+  "all_expected_exits": true,
+  "all_checks_passed": true,
+  "result": "PASS within stated benign scope",
+  "sanitization": {
+    "is_publication_of_existing_evidence": true,
+    "new_qualification_runs_performed": false,
+    "source_receipt": {
+      "logical_path": "<WORKSPACE>/receipt.json",
+      "sha256": "6130e88bb6afefb4da7b4137378c67fcf78f65893874ce78b040f1bda255baeb",
+      "availability": "Unmodified original retained by the maintainer; omitted from the public bundle because it contains private local paths."
+    },
+    "source_qualification_driver": {
+      "logical_path": "<WORKSPACE>/qualify.py",
+      "sha256": "611880d2bbc0169014ee1cfeb38df7b19e64fc87a65d0f3e62443922941b1292",
+      "included": false
+    },
+    "method": "Case-insensitive substitution of local absolute-path prefixes, including JSON-escaped and forward-slash forms; removal of internal coordination identifiers; local user/host token redaction if present. Preserve all other log bytes, including newline style and empty streams.",
+    "placeholder_meanings": {
+      "<WORKSPACE>": "Isolated qualification directory containing venv, scratch repository, raw logs, and receipt.",
+      "<PYTHON>": "Explicit CPython 3.11.9 executable used for these Windows runs.",
+      "<PYTHON_HOME>": "Base installation directory of that CPython interpreter.",
+      "<ASSET_DIR>": "Directory containing the previously downloaded official v0.2.12 pyz.",
+      "<SESSION_WORKSPACE>": "Parent workspace outside the isolated qualification directory, if referenced.",
+      "<LOCAL_USER>": "Private local user token, if referenced.",
+      "<LOCAL_HOST>": "Private local host token, if referenced.",
+      "<INTERNAL_REFERENCE>": "Internal coordination identifier, if referenced in a log."
+    },
+    "hash_semantics": "*_original_sha256 identifies the unchanged private raw bytes captured during the original run; *_published_sha256 identifies the sanitized bytes included here. A matching pair means that stream required no edits. The publication is not a byte-identical replacement for the original private receipt.",
+    "unchanged_evidence": [
+      "33 command records",
+      "15 check records",
+      "commands and arguments except local path substitution",
+      "asset versions and complete digests",
+      "source URLs",
+      "UTC start/end times",
+      "observed/expected exits",
+      "durations and timeouts",
+      "results and recorded limitations"
+    ]
+  },
+  "interpretation_addendum": {
+    "blocking_exit_1": "NOT RUN; the new run exercises benign exit 0 and invalid-input exit 2 only.",
+    "invalid_revision_json_contract": "Both surfaces return exit 2, human-readable stderr, and empty stdout even when --format json is selected.",
+    "doctor": "Canonical local workflow recognized; no branch-protection or merge-enforcement attestation.",
+    "additional_not_run": [
+      "SARIF service upload",
+      "full 0/1/2 contract qualification"
+    ]
+  }
+}

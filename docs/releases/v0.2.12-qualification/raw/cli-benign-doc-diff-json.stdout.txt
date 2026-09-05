@@ -1,0 +1,18 @@
+{
+  "checkwash_findings_version": 1,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "2706e62",
+    "checkwash_version": "0.2.12",
+    "head": "d5bda6e"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
