@@ -3758,10 +3758,15 @@ def _collect_unit(
             child_sites = tuple(
                 _helper_entry_sites(live_target, nodes_cache)
             )
-            if not child_sites and not _is_contextmanager(live_target):
+            if (
+                not child_sites
+                and not isinstance(live_target, ast.ClassDef)
+                and not _is_contextmanager(live_target)
+            ):
                 # The target has no transitive fanout, so the expensive
                 # per-root scope reconstruction cannot add anything.  This
-                # keeps a unit calling many flat helpers linear.
+                # keeps a unit calling many flat helpers linear. Classes
+                # still need the general walk to expand their method scopes.
                 closure = [func, live_target]
                 edge_entries[id(live_target)] = [(func, site_node)]
             else:
