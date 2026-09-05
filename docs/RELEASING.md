@@ -140,6 +140,33 @@ The gate is a repository variable now, because nothing auto-creates one, and
 fails if it ever goes back to being gated by `environment:` alone. D-032 has
 the full account.
 
+## Check the public package page
+
+The package description comes from `README.md` at build time. Use absolute
+GitHub URLs for repository files in that README: PyPI cannot resolve paths
+such as `docs/stability.md` against the source tree. Inspect the rendered
+description as well as the Markdown source, including content inside HTML
+disclosures that another renderer may flatten.
+
+Before publishing, check the candidate wheel's name, version, Python
+requirement, license, project URLs and embedded description. Confirm the
+description matches the intended README and all document links resolve.
+Keep alpha status, measurement provenance, refactor cost and Action version
+differences visible. This check does not establish detector coverage.
+
+After publishing, check both the unversioned PyPI project page and the exact
+version page. Confirm the displayed version, description and links; download
+the wheel and sdist from PyPI and compare their full SHA256 hashes with the
+GitHub Release assets. Check the GitHub default-branch homepage separately:
+merging documentation there does not update an existing PyPI description.
+
+PyPI records release metadata from the first upload and does not update it
+on subsequent uploads ([PyPI JSON API](https://docs.pypi.org/api/json/)). A
+description correction therefore needs a new version through the existing
+release process. Do not delete, replace or re-upload an existing release to
+rewrite its description. Until the next release, link readers to the current
+GitHub README and retain the old release's actual status in the launch notes.
+
 ## After the release
 
 - Check CI is green on the tag, not just on main.
