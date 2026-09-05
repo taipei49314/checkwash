@@ -1,7 +1,9 @@
 # Legitimate-refactor corpus — the false-positive side
 
-60 test-suite refactors that a careful engineer would make and a reviewer would
-approve. Every one keeps an oracle that still detects the bug.
+60 test-suite refactors assembled as the historical false-positive arm. Each
+ships a particular bug that the original and refactored tests are meant to catch.
+The execution qualification below checks that claim; human review must still
+decide whether the refactor preserves the intended semantics.
 
 - `CASE_*`: 30 mixed refactors (extraction, merge, split, fixtures, `approx`)
 - `EXT_*`: 30 more of the single hardest family — a concrete assertion
@@ -13,7 +15,7 @@ At v0.1.25 the first 30 blocked **20**. With the reachable-assertion IR
 **33 of 60 overall**, decomposed below rather than averaged away.
 
 ```bash
-python benchmarks/refactors/verify.py
+python benchmarks/refactors/verify.py --output /new/path/refactor-receipt.json
 ```
 
 ## Why this corpus had to exist
@@ -31,19 +33,51 @@ corpus almost never does.
 
 ## Why a case counts
 
-Nothing is taken on trust. Each case ships production **twice** — correct and
-buggy — and four pytest runs must agree:
+Each case ships production **twice** — correct and buggy — and four pytest runs
+must agree for its execution to qualify:
 
 | | PROD-GOOD | PROD-BUG |
 |---|---|---|
 | `BEFORE/` | passes | **fails** |
 | `AFTER/` | passes | **fails** |
 
-Both sides genuinely catch the bug. So any block on the `BEFORE → AFTER` diff is
-a false positive *by construction* — there is no judgement call and no
-adjudication to argue about.
+Both sides catching the seeded bug does not prove that their complete semantics
+are equivalent. For example, a relaxed tolerance can still catch that bug while
+accepting other values the original test rejected. The verifier reports
+**qualified mechanical blocks**, which need human semantic adjudication before
+they can be counted as false positives. The dated results below retain their
+historical "false positives" terminology and counts; they are not new adjudication.
 
-All 60 passed this filter on 2026-08-13.
+All 60 passed the historical exit-code-only filter on 2026-08-13. That filter
+mistook every nonzero pytest exit for a test that caught the bug, including
+collection and fixture errors. The historical records below remain unchanged.
+
+The verifier now requires each good run to exit 0 with at least one test, no
+failures, errors or skips. Each buggy run must exit 1 with at least one JUnit
+test failure, no errors and no skips. Collection/import failures, fixture setup
+or teardown errors, usage errors, no tests, timeouts, and missing or inconsistent
+reports cannot establish the oracle claim. An assertion raised during fixture
+setup or teardown is still a pytest error under this criterion; whether that
+phase should qualify needs maintainer review. It is not an engine defect.
+
+Each run retains its exit code, counts, stdout, stderr and JUnit report from
+the same subprocess. A new receipt includes the engine version, source commit
+and tree, worktree status, actual source/verifier/corpus content hashes, expected
+table hash, environment, timestamps and all cases. Automatic third-party pytest
+plugin loading is disabled in the subprocess environment. Inputs are hashed again
+after the run to detect changes during measurement.
+
+`--output` is required and must name a new file; neither historical results nor
+an existing receipt can be overwritten. The optional positional argument selects
+another cases directory; `--expected` selects its declared membership table.
+That table must contain a nonempty `cases` object whose keys are directory names
+starting with an ASCII letter/digit and containing only letters, digits, `_` or
+`-`; invalid membership is rejected before measurement.
+Missing and unexpected cases remain visible. An invalid or incomplete cohort
+exits 2 and reports the full case denominator and mechanical block count. Exit 0
+means every declared case completed all four checks against unchanged inputs.
+Neither exit status establishes a false-positive rate or replaces human semantic
+adjudication, held-out precision, adoption experience, or distribution verification.
 
 ## The result, v0.1.26 (baseline v0.1.25 in parentheses)
 
@@ -75,6 +109,6 @@ per-case truth; the family table above is kept as the v0.1.26 record.
 ## Files
 
 - `cases/CASE_NNN_<mod>/`, `cases/EXT_NNN_<mod>/` — `WHY.txt`, `PROD-GOOD/`, `PROD-BUG/`, `BEFORE/`, `AFTER/`
-- `verify.py` — four pytest runs per case, then greenwash; writes `results-latest.json`
+- `verify.py` — four pytest runs per case, then checkwash; requires a new `--output` receipt path
 - `results-2026-08-13.json` — the v0.1.25 baseline (first 30 cases), recorded before any A5 work
 - `expected.json` — the current per-case table, enforced by `tests/gates/test_refactor_corpus.py`
