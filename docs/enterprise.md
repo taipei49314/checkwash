@@ -1,6 +1,6 @@
 # Enterprise checklist
 
-One page for a security or platform team evaluating checkwash v0.2.12
+One page for a security or platform team evaluating checkwash v0.2.13
 (alpha) as a required gate, with a reviewed exemption path. Start with a
 review of its [coverage and adoption cost](stability.md#coverage-and-adoption-cost),
 then protect the deployed check and its policy files.
@@ -19,8 +19,8 @@ the [README](../README.md):
 
 3. `checkwash doctor` — it cannot see branch protection; confirm step 2.
 
-The README's Action is hash-pinned to **v0.2.11** under the one-release
-trust-lag policy. Installing the v0.2.12 CLI does not update that Action;
+The README's Action is hash-pinned to **v0.2.12** under the one-release
+trust-lag policy. Installing the v0.2.13 CLI does not update that Action;
 record both deployed versions. A required check enforces that version's
 configured verdict, not a guarantee that the change is correct.
 

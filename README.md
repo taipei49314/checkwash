@@ -25,12 +25,12 @@ like this for review, including changes written by coding agents.
 You need **Python 3.11+ and Git**. From a repository with at least two commits:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.12/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.13/checkwash.pyz
 python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.2.12/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.2.13/checkwash.pyz).
 
 | Result | What to do |
 |---|---|
@@ -38,11 +38,11 @@ You can also [download the file in your browser](https://github.com/taipei49314/
 | **Block · exit 1** | Read the finding and the diff. It may be weakened verification or a false positive. |
 | **Error · exit 2** | Resolve the input or analysis error before relying on the result. |
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.12-public-launch.md#try-it-on-a-change-you-understand).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.13-public-launch.md#try-it-on-a-change-you-understand).
 
 ## Know the limits
 
-**v0.2.12 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.2.13 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
@@ -57,7 +57,7 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action is pinned to **v0.2.11**; the CLI above is **v0.2.12**.
+The recommended Action is pinned to **v0.2.12**; the CLI above is **v0.2.13**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@283db528cd3d8e5e38173e14d766a8915efa2c90 # v0.2.11
+      - uses: taipei49314/checkwash/action@e05c37f0e1673cdf218ec62fcfb7c6712cce704b # v0.2.12
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -102,7 +102,8 @@ can inspect the local workflow, but cannot verify live branch protection.
 
 **Why the older Action pin?** A release cannot embed its own commit SHA,
 so the documented Action adopts a verified pin from the prior release.
-It does not include every change in CLI v0.2.12. To verify another trusted
+This release updates documentation, package metadata and the trusted pin;
+its detector logic is unchanged from v0.2.12. To verify another trusted
 release, use `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
@@ -117,9 +118,9 @@ release, use `git rev-parse 'vX.Y.Z^{commit}'`.
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.2.12
+pipx install checkwash==0.2.13
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.2.12
+pipx install git+https://github.com/taipei49314/checkwash@v0.2.13
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -138,7 +139,7 @@ You can run the same examples with `python checkwash.pyz demo`.
 The historical six-repo sweep recorded **42 / 1800 = 2.33%** blocks:
 **27 false positives (1.50%)**, 15 legitimate
   policy blocks (0.83%). The tracked artifacts record engine **v0.1.46**
-on a corpus used to tune the detectors, not a fresh v0.2.12 or held-out result.
+on a corpus used to tune the detectors, not a fresh v0.2.13 or held-out result.
 
 **1.33% of the corpus (24/1800) records opaque production changes**.
 That flag does not establish that each verdict changed or each diff was unanalyzed.
@@ -155,7 +156,7 @@ above is a separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.2.12 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.12-public-launch.md) |
+| Installation checks, versions and first use | [v0.2.13 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.13-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
 | Contributing or reporting a problem | [Contributing](https://github.com/taipei49314/checkwash/blob/main/CONTRIBUTING.md) · [Issues](https://github.com/taipei49314/checkwash/issues) · [Security reports](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md) |

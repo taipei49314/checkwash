@@ -1,9 +1,9 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.2.12 is alpha**. Its versioned interfaces and release checks
+checkwash **v0.2.13 is alpha**. Its versioned interfaces and release checks
 support deliberate adoption, but its coverage, false-positive cost and adoption
 evidence do not meet a 1.0 claim. This page separates those contracts from the
-work still required. The [public-launch brief](releases/v0.2.12-public-launch.md)
+work still required. The [public-launch brief](releases/v0.2.13-public-launch.md)
 records this release's evidence and limitations.
 
 
@@ -69,7 +69,7 @@ key on `version` inside the payload, not on field order.
 2.1.0. It does not bump `FINDINGS_VERSION`. Allowlisted findings are
 omitted there.
 
-**Pre-rename compatibility:** v0.2.12 emits the `checkwash_*` keys above,
+**Pre-rename compatibility:** v0.2.12 and v0.2.13 emit the `checkwash_*` keys above,
 with `FINDINGS_VERSION = 1`. Older consumers expecting
 `greenwash_findings_version` or `run.greenwash_version` must adapt explicitly;
 the legacy `greenwash` CLI alias does not provide aliases for JSON keys. The
@@ -132,7 +132,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.2.12 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.2.13 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
@@ -155,7 +155,7 @@ The next-quarter engineering focus is **refactor false positives**: shared
 helpers, unit identity changes and the documented tradeoffs in the dedicated
 corpus. Agree the desired reduction and acceptable coverage tradeoffs before
 changing detector or de-escalation behavior. That program is separate from
-the v0.2.12 documentation and adoption fixes.
+the 0.2.x documentation and adoption fixes.
 
 ## How you will be told
 
@@ -175,10 +175,10 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.2.12 documentation pins the Action to v0.2.11 under the one-release
-trust-lag policy. CLI and zipapp v0.2.12 include changes that this Action pin
-does not yet carry. Treat each installed surface as its own versioned
-dependency; see the [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
+The v0.2.13 documentation pins the Action to v0.2.12 under the one-release
+trust-lag policy. This release updates documentation, package metadata and
+the trusted pin; detector logic is unchanged from v0.2.12. Treat each installed
+surface as its own versioned dependency; see the [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 
 If a new version blocks something it used to pass, that is either a bypass
 closing or a false positive shipping — and this project has done both. Read

@@ -5,7 +5,7 @@ reports and their disposition. It is a dated status summary, not a new
 experiment or a claim of comprehensive coverage. Issue numbers below belong
 to GitHub; **THREATMODEL row 77 is a different identifier**.
 
-The released CLI/pyz is v0.2.12 (`e05c37f0e1673cdf218ec62fcfb7c6712cce704b`).
+The released CLI/pyz at this snapshot was v0.2.12 (`e05c37f0e1673cdf218ec62fcfb7c6712cce704b`).
 The reviewed main baseline is `aa84ad5d67f672486ef431feb0f60ef10f0a92a4`.
 Open candidate branches are not part of either released artifact. Consult
 the linked item for changes after this snapshot.
@@ -59,7 +59,7 @@ An open issue is not made closed by a green unrelated CI run. Likewise,
 documenting a limitation is not itself evidence of acceptable adoption cost.
 
 The [1.0 review](stability.md#what-must-change-before-10) is **NOT MET**.
-The current [public-launch brief](releases/v0.2.12-public-launch.md) invites
+The current [public-launch brief](releases/v0.2.13-public-launch.md) invites
 bounded alpha trials while keeping these limitations visible. Dedicated
 refactor precision is the next-quarter focus; its current 24/60 block rate
 must remain separate from the historical six-repo 27/1800 false-positive rate.
