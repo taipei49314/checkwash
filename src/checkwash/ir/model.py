@@ -87,6 +87,80 @@ class Assertion:
     # their call site's signature, which is what tells N copies of one helper
     # assert apart; "" for cross-file and fixture-channel inherited ones.
     reaching_sig: str = ""
+    # Import bindings visible at this exact oracle position. A unit-wide map
+    # cannot distinguish a live import from a later local rebind, nor can it
+    # respect a parameter that lexically shadows a module import. Internal
+    # only; emitted IR v1 is unchanged.
+    standin_imports: dict[str, str] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Function-local native imports definitely executed before this oracle.
+    # Each row is ``(local, canonical binding, loaded module, line, column)``.
+    # This is deliberately distinct from ``standin_module_imports``: a
+    # fixture-time ``sys.modules`` swap can affect an import in the test body,
+    # but cannot affect a module import captured during collection.
+    # Internal only; emitted IR v1 is unchanged.
+    standin_runtime_imports: tuple[
+        tuple[str, str, str, int, int], ...
+    ] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Module-level native imports whose exact binding origin is still visible
+    # at this oracle.  The row shape matches ``standin_runtime_imports``, but
+    # collection-time captures must stay separate from imports executed in a
+    # test body: an attribute replacement installed later cannot retroactively
+    # change a leaf object captured by ``from module import leaf``. Internal
+    # only; emitted IR v1 is unchanged.
+    standin_module_imports: tuple[
+        tuple[str, str, str, int, int], ...
+    ] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # True when an inherited helper oracle executes at ``standin_position``
+    # but its runtime-import row coordinates remain in the helper definition.
+    # A caller-side install is ordered against the projected call site, while
+    # the rows retain their exact source origins for helper-local reasoning.
+    # Internal only; emitted IR v1 is unchanged.
+    standin_runtime_imports_projected: bool = field(
+        default=False,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Runtime position of this oracle within its owning test.  For an
+    # inherited same-file oracle this is the helper call site, not the
+    # helper's definition span.  It is internal ordering evidence only.
+    standin_position: tuple[int, int] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Canonical syntax of the complete oracle expression, excluding an
+    # assertion message. Stand-in newness compares the semantic oracle an
+    # effect reaches; raw source spacing and dependency-name-only summaries
+    # are not stable enough for that security decision. Internal only.
+    standin_oracle_key: str | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
 
 
 @dataclass
@@ -149,6 +223,81 @@ class UnitSide:
     # requests (fixture channel) without re-walking the AST there.
     invoked: tuple[str, ...] = ()
     params: tuple[str, ...] = ()
+    # Fixtures explicitly requested by function parameters or usefixtures
+    # markers. Kept separate so `params` retains its frozen IR meaning.
+    fixtures: tuple[str, ...] = field(
+        default=(),
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Internal analysis context for the stand-in family.  These fields are
+    # deliberately omitted from the serialized IR-v1 contract: `patches`
+    # below predates the richer lifetime/alias model and its local spellings
+    # and fingerprints are frozen.  New syntax is carried alongside it rather
+    # than silently changing that public field's meaning.
+    standin_imports: dict[str, str] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    standin_installs: tuple[Any, ...] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Top-level bare bindings that replace an import provider before tests
+    # execute.  Kept per side so an aligned unit can prove the removed-import
+    # spelling without changing the frozen `patches` census.
+    standin_module_bindings: dict[str, str] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Positively identified providers for test parameters: direct
+    # parametrize values and evaluated Python defaults.  Fixture parameters
+    # remain name-resolved through ``standin_module_bindings``.  Internal
+    # only so the IR-v1 parameter/column contracts stay frozen.
+    standin_parameter_providers: dict[str, tuple[str, str]] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Names made lexical by the function body, including bindings whose
+    # control-flow provenance is too uncertain to promote.  This prevents a
+    # conditional/later local definition from borrowing a same-named module
+    # provider. Internal only; positive local providers still come from each
+    # assertion's positional ``reaching`` map.
+    standin_lexical_names: tuple[str, ...] = field(
+        default=(),
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
+    # Fixture definitions contributed by lexical test classes, outermost to
+    # innermost.  Each row is ``(class qualname, dependencies, autouse names)``.
+    # The engine combines these with conftest/module providers per unit; a
+    # file-wide flattened map cannot express a class-local override or the
+    # parent-fixture chain behind ``def fixture_name(fixture_name)``.
+    standin_fixture_layers: tuple[
+        tuple[str, dict[str, tuple[str, ...]], tuple[str, ...]], ...
+    ] = field(
+        default=(),
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
     # Stand-ins this unit installs: (dotted target, patched attribute), sorted.
     # `monkeypatch.setattr`, `mock.patch`, `patch.object`, `mocker.patch` —
     # every dialect flattened to the same pair, because a rule that knows one
@@ -225,6 +374,15 @@ class FileIR:
     units: list[Unit] = field(default_factory=list)
     alignment: str = "full"  # "full" | "degraded"
     parse_ok: bool = True
+    # Canonical local import binding -> target path on the selected file side.
+    # Internal only: adding this analysis cache must not mutate emitted IR v1.
+    standin_imports: dict[str, str] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
     # Constant environment for D6 on this file's skip conditions: name ->
     # defining expression source. Merged by the engine from the file's own
     # module-level constants plus names imported from files it can read
@@ -316,11 +474,23 @@ class DiffGlobals:
     # this diff — the honest cause of expectation drift like httpx 0.28's
     # compact JSON separators (DEPENDENCY_DRIFT, EXPECTED_VALUE_CHANGED only).
     dependency_manifest_changed: bool = False
-    # Conftest fixtures that monkeypatch a first-party target: (path, text).
-    # Replacing the code under test from a fixture makes the oracle assert
-    # against a stand-in while prod and tests both stay byte-identical
+    # New conftest module/fixture/hook stand-ins that a live test oracle
+    # actually reaches: (path, text). Replacing the code under test makes the
+    # oracle assert against a stand-in while prod and tests stay byte-identical
     # (decoy probe arm 2026-08-04).
     conftest_prod_patches: list[tuple[str, str]] = field(default_factory=list)
+    # Reachability/lifetime-refined conftest events for the current engine.
+    # `None` means an older/external IR that has only the v1 field above;
+    # `[]` means the richer pass ran and found no effective event.  Keeping
+    # this private preserves `conftest_prod_patches`'s original raw-call
+    # meaning and serialized shape.
+    conftest_standin_patches: list[tuple[str, str]] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
     # Import roots that the manifests declare as *someone else's* code, sorted.
     #
     # Declared dependencies minus the project's own name, and the second half
@@ -331,6 +501,18 @@ class DiffGlobals:
     # Empty when no manifest was read, which leaves the stdlib list as the only
     # deny and is deliberately the quieter half of the error.
     third_party_roots: tuple[str, ...] = ()
+    # Import roots positively tied to this repository: base-manifest project
+    # names, production paths in the diff, or readable modules in the head
+    # snapshot. A manifest-declared dependency cannot become local from the
+    # readable-path probe alone. Unknown absolute roots are not first-party by
+    # subtraction.
+    first_party_roots: tuple[str, ...] = field(
+        default=(),
+        repr=False,
+        compare=False,
+        kw_only=True,
+        metadata={"internal": True},
+    )
 
 
 @dataclass
@@ -346,7 +528,11 @@ class IR:
 def to_jsonable(obj: Any) -> Any:
     """Dataclass tree → plain JSON-serializable structure (tuples become lists)."""
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
-        return {f.name: to_jsonable(getattr(obj, f.name)) for f in dataclasses.fields(obj)}
+        return {
+            f.name: to_jsonable(getattr(obj, f.name))
+            for f in dataclasses.fields(obj)
+            if not f.metadata.get("internal")
+        }
     if isinstance(obj, (list, tuple)):
         return [to_jsonable(x) for x in obj]
     if isinstance(obj, dict):

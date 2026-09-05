@@ -31,5 +31,11 @@ def _contract_adapter(request, monkeypatch):
 def normalize(path):
     parts = [p for p in path.split("/") if p]
     return "/".join(parts)
+=== head: tests/test_pathnorm.py ===
+from app.pathnorm import normalize
+
+
+def test_normalize_contract():
+    assert normalize("a/./b") == "a/b"
 === expect ===
 [{"rule": "CONFTEST_PATCHES_PROD", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -510,8 +510,11 @@ def test_invoice():
     assert invoice_total(items, 0.05) == 105.3   # checks the stand-in
 ```
 
-`CONFTEST_PATCHES_PROD` sees none of this: it only reads conftest files. Prod
-and the assertion line can both stay byte-identical.
+At v0.1.25, `CONFTEST_PATCHES_PROD` saw only conftest files, so this test-local
+form was the gap: prod and the assertion line could both stay byte-identical.
+That is historical context, not the current architecture. The stand-in family
+now normalises test-local installs and applicable conftest installs into the
+same effect/reach model.
 
 **The problem this design has to solve is not detection, it is discrimination.**
 In a conftest, patching first-party code is exceptional — one autouse fixture
@@ -520,22 +523,59 @@ swaps the module under test for the whole suite. Inside a test function it is
 it constantly. "New first-party patch target in a test unit", the acceptance
 line in the issue, taken literally, fires on every commit that adds a mock.
 
-**Design.** Three conditions, all required:
+**Current design.** Three conditions, all required:
 
 1. **The unit existed before.** A brand-new test that mocks is a test that was
    written with a mock. Only an existing unit can have a stand-in *inserted
    under* it.
-2. **The patch is new on the after side** — same base-vs-head comparison the
-   conftest rule already does.
-3. **The patched attribute is reached by this unit's own assertions.** This is
-   the discriminator, and it is the whole design. `setattr(billing,
+2. **A positively owned stand-in effect is applicable and live when an oracle
+   reaches its exact canonical subject.** `setattr(billing,
    "invoice_total", …)` under `assert invoice_total(…) == 105.3` replaces the
    subject of the oracle. `setattr(app.config, "RETRIES", 1)` under an
    assertion about rendering makes the test fast and is not reported.
+3. **That effect-to-oracle relationship is new.** A patch line need not be
+   textually new: moving an existing assignment before an earlier assertion,
+   or changing a bounded `with patch(...)` into a persistent `.start()`, makes
+   an existing effect reach an additional existing oracle and is reportable.
 
-Condition 3 is what separates this from the naive rule, and it is checkable
-from IR that already exists (`left_names`, and the callee names of the asserted
-subject).
+Newness is an **effect × oracle semantic multiset**, not a set of patch
+spellings. For each side, `O[q]` counts occurrences of a canonical complete
+oracle shape (form, polarity, and normalised expression; assertion messages do
+not participate), and `R[e,q]` counts occurrences of that shape reached by
+effect `e`. Alternative install sites with the same effect identity count a
+given oracle occurrence once. The conservative event lower bound for each
+pair is:
+
+```text
+max(0, R_head[e,q] - R_base[e,q] - max(0, O_head[q] - O_base[q]))
+```
+
+The last term spends newly added identical oracles first. Thus merely adding a
+copy of an already reached assertion is not called an insertion under an old
+oracle, while a reach increase that cannot be explained by added oracle mass
+is.
+
+The bounded execution/applicability model is part of that comparison:
+
+- `with mock.patch(...)`, patch decorators, `monkeypatch.context()`, and
+  definite straight-line restores carry active intervals. The end is
+  exclusive; helper-scoped contexts/decorators do not leak to caller oracles,
+  while persistent assignments and direct `.start()` installs can reach later
+  oracles until a definite restore.
+- `@pytest.fixture` and `@pytest.hookimpl` are resolved through import aliases
+  at **definition time**, including literal `name=` and `specname=`. A rebind
+  before decorator evaluation removes that proof; a later rebind does not
+  rewrite history.
+- `mocker.patch` / `mocker.patch.object` and MonkeyPatch methods are accepted
+  only from positive provenance: a live conventional fixture request, or for
+  MonkeyPatch an object constructed from the proven pytest class. A local
+  object that merely has the right receiver name is not enough.
+- Conftest applicability is a **side-aware fixture graph**. Base and head each
+  resolve ancestor conftests, nearest providers, autouse fixtures, literal
+  parameters/`usefixtures`, and transitive fixture dependencies. Consequently
+  an unchanged dormant installing fixture becoming active through a changed
+  test request, or through a changed adapter dependency edge, is itself a new
+  effect-to-oracle event.
 
 - **Discriminator vs. legitimate mocking:** the assertion has to be about the
   patched name. Hygiene stubs — time, network, env, a slow internal helper — are
@@ -543,10 +583,29 @@ subject).
 - **FP risk: high, and higher than A1's.** A1 could at least claim the edited
   binding *was* the expectation; here the corpus is full of first-party patching
   by construction.
-- **Residual, expected to stay open:** `patch` targets built at runtime; a stub
-  installed by a fixture the unit merely requests; `respx`/`responses` and other
-  HTTP mock dialects; and the whole class where the patched name reaches the
-  assertion only through a helper. Stated, not hidden.
+- **Residuals and deliberate bounds, stated rather than implied:** xunit
+  `setUp` / `setup_method` activation is not modelled. Dynamic
+  `request.getfixturevalue(...)` and fixtures supplied only by plugins or
+  `pytest_plugins` are outside the repository fixture graph, as are fixture
+  providers inherited through a test class's Python base-class MRO. Computed
+  or branch-dependent restores, a patcher stored for later `start`/`stop`,
+  cross-ordered undo between multiple `MonkeyPatch` objects that resurrects a
+  prior effect in a second disjoint interval, and `ExitStack.enter_context`
+  have no definite active interval. Return-value and receiver provenance is
+  not inferred across arbitrary procedures; dynamic, starred, or transitively
+  forwarded helper arguments are not promoted without an exact binding. A changed
+  conftest can discover an unchanged test only through a literal target-leaf
+  or attribute needle; a consumer with no such literal is not inventoried.
+  After a `sys.modules["app.billing"]` replacement, dotted native
+  `import app.billing as billing` and from-parent `from app import billing` are
+  not definite positives because the parent package can retain its previous
+  attribute; a later exact `from app.billing import invoice_total` or literal
+  `importlib.import_module("app.billing")` remains within the bounded proof.
+  A deeply nested conftest is normally loaded after `pytest_sessionstart`, so
+  its session-start hook is deliberately inapplicable; only initial conftests
+  (the repository root or an immediate `test*` directory) are treated as
+  early enough. Runtime-computed targets, `respx`/`responses`, and other
+  HTTP-mock dialects also remain open.
 - **How this gets falsified — and the severity threshold, fixed here before a
   line of the detector exists:** the attack shape above must block; the four
   legitimate shapes (stdlib stub, third-party stub, brand-new mocking test,

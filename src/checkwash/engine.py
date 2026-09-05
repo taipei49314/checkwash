@@ -9,9 +9,11 @@ Role / CI / evidence helpers live in checkwash.roles, .ci, .evidence (E5).
 from __future__ import annotations
 
 import ast
+import copy
 import datetime
+import keyword
 from collections import Counter
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from checkwash.allowlist import AllowEntry
 from checkwash.change import EngineError, FileChange
@@ -39,6 +41,11 @@ from checkwash.findings import Finding
 from checkwash.frontends.javascript.frontend import is_js_test_path, parse_javascript
 from checkwash.frontends.python.frontend import (
     ParsedFile,
+    _definition_import_maps,
+    _fixture_is_autouse,
+    _fixture_public_name,
+    _module_callable_scopes,
+    _required_injected_parameters,
     conftest_patch_targets,
     parse_python,
 )
@@ -56,6 +63,15 @@ from checkwash.roles import (
     collectable,
     is_artifact,
 )
+from checkwash.standins import (
+    StandinInstall,
+    _provider_context,
+    install_applies,
+    install_reaches,
+    new_reaching_effects,
+    new_unit_standin_installs,
+    target_is_repo_owned,
+)
 
 __all__ = [
     "EngineError",
@@ -72,6 +88,47 @@ __all__ = [
 # Roles whose files are supervised for their own sake. Moving a file out of
 # one of these is itself the event, not a neutral relocation.
 _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"})
+_NON_HISTORIC_EARLY_CONFTEST_HOOKS = frozenset({"pytest_sessionstart"})
+_WINDOWS_DEVICE_NAMES = frozenset(
+    {"con", "prn", "aux", "nul"}
+    | {f"com{index}" for index in range(1, 10)}
+    | {f"lpt{index}" for index in range(1, 10)}
+)
+
+
+@dataclass(frozen=True)
+class _FixtureProvider:
+    provider_id: str
+    public_name: str
+    dependencies: tuple[str, ...]
+    autouse: bool
+    start_line: int
+    end_line: int
+    transparent_receiver: str | None = None
+
+
+@dataclass(frozen=True)
+class _FixtureResolution:
+    active: frozenset[tuple[str, str]]
+    trusted_receivers: frozenset[tuple[str, str]]
+    provider_order: tuple[tuple[str, str], ...]
+
+
+def _initial_conftest_for_default_collection(path: str) -> bool:
+    """Whether default root collection loads this conftest before sessionstart.
+
+    Pytest initially loads the invocation-root conftest and immediate ``test*``
+    directories. Other directory conftests arrive during traversal, after the
+    non-historic session-start hook has fired. Explicit CLI paths/testpaths can
+    broaden that initial set, but the engine has no runner-path input and must
+    not claim a definite early effect from that conditional environment.
+    """
+    path = path.replace("\\", "/")
+    if path == "conftest.py":
+        return True
+    if path.count("/") != 1:
+        return False
+    return path.split("/", 1)[0].casefold().startswith("test")
 
 
 def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChange]:
@@ -206,6 +263,72 @@ def _canonical_constants(raw: dict[str, str]) -> dict[str, str]:
     return out
 
 
+def _safe_repo_path(path: str) -> str | None:
+    """Normalize a safe repository-relative path, or reject it.
+
+    Head callbacks eventually address repository storage.  Neither a search
+    result nor a string-built stand-in target may turn them into an ambient
+    filesystem read on Windows or POSIX.
+    """
+    if not isinstance(path, str) or not path or "\x00" in path:
+        return None
+    normalized = path.replace("\\", "/")
+    if normalized.startswith("/") or ":" in normalized:
+        return None
+    parts = normalized.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    if any(
+        part != part.rstrip(" .")
+        or part.split(".", 1)[0].casefold() in _WINDOWS_DEVICE_NAMES
+        for part in parts
+    ):
+        # Win32 normalizes trailing dots/spaces and treats these basenames as
+        # ambient devices even when an extension is present (``NUL.py``).
+        return None
+    return "/".join(parts)
+
+
+def _standin_module_paths(install: StandinInstall) -> tuple[str, ...]:
+    """Safe conventional ownership paths, longest module prefix first."""
+    target = install.target
+    if target.startswith((".", "request.module")):
+        return ()
+    pieces = target.split(".")
+    if not pieces or not all(
+        piece.isidentifier() and not keyword.iskeyword(piece)
+        for piece in pieces
+    ):
+        return ()
+    # A binding imported with ``from pkg import name`` can name either a
+    # submodule or a value; probe both interpretations by starting at the
+    # full chain and walking back. Attribute installs omit only the replaced
+    # leaf, then likewise try every valid module prefix.
+    module_pieces = (
+        pieces if install.kind in ("module", "binding") else pieces[:-1]
+    )
+    if not module_pieces:
+        return ()
+    candidates: list[str] = []
+    for length in range(len(module_pieces), 0, -1):
+        module_path = "/".join(module_pieces[:length])
+        candidates.extend(
+            (
+                f"{module_path}.py",
+                f"{module_path}/__init__.py",
+                f"src/{module_path}.py",
+                f"src/{module_path}/__init__.py",
+            )
+        )
+    return tuple(
+        dict.fromkeys(
+            safe
+            for candidate in candidates
+            if (safe := _safe_repo_path(candidate)) is not None
+        )
+    )
+
+
 def build_ir(
     changes: list[FileChange],
     config: Config,
@@ -216,8 +339,11 @@ def build_ir(
     self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
+    head_exists=None,
+    head_duplicate_searcher=None,
 ) -> IR:
     g = DiffGlobals()
+    g.conftest_standin_patches = []
     g.scope_allow = sorted(scope_allow or [])
     # Someone else's code = declared, minus the project's own name, minus the
     # repo's own top-level directories. Without the subtractions this set
@@ -231,6 +357,22 @@ def build_ir(
         g.third_party_roots = tuple(
             sorted(set(known_modules) - set(self_modules or ()) - repo_roots - known_baseline())
         )
+    self_roots = set(self_modules or ())
+    external_roots = (
+        set(known_modules or ()) - self_roots - known_baseline()
+    )
+    changed_prod_roots = {
+        _module_of(change.path).split(".", 1)[0]
+        for change in changes
+        if change.path.endswith(".py")
+        and config.role_of(change.path.replace("\\", "/")) == "prod"
+    }
+    # A manifest-declared dependency prevents a coincidental conventional
+    # path from becoming ownership evidence. Manifest self-roots and files
+    # actually changed under the configured production role are independent,
+    # positive repository evidence.
+    owned_roots = self_roots | changed_prod_roots
+    g.first_party_roots = tuple(sorted(root for root in owned_roots if root))
     ir = IR(base=base_label, head=head_label, globals=g)
     removed_texts: Counter[str] = Counter()
     added_texts: Counter[str] = Counter()
@@ -259,6 +401,68 @@ def build_ir(
     raw_by_path: dict[str, tuple[bytes | None, bytes | None]] = {
         c.path.replace("\\", "/"): (c.before, c.after) for c in changes
     }
+    # Security-sensitive side reads cannot key a rename's base bytes under
+    # its destination path. Preserve actual path presence independently:
+    # ``old_path`` exists only at base and ``path`` only at head.
+    security_raw_sides: tuple[dict[str, bytes], dict[str, bytes]] = ({}, {})
+    security_changed_paths: set[str] = set()
+    for candidate in changes:
+        head_path = candidate.path.replace("\\", "/")
+        base_path = (candidate.old_path or candidate.path).replace("\\", "/")
+        security_changed_paths.update((base_path, head_path))
+        if candidate.before is not None:
+            security_raw_sides[0][base_path] = candidate.before
+        if candidate.after is not None:
+            security_raw_sides[1][head_path] = candidate.after
+    security_head_memo: dict[str, bytes | None] = {}
+
+    def _read_head_security(
+        path: str, *, expected: bool = False, searched: bool = False
+    ) -> bytes | None:
+        """Uncapped head read that distinguishes absence from read failure."""
+        safe_path = _safe_repo_path(path)
+        if safe_path is None:
+            # Search results and string patch targets are untrusted.  An
+            # invalid repository-relative path is not an ownership/provider
+            # candidate and must never reach head_exists/head_reader.
+            return None
+        path = safe_path
+        failure = (
+            f"head reader could not read searched test candidate: {path}"
+            if searched
+            else f"head reader could not read existing path: {path}"
+        )
+        if path in security_head_memo:
+            data = security_head_memo[path]
+            if data is None and expected:
+                raise EngineError(failure)
+            return data
+        known_exists = (
+            bool(head_exists(path)) if head_exists is not None else None
+        )
+        if known_exists is False:
+            if expected:
+                raise EngineError(failure)
+            security_head_memo[path] = None
+            return None
+        if head_reader is None:
+            if expected or known_exists:
+                raise EngineError(failure)
+            security_head_memo[path] = None
+            return None
+        try:
+            data = head_reader(path)
+        except EngineError:
+            raise
+        except OSError as exc:
+            raise EngineError(
+                f"head reader could not read existing path: {path}"
+            ) from exc
+        if data is None and (expected or known_exists):
+            raise EngineError(failure)
+        security_head_memo[path] = data
+        return data
+
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
     oracle_head_reads = [0]
 
@@ -279,7 +483,7 @@ def build_ir(
         a prod module or a nonexistent sibling candidate must not spend the
         budget on a file that could never carry an oracle.
         """
-        in_diff = opath in raw_by_path
+        in_diff = opath in security_changed_paths
         key = (opath, side if in_diff else -1)
         if key in oracle_memo:
             return oracle_memo[key]
@@ -288,10 +492,10 @@ def build_ir(
             oracle_memo[key] = None
             return None
         if in_diff:
-            data = raw_by_path[opath][side]
+            data = security_raw_sides[side].get(opath)
         elif head_reader is not None and oracle_head_reads[0] < _MAX_ORACLE_READS:
             oracle_head_reads[0] += 1
-            data = head_reader(opath)
+            data = _read_head_security(opath)
         else:
             data = None
         if data is not None:
@@ -302,6 +506,202 @@ def build_ir(
                 parsed = None
         oracle_memo[key] = parsed
         return parsed
+
+    security_oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
+
+    def _security_oracle_file(opath: str, side: int = 1) -> ParsedFile | None:
+        """Uncapped, side-aware provider inventory for stand-in decisions.
+
+        Paths outside the diff have identical base/head bytes, both read from
+        the head snapshot.  A changed conftest must instead expose its actual
+        before and after fixture graphs; borrowing the head graph for both
+        sides erases dependency-only activation events.
+        """
+        opath = opath.replace("\\", "/")
+        key = (opath, side if opath in security_changed_paths else -1)
+        if key in security_oracle_memo:
+            return security_oracle_memo[key]
+        if config.role_of(opath) not in ("test", "conftest"):
+            security_oracle_memo[key] = None
+            return None
+        if opath in security_changed_paths:
+            data = security_raw_sides[side].get(opath)
+        else:
+            data = _read_head_security(opath)
+        parsed = None
+        if data is not None:
+            candidate = parse_python(
+                data, collect_tests=True, conftest=opath.endswith("conftest.py")
+            )
+            if candidate.parse_ok:
+                parsed = candidate
+        security_oracle_memo[key] = parsed
+        return parsed
+
+    # Pytest discovers fixtures from final module/class attributes in ``dir``
+    # order. Multiple Python carriers may therefore export a stack under one
+    # public fixture name: the last is selected normally, while its same-name
+    # dependency deliberately resolves the preceding carrier. ParsedFile's
+    # public-name dictionaries are intentionally compact/lossy, so reconstruct
+    # this ordered registration identity only for security fixture resolution.
+    fixture_registration_memo: dict[
+        tuple[str, int],
+        dict[str, dict[str, tuple[_FixtureProvider, ...]]],
+    ] = {}
+
+    def _fixture_registrations(
+        source_path: str, side: int
+    ) -> dict[str, dict[str, tuple[_FixtureProvider, ...]]]:
+        source_path = source_path.replace("\\", "/")
+        key = (
+            source_path,
+            side if source_path in security_changed_paths else -1,
+        )
+        if key in fixture_registration_memo:
+            return fixture_registration_memo[key]
+        parsed = _security_oracle_file(source_path, side)
+        if parsed is None:
+            fixture_registration_memo[key] = {}
+            return {}
+        data = (
+            security_raw_sides[side].get(source_path)
+            if source_path in security_changed_paths
+            else _read_head_security(source_path)
+        )
+        if data is None:
+            fixture_registration_memo[key] = {}
+            return {}
+        try:
+            tree = ast.parse(_decode(data))
+        except (SyntaxError, RecursionError, ValueError, MemoryError):
+            # ``parsed`` above was successful, so this is defensive only. A
+            # missing registration map keeps the already parsed conservative
+            # provider graph rather than inventing a different winner.
+            fixture_registration_memo[key] = {}
+            return {}
+        definition_imports = _definition_import_maps(tree)
+        registrations: dict[
+            str, dict[str, tuple[_FixtureProvider, ...]]
+        ] = {}
+
+        def collect_container(
+            container: ast.Module | ast.ClassDef,
+            container_name: str,
+            *,
+            class_member: bool,
+        ) -> None:
+            live = _module_callable_scopes(container)
+            candidates: dict[str, list[_FixtureProvider]] = {}
+            provider_prefix = (
+                f"{source_path}::{container_name}"
+                if container_name
+                else source_path
+            )
+            for carrier, node in live.items():
+                if not isinstance(
+                    node, (ast.FunctionDef, ast.AsyncFunctionDef)
+                ):
+                    continue
+                exact = definition_imports.get(id(node))
+                public_name = _fixture_public_name(node, exact)
+                if public_name is None:
+                    continue
+                dependencies = tuple(
+                    sorted(
+                        _required_injected_parameters(
+                            node,
+                            class_member=class_member,
+                            definition_imports=exact,
+                        )
+                    )
+                )
+                body = tuple(
+                    statement
+                    for statement in node.body
+                    if not (
+                        isinstance(statement, ast.Expr)
+                        and isinstance(statement.value, ast.Constant)
+                        and isinstance(statement.value.value, str)
+                    )
+                )
+                transparent_receiver = None
+                if (
+                    public_name in ("monkeypatch", "mocker")
+                    and public_name in dependencies
+                    and len(body) == 1
+                ):
+                    statement = body[0]
+                    value = (
+                        statement.value
+                        if isinstance(statement, ast.Return)
+                        else (
+                            statement.value.value
+                            if isinstance(statement, ast.Expr)
+                            and isinstance(statement.value, ast.Yield)
+                            else None
+                        )
+                    )
+                    if isinstance(value, ast.Name) and value.id == public_name:
+                        transparent_receiver = public_name
+                start_line = min(
+                    (
+                        getattr(decorator, "lineno", node.lineno)
+                        for decorator in node.decorator_list
+                    ),
+                    default=node.lineno,
+                )
+                candidates.setdefault(public_name, []).append(
+                    _FixtureProvider(
+                        provider_id=(
+                            f"{provider_prefix}::<fixture:{carrier}>"
+                        ),
+                        public_name=public_name,
+                        dependencies=dependencies,
+                        autouse=_fixture_is_autouse(node, exact),
+                        start_line=start_line,
+                        end_line=getattr(
+                            node, "end_lineno", node.lineno
+                        ),
+                        transparent_receiver=transparent_receiver,
+                    )
+                )
+            registrations[container_name] = {
+                public_name: tuple(
+                    sorted(rows, key=lambda row: row.provider_id)
+                )
+                for public_name, rows in candidates.items()
+            }
+            for carrier, node in live.items():
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                child_name = (
+                    f"{container_name}.{carrier}"
+                    if container_name
+                    else carrier
+                )
+                collect_container(
+                    node, child_name, class_member=True
+                )
+
+        collect_container(tree, "", class_member=False)
+        fixture_registration_memo[key] = registrations
+        return registrations
+
+    def _fixture_provider_for_install(
+        source_path: str, side: int, install: StandinInstall
+    ) -> _FixtureProvider | None:
+        public_owner = (install.owner or "").rsplit(".", 1)[-1]
+        for container in _fixture_registrations(
+            source_path, side
+        ).values():
+            for provider in container.get(public_owner, ()):
+                if (
+                    provider.start_line
+                    <= install.position[0]
+                    <= provider.end_line
+                ):
+                    return provider
+        return None
 
     def _merge_crossfile_oracles(tpath: str, parsed: ParsedFile, side: int) -> None:
         """Fold imported-helper and requested-fixture asserts into each unit.
@@ -329,7 +729,7 @@ def build_ir(
         for unit in parsed.units:
             uside = unit.side
             extra = []
-            requested = list(uside.params)
+            requested = list(getattr(uside, "fixtures", uside.params))
             conftest = None
             if requested and any(p not in parsed.fixture_asserts for p in requested):
                 conftest = _oracle_file(conftest_path, side)
@@ -342,7 +742,10 @@ def build_ir(
             for name in parsed.autouse_fixtures:
                 if name not in requested:
                     extra.extend(parsed.fixture_asserts.get(name, ()))
-            if conftest_path in raw_by_path and conftest_path != tpath:
+            if (
+                conftest_path in security_changed_paths
+                and conftest_path != tpath
+            ):
                 c = _oracle_file(conftest_path, side)
                 if c is not None:
                     for name in c.autouse_fixtures:
@@ -362,8 +765,366 @@ def build_ir(
                 for i, a in enumerate(uside.assertions):
                     a.id = f"a{i}"
 
+    fixture_environment_memo: dict[
+        tuple[str, int], tuple[_FixtureProvider, ...]
+    ] = {}
+
+    def _ancestor_conftests(path: str) -> tuple[str, ...]:
+        """Root-to-nearest conftest paths that pytest can expose to path."""
+        directory = path.rsplit("/", 1)[0] if "/" in path else ""
+        parts = directory.split("/") if directory else []
+        return tuple(
+            dict.fromkeys(
+                (
+                    "conftest.py",
+                    *(
+                        "/".join(parts[: depth + 1]) + "/conftest.py"
+                        for depth in range(len(parts))
+                    ),
+                )
+            )
+        )
+
+    def _fixture_environment(tpath: str, parsed: ParsedFile, side: int):
+        """Ordered conftest/module fixture providers on one repository side."""
+        key = (tpath, side)
+        if key in fixture_environment_memo:
+            return fixture_environment_memo[key]
+        providers: list[_FixtureProvider] = []
+        for path in _ancestor_conftests(tpath):
+            candidate = _security_oracle_file(path, side)
+            if candidate is not None and candidate.parse_ok:
+                registrations = _fixture_registrations(path, side)
+                module_registrations = registrations.get("", {})
+                if module_registrations:
+                    providers.extend(
+                        provider
+                        for stack in module_registrations.values()
+                        for provider in stack
+                    )
+                else:
+                    providers.extend(
+                        _FixtureProvider(
+                            provider_id=path,
+                            public_name=name,
+                            dependencies=dependencies,
+                            autouse=name in candidate.autouse_fixtures,
+                            start_line=0,
+                            end_line=0,
+                        )
+                        for name, dependencies in (
+                            candidate.fixture_dependencies.items()
+                        )
+                    )
+        module_registrations = _fixture_registrations(tpath, side).get(
+            "", {}
+        )
+        if module_registrations:
+            providers.extend(
+                provider
+                for stack in module_registrations.values()
+                for provider in stack
+            )
+        else:
+            providers.extend(
+                _FixtureProvider(
+                    provider_id=tpath,
+                    public_name=name,
+                    dependencies=dependencies,
+                    autouse=name in parsed.autouse_fixtures,
+                    start_line=0,
+                    end_line=0,
+                )
+                for name, dependencies in parsed.fixture_dependencies.items()
+            )
+        environment = tuple(providers)
+        fixture_environment_memo[key] = environment
+        return environment
+
+    def _fixture_resolution(
+        tpath: str,
+        parsed: ParsedFile,
+        unit_side,
+        side: int,
+    ) -> _FixtureResolution:
+        """Provider-aware pytest fixture closure for one collected unit.
+
+        A flat ``name -> provider`` map loses three real pytest semantics:
+        class-local fixtures shadow conftest fixtures only for their class;
+        direct parametrization installs a pseudo-fixture visible to another
+        fixture's dependency; and ``def f(f)`` deliberately requests the
+        previous overridden provider. Resolve a layered provider stack while
+        retaining ancestor autouse names as activation roots.
+        """
+        fixture_providers = list(
+            _fixture_environment(tpath, parsed, side)
+        )
+        registrations = _fixture_registrations(tpath, side)
+        for class_name, dependencies, autouse in (
+            getattr(unit_side, "standin_fixture_layers", ()) or ()
+        ):
+            class_registrations = registrations.get(class_name, {})
+            if class_registrations:
+                fixture_providers.extend(
+                    provider
+                    for stack in class_registrations.values()
+                    for provider in stack
+                )
+            else:
+                fixture_providers.extend(
+                    _FixtureProvider(
+                        provider_id=f"{tpath}::{class_name}",
+                        public_name=name,
+                        dependencies=fixture_dependencies,
+                        autouse=name in autouse,
+                        start_line=0,
+                        end_line=0,
+                    )
+                    for name, fixture_dependencies in dependencies.items()
+                )
+        parameter_providers = (
+            getattr(unit_side, "standin_parameter_providers", None) or {}
+        )
+        direct_parameters = {
+            name: ()
+            for name, provider in parameter_providers.items()
+            if provider and provider[0] == "parametrize"
+        }
+        if direct_parameters:
+            fixture_providers.extend(
+                _FixtureProvider(
+                    provider_id=f"{tpath}::<parametrize:{name}>",
+                    public_name=name,
+                    dependencies=(),
+                    autouse=False,
+                    start_line=0,
+                    end_line=0,
+                )
+                for name in direct_parameters
+            )
+
+        providers: dict[str, list[int]] = {}
+        autouse_names: set[str] = set()
+        for index, provider in enumerate(fixture_providers):
+            providers.setdefault(provider.public_name, []).append(index)
+            if provider.autouse:
+                autouse_names.add(provider.public_name)
+
+        def resolve(name: str, before: int | None = None) -> int | None:
+            candidates = providers.get(name, ())
+            for index in reversed(candidates):
+                if before is None or index < before:
+                    return index
+            return None
+
+        trusted_memo: dict[int, bool] = {}
+
+        def trusted_receiver(provider_index: int) -> bool:
+            if provider_index in trusted_memo:
+                return trusted_memo[provider_index]
+            provider = fixture_providers[provider_index]
+            trusted = False
+            if (
+                provider.transparent_receiver
+                == provider.public_name
+            ):
+                previous = resolve(
+                    provider.public_name, provider_index
+                )
+                trusted = (
+                    previous is None or trusted_receiver(previous)
+                )
+            trusted_memo[provider_index] = trusted
+            return trusted
+
+        pending: list[tuple[str, int]] = []
+        for name in sorted(
+            set(getattr(unit_side, "fixtures", unit_side.params))
+            | autouse_names
+        ):
+            provider_index = resolve(name)
+            if provider_index is not None:
+                pending.append((name, provider_index))
+
+        active: set[tuple[str, str]] = set()
+        trusted_active: set[tuple[str, str]] = set()
+        visited: set[tuple[str, int]] = set()
+        while pending:
+            name, provider_index = pending.pop()
+            state = (name, provider_index)
+            if state in visited:
+                continue
+            visited.add(state)
+            provider = fixture_providers[provider_index]
+            token = (provider.provider_id, name)
+            active.add(token)
+            if trusted_receiver(provider_index):
+                trusted_active.add(token)
+            for dependency in provider.dependencies:
+                dependency_index = resolve(
+                    dependency,
+                    provider_index if dependency == name else None,
+                )
+                if dependency_index is not None:
+                    pending.append((dependency, dependency_index))
+        return _FixtureResolution(
+            active=frozenset(active),
+            trusted_receivers=frozenset(trusted_active),
+            provider_order=tuple(
+                (provider.provider_id, provider.public_name)
+                for provider in fixture_providers
+            ),
+        )
+
+    def _repo_fixture_shadows_receiver(
+        install: StandinInstall,
+        resolution: _FixtureResolution,
+        *,
+        current_provider: tuple[str, str] | None = None,
+    ) -> bool:
+        """Whether pytest resolves an API receiver to repository code.
+
+        A fixture may override itself while requesting the prior definition:
+        ``def monkeypatch(monkeypatch)`` receives its parent/plugin fixture,
+        not its own return value. The currently executing provider is therefore
+        excluded, while any earlier active repository provider still shadows
+        the builtin/plugin receiver.
+        """
+        receiver = install.api_fixture_receiver
+        if receiver is None:
+            return False
+        eligible = resolution.active
+        if current_provider is not None:
+            try:
+                current_index = resolution.provider_order.index(
+                    current_provider
+                )
+            except ValueError:
+                pass
+            else:
+                # ``def monkeypatch(monkeypatch)`` requests the preceding
+                # fixture definition. Providers registered after this one may
+                # depend on and execute it, but cannot flow backwards into its
+                # receiver argument and therefore are consumers, not shadows.
+                eligible = eligible & frozenset(
+                    resolution.provider_order[:current_index]
+                )
+        return any(
+            fixture_name == receiver
+            and (provider, fixture_name) != current_provider
+            and (provider, fixture_name)
+            not in resolution.trusted_receivers
+            for provider, fixture_name in eligible
+        )
+
+    def _filter_unit_standin_installs(
+        test_path: str, parsed: ParsedFile, side: int
+    ) -> None:
+        """Apply local fixture-provider and API-receiver resolution."""
+        def fixture_provider(
+            install: StandinInstall,
+        ) -> _FixtureProvider | None:
+            if install.scope not in ("fixture", "class_fixture"):
+                return None
+            return _fixture_provider_for_install(
+                test_path, side, install
+            )
+
+        def current_provider(
+            install: StandinInstall,
+            provider: _FixtureProvider | None,
+        ) -> tuple[str, str] | None:
+            if (
+                provider is None
+                or provider.public_name
+                != install.api_fixture_receiver
+            ):
+                return None
+            return (provider.provider_id, provider.public_name)
+
+        # The frontend can attach fixture installs that its same-file graph
+        # proves active. A conftest fixture may also request a fixture supplied
+        # by the consuming test module/class, however; only the engine has that
+        # cross-file graph. Retain all local fixture-scoped candidates here and
+        # let the side-aware provider resolution below select the ones that
+        # actually execute for each unit.
+        fixture_candidates = tuple(
+            install
+            for install in parsed.standin_installs
+            if install.scope in ("fixture", "class_fixture")
+        )
+        for unit in parsed.units:
+            unit_side = unit.side
+            installs = tuple(
+                dict.fromkeys(
+                    (
+                        *(unit_side.standin_installs or ()),
+                        *fixture_candidates,
+                    )
+                )
+            )
+            if not installs:
+                continue
+            resolution = _fixture_resolution(
+                test_path, parsed, unit_side, side
+            )
+            filtered: list[StandinInstall] = []
+            for install in installs:
+                provider = fixture_provider(install)
+                if (
+                    provider is not None
+                    and (provider.provider_id, provider.public_name)
+                    not in resolution.active
+                ):
+                    continue
+                if _repo_fixture_shadows_receiver(
+                    install,
+                    resolution,
+                    current_provider=current_provider(
+                        install, provider
+                    ),
+                ):
+                    continue
+                filtered.append(install)
+            unit_side.standin_installs = tuple(filtered)
+
+    changed_conftest_paths: set[str] = set()
+    test_side_paths: dict[str, tuple[str, str]] = {}
+    source_counts = Counter(
+        data
+        for candidate in changes
+        for data in (candidate.before, candidate.after)
+        if data is not None
+    )
+    repeated_sources = {
+        data for data, count in source_counts.items() if count > 1
+    }
+    parse_templates: dict[tuple[bytes, bool, bool], ParsedFile] = {}
+
+    def _parse_changed_python(
+        data: bytes, *, collect_tests: bool, conftest: bool
+    ) -> ParsedFile:
+        """Return an independent parse, reusing only repeated source bytes."""
+        if data not in repeated_sources:
+            return parse_python(
+                data, collect_tests=collect_tests, conftest=conftest
+            )
+        key = (data, collect_tests, conftest)
+        template = parse_templates.get(key)
+        if template is not None:
+            return copy.deepcopy(template)
+        parsed = parse_python(
+            data, collect_tests=collect_tests, conftest=conftest
+        )
+        # The caller enriches each ParsedFile with side/path-specific oracle
+        # and fixture data. Retain an untouched template before returning the
+        # first instance for those mutations.
+        parse_templates[key] = copy.deepcopy(parsed)
+        return parsed
+
     for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
         path = change.path.replace("\\", "/")
+        old_path = (change.old_path or path).replace("\\", "/")
         if is_artifact(path):
             continue  # generated output is not evidence of anything
         role = config.role_of(path)
@@ -386,14 +1147,32 @@ def build_ir(
         if is_python:
             is_conftest = role == "conftest"
             collect = is_conftest or (role == "test" and collectable(path))
-            if change.before is not None:
-                before_parsed = parse_python(
+            if (
+                change.before is not None
+                and change.after is not None
+                and change.before == change.after
+            ):
+                # Some API producers retain byte-identical modified/renamed
+                # entries. Parsing is pure and path-independent; clone the
+                # result so side-specific oracle/fixture enrichment below
+                # still mutates independent objects.
+                before_parsed = _parse_changed_python(
                     change.before, collect_tests=collect, conftest=is_conftest
                 )
-            if change.after is not None:
-                after_parsed = parse_python(
-                    change.after, collect_tests=collect, conftest=is_conftest
-                )
+                after_parsed = copy.deepcopy(before_parsed)
+            else:
+                if change.before is not None:
+                    before_parsed = _parse_changed_python(
+                        change.before,
+                        collect_tests=collect,
+                        conftest=is_conftest,
+                    )
+                if change.after is not None:
+                    after_parsed = _parse_changed_python(
+                        change.after,
+                        collect_tests=collect,
+                        conftest=is_conftest,
+                    )
         elif is_js_test:
             if change.before is not None:
                 before_parsed = parse_javascript(change.before)
@@ -407,14 +1186,20 @@ def build_ir(
 
         if is_python and role == "test" and collect:
             if before_parsed is not None:
-                _merge_crossfile_oracles(path, before_parsed, 0)
+                _merge_crossfile_oracles(old_path, before_parsed, 0)
+                _filter_unit_standin_installs(
+                    old_path, before_parsed, 0
+                )
             if after_parsed is not None:
                 _merge_crossfile_oracles(path, after_parsed, 1)
+                _filter_unit_standin_installs(path, after_parsed, 1)
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         parsed_for_helpers = after_parsed if after_parsed and after_parsed.parse_ok else before_parsed
         if parsed_for_helpers is not None and parsed_for_helpers.parse_ok:
             file_ir.helper_calls = dict(parsed_for_helpers.helper_calls)
+            if is_python:
+                file_ir.standin_imports = dict(parsed_for_helpers.import_bindings)
         ir.files.append(file_ir)
         if is_python and not file_ir.parse_ok:
             ir.skipped_files.append(path)
@@ -442,6 +1227,8 @@ def build_ir(
             # could never connect a deleted test file to the feature removal
             # that explains it (starlette b133ab45ad deletes both halves).
             g.test_file_imports[path] = list(before_parsed.imports)
+        if role == "test":
+            test_side_paths[path] = (old_path, path)
         if role in ("test", "conftest"):
             for unit in file_ir.units:
                 if unit.before is None or unit.after is None:
@@ -479,21 +1266,33 @@ def build_ir(
         if path in MANIFESTS and _deps_differ(change.before, change.after, path):
             g.dependency_manifest_changed = True
 
+        # Preserve the serialized IR-v1 field exactly: its contract is the
+        # original raw first-party monkeypatch-call census, not the richer
+        # reachability/lifetime result introduced by this family.
         if role == "conftest" and change.after is not None:
-            first_party = frozenset(
-                p.replace("\\", "/").split("/")[0].removesuffix(".py")
-                for p in (c.path for c in changes)
+            legacy_first_party = frozenset(
+                candidate.path.replace("\\", "/").split("/")[0].removesuffix(".py")
+                for candidate in changes
             ) | frozenset(
-                _module_of(f.path).split(".")[0] for f in ir.files if f.role == "prod"
+                _module_of(existing.path).split(".")[0]
+                for existing in ir.files
+                if existing.role == "prod"
             )
-            before_patches = (
-                set(conftest_patch_targets(change.before, first_party))
+            legacy_before = (
+                set(conftest_patch_targets(change.before, legacy_first_party))
                 if change.before is not None
                 else set()
             )
-            for text in conftest_patch_targets(change.after, first_party):
-                if text not in before_patches:
+            for text in conftest_patch_targets(change.after, legacy_first_party):
+                if text not in legacy_before:
                     g.conftest_prod_patches.append((path, text))
+
+        if role == "conftest" and (
+            change.before != change.after or old_path != path
+        ):
+            # A graph-only edit can activate an unchanged ancestor stand-in;
+            # retain the changed path even when this file adds no install.
+            changed_conftest_paths.update((old_path, path))
 
         if change.synthetic == "renamed_from_test":
             # Relocated test bytes are not production behaviour change; they
@@ -684,6 +1483,533 @@ def build_ir(
             for text, count in sorted((after_broad - before_broad).items()):
                 g.broad_excepts_added.extend([(path, text)] * count)
 
+    # A conftest effect can become dangerous without being textually new:
+    # an existing test can request its fixture for the first time, or a
+    # changed adapter/autouse fixture can acquire a dependency on it. Build
+    # base and head fixture environments independently, then compare only the
+    # effects that actually execute for each aligned, live test unit.
+    conftest_events: dict[
+        tuple[str, tuple[str, str, str, str, str, bool]],
+        tuple[str, StandinInstall],
+    ] = {}
+
+    def _applicable_conftest_installs(
+        test_path: str,
+        parsed: ParsedFile,
+        unit_side,
+        side: int,
+    ) -> tuple[tuple[str, StandinInstall], ...]:
+        resolution = _fixture_resolution(
+            test_path, parsed, unit_side, side
+        )
+        applicable: list[tuple[str, StandinInstall]] = []
+        for conftest_path in _ancestor_conftests(test_path):
+            conftest = _security_oracle_file(conftest_path, side)
+            if conftest is None:
+                continue
+            for install in conftest.standin_installs:
+                # A conftest-local binding does not replace the binding in a
+                # separately imported test module.
+                if install.kind == "binding":
+                    continue
+                # Pytest registers the repository/root and immediate test
+                # conftests during initial discovery. A deeper provider is
+                # commonly imported only after configure/sessionstart have
+                # fired, so its early-hook body is not a definite effect.
+                # Module bodies, fixtures, and runtest hooks have later,
+                # independently modelled lifecycles and remain eligible.
+                if (
+                    install.scope == "hook"
+                    and install.owner in _NON_HISTORIC_EARLY_CONFTEST_HOOKS
+                    and not _initial_conftest_for_default_collection(
+                        conftest_path
+                    )
+                ):
+                    continue
+                public_owner = (install.owner or "").rsplit(".", 1)[-1]
+                fixture_provider = (
+                    _fixture_provider_for_install(
+                        conftest_path, side, install
+                    )
+                    if install.scope in ("fixture", "class_fixture")
+                    else None
+                )
+                provider_token = (
+                    (
+                        fixture_provider.provider_id,
+                        fixture_provider.public_name,
+                    )
+                    if fixture_provider is not None
+                    else (conftest_path, public_owner)
+                )
+                current_provider = (
+                    provider_token
+                    if public_owner == install.api_fixture_receiver
+                    else None
+                )
+                if _repo_fixture_shadows_receiver(
+                    install,
+                    resolution,
+                    current_provider=current_provider,
+                ):
+                    # The frontend's receiver proof assumes pytest's builtin
+                    # monkeypatch or pytest-mock's mocker fixture. A visible
+                    # repository/class/direct-param provider with that name
+                    # wins pytest resolution, so the arbitrary receiver no
+                    # longer proves that this call installs anything.
+                    continue
+                applies = (
+                    provider_token in resolution.active
+                    if install.scope in ("fixture", "class_fixture")
+                    else install_applies(install, unit_side)
+                )
+                if applies:
+                    applicable.append((conftest_path, install))
+        return tuple(
+            sorted(
+                applicable,
+                key=lambda item: (
+                    item[1].effect_identity,
+                    item[0],
+                    item[1].text,
+                    item[1].position,
+                ),
+            )
+        )
+
+    # Changed tests are already in memory. A changed conftest can also affect
+    # unchanged tests, so derive literal oracle needles from both sides of it
+    # and every ancestor (an edited nested adapter can activate a root
+    # fixture), then inventory all matching head tests in one batch.
+    test_pairs: dict[
+        str, tuple[str, str, ParsedFile, ParsedFile, tuple]
+    ] = {}
+    files_by_path = {file.path: file for file in ir.files}
+    for test_path in sorted(set(before_by_path) & set(after_by_path)):
+        if config.role_of(test_path) != "test" or not collectable(test_path):
+            continue
+        file = files_by_path.get(test_path)
+        if file is None:
+            continue
+        pairs = tuple(
+            (unit.before, unit.after)
+            for unit in file.units
+            if unit.before is not None and unit.after is not None
+        )
+        if pairs:
+            before_test_path, after_test_path = test_side_paths.get(
+                test_path, (test_path, test_path)
+            )
+            test_pairs[test_path] = (
+                before_test_path,
+                after_test_path,
+                before_by_path[test_path],
+                after_by_path[test_path],
+                pairs,
+            )
+
+    search_installs: list[StandinInstall] = []
+    fixture_provider_needles: set[str] = set()
+    receiver_transition_needles: set[str] = set()
+    for changed_path in sorted(changed_conftest_paths):
+        for conftest_path in _ancestor_conftests(changed_path):
+            for side in (0, 1):
+                parsed = _security_oracle_file(conftest_path, side)
+                if parsed is not None:
+                    search_installs.extend(
+                        install
+                        for install in parsed.standin_installs
+                        if install.kind != "binding"
+                    )
+        for side in (0, 1):
+            changed_parsed = _security_oracle_file(changed_path, side)
+            if changed_parsed is None:
+                continue
+            receiver_transition_needles.update(
+                {"monkeypatch", "mocker"}
+                & (
+                    set(changed_parsed.fixture_dependencies)
+                    | set(
+                        _fixture_registrations(changed_path, side).get(
+                            "", {}
+                        )
+                    )
+                )
+            )
+            fixture_provider_needles.update(
+                changed_parsed.fixture_dependencies
+            )
+            fixture_provider_needles.update(
+                dependency
+                for dependencies in changed_parsed.fixture_dependencies.values()
+                for dependency in dependencies
+                if dependency not in ("monkeypatch", "mocker", "request")
+            )
+
+    # A parent fixture resolves non-self dependencies in the consuming test's
+    # context, so a changed root adapter can activate an installing fixture in
+    # an unchanged descendant conftest. Discover provider files by fixture
+    # name first, then use their concrete target names for the test inventory.
+    def _below_changed_conftest(path: str) -> bool:
+        return any(
+            not directory or path.startswith(directory + "/")
+            for changed_path in changed_conftest_paths
+            for directory in (
+                changed_path.rsplit("/", 1)[0]
+                if "/" in changed_path
+                else "",
+            )
+        )
+
+    test_provider_candidates: set[str] = set()
+    if (
+        fixture_provider_needles
+        and head_searcher is not None
+        and head_reader is not None
+    ):
+        provider_candidates = sorted(
+            {
+                safe
+                for candidate in head_searcher(
+                    sorted(fixture_provider_needles)
+                )
+                if (safe := _safe_repo_path(candidate)) is not None
+                and safe not in security_changed_paths
+                and (
+                    (
+                        safe.endswith("conftest.py")
+                        and config.role_of(safe) == "conftest"
+                    )
+                    or (
+                        safe.endswith(".py")
+                        and config.role_of(safe) == "test"
+                        and collectable(safe)
+                    )
+                )
+                and _below_changed_conftest(safe)
+            }
+        )
+        for provider_path in provider_candidates:
+            data = _read_head_security(
+                provider_path, expected=True
+            )
+            assert data is not None
+            parsed = _security_oracle_file(provider_path, 1)
+            if parsed is None:
+                provider_kind = (
+                    "conftest"
+                    if config.role_of(provider_path) == "conftest"
+                    else "test fixture"
+                )
+                raise EngineError(
+                    "head reader could not parse searched "
+                    + provider_kind
+                    + " provider: "
+                    + provider_path
+                )
+            registrations = _fixture_registrations(
+                provider_path, 1
+            )
+            provided_names = set(parsed.fixture_dependencies)
+            provided_names.update(
+                public_name
+                for container in registrations.values()
+                for public_name in container
+            )
+            if not provided_names.intersection(
+                fixture_provider_needles
+            ):
+                continue
+            is_test_provider = config.role_of(provider_path) == "test"
+            if is_test_provider:
+                # The provider and its consuming oracle may live in this very
+                # test module. Retain it for direct side-aware evaluation even
+                # if the target is referenced through an alias that a literal
+                # target search would not rediscover.
+                test_provider_candidates.add(provider_path)
+            search_installs.extend(
+                install
+                for install in parsed.standin_installs
+                if (
+                    install.scope in ("fixture", "class_fixture")
+                    if is_test_provider
+                    else install.kind != "binding"
+                )
+            )
+    needles = sorted(
+        receiver_transition_needles
+        | {
+            needle
+            for install in search_installs
+            for needle in (
+                install.attr if install.attr != "*" else "",
+                install.target.rsplit(".", 1)[-1],
+            )
+            if needle
+        }
+    )
+    if (
+        (needles or test_provider_candidates)
+        and head_searcher is not None
+        and head_reader is not None
+    ):
+        diff_paths = set(security_changed_paths)
+        searched_test_candidates = (
+            head_searcher(needles) if needles else ()
+        )
+        candidates = sorted(
+            test_provider_candidates
+            | {
+                safe
+                for candidate in searched_test_candidates
+                if (safe := _safe_repo_path(candidate)) is not None
+                and safe not in diff_paths
+                and safe.endswith(".py")
+                and config.role_of(safe) == "test"
+                and collectable(safe)
+                and _below_changed_conftest(safe)
+            }
+        )
+        # This is a security inventory, not an optional duplicate credit. Do
+        # not cap it by path count or file size; every searched result is read
+        # through the fail-closed safe-path callback.
+        for test_path in candidates:
+            data = _read_head_security(
+                test_path, expected=True, searched=True
+            )
+            assert data is not None  # expected=True makes absence an error
+            before_parsed = parse_python(data, collect_tests=True)
+            after_parsed = parse_python(data, collect_tests=True)
+            if not before_parsed.parse_ok or not after_parsed.parse_ok:
+                raise EngineError(
+                    "head reader could not parse searched test candidate: "
+                    + test_path
+                )
+            _merge_crossfile_oracles(test_path, before_parsed, 0)
+            _merge_crossfile_oracles(test_path, after_parsed, 1)
+            _filter_unit_standin_installs(test_path, before_parsed, 0)
+            _filter_unit_standin_installs(test_path, after_parsed, 1)
+            before_units = {
+                unit.qualname: unit.side for unit in before_parsed.units
+            }
+            after_units = {
+                unit.qualname: unit.side for unit in after_parsed.units
+            }
+            pairs = tuple(
+                (before_units[name], after_units[name])
+                for name in sorted(set(before_units) & set(after_units))
+            )
+            if pairs:
+                test_pairs[test_path] = (
+                    test_path,
+                    test_path,
+                    before_parsed,
+                    after_parsed,
+                    pairs,
+                )
+            if any(
+                new_unit_standin_installs(before_side, after_side)
+                for before_side, after_side in pairs
+            ):
+                # The source bytes are unchanged, but a changed conftest can
+                # remove a repository fixture that shadowed pytest's trusted
+                # monkeypatch/mocker provider.  That environment transition
+                # makes an existing local call a newly operative stand-in, so
+                # expose the aligned file to TEST_PATCHES_SUBJECT exactly as
+                # we do for an in-diff test edit.
+                before_by_path[test_path] = before_parsed
+                after_by_path[test_path] = after_parsed
+                searched_file = align_file(
+                    test_path,
+                    "test",
+                    "modified",
+                    before_parsed,
+                    after_parsed,
+                )
+                searched_file.helper_calls = dict(
+                    after_parsed.helper_calls
+                )
+                searched_file.standin_imports = dict(
+                    after_parsed.import_bindings
+                )
+                ir.files.append(searched_file)
+                files_by_path[test_path] = searched_file
+                g.test_file_imports[test_path] = list(
+                    after_parsed.imports
+                )
+
+    for test_path, (
+        before_test_path,
+        after_test_path,
+        before_parsed,
+        after_parsed,
+        pairs,
+    ) in sorted(test_pairs.items()):
+        # The fixture/oracle comparison below resolves constants and walks
+        # every aligned unit. Most diffs have no conftest stand-in at all;
+        # prove that once from the small ancestor chain so the many-file path
+        # stays linear instead of calling `_gate_constants` N times against
+        # an N-file parse map.
+        if not any(
+            candidate is not None and candidate.standin_installs
+            for side, side_path in (
+                (0, before_test_path),
+                (1, after_test_path),
+            )
+            for conftest_path in _ancestor_conftests(side_path)
+            for candidate in (
+                _security_oracle_file(conftest_path, side),
+            )
+        ):
+            continue
+        before_constants = _gate_constants(
+            before_parsed, before_by_path, None
+        )
+        after_constants = _gate_constants(
+            after_parsed, after_by_path, head_reader
+        )
+        for before_side, after_side in pairs:
+            if not unit_is_live(after_side, after_constants):
+                continue
+            before_entries = (
+                _applicable_conftest_installs(
+                    before_test_path, before_parsed, before_side, 0
+                )
+                if unit_is_live(before_side, before_constants)
+                else ()
+            )
+            after_entries = _applicable_conftest_installs(
+                after_test_path, after_parsed, after_side, 1
+            )
+            if not after_entries:
+                continue
+            before_imports = (
+                before_side.standin_imports
+                if before_side.standin_imports is not None
+                else before_parsed.import_bindings
+            )
+            after_imports = (
+                after_side.standin_imports
+                if after_side.standin_imports is not None
+                else after_parsed.import_bindings
+            )
+            selected = new_reaching_effects(
+                before_side,
+                after_side,
+                before_imports,
+                after_imports,
+                before_installs=tuple(
+                    install for _path, install in before_entries
+                ),
+                after_installs=tuple(
+                    install for _path, install in after_entries
+                ),
+            )
+            for event in selected:
+                # Preserve source attribution after the shared semantic API
+                # groups alternative instances by effect identity. Prefer an
+                # instance that really reaches this unit, then deterministic
+                # path/text order.
+                reaching = [
+                    (path, install)
+                    for path, install in after_entries
+                    if install.effect_identity == event.effect_identity
+                    and install_reaches(
+                        install, after_side, after_imports
+                    )
+                ]
+                if not reaching:
+                    continue
+                path, install = min(
+                    reaching,
+                    key=lambda item: (
+                        item[0],
+                        item[1].text,
+                        item[1].position,
+                    ),
+                )
+                conftest_events.setdefault(
+                    (path, install.effect_identity), (path, install)
+                )
+
+    # The manifest project name is the strongest ownership source, but test
+    # fixtures often model a src-layout package without including a manifest.
+    # A readable canonical module path in the head snapshot is positive local
+    # evidence too. Missing paths do not become ownership by subtraction.
+    # Crucially, a conftest candidate reaches this set only after applicability
+    # and oracle reach have both been proven; dormant fixtures must not cause
+    # N x git ownership probes.
+    ownership_candidates = {
+        install for _path, install in conftest_events.values()
+    }
+    # TEST_PATCHES_SUBJECT can only consume a newly added patch on an existing
+    # aligned unit whose oracle reaches that exact target. Apply those two
+    # in-memory predicates before conventional-path ownership probes: existing
+    # hygiene mocks and unrelated collaborator stubs must not cause git reads.
+    for file in ir.files:
+        if file.role not in ("test", "conftest"):
+            continue
+        for unit in file.units:
+            if unit.before is None or unit.after is None:
+                continue
+            if (
+                not (unit.before.standin_installs or ())
+                and not (unit.after.standin_installs or ())
+                and _provider_context(unit.before)
+                == _provider_context(unit.after)
+            ):
+                continue
+            for install in new_unit_standin_installs(
+                unit.before, unit.after
+            ):
+                if install_reaches(
+                    install,
+                    unit.after,
+                    (
+                        unit.after.standin_imports
+                        if unit.after.standin_imports is not None
+                        else file.standin_imports or {}
+                    ),
+                ):
+                    ownership_candidates.add(install)
+    if head_reader is not None:
+        for install in sorted(
+            ownership_candidates,
+            key=lambda item: (
+                item.effect_identity,
+                item.finding_target,
+                item.text,
+                item.replacement_target or "",
+            ),
+        ):
+            if install.target.startswith((".", "request.module")):
+                continue
+            root = install.target.split(".", 1)[0]
+            if root in owned_roots:
+                continue
+            if root in external_roots:
+                continue
+            if any(
+                _read_head_security(path) is not None
+                for path in _standin_module_paths(install)
+            ):
+                owned_roots.add(root)
+    g.first_party_roots = tuple(sorted(owned_roots))
+
+    assert g.conftest_standin_patches is not None
+    g.conftest_standin_patches.extend(
+        sorted(
+            {
+                (path, install.text)
+                for path, install in conftest_events.values()
+                if target_is_repo_owned(install.target, owned_roots)
+            }
+        )
+    )
+
+    g.conftest_prod_patches.sort()
+    assert g.conftest_standin_patches is not None
+    g.conftest_standin_patches.sort()
     g.base_literals = sorted(base_literals)
     # packages with >=1 genuinely modified symbol; deliberately NOT every
     # package with any prod change (see PACKAGE_REPAIR credit above).
@@ -764,7 +2090,8 @@ def build_ir(
     # and parsed, capped. Deleting one of two identical copies leaves the
     # oracle running — the attack shapes (survivor skipped, survivor edited)
     # fail the liveness and hash checks and earn nothing.
-    if head_searcher is not None and head_reader is not None:
+    duplicate_searcher = head_duplicate_searcher or head_searcher
+    if duplicate_searcher is not None and head_reader is not None:
         wanted: set[str] = set()
         needles: set[str] = set()
         for file in ir.files:
@@ -781,16 +2108,17 @@ def build_ir(
         if wanted:
             diff_paths = {f.path for f in ir.files}
             candidates = sorted(
-                p.replace("\\", "/")
-                for p in head_searcher(sorted(needles))
-                if p.replace("\\", "/") not in diff_paths
-                and p.endswith(".py")
-                and config.role_of(p.replace("\\", "/")) == "test"
-                and collectable(p.replace("\\", "/"))
+                safe
+                for candidate in duplicate_searcher(sorted(needles))
+                if (safe := _safe_repo_path(candidate)) is not None
+                and safe not in diff_paths
+                and safe.endswith(".py")
+                and config.role_of(safe) == "test"
+                and collectable(safe)
             )
             found: set[str] = set()
             for path in candidates[:_MAX_DUP_READS]:
-                data = head_reader(path)
+                data = _read_head_security(path)
                 if data is None:
                     continue
                 parsed = parse_python(data, collect_tests=True)
@@ -826,6 +2154,8 @@ def analyze(
     self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
+    head_exists=None,
+    head_duplicate_searcher=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -837,6 +2167,8 @@ def analyze(
         self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
+        head_exists=head_exists,
+        head_duplicate_searcher=head_duplicate_searcher,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

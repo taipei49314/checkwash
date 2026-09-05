@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import os
+import stat
 import sys
 
 from checkwash import __version__
@@ -21,11 +22,12 @@ from checkwash.allowlist import MAX_EXPIRY_DAYS, load_allowlist
 from checkwash.config import SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
 from checkwash.deps import MANIFESTS, parse_manifest, project_names
-from checkwash.engine import analyze
+from checkwash.engine import EngineError, analyze
 from checkwash.pyenv import known_baseline
 from checkwash.gitio import (
     GitError,
     grep_head_paths,
+    head_path_exists,
     list_range_changes,
     list_worktree_changes,
     merge_base,
@@ -73,6 +75,163 @@ def _write_term(text: str) -> None:
     sys.stdout.write(text)
 
 
+_WORKTREE_SEARCH_CHUNK = 64 * 1024
+_DUPLICATE_SEARCH_MAX_PATHS = 64
+_DUPLICATE_SEARCH_MAX_BYTES = 1_000_000
+_WORKTREE_SEARCH_SKIP_DIRS = frozenset(
+    {
+        ".git",
+        "__pycache__",
+        "node_modules",
+        "dist",
+        "build",
+        ".venv",
+        "venv",
+        ".tox",
+        ".nox",
+        ".eggs",
+        "htmlcov",
+    }
+)
+
+
+def _stream_contains_any(fh, needles: tuple[bytes, ...]) -> bool:
+    """Fixed-string search with bounded, linear cross-block overlap.
+
+    A block is at least as long as the longest needle.  Consequently the
+    retained overlap is never larger than the next block: every input byte is
+    copied and searched at most a constant number of times.  Keeping the read
+    size fixed while retaining an arbitrarily long needle-sized tail would
+    instead recopy that tail once per small chunk.
+    """
+    if not needles:
+        return False
+    longest = max(len(needle) for needle in needles)
+    block_size = max(_WORKTREE_SEARCH_CHUNK, longest)
+    overlap = max(0, longest - 1)
+    tail = b""
+    while True:
+        chunk = fh.read(block_size)
+        if not chunk:
+            return False
+        window = tail + chunk if tail else chunk
+        if any(needle in window for needle in needles):
+            return True
+        tail = window[-overlap:] if overlap else b""
+        # Do not retain the previous 2-block search window while the next
+        # block is read.  Peak auxiliary memory remains proportional to the
+        # longest needle rather than stacking consecutive windows.
+        del window, chunk
+
+
+def _contained_regular_worktree_path(repo: str, path: str) -> str | None:
+    """A regular, non-symlink file whose resolved path stays under repo."""
+    lexical_root = os.path.abspath(repo)
+    root = os.path.realpath(repo)
+    candidate = os.path.abspath(
+        path
+        if os.path.isabs(path)
+        else os.path.join(repo, path.replace("/", os.sep))
+    )
+    resolved = os.path.realpath(candidate)
+    try:
+        if (
+            os.path.commonpath((lexical_root, candidate)) != lexical_root
+            or os.path.commonpath((root, resolved)) != root
+        ):
+            return None
+        mode = os.lstat(candidate).st_mode
+    except (FileNotFoundError, NotADirectoryError, ValueError):
+        return None
+    return candidate if stat.S_ISREG(mode) else None
+
+
+def _search_worktree_paths(repo: str, needles: list[str]) -> list[str]:
+    """All Python paths in a worktree containing any fixed-string needle.
+
+    Security inventory cannot stop at a path-count or file-size prefix: an
+    unchanged oracle later in traversal order is still live. Files are read
+    in bounded blocks sized for the longest needle, retaining only enough
+    overlap to match a needle split across two blocks.
+    """
+    wanted = tuple(dict.fromkeys(n.encode("utf-8") for n in needles if n))
+    if not wanted:
+        return []
+    hits: list[str] = []
+
+    def walk_error(exc: OSError) -> None:
+        failed = exc.filename or repo
+        try:
+            relative = os.path.relpath(failed, repo).replace(os.sep, "/")
+        except (TypeError, ValueError):
+            relative = str(failed)
+        raise EngineError(
+            f"could not walk worktree search path: {relative}"
+        ) from exc
+
+    for root, dirs, files in os.walk(repo, onerror=walk_error):
+        dirs[:] = sorted(
+            d
+            for d in dirs
+            if d not in _WORKTREE_SEARCH_SKIP_DIRS and not d.startswith(".")
+        )
+        for filename in sorted(files):
+            if not filename.endswith(".py"):
+                continue
+            full = os.path.join(root, filename)
+            try:
+                safe_full = _contained_regular_worktree_path(repo, full)
+                if safe_full is None:
+                    continue
+                with open(safe_full, "rb") as fh:
+                    matched = _stream_contains_any(fh, wanted)
+            except OSError as exc:
+                relative = os.path.relpath(full, repo).replace(os.sep, "/")
+                raise EngineError(
+                    f"could not read worktree search candidate: {relative}"
+                ) from exc
+            if matched:
+                hits.append(os.path.relpath(full, repo).replace(os.sep, "/"))
+    return hits
+
+
+def _search_worktree_duplicate_paths(repo: str, needles: list[str]) -> list[str]:
+    """Bounded search used only for the optional duplicate-survivor credit.
+
+    Missing a duplicate makes the verdict stricter, so this non-security path
+    keeps the historical path/byte bounds. Stand-in oracle inventory uses the
+    uncapped, fail-closed `_search_worktree_paths` above.
+    """
+    wanted = tuple(dict.fromkeys(n.encode("utf-8") for n in needles if n))
+    if not wanted:
+        return []
+    hits: list[str] = []
+    for root, dirs, files in os.walk(repo):
+        dirs[:] = sorted(
+            directory
+            for directory in dirs
+            if directory not in _WORKTREE_SEARCH_SKIP_DIRS
+            and not directory.startswith(".")
+        )
+        for filename in sorted(files):
+            if not filename.endswith(".py"):
+                continue
+            full = os.path.join(root, filename)
+            try:
+                safe_full = _contained_regular_worktree_path(repo, full)
+                if safe_full is None:
+                    continue
+                with open(safe_full, "rb") as fh:
+                    data = fh.read(_DUPLICATE_SEARCH_MAX_BYTES)
+            except OSError:
+                continue
+            if any(needle in data for needle in wanted):
+                hits.append(os.path.relpath(full, repo).replace(os.sep, "/"))
+                if len(hits) >= _DUPLICATE_SEARCH_MAX_PATHS:
+                    return hits
+    return hits
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     repo = args.repo
     if args.range:
@@ -108,6 +267,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
         def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
             return grep_head_paths(repo, _rev, needles)
+
+        head_duplicate_searcher = head_searcher
+
+        def head_exists(path: str, _rev: str = head) -> bool:
+            return head_path_exists(repo, _rev, path)
     else:
         base = "HEAD"
         changes = list_worktree_changes(repo)
@@ -118,36 +282,34 @@ def _cmd_check(args: argparse.Namespace) -> int:
         def head_reader(path: str) -> bytes | None:
             # Worktree mode's head snapshot is the working tree itself, the
             # same place list_worktree_changes reads the after side from.
-            disk = os.path.join(repo, path.replace("/", os.sep))
             try:
+                disk = _contained_regular_worktree_path(repo, path)
+                if disk is None:
+                    return None
                 with open(disk, "rb") as fh:
                     return fh.read()
-            except OSError:
+            except (FileNotFoundError, NotADirectoryError):
                 return None
+            except OSError as exc:
+                raise EngineError(
+                    f"could not read existing worktree path: {path}"
+                ) from exc
+
+        def head_exists(path: str) -> bool:
+            try:
+                return _contained_regular_worktree_path(repo, path) is not None
+            except (FileNotFoundError, NotADirectoryError):
+                return False
+            except OSError as exc:
+                raise EngineError(
+                    f"could not inspect worktree path: {path}"
+                ) from exc
 
         def head_searcher(needles: list[str]) -> list[str]:
-            # Working-tree grep, bounded: .py files only, artifact dirs
-            # pruned, first 64 hits win. Only runs when a test unit
-            # disappeared from the working diff.
-            wanted = [n.encode("utf-8") for n in needles]
-            hits: list[str] = []
-            skip_dirs = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
-            for root, dirs, files in os.walk(repo):
-                dirs[:] = sorted(d for d in dirs if d not in skip_dirs and not d.startswith("."))
-                for fn in sorted(files):
-                    if not fn.endswith(".py"):
-                        continue
-                    full = os.path.join(root, fn)
-                    try:
-                        with open(full, "rb") as fh:
-                            data = fh.read(1_000_000)
-                    except OSError:
-                        continue
-                    if any(n in data for n in wanted):
-                        hits.append(os.path.relpath(full, repo).replace(os.sep, "/"))
-                        if len(hits) >= 64:
-                            return hits
-            return hits
+            return _search_worktree_paths(repo, needles)
+
+        def head_duplicate_searcher(needles: list[str]) -> list[str]:
+            return _search_worktree_duplicate_paths(repo, needles)
 
     config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
     config, config_error, config_warnings = load_config(config_data, path=config_path)
@@ -211,6 +373,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
+        head_exists=head_exists,
+        head_duplicate_searcher=head_duplicate_searcher,
     )
 
     if args.emit_ir:
