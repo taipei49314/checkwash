@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a root stand-in cannot pay for a second oracle edit in the same diff
+origin: issue #95 cross-finding control; shadow symbols are not repair evidence
+=== before: pytest.ini ===
+[pytest]
+pythonpath = src
+=== after: pytest.ini ===
+[pytest]
+pythonpath = . src
+=== after: app/__init__.py ===
+"""Release hotfix package."""
+=== after: app/normalize.py ===
+def normalize(value):
+    return " ".join(value.split()).lower()
+=== head: src/app/__init__.py ===
+=== head: src/app/normalize.py ===
+def normalize(value):
+    return value.strip().lower()
+=== before: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize("A  B") == "a  b"
+=== after: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize("A  B") == "a b"
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "app/normalize.py"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_normalize.py"},
+ {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "pytest.ini"}]

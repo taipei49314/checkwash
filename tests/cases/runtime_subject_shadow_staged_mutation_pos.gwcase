@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a previously equivalent winning provider becomes a stand-in when mutated
+origin: two-commit plant closure requires a semantic change to the already-winning provider
+=== before: app/__init__.py ===
+=== after: app/__init__.py ===
+=== before: app/normalize.py ===
+def normalize(value):
+    return value.strip()
+=== after: app/normalize.py ===
+def normalize(value):
+    return value.strip().lower()
+=== head: src/app/__init__.py ===
+=== head: src/app/normalize.py ===
+def normalize(value):
+    return value.strip()
+=== head: pytest.ini ===
+[pytest]
+pythonpath = . src
+=== head: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize(" X ") == "x"
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "app/normalize.py"}]

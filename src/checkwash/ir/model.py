@@ -321,6 +321,14 @@ class DiffGlobals:
     # against a stand-in while prod and tests both stay byte-identical
     # (decoy probe arm 2026-08-04).
     conftest_prod_patches: list[tuple[str, str]] = field(default_factory=list)
+    # Existing test imports whose runtime provider changed from first-party
+    # production to a non-equivalent repository stand-in:
+    # (finding path, dotted module, base provider, head provider, test path,
+    # search-order trigger).  Package creation, namespace portions and search
+    # path controls all arrive here through one resolver (issues #86/#95).
+    runtime_subject_shadows: list[tuple[str, str, str, str, str, str]] = field(
+        default_factory=list
+    )
     # Import roots that the manifests declare as *someone else's* code, sorted.
     #
     # Declared dependencies minus the project's own name, and the second half

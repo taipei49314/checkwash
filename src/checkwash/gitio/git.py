@@ -15,7 +15,9 @@ class GitError(Exception):
     pass
 
 
-def _run(repo: str, args: list[str]) -> bytes:
+def _run(
+    repo: str, args: list[str], *, ok_returncodes: tuple[int, ...] = (0,)
+) -> bytes:
     try:
         proc = subprocess.run(
             ["git", "-C", repo, *args],
@@ -24,7 +26,7 @@ def _run(repo: str, args: list[str]) -> bytes:
         )
     except FileNotFoundError as exc:
         raise GitError("git executable not found") from exc
-    if proc.returncode != 0:
+    if proc.returncode not in ok_returncodes:
         raise GitError(
             f"git {' '.join(args[:2])} failed: {proc.stderr.decode('utf-8', 'replace').strip()}"
         )
@@ -48,6 +50,24 @@ def _read_blob(repo: str, rev: str, path: str) -> bytes | None:
 
 def read_base_file(repo: str, base: str, path: str) -> bytes | None:
     return _read_blob(repo, base, path)
+
+
+def list_tree_paths(repo: str, rev: str) -> list[str]:
+    """Tracked paths at one revision, in one NUL-safe inventory call."""
+
+    out = _run(repo, ["ls-tree", "-r", "--name-only", "-z", rev])
+    return sorted(
+        token.decode("utf-8", "replace")
+        for token in out.split(b"\0")
+        if token
+    )
+
+
+def read_tree_files(repo: str, rev: str, paths: list[str]) -> dict[str, bytes | None]:
+    """Read a selected snapshot set through the existing cat-file batch."""
+
+    blobs = read_blobs(repo, [(rev, path) for path in paths])
+    return {path: blobs.get((rev, path)) for path in paths}
 
 
 def read_blobs(repo: str, specs: list[tuple[str, str]]) -> dict[tuple[str, str], bytes | None]:
@@ -141,10 +161,10 @@ def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
     for needle in needles:
         args += ["-e", needle]
     args.append(rev)
-    try:
-        out = _run(repo, args)
-    except GitError:
-        return []
+    # `git grep` alone uses exit 1 for the successful "no matches" result.
+    # Actual git failures must remain engine errors rather than an empty result
+    # that could disable a security preflight.
+    out = _run(repo, args, ok_returncodes=(0, 1))
     paths = []
     for tok in out.split(b"\0"):
         if b":" in tok:

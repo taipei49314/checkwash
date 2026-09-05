@@ -26,15 +26,18 @@ from checkwash.pyenv import known_baseline
 from checkwash.gitio import (
     GitError,
     grep_head_paths,
+    list_tree_paths,
     list_range_changes,
     list_worktree_changes,
     merge_base,
     read_base_file,
+    read_tree_files,
     rev_parse,
 )
 from checkwash.report.jsonout import findings_to_json, ir_to_json
 from checkwash.report.sarif import findings_to_sarif
 from checkwash.report.term import render
+from checkwash.shadow import HeadSearchResult
 from checkwash.sweep import sweep
 
 
@@ -106,8 +109,18 @@ def _cmd_check(args: argparse.Namespace) -> int:
         def head_reader(path: str, _rev: str = head) -> bytes | None:
             return read_base_file(repo, _rev, path)
 
-        def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
-            return grep_head_paths(repo, _rev, needles)
+        def head_searcher(
+            needles: list[str], _rev: str = head
+        ) -> HeadSearchResult:
+            return HeadSearchResult(
+                tuple(grep_head_paths(repo, _rev, needles)), complete=True
+            )
+
+        def head_path_lister(_rev: str = head) -> list[str]:
+            return list_tree_paths(repo, _rev)
+
+        def head_batch_reader(paths: list[str], _rev: str = head) -> dict[str, bytes | None]:
+            return read_tree_files(repo, _rev, paths)
     else:
         base = "HEAD"
         changes = list_worktree_changes(repo)
@@ -125,29 +138,84 @@ def _cmd_check(args: argparse.Namespace) -> int:
             except OSError:
                 return None
 
-        def head_searcher(needles: list[str]) -> list[str]:
-            # Working-tree grep, bounded: .py files only, artifact dirs
-            # pruned, first 64 hits win. Only runs when a test unit
-            # disappeared from the working diff.
+        def head_searcher(needles: list[str]) -> HeadSearchResult:
+            # Working-tree grep: .py files only and artifact dirs pruned. Its
+            # consumers apply their own read bounds or exact import filter, so
+            # truncating paths here would turn ordering into a detector bypass.
             wanted = [n.encode("utf-8") for n in needles]
             hits: list[str] = []
-            skip_dirs = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
-            for root, dirs, files in os.walk(repo):
-                dirs[:] = sorted(d for d in dirs if d not in skip_dirs and not d.startswith("."))
+            skip_dirs = {
+                ".git",
+                "__pycache__",
+                "node_modules",
+                "dist",
+                "build",
+                ".venv",
+                "venv",
+                ".tox",
+                ".nox",
+                ".eggs",
+                "htmlcov",
+            }
+
+            def raise_walk_error(exc: OSError) -> None:
+                raise exc
+
+            for root, dirs, files in os.walk(repo, onerror=raise_walk_error):
+                dirs[:] = sorted(d for d in dirs if d not in skip_dirs)
                 for fn in sorted(files):
                     if not fn.endswith(".py"):
                         continue
                     full = os.path.join(root, fn)
                     try:
                         with open(full, "rb") as fh:
-                            data = fh.read(1_000_000)
+                            overlap = max((len(needle) for needle in wanted), default=1) - 1
+                            tail = b""
+                            matched = False
+                            while chunk := fh.read(64 * 1024):
+                                data = tail + chunk
+                                if any(needle in data for needle in wanted):
+                                    matched = True
+                                    break
+                                tail = data[-overlap:] if overlap else b""
                     except OSError:
-                        continue
-                    if any(n in data for n in wanted):
+                        # The shadow detector can fall back to its exact tree
+                        # inventory only if a partial grep is distinguishable
+                        # from a real no-match result.
+                        raise
+                    if matched:
                         hits.append(os.path.relpath(full, repo).replace(os.sep, "/"))
-                        if len(hits) >= 64:
-                            return hits
-            return hits
+            # The filesystem walk intentionally prunes artifact-looking
+            # directories.  Its hits are useful, but only the tracked-tree
+            # inventory below is authoritative for an adversarial worktree.
+            return HeadSearchResult(tuple(hits), complete=False)
+
+        def head_path_lister() -> list[str]:
+            # One tracked-tree inventory plus the already-known working diff
+            # gives the exact prospective snapshot, including tracked paths
+            # under artifact-looking directories and every untracked addition.
+            paths = set(list_tree_paths(repo, "HEAD"))
+            for change in changes:
+                path = change.path.replace("\\", "/")
+                old_path = (change.old_path or "").replace("\\", "/")
+                if old_path and old_path != path:
+                    paths.discard(old_path)
+                if change.after is None:
+                    paths.discard(path)
+                else:
+                    paths.add(path)
+            return sorted(paths)
+
+        def head_batch_reader(paths: list[str]) -> dict[str, bytes | None]:
+            result: dict[str, bytes | None] = {}
+            for path in paths:
+                disk = os.path.join(repo, path.replace("/", os.sep))
+                try:
+                    with open(disk, "rb") as fh:
+                        result[path] = fh.read()
+                except OSError:
+                    result[path] = None
+            return result
 
     config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
     config, config_error, config_warnings = load_config(config_data, path=config_path)
@@ -211,6 +279,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
+        head_path_lister=head_path_lister,
+        head_batch_reader=head_batch_reader,
     )
 
     if args.emit_ir:

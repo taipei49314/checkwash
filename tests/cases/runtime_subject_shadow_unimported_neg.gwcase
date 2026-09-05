@@ -1,0 +1,18 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a duplicate module no existing test imports is not an oracle event
+origin: exact import-scope negative for issues #86 and #95
+=== after: tests/src/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== head: src/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 1)
+=== head: tests/test_shipping.py ===
+from src.shipping import quote
+
+
+def test_shipping():
+    assert quote(1) == 5
+=== expect ===
+[]

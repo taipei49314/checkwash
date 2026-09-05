@@ -1,0 +1,19 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: pytest inserts the parent of a regular tests package, not tests itself
+origin: exact package-resolution negative for issue #86
+=== after: tests/src/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== head: tests/__init__.py ===
+=== head: src/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 1)
+=== head: tests/test_billing.py ===
+from src.billing import invoice_total
+
+
+def test_invoice_total():
+    assert invoice_total([10.0, 90.0], 0.053) == 105.3
+=== expect ===
+[]

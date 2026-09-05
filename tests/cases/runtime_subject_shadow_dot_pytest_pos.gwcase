@@ -1,0 +1,26 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: dot-pytest configuration cannot buy repair evidence for its own shadow
+origin: supported pytest configuration spelling outside the frozen role table
+=== before: .pytest.ini ===
+[pytest]
+pythonpath = src
+=== after: .pytest.ini ===
+[pytest]
+pythonpath = . src
+=== after: app/__init__.py ===
+=== after: app/normalize.py ===
+def normalize(value):
+    return value.lower()
+=== head: src/app/__init__.py ===
+=== head: src/app/normalize.py ===
+def normalize(value):
+    return value.strip()
+=== head: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize(" X ") == "x"
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "app/normalize.py"}]

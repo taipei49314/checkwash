@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: changing the original provider remains ordinary repair evidence
+origin: cross-finding negative; exclusion is path-scoped to the selected stand-in
+=== head: pytest.ini ===
+[pytest]
+pythonpath = src
+=== head: src/app/__init__.py ===
+=== before: src/app/normalize.py ===
+def normalize(value):
+    return value.strip().lower()
+=== after: src/app/normalize.py ===
+def normalize(value):
+    return " ".join(value.split()).lower()
+=== before: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize("A  B") == "a  b"
+=== after: tests/test_normalize.py ===
+from app.normalize import normalize
+
+
+def test_normalize():
+    assert normalize("A  B") == "a b"
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "path": "tests/test_normalize.py"}]
