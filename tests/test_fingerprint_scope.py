@@ -17,7 +17,7 @@ from checkwash.allowlist import (
 from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
-from checkwash.detectors.globals_rules import detect_ci_touched, detect_guardrail, detect_scope_drift, detect_unparseable_test
+from checkwash.detectors.globals_rules import detect_ci_touched, detect_guardrail, detect_scope_drift, detect_snapshot_cochange, detect_unparseable_test
 from checkwash.engine import _classify_allowlist_change, analyze
 from checkwash.findings import fingerprint_issue, make_change_fingerprint, make_fingerprint
 from checkwash.ir.model import ChangeEvidence, IR, to_jsonable
@@ -159,6 +159,8 @@ def test_new_keys_do_not_depend_on_revision_labels_or_other_files():
 
 @pytest.mark.parametrize("rule,path", [
     ("GUARDRAIL_TOUCHED", PATH), ("CI_WORKFLOW_TOUCHED", ".github/workflows/test.yml"),
+    ("TEST_FILE_UNPARSEABLE", "tests/test_api.py"), ("SCOPE_DRIFT", "auth.py"),
+    ("SNAPSHOT_CODE_COCHANGE", "tests/golden/greeting.txt"),
 ])
 @pytest.mark.parametrize("declared_rule", [None, "ASSERT_REMOVED", ""])
 def test_retired_keys_are_kept_by_parser_but_never_eligible(rule, path, declared_rule):
@@ -269,3 +271,43 @@ def test_scope_identity_binds_pair_and_effective_contract_without_revision_or_pr
     ir.files.clear()
     with pytest.raises(EngineError, match="missing.*evidence"):
         detect_scope_drift(ir)
+
+
+def test_snapshot_identity_binds_both_pairs_and_all_production_companions():
+    snapshot = FileChange("tests/golden/greeting.txt", "modified", b"hello\n", b"hi\n")
+    production = [FileChange(f"part{i}.rs", "modified", b"old\xff\n", b"new\xfe\n") for i in range(4)]
+    def evaluate(items):
+        ir, findings, _ = analyze(items, Config(), Contract(), [], TODAY)
+        return ir, next(f for f in findings if f.rule == "SNAPSHOT_CODE_COCHANGE")
+    ir, first = evaluate([snapshot, *production])
+    assert first.severity == "warn"
+    assert evaluate(list(reversed([snapshot, *production])))[1].fingerprint == first.fingerprint
+    for side in ("before", "after"):
+        assert evaluate([replace(snapshot, **{side: b"different\n"}), *production])[1].fingerprint != first.fingerprint
+        changed = [*production[:3], replace(production[3], **{side: b"different\n"})]
+        later = evaluate([snapshot, *changed])[1]
+        assert later.message == first.message  # companion four is absent from the short message
+        assert later.fingerprint != first.fingerprint
+    moved = [*production[:3], replace(production[3], path="another.rs")]
+    assert evaluate([snapshot, *moved])[1].fingerprint != first.fingerprint
+    ir.globals.prod_files_changed.reverse()
+    assert detect_snapshot_cochange(ir)[0].fingerprint == first.fingerprint
+    ir.files[0].change_evidence = None
+    with pytest.raises(EngineError, match="missing.*evidence"):
+        detect_snapshot_cochange(ir)
+    ir.files.clear()
+    with pytest.raises(EngineError, match="missing.*evidence"):
+        detect_snapshot_cochange(ir)
+
+
+def test_snapshot_hashes_opaque_added_and_deleted_companions_only_for_an_event():
+    snapshot = FileChange("tests/golden/value.txt", "added", None, b"value\n")
+    added = FileChange("asset.rs", "added", None, b"\xff")
+    deleted = FileChange("old.rs", "deleted", b"\x00", None)
+    ir, findings, _ = analyze([snapshot, added, deleted], Config(), Contract(), [], TODAY)
+    assert any(f.rule == "SNAPSHOT_CODE_COCHANGE" for f in findings)
+    assert all(f.change_evidence is not None for f in ir.files)
+    test = FileChange("tests/test_value.py", "added", None, b"def test_value():\n    assert 5 == 5\n")
+    ir, findings, _ = analyze([snapshot, added, deleted, test], Config(), Contract(), [], TODAY)
+    assert not any(f.rule == "SNAPSHOT_CODE_COCHANGE" for f in findings)
+    assert all(f.change_evidence is None for f in ir.files)

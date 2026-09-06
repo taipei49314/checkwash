@@ -138,6 +138,44 @@ def test_scope_approval_cannot_cross_content_or_base_contract(repo, legacy, chan
         assert _cli(repo, "allow", key, "--reason", "retired scope key").returncode == 2
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize("changed_context", ["snapshot", "production", "later_pair"])
+def test_snapshot_approval_binds_production_pair_under_strict_warning_gate(repo, legacy, changed_context):
+    path, rule, production = "tests/golden/greeting.txt", "SNAPSHOT_CODE_COCHANGE", "render.py"
+    _write(repo, path, b"Hello, Ada!\n")
+    _write(repo, production, b'def render(name):\n    return "Hello, " + name + "!"\n')
+    _commit(repo, path, production)
+    _write(repo, path, b"Hi, Ada!\n")
+    _write(repo, production, b'def render(name):\n    return "Hi, " + name + "!"\n')
+    strict = ("--fail-on", "warn")
+    initial, _, first = _check(repo, rule, extra=strict)
+    assert initial.returncode == 1 and first["severity"] == "warn"
+    key = _legacy(rule, path) if legacy else first["fingerprint"]
+    _write(repo, ".greenwash/allow.toml", _ledger(key, "ASSERT_REMOVED" if legacy else None))
+    _commit(repo, ".greenwash/allow.toml")
+    _write(repo, "README.md", b"unrelated documentation\n")
+    _commit(repo, "README.md")
+    same, _, exact = _check(repo, rule, extra=strict)
+    assert exact["allowlisted"] is (not legacy)
+    assert same.returncode == (1 if legacy else 0)
+    if changed_context == "later_pair":
+        _commit(repo, path, production)
+    if changed_context != "production":
+        _write(repo, path, b"always the same\n")
+    if changed_context != "snapshot":
+        _write(repo, production, b'def render(name):\n    return "always the same"\n')
+    _commit(repo, path, production)
+    result, payload, later = _check(repo, rule, "HEAD~1..HEAD", extra=strict)
+    assert result.returncode == 1 and payload["verdict"] == "block"
+    assert later["severity"] == "warn" and not later["allowlisted"]
+    assert later["fingerprint"] != key
+    default, default_payload, _ = _check(repo, rule, "HEAD~1..HEAD")
+    assert default.returncode == 0 and default_payload["verdict"] == "pass"
+    if legacy:
+        assert b"retired" in result.stderr and key.encode() in result.stderr
+        assert _cli(repo, "allow", key, "--reason", "retired snapshot key").returncode == 2
+
+
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=["guardrail", "ci"])
 @pytest.mark.parametrize("directory", [".checkwash", ".greenwash"])
 @pytest.mark.parametrize("spoof_rule", [False, True])

@@ -8,7 +8,13 @@ SCOPE_DRIFT, HIDDEN_UNICODE.
 from __future__ import annotations
 
 from checkwash.change import EngineError
-from checkwash.findings import Evidence, Finding, make_change_fingerprint, make_fingerprint
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    change_identity,
+    make_change_fingerprint,
+    make_fingerprint,
+)
 from checkwash.ir.model import IR
 
 
@@ -16,6 +22,11 @@ def detect_snapshot_cochange(ir: IR) -> list[Finding]:
     g = ir.globals
     if not g.snapshot_files_changed or not g.prod_files_changed or g.test_logic_changed:
         return []
+    files = {file.path: file for file in ir.files}
+    for path in sorted(set(g.snapshot_files_changed) | set(g.prod_files_changed)):
+        if path not in files:
+            raise EngineError(f"SNAPSHOT_CODE_COCHANGE/{path}: missing file evidence")
+    production = [change_identity(files[path]) for path in sorted(set(g.prod_files_changed))]
     return [
         Finding(
             rule="SNAPSHOT_CODE_COCHANGE",
@@ -26,7 +37,10 @@ def detect_snapshot_cochange(ir: IR) -> list[Finding]:
             ),
             path=path,
             unit=None,
-            fingerprint=make_fingerprint("SNAPSHOT_CODE_COCHANGE", path, None, path),
+            fingerprint=make_change_fingerprint(
+                "SNAPSHOT_CODE_COCHANGE", files[path],
+                {"production_changes": production, "test_logic_changed": g.test_logic_changed},
+            ),
         )
         for path in g.snapshot_files_changed
     ]

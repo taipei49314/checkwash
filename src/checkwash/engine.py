@@ -395,7 +395,8 @@ def build_ir(
         c.old_path.replace("\\", "/"): c.path.replace("\\", "/")
         for c in changes if c.old_path
     }
-    for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
+    expanded_changes = sorted(_expand_renames(changes, config), key=lambda c: c.path)
+    for change in expanded_changes:
         path = change.path.replace("\\", "/")
         if is_artifact(path):
             continue  # generated output is not evidence of anything
@@ -741,6 +742,18 @@ def build_ir(
     g.hidden_unicode.sort()
     g.scope_drift.sort()
     g.exemptions_added.sort()
+
+    if g.snapshot_files_changed and g.prod_files_changed and not g.test_logic_changed:
+        # This event includes every production co-change, including opaque
+        # files. Hash companions only when the snapshot detector can fire.
+        paths = set(g.snapshot_files_changed) | set(g.prod_files_changed)
+        selected_changes = {
+            c.path.replace("\\", "/"): c for c in expanded_changes
+            if c.path.replace("\\", "/") in paths
+        }
+        for file in ir.files:
+            if file.path in paths and file.change_evidence is None:
+                file.change_evidence = _change_evidence(selected_changes[file.path], rename_destinations)
 
     # D6 constant environments, resolved here so gating stays a pure function
     # of the IR: same-file constants first, then names imported from files in

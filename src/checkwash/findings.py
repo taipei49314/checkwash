@@ -12,6 +12,7 @@ from checkwash.ir.model import FileIR, normalize_text
 
 CHANGE_FINGERPRINT_RULES = frozenset({
     "GUARDRAIL_TOUCHED", "CI_WORKFLOW_TOUCHED", "TEST_FILE_UNPARSEABLE", "SCOPE_DRIFT",
+    "SNAPSHOT_CODE_COCHANGE",
 })
 _CHANGE_DIGEST = re.compile(r"v2:[0-9a-f]{64}\Z")
 _CONTENT_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
@@ -109,15 +110,11 @@ def make_fingerprint(rule: str, path: str, qualname: str | None, before_text: st
     return f"{rule}/{path}/{qualname or '-'}/{digest}"
 
 
-def make_change_fingerprint(rule: str, file: FileIR, context: dict) -> str:
-    """Bind an exemption to both snapshots and the detector's event context.
-
-    Full SHA256 and canonical JSON avoid truncated identities and ambiguous
-    slash-joined evidence. No before-only, path-only or legacy-key fallback.
-    """
+def change_identity(file: FileIR) -> dict:
+    """Validated content pair, also usable for a finding's companion files."""
     evidence = file.change_evidence
-    if rule not in CHANGE_FINGERPRINT_RULES or evidence is None:
-        raise EngineError(f"{rule}/{file.path}: missing content-bound fingerprint evidence")
+    if evidence is None:
+        raise EngineError(f"{file.path}: missing content-bound fingerprint evidence")
     expected_sides = {"added": (False, True), "modified": (True, True), "deleted": (True, False)}
     sides = (evidence.before_sha256, evidence.after_sha256)
     if file.status not in expected_sides or any(
@@ -125,10 +122,8 @@ def make_change_fingerprint(rule: str, file: FileIR, context: dict) -> str:
         if required else digest is not None
         for digest, required in zip(sides, expected_sides.get(file.status, ()))
     ):
-        raise EngineError(f"{rule}/{file.path}: invalid content-bound fingerprint evidence for {file.status!r}")
-    payload = {
-        "scheme": "checkwash/change-fingerprint/v2",
-        "rule": rule,
+        raise EngineError(f"{file.path}: invalid content-bound fingerprint evidence for {file.status!r}")
+    return {
         "path": file.path,
         "role": file.role,
         "status": file.status,
@@ -136,6 +131,21 @@ def make_change_fingerprint(rule: str, file: FileIR, context: dict) -> str:
         "rename_to": evidence.rename_to,
         "before_sha256": evidence.before_sha256,
         "after_sha256": evidence.after_sha256,
+    }
+
+
+def make_change_fingerprint(rule: str, file: FileIR, context: dict) -> str:
+    """Bind an exemption to both snapshots and the detector's event context.
+
+    Full SHA256 and canonical JSON avoid truncated identities and ambiguous
+    slash-joined evidence. No before-only, path-only or legacy-key fallback.
+    """
+    if rule not in CHANGE_FINGERPRINT_RULES:
+        raise EngineError(f"{rule}/{file.path}: unsupported content-bound fingerprint rule")
+    payload = {
+        "scheme": "checkwash/change-fingerprint/v2",
+        "rule": rule,
+        **change_identity(file),
         "context": context,
     }
     encoded = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
