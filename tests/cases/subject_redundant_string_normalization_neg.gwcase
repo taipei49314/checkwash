@@ -1,0 +1,25 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: A closed literal call proves that pure production already normalizes
+origin: issue 131 — honest normalize_input refactor with strict production snapshot
+=== before: tests/test_bool.py ===
+from app.parse_bool import parse_bool
+
+
+def test_yes():
+    assert parse_bool("Yes") is True
+=== after: tests/test_bool.py ===
+from app.parse_bool import parse_bool
+
+
+def normalize_input(s):
+    return s.strip().lower()
+
+
+def test_yes():
+    assert parse_bool(normalize_input("Yes")) is True
+=== head: src/app/parse_bool.py ===
+def parse_bool(s):
+    return s.strip().lower() in {"1", "true", "yes"}
+=== expect ===
+[]

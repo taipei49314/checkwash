@@ -59,10 +59,16 @@ def detect(ir: IR) -> list[Finding]:
                 # honest answer to that.
                 after_subject = resolve_through(a.left, unit.after.bindings)
                 before_subject = resolve_through(b.left, unit.before.bindings)
-                if not (
-                    expr_wraps(before_subject, after_subject)
-                    or argument_wraps(before_subject, after_subject)
-                ):
+                # Keep the direct comparison as well: resolving only the bare
+                # before-side name turns ``result -> abs(result)`` into
+                # ``calculate() -> abs(result)`` and loses the containment.
+                direct_wrapper = expr_wraps(b.left, a.left) or argument_wraps(b.left, a.left)
+                if direct_wrapper:
+                    before_subject, after_subject = b.left, a.left
+                elif not (expr_wraps(before_subject, after_subject)
+                          or argument_wraps(before_subject, after_subject)):
+                    continue
+                if (unit.qualname, b.id, a.id) in file.normalization_equivalent_pairs:
                     continue
                 findings.append(
                     Finding(
