@@ -1,0 +1,41 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Editing the input column while appending a row is still not an oracle edit
+note: Research E-08b paired control for param_row_cell_edit_appended_pos:
+note2: the row-keyed comparison must not read a changed input as a changed
+note3: expectation (the pairing it had is simply no longer tested). The
+note4: frozen expectation_parametrize_input_neg pins the same contract
+note5: without the appended row.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 105.0),
+        ([10.0], 10.5),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([60.0, 40.0], 105.0),
+        ([10.0], 10.5),
+        ([1.0, 1.0], 2.1),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

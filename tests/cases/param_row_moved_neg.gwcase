@@ -1,0 +1,39 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Reordering whole parametrize rows moves no expectation
+note: Research E-08b paired control. Row identity is (inputs -> expected),
+note2: so a permutation of complete rows changes no pairing. The column
+note3: rule this replaces reported it at high, because the column text
+note4: differs -- a false block on a readability edit.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 105.0),
+        ([10.0], 10.5),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([10.0], 10.5),
+        ([50.0, 50.0], 105.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

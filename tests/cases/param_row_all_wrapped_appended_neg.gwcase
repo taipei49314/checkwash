@@ -1,0 +1,40 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Appending a wrapped row to a fully wrapped table
+note: Paired control for param_row_all_wrapped_cell_edit_pos: the rows the
+note2: table had keep their answers, and a new input with a new answer is
+note3: an addition, not an edit. The 105.0 row still catches a tax-ignoring
+note4: invoice_total.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, id="pair"),
+        pytest.param([], 0.0, id="empty"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, id="pair"),
+        pytest.param([], 0.0, id="empty"),
+        pytest.param([10.0], 10.5, id="single"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

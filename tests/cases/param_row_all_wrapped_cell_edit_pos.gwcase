@@ -1,0 +1,42 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Editing an expectation in a table where every row is a pytest.param
+bypass: 86a
+note: F-067, the complete form. When every row is wrapped, the expectation
+note2: column never appears in `param_columns` on either side, so a rule
+note3: that picks its candidates from that dict's keys never looks at the
+note4: table at all. The candidates come from the row structure too, and
+note5: the row keyed by [50.0, 50.0] now expects 100.0 (what a tax-ignoring
+note6: invoice_total returns) instead of 105.0.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, id="pair"),
+        pytest.param([], 0.0, id="empty"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 100.0, id="pair"),
+        pytest.param([], 0.0, id="empty"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -67,22 +67,130 @@ it exactly as they do its peer oracle rules.
 from __future__ import annotations
 
 import ast
+from collections import Counter
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
-from checkwash.ir.model import IR, normalize_text
+from checkwash.ir.model import IR, ParamTable, normalize_text, param_tables
 
 
 def _column_values_edited(before: str, after: str) -> bool:
-    """Did a parametrize column's *values* change, as opposed to its rows?
+    """Column-level fallback: did a parametrize column's *values* change?
 
-    Adding or deleting rows changes the column text too, and that event already
-    has an owner: `TEST_DISABLED` reports deleted rows at high, because in
-    pytest's model each row is a test item. Reporting the same edit again here
-    is two findings for one change, which is how a report stops being read.
-    Only a same-length column with different cells is an expectation edit.
+    Used only where the table's rows are not recoverable on both sides (see
+    `_column_expectation_edited`). Adding or deleting rows changes the column
+    text too, and that event already has an owner: `TEST_DISABLED` reports
+    deleted rows at high, because in pytest's model each row is a test item.
+    Reporting the same edit again here is two findings for one change, which
+    is how a report stops being read. Only a same-length column with
+    different cells is an expectation edit -- which is also why, on its own,
+    this rule let one rewritten cell through whenever a row was appended
+    beside it (F-060).
     """
     b, a = before.split(""), after.split("")
     return len(b) == len(a) and b != a
+
+
+def _param_names(side) -> set[str]:
+    """Every parametrize argname the side binds: the column strings' keys and
+    the row tables' names.
+
+    The two disagree exactly when every row of a table is a
+    `pytest.param(...)`: the column reader records only the first cell of
+    such a row, so a fully wrapped table's expectation column has no key in
+    `param_columns` at all (F-067), and a candidate set drawn from those keys
+    never reaches the rows that would have caught the edit.
+    """
+    return set(side.param_columns) | {n for t in param_tables(side) for n in t.names}
+
+
+def _table_for(side, name: str) -> ParamTable | None:
+    """The one `parametrize` table that binds `name`, or None if unclear.
+
+    None when no table records the argname and when two stacked decorators
+    both bind it: either way there is no single input-to-expectation mapping
+    to read, and the caller falls back to the column rule rather than
+    inventing one.
+    """
+    hits = [t for t in param_tables(side) if name in t.names]
+    return hits[0] if len(hits) == 1 else None
+
+
+def _is_subsequence(small, big) -> bool:
+    it = iter(big)
+    return all(any(x == y for y in it) for x in small)
+
+
+def _column_expectation_edited(name: str, before_side, after_side) -> bool:
+    """Did the expectation change *for an input the table still tests*?
+
+    The column string answers "are these the same cells"; a laundering edit
+    is free to keep the cells and change who gets which. `(1, 2), (2, 4)`
+    becoming `(1, 4), (2, 2), (3, 6)` rewrites both answers and preserves
+    the column's multiset exactly, and an appended row hides a rewritten
+    cell the same way -- `_column_values_edited` requires equal lengths, so
+    editing one cell while adding a row is silent (F-060, corpus LLM-arm
+    family escapes/056). Both are the mistake `param_cases` made for
+    deletions (F-063): counting rows instead of identifying them.
+
+    So the comparison is made on rows, keyed by the row's *other* cells --
+    the inputs:
+
+    - a key that disappeared is a deleted test item; `TEST_DISABLED` owns it
+      and reporting it here is two findings for one change,
+    - a key whose expectations still contain everything they used to
+      (multiset, so a duplicated input is not laundered by one of its rows
+      changing) is a pure addition or a reordering: no expectation moved,
+    - a key whose expectations only shrank -- a duplicated row deduplicated
+      -- lost test items and gained no answer; that is the count rule's
+      event too, not an edit,
+    - a key that lost an answer it had *and* gained one it did not have is
+      this rule's event.
+
+    A single-column table has no inputs to key on, so row identity is
+    position: the before cells must survive as a subsequence, which permits
+    insertion anywhere and rejects an edit or a reshuffle. That is the
+    judgement the column rule made for equal lengths, extended to additions
+    -- a contract kept conservative on purpose, not a claim that reordering
+    a single column is always honest.
+
+    Row text is read through `pytest.param`, so marking a row keeps its cell
+    here and the disabling stays `TEST_DISABLED`'s single event; it also
+    means a wrapped row's every cell takes part, which closes F-067 without
+    a rule of its own.
+
+    Without a table on each side that binds the name with the same argnames
+    (an older IR, a renamed column, the same name bound by two stacked
+    decorators, a table the frontend could not read), the column rule
+    decides, and only when both sides have the column string.
+    """
+    b_table, a_table = _table_for(before_side, name), _table_for(after_side, name)
+    if b_table is None or a_table is None or b_table.names != a_table.names:
+        b_col = before_side.param_columns.get(name)
+        a_col = after_side.param_columns.get(name)
+        if b_col is None or a_col is None:
+            return False
+        return _column_values_edited(b_col, a_col)
+    col = b_table.names.index(name)
+    others = [i for i in range(len(b_table.names)) if i != col]
+    if not others:
+        return not _is_subsequence(
+            [r[col] for r in b_table.rows], [r[col] for r in a_table.rows]
+        )
+
+    def by_key(rows):
+        out: dict[tuple[str, ...], Counter] = {}
+        for r in rows:
+            out.setdefault(tuple(r[i] for i in others), Counter())[r[col]] += 1
+        return out
+
+    after_by_key = by_key(a_table.rows)
+    for key, wanted in by_key(b_table.rows).items():
+        got = after_by_key.get(key)
+        if got is None:
+            continue  # the row is gone: TEST_DISABLED's event, not this one
+        if not wanted <= got and not got <= wanted:
+            return True
+    return False
 
 
 def _gated_alternative_added(before_key: str, after_key: str, exclusive: bool) -> bool:
@@ -264,13 +372,13 @@ def detect(ir: IR) -> list[Finding]:
                             and _binding_moved(b, a, unit, name)
                         }
                         | {
+                            # Candidates come from the row tables as well as
+                            # the column strings: a fully wrapped table has
+                            # no expectation key among the latter (F-067).
                             name
-                            for name in consumed & set(unit.after.param_columns)
-                            if name in unit.before.param_columns
-                            and _column_values_edited(
-                                unit.before.param_columns[name],
-                                unit.after.param_columns[name],
-                            )
+                            for name in consumed & _param_names(unit.after)
+                            if name in _param_names(unit.before)
+                            and _column_expectation_edited(name, unit.before, unit.after)
                         }
                         | {
                             # The fourth source: a same-file top-level
