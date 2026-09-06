@@ -269,7 +269,12 @@ def _cmd_check(args: argparse.Namespace) -> int:
 # 2026-08-07). The rev is interpolated rather than typed, because a hardcoded
 # version in a printed snippet is a claim that drifts.
 _PRECOMMIT_SNIPPET = """\
-# .pre-commit-config.yaml
+# Template only: no files were written and no hook was installed.
+# Save or merge this into .pre-commit-config.yaml in your repository.
+# Install the pre-commit runner in your development environment, then run:
+#   pre-commit install
+#   pre-commit run checkwash --all-files
+# --repo does not change this print-only operation.
 repos:
   - repo: https://github.com/taipei49314/checkwash
     rev: v{version}
@@ -387,7 +392,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     hook = sub.add_parser("hook", help="integration helpers")
     hook_sub = hook.add_subparsers(dest="hook_command", required=True)
-    hook_install = hook_sub.add_parser("install", help="wire checkwash into an agent or tool")
+    hook_install = hook_sub.add_parser(
+        "install", help="write Claude settings or print a pre-commit template",
+        description="For claude-code, write Stop hook settings. For pre-commit, print a YAML template only; save it and run pre-commit install yourself.",
+    )
     hook_install.add_argument("--agent", choices=["claude-code", "pre-commit"], required=True)
     hook_install.add_argument("--repo", default=".")
     hook_install.add_argument(
