@@ -18,6 +18,22 @@ MAX_SEARCH_HITS = 64
 _SKIP = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
 
 
+def search_source_mapping(snapshot, needles):
+    """Search a caller-owned complete byte snapshot.
+
+    The empty needle has the same inventory meaning as the filesystem
+    adapters: nonempty Python files only, with no silent hit truncation.
+    Ordinary searches retain the historical in-memory matching behavior.
+    """
+    if "" in needles:
+        paths = [path for path, data in sorted(snapshot.items()) if path.endswith(".py") and data]
+        if len(paths) >= MAX_SEARCH_HITS:
+            raise EngineError("strict snapshot importer search exceeds the hit limit")
+        return paths
+    return [path for path, data in sorted(snapshot.items())
+            if any(needle.encode("utf-8") in data for needle in needles)]
+
+
 def _run(repo, args, *, data=None, no_matches=False):
     result = subprocess.run(["git", "-C", str(repo), *args], input=data, capture_output=True)
     if no_matches and result.returncode == 1:

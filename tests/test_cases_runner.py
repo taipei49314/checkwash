@@ -5,10 +5,11 @@ import pathlib
 
 import pytest
 
-from checkwash.cases import case_to_changes, match_expectations, parse_case
+from checkwash.cases import case_snapshot, case_to_changes, match_expectations, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.engine import analyze
+from checkwash.gitio.snapshot import search_source_mapping
 from checkwash.pyenv import known_baseline
 
 CASES = sorted((pathlib.Path(__file__).parent / "cases").glob("*.gwcase"))
@@ -21,6 +22,7 @@ def test_case(case_path):
     contract = parse_contract(case.task) if case.task else Contract()
     known = (known_baseline() | set(case.env)) if case.env is not None else None
     head = {p: c.encode("utf-8") for p, c in case.head.items()}
+    snapshot = case_snapshot(case)
     ir, findings, _verdict = analyze(
         case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,
         head_reader=head.get if head else None,
@@ -31,9 +33,8 @@ def test_case(case_path):
         ),
         # Declarative fixtures are a closed snapshot: an omitted head path is
         # absent, and the in-memory search cannot suffer an I/O failure.
-        root_reader=head.get,
-        root_searcher=lambda needles: [p for p, data in sorted(head.items())
-                                      if any(n.encode("utf-8") in data for n in needles)],
+        root_reader=snapshot.get,
+        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )
     visible = [f for f in findings if not f.allowlisted]
     mismatch = match_expectations(case.expect, visible)

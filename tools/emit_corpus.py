@@ -11,10 +11,11 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
 
-from checkwash.cases import case_to_changes, parse_case  # noqa: E402
+from checkwash.cases import case_snapshot, case_to_changes, parse_case  # noqa: E402
 from checkwash.config import Config  # noqa: E402
 from checkwash.contract import Contract, parse_contract  # noqa: E402
 from checkwash.engine import analyze  # noqa: E402
+from checkwash.gitio.snapshot import search_source_mapping  # noqa: E402
 from checkwash.report.jsonout import findings_to_json, ir_to_json  # noqa: E402
 
 CASES = sorted((pathlib.Path(__file__).resolve().parent.parent / "tests" / "cases").glob("*.gwcase"))
@@ -43,6 +44,7 @@ def main() -> None:
         case = parse_case(case_path.read_text(encoding="utf-8"))
         contract = parse_contract(case.task) if case.task else Contract()
         head = {p: c.encode("utf-8") for p, c in case.head.items()}
+        snapshot = case_snapshot(case)
         ir, findings, verdict = analyze(
             case_to_changes(case), Config(), contract, [], TODAY,
             head_reader=head.get if head else None,
@@ -51,9 +53,8 @@ def main() -> None:
                                            if any(n.encode("utf-8") in data for n in needles)])
                 if head else None
             ),
-            root_reader=head.get,
-            root_searcher=lambda needles, _h=head: [p for p, data in sorted(_h.items())
-                                                   if any(n.encode("utf-8") in data for n in needles)],
+            root_reader=snapshot.get,
+            root_searcher=lambda needles, _snapshot=snapshot: search_source_mapping(_snapshot, needles),
         )
         _write(f"# {case_path.name}\n")
         _write(findings_to_json(ir, findings, verdict))

@@ -99,6 +99,15 @@ def parse_case(text: str) -> Case:
     return case
 
 
+def case_snapshot(case: Case) -> dict[str, bytes]:
+    """The full declared after snapshot, including changed and added files."""
+    snapshot = {path: source.encode("utf-8") for path, source in case.head.items()}
+    for path in case.before.keys() - case.after.keys():
+        snapshot.pop(path, None)
+    snapshot.update({path: source.encode("utf-8") for path, source in case.after.items()})
+    return snapshot
+
+
 def case_to_changes(case: Case) -> list[FileChange]:
     changes: list[FileChange] = []
     for path in sorted(set(case.before) | set(case.after)):

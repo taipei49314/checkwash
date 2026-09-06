@@ -33,6 +33,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from checkwash.config import Config  # noqa: E402
 from checkwash.contract import Contract  # noqa: E402
 from checkwash.engine import FileChange, analyze  # noqa: E402
+from checkwash.gitio.snapshot import search_source_mapping  # noqa: E402
 from checkwash.pyenv import known_baseline  # noqa: E402
 
 TODAY = datetime.date(2026, 1, 1)
@@ -94,9 +95,7 @@ def judge(case: pathlib.Path) -> tuple[str, list[str]]:
             p for p, d in sorted(head.items()) if any(n.encode() in d for n in needles)
         ],
         root_reader=snapshot.get,
-        root_searcher=lambda needles: [
-            p for p, d in sorted(snapshot.items()) if any(n.encode() in d for n in needles)
-        ],
+        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )
     return verdict, sorted({f"{f.rule}/{f.severity}" for f in findings if not f.allowlisted})
 
