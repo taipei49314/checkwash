@@ -271,6 +271,12 @@ class FileIR:
     # Required by content-bound finding identities. Populated only for
     # relevant evidence; an absent record is not a legacy fallback.
     change_evidence: ChangeEvidence | None = None
+    # Optional proof for numeric bound -> exact restoration. The engine
+    # compares normalized file contents outside concrete native bare-assert
+    # spans before oracle inheritance, permitting at most one changed native
+    # assertion, in a single non-artifact file change with no rename. Other
+    # files could redefine the callee; unknown provenance defaults to false.
+    native_assertion_context_unchanged: bool = False
 
 
 @dataclass

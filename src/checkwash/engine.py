@@ -41,6 +41,7 @@ from checkwash.frontends.javascript.frontend import is_js_test_path, parse_javas
 from checkwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
+    normalize_source,
     parse_python,
 )
 from checkwash.gating import apply_gates, unit_is_live
@@ -221,6 +222,51 @@ def _canonical_constants(raw: dict[str, str]) -> dict[str, str]:
     return out
 
 
+def _native_assertion_context(
+    data: bytes | None, parsed: ParsedFile | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
+    """Exact surrounding source, with proven native bare-assert spans cut out.
+
+    A raises/with assertion may span executable setup code; inherited asserts
+    can point into a helper. Neither is safe to mask. Unknown/overlapping spans
+    decline the proof rather than guessing where assertion code ends.
+    """
+    if data is None or parsed is None or not parsed.parse_ok:
+        return None
+    source = normalize_source(data)
+    spans = []
+    for unit in parsed.units:
+        for assertion in unit.side.assertions:
+            text = assertion.text
+            if assertion.inherited or not (
+                text.startswith("assert") and len(text) > 6
+                and (text[6].isspace() or text[6] == "(")
+            ):
+                continue
+            if (
+                not isinstance(assertion.span, tuple) or len(assertion.span) != 2
+                or any(type(value) is not int for value in assertion.span)
+            ):
+                return None
+            start, end = assertion.span
+            if not 0 <= start < end <= len(source) or source[start:end] != text:
+                return None
+            spans.append((start, end))
+    if not spans:
+        return None
+    parts = []
+    assertions = []
+    cursor = 0
+    for start, end in sorted(spans):
+        if start < cursor:
+            return None
+        parts.append(source[cursor:start])
+        assertions.append(source[start:end])
+        cursor = end
+    parts.append(source[cursor:])
+    return tuple(parts), tuple(assertions)
+
+
 def build_ir(
     changes: list[FileChange],
     config: Config,
@@ -396,6 +442,7 @@ def build_ir(
         for c in changes if c.old_path
     }
     expanded_changes = sorted(_expand_renames(changes, config), key=lambda c: c.path)
+    single_context_change = sum(not is_artifact(c.path) for c in changes) == 1
     for change in expanded_changes:
         path = change.path.replace("\\", "/")
         if is_artifact(path):
@@ -446,6 +493,22 @@ def build_ir(
         if before_parsed is not None and before_parsed.parse_ok:
             before_by_path[path] = before_parsed
 
+        native_context_unchanged = False
+        if (
+            single_context_change and change.old_path is None
+            and is_python and role in ("test", "conftest")
+        ):
+            before_context = _native_assertion_context(change.before, before_parsed)
+            after_context = _native_assertion_context(change.after, after_parsed)
+            native_context_unchanged = (
+                before_context is not None and after_context is not None
+                and before_context[0] == after_context[0]
+                # Another rewritten assert can change the next assertion's
+                # input through a call's side effect. This narrow proof permits
+                # only one rewritten native assertion in the whole file.
+                and sum(b != a for b, a in zip(before_context[1], after_context[1])) <= 1
+            )
+
         if is_python and role == "test" and collect:
             if before_parsed is not None:
                 _merge_crossfile_oracles(path, before_parsed, 0)
@@ -453,6 +516,7 @@ def build_ir(
                 _merge_crossfile_oracles(path, after_parsed, 1)
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
+        file_ir.native_assertion_context_unchanged = native_context_unchanged
         if role in ("ci", "guardrail"):
             file_ir.change_evidence = _change_evidence(change, rename_destinations)
         parsed_for_helpers = after_parsed if after_parsed and after_parsed.parse_ok else before_parsed

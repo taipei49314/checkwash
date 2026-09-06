@@ -20,7 +20,7 @@ import re
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.astutil import same_expr
-from checkwash.ir.model import Assertion, IR
+from checkwash.ir.model import Assertion, FileIR, IR
 
 
 def _numeric_comparison(assertion: Assertion):
@@ -60,15 +60,20 @@ def _numeric_comparison(assertion: Assertion):
     return None
 
 
-def _numeric_bound_restored(before: Assertion, after: Assertion) -> bool:
+def _numeric_bound_restored(before: Assertion, after: Assertion, file: FileIR) -> bool:
     """The new exact literal satisfies the old bound on the same subject.
 
     A greater lattice score alone is insufficient: x > 0 -> x == -1 still
-    rewrites what the test accepts. Keep that finding, and reject changed
-    reaching definitions even when the subject's spelling stays unchanged.
+    rewrites what the test accepts. Keep that finding, and require unchanged
+    surrounding source and other assertions as well as reaching definitions.
+    The engine provides that proof only for a single non-artifact file change
+    without a rename; co-changed files could redefine an imported callee.
     This reasons about ordinary numeric predicates, not overloaded operators.
     """
-    if before.reaching != after.reaching or before.inherited or after.inherited:
+    if (
+        not file.native_assertion_context_unchanged
+        or before.reaching != after.reaching or before.inherited or after.inherited
+    ):
         return False
     old, new = _numeric_comparison(before), _numeric_comparison(after)
     if old is None or new is None or old[0] != new[0] or new[1] is not ast.Eq:
@@ -111,7 +116,7 @@ def detect(ir: IR) -> list[Finding]:
                 # Only unweakened pairs: a drop is ASSERT_WEAKENED's business.
                 if pair.strength_change is None or pair.strength_change < 0:
                     continue
-                if pair.strength_change > 0 and _numeric_bound_restored(b, a):
+                if pair.strength_change > 0 and _numeric_bound_restored(b, a, file):
                     continue
                 strength_description = (
                     "with no change in assertion strength"
