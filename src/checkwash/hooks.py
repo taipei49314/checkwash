@@ -10,7 +10,6 @@ import json
 import os
 from pathlib import Path
 import shlex
-import shutil
 import stat
 import subprocess
 import sys
@@ -74,14 +73,33 @@ def _probe(command: str, args: list[str]) -> None:
         )
 
 
+def _shared_executable() -> str | None:
+    """Search explicit absolute PATH entries, never Windows' implicit cwd.
+
+    Python 3.11 shutil.which prepends the current directory on Windows even
+    when a PATH argument is supplied. Joining an absolute entry ourselves also
+    excludes empty, relative and drive-relative entries. The final portable
+    hook still depends on the PATH used by each teammate's Claude runtime.
+    """
+    filename = "checkwash.exe" if os.name == "nt" else "checkwash"
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        directory = Path(entry)
+        if not entry or not directory.is_absolute():
+            continue
+        candidate = directory / filename
+        if candidate.is_file() and os.access(candidate, os.F_OK | os.X_OK):
+            return str(candidate)
+    return None
+
+
 def build_handler(local: bool) -> dict:
     if local:
         command = os.path.abspath(sys.executable)
         args = ["-I", "-c", _BOOTSTRAP, json.dumps(_local_binding(), sort_keys=True), *_CHECK_ARGS]
         _probe(command, [*args[:-3], "--version"])
         return {"type": "command", "command": command, "args": args}
-    executable = shutil.which("checkwash")
-    if executable is None or (os.name == "nt" and Path(executable).suffix.lower() != ".exe"):
+    executable = _shared_executable()
+    if executable is None:
         raise HookInstallError(
             "shared settings require an installed checkwash CLI on PATH; "
             "install the CLI or use --local for this Python/zipapp installation"

@@ -129,7 +129,7 @@ def test_invalid_settings_are_not_modified(repo, settings):
 
 
 def test_shared_missing_cli_does_not_create_settings(repo, monkeypatch):
-    monkeypatch.setattr("checkwash.hooks.shutil.which", lambda _: None)
+    monkeypatch.setenv("PATH", "")
     with pytest.raises(HookInstallError, match="install the CLI or use --local"):
         install_claude(str(repo), False)
     assert not (repo / ".claude").exists()
@@ -137,14 +137,14 @@ def test_shared_missing_cli_does_not_create_settings(repo, monkeypatch):
 
 def test_shared_handler_is_portable_and_probed(monkeypatch):
     calls = []
-    monkeypatch.setattr("checkwash.hooks.shutil.which", lambda _: "C:/tool/checkwash.exe")
+    monkeypatch.setattr("checkwash.hooks._shared_executable", lambda: "C:/tool/checkwash.exe")
     monkeypatch.setattr("checkwash.hooks._probe", lambda command, args: calls.append((command, args)))
     assert build_handler(False) == {"type": "command", "command": "checkwash", "args": ["check", "--format", "hook-json"]}
     assert calls == [("C:/tool/checkwash.exe", ["--version"])]
 
 
 def test_shared_merge_keeps_portable_binding_and_other_settings(repo, monkeypatch):
-    monkeypatch.setattr("checkwash.hooks.shutil.which", lambda _: "C:/tool/checkwash.exe")
+    monkeypatch.setattr("checkwash.hooks._shared_executable", lambda: "C:/tool/checkwash.exe")
     monkeypatch.setattr("checkwash.hooks._probe", lambda *args: None)
     path = repo / ".claude/settings.json"
     path.parent.mkdir()
@@ -170,3 +170,42 @@ def test_probe_and_atomic_replace_failures_leave_original(repo, monkeypatch):
         install_claude(str(repo), True)
     assert path.read_bytes() == original
     assert sorted(p.name for p in path.parent.iterdir()) == ["settings.local.json"]
+
+
+@pytest.mark.parametrize("path_entry", ["", ".", "relative-bin", "absolute-empty-dir"])
+def test_shared_probe_never_discovers_an_implicit_repo_executable(repo, tmp_path, monkeypatch, path_entry):
+    filename = "checkwash.exe" if os.name == "nt" else "checkwash"
+    for directory in (repo, repo / "relative-bin"):
+        directory.mkdir(exist_ok=True)
+        dummy = directory / filename
+        dummy.write_bytes(b"must never run this repository executable")
+        dummy.chmod(0o755)
+    if path_entry == "absolute-empty-dir":
+        directory = tmp_path / "explicit empty PATH directory"
+        directory.mkdir()
+        path_entry = str(directory)
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("PATH", path_entry)
+    calls = []
+    monkeypatch.setattr("checkwash.hooks._probe", lambda *args: calls.append(args))
+    with pytest.raises(HookInstallError, match="shared settings require an installed checkwash CLI"):
+        install_claude(str(repo), False)
+    assert calls == []
+    assert not (repo / ".claude").exists()
+
+
+def test_shared_probe_uses_absolute_path_entry_ahead_of_repo_dummy(repo, tmp_path, monkeypatch):
+    filename = "checkwash.exe" if os.name == "nt" else "checkwash"
+    trusted = tmp_path / "explicit venv Scripts 發票"
+    trusted.mkdir()
+    for directory in (repo, trusted):
+        candidate = directory / filename
+        candidate.write_bytes(b"version probe selection fixture")
+        candidate.chmod(0o755)
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("PATH", os.pathsep.join(["", ".", str(trusted)]))
+    calls = []
+    monkeypatch.setattr("checkwash.hooks._probe", lambda command, args: calls.append((command, args)))
+    handler = build_handler(False)
+    assert calls == [(str(trusted / filename), ["--version"])]
+    assert handler == {"type": "command", "command": "checkwash", "args": ["check", "--format", "hook-json"]}

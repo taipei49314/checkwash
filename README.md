@@ -190,5 +190,5 @@ above is a separate population; the general-commit rate does not predict it.
 Related projects: [checkwash-corpus](https://github.com/taipei49314/checkwash-corpus)
 and [smallestlie](https://github.com/taipei49314/smallestlie) hold evaluation work.
 
-Alpha pre-release. 21 detectors, 783 tests in the current source tree.
+Alpha pre-release. 21 detectors, 788 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).
