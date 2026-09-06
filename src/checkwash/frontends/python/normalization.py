@@ -14,6 +14,8 @@ import copy
 from pathlib import PurePosixPath
 
 from checkwash.ir.astutil import argument_wraps
+from checkwash.change import EngineError
+from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 
 _METHODS = frozenset({"strip", "lstrip", "rstrip", "lower", "upper", "casefold"})
 _MAX_READS = 64
@@ -189,7 +191,7 @@ def _production(module, original, path, read):
     return _return_function(body[0])
 
 
-def _equivalent(before, after, qualname, path, read):
+def _equivalent(before, after, qualname, path, read, search):
     b_imports, _b_helpers, b_assert = _caller(before, qualname)
     a_imports, a_helpers, a_assert = _caller(after, qualname)
     b, a = b_assert.test.left, a_assert.test.left
@@ -212,6 +214,8 @@ def _equivalent(before, after, qualname, path, read):
     old_compare.left = new_compare.left = ast.Constant(value=None)
     if ast.dump(old_compare) != ast.dump(new_compare):
         raise _Unproved
+    if not inert_test_execution_context(path, read, search):
+        raise _Unproved
     module, original = b_imports[b.func.id]
     parameter, expression = _production(module, original, path, read)
     old_value = _project(b.args[0], {}, {})
@@ -223,7 +227,7 @@ def _equivalent(before, after, qualname, path, read):
     return ast.dump(old_result) == ast.dump(new_result)
 
 
-def mark_normalization_equivalence(ir, raw_by_path, root_reader):
+def mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher=None):
     """Attach proof only for unchanged production read from a strict snapshot.
 
     The historical head_reader treats read failures as absence, so it cannot
@@ -231,6 +235,16 @@ def mark_normalization_equivalence(ir, raw_by_path, root_reader):
     finding. A real strict-reader error propagates as an engine error.
     """
     cache = {}
+    inventory = []
+
+    def search(needles):
+        if not inventory:
+            try:
+                paths = root_searcher(needles) if root_searcher is not None else None
+            except (EngineError, OSError, ValueError, TypeError):
+                paths = None
+            inventory.append(paths)
+        return inventory[0]
 
     def read(path):
         if path not in cache:
@@ -242,7 +256,10 @@ def mark_normalization_equivalence(ir, raw_by_path, root_reader):
             else:
                 if root_reader is None or len(cache) >= _MAX_READS:
                     raise _Unproved
-                cache[path] = root_reader(path)
+                source = root_reader(path)
+                if source is not None and not isinstance(source, bytes):
+                    raise EngineError("normalization strict snapshot reader returned invalid source bytes")
+                cache[path] = source
         return cache[path]
 
     for file in ir.files:
@@ -263,7 +280,7 @@ def mark_normalization_equivalence(ir, raw_by_path, root_reader):
                 if b.inherited or a.inherited or not argument_wraps(b.left, a.left):
                     continue
                 try:
-                    if _equivalent(before, after, unit.qualname, file.path, read):
+                    if _equivalent(before, after, unit.qualname, file.path, read, search):
                         proven.append((unit.qualname, b.id, a.id))
                 except (_Unproved, RecursionError, MemoryError):
                     pass

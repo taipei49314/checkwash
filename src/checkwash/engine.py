@@ -1055,7 +1055,7 @@ def build_ir(
                     if pu.side.body_hash in wanted and unit_is_live(pu.side, consts):
                         found.add(pu.side.body_hash)
             g.duplicate_unit_hashes = sorted(found)
-    mark_normalization_equivalence(ir, raw_by_path, root_reader)
+    mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
     return ir
 
 

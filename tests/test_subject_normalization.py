@@ -22,6 +22,7 @@ def run(before=BEFORE, after=AFTER, *, snapshot=SNAPSHOT, extra=(), strict=True)
         [FileChange("tests/test_bool.py", "modified", before, after), *extra],
         Config(), Contract(), [], datetime.date(2026, 9, 6),
         root_reader=snapshot.get if strict else None, head_reader=snapshot.get,
+        root_searcher=(lambda needles: [p for p, data in sorted(snapshot.items()) if data]) if strict else None,
     )
 
 
@@ -137,7 +138,8 @@ def test_snapshot_read_error_remains_an_engine_error():
 
     with pytest.raises(EngineError, match="snapshot unavailable"):
         analyze([FileChange("tests/test_bool.py", "modified", BEFORE, AFTER)],
-                Config(), Contract(), [], datetime.date(2026, 9, 6), root_reader=unavailable)
+                Config(), Contract(), [], datetime.date(2026, 9, 6), root_reader=unavailable,
+                root_searcher=lambda needles: [])
 
 
 def test_other_changed_file_cannot_borrow_the_closed_caller_proof():
