@@ -5,10 +5,11 @@ from __future__ import annotations
 import datetime
 from pathlib import Path
 
-from checkwash.cases import case_to_changes, parse_case
+from checkwash.cases import case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
+from checkwash.gitio.snapshot import search_source_mapping
 from checkwash.findings import (
     SHAPE_MARKER_ADDED,
     SHAPE_PARAM_CASES_REMOVED,
@@ -59,12 +60,15 @@ def test_prod_removal_reads_shape_not_message():
 
 def _findings(name: str) -> list[Finding]:
     case = parse_case((CASES / name).read_text(encoding="utf-8"))
+    snapshot = case_snapshot(case)
     _ir, findings, _verdict = analyze(
         case_to_changes(case),
         Config(),
         Contract(),
         [],
         datetime.date(2026, 1, 1),
+        root_reader=snapshot.get,
+        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )
     return [f for f in findings if f.rule == "TEST_DISABLED"]
 

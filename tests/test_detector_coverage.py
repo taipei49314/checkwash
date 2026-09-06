@@ -8,11 +8,12 @@ negative fixture is an unbounded false-positive risk. This gate is what keeps
 import datetime
 import pathlib
 
-from checkwash.cases import case_to_changes, parse_case
+from checkwash.cases import case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.detectors import REGISTRY
 from checkwash.engine import analyze
+from checkwash.gitio.snapshot import search_source_mapping
 from checkwash.gating import RULE_ORDER
 from checkwash.pyenv import known_baseline
 
@@ -30,8 +31,11 @@ def _all_findings():
         case = parse_case(case_path.read_text(encoding="utf-8"))
         contract = parse_contract(case.task) if case.task else Contract()
         known = (known_baseline() | set(case.env)) if case.env is not None else None
+        snapshot = case_snapshot(case)
         _ir, findings, _verdict = analyze(
-            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known
+            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,
+            root_reader=snapshot.get,
+            root_searcher=lambda needles: search_source_mapping(snapshot, needles),
         )
         for f in findings:
             rules_fired.add(f.rule)

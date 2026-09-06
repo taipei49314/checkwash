@@ -56,8 +56,11 @@ def test_expectation_definition_package_unrelated_has_no_credit():
         "expectation_definition_package_unrelated_pos.gwcase"
     )
     case = parse_case(case_path.read_text(encoding="utf-8"))
+    snapshot = case_snapshot(case)
     _ir, findings, _verdict = analyze(
-        case_to_changes(case), Config(), Contract(), [], TODAY
+        case_to_changes(case), Config(), Contract(), [], TODAY,
+        root_reader=snapshot.get,
+        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )
     hits = [f for f in findings if f.rule == "EXPECTATION_DEFINITION_CHANGED"]
     assert hits, "rule did not fire"
