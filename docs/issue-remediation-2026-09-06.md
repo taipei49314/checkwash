@@ -76,6 +76,12 @@ the current concrete expression, not every possible future production mutant.
 External plugins, custom import hooks and arbitrary runtime introspection are
 not established by this source check.
 
+Repository pytest configuration is checked too: custom collection names and
+plugin activation cannot hide executable sibling modules from that check.
+Unsupported options withhold optional precision. The complete inventory still
+inspects all conventional collected siblings when a supported configuration
+limits collection to literal descendant test paths.
+
 The optional proof inventory is deliberately small: fewer than 64 nonempty
 Python source paths, with additional source/AST/read bounds. Missing, incomplete
 or over-budget discovery keeps ordinary findings. Working-tree analysis sees
@@ -94,7 +100,8 @@ replays use immutable captured trees and identify their engine source.
 The original research records and published-version measurements remain
 historical. #132 tracks the remaining population; this work does not claim all
 559 saved families are fixed. Source improvements in CASE_026_leap and
-CASE_029_flatten require review of the frozen refactor records. The legacy
+CASE_029_flatten require review of the frozen refactor records; the repaired
+tamper case 026-normalize also needs its captured expectation reviewed. The legacy
 frozen wrapper lacks the new strict callbacks, so its results alone do not
 qualify the precision path; complete-snapshot replays are recorded separately.
 

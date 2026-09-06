@@ -2,6 +2,17 @@
 
 Updated: 2026-09-06 (v0.2.13 public documentation, package metadata and trusted-pin maintenance).
 
+## Additional September 6 issue candidate
+
+Issues #127–#131 have a separate unreleased source candidate covering conftest
+targets, stored expectations and bounded Python oracle forms. See the
+[scope and limitations](docs/issue-remediation-2026-09-06.md). The #125 CI
+results in the next section describe that earlier source, not qualification
+of these additional changes. Historical population records remain unchanged;
+the new source replays, contract wording and three changed benchmark records
+are presented separately for maintainer review. No new release or Action pin
+is implied by this candidate.
+
 ## Unreleased next-minor remediation candidate
 
 The remediation branch implements content-bound exemptions for five file-wide
