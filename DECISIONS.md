@@ -1956,3 +1956,48 @@ changed; `projD`-shape 70→60 transitions block as before.
 
 **Verification:** all four D7 fixtures green unchanged; full suite and
 corpus gates unchanged; dogfood clean.
+
+## D-055 (2026-09-06): content-bound exemptions — next minor candidate
+
+The owner approved the remediation plan and then authorized merging its
+implementation and delivered contract patch on 2026-09-06. The named-defect
+commits and local/CI evidence remain individually reviewable. This records
+the owner's merge authorization, not a release or a separate independent
+human review of fixture labels.
+
+The per-fingerprint promise was broader than it sounded: five file-wide
+rules used only rule and path as identity. A typo approval could also waive
+removal of an AGENTS constraint, and a Python-version approval could waive
+continue-on-error. Follow-up controls confirmed parser, scope, and strict-warn
+snapshot variants. The real AGENTS rename-residue entry was also reused on
+later policy content; its cleanup is separately reviewed.
+
+Use validated before AND after digests plus path/status/role/rename metadata
+and the rule's relevant structured context, canonical JSON and complete SHA256.
+Before-only hashing still conflates two different edits from the same base.
+Whitespace compression is inappropriate for arbitrary policy/workflow text,
+so only CRLF is normalized. Version this identity as v2; retire known legacy
+namespaces without removing their parsed records. Keep unaffected identities,
+expiry, fail-on, severity, strength/alignment, and base-side policy unchanged.
+The old record cannot be automatically migrated because its reason does not
+preserve the reviewed content. Missing required evidence fails as an engine
+error; direct IR consumers and the full pipeline share the same identity.
+
+This breaks a frozen fingerprint contract and adds required evidence for these
+rules: IR_VERSION and FINDINGS_VERSION move to 2, retaining the checkwash_*
+keys. Ship only in a new minor release (0.3.0 proposed), under the existing
+weekly slot and tag-parity procedure. Do not waive the release gate to make a
+candidate green. Under the one-release Action trust lag, fixed CLI artifacts
+and promotion of their verified Action SHA are separate completion points.
+
+Validation must preserve per-commit before/after controls, parser/scope/prod
+context controls, legacy base-side rejection, append-only ledger evidence,
+ordinary expiry behavior, package/zipapp installs, and pinned corpus comparison.
+Historical benchmark records are not overwritten. Exact counts and runtime
+qualification belong in the execution receipts, not an unmeasured prediction.
+
+Cleanup does not get a new escape hatch. A same-ledger approval changes the
+very content it would approve; maintainers must review the exact tightening
+diff through their existing governance route. Removing the legacy entry from
+head does not clean old bases, and rolling back to an old engine can reactivate
+its broad key. Prefer a forward fix or a previously qualified fixed release.

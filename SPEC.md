@@ -6,7 +6,7 @@ Changing anything here requires a version bump of the affected schema and a
 full fixture re-run. Coding agents have **read-only** authority over this file
 and over `tests/gates/**`; changes are made by the human maintainer only.
 
-Spec version: 1 (`greenwash_ir_version: 1`, `greenwash_findings_version: 1`)
+Spec version: 2 (IR payload `version: 2`, findings envelope `checkwash_findings_version: 2`; next minor candidate, unreleased)
 
 ## 1. Analysis unit
 
@@ -355,10 +355,46 @@ expires = "2026-10-01"
   pin it — else the current date. This is the only clock read that can affect
   a verdict, and it is overridable precisely so runs can be reproduced.
 
-Fingerprint = `sha256(rule + "/" + path + "/" + qualname + "/" + normalize(before_text))[:12]`,
-prefixed `rule/path/qualname/` for readability. `normalize` strips all
-whitespace. Line numbers are excluded so in-file moves don't invalidate
-exemptions.
+For rules other than the five listed below, fingerprint remains
+`sha256(rule + "/" + path + "/" + qualname + "/" + normalize(before_text))[:12]`,
+prefixed `rule/path/qualname/` for readability. That legacy normalization
+strips whitespace outside string literals and preserves whitespace within
+them; line numbers are excluded.
+
+GUARDRAIL_TOUCHED, CI_WORKFLOW_TOUCHED, TEST_FILE_UNPARSEABLE, SCOPE_DRIFT,
+and SNAPSHOT_CODE_COCHANGE use content-bound v2 fingerprints. Their identity
+is canonical JSON containing the rule, normalized repository path, role,
+change status, rename origin/destination, both source-content SHA256 digests
+(null for an absent side), and the rule's structured event context. Each
+source digest normalizes CRLF to LF and preserves other bytes. The complete
+SHA256 of that ASCII canonical JSON is emitted as `rule/path/-/v2:<64hex>`;
+no truncated identity is accepted for these rules. Revision labels, timestamps,
+and local absolute paths are excluded. IR FileIR.change_evidence carries the
+source digests and rename metadata; required missing or malformed evidence
+is an engine error, never a legacy fallback. An optional FileIR boolean
+`native_assertion_context_unchanged`, default false, separately carries the
+numeric-restoration source proof: exactly one non-artifact file change, no
+rename, at most one changed native bare assertion, and identical normalized
+surrounding source. Inherited assertions and unknown spans cannot provide
+this proof; it does not affect fingerprint identity.
+
+Context includes guardrail creation/loosening, all detected CI weakening
+lines, the previous parser state, effective scope globs/role, or the complete
+sorted set of co-changed production identities as applicable. A different
+after on the same before, or a different relevant event context, requires a
+different approval. An identical reviewed content pair can survive rebasing
+when its paths and relevant context are unchanged.
+
+Legacy keys in these five namespaces are retired even if their expiry has
+not passed. They remain parsed records so ledger deletions/rewrites remain
+detectable, but are excluded from eligibility; the writer rejects new legacy
+keys. An entry's rule label cannot disguise a retired fingerprint namespace.
+Other namespaces keep their existing matching compatibility. Old reasons do
+not contain enough evidence for automatic migration; re-review the intended
+diff and record its complete v2 identity. Expiry and base-side loading policy
+are unchanged. A ledger's own content-bound approval cannot be self-hosted
+without changing its before digest; cleanup requires the maintainer's exact
+reviewed governance path, not another broad exemption.
 
 ## 7. Alignment algorithm (frozen parameters)
 

@@ -11,12 +11,17 @@ Windows output, workflow diagnostics, SARIF source locations and narrowly
 bounded numeric-restoration/root-helper precision. See the [upgrade notes](docs/remediation-upgrade.md)
 for migration, compatibility and runtime limits.
 
-These are draft changes. Public artifacts remain v0.2.13 and the recommended
-Action remains v0.2.12. The original benchmark records below are unchanged.
-The maintainer-owned contract patch and exact legacy-ledger cleanup require
-review; the release slot, published-source parity, full runtime/CI qualification
-and later Action promotion remain completion gates. A local candidate build
-does not mean that users installing a published package have these fixes.
+The owner authorized merging the remediation on 2026-09-06. The integration
+candidate includes the contract update and removal of the exact legacy AGENTS
+ledger entry. It must enter main with the complete numeric-restoration follow-up,
+not through an intermediate state. Public artifacts remain v0.2.13 and the
+recommended Action remains v0.2.12. The original benchmark records below are
+unchanged. The source-qualified stack has 912 passing tests on all nine CI
+OS/Python combinations; the published-tag parity test still fails because this
+source is unreleased, and the dependent cross-platform byte-compare is skipped.
+The release slot, published-source parity, cross-platform byte comparison and
+later Action promotion remain completion gates. A local candidate build does
+not mean that users installing a published package have these fixes.
 
 ## 2026-09-06: public package-page correction (v0.2.13)
 
