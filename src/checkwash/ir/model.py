@@ -1,4 +1,4 @@
-"""IR data model (SPEC: checkwash_ir_version 1).
+"""IR data model (checkwash_ir_version 2).
 
 Detectors consume this and nothing else. All ordering inside the IR is
 explicit and deterministic; no dict/set iteration order leaks into output.
@@ -216,6 +216,21 @@ class Unit:
     delta: UnitDelta | None
 
 
+@dataclass(frozen=True)
+class ChangeEvidence:
+    """Content identity of the analyzed change, without copying file contents.
+
+    None means the side does not exist; an empty file has a real digest.
+    Digests normalize CRLF only. Commit labels and local paths are excluded.
+    rename_to preserves the destination of a rename expanded into deletion.
+    """
+
+    before_sha256: str | None
+    after_sha256: str | None
+    old_path: str | None = None
+    rename_to: str | None = None
+
+
 @dataclass
 class FileIR:
     path: str
@@ -253,6 +268,9 @@ class FileIR:
     # Same-file helper name -> callee leaves. Repair evidence follows one
     # hop through a helper the unit actually invokes (T1.9).
     helper_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # Required by the v2 file-wide CI/guardrail fingerprint scheme. Other
+    # roles need no extra hashing. An absent record is not a legacy fallback.
+    change_evidence: ChangeEvidence | None = None
 
 
 @dataclass

@@ -17,7 +17,7 @@ import os
 import sys
 
 from checkwash import __version__
-from checkwash.allowlist import MAX_EXPIRY_DAYS, load_allowlist
+from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
 from checkwash.config import SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
 from checkwash.deps import MANIFESTS, parse_manifest, project_names
@@ -156,6 +156,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
         config.fail_on = args.fail_on
     allow_path, allow_data = read_base_config_file(repo, config_side, "allow.toml")
     allow_entries, allow_error = load_allowlist(allow_data, path=allow_path)
+    # Unsupported exemptions are not TOML parse errors. Keep machine stdout
+    # intact and report the ignored base-side keys on stderr in every format.
+    for message in fingerprint_diagnostics(allow_entries):
+        print(f"checkwash: {allow_path}: ignored exemption: {message}", file=sys.stderr)
     # A config that silently fails to parse used to revert a hardened gate to
     # defaults with no diagnostic anywhere (confirmed red-team finding).
     # Value-level warnings are visible in the same channels but never fatal:
@@ -365,6 +369,10 @@ def _toml_str(value: str) -> str:
 
 
 def _cmd_allow(args: argparse.Namespace) -> int:
+    issue = fingerprint_issue(args.fingerprint)
+    if issue is not None:
+        print(f"error: {issue}", file=sys.stderr)
+        return 2
     if not args.reason.strip():
         print("error: --reason must not be empty", file=sys.stderr)
         return 2

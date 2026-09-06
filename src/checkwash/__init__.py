@@ -2,5 +2,5 @@
 
 __version__ = "0.2.13"
 
-IR_VERSION = 1
-FINDINGS_VERSION = 1
+IR_VERSION = 2
+FINDINGS_VERSION = 2

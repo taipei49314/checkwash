@@ -1,11 +1,56 @@
-"""Finding model and fingerprints (SPEC: checkwash_findings_version 1)."""
+"""Finding model and versioned fingerprints (checkwash_findings_version 2)."""
 
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 from dataclasses import dataclass, field
 
-from checkwash.ir.model import normalize_text
+from checkwash.change import EngineError
+from checkwash.ir.model import FileIR, normalize_text
+
+CHANGE_FINGERPRINT_RULES = frozenset({"GUARDRAIL_TOUCHED", "CI_WORKFLOW_TOUCHED"})
+_CHANGE_DIGEST = re.compile(r"v2:[0-9a-f]{64}\Z")
+_CONTENT_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
+
+
+def fingerprint_state(fingerprint: str, rule: str | None = None) -> str:
+    """`supported`, `retired`, or `invalid`; independent of entry expiry."""
+    key_rule = fingerprint.split("/", 1)[0]
+    if key_rule in CHANGE_FINGERPRINT_RULES:
+        parts = fingerprint.split("/", 1)[1].rsplit("/", 2) if "/" in fingerprint else []
+        if len(parts) != 3 or not parts[0] or parts[1] != "-":
+            return "invalid"
+        if not parts[2].startswith("v2:"):
+            return "retired"
+        if not _CHANGE_DIGEST.fullmatch(parts[2]):
+            return "invalid"
+        if rule and rule != key_rule:
+            return "invalid"
+    return "supported"
+
+
+def fingerprint_issue(fingerprint: str, rule: str | None = None) -> str | None:
+    """Explain an unsupported exemption key without discarding its record.
+
+    The fingerprint's own rule is authoritative: changing an entry's `rule`
+    field must not make a retired file-wide key eligible again. Other rules
+    keep their existing identity scheme.
+    """
+    key_rule = fingerprint.split("/", 1)[0]
+    state = fingerprint_state(fingerprint, rule)
+    if state == "supported":
+        return None
+    if state == "retired":
+        return (
+            f"{key_rule} requires a content-bound v2 fingerprint; legacy file-wide "
+            "exemptions are retired. Re-run the reviewed diff with this version "
+            "and review its new fingerprint before recording an exemption"
+        )
+    if rule and rule != key_rule:
+        return f"entry rule {rule!r} does not match fingerprint rule {key_rule!r}"
+    return f"{key_rule} requires a complete content-bound v2 fingerprint from a reviewed diff"
 
 # TEST_DISABLED event kinds. Gating must read `Finding.shape`, never English
 # message text (E2 / static review 2026-08-11 Issue 3).
@@ -60,3 +105,37 @@ def make_fingerprint(rule: str, path: str, qualname: str | None, before_text: st
         "/".join([rule, path, qualname or "", normalize_text(before_text)]).encode("utf-8")
     ).hexdigest()[:12]
     return f"{rule}/{path}/{qualname or '-'}/{digest}"
+
+
+def make_change_fingerprint(rule: str, file: FileIR, context: dict) -> str:
+    """Bind an exemption to both snapshots and the detector's event context.
+
+    Full SHA256 and canonical JSON avoid truncated identities and ambiguous
+    slash-joined evidence. No before-only, path-only or legacy-key fallback.
+    """
+    evidence = file.change_evidence
+    if rule not in CHANGE_FINGERPRINT_RULES or evidence is None:
+        raise EngineError(f"{rule}/{file.path}: missing content-bound fingerprint evidence")
+    expected_sides = {"added": (False, True), "modified": (True, True), "deleted": (True, False)}
+    sides = (evidence.before_sha256, evidence.after_sha256)
+    if file.status not in expected_sides or any(
+        (not isinstance(digest, str) or not _CONTENT_DIGEST.fullmatch(digest))
+        if required else digest is not None
+        for digest, required in zip(sides, expected_sides.get(file.status, ()))
+    ):
+        raise EngineError(f"{rule}/{file.path}: invalid content-bound fingerprint evidence for {file.status!r}")
+    payload = {
+        "scheme": "checkwash/change-fingerprint/v2",
+        "rule": rule,
+        "path": file.path,
+        "role": file.role,
+        "status": file.status,
+        "old_path": evidence.old_path,
+        "rename_to": evidence.rename_to,
+        "before_sha256": evidence.before_sha256,
+        "after_sha256": evidence.after_sha256,
+        "context": context,
+    }
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+    digest = hashlib.sha256(encoded.encode("ascii")).hexdigest()
+    return f"{rule}/{file.path}/-/v2:{digest}"

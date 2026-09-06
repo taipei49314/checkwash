@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from checkwash.config import resolve_config_file
-from checkwash.allowlist import MAX_EXPIRY_DAYS, summarize_allowlist
+from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, summarize_allowlist
 
 
 @dataclass
@@ -448,18 +448,28 @@ def collect(root: Path) -> list[Note]:
         f"allowlist: {'present (' + allow_rel + ')' if allow.exists() else 'absent'}. A new allowlist entry "
         "takes effect on the next diff and must be committed.",
     ))
-    ledger = summarize_allowlist(allow.read_bytes() if allow.exists() else None, datetime.date.today())
+    ledger_data = allow.read_bytes() if allow.exists() else None
+    ledger = summarize_allowlist(ledger_data, datetime.date.today())
     if ledger.parse_error:
         notes.append(Note("warn", "allow.toml could not be parsed; no exemptions are active", ledger.parse_error))
     else:
         detail = (
             f"{ledger.entries} entries in {allow_rel}; {ledger.active} active today, "
-            f"{ledger.expired} expired, {ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap (ignored on read)."
+            f"{ledger.expired} expired, {ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap (ignored on read), "
+            f"{ledger.retired} retired fingerprint(s), {ledger.invalid} invalid entry/entries."
             if ledger.present else
             f"no allow.toml yet. `checkwash allow` writes one; expiry is capped at "
             f"{MAX_EXPIRY_DAYS} days. Commit it and put `{allow_rel.split('/')[0]}/` in CODEOWNERS."
         )
         notes.append(Note("info", f"allowlist expiry is capped at {MAX_EXPIRY_DAYS} days", detail))
+        if ledger.retired or ledger.invalid:
+            entries, _error = load_allowlist(ledger_data, path=allow_rel)
+            notes.append(Note(
+                "warn", "retired or invalid exemptions are ignored",
+                f"{allow_rel}: " + "; ".join(fingerprint_diagnostics(entries))
+                + ". Re-run the intended diff and review a new content-bound fingerprint; "
+                "old approvals cannot be migrated without reviewing the actual change.",
+            ))
     notes.append(Note(
         "info", "use a three-dot range for pull requests",
         "`checkwash check BASE...HEAD` resolves through the merge base. A two-dot range drags "

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import datetime
+import hashlib
 from collections import Counter
 from dataclasses import replace
 
@@ -44,7 +45,7 @@ from checkwash.frontends.python.frontend import (
 )
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.diffalign import align_file
-from checkwash.ir.model import IR, DiffGlobals, normalize_text
+from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, normalize_text
 from checkwash.pyenv import known_baseline
 from checkwash.report.context import ReportContext
 from checkwash.roles import (
@@ -377,6 +378,10 @@ def build_ir(
                 for i, a in enumerate(uside.assertions):
                     a.id = f"a{i}"
 
+    rename_destinations = {
+        c.old_path.replace("\\", "/"): c.path.replace("\\", "/")
+        for c in changes if c.old_path
+    }
     for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
         path = change.path.replace("\\", "/")
         if is_artifact(path):
@@ -434,6 +439,19 @@ def build_ir(
                 _merge_crossfile_oracles(path, after_parsed, 1)
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
+        if role in ("ci", "guardrail"):
+            file_ir.change_evidence = ChangeEvidence(
+                before_sha256=(
+                    hashlib.sha256(change.before.replace(b"\r\n", b"\n")).hexdigest()
+                    if change.before is not None else None
+                ),
+                after_sha256=(
+                    hashlib.sha256(change.after.replace(b"\r\n", b"\n")).hexdigest()
+                    if change.after is not None else None
+                ),
+                old_path=change.old_path.replace("\\", "/") if change.old_path else None,
+                rename_to=rename_destinations.get(path) if change.status == "deleted" else None,
+            )
         parsed_for_helpers = after_parsed if after_parsed and after_parsed.parse_ok else before_parsed
         if parsed_for_helpers is not None and parsed_for_helpers.parse_ok:
             file_ir.helper_calls = dict(parsed_for_helpers.helper_calls)

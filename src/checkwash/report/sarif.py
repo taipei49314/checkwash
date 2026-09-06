@@ -10,7 +10,7 @@ import json
 from urllib.parse import quote
 
 from checkwash import __version__
-from checkwash.findings import Finding
+from checkwash.findings import CHANGE_FINGERPRINT_RULES, Finding, fingerprint_state
 from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
 
@@ -83,7 +83,14 @@ def _result(finding: Finding, context: ReportContext | None) -> dict:
             }
         ],
         "message": {"text": finding.message},
-        "partialFingerprints": {"checkwash/v1": finding.fingerprint},
+        "partialFingerprints": {
+            (
+                "checkwash/v2"
+                if finding.rule in CHANGE_FINGERPRINT_RULES
+                and fingerprint_state(finding.fingerprint, finding.rule) == "supported"
+                else "checkwash/v1"
+            ): finding.fingerprint
+        },
         "ruleId": finding.rule,
     }
     if location is None:
