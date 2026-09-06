@@ -209,6 +209,43 @@ def test_clean(data):
     assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
 
 
+def test_repeated_row_subject_arguments_cannot_hide_object_identity_bug(tmp_path):
+    import os
+    import subprocess
+    import sys
+
+    before = b'''from app.identity import check
+def test_first():
+    assert check([1], [1]) is True
+def test_second():
+    assert check([2], [2]) is True
+'''
+    after = b'''from app.identity import check
+import pytest
+@pytest.mark.parametrize("value", [[1], [2]])
+def test_identity(value):
+    assert check(value, value) is True
+'''
+    production = b"def check(a, b):\n    return a is b\n"
+    snapshot = {"app/__init__.py": b"", "app/identity.py": production}
+    for side, source, status in (("before", before, 1), ("after", after, 0)):
+        checkout = tmp_path / side
+        for path, data in {**snapshot, "tests/test_identity.py": source}.items():
+            target = checkout / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "tests/test_identity.py"], cwd=checkout,
+            capture_output=True, text=True, timeout=30,
+            env=dict(os.environ, PYTHONPATH=str(checkout), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"),
+        )
+        assert result.returncode == status, result.stdout + result.stderr
+    ir, _findings, _verdict = run(after, before, snapshot=snapshot)
+    # The ordinary compensation policy may still allow this unsupported
+    # table; the precision projection must not remove its evidence.
+    assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
+
+
 def test_consolidation_supports_crlf_source():
     _ir, findings, verdict = run(FIXTURE.replace(b"\n", b"\r\n"), BEFORE.replace(b"\n", b"\r\n"))
     assert verdict == "pass"

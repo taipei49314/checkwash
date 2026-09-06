@@ -96,12 +96,12 @@ def _concrete(node, bindings, imports):
         return None
     original = node.test
     if isinstance(original, ast.Compare):
-        subject_names = {n.id for n in ast.walk(original.left) if isinstance(n, ast.Name)}
-        expected_names = {n.id for value in original.comparators for n in ast.walk(value) if isinstance(n, ast.Name)}
-        # A mutable row passed to the subject and reused as its expected
-        # value is a self-oracle: the call can mutate both at once. Copying
-        # its literal AST into two operands would incorrectly erase aliasing.
-        if subject_names & expected_names & bindings.keys():
+        # Substitution copies a row's AST into each use. Reusing the same
+        # object in two subject arguments, or as input and expectation, is
+        # not equivalent to constructing two independent literal objects.
+        # Decline every repeated row binding rather than guess mutability.
+        uses = Counter(n.id for n in ast.walk(original) if isinstance(n, ast.Name) and n.id in bindings)
+        if any(count > 1 for count in uses.values()):
             return None
     concrete = _Substitute(bindings).visit(copy.deepcopy(node))
     compare = concrete.test
