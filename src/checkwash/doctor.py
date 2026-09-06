@@ -14,6 +14,7 @@ from pathlib import Path
 from checkwash.config import resolve_config_file
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, summarize_allowlist
 from checkwash.hooks import HookInstallError, has_stop_hook
+from checkwash.report.textio import write_text
 
 
 @dataclass
@@ -509,15 +510,18 @@ def run(root: str = ".", stream=None) -> int:
     import sys
 
     stream = stream or sys.stdout
+    def w(text):
+        write_text(text, stream)
+
     notes = collect(Path(root))
     for note in notes:
-        stream.write(f"{_SYMBOL[note.level]}  {note.title}\n")
+        w(f"{_SYMBOL[note.level]}  {note.title}\n")
         for line in _wrap(note.detail):
-            stream.write(f"      {line}\n")
-        stream.write("\n")
+            w(f"      {line}\n")
+        w("\n")
     problems = [n for n in notes if n.level == "problem"]
     warns = [n for n in notes if n.level == "warn"]
-    stream.write(
+    w(
         f"summary: {len(problems)} problem(s), {len(warns)} warning(s). "
         "checkwash cannot verify branch protection; see the note above.\n"
     )

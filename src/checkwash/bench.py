@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from checkwash.demo import run as run_demo
+from checkwash.report.textio import write_text
 
 # Official remotes for the six-repo false-positive corpus. Names match
 # benchmarks/sweeps/<name>.json. The SHAs come from those files, not here.
@@ -201,7 +202,8 @@ def collect(
 
 def render(report: BenchReport, stream=None, local_only: bool = False) -> int:
     stream = stream or sys.stdout
-    w = stream.write
+    def w(text):
+        write_text(text, stream)
 
     w("checkwash bench — reproduce the published numbers\n")
     w("=" * 56 + "\n\n")
@@ -284,20 +286,23 @@ def _run_sweeps(report: BenchReport, stream) -> int:
     """Re-run the published sweep window on each clone. Slow; opt-in."""
     from checkwash.sweep import sweep
 
+    def w(text):
+        write_text(text, stream)
+
     if report.checkout is None or report.missing_clones:
-        stream.write("error: --run-sweep requires every sweep clone and pin\n")
+        w("error: --run-sweep requires every sweep clone and pin\n")
         return 2
     today = __import__("datetime").date.today()
     for clone in report.clones:
         assert clone.path is not None
-        stream.write(f"sweeping {clone.name} ({clone.path}) ...\n")
+        w(f"sweeping {clone.name} ({clone.path}) ...\n")
         stream.flush()
         result = sweep(str(clone.path), "HEAD", 300, today, None)
-        stream.write(
+        w(
             f"  analysed={result.commits} blocked={result.blocked} "
             f"newest={result.corpus_newest[:12]}\n"
         )
-    stream.write("re-sweep finished; compare against benchmarks/sweeps/*.json\n")
+    w("re-sweep finished; compare against benchmarks/sweeps/*.json\n")
     return 0
 
 

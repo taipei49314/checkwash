@@ -36,6 +36,7 @@ from checkwash.report.jsonout import findings_to_json, ir_to_json
 from checkwash.report.sarif import findings_to_sarif
 from checkwash.report.context import ReportContext
 from checkwash.report.term import render
+from checkwash.report.textio import write_text
 from checkwash.sweep import sweep
 
 
@@ -64,14 +65,8 @@ def _write_machine(text: str) -> None:
 
 
 def _write_term(text: str) -> None:
-    """Human report: degrade unencodable glyphs rather than crash (SPEC §9)."""
-    enc = getattr(sys.stdout, "encoding", None)
-    if enc:
-        try:
-            text.encode(enc)
-        except (UnicodeEncodeError, LookupError):
-            text = text.encode(enc, errors="replace").decode(enc, errors="replace")
-    sys.stdout.write(text)
+    """Human report: preserve evidence with escapes when the encoding needs it."""
+    write_text(text)
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
@@ -85,17 +80,17 @@ def _cmd_check(args: argparse.Namespace) -> int:
             left, _, right = args.range.partition("...")
             right = right.lstrip(".")
             if not left or not right:
-                print(f"error: range must be BASE...HEAD, got {args.range!r}", file=sys.stderr)
+                write_text(f"error: range must be BASE...HEAD, got {args.range!r}\n", sys.stderr)
                 return 2
             base = merge_base(repo, left, right)
             head = right
         elif ".." in args.range:
             base, _, head = args.range.partition("..")
         else:
-            print(f"error: range must be BASE..HEAD, got {args.range!r}", file=sys.stderr)
+            write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
             return 2
         if not base or not head:
-            print(f"error: range must be BASE..HEAD, got {args.range!r}", file=sys.stderr)
+            write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
             return 2
         changes = list_range_changes(repo, base, head)
         base_label = rev_parse(repo, base)
@@ -159,7 +154,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     # Unsupported exemptions are not TOML parse errors. Keep machine stdout
     # intact and report the ignored base-side keys on stderr in every format.
     for message in fingerprint_diagnostics(allow_entries):
-        print(f"checkwash: {allow_path}: ignored exemption: {message}", file=sys.stderr)
+        write_text(f"checkwash: {allow_path}: ignored exemption: {message}\n", sys.stderr)
     # A config that silently fails to parse used to revert a hardened gate to
     # defaults with no diagnostic anywhere (confirmed red-team finding).
     # Value-level warnings are visible in the same channels but never fatal:
@@ -168,7 +163,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     errors = [e for e in (config_error, allow_error) if e]
     diagnostics = errors + config_warnings
     for message in diagnostics:
-        print(f"checkwash: {message}", file=sys.stderr)
+        write_text(f"checkwash: {message}\n", sys.stderr)
     if errors and config.on_engine_error == "block":
         return 2
 
@@ -298,7 +293,7 @@ repos:
 def _cmd_hook_install(args: argparse.Namespace) -> int:
     if args.agent == "pre-commit":
         if args.local:
-            print("error: --local applies to --agent claude-code only", file=sys.stderr)
+            write_text("error: --local applies to --agent claude-code only\n", sys.stderr)
             return 2
         # Nothing to write for them — their config is theirs; print the block.
         sys.stdout.write(_PRECOMMIT_SNIPPET.format(version=__version__))
@@ -309,7 +304,7 @@ def _cmd_hook_install(args: argparse.Namespace) -> int:
     try:
         message = install_claude(args.repo, args.local)
     except HookInstallError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        write_text(f"error: {exc}\n", sys.stderr)
         return 2
     _write_term(message)
     return 0
@@ -342,15 +337,15 @@ def _toml_str(value: str) -> str:
 def _cmd_allow(args: argparse.Namespace) -> int:
     issue = fingerprint_issue(args.fingerprint)
     if issue is not None:
-        print(f"error: {issue}", file=sys.stderr)
+        write_text(f"error: {issue}\n", sys.stderr)
         return 2
     if not args.reason.strip():
-        print("error: --reason must not be empty", file=sys.stderr)
+        write_text("error: --reason must not be empty\n", sys.stderr)
         return 2
     today = _today()
     expires = args.expires or (today + datetime.timedelta(days=90)).isoformat()
     if (datetime.date.fromisoformat(expires) - today).days > MAX_EXPIRY_DAYS:
-        print(f"error: expiry exceeds {MAX_EXPIRY_DAYS} days", file=sys.stderr)
+        write_text(f"error: expiry exceeds {MAX_EXPIRY_DAYS} days\n", sys.stderr)
         return 2
     path = os.path.join(args.repo, *resolve_config_file(args.repo, "allow.toml").split("/"))
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -365,12 +360,18 @@ def _cmd_allow(args: argparse.Namespace) -> int:
     )
     with open(path, "a", encoding="utf-8", newline="\n") as fh:
         fh.write(entry)
-    print(f"recorded exemption in {path} (expires {expires}); commit it through review")
+    write_text(f"recorded exemption in {path} (expires {expires}); commit it through review\n")
     return 0
 
 
+class _ArgumentParser(argparse.ArgumentParser):
+    def _print_message(self, message, file=None):
+        if message:
+            write_text(message, file or sys.stderr)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="checkwash")
+    parser = _ArgumentParser(prog="checkwash")
     parser.add_argument("--version", action="version", version=f"checkwash {__version__}")
     sub = parser.add_subparsers(dest="command")
 
@@ -494,9 +495,9 @@ def main(argv: list[str] | None = None) -> int:
     ):
         hint = _closest_command(argv[0])
         if hint:
-            print(
-                f"error: unknown command {argv[0]!r}. Did you mean {hint!r}?",
-                file=sys.stderr,
+            write_text(
+                f"error: unknown command {argv[0]!r}. Did you mean {hint!r}?\n",
+                sys.stderr,
             )
             return 2
         argv = ["check", *argv]
@@ -537,13 +538,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
     except (GitError, OSError, RecursionError) as exc:
-        print(f"checkwash engine error: {exc}", file=sys.stderr)
+        write_text(f"checkwash engine error: {exc}\n", sys.stderr)
         return 2
     except Exception as exc:  # noqa: BLE001 - crash must never read as a verdict
         # Exit 1 means "block" (SPEC §9); an unhandled traceback exiting 1
         # is indistinguishable from a real finding for CI (confirmed
         # red-team finding). Engine errors are always 2.
-        print(f"checkwash engine error: {type(exc).__name__}: {exc}", file=sys.stderr)
+        write_text(f"checkwash engine error: {type(exc).__name__}: {exc}\n", sys.stderr)
         return 2
 
 
