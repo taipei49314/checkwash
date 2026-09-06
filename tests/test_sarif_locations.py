@@ -136,3 +136,19 @@ def test_reporting_context_does_not_change_ir_json_verdict_or_allowlist_filterin
     for finding in findings:
         finding.allowlisted = True
     assert json.loads(findings_to_sarif(ir, findings))["runs"][0]["results"] == []
+
+
+def test_projected_root_helper_expected_value_points_to_the_caller():
+    before = b"from calc import add\n\ndef test_add():\n    assert add(2, 3) == 5\n"
+    after = b"from calc import add\nfrom test_helpers import assert_equal\n\ndef test_add():\n    assert_equal(add(2, 3), 4)\n"
+    helper = b"\n\ndef assert_equal(actual, expected):\n    assert actual == expected\n"
+    _, _, verdict, results = _run([
+        FileChange("tests/test_calc.py", "modified", before, after),
+        FileChange("test_helpers.py", "added", None, helper),
+    ], root_reader={}.get)
+    assert verdict == "block"
+    hit = next(r for r in results if r["ruleId"] == "EXPECTED_VALUE_CHANGED")
+    assert _physical(hit) == {
+        "artifactLocation": {"uri": "tests/test_calc.py"},
+        "region": {"startLine": 5},
+    }

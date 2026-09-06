@@ -44,7 +44,9 @@ from checkwash.frontends.python.frontend import (
     normalize_source,
     parse_python,
 )
+from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.gating import apply_gates, unit_is_live
+from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
 from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, normalize_text
 from checkwash.pyenv import known_baseline
@@ -267,6 +269,66 @@ def _native_assertion_context(
     return tuple(parts), tuple(assertions)
 
 
+def _root_importer_changes(changes, config, head_reader, head_searcher):
+    """Read unchanged callers of changed root helpers, once and within caps.
+
+    A file absent from the real diff has the same bytes on both snapshots.
+    Its inherited oracle can still change when a root helper changes. The
+    existing snapshot search/reader APIs supply data; no repository code runs.
+    Unlike a missing refactor credit, an incomplete reverse search could miss
+    a removed oracle, so unavailable/exhausted discovery is an engine error.
+    """
+    modules = {}
+    real_paths = {p.replace("\\", "/") for c in changes for p in (c.path, c.old_path) if p}
+    for change in changes:
+        path = change.path.replace("\\", "/")
+        old_path = (change.old_path or "").replace("\\", "/")
+        if (old_path and old_path != path and "/" not in old_path and old_path.endswith(".py")
+                and change.before is not None and config.role_of(old_path) in ("test", "conftest")
+                and transparent_root_helpers(change.before)):
+            raise EngineError("root assertion helper renames are outside bounded importer analysis")
+        if ("/" in path or not path.endswith(".py") or not path[:-3].isidentifier() or change.before is None
+                or change.before == change.after or config.role_of(path) not in ("test", "conftest")):
+            continue
+        names = transparent_root_helpers(change.before)
+        if names:
+            modules[path[:-3]] = set(names)
+    if not modules:
+        return [], 0, set()
+    if head_reader is None or head_searcher is None:
+        raise EngineError("changed root assertion helpers require snapshot importer search")
+    if len(modules) > _MAX_ORACLE_READS:
+        raise EngineError("root assertion helper search exceeds the module budget")
+    candidates = sorted({p.replace("\\", "/") for p in head_searcher(sorted(modules))})
+    # The existing grep returns at most 64 hits. Exactly 64 can be a truncated
+    # set; never call that a complete review of removed helper assertions.
+    if len(candidates) >= 64:
+        raise EngineError("root assertion helper importer search may be truncated")
+    discovered = []
+    reads = 0
+    for candidate in candidates:
+        path = candidate.replace("\\", "/")
+        if (path in real_paths or not path.endswith(".py") or is_artifact(path)
+                or config.role_of(path) not in ("test", "conftest") or not collectable(path)):
+            continue
+        if path.startswith("/") or ":" in path or any(p in ("", ".", "..") for p in path.split("/")):
+            raise EngineError("root assertion helper search returned an invalid repository path")
+        if reads >= min(_MAX_DUP_READS, _MAX_ORACLE_READS):
+            raise EngineError("root assertion helper importer search exceeds the read budget")
+        data = head_reader(path)
+        reads += 1
+        if data is None:
+            raise EngineError(f"root assertion helper importer snapshot is unavailable: {path}")
+        try:
+            imports = root_imports(data)
+        except (SyntaxError, ValueError, MemoryError, RecursionError):
+            continue
+        if any(module in modules and original in modules[module] for module, original in imports.values()):
+            discovered.append(FileChange(path=path, status="modified", before=data, after=data,
+                                         synthetic="root_helper_importer"))
+    return discovered, reads, set(modules)
+
+
 def build_ir(
     changes: list[FileChange],
     config: Config,
@@ -278,7 +340,11 @@ def build_ir(
     head_reader=None,
     head_searcher=None,
     report_context: ReportContext | None = None,
+    root_reader=None,
+    root_searcher=None,
 ) -> IR:
+    importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
+    changes = [*changes, *importer_changes]
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
     # Someone else's code = declared, minus the project's own name, minus the
@@ -322,9 +388,13 @@ def build_ir(
         c.path.replace("\\", "/"): (c.before, c.after) for c in changes
     }
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
-    oracle_head_reads = [0]
+    oracle_sources: dict[tuple[str, int], bytes | None] = {}
+    strict_oracle_sources: set[tuple[str, int]] = set()
+    root_import_memo: dict[tuple[str, int], dict] = {}
+    root_projection_memo: dict[tuple[str, int, str], dict] = {}
+    oracle_head_reads = [importer_reads]
 
-    def _oracle_file(opath: str, side: int) -> ParsedFile | None:
+    def _oracle_file(opath: str, side: int, *, strict=False, absence_only=False) -> ParsedFile | None:
         """A test/conftest module parsed for its oracle carriers, or None.
 
         side 0 = base, 1 = head. A file outside the diff is identical on both
@@ -337,26 +407,32 @@ def build_ir(
         base half, which is what makes an extraction's before side resolve
         to nothing — correctly, so in-diff files keep their per-side halves.
 
-        Role is a pure function of the path and is checked before the read:
-        a prod module or a nonexistent sibling candidate must not spend the
-        budget on a file that could never carry an oracle.
+        Oracle reads skip production roles. Strict absence probes must still
+        read them: a production-role package can shadow a test-role module.
         """
         in_diff = opath in raw_by_path
         key = (opath, side if in_diff else -1)
-        if key in oracle_memo:
+        if key in oracle_memo and (not strict or key in strict_oracle_sources):
             return oracle_memo[key]
         parsed: ParsedFile | None = None
-        if config.role_of(opath) not in ("test", "conftest"):
+        oracle_role = config.role_of(opath) in ("test", "conftest")
+        if not oracle_role and not (strict and absence_only):
             oracle_memo[key] = None
             return None
         if in_diff:
             data = raw_by_path[opath][side]
-        elif head_reader is not None and oracle_head_reads[0] < _MAX_ORACLE_READS:
+        elif (root_reader if strict else head_reader) is not None and oracle_head_reads[0] < _MAX_ORACLE_READS:
             oracle_head_reads[0] += 1
-            data = head_reader(opath)
+            data = (root_reader if strict else head_reader)(opath)
         else:
             data = None
-        if data is not None:
+            # Exhausting the read budget is unknown, not an absent sibling.
+            oracle_memo[key] = None
+            return None
+        oracle_sources[key] = data
+        if strict or in_diff:
+            strict_oracle_sources.add(key)
+        if data is not None and oracle_role:
             if report_context is not None:
                 report_context.snapshot(opath, side, data)
                 if not in_diff:
@@ -429,6 +505,61 @@ def build_ir(
                     candidate = module.replace(".", "/") + ".py"
                 else:
                     candidate = f"{tdir}/{module}.py" if tdir else f"{module}.py"
+                root = f"{module}.py"
+                if (root_reader is not None and "." not in module and tdir
+                        and config.role_of(root) in ("test", "conftest")):
+                    # Keep absolute versus .relative identity, which the
+                    # legacy sibling map intentionally collapses. Only this
+                    # new root channel needs the stricter binding contract.
+                    import_key = (tpath, side)
+                    source = raw_by_path[tpath][side]
+                    if import_key not in root_import_memo:
+                        root_import_memo[import_key] = root_imports(source)
+                    if root_import_memo[import_key].get(n) == (module, orig):
+                        _oracle_file(root, side, strict=True)
+                        root_key = (root, side if root in raw_by_path else -1)
+                        if root_key not in strict_oracle_sources:
+                            continue
+                        root_source = oracle_sources[root_key]
+                        if root_source is not None:
+                            # A present (even unparseable) sibling makes the
+                            # runtime import target ambiguous; do not guess.
+                            alternatives = (candidate, f"{module}/__init__.py", f"{tdir}/{module}/__init__.py")
+                            alternative_keys = []
+                            for alternative in alternatives:
+                                _oracle_file(alternative, side, strict=True, absence_only=True)
+                                alternative_keys.append((alternative, side if alternative in raw_by_path else -1))
+                            unknown = any(key not in strict_oracle_sources for key in alternative_keys)
+                            present = any(oracle_sources.get(key) is not None for key in alternative_keys)
+                            if unknown and module in reviewed_root_modules:
+                                raise EngineError("root assertion helper resolution exceeds the snapshot read budget")
+                            if present and module in reviewed_root_modules:
+                                raise EngineError("changed root assertion helper has an ambiguous sibling import")
+                            if unknown or present:
+                                continue
+                            projection_key = (tpath, side, n)
+                            if projection_key not in root_projection_memo:
+                                root_projection_memo[projection_key] = (
+                                    project_root_oracles(source, root_source, n, orig)
+                                    if oracle_memo[root_key] is not None else {}
+                                )
+                            projected = root_projection_memo[projection_key].get(unit.qualname, ())
+                            if side == 1 and raw_by_path[tpath][0] is not None:
+                                if not root_caller_unchanged(raw_by_path[tpath][0], source, module, n, orig, unit.qualname):
+                                    projected = []
+                            if side == 1 and tpath in before_by_path:
+                                prior = next((u for u in before_by_path[tpath].units if u.qualname == unit.qualname), None)
+                                if prior is not None:
+                                    # This credit preserves an existing oracle;
+                                    # replacing its subject with another call
+                                    # is not the extraction being recognized.
+                                    projected = [a for a in projected if any(
+                                        same_expr(a.left, b.left) for b in prior.side.assertions
+                                    )]
+                            # Projection text and span describe the concrete
+                            # call in this test, not the helper definition.
+                            inherit(projected, tpath)
+                            continue
                 helper = _oracle_file(candidate, side)
                 if helper is not None:
                     inherit(helper.helper_asserts.get(orig, ()), candidate)
@@ -576,7 +707,7 @@ def build_ir(
                     ):
                         g.test_logic_changed = True
 
-        if g.scope_allow and not any(
+        if change.synthetic != "root_helper_importer" and g.scope_allow and not any(
             _scope_match(path, glob) for glob in g.scope_allow
         ):
             g.scope_drift.append((path, role))
@@ -949,6 +1080,8 @@ def analyze(
     head_reader=None,
     head_searcher=None,
     report_context: ReportContext | None = None,
+    root_reader=None,
+    root_searcher=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -961,6 +1094,8 @@ def analyze(
         head_reader=head_reader,
         head_searcher=head_searcher,
         report_context=report_context,
+        root_reader=root_reader,
+        root_searcher=root_searcher,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

@@ -32,6 +32,7 @@ from checkwash.gitio import (
     read_base_file,
     rev_parse,
 )
+from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 from checkwash.report.jsonout import findings_to_json, ir_to_json
 from checkwash.report.sarif import findings_to_sarif
 from checkwash.report.context import ReportContext
@@ -200,6 +201,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         known_modules = known_baseline() | declared
 
     report_context = ReportContext() if args.format == "sarif" else None
+    root_snapshot = GitSnapshot(repo, head_label) if args.range else WorkingTreeSnapshot(repo)
     ir, findings, verdict = analyze(
         changes,
         config,
@@ -213,6 +215,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         head_reader=head_reader,
         head_searcher=head_searcher,
         report_context=report_context,
+        root_reader=root_snapshot.read,
+        root_searcher=root_snapshot.search,
     )
 
     if args.emit_ir:

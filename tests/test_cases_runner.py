@@ -29,6 +29,11 @@ def test_case(case_path):
                               if any(n.encode("utf-8") in data for n in needles)])
             if head else None
         ),
+        # Declarative fixtures are a closed snapshot: an omitted head path is
+        # absent, and the in-memory search cannot suffer an I/O failure.
+        root_reader=head.get,
+        root_searcher=lambda needles: [p for p, data in sorted(head.items())
+                                      if any(n.encode("utf-8") in data for n in needles)],
     )
     visible = [f for f in findings if not f.allowlisted]
     mismatch = match_expectations(case.expect, visible)
