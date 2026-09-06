@@ -9,10 +9,32 @@ External plugins/import hooks remain outside this bounded source proof.
 from __future__ import annotations
 
 import ast
+import configparser
 from pathlib import PurePosixPath
+import tomllib
 
 from checkwash.change import EngineError
 from checkwash.roles import collectable
+
+_CONFIG_FILES = ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg", "pytest.toml", ".pytest.toml")
+
+
+def _default_collection_config(source, filename):
+    """Unknown pytest options cannot prove default collection or startup."""
+    try:
+        text = source.decode("utf-8-sig")
+        if filename.endswith(".toml"):
+            parsed = tomllib.loads(text)
+            if filename == "pyproject.toml":
+                tool = parsed.get("tool", {})
+                return isinstance(tool, dict) and not tool.get("pytest")
+            return not parsed
+        parsed = configparser.ConfigParser(interpolation=None)
+        parsed.read_string(text)
+        return not any(dict(parsed[section]) for section in parsed.sections()
+                       if section.lower() in ("pytest", "tool:pytest"))
+    except (UnicodeError, ValueError, configparser.Error, RecursionError, MemoryError):
+        return False
 
 
 def _inert(node):
@@ -60,6 +82,8 @@ def inert_test_execution_context(path, read, search=None):
     Missing, failed or over-budget discovery withholds optional proof. Empty
     sources are inert. ``read`` distinguishes known absence from failures;
     selected-source read exceptions propagate. The caller owns its cache.
+    Nonempty pytest configuration withholds the default-collection proof;
+    configured collection names and plugin options must not hide siblings.
     """
     if read is None or search is None:
         return False
@@ -73,20 +97,24 @@ def inert_test_execution_context(path, read, search=None):
     siblings = {p for p in inventoried if collectable(p) and p != path.replace("\\", "/")}
     selected = set(siblings)
     relevant = {path, *(p for p in paths if collectable(p) or p.replace("\\", "/").endswith("conftest.py"))}
-    for candidate in relevant:
+    configurations = set()
+    for candidate in {path, *paths}:
         normalized = candidate.replace("\\", "/")
         parts = PurePosixPath(normalized).parts
         if not parts or len(parts) > 16 or normalized.startswith("/") or any(
             part in (".", "..") or ":" in part for part in parts
         ):
             return False
-        if parts[-1] == "conftest.py":
+        if candidate in relevant and parts[-1] == "conftest.py":
             selected.add(normalized)
         for depth in range(len(parts)):
             directory = "/".join(parts[:depth])
             prefix = directory + "/" if directory else ""
-            for filename in ("__init__.py", "conftest.py"):
-                selected.add(prefix + filename)
+            if candidate in relevant:
+                for filename in ("__init__.py", "conftest.py"):
+                    selected.add(prefix + filename)
+            configurations.update(prefix + filename for filename in _CONFIG_FILES)
+    selected.update(configurations)
     if len(selected) > 128:
         return False
     for candidate in sorted(selected):
@@ -99,6 +127,10 @@ def inert_test_execution_context(path, read, search=None):
             raise EngineError("strict test execution context reader returned invalid source bytes")
         if len(source) > 100_000:
             return False
+        if candidate in configurations:
+            if not _default_collection_config(source, PurePosixPath(candidate).name):
+                return False
+            continue
         try:
             tree = ast.parse(source.decode("utf-8-sig"))
         except (UnicodeError, SyntaxError, ValueError, RecursionError, MemoryError):

@@ -49,7 +49,15 @@ def test_all_ancestor_startup_paths_are_requested_from_strict_reader():
         return None
 
     assert inert_test_execution_context("tests/unit/test_bool.py", read, lambda needles: [])
-    assert requested == ["__init__.py", "conftest.py", "tests/__init__.py", "tests/conftest.py", "tests/unit/__init__.py", "tests/unit/conftest.py"]
+    assert requested == [
+        ".pytest.ini", ".pytest.toml", "__init__.py", "conftest.py", "pyproject.toml",
+        "pytest.ini", "pytest.toml", "setup.cfg",
+        "tests/.pytest.ini", "tests/.pytest.toml", "tests/__init__.py", "tests/conftest.py",
+        "tests/pyproject.toml", "tests/pytest.ini", "tests/pytest.toml", "tests/setup.cfg", "tests/tox.ini",
+        "tests/unit/.pytest.ini", "tests/unit/.pytest.toml", "tests/unit/__init__.py", "tests/unit/conftest.py",
+        "tests/unit/pyproject.toml", "tests/unit/pytest.ini", "tests/unit/pytest.toml", "tests/unit/setup.cfg",
+        "tests/unit/tox.ini", "tox.ini",
+    ]
 
 
 def test_failed_or_invalid_startup_reader_does_not_become_absence():
@@ -99,6 +107,32 @@ def test_unproved_sibling_tests_withhold_precision(source):
 def test_inventoried_source_disappearance_is_an_error():
     with pytest.raises(EngineError, match="inventoried source disappeared"):
         inert_test_execution_context("tests/test_bool.py", {}.get, lambda needles: ["tests/conftest.py"])
+
+
+@pytest.mark.parametrize("path, source", [
+    ("pytest.ini", b"[pytest]\npython_files = *.py\n"),
+    (".pytest.ini", b"[pytest]\npython_functions = *\n"),
+    ("tests/pytest.ini", b"[pytest]\npython_classes = *\n"),
+    ("tox.ini", b"[pytest]\naddopts = -p custom_plugin\n"),
+    ("setup.cfg", b"[tool:pytest]\npython_files = *.py\n"),
+    ("pyproject.toml", b'[tool.pytest.ini_options]\npython_files = ["*.py"]\n'),
+    ("pytest.toml", b'[pytest]\npython_files = ["*.py"]\n'),
+    (".pytest.toml", b'[pytest]\npython_files = ["*.py"]\n'),
+    ("pytest.ini", b"invalid config without a section\n"),
+    ("pyproject.toml", b"invalid ! toml\n"),
+])
+def test_unproved_pytest_configuration_withholds_default_collection_proof(path, source):
+    assert run(snapshot={**SNAPSHOT, path: source})[2] == "block"
+
+
+@pytest.mark.parametrize("path, source", [
+    ("pytest.ini", b"# no custom options\n[pytest]\n"),
+    ("setup.cfg", b"[metadata]\nname = sample\n"),
+    ("pyproject.toml", b'[project]\nname = "sample"\nversion = "0.1.0"\n'),
+    ("pytest.toml", b"# empty config\n"),
+])
+def test_empty_pytest_options_and_nonpytest_metadata_preserve_the_proof(path, source):
+    assert run(snapshot={**SNAPSHOT, path: source})[2] == "pass"
 
 
 def test_git_and_worktree_empty_needle_inventory_agree_on_empty_sources(tmp_path):
@@ -178,3 +212,11 @@ def test_runtime_rebinding_red_to_green_does_not_earn_equivalence(tmp_path, star
     report = json.loads(result.stdout)
     assert report["verdict"] == "block"
     assert any(f["rule"] == "SUBJECT_NORMALIZED" for f in report["findings"])
+
+
+@pytest.mark.parametrize("mode", ["range", "worktree"])
+def test_custom_collection_red_to_green_does_not_earn_equivalence(tmp_path, mode):
+    # The custom filename is intentionally outside default collectable().
+    # pytest imports it during collection before running test_bool.py.
+    (tmp_path / "pytest.ini").write_text("[pytest]\npython_files = *.py\n", encoding="utf-8")
+    test_runtime_rebinding_red_to_green_does_not_earn_equivalence(tmp_path, "tests/boot.py", mode)
