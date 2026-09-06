@@ -1,0 +1,43 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 130
+note: the same helper-loop consolidation as table_helper_loop_consolidation_neg
+note2: with the remainder row's expectation rewritten to what a chunk() that
+note3: drops the remainder returns; inlining the helper leaves the concrete
+note4: expected rows in place for the ordinary detectors, so the edit shows
+=== before: tests/test_chunk.py ===
+from app.chunk import chunk
+
+
+def check(xs, n, expected):
+    assert chunk(xs, n) == expected
+
+
+def test_even():
+    check([1, 2, 3, 4], 2, [[1, 2], [3, 4]])
+
+
+def test_remainder():
+    check([1, 2, 3, 4, 5], 2, [[1, 2], [3, 4], [5]])
+
+
+def test_empty():
+    check([], 3, [])
+=== after: tests/test_chunk.py ===
+from app.chunk import chunk
+
+
+def check(xs, n, expected):
+    assert chunk(xs, n) == expected
+
+
+def test_chunk():
+    cases = [
+        ([1, 2, 3, 4], 2, [[1, 2], [3, 4]]),
+        ([1, 2, 3, 4, 5], 2, [[1, 2], [3, 4]]),
+        ([], 3, []),
+    ]
+    for xs, n, expected in cases:
+        check(xs, n, expected)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

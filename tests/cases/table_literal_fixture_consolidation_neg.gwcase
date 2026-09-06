@@ -1,0 +1,40 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+note: corpus LLM-arm false_positives/073 shape -- native tests become one test
+note2: walking a zero-argument @pytest.fixture that returns a literal table;
+note3: the rows are substituted per concrete assertion exactly as an inline
+note4: table's are, and every old oracle survives in order
+=== before: tests/test_chunk.py ===
+from app.chunk import chunk
+
+
+def test_even():
+    assert chunk([1, 2, 3, 4], 2) == [[1, 2], [3, 4]]
+
+
+def test_remainder():
+    assert chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]
+
+
+def test_empty():
+    assert chunk([], 3) == []
+=== after: tests/test_chunk.py ===
+import pytest
+from app.chunk import chunk
+
+
+@pytest.fixture
+def cases():
+    return [
+        ([1, 2, 3, 4], 2, [[1, 2], [3, 4]]),
+        ([1, 2, 3, 4, 5], 2, [[1, 2], [3, 4], [5]]),
+        ([], 3, []),
+    ]
+
+
+def test_chunk(cases):
+    for xs, n, expected in cases:
+        assert chunk(xs, n) == expected
+=== expect ===
+[]

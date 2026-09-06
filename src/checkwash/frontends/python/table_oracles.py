@@ -137,11 +137,118 @@ def _fixture(node):
     return decorator.keywords[0].value
 
 
-def _test(node, fixtures, imports, *, baseline):
+def _helper(node):
+    """A same-file `def check(a, b): assert <...>` a table row can call.
+
+    Inlining is the only way to prove the loop body actually checks the row:
+    crediting the call itself would credit any call, which is exactly the
+    unproved step a reviewer rejected in the first attempt at this
+    (E-04, 2026-09-06). Bounded to one statement, one message-free assertion,
+    plain named parameters, no decorator, and a name pytest does not collect
+    under default `python_functions` (already required by the caller's inert
+    startup proof, which rejects any non-default collection option).
+    """
+    parameters = _args(node)
+    if (parameters is None or not parameters or node.name.startswith("test")
+            or node.decorator_list or len(node.body) != 1
+            or len(set(parameters)) != len(parameters)):
+        return None
+    assertion = node.body[0]
+    if not isinstance(assertion, ast.Assert) or assertion.msg is not None:
+        return None
+    return parameters, assertion
+
+
+def _inlined(statement, bindings, helpers, scope):
+    """`check(row, names)` as a unit's only statement -> the helper's own
+    assertion, with the helper's parameters bound to this row's literals.
+
+    The callee has to *be* the module-level helper at run time, so it must
+    be a bare name that nothing in the test's own scope rebinds: a test
+    parameter, a parametrize argname, a loop target or the local a table is
+    assigned to. `for check, n, expected in rows: check(check, n, expected)`
+    calls the row's first cell, not the helper; substituting the helper
+    there would credit a check that never runs. (Module-level rebinding is
+    already impossible: `_module` admits no statement but imports and
+    uniquely named defs.)
+
+    Every argument must be a row name or a literal; anything else is an
+    unproved value. A row name reaching two parameters is declined for the
+    same reason `_concrete` declines a repeated binding: at run time both
+    parameters see one object, while substitution would copy two independent
+    literals.
+    """
+    if not (isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call)):
+        return None
+    call = statement.value
+    if not isinstance(call.func, ast.Name) or call.func.id in scope:
+        return None
+    helper = helpers.get(call.func.id)
+    if helper is None or call.keywords or len(call.args) != len(helper[0]):
+        return None
+    parameters, assertion = helper
+    inner, consumed = {}, Counter()
+    for parameter, argument in zip(parameters, call.args):
+        if isinstance(argument, ast.Name) and argument.id in bindings:
+            consumed[argument.id] += 1
+            inner[parameter] = bindings[argument.id]
+        elif _literal(argument):
+            inner[parameter] = argument
+        else:
+            return None
+    if any(count > 1 for count in consumed.values()):
+        return None
+    return assertion, inner
+
+
+def _checked(statement, bindings, imports, helpers, scope):
+    """The row's concrete assertion, whether written inline or via a helper.
+
+    `scope` is every name the test binds itself (parameters, row names, the
+    local a table is assigned to); a helper call through one of those names
+    is not a call of the helper.
+    """
+    if isinstance(statement, ast.Assert):
+        return _concrete(statement, bindings, imports)
+    inlined = _inlined(statement, bindings, helpers, scope | set(bindings))
+    if inlined is None:
+        return None
+    assertion, inner = inlined
+    return _concrete(assertion, inner, imports)
+
+
+def _table_fixture(node):
+    """A zero-argument `@pytest.fixture` whose whole body returns a literal
+    table, for a test that walks it with a `for` loop.
+
+    Unlike `params=`, this multiplies no collection: it is a shared literal
+    constant, so several tests may read it without the one-consumer rule
+    above. Nothing in it is executed here either — the rows are substituted
+    into each concrete assertion exactly as an inline table's are.
+    """
+    if _args(node) != [] or len(node.decorator_list) != 1 or len(node.body) != 1:
+        return None
+    decorator = node.decorator_list[0]
+    if isinstance(decorator, ast.Call):
+        if decorator.args or decorator.keywords:
+            return None
+        decorator = decorator.func
+    if dotted_name(decorator) != "pytest.fixture":
+        return None
+    returned = node.body[0]
+    if not isinstance(returned, ast.Return) or not isinstance(returned.value, (ast.List, ast.Tuple)):
+        return None
+    return returned.value
+
+
+def _test(node, fixtures, tables, imports, helpers, *, baseline):
     names = _args(node)
     if names is None or not node.name.startswith("test"):
         return None
     body, bindings, table = node.body, [{}], False
+    # Names the test itself binds, for `_inlined`'s shadowing check: its
+    # parameters now, the row names and any table local below.
+    scope = set(names)
     if baseline:
         if names or node.decorator_list:
             return None
@@ -164,6 +271,15 @@ def _test(node, fixtures, imports, *, baseline):
             return None
         bindings = _rows(decorator.args[1], columns, unpack=len(columns) != 1)
         table = True
+    elif (len(names) == 1 and names[0] in tables and len(body) == 1 and isinstance(body[0], ast.For)
+          and isinstance(body[0].iter, ast.Name) and body[0].iter.id == names[0]):
+        loop = body[0]
+        columns = _names(loop.target)
+        if loop.orelse or not columns or names[0] in columns:
+            return None
+        bindings = _rows(tables[names[0]], columns, unpack=not isinstance(loop.target, ast.Name))
+        scope.update(columns)
+        body, table = loop.body, True
     elif names:
         if (len(names) != 1 or names[0] not in fixtures or len(body) != 2
                 or not isinstance(body[0], ast.Assign) or len(body[0].targets) != 1
@@ -173,6 +289,7 @@ def _test(node, fixtures, imports, *, baseline):
         if not columns or names[0] in columns:
             return None
         bindings = _rows(fixtures[names[0]], columns, unpack=not isinstance(body[0].targets[0], ast.Name))
+        scope.update(columns)
         body, table = body[1:], True
     elif ((len(body) == 1 and isinstance(body[0], ast.For))
           or (len(body) == 2 and isinstance(body[0], ast.Assign) and isinstance(body[1], ast.For))):
@@ -185,14 +302,16 @@ def _test(node, fixtures, imports, *, baseline):
                     or rows.id in imports):
                 return None
             rows = assignment.value
+            scope.add(assignment.targets[0].id)
         columns = _names(loop.target)
         if loop.orelse or not columns:
             return None
         bindings = _rows(rows, columns, unpack=not isinstance(loop.target, ast.Name))
+        scope.update(columns)
         body, table = loop.body, True
     if bindings is None or len(body) != 1:
         return None
-    assertions = [_concrete(body[0], row, imports) for row in bindings]
+    assertions = [_checked(body[0], row, imports, helpers, scope) for row in bindings]
     if any(assertion is None for assertion in assertions):
         return None
     return [_Case(assertion, body[0], node) for assertion in assertions], table
@@ -230,7 +349,7 @@ def _module(source, *, baseline):
             functions.append(node)
         else:
             return None
-    fixtures = {}
+    fixtures, tables = {}, {}
     if not baseline:
         for function in functions:
             fixture = _fixture(function)
@@ -238,22 +357,44 @@ def _module(source, *, baseline):
                 if not pytest_imported:
                     return None
                 fixtures[function.name] = fixture
-    result, table, used_fixtures = [], False, Counter()
+                continue
+            table_fixture = _table_fixture(function)
+            if table_fixture is not None:
+                if not pytest_imported:
+                    return None
+                tables[function.name] = table_fixture
+    helpers = {}
     for function in functions:
-        if function.name in fixtures:
+        if function.name in fixtures or function.name in tables:
             continue
-        expanded = _test(function, fixtures, imports, baseline=baseline)
+        candidate = _helper(function)
+        if candidate is not None:
+            helpers[function.name] = candidate
+    result, table = [], False
+    used_fixtures, used_helpers, used_tables = Counter(), Counter(), Counter()
+    for function in functions:
+        if function.name in fixtures or function.name in tables or function.name in helpers:
+            continue
+        expanded = _test(function, fixtures, tables, imports, helpers, baseline=baseline)
         if expanded is None:
             return None
         cases, is_table = expanded
         if function.decorator_list and not pytest_imported:
             return None
         used_fixtures.update(set(_args(function)) & fixtures.keys())
+        used_tables.update(set(_args(function)) & tables.keys())
+        used_helpers.update(name for name in (dotted_name(call.func) for call in ast.walk(function)
+                                              if isinstance(call, ast.Call)) if name in helpers)
         result.extend(cases)
         table |= is_table and len(cases) >= 2
         if len(result) > MAX_CASES:
             return None
     if fixtures.keys() != used_fixtures.keys() or any(count != 1 for count in used_fixtures.values()):
+        return None
+    # A helper nobody calls never runs, but leaving one uninspected in an
+    # otherwise transparent module weakens the "entire module" claim the
+    # projection rests on. Same discipline as the fixtures above.
+    if helpers.keys() != used_helpers.keys() or tables.keys() != used_tables.keys():
         return None
     return text, import_nodes, result, table, pytest_imported
 
@@ -300,9 +441,11 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
     The caller restricts this to one modified collected test file. Baseline
     tests are plain, zero-argument native single-assert functions; the head
     can consolidate them into literal parametrize, fixture(params=), or loops.
-    Deleting/reordering rows, dynamic tables, indirect/marked params,
-    setup/teardown, multiple assertions, and any executable module statement
-    remain outside this first bounded implementation.
+    A row's single check may be written inline or delegated to a same-file
+    message-free single-assert helper, which is inlined per row before any
+    strictness below applies. Deleting/reordering rows, dynamic tables,
+    indirect/marked params, setup/teardown, multiple assertions, and any
+    executable module statement remain outside this bounded implementation.
     """
     if (root_reader is None or root_searcher is None or not before_parsed.parse_ok or not after_parsed.parse_ok
             or len(before_parsed.units) < 2):
