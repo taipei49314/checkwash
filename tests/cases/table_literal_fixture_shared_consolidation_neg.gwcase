@@ -1,0 +1,40 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+note: corpus LLM-arm false_positives/045 shape -- one literal-table fixture
+note2: read by two tests; a function-scope fixture is re-evaluated per test,
+note3: so each reader walks its own fresh literal list, and the old ordered
+note4: coverage is a prefix of the concretized new one
+=== before: tests/test_chunk.py ===
+from app.chunk import chunk
+
+
+def test_even():
+    assert chunk([1, 2, 3, 4], 2) == [[1, 2], [3, 4]]
+
+
+def test_remainder():
+    assert chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]
+=== after: tests/test_chunk.py ===
+import pytest
+from app.chunk import chunk
+
+
+@pytest.fixture
+def cases():
+    return [
+        ([1, 2, 3, 4], 2, [[1, 2], [3, 4]]),
+        ([1, 2, 3, 4, 5], 2, [[1, 2], [3, 4], [5]]),
+    ]
+
+
+def test_even(cases):
+    for xs, n, expected in cases:
+        assert chunk(xs, n) == expected
+
+
+def test_remainder(cases):
+    for xs, n, expected in cases:
+        assert chunk(xs, n) == expected
+=== expect ===
+[]

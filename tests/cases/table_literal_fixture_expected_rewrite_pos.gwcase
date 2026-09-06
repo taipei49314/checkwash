@@ -1,0 +1,40 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 130
+note: the same literal-fixture consolidation as
+note2: table_literal_fixture_consolidation_neg with the remainder row's
+note3: expectation rewritten to what a chunk() that drops the remainder
+note4: returns; the fixture's rows are concretized, so the edit shows
+=== before: tests/test_chunk.py ===
+from app.chunk import chunk
+
+
+def test_even():
+    assert chunk([1, 2, 3, 4], 2) == [[1, 2], [3, 4]]
+
+
+def test_remainder():
+    assert chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]
+
+
+def test_empty():
+    assert chunk([], 3) == []
+=== after: tests/test_chunk.py ===
+import pytest
+from app.chunk import chunk
+
+
+@pytest.fixture
+def cases():
+    return [
+        ([1, 2, 3, 4], 2, [[1, 2], [3, 4]]),
+        ([1, 2, 3, 4, 5], 2, [[1, 2], [3, 4]]),
+        ([], 3, []),
+    ]
+
+
+def test_chunk(cases):
+    for xs, n, expected in cases:
+        assert chunk(xs, n) == expected
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

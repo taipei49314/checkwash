@@ -1,0 +1,43 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+note: corpus LLM-arm false_positives/011 shape -- three native tests that each
+note2: delegate to a same-file single-assert helper become one loop over a
+note3: literal table that calls the same helper; the helper is inlined per row
+note4: and every old oracle survives in order
+=== before: tests/test_chunk.py ===
+from app.chunk import chunk
+
+
+def check(xs, n, expected):
+    assert chunk(xs, n) == expected
+
+
+def test_even():
+    check([1, 2, 3, 4], 2, [[1, 2], [3, 4]])
+
+
+def test_remainder():
+    check([1, 2, 3, 4, 5], 2, [[1, 2], [3, 4], [5]])
+
+
+def test_empty():
+    check([], 3, [])
+=== after: tests/test_chunk.py ===
+from app.chunk import chunk
+
+
+def check(xs, n, expected):
+    assert chunk(xs, n) == expected
+
+
+def test_chunk():
+    cases = [
+        ([1, 2, 3, 4], 2, [[1, 2], [3, 4]]),
+        ([1, 2, 3, 4, 5], 2, [[1, 2], [3, 4], [5]]),
+        ([], 3, []),
+    ]
+    for xs, n, expected in cases:
+        check(xs, n, expected)
+=== expect ===
+[]
