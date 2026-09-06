@@ -89,16 +89,29 @@ def detect(ir: IR) -> list[Finding]:
                 )
             if unit.delta.param_cases_removed:
                 n = unit.delta.param_cases_removed
+                disabled = unit.delta.param_cases_disabled
                 before_n = unit.before.param_cases if unit.before else None
                 after_n = unit.after.param_cases
+                live_after = after_n if after_n is not None else 1
+                if disabled:
+                    # A marked row is still written down, so the live count
+                    # can stay put (F-063: one row marked, one appended).
+                    # Say what happened rather than "deleted (2 -> 2)".
+                    message = (
+                        f"{unit.qualname}: {n} of {before_n} parametrized case(s) no longer "
+                        f"run ({disabled} disabled, {n - disabled} deleted; live count "
+                        f"{before_n} -> {live_after})"
+                    )
+                else:
+                    message = (
+                        f"{unit.qualname}: {n} parametrized case(s) deleted "
+                        f"({before_n} -> {live_after})"
+                    )
                 findings.append(
                     Finding(
                         rule="TEST_DISABLED",
                         severity="warn",
-                        message=(
-                            f"{unit.qualname}: {n} parametrized case(s) deleted "
-                            f"({before_n} -> {after_n if after_n is not None else 1})"
-                        ),
+                        message=message,
                         path=file.path,
                         unit=unit.qualname,
                         before=None,

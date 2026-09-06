@@ -1,0 +1,47 @@
+=== meta ===
+rule: TEST_DISABLED
+title: Skip-marking two rows while appending three grows the live count
+note: F-063 scaled up. Any number of disabled rows is paid for by at least
+note2: as many appended ones and the count arithmetic reports nothing (or
+note3: growth); by row identity two of the three original items stopped
+note4: running. Three appended rather than two for the same reason as
+note5: param_row_marked_appended_twice_pos: keep the base's wrong-reason
+note6: EXPECTATION_DEFINITION_CHANGED (F-067) out of this fixture. The two
+note7: marked rows are the ones a tax-ignoring bug fails; the rest cannot.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 105.0),
+        ([10.0], 10.5),
+        ([], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, marks=pytest.mark.skip),
+        pytest.param([10.0], 10.5, marks=pytest.mark.skip),
+        ([], 0.0),
+        ([0.0], 0.0),
+        ([0.0, 0.0], 0.0),
+        ([0.0, 0.0, 0.0], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

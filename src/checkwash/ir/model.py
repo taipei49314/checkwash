@@ -111,6 +111,29 @@ class Handler:
     span: tuple[int, int]
 
 
+@dataclass(frozen=True)
+class ParamTable:
+    """One `parametrize` decorator's table, kept as rows.
+
+    `names` are the argnames the decorator binds, `rows` the canonical
+    (`ast.unparse`) cell texts of each row in argname order, `disabled` one
+    flag per row for the rows a `skip` / non-strict `xfail` mark took out of
+    the run. Cell text is read *through* `pytest.param`, so marking a row or
+    giving it an `id=` does not change which row it is -- the mark is the
+    `disabled` flag, and that separation is the whole point: the row is still
+    written down, it just stopped running.
+
+    Stacked decorators are independent tables (pytest multiplies them into
+    test items), so a unit carries one entry per decorator rather than one
+    wider table; zipping across decorators would invent pairings that do
+    not exist.
+    """
+
+    names: tuple[str, ...]
+    rows: tuple[tuple[str, ...], ...]
+    disabled: tuple[bool, ...]
+
+
 @dataclass
 class UnitSide:
     span: tuple[int, int]
@@ -138,6 +161,19 @@ class UnitSide:
     # A parametrized test's expectation lives in the decorator, not the body,
     # so editing it moves the oracle with the assertion untouched.
     param_columns: dict[str, str] = field(default_factory=dict)
+    # The same tables, unflattened: one `ParamTable` per `parametrize`
+    # decorator (read through `param_tables()`, never directly). Both facts
+    # a row carries are lost by the two flattenings above. `param_columns`
+    # keeps the cells but not which expectation belongs to which input, so
+    # a swapped pair of answers, or an answer rewritten while a row is
+    # appended, reads as no change (F-060). `param_cases` keeps a *count*
+    # of live rows, so disabling one row while appending another nets to
+    # zero and the disabled test item is never reported (F-063). Empty when
+    # the unit has no readable table -- and, deliberately, when *any* of its
+    # counted decorators is unreadable (a starred row, a non-literal cell
+    # list), so that whoever reads the rows sees exactly the decorators
+    # `param_cases` counted, or nothing.
+    param_rows: tuple[ParamTable, ...] = ()
     # Literal paths a conftest removes from collection, sorted. Markers
     # deduplicate by name, so appending a second control to a conftest that
     # already had one produced no event at all (THREATMODEL 81). The path set
@@ -197,7 +233,18 @@ class UnitDelta:
     markers_added: list[str] = field(default_factory=list)
     handlers_widened: list[str] = field(default_factory=list)
     tolerance_changes: list[tuple[str, str, str]] = field(default_factory=list)  # (kind, before, after)
-    param_cases_removed: int = 0  # parametrized cases deleted (pytest test items)
+    # Parametrized test items that ran before and do not run after: deleted
+    # rows, and -- when the rows can be paired by identity -- rows that are
+    # still written down but marked off. Never less than the live-count
+    # difference the field originally held.
+    param_cases_removed: int = 0
+    # How many of `param_cases_removed` are lost to a `pytest.param(...,
+    # marks=skip)` on a row that is still there, rather than to a deletion.
+    # Kept apart only so the finding can say which happened: "1 deleted
+    # (2 -> 2)" would be a lie about a row that was marked while another was
+    # appended, where the live count never moved (F-063). Zero whenever the
+    # rows could not be paired, so the count rule's message is unchanged.
+    param_cases_disabled: int = 0
     # Skips whose condition text never changed but whose *meaning* did,
     # because a constant it names was edited: `STRICT = True` -> `False`
     # under `if not STRICT: pytest.skip(...)` silences the test with no
@@ -376,6 +423,55 @@ class IR:
     globals: DiffGlobals = field(default_factory=DiffGlobals)
     skipped_files: list[str] = field(default_factory=list)
     version: int = IR_VERSION
+
+
+def param_tables(side: UnitSide | None) -> tuple[ParamTable, ...]:
+    """A side's `param_rows`, validated, or `()` when they cannot be trusted.
+
+    This is the one way a consumer reads the row structure, and it accepts
+    every spelling the structure arrives in: the frontend's `ParamTable`
+    instances, the dict-and-list form `to_jsonable` emits (dataclasses
+    become dicts, tuples become lists), and a bare `(names, rows, disabled)`
+    triple. Everything is normalized back to tuples, so a row can be a
+    Counter key again after a JSON round trip.
+
+    A side without `param_rows` -- an older IR payload, a unit with no
+    readable table -- reads as no tables, and every consumer then keeps the
+    behaviour it had before the field existed. A side whose entries do not
+    all pass the shape check (a width that is not the argname count, a cell
+    that is not text, a `disabled` list that does not line up) also reads as
+    no tables: a partly readable structure cannot say which rows survived,
+    and a finding built on the readable half would be built on nothing.
+    """
+    raw = getattr(side, "param_rows", None) if side is not None else None
+    if not raw or isinstance(raw, (str, bytes, dict)):
+        return ()
+    out: list[ParamTable] = []
+    try:
+        for entry in raw:
+            if isinstance(entry, ParamTable):
+                names, rows, disabled = entry.names, entry.rows, entry.disabled
+            elif isinstance(entry, dict):
+                names, rows, disabled = entry["names"], entry["rows"], entry["disabled"]
+            else:
+                names, rows, disabled = entry
+            if any(isinstance(x, (str, bytes, dict)) for x in (names, rows, disabled)):
+                return ()
+            names = tuple(names)
+            if not names or not all(isinstance(n, str) for n in names):
+                return ()
+            rows = tuple(
+                tuple(r) if not isinstance(r, (str, bytes, dict)) else () for r in rows
+            )
+            if any(len(r) != len(names) or not all(isinstance(c, str) for c in r) for r in rows):
+                return ()
+            disabled = tuple(disabled)
+            if len(disabled) != len(rows) or not all(isinstance(d, bool) for d in disabled):
+                return ()
+            out.append(ParamTable(names, rows, disabled))
+    except (TypeError, ValueError, KeyError):
+        return ()
+    return tuple(out)
 
 
 def to_jsonable(obj: Any) -> Any:

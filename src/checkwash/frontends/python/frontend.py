@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
-from checkwash.ir.model import Assertion, Handler, Marker, UnitSide, normalize_text
+from checkwash.ir.model import Assertion, Handler, Marker, ParamTable, UnitSide, normalize_text
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
 
@@ -1647,6 +1647,91 @@ def _param_cell_value(cell):
     return cell
 
 
+def _param_argnames(dec: ast.Call) -> list[str] | None:
+    """The argnames a `parametrize` decorator binds, or None if unreadable.
+
+    Stricter than `_param_columns`' inline reading on purpose: a list of
+    argnames with a non-string element is unreadable here, not partially
+    read, because a table whose width is uncertain cannot say which row is
+    which.
+    """
+    names_node = dec.args[0]
+    if isinstance(names_node, ast.Constant) and isinstance(names_node.value, str):
+        return [n.strip() for n in names_node.value.split(",") if n.strip()]
+    if isinstance(names_node, (ast.List, ast.Tuple)):
+        if not all(isinstance(e, ast.Constant) and isinstance(e.value, str) for e in names_node.elts):
+            return None
+        return [e.value for e in names_node.elts]
+    return None
+
+
+def _param_row_cells(names: list[str], row: ast.AST) -> list[ast.AST] | None:
+    """The cell nodes of one parametrize row, or None if the row is unreadable.
+
+    `pytest.param(a, b, marks=...)` spells the row as call arguments, one per
+    argname -- not as a tuple, and not as `_param_cell_value`'s single value
+    (that helper answers the one-cell question). Reading only `args[0]` would
+    drop every cell after the first, which is how `_param_columns` loses the
+    expectation of a wrapped row (F-067) and would drop every marked
+    multi-argument row here -- exactly the row F-063 is about.
+
+    A single argname takes the whole value as its one cell, tuple or not,
+    which is what pytest does. A row of the wrong width, or one with a
+    starred element, is unreadable: the first is a collection error, the
+    second a table whose rows this reader cannot enumerate.
+    """
+    if isinstance(row, ast.Call) and (_dotted(row.func) or "").rsplit(".", 1)[-1] == "param":
+        cells = list(row.args)
+    elif len(names) > 1 and isinstance(row, (ast.List, ast.Tuple)):
+        cells = list(row.elts)
+    else:
+        cells = [row]
+    if len(cells) != len(names) or any(isinstance(c, ast.Starred) for c in cells):
+        return None
+    return cells
+
+
+def _param_tables(func) -> tuple[ParamTable, ...]:
+    """One `ParamTable` per `parametrize` decorator, or `()` if any is unreadable.
+
+    `_param_columns` flattens the table into one string per argname and
+    `_param_case_count` flattens it into a number; the two facts a *row*
+    carries survive neither. Which expectation belongs to which input is
+    gone from the column string (F-060); which rows are the *same* rows is
+    gone from the count, so skip-marking one row while appending another
+    nets to zero (F-063). This keeps the rows, per decorator, with the
+    disabling mark recorded beside the row rather than inside its text.
+
+    The decorators considered are exactly the ones `_param_case_count`
+    counts (a literal list of values), and the answer is all-or-nothing:
+    if one of them cannot be read row by row, the unit has no tables. A
+    consumer that read the other decorators would be pairing rows against
+    a live count that includes the unreadable one.
+    """
+    tables: list[ParamTable] = []
+    for dec in func.decorator_list:
+        if not isinstance(dec, ast.Call) or _dotted(dec.func) not in _PARAMETRIZE:
+            continue
+        if len(dec.args) < 2 or not isinstance(dec.args[1], (ast.List, ast.Tuple)):
+            continue
+        names = _param_argnames(dec)
+        if not names:
+            return ()
+        rows: list[tuple[str, ...]] = []
+        disabled: list[bool] = []
+        for row in dec.args[1].elts:
+            cells = _param_row_cells(names, row)
+            if cells is None:
+                return ()
+            try:
+                rows.append(tuple(ast.unparse(cell) for cell in cells))
+            except (AttributeError, ValueError):  # pragma: no cover - defensive
+                return ()
+            disabled.append(_param_row_disabled(row))
+        tables.append(ParamTable(tuple(names), tuple(rows), tuple(disabled)))
+    return tuple(tables)
+
+
 def _param_columns(func) -> dict[str, str]:
     """parametrize argname -> canonical text of that column, row by row.
 
@@ -2331,6 +2416,7 @@ def _collect_unit(
             else ()
         ),
         param_columns=_param_columns(func),
+        param_rows=_param_tables(func),
         patches=tuple(sorted(patches)),
         invoked=tuple(sorted(_invocations(func, caches))),
         params=tuple(

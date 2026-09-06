@@ -1,0 +1,48 @@
+=== meta ===
+rule: TEST_DISABLED
+title: Skip-marking a row while appending two is a disabled test item, not a wash
+note: F-063 (research E-08b / E-11). `param_cases` is a count of live rows,
+note2: so marking one row (-1) and appending rows (+2) reads as growth and
+note3: the disabled row is never reported; the same mark without appended
+note4: rows blocked at high. Row identity does not net out. Two rows are
+note5: appended rather than one so the fixture isolates TEST_DISABLED: with
+note6: one appended row the base also fires EXPECTATION_DEFINITION_CHANGED
+note7: for the wrong reason (the wrapped row's cells drop out of the column
+note8: text, F-067), and that finding is the row-keyed comparison's to
+note9: remove, not this rule's to pin. tests/test_param_rows.py pins the
+note10: one-appended shape on the delta. The marked row is the only one a
+note11: tax-ignoring bug can fail; the appended rows are ones it cannot.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 105.0),
+        ([], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, marks=pytest.mark.skip),
+        ([], 0.0),
+        ([0.0], 0.0),
+        ([0.0, 0.0], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

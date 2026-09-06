@@ -1,0 +1,39 @@
+=== meta ===
+rule: TEST_DISABLED
+title: Renaming a parametrize case id changes no test item
+note: Row identity is the cell values, not the id pytest prints. Renaming
+note2: an id rewrites the decorator text and must stay silent, or every
+note3: readability edit to a table becomes a finding. Both rows run on both
+note4: sides and the row a tax-ignoring bug fails still fails.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, id="two-fifties"),
+        pytest.param([], 0.0, id="empty"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, id="pair-of-fifties"),
+        pytest.param([], 0.0, id="no-items"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+title: Stacked parametrize tables that each skip one row and append one
+note: Two decorators of two rows are four test items. Marking one row in
+note2: each and appending one to each keeps both live counts (2 -> 2) and
+note3: the product (4 -> 4), while three of the four original items no
+note4: longer run. tests/test_param_rows.py pins the number 3 -- not 2
+note5: (rows) and not 4 (the sum of each table's loss times the other's
+note6: after-live rows, which double-counts the item that lost both rows).
+note7: The marked items row is the only one a tax-ignoring bug can fail.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize("rate", [0.05, 0.1])
+@pytest.mark.parametrize("items", [[50.0, 50.0], []])
+def test_invoice_total_applies_tax(items, rate):
+    assert invoice_total(items, rate) == round(sum(items) * (1 + rate), 2)
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize("rate", [pytest.param(0.05, marks=pytest.mark.skip), 0.1, 0.2])
+@pytest.mark.parametrize(
+    "items",
+    [pytest.param([50.0, 50.0], marks=pytest.mark.skip), [], [0.0]],
+)
+def test_invoice_total_applies_tax(items, rate):
+    assert invoice_total(items, rate) == round(sum(items) * (1 + rate), 2)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
