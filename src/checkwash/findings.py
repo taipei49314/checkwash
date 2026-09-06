@@ -10,7 +10,9 @@ from dataclasses import dataclass, field
 from checkwash.change import EngineError
 from checkwash.ir.model import FileIR, normalize_text
 
-CHANGE_FINGERPRINT_RULES = frozenset({"GUARDRAIL_TOUCHED", "CI_WORKFLOW_TOUCHED"})
+CHANGE_FINGERPRINT_RULES = frozenset({
+    "GUARDRAIL_TOUCHED", "CI_WORKFLOW_TOUCHED", "TEST_FILE_UNPARSEABLE",
+})
 _CHANGE_DIGEST = re.compile(r"v2:[0-9a-f]{64}\Z")
 _CONTENT_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 

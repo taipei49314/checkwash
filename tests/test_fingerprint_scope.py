@@ -17,7 +17,7 @@ from checkwash.allowlist import (
 from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
-from checkwash.detectors.globals_rules import detect_ci_touched, detect_guardrail
+from checkwash.detectors.globals_rules import detect_ci_touched, detect_guardrail, detect_unparseable_test
 from checkwash.engine import _classify_allowlist_change, analyze
 from checkwash.findings import fingerprint_issue, make_change_fingerprint, make_fingerprint
 from checkwash.ir.model import ChangeEvidence, IR, to_jsonable
@@ -229,3 +229,19 @@ def test_sarif_versions_only_the_changed_identity_scheme():
     keys = {result["ruleId"]: result["partialFingerprints"] for result in results}
     assert keys["GUARDRAIL_TOUCHED"] == {"checkwash/v2": _fingerprint()}
     assert keys["ASSERT_REMOVED"] == {"checkwash/v1": unchanged}
+
+
+def test_unparseable_identity_binds_content_pair_and_parser_state():
+    path = "tests/test_api.py"
+    before, after = b"VALUE = 5\nassert VALUE == 5\n", b"VALUE = (\nassert VALUE == 5\n"
+    ir, findings, _ = _analyze(before, after, path=path)
+    hit = next(f for f in findings if f.rule == "TEST_FILE_UNPARSEABLE")
+    assert hit.severity == "high" and hit.fingerprint.startswith(f"TEST_FILE_UNPARSEABLE/{path}/-/v2:")
+    ir.globals.unparseable_tests = [(path, False)]
+    assert detect_unparseable_test(ir)[0].fingerprint != hit.fingerprint
+    for changed_before, changed_after in [(before + b"# earlier\n", after), (before, after + b"# later\n")]:
+        _, changed, _ = _analyze(changed_before, changed_after, path=path)
+        assert next(f for f in changed if f.rule == hit.rule).fingerprint != hit.fingerprint
+    ir.files.clear()
+    with pytest.raises(EngineError, match="missing.*evidence"):
+        detect_unparseable_test(ir)

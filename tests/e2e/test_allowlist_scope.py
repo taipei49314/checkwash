@@ -79,6 +79,34 @@ def repo(tmp_path):
     return tmp_path
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+def test_parser_approval_cannot_hide_a_later_parser_regression(repo, legacy):
+    path, rule = "tests/test_api.py", "TEST_FILE_UNPARSEABLE"
+    _write(repo, path, b"VALUE = (\n")
+    _commit(repo, path)
+    _write(repo, path, b"VALUE = (\n# known unsupported file\n")
+    _, _, first = _check(repo, rule)
+    key = _legacy(rule, path) if legacy else first["fingerprint"]
+    _write(repo, ".greenwash/allow.toml", _ledger(key, "ASSERT_REMOVED" if legacy else None))
+    _commit(repo, ".greenwash/allow.toml")
+    _, _, exact = _check(repo, rule)
+    assert exact["allowlisted"] is (not legacy)
+    _commit(repo, path)
+    _write(repo, path, b"VALUE = 5\nassert VALUE == 5\n")
+    _commit(repo, path)
+    _write(repo, path, b"VALUE = (\nassert VALUE == 5\n")
+    _commit(repo, path)
+    result, payload, later = _check(repo, rule, "HEAD~1..HEAD")
+    assert result.returncode == 1 and payload["verdict"] == "block"
+    assert later["severity"] == "high" and not later["allowlisted"]
+    assert later["fingerprint"] != key
+    assert [f["rule"] for f in payload["findings"]] == [rule]
+    if legacy:
+        assert b"retired" in result.stderr and key.encode() in result.stderr
+        refused = _cli(repo, "allow", key, "--reason", "retired parser key")
+        assert refused.returncode == 2
+
+
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=["guardrail", "ci"])
 @pytest.mark.parametrize("directory", [".checkwash", ".greenwash"])
 @pytest.mark.parametrize("spoof_rule", [False, True])

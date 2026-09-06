@@ -76,6 +76,19 @@ __all__ = [
 _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"})
 
 
+def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
+    """Retain content identities only; canonicalize CRLF without erasing bytes."""
+    return ChangeEvidence(
+        before_sha256=(hashlib.sha256(change.before.replace(b"\r\n", b"\n")).hexdigest()
+                       if change.before is not None else None),
+        after_sha256=(hashlib.sha256(change.after.replace(b"\r\n", b"\n")).hexdigest()
+                      if change.after is not None else None),
+        old_path=change.old_path.replace("\\", "/") if change.old_path else None,
+        rename_to=(rename_destinations.get(change.path.replace("\\", "/"))
+                   if change.status == "deleted" else None),
+    )
+
+
 def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChange]:
     """A rename that moves a test file out of collection is a disappearance.
 
@@ -440,18 +453,7 @@ def build_ir(
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         if role in ("ci", "guardrail"):
-            file_ir.change_evidence = ChangeEvidence(
-                before_sha256=(
-                    hashlib.sha256(change.before.replace(b"\r\n", b"\n")).hexdigest()
-                    if change.before is not None else None
-                ),
-                after_sha256=(
-                    hashlib.sha256(change.after.replace(b"\r\n", b"\n")).hexdigest()
-                    if change.after is not None else None
-                ),
-                old_path=change.old_path.replace("\\", "/") if change.old_path else None,
-                rename_to=rename_destinations.get(path) if change.status == "deleted" else None,
-            )
+            file_ir.change_evidence = _change_evidence(change, rename_destinations)
         parsed_for_helpers = after_parsed if after_parsed and after_parsed.parse_ok else before_parsed
         if parsed_for_helpers is not None and parsed_for_helpers.parse_ok:
             file_ir.helper_calls = dict(parsed_for_helpers.helper_calls)
@@ -468,6 +470,7 @@ def build_ir(
             if role in ("test", "conftest") and change.status != "deleted":
                 was_parseable = before_parsed is not None and before_parsed.parse_ok
                 g.unparseable_tests.append((path, was_parseable))
+                file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
         if role in ("test", "conftest") and after_parsed and after_parsed.parse_ok:
             g.test_file_imports[path] = list(after_parsed.imports)

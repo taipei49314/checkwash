@@ -268,8 +268,8 @@ class FileIR:
     # Same-file helper name -> callee leaves. Repair evidence follows one
     # hop through a helper the unit actually invokes (T1.9).
     helper_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    # Required by the v2 file-wide CI/guardrail fingerprint scheme. Other
-    # roles need no extra hashing. An absent record is not a legacy fallback.
+    # Required by content-bound finding identities. Populated only for
+    # relevant evidence; an absent record is not a legacy fallback.
     change_evidence: ChangeEvidence | None = None
 
 

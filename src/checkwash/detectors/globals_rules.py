@@ -55,8 +55,11 @@ def detect_unparseable_test(ir: IR) -> list[Finding]:
     A file that parsed on the base side and stopped parsing on the head side
     is the suspicious transition and carries no de-escalation.
     """
+    files = {file.path: file for file in ir.files}
     findings = []
     for path, was_parseable in ir.globals.unparseable_tests:
+        if path not in files:
+            raise EngineError(f"TEST_FILE_UNPARSEABLE/{path}: missing file evidence")
         findings.append(
             Finding(
                 rule="TEST_FILE_UNPARSEABLE",
@@ -68,7 +71,9 @@ def detect_unparseable_test(ir: IR) -> list[Finding]:
                 path=path,
                 unit=None,
                 after=Evidence(text=path, span=(0, 0)),
-                fingerprint=make_fingerprint("TEST_FILE_UNPARSEABLE", path, None, path),
+                fingerprint=make_change_fingerprint(
+                    "TEST_FILE_UNPARSEABLE", files[path], {"was_parseable": was_parseable},
+                ),
             )
         )
     return findings
