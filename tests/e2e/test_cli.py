@@ -110,7 +110,7 @@ def test_sarif_format_is_github_code_scanning_subset(repo):
     assert hit["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == (
         "tests/test_billing.py"
     )
-    assert hit["locations"][0]["physicalLocation"]["region"]["startLine"] == 1
+    assert hit["locations"][0]["physicalLocation"]["region"] == {"startLine": 6}
     assert hit["partialFingerprints"]["checkwash/v1"]
     again = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
     assert again.stdout == result.stdout
@@ -125,6 +125,17 @@ def test_sarif_pass_is_empty_results(repo):
     payload = json.loads(result.stdout)
     assert payload["runs"][0]["results"] == []
     assert payload["runs"][0]["tool"]["driver"]["rules"] == []
+
+
+def test_sarif_range_uses_committed_snapshot_not_current_worktree(repo):
+    _weaken(repo)
+    _git(repo, "commit", "-am", "weaken at line six")
+    test_file = repo / "tests" / "test_billing.py"
+    test_file.write_text("\n" * 3 + test_file.read_text(encoding="utf-8"), encoding="utf-8")
+    committed = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
+    assert committed.returncode == 1, committed.stderr
+    hit = next(r for r in json.loads(committed.stdout)["runs"][0]["results"] if r["ruleId"] == "ASSERT_WEAKENED")
+    assert hit["locations"][0]["physicalLocation"]["region"] == {"startLine": 6}
 
 
 def test_clean_range_passes(repo):

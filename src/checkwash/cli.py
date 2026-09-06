@@ -34,6 +34,7 @@ from checkwash.gitio import (
 )
 from checkwash.report.jsonout import findings_to_json, ir_to_json
 from checkwash.report.sarif import findings_to_sarif
+from checkwash.report.context import ReportContext
 from checkwash.report.term import render
 from checkwash.sweep import sweep
 
@@ -199,6 +200,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     if found_manifest:
         known_modules = known_baseline() | declared
 
+    report_context = ReportContext() if args.format == "sarif" else None
     ir, findings, verdict = analyze(
         changes,
         config,
@@ -211,6 +213,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
+        report_context=report_context,
     )
 
     if args.emit_ir:
@@ -219,7 +222,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     if args.format == "json":
         _write_machine(findings_to_json(ir, findings, verdict, diagnostics))
     elif args.format == "sarif":
-        _write_machine(findings_to_sarif(ir, findings))
+        _write_machine(findings_to_sarif(ir, findings, report_context))
     elif args.format == "hook-json":
         # Claude Code Stop-hook protocol: JSON on stdout carries the decision,
         # exit 0 either way (non-zero would read as a hook failure).

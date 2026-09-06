@@ -46,6 +46,7 @@ from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.diffalign import align_file
 from checkwash.ir.model import IR, DiffGlobals, normalize_text
 from checkwash.pyenv import known_baseline
+from checkwash.report.context import ReportContext
 from checkwash.roles import (
     _MAX_ORACLE_READS,
     _added_lines,
@@ -216,6 +217,7 @@ def build_ir(
     self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
+    report_context: ReportContext | None = None,
 ) -> IR:
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
@@ -295,6 +297,10 @@ def build_ir(
         else:
             data = None
         if data is not None:
+            if report_context is not None:
+                report_context.snapshot(opath, side, data)
+                if not in_diff:
+                    report_context.snapshot(opath, 1 - side, data)
             parsed = parse_python(
                 data, collect_tests=True, conftest=opath.endswith("conftest.py")
             )
@@ -329,25 +335,34 @@ def build_ir(
         for unit in parsed.units:
             uside = unit.side
             extra = []
+
+            def inherit(assertions, source_path):
+                extra.extend(assertions)
+                if report_context is not None:
+                    for assertion in assertions:
+                        report_context.bind(tpath, side, assertion, source_path)
+
             requested = list(uside.params)
             conftest = None
             if requested and any(p not in parsed.fixture_asserts for p in requested):
                 conftest = _oracle_file(conftest_path, side)
             for p in requested:
                 found = parsed.fixture_asserts.get(p)
+                source_path = tpath
                 if found is None and conftest is not None:
                     found = conftest.fixture_asserts.get(p)
+                    source_path = conftest_path
                 if found:
-                    extra.extend(found)
+                    inherit(found, source_path)
             for name in parsed.autouse_fixtures:
                 if name not in requested:
-                    extra.extend(parsed.fixture_asserts.get(name, ()))
+                    inherit(parsed.fixture_asserts.get(name, ()), tpath)
             if conftest_path in raw_by_path and conftest_path != tpath:
                 c = _oracle_file(conftest_path, side)
                 if c is not None:
                     for name in c.autouse_fixtures:
                         if name not in requested:
-                            extra.extend(c.fixture_asserts.get(name, ()))
+                            inherit(c.fixture_asserts.get(name, ()), conftest_path)
             for n in sorted(set(uside.invoked) & set(parsed.from_imports)):
                 module, orig = parsed.from_imports[n]
                 if "." in module:
@@ -356,7 +371,7 @@ def build_ir(
                     candidate = f"{tdir}/{module}.py" if tdir else f"{module}.py"
                 helper = _oracle_file(candidate, side)
                 if helper is not None:
-                    extra.extend(helper.helper_asserts.get(orig, ()))
+                    inherit(helper.helper_asserts.get(orig, ()), candidate)
             if extra:
                 uside.assertions.extend(replace(a) for a in extra)
                 for i, a in enumerate(uside.assertions):
@@ -399,6 +414,13 @@ def build_ir(
                 before_parsed = parse_javascript(change.before)
             if change.after is not None:
                 after_parsed = parse_javascript(change.after)
+
+        if report_context is not None:
+            if is_python or is_js_test:
+                report_context.snapshot(path, 0, change.before)
+                report_context.snapshot(path, 1, change.after)
+            report_context.parsed(path, 0, before_parsed)
+            report_context.parsed(path, 1, after_parsed)
 
         if after_parsed is not None and after_parsed.parse_ok:
             after_by_path[path] = after_parsed
@@ -826,6 +848,7 @@ def analyze(
     self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
+    report_context: ReportContext | None = None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -837,6 +860,7 @@ def analyze(
         self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
+        report_context=report_context,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)
