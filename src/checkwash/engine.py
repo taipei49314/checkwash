@@ -886,6 +886,10 @@ def build_ir(
             _scan_ci_weakening(g, path, change.before, change.after, ci_base)
         elif role == "snapshot":
             g.snapshot_files_changed.append(path)
+            # Standalone stored-oracle rewrites need both content digests too.
+            # This remains valid when no production file appears in the diff.
+            if change.status == "modified":
+                file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
         if is_python and before_parsed is not None and before_parsed.parse_ok:
             base_literals.update(before_parsed.literals)

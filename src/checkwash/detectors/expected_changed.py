@@ -21,6 +21,7 @@ import re
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.model import Assertion, FileIR, IR
+from checkwash.detectors.snapshot_expectation import detect as detect_stored_expectations
 
 
 def _numeric_comparison(assertion: Assertion):
@@ -100,7 +101,7 @@ def _surface_expected_names(assertion: Assertion) -> tuple[str, ...]:
 
 
 def detect(ir: IR) -> list[Finding]:
-    findings: list[Finding] = []
+    findings: list[Finding] = detect_stored_expectations(ir)
     for file in ir.files:
         if file.role not in ("test", "conftest"):
             continue

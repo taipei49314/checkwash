@@ -1,0 +1,7 @@
+=== meta ===
+rule: none
+note: creating a first stored expectation does not rewrite an existing oracle
+=== after: tests/invoice.expected ===
+105.3
+=== expect ===
+[]

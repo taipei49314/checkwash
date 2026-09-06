@@ -1,0 +1,9 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: an existing stored oracle is rewritten without any implementation change
+=== before: tests/golden/invoice.txt ===
+105.3
+=== after: tests/golden/invoice.txt ===
+104.0
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high"}]

@@ -68,7 +68,10 @@ DEFAULT_ROLES: dict[str, list[str]] = {
         "**/.justfile",
         "**/JUSTFILE",
     ],
-    "snapshot": ["**/__snapshots__/**", "**/golden/**", "**/*.golden", "**/*.snap"],
+    "snapshot": [
+        "**/__snapshots__/**", "**/golden/**", "**/*.golden", "**/*.snap",
+        "**/expected/**", "**/*.expected",
+    ],
     "lockfile": [
         "poetry.lock",
         "uv.lock",
