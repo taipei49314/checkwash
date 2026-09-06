@@ -232,3 +232,15 @@ def test_original_native_assert_span_survives_unicode_comment_and_crlf():
     source = before.decode().replace("\r\n", "\n")
     assert source[slice(*assertion.span)] == 'assert Matches(normalize(" Ab "), "ab")'
     assert findings[0].before.text == 'assert Matches(normalize(" Ab "), "ab")'
+
+
+def test_synthetic_deleted_path_without_raw_provenance_keeps_native_ir():
+    from checkwash.frontends.python.frontend import parse_python
+    from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
+
+    parsed = parse_python(BEFORE, collect_tests=True)
+    assertion = next(unit for unit in parsed.units if unit.qualname == "test_normalize").side.assertions[0]
+    assert assertion.form == "truthy"
+    project_truthiness_oracles(PATH, parsed, None, {"legacy_normalize.py": (BEFORE, BEFORE)},
+                              SNAPSHOT.get, lambda _: list(SNAPSHOT))
+    assert assertion.form == "truthy"

@@ -163,6 +163,11 @@ def _project_side(path, source, parsed, read):
 
 def project_truthiness_oracles(path, before_parsed, after_parsed, raw_by_path, root_reader, root_searcher):
     """Resolve the two source sides independently; unsupported sides stay as-is."""
+    # Rename expansion can synthesize a deleted collected path while the raw
+    # diff is keyed only by its destination. Keep that disappearance's normal
+    # IR; optional scalar projection must not borrow another path's sources.
+    if path not in raw_by_path:
+        return
     before, after = raw_by_path[path]
     if not any(source and b"__bool__" in source for source in (before, after)):
         return
