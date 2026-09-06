@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import stat
 import subprocess
@@ -143,6 +144,29 @@ def stop_handlers(settings: object) -> list[dict]:
                 raise HookInstallError("command hooks require a string command and string args")
         handlers.extend(entry["hooks"])
     return handlers
+
+
+def has_stop_hook(settings: object) -> bool:
+    """Recognize configuration only; never execute it or infer effective policy."""
+    for handler in stop_handlers(settings):
+        if handler.get("type") != "command":
+            continue
+        shape = {key: handler[key] for key in ("type", "command", "args") if key in handler}
+        if is_managed_handler(shape):
+            return True
+        if "args" in handler:
+            words = [handler["command"], *handler["args"]]
+        else:
+            try:
+                words = shlex.split(handler["command"])
+            except ValueError:
+                continue
+        if not words:
+            continue
+        name = words[0].replace("\\", "/").rsplit("/", 1)[-1]
+        if name in {"checkwash", "checkwash.exe", "greenwash", "greenwash.exe"} and words[1:4] == _CHECK_ARGS:
+            return True
+    return False
 
 
 def install_claude(repo: str, local: bool) -> str:

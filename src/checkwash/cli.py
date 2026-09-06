@@ -393,7 +393,7 @@ def build_parser() -> argparse.ArgumentParser:
     hook_install.add_argument(
         "--local",
         action="store_true",
-        help="write .claude/settings.local.json (machine-local, git-ignored) instead of the shared settings.json",
+        help="write machine-local .claude/settings.local.json instead of shared settings.json; this installer does not configure Git ignore",
     )
 
     sub.add_parser("demo", help="replay real tampering cases offline")

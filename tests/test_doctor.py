@@ -514,9 +514,11 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
 
 def test_local_hook_without_ci_and_empty_repo_remain_problems(tmp_path):
     hooked = _repo(tmp_path / "hook", {
-        ".claude/settings.json": json.dumps({"hooks": {"Stop": "checkwash check"}})
+        ".claude/settings.json": json.dumps({"hooks": {"Stop": [{"hooks": [
+            {"type": "command", "command": "checkwash check --format hook-json"}
+        ]}]}})
     })
-    assert _levels(collect(hooked), "runs locally but not in CI") == ["problem"]
+    assert _levels(collect(hooked), "configured locally but not in CI") == ["problem"]
     assert _levels(collect(_repo(tmp_path / "empty", {"README.md": "hello"})), "no checkwash installation found") == ["problem"]
 
 
@@ -612,3 +614,52 @@ def test_unsupported_shape_does_not_get_a_pin_diagnosis(tmp_path):
     detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
     assert "unsupported or ambiguous workflow shape" in detail
     assert "unsupported SHA" not in detail
+
+
+@pytest.mark.parametrize("files", [
+    [".claude/settings.json"], [".claude/settings.local.json"],
+    [".claude/settings.json", ".claude/settings.local.json"],
+])
+def test_doctor_identifies_actual_stop_configuration_paths(tmp_path, files):
+    from checkwash.hooks import build_handler
+
+    settings = json.dumps({"hooks": {"Stop": [{"hooks": [build_handler(True)]}]}})
+    root = _repo(tmp_path, {path: settings for path in files})
+    notes = collect(root)
+    local = [n for n in notes if "configured locally but not in CI" in n.title]
+    assert len(local) == 1
+    for path in files:
+        assert path in local[0].detail
+    assert _levels(notes, "not runtime verification") == ["info"]
+    assert run(str(root), io.StringIO()) == 1
+    _canonical_repo(root)
+    assert run(str(root), io.StringIO()) == 0
+
+
+@pytest.mark.parametrize("settings", [
+    {"comment": "checkwash"}, {"permissions": {"allow": ["Bash(checkwash:*)"]}},
+    {"hooks": {"Stop": "checkwash check"}},
+    {"hooks": {"PreToolUse": [{"hooks": [{"type": "command", "command": "checkwash"}]}]}},
+])
+def test_doctor_does_not_infer_stop_hooks_from_substrings(tmp_path, settings):
+    root = _repo(tmp_path, {".claude/settings.local.json": json.dumps(settings)})
+    notes = collect(root)
+    assert not _levels(notes, "configured locally")
+    assert _levels(notes, "no checkwash installation found") == ["problem"]
+
+
+def test_install_local_then_doctor_accepts_bom_and_does_not_claim_gitignore(tmp_path, capsys):
+    from checkwash.cli import build_parser
+    from checkwash.hooks import install_claude
+
+    root = _repo(tmp_path, {"README.md": "baseline"})
+    install_claude(str(root), True)
+    path = root / ".claude/settings.local.json"
+    path.write_bytes(b"\xef\xbb\xbf" + path.read_bytes())
+    assert _levels(collect(root), "configured locally") == ["problem"]
+    status = _git(root, "status", "--porcelain", "--untracked-files=all").stdout
+    assert "?? .claude/settings.local.json" in status
+    with pytest.raises(SystemExit) as exc:
+        build_parser().parse_args(["hook", "install", "--help"])
+    assert exc.value.code == 0
+    assert "does not configure Git ignore" in " ".join(capsys.readouterr().out.split())

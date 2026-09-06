@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import re
 import stat
@@ -12,6 +13,7 @@ from pathlib import Path
 
 from checkwash.config import resolve_config_file
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, summarize_allowlist
+from checkwash.hooks import HookInstallError, has_stop_hook
 
 
 @dataclass
@@ -394,8 +396,18 @@ def _workflow_gates(root: Path) -> tuple[list[tuple[str, str]], list[str]]:
 def collect(root: Path) -> list[Note]:
     notes: list[Note] = []
     jobs, incomplete = _workflow_gates(root)
-    settings_blob = _read(root / ".claude" / "settings.json")
-    hook_installed = "checkwash" in settings_blob or "greenwash" in settings_blob
+    hook_paths = []
+    hook_issues = []
+    for relative in (".claude/settings.json", ".claude/settings.local.json"):
+        path = root / relative
+        if not path.exists():
+            continue
+        try:
+            settings = json.loads(path.read_text(encoding="utf-8-sig"))
+            if has_stop_hook(settings):
+                hook_paths.append(relative)
+        except (OSError, ValueError, HookInstallError) as exc:
+            hook_issues.append(f"{relative}: {exc}")
     precommit_blob = _read(root / ".pre-commit-config.yaml")
     precommit_installed = "checkwash" in precommit_blob or "greenwash" in precommit_blob
 
@@ -411,20 +423,31 @@ def collect(root: Path) -> list[Note]:
         ))
     else:
         where = [name for name, present in (
-            ("a Claude Code stop-hook", hook_installed), ("pre-commit", precommit_installed)
+            ("a Claude Code Stop hook configuration in " + ", ".join(hook_paths), bool(hook_paths)),
+            ("pre-commit configuration", precommit_installed),
         ) if present]
         if where:
             notes.append(Note(
-                "problem", "checkwash runs locally but not in CI",
+                "problem", "checkwash is configured locally but not in CI",
                 "Found " + " and ".join(where) + ", and no exact supported workflow under "
                 ".github/workflows. A local hook can be skipped and cannot stop someone else's merge.",
             ))
+
         else:
             notes.append(Note(
                 "problem", "no checkwash installation found",
                 "No exact supported workflow invokes checkwash and no local hook was found. "
                 "See the Required check section of the README.",
             ))
+
+    if hook_paths:
+        notes.append(Note(
+            "info", "local hook configuration is not runtime verification",
+            "Found " + ", ".join(hook_paths) + ". Doctor does not execute Claude or evaluate "
+            "its complete managed/global settings. Verify the Stop event in your Claude runtime.",
+        ))
+    if hook_issues:
+        notes.append(Note("info", "local hook configuration could not be read", "; ".join(hook_issues)))
 
     notes.append(Note(
         "info", "checkwash cannot tell whether the check is *required*",
