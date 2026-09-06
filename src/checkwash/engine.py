@@ -47,6 +47,7 @@ from checkwash.frontends.python.frontend import (
 )
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
+from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
@@ -614,6 +615,14 @@ def build_ir(
                 before_parsed = parse_javascript(change.before)
             if change.after is not None:
                 after_parsed = parse_javascript(change.after)
+
+        if (is_python and role == "test" and collect and len(changes) == 1
+                and change.status == "modified" and change.old_path is None
+                and before_parsed is not None and after_parsed is not None):
+            before_parsed, after_parsed = project_table_consolidation(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher,
+            )
 
         if report_context is not None:
             if is_python or is_js_test:

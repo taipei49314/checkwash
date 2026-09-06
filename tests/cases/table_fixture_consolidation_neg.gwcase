@@ -1,0 +1,25 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+note: literal fixture rows preserve both concrete imported calls and their expectations
+=== before: tests/test_calc.py ===
+from app.calc import add
+
+def test_small():
+    assert add(1, 2) == 3
+
+def test_large():
+    assert add(5, 6) == 11
+=== after: tests/test_calc.py ===
+from app.calc import add
+import pytest
+
+@pytest.fixture(params=[(1, 2, 3), (5, 6, 11)])
+def case(request):
+    return request.param
+
+def test_add(case):
+    a, b, expected = case
+    assert add(a, b) == expected
+=== expect ===
+[]
