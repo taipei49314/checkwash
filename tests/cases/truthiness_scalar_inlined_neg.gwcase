@@ -1,0 +1,27 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: Inlining the same proved scalar equality preserves the oracle
+origin: issue 131 — honest counterpart to the transparent Matches.__bool__ carrier
+=== before: tests/test_normalize.py ===
+from app.normalize import normalize
+
+class Matches:
+    def __init__(self, got, expected):
+        self.got = got
+        self.expected = expected
+
+    def __bool__(self):
+        return self.got == self.expected
+
+def test_normalize():
+    assert Matches(normalize(" Ab "), "ab")
+=== after: tests/test_normalize.py ===
+from app.normalize import normalize
+
+def test_normalize():
+    assert normalize(" Ab ") == "ab"
+=== head: src/app/normalize.py ===
+def normalize(s):
+    return s
+=== expect ===
+[]

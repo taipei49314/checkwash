@@ -48,6 +48,7 @@ from checkwash.frontends.python.frontend import (
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
 from checkwash.frontends.python.table_oracles import project_table_consolidation
+from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
@@ -653,6 +654,7 @@ def build_ir(
             )
 
         if is_python and role == "test" and collect:
+            project_truthiness_oracles(path, before_parsed, after_parsed, raw_by_path, root_reader, root_searcher)
             if before_parsed is not None:
                 _merge_crossfile_oracles(path, before_parsed, 0)
             if after_parsed is not None:

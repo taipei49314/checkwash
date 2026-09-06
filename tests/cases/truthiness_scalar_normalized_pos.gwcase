@@ -1,0 +1,30 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: A transparent scalar-equality carrier cannot hide result normalization
+origin: issue 131 — the reported Matches.__bool__ escape with a closed scalar snapshot
+=== before: tests/test_normalize.py ===
+from app.normalize import normalize
+
+class Matches:
+    def __init__(self, got, expected):
+        self.got = got
+        self.expected = expected
+
+    def __bool__(self):
+        return self.got == self.expected
+
+def test_normalize():
+    assert Matches(normalize(" Ab "), "ab")
+=== after: tests/test_normalize.py ===
+from app.normalize import normalize
+
+def expected_value(s):
+    return s.strip().lower()
+
+def test_normalize():
+    assert expected_value(normalize(" Ab ")) == "ab"
+=== head: src/app/normalize.py ===
+def normalize(s):
+    return s
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high"}]
