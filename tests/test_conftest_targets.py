@@ -117,6 +117,21 @@ def test_changed_target_uses_its_own_snapshot_side():
     assert run(before, before=before, extra=[added], reader={}.get)[2] == "block"
 
 
+def test_module_rename_preserves_preexisting_patch_identity():
+    renamed = FileChange("billing.py", "modified", PRODUCTION, PRODUCTION, old_path="pricing.py")
+    after = PATCH.replace(b"import pricing", b"import billing as pricing")
+    assert run(after, before=PATCH, extra=[renamed], reader={"billing.py": PRODUCTION}.get)[1] == []
+
+
+def test_relative_import_target_is_resolved_in_its_conftest_package():
+    assert run(PATCH.replace(b"import pricing", b"from . import pricing"), head={"tests/pricing.py": PRODUCTION})[2] == "block"
+
+
+def test_invalid_snapshot_value_cannot_prove_module_identity():
+    with pytest.raises(EngineError, match="invalid source bytes"):
+        run(reader=lambda path: False)
+
+
 def git(repo, *args):
     result = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, check=True)
     return result.stdout.decode().strip()

@@ -6,7 +6,15 @@ from checkwash.roles import is_artifact
 
 class ConftestContext:
     def __init__(self, changes, reader):
-        self.changed = {c.path.replace("\\", "/"): (c.before, c.after) for c in changes}
+        self.changed = {}
+        for change in changes:
+            path = change.path.replace("\\", "/")
+            old = (change.old_path or path).replace("\\", "/")
+            if old != path:
+                self.changed[old] = (change.before, None)
+                self.changed[path] = (None, change.after)
+            else:
+                self.changed[path] = (change.before, change.after)
         self.reader = reader
         self.cache = {}
 
@@ -31,7 +39,10 @@ class ConftestContext:
                                 raise EngineError("conftest patch targets require a complete strict snapshot reader")
                             if len(self.cache) >= 128:
                                 raise EngineError("conftest patch target resolution exceeds the snapshot read budget")
-                            self.cache[path] = self.reader(path)
+                            data = self.reader(path)
+                            if data is not None and not isinstance(data, bytes):
+                                raise EngineError("conftest strict snapshot reader returned invalid source bytes")
+                            self.cache[path] = data
                         data = self.cache[path]
                     if data is not None:
                         return True

@@ -66,6 +66,18 @@ def test_unchanged_mock_patch_remains_silent():
     assert run(MOCK_PATCH + b"\n# comment\n", before=MOCK_PATCH)[1] == []
 
 
+def test_import_in_one_conditional_arm_does_not_prove_other_arm_target():
+    source = b'''from unittest.mock import patch
+import requests as pricing
+if condition:
+    import pricing
+else:
+    with patch.object(pricing, "get", return_value=None):
+        pass
+'''
+    assert not any(f.rule == "CONFTEST_PATCHES_PROD" for f in run(source)[1])
+
+
 @pytest.mark.parametrize("mode", ["worktree", "range"])
 @pytest.mark.parametrize("patch_source", [
     MOCK_PATCH,

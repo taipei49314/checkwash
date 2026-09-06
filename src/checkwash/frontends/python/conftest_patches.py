@@ -110,7 +110,7 @@ def patch_calls(tree, source, module_exists, *, module_name="", source_segment=N
                     nested.pop(name, None)
                 for _field, value in ast.iter_fields(statement):
                     if isinstance(value, list) and value and all(isinstance(n, ast.stmt) for n in value):
-                        block(value, nested, inspect=inspect)
+                        block(value, dict(nested), inspect=inspect)
                     elif isinstance(value, ast.expr) and inspect:
                         expression(value, nested)
                     elif isinstance(value, list):
@@ -118,9 +118,9 @@ def patch_calls(tree, source, module_exists, *, module_name="", source_segment=N
                             if isinstance(item, ast.withitem) and inspect:
                                 expression(item.context_expr, nested)
                             elif isinstance(item, ast.ExceptHandler):
-                                block(item.body, nested, inspect=inspect)
+                                block(item.body, dict(nested), inspect=inspect)
                             elif isinstance(item, ast.match_case):
-                                block(item.body, nested, inspect=inspect)
+                                block(item.body, dict(nested), inspect=inspect)
                 for name in _names(statement):
                     bindings.pop(name, None)
                 continue

@@ -61,7 +61,16 @@ def run(stream=None) -> int:
     for name, text in cases:
         case = parse_case(text)
         contract = parse_contract(case.task) if case.task else Contract()
-        _ir, findings, verdict = analyze(case_to_changes(case), Config(), contract, [], _TODAY)
+        head = {path: data.encode("utf-8") for path, data in case.head.items()}
+        _ir, findings, verdict = analyze(
+            case_to_changes(case), Config(), contract, [], _TODAY,
+            head_reader=head.get,
+            # A declarative case is a complete snapshot: omitted paths are
+            # absent, including for conftest target and root-helper probes.
+            root_reader=head.get,
+            root_searcher=lambda needles: [path for path, data in sorted(head.items())
+                                           if any(needle.encode("utf-8") in data for needle in needles)],
+        )
         visible = [f for f in findings if not f.allowlisted]
 
         title = case.meta.get("title", name)
