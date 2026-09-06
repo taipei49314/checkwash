@@ -14,6 +14,7 @@ import operator
 import re
 from dataclasses import dataclass, field
 
+from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.model import Assertion, Handler, Marker, UnitSide, normalize_text
@@ -2722,6 +2723,8 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     raw = normalize_source(data)
     try:
         tree = ast.parse(raw)
+        if collect_tests and "raise" in raw and "AssertionError" in raw:
+            tree = conditional_oracle_carriers(tree)
     except SyntaxError:
         return ParsedFile(parse_ok=False)
     except (RecursionError, ValueError, MemoryError):

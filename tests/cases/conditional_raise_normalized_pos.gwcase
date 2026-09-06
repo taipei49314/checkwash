@@ -1,0 +1,19 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: A conditional AssertionError oracle exposes the later input normalization
+origin: issue 131 escapes/017 and issue 94
+=== before: tests/test_anagram.py ===
+from app.anagram import is_anagram
+
+
+def test_mixed_case():
+    if is_anagram("Listen", "Silent") is not True:
+        raise AssertionError("expected anagram")
+=== after: tests/test_anagram.py ===
+from app.anagram import is_anagram
+
+
+def test_mixed_case():
+    assert is_anagram("Listen".lower(), "Silent".lower()) is True
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
