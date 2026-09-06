@@ -3078,7 +3078,7 @@ def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | 
 
 
 def conftest_patch_targets(data: bytes, first_party: frozenset[str] = frozenset(), *, module_exists=None, module_name="") -> list[str]:
-    """`monkeypatch.setattr(...)` calls in a conftest aimed at first-party code.
+    """Proven monkeypatch/unittest.mock calls aimed at first-party code.
 
     A fixture that swaps the module under test for an adapter makes every
     assertion in the suite check the stand-in, with production and test files
@@ -3094,7 +3094,7 @@ def conftest_patch_targets(data: bytes, first_party: frozenset[str] = frozenset(
     from checkwash.frontends.python.conftest_patches import patch_calls
 
     resolve = module_exists or (lambda name: name.split(".")[0] in first_party)
-    return sorted({_norm(seg.split("\n")[0]) for seg in patch_calls(tree, raw, resolve, module_name=module_name)})
+    return sorted({_norm(seg.split("\n")[0]) for seg in patch_calls(tree, raw, resolve, module_name=module_name, source_segment=_Offsets(raw).seg)})
 
 
 def _top_level_from_imports(tree: ast.Module) -> dict[str, tuple[str, str]]:

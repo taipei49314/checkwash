@@ -34,10 +34,11 @@ def _names(node):
     return set().union(*(_names(n) for n in ast.iter_child_nodes(node)))
 
 
-def patch_calls(tree, source, module_exists, *, module_name=""):
+def patch_calls(tree, source, module_exists, *, module_name="", source_segment=None):
     """Return proven patch calls aimed at repository code, with source text."""
     found = []
     functions = []
+    segment = source_segment or (lambda node: ast.get_source_segment(source, node))
 
     def import_bindings(node, bindings):
         if isinstance(node, ast.Import):
@@ -56,14 +57,21 @@ def patch_calls(tree, source, module_exists, *, module_name=""):
 
     def target(call, bindings):
         api = _resolve(call.func, bindings)
-        if api not in {"@pytest.monkeypatch.setattr", "@pytest.monkeypatch.setitem", "@pytest.monkeypatch.set_attribute"}:
+        if api not in {
+            "@pytest.monkeypatch.setattr", "@pytest.monkeypatch.setitem", "@pytest.monkeypatch.set_attribute",
+            "unittest.mock.patch", "unittest.mock.patch.object",
+        }:
             return False
         arg = call.args[0] if call.args else next((k.value for k in call.keywords if k.arg == "target"), None)
         if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            if api == "unittest.mock.patch.object":
+                return False  # patch.object requires an object, not a string
             # String forms name the attribute too. A bare module is not a
             # valid setattr string target and is not evidence of a patch.
             dotted = arg.value.rsplit(".", 1)[0] if "." in arg.value else ""
         else:
+            if api == "unittest.mock.patch":
+                return False  # patch requires a qualified string target
             dotted = _resolve(arg, bindings) or ""
         if dotted == "@pytest.request.module" or dotted.startswith("@pytest.request.module."):
             return True
@@ -73,7 +81,7 @@ def patch_calls(tree, source, module_exists, *, module_name=""):
         if isinstance(node, (ast.Lambda, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             return  # these introduce another lexical scope
         if isinstance(node, ast.Call) and target(node, bindings):
-            found.append(ast.get_source_segment(source, node) or ast.unparse(node))
+            found.append(segment(node) or ast.unparse(node))
         for child in ast.iter_child_nodes(node):
             expression(child, bindings)
 

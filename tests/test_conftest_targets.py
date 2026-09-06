@@ -123,7 +123,7 @@ def git(repo, *args):
 
 
 @pytest.mark.parametrize("mode", ["worktree", "range"])
-def test_real_pytest_standin_is_blocked_without_production_diff(tmp_path, mode):
+def test_real_pytest_standin_is_blocked_without_production_diff(tmp_path, mode, patch_source=PATCH):
     git(tmp_path, "init", "-b", "main")
     git(tmp_path, "config", "user.name", "checkwash-test")
     git(tmp_path, "config", "user.email", "test@example.invalid")
@@ -136,9 +136,11 @@ def test_real_pytest_standin_is_blocked_without_production_diff(tmp_path, mode):
     env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
     baseline = subprocess.run([sys.executable, "-m", "pytest", "-q"], cwd=tmp_path, env=env, capture_output=True)
     assert baseline.returncode == 1
-    (tmp_path / "tests/conftest.py").write_bytes(PATCH)
+    assert b"assert 0 == 5" in baseline.stdout
+    (tmp_path / "tests/conftest.py").write_bytes(patch_source)
     repaired = subprocess.run([sys.executable, "-m", "pytest", "-q"], cwd=tmp_path, env=env, capture_output=True)
     assert repaired.returncode == 0, repaired.stdout
+    assert b"1 passed" in repaired.stdout
     args = []
     if mode == "range":
         git(tmp_path, "add", "tests/conftest.py")

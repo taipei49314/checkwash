@@ -1,0 +1,18 @@
+=== meta ===
+bypass: 60
+rule: CONFTEST_PATCHES_PROD
+title: an aliased unittest.mock patch string replaces unchanged production
+origin: GitHub issue 128 canonical context-manager stand-in
+=== after: tests/conftest.py ===
+import pytest
+from unittest.mock import patch as replace
+
+@pytest.fixture(autouse=True)
+def replace_total():
+    with replace("pricing.total", return_value=5):
+        yield
+=== head: src/pricing.py ===
+def total():
+    return 0
+=== expect ===
+[{"rule": "CONFTEST_PATCHES_PROD", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

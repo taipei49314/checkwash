@@ -1,0 +1,17 @@
+=== meta ===
+rule: CONFTEST_PATCHES_PROD
+title: unittest.mock patch of an external dependency remains hygiene
+origin: GitHub issue 128 first-party-only boundary
+=== after: tests/conftest.py ===
+import pytest
+from unittest.mock import patch
+
+@pytest.fixture(autouse=True)
+def no_network():
+    with patch("requests.get", return_value=None):
+        yield
+=== head: pricing.py ===
+def total():
+    return 0
+=== expect ===
+[]
