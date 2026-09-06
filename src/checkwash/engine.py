@@ -47,6 +47,7 @@ from checkwash.frontends.python.frontend import (
 )
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
+from checkwash.frontends.python.table_normalization import mark_table_normalization
 from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
 from checkwash.gating import apply_gates, unit_is_live
@@ -1066,6 +1067,7 @@ def build_ir(
                     if pu.side.body_hash in wanted and unit_is_live(pu.side, consts):
                         found.add(pu.side.body_hash)
             g.duplicate_unit_hashes = sorted(found)
+    mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
     mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
     return ir
 
