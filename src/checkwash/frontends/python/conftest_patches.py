@@ -8,11 +8,19 @@ or arbitrary objects merely named ``monkeypatch``.
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
+
+
+@dataclass
+class _Patcher:
+    call: ast.Call
+    bindings: dict
 
 
 def _resolve(node, bindings):
     if isinstance(node, ast.Name):
-        return bindings.get(node.id)
+        value = bindings.get(node.id)
+        return value if isinstance(value, str) else None
     if isinstance(node, ast.Attribute):
         base = _resolve(node.value, bindings)
         return f"{base}.{node.attr}" if base else None
@@ -77,11 +85,33 @@ def patch_calls(tree, source, module_exists, *, module_name="", source_segment=N
             return True
         return bool(dotted) and module_exists(dotted)
 
-    def expression(node, bindings):
+    def patcher(node, bindings):
+        if isinstance(node, ast.Name):
+            value = bindings.get(node.id)
+            return value if isinstance(value, _Patcher) else None
+        if isinstance(node, ast.Call) and _resolve(node.func, bindings) in {
+            "unittest.mock.patch", "unittest.mock.patch.object",
+        }:
+            return _Patcher(node, dict(bindings))
+        return None
+
+    def activate(node, bindings):
+        value = patcher(node, bindings)
+        if value is not None and target(value.call, value.bindings):
+            found.append(segment(value.call) or ast.unparse(value.call))
+
+    def expression(node, bindings, *, activated=False):
         if isinstance(node, (ast.Lambda, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             return  # these introduce another lexical scope
-        if isinstance(node, ast.Call) and target(node, bindings):
-            found.append(segment(node) or ast.unparse(node))
+        if activated:
+            activate(node, bindings)
+        if isinstance(node, ast.Call):
+            api = _resolve(node.func, bindings)
+            if api and api.startswith("@pytest.monkeypatch.") and target(node, bindings):
+                found.append(segment(node) or ast.unparse(node))
+            if (isinstance(node.func, ast.Attribute) and node.func.attr == "start"
+                    and not node.args and not node.keywords):
+                activate(node.func.value, bindings)
         for child in ast.iter_child_nodes(node):
             expression(child, bindings)
 
@@ -93,7 +123,7 @@ def patch_calls(tree, source, module_exists, *, module_name="", source_segment=N
             if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if inspect:
                     for decorator in statement.decorator_list:
-                        expression(decorator, bindings)
+                        expression(decorator, bindings, activated=True)
                     if defer:
                         fixture = any(_resolve(d.func if isinstance(d, ast.Call) else d, bindings) == "pytest.fixture" for d in statement.decorator_list)
                         functions.append((statement, fixture))
@@ -108,6 +138,7 @@ def patch_calls(tree, source, module_exists, *, module_name="", source_segment=N
                 nested = dict(bindings)
                 for name in _names(statement):
                     nested.pop(name, None)
+                entering = dict(bindings)
                 for _field, value in ast.iter_fields(statement):
                     if isinstance(value, list) and value and all(isinstance(n, ast.stmt) for n in value):
                         block(value, dict(nested), inspect=inspect)
@@ -116,7 +147,12 @@ def patch_calls(tree, source, module_exists, *, module_name="", source_segment=N
                     elif isinstance(value, list):
                         for item in value:
                             if isinstance(item, ast.withitem) and inspect:
-                                expression(item.context_expr, nested)
+                                # Enter before binding ``as`` targets or
+                                # executing writes in the managed body.
+                                expression(item.context_expr, entering, activated=True)
+                                if item.optional_vars is not None:
+                                    for name in _names(item.optional_vars):
+                                        entering.pop(name, None)
                             elif isinstance(item, ast.ExceptHandler):
                                 block(item.body, dict(nested), inspect=inspect)
                             elif isinstance(item, ast.match_case):
@@ -127,8 +163,17 @@ def patch_calls(tree, source, module_exists, *, module_name="", source_segment=N
             if inspect:
                 expression(statement, bindings)
             assigned = _names(statement)
+            constructed = patcher(statement.value, bindings) if isinstance(statement, (ast.Assign, ast.AnnAssign)) else None
             for name in assigned:
                 bindings.pop(name, None)
+            if constructed is not None:
+                # Constructors are inert until a with/decorator/start use.
+                # Record only direct name bindings; destructuring does not
+                # establish which runtime object a later name denotes.
+                targets = statement.targets if isinstance(statement, ast.Assign) else [statement.target]
+                for item in targets:
+                    if isinstance(item, ast.Name):
+                        bindings[item.id] = constructed
             # A locally constructed pytest MonkeyPatch has the same API as
             # the builtin fixture. Arbitrary constructor results do not.
             if isinstance(statement, (ast.Assign, ast.AnnAssign)) and isinstance(statement.value, ast.Call):
