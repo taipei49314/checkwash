@@ -291,8 +291,6 @@ repos:
 
 
 def _cmd_hook_install(args: argparse.Namespace) -> int:
-    import json as _json
-
     if args.agent == "pre-commit":
         if args.local:
             print("error: --local applies to --agent claude-code only", file=sys.stderr)
@@ -301,48 +299,16 @@ def _cmd_hook_install(args: argparse.Namespace) -> int:
         sys.stdout.write(_PRECOMMIT_SNIPPET.format(version=__version__))
         return 0
 
-    # settings.local.json is Claude Code's machine-local file (conventionally
-    # git-ignored). It exists as a target because installing into the shared
-    # settings.json edits a guardrail file inside the repo — a change this
-    # tool's own GUARDRAIL_TOUCHED detector then flags on the next diff. A
-    # first-party installer should not force a guardrail commit just to try
-    # the gate: trial locally, share by choice.
-    filename = "settings.local.json" if args.local else "settings.json"
-    settings_path = os.path.join(args.repo, ".claude", filename)
-    settings: dict = {}
-    if os.path.exists(settings_path):
-        # utf-8-sig, not utf-8: Windows tooling routinely writes settings.json
-        # with a BOM (PowerShell 5.1's `Out-File -Encoding utf8` always does),
-        # and json.load rejects a BOM outright — so the installer refused
-        # perfectly healthy files as "not valid JSON". The sig codec accepts
-        # both forms; the write below normalizes to BOM-less UTF-8.
-        with open(settings_path, encoding="utf-8-sig") as fh:
-            try:
-                settings = _json.load(fh)
-            except _json.JSONDecodeError:
-                print(f"error: {settings_path} is not valid JSON; not touching it", file=sys.stderr)
-                return 2
-    command = "checkwash check --format hook-json"
-    hooks = settings.setdefault("hooks", {})
-    stop = hooks.setdefault("Stop", [])
-    already = any(
-        h.get("command") == command
-        for entry in stop
-        if isinstance(entry, dict)
-        for h in entry.get("hooks", [])
-        if isinstance(h, dict)
-    )
-    if not already:
-        stop.append({"hooks": [{"type": "command", "command": command}]})
-    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
-    with open(settings_path, "w", encoding="utf-8", newline="\n") as fh:
-        _json.dump(settings, fh, indent=2, sort_keys=True)
-        fh.write("\n")
-    print(
-        f"{'already installed' if already else 'installed'}: Stop hook in {settings_path}\n"
-        "checkwash will run when the agent finishes and block the stop on high findings."
-    )
+    from checkwash.hooks import HookInstallError, install_claude
+
+    try:
+        message = install_claude(args.repo, args.local)
+    except HookInstallError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    _write_term(message)
     return 0
+
 
 
 def _toml_str(value: str) -> str:

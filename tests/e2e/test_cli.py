@@ -248,38 +248,41 @@ def test_hook_json_clean_is_empty_object(repo):
 def test_hook_install_merges_existing_settings(repo):
     claude_dir = repo / ".claude"
     claude_dir.mkdir()
-    (claude_dir / "settings.json").write_text(
+    (claude_dir / "settings.local.json").write_text(
         '{"permissions": {"allow": ["Bash(pytest:*)"]}}', encoding="utf-8"
     )
-    result = _checkwash(repo, "hook", "install", "--agent", "claude-code")
+    result = _checkwash(repo, "hook", "install", "--agent", "claude-code", "--local")
     assert result.returncode == 0, result.stderr
-    settings = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
+    settings = json.loads((claude_dir / "settings.local.json").read_text(encoding="utf-8"))
     assert settings["permissions"]["allow"] == ["Bash(pytest:*)"]  # preserved
     commands = [
         h["command"]
         for entry in settings["hooks"]["Stop"]
         for h in entry["hooks"]
     ]
-    assert "checkwash check --format hook-json" in commands
+    from checkwash.hooks import is_managed_handler
+
+    assert len(commands) == 1
+    assert is_managed_handler(settings["hooks"]["Stop"][0]["hooks"][0])
     # idempotent
-    again = _checkwash(repo, "hook", "install", "--agent", "claude-code")
+    again = _checkwash(repo, "hook", "install", "--agent", "claude-code", "--local")
     assert again.returncode == 0
-    settings2 = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
+    settings2 = json.loads((claude_dir / "settings.local.json").read_text(encoding="utf-8"))
     assert settings2 == settings
 
 
 def test_hook_install_reads_bom_settings(repo):
     # PowerShell 5.1's `Out-File -Encoding utf8` writes a BOM; the installer
-    # used to refuse such a settings.json as invalid JSON (field finding,
+    # used to refuse such a settings.local.json as invalid JSON (field finding,
     # 2026-09-01). The merge must succeed and preserve the existing keys.
     claude_dir = repo / ".claude"
     claude_dir.mkdir()
-    (claude_dir / "settings.json").write_bytes(
+    (claude_dir / "settings.local.json").write_bytes(
         '{"permissions": {"allow": ["Bash(pytest:*)"]}}'.encode("utf-8-sig")
     )
-    result = _checkwash(repo, "hook", "install", "--agent", "claude-code")
+    result = _checkwash(repo, "hook", "install", "--agent", "claude-code", "--local")
     assert result.returncode == 0, result.stderr
-    raw = (claude_dir / "settings.json").read_bytes()
+    raw = (claude_dir / "settings.local.json").read_bytes()
     assert not raw.startswith(b"\xef\xbb\xbf")  # write normalizes the BOM away
     settings = json.loads(raw.decode("utf-8"))
     assert settings["permissions"]["allow"] == ["Bash(pytest:*)"]
@@ -288,7 +291,10 @@ def test_hook_install_reads_bom_settings(repo):
         for entry in settings["hooks"]["Stop"]
         for h in entry["hooks"]
     ]
-    assert "checkwash check --format hook-json" in commands
+    from checkwash.hooks import is_managed_handler
+
+    assert len(commands) == 1
+    assert is_managed_handler(settings["hooks"]["Stop"][0]["hooks"][0])
 
 
 def test_hook_install_local_targets_local_settings(repo):
@@ -306,7 +312,10 @@ def test_hook_install_local_targets_local_settings(repo):
         for entry in settings["hooks"]["Stop"]
         for h in entry["hooks"]
     ]
-    assert "checkwash check --format hook-json" in commands
+    from checkwash.hooks import is_managed_handler
+
+    assert len(commands) == 1
+    assert is_managed_handler(settings["hooks"]["Stop"][0]["hooks"][0])
     # idempotent, same as the shared path
     again = _checkwash(repo, "hook", "install", "--agent", "claude-code", "--local")
     assert again.returncode == 0
