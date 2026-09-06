@@ -7,7 +7,14 @@ SCOPE_DRIFT, HIDDEN_UNICODE.
 
 from __future__ import annotations
 
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.change import EngineError
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    change_identity,
+    make_change_fingerprint,
+    make_fingerprint,
+)
 from checkwash.ir.model import IR
 
 
@@ -15,6 +22,11 @@ def detect_snapshot_cochange(ir: IR) -> list[Finding]:
     g = ir.globals
     if not g.snapshot_files_changed or not g.prod_files_changed or g.test_logic_changed:
         return []
+    files = {file.path: file for file in ir.files}
+    for path in sorted(set(g.snapshot_files_changed) | set(g.prod_files_changed)):
+        if path not in files:
+            raise EngineError(f"SNAPSHOT_CODE_COCHANGE/{path}: missing file evidence")
+    production = [change_identity(files[path]) for path in sorted(set(g.prod_files_changed))]
     return [
         Finding(
             rule="SNAPSHOT_CODE_COCHANGE",
@@ -25,7 +37,10 @@ def detect_snapshot_cochange(ir: IR) -> list[Finding]:
             ),
             path=path,
             unit=None,
-            fingerprint=make_fingerprint("SNAPSHOT_CODE_COCHANGE", path, None, path),
+            fingerprint=make_change_fingerprint(
+                "SNAPSHOT_CODE_COCHANGE", files[path],
+                {"production_changes": production, "test_logic_changed": g.test_logic_changed},
+            ),
         )
         for path in g.snapshot_files_changed
     ]
@@ -54,8 +69,11 @@ def detect_unparseable_test(ir: IR) -> list[Finding]:
     A file that parsed on the base side and stopped parsing on the head side
     is the suspicious transition and carries no de-escalation.
     """
+    files = {file.path: file for file in ir.files}
     findings = []
     for path, was_parseable in ir.globals.unparseable_tests:
+        if path not in files:
+            raise EngineError(f"TEST_FILE_UNPARSEABLE/{path}: missing file evidence")
         findings.append(
             Finding(
                 rule="TEST_FILE_UNPARSEABLE",
@@ -67,7 +85,9 @@ def detect_unparseable_test(ir: IR) -> list[Finding]:
                 path=path,
                 unit=None,
                 after=Evidence(text=path, span=(0, 0)),
-                fingerprint=make_fingerprint("TEST_FILE_UNPARSEABLE", path, None, path),
+                fingerprint=make_change_fingerprint(
+                    "TEST_FILE_UNPARSEABLE", files[path], {"was_parseable": was_parseable},
+                ),
             )
         )
     return findings
@@ -92,12 +112,15 @@ def detect_suppression(ir: IR) -> list[Finding]:
 
 
 def detect_ci_touched(ir: IR) -> list[Finding]:
+    files = {file.path: file for file in ir.files}
     weakened = {path for path, _line in ir.globals.ci_weakening_lines}
     lines_by_path: dict[str, str] = {}
     for path, line in ir.globals.ci_weakening_lines:
         lines_by_path.setdefault(path, line)
     findings = []
     for path in ir.globals.ci_files_changed:
+        if path not in files:
+            raise EngineError(f"CI_WORKFLOW_TOUCHED/{path}: missing file evidence")
         weak = path in weakened
         findings.append(
             Finding(
@@ -110,7 +133,12 @@ def detect_ci_touched(ir: IR) -> list[Finding]:
                 path=path,
                 unit=None,
                 after=Evidence(text=lines_by_path[path], span=(0, 0)) if weak else None,
-                fingerprint=make_fingerprint("CI_WORKFLOW_TOUCHED", path, None, path),
+                fingerprint=make_change_fingerprint(
+                    "CI_WORKFLOW_TOUCHED", files[path],
+                    {"weakening_lines": sorted(
+                        line for p, line in ir.globals.ci_weakening_lines if p == path
+                    )},
+                ),
             )
         )
     return findings
@@ -152,6 +180,10 @@ def _guardrail_message(ir: IR, path: str) -> str:
 
 
 def detect_guardrail(ir: IR) -> list[Finding]:
+    files = {file.path: file for file in ir.files}
+    for path in ir.globals.guardrail_files_changed:
+        if path not in files:
+            raise EngineError(f"GUARDRAIL_TOUCHED/{path}: missing file evidence")
     findings = [
         Finding(
             rule="GUARDRAIL_TOUCHED",
@@ -159,7 +191,13 @@ def detect_guardrail(ir: IR) -> list[Finding]:
             message=_guardrail_message(ir, path),
             path=path,
             unit=None,
-            fingerprint=make_fingerprint("GUARDRAIL_TOUCHED", path, None, path),
+            fingerprint=make_change_fingerprint(
+                "GUARDRAIL_TOUCHED", files[path],
+                {
+                    "created": path in ir.globals.guardrail_files_created,
+                    "created_loosening": path in ir.globals.guardrail_configs_created_loosening,
+                },
+            ),
         )
         for path in ir.globals.guardrail_files_changed
     ]
@@ -197,6 +235,10 @@ def detect_import_unresolved(ir: IR) -> list[Finding]:
 
 
 def detect_scope_drift(ir: IR) -> list[Finding]:
+    files = {file.path: file for file in ir.files}
+    for path, _role in ir.globals.scope_drift:
+        if path not in files:
+            raise EngineError(f"SCOPE_DRIFT/{path}: missing file evidence")
     role_weight = {"prod": "prod", "ci": "ci", "guardrail": "guardrail"}
     return [
         Finding(
@@ -208,7 +250,10 @@ def detect_scope_drift(ir: IR) -> list[Finding]:
             ),
             path=path,
             unit=None,
-            fingerprint=make_fingerprint("SCOPE_DRIFT", path, None, path),
+            fingerprint=make_change_fingerprint(
+                "SCOPE_DRIFT", files[path],
+                {"scope_allow": sorted(set(ir.globals.scope_allow)), "role": role},
+            ),
         )
         for path, role in ir.globals.scope_drift
     ]

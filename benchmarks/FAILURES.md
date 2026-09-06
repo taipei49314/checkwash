@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **117 bypasses** are documented, of which **28 are not closed**.
+- **118 bypasses** are documented, of which **29 are not closed**.
 - The **historical in-sample adjudication** labels **27 of 1800** human-written commits as blocked by mistake (1.50%), each one named below. The sweep JSONs record engine 0.1.46; the adjudication is dated 2026-08-26. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -160,7 +160,7 @@ behind it* unshippable.
 | 98 | Replace an independently derived **call-expression** expectation with a **call to a same-bug twin** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == twin_total(items)` — twin unused at baseline, implements the identical bug | `expected_call_to_twin_pos.gwcase` |
 | 99 | Edit checkwash's own config under its renamed directory — `.checkwash/config.toml` — either a comment change in the same diff as a weakened assertion, or a committed `[detectors] disable`. The path matched no role and was classified production: the comment change granted `REPAIR_EVIDENCE` (verdict pass) and the planted disable produced zero findings; the same edits under `.greenwash/` were critical | `exemption_added_checkwash_pos.gwcase`, `guardrail_checkwash_config_and_weakening_pos.gwcase`, `guardrail_checkwash_config_pos.gwcase` |
 
-## Unclassified (11)
+## Unclassified (12)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -175,6 +175,7 @@ behind it* unshippable.
 | 86j | The expectation lives in a **conftest** fixture, not a same-file one | — |
 | 91a | Everything row 91's reachable set cannot see: subvert the *meaning* of a syntactically strong assertion (`__eq__`/`__bool__`/`__contains__` always true, a swallowing `__exit__`, a no-op `TestResult`, `int()`/`set()`/`bool()` coercion inside the helper, a default `expected` parameter never overridden); make the subject vacuous while keeping the assert (`for n in nums if False`, `mismatches[:0]`, `assert pred` where `pred` was called); compute zero runs (exhausted iterator, unscheduled coroutine, table filtered to passing inputs); put the helper in *another file* (conftest.py, tests/helpers.py); or change unit identity (merge, split, params fixture) | — |
 | 92 | (False positive, and the largest one) Restructure where a test's assertions live, without weakening anything: extract the check into a helper or a `conftest.py`, move it into a fixture's teardown, merge two tests into one, split one into two, drive them from a params fixture, put the comparison behind `operator.eq` or a comparison object's method, replace exact equality with `pytest.approx` and a tolerance | — |
+| 101 | Reuse a path-only exemption for a later unrelated change to a guardrail, CI file, unparseable test, out-of-scope file, or snapshot/production pair | — |
 
 ## False positives on human-written commits
 

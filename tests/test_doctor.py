@@ -514,9 +514,11 @@ def test_linked_workflow_and_local_action_paths_are_never_healthy(tmp_path):
 
 def test_local_hook_without_ci_and_empty_repo_remain_problems(tmp_path):
     hooked = _repo(tmp_path / "hook", {
-        ".claude/settings.json": json.dumps({"hooks": {"Stop": "checkwash check"}})
+        ".claude/settings.json": json.dumps({"hooks": {"Stop": [{"hooks": [
+            {"type": "command", "command": "checkwash check --format hook-json"}
+        ]}]}})
     })
-    assert _levels(collect(hooked), "runs locally but not in CI") == ["problem"]
+    assert _levels(collect(hooked), "configured locally but not in CI") == ["problem"]
     assert _levels(collect(_repo(tmp_path / "empty", {"README.md": "hello"})), "no checkwash installation found") == ["problem"]
 
 
@@ -572,3 +574,92 @@ def test_doctor_sees_the_renamed_config_directory(tmp_path):
     assert "present (.checkwash/allow.toml)" in base_side.detail
     cap = next(note for note in notes if "180 days" in note.title)
     assert "1 entries in .checkwash/allow.toml" in cap.detail
+
+
+def test_untracked_and_index_mismatch_have_actionable_distinct_reasons(tmp_path):
+    root = _repo(tmp_path, {"README.md": "baseline"})
+    path = root / CI / "checkwash.yml"
+    path.parent.mkdir(parents=True)
+    path.write_text(CANONICAL, encoding="utf-8")
+    detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
+    assert "untracked workflow" in detail
+    assert "git add -- .github/workflows/checkwash.yml" in detail
+    assert "a commit is not required" in detail
+    assert run(str(root), io.StringIO()) == 1
+    _stage(root)
+    _healthy(root)
+    path.write_text(CANONICAL + "# reviewed edit\n", encoding="utf-8")
+    detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
+    assert "index and worktree differ" in detail
+    assert "untracked workflow" not in detail
+    _stage(root)
+    _healthy(root)
+
+
+@pytest.mark.parametrize("ref,reason", [
+    ("v0.2.12", "tag or non-SHA ref"),
+    ("283db528cd3d8e5e38173e14d766a8915efa2c90", "unsupported SHA"),
+])
+def test_ref_diagnostics_name_actual_and_required_pins(tmp_path, ref, reason):
+    required = "e05c37f0e1673cdf218ec62fcfb7c6712cce704b"
+    root = _canonical_repo(tmp_path, CANONICAL.replace(required, ref))
+    detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
+    assert reason in detail
+    assert ref in detail and required in detail
+    assert run(str(root), io.StringIO()) == 1
+
+
+def test_unsupported_shape_does_not_get_a_pin_diagnosis(tmp_path):
+    root = _canonical_repo(tmp_path, CANONICAL.replace("on: [pull_request]", "on: push"))
+    detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
+    assert "unsupported or ambiguous workflow shape" in detail
+    assert "unsupported SHA" not in detail
+
+
+@pytest.mark.parametrize("files", [
+    [".claude/settings.json"], [".claude/settings.local.json"],
+    [".claude/settings.json", ".claude/settings.local.json"],
+])
+def test_doctor_identifies_actual_stop_configuration_paths(tmp_path, files):
+    from checkwash.hooks import build_handler
+
+    settings = json.dumps({"hooks": {"Stop": [{"hooks": [build_handler(True)]}]}})
+    root = _repo(tmp_path, {path: settings for path in files})
+    notes = collect(root)
+    local = [n for n in notes if "configured locally but not in CI" in n.title]
+    assert len(local) == 1
+    for path in files:
+        assert path in local[0].detail
+    assert _levels(notes, "not runtime verification") == ["info"]
+    assert run(str(root), io.StringIO()) == 1
+    _canonical_repo(root)
+    assert run(str(root), io.StringIO()) == 0
+
+
+@pytest.mark.parametrize("settings", [
+    {"comment": "checkwash"}, {"permissions": {"allow": ["Bash(checkwash:*)"]}},
+    {"hooks": {"Stop": "checkwash check"}},
+    {"hooks": {"PreToolUse": [{"hooks": [{"type": "command", "command": "checkwash"}]}]}},
+])
+def test_doctor_does_not_infer_stop_hooks_from_substrings(tmp_path, settings):
+    root = _repo(tmp_path, {".claude/settings.local.json": json.dumps(settings)})
+    notes = collect(root)
+    assert not _levels(notes, "configured locally")
+    assert _levels(notes, "no checkwash installation found") == ["problem"]
+
+
+def test_install_local_then_doctor_accepts_bom_and_does_not_claim_gitignore(tmp_path, capsys):
+    from checkwash.cli import build_parser
+    from checkwash.hooks import install_claude
+
+    root = _repo(tmp_path, {"README.md": "baseline"})
+    install_claude(str(root), True)
+    path = root / ".claude/settings.local.json"
+    path.write_bytes(b"\xef\xbb\xbf" + path.read_bytes())
+    assert _levels(collect(root), "configured locally") == ["problem"]
+    status = _git(root, "status", "--porcelain", "--untracked-files=all").stdout
+    assert "?? .claude/settings.local.json" in status
+    with pytest.raises(SystemExit) as exc:
+        build_parser().parse_args(["hook", "install", "--help"])
+    assert exc.value.code == 0
+    assert "does not configure Git ignore" in " ".join(capsys.readouterr().out.split())

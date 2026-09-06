@@ -80,12 +80,22 @@ def judge(case: pathlib.Path) -> tuple[str, list[str]]:
         )
     head = {f"src/{_rel(p, case / 'src')}": p.read_bytes()
             for p in (case / "src").rglob("*.py")}
+    # Strict root-helper callbacks need every file in the synthetic after
+    # tree; the legacy production-only lookup cannot prove absence.
+    snapshot = {f"src/{_rel(p, case / 'src')}": p.read_bytes()
+                for p in (case / "src").rglob("*") if p.is_file()}
+    snapshot.update({_rel(p, after_dir): p.read_bytes()
+                     for p in after_dir.rglob("*") if p.is_file()})
     _ir, findings, verdict = analyze(
         changes, Config(), Contract(), [], TODAY,
         known_modules=known_baseline() | {"app"},  # the corpora ship app.* by construction
         head_reader=head.get,
         head_searcher=lambda needles: [
             p for p, d in sorted(head.items()) if any(n.encode() in d for n in needles)
+        ],
+        root_reader=snapshot.get,
+        root_searcher=lambda needles: [
+            p for p, d in sorted(snapshot.items()) if any(n.encode() in d for n in needles)
         ],
     )
     return verdict, sorted({f"{f.rule}/{f.severity}" for f in findings if not f.allowlisted})

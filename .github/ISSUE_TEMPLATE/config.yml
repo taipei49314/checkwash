@@ -5,7 +5,7 @@ contact_links:
   - name: Check the known-failures page first
     url: https://github.com/taipei49314/checkwash/blob/main/benchmarks/FAILURES.md
     about: >-
-      Every bypass that is still open, every human commit greenwash blocks by
+      Every bypass that is still open, every human commit checkwash blocks by
       mistake, and every cheat a real agent got past it — one generated page.
       If what you found is already there, you have confirmed a known hole
       rather than found a new one, which is still worth saying, and the row
@@ -14,7 +14,7 @@ contact_links:
     url: https://github.com/taipei49314/checkwash/blob/main/THREATMODEL.md
     about: >-
       Rewriting production so a weak test passes honestly is undecidable at
-      the diff layer and out of scope by design; a production file greenwash
+      the diff layer and out of scope by design; a production file checkwash
       cannot read suppresses escalation for the whole diff. Neither is a bug
       report, and both are measured rather than waved away.
   - name: What is frozen and what will change under you

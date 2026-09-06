@@ -5,6 +5,12 @@ One page for a security or platform team evaluating checkwash v0.2.13
 review of its [coverage and adoption cost](stability.md#coverage-and-adoption-cost),
 then protect the deployed check and its policy files.
 
+**Candidate notice:** the unreleased remediation branch changes five
+exemption namespaces and local installation behavior. The public v0.2.13
+artifacts and recommended v0.2.12 Action have not received these fixes.
+Follow the [next-minor migration notes](remediation-upgrade.md); a CLI upgrade
+alone does not update a deployed Action or an existing hook.
+
 ## 1. Required check
 
 A job that runs and is not required does not block a merge. Three steps in
@@ -40,6 +46,14 @@ diff is the PR, not the last commit. A wash split across merged PRs is
 still outside that window — [process-windows.md](process-windows.md).
 
 ## 3. Allowlist — reviewed, time-boxed, base-side
+
+In v0.2.13, GUARDRAIL_TOUCHED, CI_WORKFLOW_TOUCHED,
+TEST_FILE_UNPARSEABLE, SCOPE_DRIFT and SNAPSHOT_CODE_COCHANGE use rule/path
+identities: a per-fingerprint exemption is file-wide for these rules and may
+cover later unrelated content. The candidate binds both snapshots and the
+rule's context, rejects old keys, and requires a newly reviewed v2 approval.
+The expiry limits below do not narrow an old key's scope. Do not mechanically
+rewrite the digest or use a ledger entry to approve its own cleanup.
 
 ```bash
 checkwash allow "ASSERT_WEAKENED/tests/test_x.py/test_x/abcd1234ef56" \

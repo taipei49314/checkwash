@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: importing a root helper cannot hide changing its expected argument from 5 to 4
+=== before: tests/test_calc.py ===
+from calc import add
+
+
+def test_add():
+    assert add(2, 3) == 5
+=== after: tests/test_calc.py ===
+from calc import add
+from test_helpers import assert_equal
+
+
+def test_add():
+    assert_equal(add(2, 3), 4)
+=== after: test_helpers.py ===
+def assert_equal(actual, expected):
+    assert actual == expected
+=== head: calc.py ===
+def add(a, b):
+    return a + b
+=== expect ===
+[{"rule":"EXPECTED_VALUE_CHANGED","severity":"high"}]

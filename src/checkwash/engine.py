@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import datetime
+import hashlib
 from collections import Counter
 from dataclasses import replace
 
@@ -40,12 +41,16 @@ from checkwash.frontends.javascript.frontend import is_js_test_path, parse_javas
 from checkwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
+    normalize_source,
     parse_python,
 )
+from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.gating import apply_gates, unit_is_live
+from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
-from checkwash.ir.model import IR, DiffGlobals, normalize_text
+from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, normalize_text
 from checkwash.pyenv import known_baseline
+from checkwash.report.context import ReportContext
 from checkwash.roles import (
     _MAX_ORACLE_READS,
     _added_lines,
@@ -72,6 +77,19 @@ __all__ = [
 # Roles whose files are supervised for their own sake. Moving a file out of
 # one of these is itself the event, not a neutral relocation.
 _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"})
+
+
+def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
+    """Retain content identities only; canonicalize CRLF without erasing bytes."""
+    return ChangeEvidence(
+        before_sha256=(hashlib.sha256(change.before.replace(b"\r\n", b"\n")).hexdigest()
+                       if change.before is not None else None),
+        after_sha256=(hashlib.sha256(change.after.replace(b"\r\n", b"\n")).hexdigest()
+                      if change.after is not None else None),
+        old_path=change.old_path.replace("\\", "/") if change.old_path else None,
+        rename_to=(rename_destinations.get(change.path.replace("\\", "/"))
+                   if change.status == "deleted" else None),
+    )
 
 
 def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChange]:
@@ -206,6 +224,111 @@ def _canonical_constants(raw: dict[str, str]) -> dict[str, str]:
     return out
 
 
+def _native_assertion_context(
+    data: bytes | None, parsed: ParsedFile | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
+    """Exact surrounding source, with proven native bare-assert spans cut out.
+
+    A raises/with assertion may span executable setup code; inherited asserts
+    can point into a helper. Neither is safe to mask. Unknown/overlapping spans
+    decline the proof rather than guessing where assertion code ends.
+    """
+    if data is None or parsed is None or not parsed.parse_ok:
+        return None
+    source = normalize_source(data)
+    spans = []
+    for unit in parsed.units:
+        for assertion in unit.side.assertions:
+            text = assertion.text
+            if assertion.inherited or not (
+                text.startswith("assert") and len(text) > 6
+                and (text[6].isspace() or text[6] == "(")
+            ):
+                continue
+            if (
+                not isinstance(assertion.span, tuple) or len(assertion.span) != 2
+                or any(type(value) is not int for value in assertion.span)
+            ):
+                return None
+            start, end = assertion.span
+            if not 0 <= start < end <= len(source) or source[start:end] != text:
+                return None
+            spans.append((start, end))
+    if not spans:
+        return None
+    parts = []
+    assertions = []
+    cursor = 0
+    for start, end in sorted(spans):
+        if start < cursor:
+            return None
+        parts.append(source[cursor:start])
+        assertions.append(source[start:end])
+        cursor = end
+    parts.append(source[cursor:])
+    return tuple(parts), tuple(assertions)
+
+
+def _root_importer_changes(changes, config, head_reader, head_searcher):
+    """Read unchanged callers of changed root helpers, once and within caps.
+
+    A file absent from the real diff has the same bytes on both snapshots.
+    Its inherited oracle can still change when a root helper changes. The
+    existing snapshot search/reader APIs supply data; no repository code runs.
+    Unlike a missing refactor credit, an incomplete reverse search could miss
+    a removed oracle, so unavailable/exhausted discovery is an engine error.
+    """
+    modules = {}
+    real_paths = {p.replace("\\", "/") for c in changes for p in (c.path, c.old_path) if p}
+    for change in changes:
+        path = change.path.replace("\\", "/")
+        old_path = (change.old_path or "").replace("\\", "/")
+        if (old_path and old_path != path and "/" not in old_path and old_path.endswith(".py")
+                and change.before is not None and config.role_of(old_path) in ("test", "conftest")
+                and transparent_root_helpers(change.before)):
+            raise EngineError("root assertion helper renames are outside bounded importer analysis")
+        if ("/" in path or not path.endswith(".py") or not path[:-3].isidentifier() or change.before is None
+                or change.before == change.after or config.role_of(path) not in ("test", "conftest")):
+            continue
+        names = transparent_root_helpers(change.before)
+        if names:
+            modules[path[:-3]] = set(names)
+    if not modules:
+        return [], 0, set()
+    if head_reader is None or head_searcher is None:
+        raise EngineError("changed root assertion helpers require snapshot importer search")
+    if len(modules) > _MAX_ORACLE_READS:
+        raise EngineError("root assertion helper search exceeds the module budget")
+    candidates = sorted({p.replace("\\", "/") for p in head_searcher(sorted(modules))})
+    # The existing grep returns at most 64 hits. Exactly 64 can be a truncated
+    # set; never call that a complete review of removed helper assertions.
+    if len(candidates) >= 64:
+        raise EngineError("root assertion helper importer search may be truncated")
+    discovered = []
+    reads = 0
+    for candidate in candidates:
+        path = candidate.replace("\\", "/")
+        if (path in real_paths or not path.endswith(".py") or is_artifact(path)
+                or config.role_of(path) not in ("test", "conftest") or not collectable(path)):
+            continue
+        if path.startswith("/") or ":" in path or any(p in ("", ".", "..") for p in path.split("/")):
+            raise EngineError("root assertion helper search returned an invalid repository path")
+        if reads >= min(_MAX_DUP_READS, _MAX_ORACLE_READS):
+            raise EngineError("root assertion helper importer search exceeds the read budget")
+        data = head_reader(path)
+        reads += 1
+        if data is None:
+            raise EngineError(f"root assertion helper importer snapshot is unavailable: {path}")
+        try:
+            imports = root_imports(data)
+        except (SyntaxError, ValueError, MemoryError, RecursionError):
+            continue
+        if any(module in modules and original in modules[module] for module, original in imports.values()):
+            discovered.append(FileChange(path=path, status="modified", before=data, after=data,
+                                         synthetic="root_helper_importer"))
+    return discovered, reads, set(modules)
+
+
 def build_ir(
     changes: list[FileChange],
     config: Config,
@@ -216,7 +339,12 @@ def build_ir(
     self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
+    report_context: ReportContext | None = None,
+    root_reader=None,
+    root_searcher=None,
 ) -> IR:
+    importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
+    changes = [*changes, *importer_changes]
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
     # Someone else's code = declared, minus the project's own name, minus the
@@ -260,9 +388,13 @@ def build_ir(
         c.path.replace("\\", "/"): (c.before, c.after) for c in changes
     }
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
-    oracle_head_reads = [0]
+    oracle_sources: dict[tuple[str, int], bytes | None] = {}
+    strict_oracle_sources: set[tuple[str, int]] = set()
+    root_import_memo: dict[tuple[str, int], dict] = {}
+    root_projection_memo: dict[tuple[str, int, str], dict] = {}
+    oracle_head_reads = [importer_reads]
 
-    def _oracle_file(opath: str, side: int) -> ParsedFile | None:
+    def _oracle_file(opath: str, side: int, *, strict=False, absence_only=False) -> ParsedFile | None:
         """A test/conftest module parsed for its oracle carriers, or None.
 
         side 0 = base, 1 = head. A file outside the diff is identical on both
@@ -275,26 +407,36 @@ def build_ir(
         base half, which is what makes an extraction's before side resolve
         to nothing — correctly, so in-diff files keep their per-side halves.
 
-        Role is a pure function of the path and is checked before the read:
-        a prod module or a nonexistent sibling candidate must not spend the
-        budget on a file that could never carry an oracle.
+        Oracle reads skip production roles. Strict absence probes must still
+        read them: a production-role package can shadow a test-role module.
         """
         in_diff = opath in raw_by_path
         key = (opath, side if in_diff else -1)
-        if key in oracle_memo:
+        if key in oracle_memo and (not strict or key in strict_oracle_sources):
             return oracle_memo[key]
         parsed: ParsedFile | None = None
-        if config.role_of(opath) not in ("test", "conftest"):
+        oracle_role = config.role_of(opath) in ("test", "conftest")
+        if not oracle_role and not (strict and absence_only):
             oracle_memo[key] = None
             return None
         if in_diff:
             data = raw_by_path[opath][side]
-        elif head_reader is not None and oracle_head_reads[0] < _MAX_ORACLE_READS:
+        elif (root_reader if strict else head_reader) is not None and oracle_head_reads[0] < _MAX_ORACLE_READS:
             oracle_head_reads[0] += 1
-            data = head_reader(opath)
+            data = (root_reader if strict else head_reader)(opath)
         else:
             data = None
-        if data is not None:
+            # Exhausting the read budget is unknown, not an absent sibling.
+            oracle_memo[key] = None
+            return None
+        oracle_sources[key] = data
+        if strict or in_diff:
+            strict_oracle_sources.add(key)
+        if data is not None and oracle_role:
+            if report_context is not None:
+                report_context.snapshot(opath, side, data)
+                if not in_diff:
+                    report_context.snapshot(opath, 1 - side, data)
             parsed = parse_python(
                 data, collect_tests=True, conftest=opath.endswith("conftest.py")
             )
@@ -329,40 +471,110 @@ def build_ir(
         for unit in parsed.units:
             uside = unit.side
             extra = []
+
+            def inherit(assertions, source_path):
+                extra.extend(assertions)
+                if report_context is not None:
+                    for assertion in assertions:
+                        report_context.bind(tpath, side, assertion, source_path)
+
             requested = list(uside.params)
             conftest = None
             if requested and any(p not in parsed.fixture_asserts for p in requested):
                 conftest = _oracle_file(conftest_path, side)
             for p in requested:
                 found = parsed.fixture_asserts.get(p)
+                source_path = tpath
                 if found is None and conftest is not None:
                     found = conftest.fixture_asserts.get(p)
+                    source_path = conftest_path
                 if found:
-                    extra.extend(found)
+                    inherit(found, source_path)
             for name in parsed.autouse_fixtures:
                 if name not in requested:
-                    extra.extend(parsed.fixture_asserts.get(name, ()))
+                    inherit(parsed.fixture_asserts.get(name, ()), tpath)
             if conftest_path in raw_by_path and conftest_path != tpath:
                 c = _oracle_file(conftest_path, side)
                 if c is not None:
                     for name in c.autouse_fixtures:
                         if name not in requested:
-                            extra.extend(c.fixture_asserts.get(name, ()))
+                            inherit(c.fixture_asserts.get(name, ()), conftest_path)
             for n in sorted(set(uside.invoked) & set(parsed.from_imports)):
                 module, orig = parsed.from_imports[n]
                 if "." in module:
                     candidate = module.replace(".", "/") + ".py"
                 else:
                     candidate = f"{tdir}/{module}.py" if tdir else f"{module}.py"
+                root = f"{module}.py"
+                if (root_reader is not None and "." not in module and tdir
+                        and config.role_of(root) in ("test", "conftest")):
+                    # Keep absolute versus .relative identity, which the
+                    # legacy sibling map intentionally collapses. Only this
+                    # new root channel needs the stricter binding contract.
+                    import_key = (tpath, side)
+                    source = raw_by_path[tpath][side]
+                    if import_key not in root_import_memo:
+                        root_import_memo[import_key] = root_imports(source)
+                    if root_import_memo[import_key].get(n) == (module, orig):
+                        _oracle_file(root, side, strict=True)
+                        root_key = (root, side if root in raw_by_path else -1)
+                        if root_key not in strict_oracle_sources:
+                            continue
+                        root_source = oracle_sources[root_key]
+                        if root_source is not None:
+                            # A present (even unparseable) sibling makes the
+                            # runtime import target ambiguous; do not guess.
+                            alternatives = (candidate, f"{module}/__init__.py", f"{tdir}/{module}/__init__.py")
+                            alternative_keys = []
+                            for alternative in alternatives:
+                                _oracle_file(alternative, side, strict=True, absence_only=True)
+                                alternative_keys.append((alternative, side if alternative in raw_by_path else -1))
+                            unknown = any(key not in strict_oracle_sources for key in alternative_keys)
+                            present = any(oracle_sources.get(key) is not None for key in alternative_keys)
+                            if unknown and module in reviewed_root_modules:
+                                raise EngineError("root assertion helper resolution exceeds the snapshot read budget")
+                            if present and module in reviewed_root_modules:
+                                raise EngineError("changed root assertion helper has an ambiguous sibling import")
+                            if unknown or present:
+                                continue
+                            projection_key = (tpath, side, n)
+                            if projection_key not in root_projection_memo:
+                                root_projection_memo[projection_key] = (
+                                    project_root_oracles(source, root_source, n, orig)
+                                    if oracle_memo[root_key] is not None else {}
+                                )
+                            projected = root_projection_memo[projection_key].get(unit.qualname, ())
+                            if side == 1 and raw_by_path[tpath][0] is not None:
+                                if not root_caller_unchanged(raw_by_path[tpath][0], source, module, n, orig, unit.qualname):
+                                    projected = []
+                            if side == 1 and tpath in before_by_path:
+                                prior = next((u for u in before_by_path[tpath].units if u.qualname == unit.qualname), None)
+                                if prior is not None:
+                                    # This credit preserves an existing oracle;
+                                    # replacing its subject with another call
+                                    # is not the extraction being recognized.
+                                    projected = [a for a in projected if any(
+                                        same_expr(a.left, b.left) for b in prior.side.assertions
+                                    )]
+                            # Projection text and span describe the concrete
+                            # call in this test, not the helper definition.
+                            inherit(projected, tpath)
+                            continue
                 helper = _oracle_file(candidate, side)
                 if helper is not None:
-                    extra.extend(helper.helper_asserts.get(orig, ()))
+                    inherit(helper.helper_asserts.get(orig, ()), candidate)
             if extra:
                 uside.assertions.extend(replace(a) for a in extra)
                 for i, a in enumerate(uside.assertions):
                     a.id = f"a{i}"
 
-    for change in sorted(_expand_renames(changes, config), key=lambda c: c.path):
+    rename_destinations = {
+        c.old_path.replace("\\", "/"): c.path.replace("\\", "/")
+        for c in changes if c.old_path
+    }
+    expanded_changes = sorted(_expand_renames(changes, config), key=lambda c: c.path)
+    single_context_change = sum(not is_artifact(c.path) for c in changes) == 1
+    for change in expanded_changes:
         path = change.path.replace("\\", "/")
         if is_artifact(path):
             continue  # generated output is not evidence of anything
@@ -400,10 +612,33 @@ def build_ir(
             if change.after is not None:
                 after_parsed = parse_javascript(change.after)
 
+        if report_context is not None:
+            if is_python or is_js_test:
+                report_context.snapshot(path, 0, change.before)
+                report_context.snapshot(path, 1, change.after)
+            report_context.parsed(path, 0, before_parsed)
+            report_context.parsed(path, 1, after_parsed)
+
         if after_parsed is not None and after_parsed.parse_ok:
             after_by_path[path] = after_parsed
         if before_parsed is not None and before_parsed.parse_ok:
             before_by_path[path] = before_parsed
+
+        native_context_unchanged = False
+        if (
+            single_context_change and change.old_path is None
+            and is_python and role in ("test", "conftest")
+        ):
+            before_context = _native_assertion_context(change.before, before_parsed)
+            after_context = _native_assertion_context(change.after, after_parsed)
+            native_context_unchanged = (
+                before_context is not None and after_context is not None
+                and before_context[0] == after_context[0]
+                # Another rewritten assert can change the next assertion's
+                # input through a call's side effect. This narrow proof permits
+                # only one rewritten native assertion in the whole file.
+                and sum(b != a for b, a in zip(before_context[1], after_context[1])) <= 1
+            )
 
         if is_python and role == "test" and collect:
             if before_parsed is not None:
@@ -412,6 +647,9 @@ def build_ir(
                 _merge_crossfile_oracles(path, after_parsed, 1)
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
+        file_ir.native_assertion_context_unchanged = native_context_unchanged
+        if role in ("ci", "guardrail"):
+            file_ir.change_evidence = _change_evidence(change, rename_destinations)
         parsed_for_helpers = after_parsed if after_parsed and after_parsed.parse_ok else before_parsed
         if parsed_for_helpers is not None and parsed_for_helpers.parse_ok:
             file_ir.helper_calls = dict(parsed_for_helpers.helper_calls)
@@ -428,6 +666,7 @@ def build_ir(
             if role in ("test", "conftest") and change.status != "deleted":
                 was_parseable = before_parsed is not None and before_parsed.parse_ok
                 g.unparseable_tests.append((path, was_parseable))
+                file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
         if role in ("test", "conftest") and after_parsed and after_parsed.parse_ok:
             g.test_file_imports[path] = list(after_parsed.imports)
@@ -468,10 +707,12 @@ def build_ir(
                     ):
                         g.test_logic_changed = True
 
-        if g.scope_allow and not any(
+        if change.synthetic != "root_helper_importer" and g.scope_allow and not any(
             _scope_match(path, glob) for glob in g.scope_allow
         ):
             g.scope_drift.append((path, role))
+            if file_ir.change_evidence is None:
+                file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
         if role in ("test", "conftest", "prod", "ci", "guardrail"):
             _scan_hidden_unicode(g, path, change.before, change.after)
@@ -697,6 +938,18 @@ def build_ir(
     g.scope_drift.sort()
     g.exemptions_added.sort()
 
+    if g.snapshot_files_changed and g.prod_files_changed and not g.test_logic_changed:
+        # This event includes every production co-change, including opaque
+        # files. Hash companions only when the snapshot detector can fire.
+        paths = set(g.snapshot_files_changed) | set(g.prod_files_changed)
+        selected_changes = {
+            c.path.replace("\\", "/"): c for c in expanded_changes
+            if c.path.replace("\\", "/") in paths
+        }
+        for file in ir.files:
+            if file.path in paths and file.change_evidence is None:
+                file.change_evidence = _change_evidence(selected_changes[file.path], rename_destinations)
+
     # D6 constant environments, resolved here so gating stays a pure function
     # of the IR: same-file constants first, then names imported from files in
     # this diff, then from the head snapshot (click's `from click._compat
@@ -826,6 +1079,9 @@ def analyze(
     self_modules: set[str] | None = None,
     head_reader=None,
     head_searcher=None,
+    report_context: ReportContext | None = None,
+    root_reader=None,
+    root_searcher=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -837,6 +1093,9 @@ def analyze(
         self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
+        report_context=report_context,
+        root_reader=root_reader,
+        root_searcher=root_searcher,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

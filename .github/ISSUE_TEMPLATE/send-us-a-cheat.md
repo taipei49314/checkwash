@@ -1,6 +1,6 @@
 ---
-name: Send us a cheat greenwash missed
-about: A test-tampering diff that greenwash let through (a false negative)
+name: Send us a cheat checkwash missed
+about: A test-tampering diff that checkwash let through (a false negative)
 title: "[missed cheat] "
 labels: cheat-of-the-week, false-negative
 ---
@@ -23,8 +23,8 @@ labels: cheat-of-the-week, false-negative
 
 ```
 
-**What greenwash said**
-<!-- paste `greenwash check --format json` output, or just "verdict: pass" -->
+**What checkwash said**
+<!-- paste `checkwash check --format json` output, or just "verdict: pass" -->
 
 **Why this is tampering and not an honest fix**
 <!-- the bug is still there because... -->

@@ -6,6 +6,8 @@ import datetime
 import tomllib
 from dataclasses import dataclass
 
+from checkwash.findings import fingerprint_issue, fingerprint_state
+
 MAX_EXPIRY_DAYS = 180
 
 
@@ -68,10 +70,12 @@ class AllowSummary:
     active: int
     expired: int
     over_cap: int
+    retired: int = 0
+    invalid: int = 0
 
 
 def _entry_state(e: AllowEntry, today: datetime.date) -> str:
-    """`active`, `expired`, `over_cap`, or `invalid` — the one implementation
+    """`active`, `expired`, `over_cap`, `retired`, or `invalid` — one implementation
     both consumers share, so the doctor's summary and the gate can never
     disagree (their docstrings promise "same rules").
 
@@ -82,6 +86,9 @@ def _entry_state(e: AllowEntry, today: datetime.date) -> str:
     exactly the way bypass #39 closed (audit 2026-08-19). A missing or
     unparseable `created` still anchors at today.
     """
+    key_state = fingerprint_state(e.fingerprint, e.rule)
+    if key_state != "supported":
+        return key_state
     try:
         expiry = datetime.date.fromisoformat(e.expires)
     except ValueError:
@@ -105,7 +112,7 @@ def summarize_allowlist(data: bytes | None, today: datetime.date) -> AllowSummar
     entries, err = load_allowlist(data)
     if err:
         return AllowSummary(True, err, 0, 0, 0, 0)
-    active = expired = over_cap = 0
+    active = expired = over_cap = retired = invalid = 0
     for e in entries:
         state = _entry_state(e, today)
         if state == "over_cap":
@@ -114,7 +121,24 @@ def summarize_allowlist(data: bytes | None, today: datetime.date) -> AllowSummar
             expired += 1
         elif state == "active":
             active += 1
-    return AllowSummary(True, None, len(entries), active, expired, over_cap)
+        elif state == "retired":
+            retired += 1
+        elif state == "invalid":
+            invalid += 1
+    return AllowSummary(True, None, len(entries), active, expired, over_cap, retired, invalid)
+
+
+def fingerprint_diagnostics(entries: list[AllowEntry]) -> list[str]:
+    """Unsupported keys remain parsed for ledger-change detection, but visible.
+
+    Parsing must not filter these out: the engine compares parsed before/after
+    entries to distinguish append-only additions from revocation or rewriting.
+    """
+    return [
+        f"{entry.fingerprint}: {issue}"
+        for entry in entries
+        if (issue := fingerprint_issue(entry.fingerprint, entry.rule)) is not None
+    ]
 
 
 def active_fingerprints(entries: list[AllowEntry], today: datetime.date) -> set[str]:

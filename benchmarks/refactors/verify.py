@@ -142,12 +142,23 @@ def judge(before_root: pathlib.Path, after_root: pathlib.Path, src: pathlib.Path
             )
         )
     head = {f"src/{_rel(p, src)}": p.read_bytes() for p in src.rglob("*.py")}
+    # The synthetic repository is the full AFTER tree plus unchanged src.
+    # Keep the legacy production lookup separate: its missing keys cannot
+    # prove that a root/sibling assertion helper is absent.
+    snapshot = {f"src/{_rel(p, src)}": p.read_bytes()
+                for p in src.rglob("*") if p.is_file()}
+    snapshot.update({_rel(p, after_root): p.read_bytes()
+                     for p in after_root.rglob("*") if p.is_file()})
     _ir, findings, verdict = analyze(
         changes, Config(), Contract(), [], TODAY,
         known_modules=known_baseline() | {"app"},  # the corpora ship app.* by construction
         head_reader=head.get,
         head_searcher=lambda needles: [
             p for p, d in sorted(head.items()) if any(n.encode() in d for n in needles)
+        ],
+        root_reader=snapshot.get,
+        root_searcher=lambda needles: [
+            p for p, d in sorted(snapshot.items()) if any(n.encode() in d for n in needles)
         ],
     )
     return verdict, sorted({f"{f.rule}/{f.severity}" for f in findings if not f.allowlisted})

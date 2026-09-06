@@ -19,6 +19,7 @@ from checkwash.cases import case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.engine import analyze
+from checkwash.report.textio import write_text
 
 _TODAY = datetime.date(2026, 1, 1)
 
@@ -44,7 +45,8 @@ def _load_cases() -> list[tuple[str, str]]:
 def run(stream=None) -> int:
     stream = stream or sys.stdout
     sym = _symbols(stream)
-    w = stream.write
+    def w(text):
+        write_text(text, stream)
 
     cases = _load_cases()
     if not cases:

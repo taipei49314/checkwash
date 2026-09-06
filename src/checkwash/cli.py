@@ -17,7 +17,7 @@ import os
 import sys
 
 from checkwash import __version__
-from checkwash.allowlist import MAX_EXPIRY_DAYS, load_allowlist
+from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
 from checkwash.config import SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
 from checkwash.deps import MANIFESTS, parse_manifest, project_names
@@ -32,9 +32,12 @@ from checkwash.gitio import (
     read_base_file,
     rev_parse,
 )
+from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 from checkwash.report.jsonout import findings_to_json, ir_to_json
 from checkwash.report.sarif import findings_to_sarif
+from checkwash.report.context import ReportContext
 from checkwash.report.term import render
+from checkwash.report.textio import write_text
 from checkwash.sweep import sweep
 
 
@@ -63,14 +66,8 @@ def _write_machine(text: str) -> None:
 
 
 def _write_term(text: str) -> None:
-    """Human report: degrade unencodable glyphs rather than crash (SPEC §9)."""
-    enc = getattr(sys.stdout, "encoding", None)
-    if enc:
-        try:
-            text.encode(enc)
-        except (UnicodeEncodeError, LookupError):
-            text = text.encode(enc, errors="replace").decode(enc, errors="replace")
-    sys.stdout.write(text)
+    """Human report: preserve evidence with escapes when the encoding needs it."""
+    write_text(text)
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
@@ -84,17 +81,17 @@ def _cmd_check(args: argparse.Namespace) -> int:
             left, _, right = args.range.partition("...")
             right = right.lstrip(".")
             if not left or not right:
-                print(f"error: range must be BASE...HEAD, got {args.range!r}", file=sys.stderr)
+                write_text(f"error: range must be BASE...HEAD, got {args.range!r}\n", sys.stderr)
                 return 2
             base = merge_base(repo, left, right)
             head = right
         elif ".." in args.range:
             base, _, head = args.range.partition("..")
         else:
-            print(f"error: range must be BASE..HEAD, got {args.range!r}", file=sys.stderr)
+            write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
             return 2
         if not base or not head:
-            print(f"error: range must be BASE..HEAD, got {args.range!r}", file=sys.stderr)
+            write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
             return 2
         changes = list_range_changes(repo, base, head)
         base_label = rev_parse(repo, base)
@@ -155,6 +152,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
         config.fail_on = args.fail_on
     allow_path, allow_data = read_base_config_file(repo, config_side, "allow.toml")
     allow_entries, allow_error = load_allowlist(allow_data, path=allow_path)
+    # Unsupported exemptions are not TOML parse errors. Keep machine stdout
+    # intact and report the ignored base-side keys on stderr in every format.
+    for message in fingerprint_diagnostics(allow_entries):
+        write_text(f"checkwash: {allow_path}: ignored exemption: {message}\n", sys.stderr)
     # A config that silently fails to parse used to revert a hardened gate to
     # defaults with no diagnostic anywhere (confirmed red-team finding).
     # Value-level warnings are visible in the same channels but never fatal:
@@ -163,7 +164,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     errors = [e for e in (config_error, allow_error) if e]
     diagnostics = errors + config_warnings
     for message in diagnostics:
-        print(f"checkwash: {message}", file=sys.stderr)
+        write_text(f"checkwash: {message}\n", sys.stderr)
     if errors and config.on_engine_error == "block":
         return 2
 
@@ -199,6 +200,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
     if found_manifest:
         known_modules = known_baseline() | declared
 
+    report_context = ReportContext() if args.format == "sarif" else None
+    root_snapshot = GitSnapshot(repo, head_label) if args.range else WorkingTreeSnapshot(repo)
     ir, findings, verdict = analyze(
         changes,
         config,
@@ -211,6 +214,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         self_modules=self_modules,
         head_reader=head_reader,
         head_searcher=head_searcher,
+        report_context=report_context,
+        root_reader=root_snapshot.read,
+        root_searcher=root_snapshot.search,
     )
 
     if args.emit_ir:
@@ -219,7 +225,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     if args.format == "json":
         _write_machine(findings_to_json(ir, findings, verdict, diagnostics))
     elif args.format == "sarif":
-        _write_machine(findings_to_sarif(ir, findings))
+        _write_machine(findings_to_sarif(ir, findings, report_context))
     elif args.format == "hook-json":
         # Claude Code Stop-hook protocol: JSON on stdout carries the decision,
         # exit 0 either way (non-zero would read as a hook failure).
@@ -262,7 +268,12 @@ def _cmd_check(args: argparse.Namespace) -> int:
 # 2026-08-07). The rev is interpolated rather than typed, because a hardcoded
 # version in a printed snippet is a claim that drifts.
 _PRECOMMIT_SNIPPET = """\
-# .pre-commit-config.yaml
+# Template only: no files were written and no hook was installed.
+# Save or merge this into .pre-commit-config.yaml in your repository.
+# Install the pre-commit runner in your development environment, then run:
+#   pre-commit install
+#   pre-commit run checkwash --all-files
+# --repo does not change this print-only operation.
 repos:
   - repo: https://github.com/taipei49314/checkwash
     rev: v{version}
@@ -284,58 +295,24 @@ repos:
 
 
 def _cmd_hook_install(args: argparse.Namespace) -> int:
-    import json as _json
-
     if args.agent == "pre-commit":
         if args.local:
-            print("error: --local applies to --agent claude-code only", file=sys.stderr)
+            write_text("error: --local applies to --agent claude-code only\n", sys.stderr)
             return 2
         # Nothing to write for them — their config is theirs; print the block.
         sys.stdout.write(_PRECOMMIT_SNIPPET.format(version=__version__))
         return 0
 
-    # settings.local.json is Claude Code's machine-local file (conventionally
-    # git-ignored). It exists as a target because installing into the shared
-    # settings.json edits a guardrail file inside the repo — a change this
-    # tool's own GUARDRAIL_TOUCHED detector then flags on the next diff. A
-    # first-party installer should not force a guardrail commit just to try
-    # the gate: trial locally, share by choice.
-    filename = "settings.local.json" if args.local else "settings.json"
-    settings_path = os.path.join(args.repo, ".claude", filename)
-    settings: dict = {}
-    if os.path.exists(settings_path):
-        # utf-8-sig, not utf-8: Windows tooling routinely writes settings.json
-        # with a BOM (PowerShell 5.1's `Out-File -Encoding utf8` always does),
-        # and json.load rejects a BOM outright — so the installer refused
-        # perfectly healthy files as "not valid JSON". The sig codec accepts
-        # both forms; the write below normalizes to BOM-less UTF-8.
-        with open(settings_path, encoding="utf-8-sig") as fh:
-            try:
-                settings = _json.load(fh)
-            except _json.JSONDecodeError:
-                print(f"error: {settings_path} is not valid JSON; not touching it", file=sys.stderr)
-                return 2
-    command = "checkwash check --format hook-json"
-    hooks = settings.setdefault("hooks", {})
-    stop = hooks.setdefault("Stop", [])
-    already = any(
-        h.get("command") == command
-        for entry in stop
-        if isinstance(entry, dict)
-        for h in entry.get("hooks", [])
-        if isinstance(h, dict)
-    )
-    if not already:
-        stop.append({"hooks": [{"type": "command", "command": command}]})
-    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
-    with open(settings_path, "w", encoding="utf-8", newline="\n") as fh:
-        _json.dump(settings, fh, indent=2, sort_keys=True)
-        fh.write("\n")
-    print(
-        f"{'already installed' if already else 'installed'}: Stop hook in {settings_path}\n"
-        "checkwash will run when the agent finishes and block the stop on high findings."
-    )
+    from checkwash.hooks import HookInstallError, install_claude
+
+    try:
+        message = install_claude(args.repo, args.local)
+    except HookInstallError as exc:
+        write_text(f"error: {exc}\n", sys.stderr)
+        return 2
+    _write_term(message)
     return 0
+
 
 
 def _toml_str(value: str) -> str:
@@ -362,13 +339,17 @@ def _toml_str(value: str) -> str:
 
 
 def _cmd_allow(args: argparse.Namespace) -> int:
+    issue = fingerprint_issue(args.fingerprint)
+    if issue is not None:
+        write_text(f"error: {issue}\n", sys.stderr)
+        return 2
     if not args.reason.strip():
-        print("error: --reason must not be empty", file=sys.stderr)
+        write_text("error: --reason must not be empty\n", sys.stderr)
         return 2
     today = _today()
     expires = args.expires or (today + datetime.timedelta(days=90)).isoformat()
     if (datetime.date.fromisoformat(expires) - today).days > MAX_EXPIRY_DAYS:
-        print(f"error: expiry exceeds {MAX_EXPIRY_DAYS} days", file=sys.stderr)
+        write_text(f"error: expiry exceeds {MAX_EXPIRY_DAYS} days\n", sys.stderr)
         return 2
     path = os.path.join(args.repo, *resolve_config_file(args.repo, "allow.toml").split("/"))
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -383,12 +364,18 @@ def _cmd_allow(args: argparse.Namespace) -> int:
     )
     with open(path, "a", encoding="utf-8", newline="\n") as fh:
         fh.write(entry)
-    print(f"recorded exemption in {path} (expires {expires}); commit it through review")
+    write_text(f"recorded exemption in {path} (expires {expires}); commit it through review\n")
     return 0
 
 
+class _ArgumentParser(argparse.ArgumentParser):
+    def _print_message(self, message, file=None):
+        if message:
+            write_text(message, file or sys.stderr)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="checkwash")
+    parser = _ArgumentParser(prog="checkwash")
     parser.add_argument("--version", action="version", version=f"checkwash {__version__}")
     sub = parser.add_subparsers(dest="command")
 
@@ -410,13 +397,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     hook = sub.add_parser("hook", help="integration helpers")
     hook_sub = hook.add_subparsers(dest="hook_command", required=True)
-    hook_install = hook_sub.add_parser("install", help="wire checkwash into an agent or tool")
+    hook_install = hook_sub.add_parser(
+        "install", help="write Claude settings or print a pre-commit template",
+        description="For claude-code, write Stop hook settings. For pre-commit, print a YAML template only; save it and run pre-commit install yourself.",
+    )
     hook_install.add_argument("--agent", choices=["claude-code", "pre-commit"], required=True)
     hook_install.add_argument("--repo", default=".")
     hook_install.add_argument(
         "--local",
         action="store_true",
-        help="write .claude/settings.local.json (machine-local, git-ignored) instead of the shared settings.json",
+        help="write machine-local .claude/settings.local.json instead of shared settings.json; this installer does not configure Git ignore",
     )
 
     sub.add_parser("demo", help="replay real tampering cases offline")
@@ -509,9 +499,9 @@ def main(argv: list[str] | None = None) -> int:
     ):
         hint = _closest_command(argv[0])
         if hint:
-            print(
-                f"error: unknown command {argv[0]!r}. Did you mean {hint!r}?",
-                file=sys.stderr,
+            write_text(
+                f"error: unknown command {argv[0]!r}. Did you mean {hint!r}?\n",
+                sys.stderr,
             )
             return 2
         argv = ["check", *argv]
@@ -552,13 +542,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
     except (GitError, OSError, RecursionError) as exc:
-        print(f"checkwash engine error: {exc}", file=sys.stderr)
+        write_text(f"checkwash engine error: {exc}\n", sys.stderr)
         return 2
     except Exception as exc:  # noqa: BLE001 - crash must never read as a verdict
         # Exit 1 means "block" (SPEC §9); an unhandled traceback exiting 1
         # is indistinguishable from a real finding for CI (confirmed
         # red-team finding). Engine errors are always 2.
-        print(f"checkwash engine error: {type(exc).__name__}: {exc}", file=sys.stderr)
+        write_text(f"checkwash engine error: {type(exc).__name__}: {exc}\n", sys.stderr)
         return 2
 
 

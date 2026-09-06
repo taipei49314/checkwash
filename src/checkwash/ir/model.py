@@ -1,4 +1,4 @@
-"""IR data model (SPEC: checkwash_ir_version 1).
+"""IR data model (checkwash_ir_version 2).
 
 Detectors consume this and nothing else. All ordering inside the IR is
 explicit and deterministic; no dict/set iteration order leaks into output.
@@ -216,6 +216,21 @@ class Unit:
     delta: UnitDelta | None
 
 
+@dataclass(frozen=True)
+class ChangeEvidence:
+    """Content identity of the analyzed change, without copying file contents.
+
+    None means the side does not exist; an empty file has a real digest.
+    Digests normalize CRLF only. Commit labels and local paths are excluded.
+    rename_to preserves the destination of a rename expanded into deletion.
+    """
+
+    before_sha256: str | None
+    after_sha256: str | None
+    old_path: str | None = None
+    rename_to: str | None = None
+
+
 @dataclass
 class FileIR:
     path: str
@@ -253,6 +268,15 @@ class FileIR:
     # Same-file helper name -> callee leaves. Repair evidence follows one
     # hop through a helper the unit actually invokes (T1.9).
     helper_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # Required by content-bound finding identities. Populated only for
+    # relevant evidence; an absent record is not a legacy fallback.
+    change_evidence: ChangeEvidence | None = None
+    # Optional proof for numeric bound -> exact restoration. The engine
+    # compares normalized file contents outside concrete native bare-assert
+    # spans before oracle inheritance, permitting at most one changed native
+    # assertion, in a single non-artifact file change with no rename. Other
+    # files could redefine the callee; unknown provenance defaults to false.
+    native_assertion_context_unchanged: bool = False
 
 
 @dataclass

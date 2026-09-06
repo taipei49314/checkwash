@@ -1,6 +1,6 @@
 ---
-name: greenwash blocked honest work
-about: greenwash blocked a commit that did not tamper with anything (a false positive)
+name: checkwash blocked honest work
+about: checkwash blocked a commit that did not tamper with anything (a false positive)
 title: "[false block] "
 labels: false-positive
 ---
@@ -13,8 +13,8 @@ labels: false-positive
 
 ```
 
-**What greenwash blocked it with**
-<!-- paste `greenwash check --format json`, esp. the rule and escalators -->
+**What checkwash blocked it with**
+<!-- paste `checkwash check --format json`, esp. the rule and escalators -->
 
 **Why it's a false positive**
 <!-- the oracle is not actually weaker because... -->

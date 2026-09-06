@@ -20,23 +20,54 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
+**Unreleased remediation branch:** the downloads below still install v0.2.13.
+Five file-wide exemption rules in that release can reuse an approval for a
+later change to the same path. The [next-minor upgrade notes](https://github.com/taipei49314/checkwash/blob/fix/first-hour-integration/docs/remediation-upgrade.md)
+describe the content-bound replacement, retired keys, and installation fixes.
+Record the commit when testing this candidate; it has not been released.
+
 ## Try it
 
-You need **Python 3.11+ and Git**. From a repository with at least two commits:
+You need **Python 3.11+ and Git**. Download and try the offline examples first.
+
+Windows PowerShell (including 5.1):
+
+```powershell
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.13/checkwash.pyz
+python checkwash.pyz --version
+python checkwash.pyz demo
+```
+
+PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
+macOS/Linux or Git Bash:
 
 ```bash
 curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.13/checkwash.pyz
+python checkwash.pyz --version
+python checkwash.pyz demo
+```
+
+Then, from a repository with at least two commits:
+
+```bash
 python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
 You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.2.13/checkwash.pyz).
+For uncommitted changes use `python checkwash.pyz check`. For a branch review,
+use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
+`BASE..HEAD` compares the two named snapshots directly.
 
 | Result | What to do |
 |---|---|
 | **Pass · exit 0** | No finding requires blocking under your configuration. Keep running your normal tests and review. |
 | **Block · exit 1** | Read the finding and the diff. It may be weakened verification or a false positive. |
 | **Error · exit 2** | Resolve the input or analysis error before relying on the result. |
+
+The default threshold is **high**: a visible **warn** can still pass.
+`REPAIR_EVIDENCE` describes related changes in the same diff; it does not
+prove a repair is correct.
 
 For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.13-public-launch.md#try-it-on-a-change-you-understand).
 
@@ -165,5 +196,5 @@ above is a separate population; the general-commit rate does not predict it.
 Related projects: [checkwash-corpus](https://github.com/taipei49314/checkwash-corpus)
 and [smallestlie](https://github.com/taipei49314/smallestlie) hold evaluation work.
 
-Alpha pre-release. 21 detectors, 605 tests in the current source tree.
+Alpha pre-release. 21 detectors, 913 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

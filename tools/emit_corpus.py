@@ -51,6 +51,9 @@ def main() -> None:
                                            if any(n.encode("utf-8") in data for n in needles)])
                 if head else None
             ),
+            root_reader=head.get,
+            root_searcher=lambda needles, _h=head: [p for p, data in sorted(_h.items())
+                                                   if any(n.encode("utf-8") in data for n in needles)],
         )
         _write(f"# {case_path.name}\n")
         _write(findings_to_json(ir, findings, verdict))

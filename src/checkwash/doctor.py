@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import re
 import stat
@@ -11,7 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from checkwash.config import resolve_config_file
-from checkwash.allowlist import MAX_EXPIRY_DAYS, summarize_allowlist
+from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, summarize_allowlist
+from checkwash.hooks import HookInstallError, has_stop_hook
+from checkwash.report.textio import write_text
 
 
 @dataclass
@@ -199,21 +202,25 @@ def _git_query(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | N
     return result
 
 
-def _tracked_blob(root: Path, relative: str | Path) -> bytes | None:
+def _tracked_blob(root: Path, relative: str | Path) -> tuple[bytes | None, str]:
     relative = Path(relative)
     if relative.is_absolute() or ".." in relative.parts:
-        return None
+        return None, "not a repository-relative path"
     requested = relative.as_posix()
     try:
         encoded = requested.encode("utf-8")
     except UnicodeEncodeError:
-        return None
+        return None, "path cannot be encoded as UTF-8"
     result = _git_query(root, "ls-files", "--stage", "-z", "--", requested)
     if result is None:
-        return None
+        return None, "Git index could not be inspected"
+    if result.returncode:
+        return None, "Git index is unavailable; run doctor from a Git repository"
+    if not result.stdout:
+        return None, f"untracked workflow; review it, then git add -- {requested} (a commit is not required)"
     records = result.stdout.split(b"\0")
     if result.returncode or len(records) != 2 or records[1]:
-        return None
+        return None, "multiple or unmerged index entries; resolve the index before retrying"
     header, separator, actual = records[0].partition(b"\t")
     fields = header.split(b" ")
     if not (
@@ -224,24 +231,35 @@ def _tracked_blob(root: Path, relative: str | Path) -> bytes | None:
         and re.fullmatch(rb"[0-9a-f]{40}|[0-9a-f]{64}", fields[1])
         and fields[2] == b"0"
     ):
-        return None
+        return None, "index entry is not a regular, stage-0 file with the exact path"
     oid = fields[1].decode("ascii")
     blob = _git_query(root, "cat-file", "blob", oid)
     worktree = _regular_bytes(root / relative)
     if blob is None or blob.returncode or worktree is None:
-        return None
+        return None, "indexed blob or regular worktree file could not be read"
     normalized_blob = blob.stdout.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
     normalized_worktree = worktree.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
     if worktree != blob.stdout and normalized_worktree != normalized_blob:
-        return None
-    return blob.stdout
+        return None, f"index and worktree differ (including intent-to-add); review, then git add -- {requested}"
+    return blob.stdout, ""
 
 
 def _uses(props: dict[str, str], owner: str) -> bool:
     return set(props) == {"uses", "with"} and props["uses"] == f"{owner}@{_PINS[owner]}"
 
 
-def _healthy_job(body: list[str]) -> bool:
+def _pin_issue(props: dict[str, str], owner: str) -> str:
+    """Explain a parsed ref mismatch without relaxing the trusted chain."""
+    actual = props.get("uses", "")
+    prefix = owner + "@"
+    if not actual.startswith(prefix):
+        return f"expected {prefix}{_PINS[owner]}; found {actual or '(no uses)'}"
+    ref = actual[len(prefix):]
+    kind = "unsupported SHA" if re.fullmatch(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}", ref) else "tag or non-SHA ref"
+    return f"{owner}: {kind} {ref}; this CLI requires {_PINS[owner]}"
+
+
+def _healthy_job(body: list[str], reasons: list[str]) -> bool:
     job_items: list[tuple[int, str, str]] = []
     for index, line in enumerate(body[1:], 1):
         if _indent(line) == 4:
@@ -272,19 +290,26 @@ def _healthy_job(body: list[str]) -> bool:
     if not _uses(checkout[0], "actions/checkout") or checkout[1] != {
         "fetch-depth": "0", "persist-credentials": "false"
     }:
+        if checkout[0].get("uses") != "actions/checkout@" + _PINS["actions/checkout"]:
+            reasons.append(_pin_issue(checkout[0], "actions/checkout"))
         return False
     if not _uses(setup[0], "actions/setup-python") or setup[1] != {"python-version": '"3.12"'}:
+        if setup[0].get("uses") != "actions/setup-python@" + _PINS["actions/setup-python"]:
+            reasons.append(_pin_issue(setup[0], "actions/setup-python"))
         return False
     props, with_values = gate
     remote = set(props) == {"uses"} and not with_values and props["uses"] == (
         "taipei49314/checkwash/action@" + _PINS["taipei49314/checkwash/action"]
     )
+    if not remote and props.get("uses") != "taipei49314/checkwash/action@" + _PINS["taipei49314/checkwash/action"]:
+        reasons.append(_pin_issue(props, "taipei49314/checkwash/action"))
     return remote
 
 
-def _workflow(data: bytes) -> tuple[list[str], bool]:
+def _workflow(data: bytes, reasons: list[str]) -> tuple[list[str], bool]:
     text = _decode_workflow(data)
     if text is None:
+        reasons.append("workflow is not supported UTF-8/YAML text")
         return [], True
     lines = _lines(text)
     blob = "\n".join(lines)
@@ -340,7 +365,7 @@ def _workflow(data: bytes) -> tuple[list[str], bool]:
     healthy = []
     for pos, (start, name) in enumerate(starts):
         stop = starts[pos + 1][0] if pos + 1 < len(starts) else end
-        if _healthy_job(lines[start:stop]):
+        if _healthy_job(lines[start:stop], reasons):
             healthy.append(name)
     return healthy, candidate
 
@@ -354,23 +379,36 @@ def _workflow_gates(root: Path) -> tuple[list[tuple[str, str]], list[str]]:
         return gates, [".github/workflows (linked path)"]
     for path in sorted(p for p in directory.iterdir() if p.is_file() and p.suffix in {".yml", ".yaml"}):
         relative = path.relative_to(root)
-        blob = _tracked_blob(root, relative) if _plain_chain(root, relative) else None
+        blob, issue = _tracked_blob(root, relative) if _plain_chain(root, relative) else (
+            None, "linked, nonregular, or case-mismatched workflow path"
+        )
         if blob is None:
-            incomplete.append(relative.as_posix())
+            incomplete.append(f"{relative.as_posix()}: {issue}")
             continue
-        names, candidate = _workflow(blob)
+        reasons: list[str] = []
+        names, candidate = _workflow(blob, reasons)
         rel = path.relative_to(root).as_posix()
         gates.extend((rel, name) for name in names)
         if candidate and not names:
-            incomplete.append(rel)
+            incomplete.append(f"{rel}: " + ("; ".join(reasons) or "unsupported or ambiguous workflow shape"))
     return gates, incomplete
 
 
 def collect(root: Path) -> list[Note]:
     notes: list[Note] = []
     jobs, incomplete = _workflow_gates(root)
-    settings_blob = _read(root / ".claude" / "settings.json")
-    hook_installed = "checkwash" in settings_blob or "greenwash" in settings_blob
+    hook_paths = []
+    hook_issues = []
+    for relative in (".claude/settings.json", ".claude/settings.local.json"):
+        path = root / relative
+        if not path.exists():
+            continue
+        try:
+            settings = json.loads(path.read_text(encoding="utf-8-sig"))
+            if has_stop_hook(settings):
+                hook_paths.append(relative)
+        except (OSError, ValueError, HookInstallError) as exc:
+            hook_issues.append(f"{relative}: {exc}")
     precommit_blob = _read(root / ".pre-commit-config.yaml")
     precommit_installed = "checkwash" in precommit_blob or "greenwash" in precommit_blob
 
@@ -381,25 +419,36 @@ def collect(root: Path) -> list[Note]:
     elif incomplete:
         notes.append(Note(
             "warn", "workflow analysis incomplete",
-            "No exact supported gate was proven in " + ", ".join(incomplete) + ". "
+            "No exact supported gate was proven. " + "; ".join(incomplete) + ". "
             "Use the three-step, hash-pinned workflow from the README; direct run steps are never trusted.",
         ))
     else:
         where = [name for name, present in (
-            ("a Claude Code stop-hook", hook_installed), ("pre-commit", precommit_installed)
+            ("a Claude Code Stop hook configuration in " + ", ".join(hook_paths), bool(hook_paths)),
+            ("pre-commit configuration", precommit_installed),
         ) if present]
         if where:
             notes.append(Note(
-                "problem", "checkwash runs locally but not in CI",
+                "problem", "checkwash is configured locally but not in CI",
                 "Found " + " and ".join(where) + ", and no exact supported workflow under "
                 ".github/workflows. A local hook can be skipped and cannot stop someone else's merge.",
             ))
+
         else:
             notes.append(Note(
                 "problem", "no checkwash installation found",
                 "No exact supported workflow invokes checkwash and no local hook was found. "
                 "See the Required check section of the README.",
             ))
+
+    if hook_paths:
+        notes.append(Note(
+            "info", "local hook configuration is not runtime verification",
+            "Found " + ", ".join(hook_paths) + ". Doctor does not execute Claude or evaluate "
+            "its complete managed/global settings. Verify the Stop event in your Claude runtime.",
+        ))
+    if hook_issues:
+        notes.append(Note("info", "local hook configuration could not be read", "; ".join(hook_issues)))
 
     notes.append(Note(
         "info", "checkwash cannot tell whether the check is *required*",
@@ -423,18 +472,28 @@ def collect(root: Path) -> list[Note]:
         f"allowlist: {'present (' + allow_rel + ')' if allow.exists() else 'absent'}. A new allowlist entry "
         "takes effect on the next diff and must be committed.",
     ))
-    ledger = summarize_allowlist(allow.read_bytes() if allow.exists() else None, datetime.date.today())
+    ledger_data = allow.read_bytes() if allow.exists() else None
+    ledger = summarize_allowlist(ledger_data, datetime.date.today())
     if ledger.parse_error:
         notes.append(Note("warn", "allow.toml could not be parsed; no exemptions are active", ledger.parse_error))
     else:
         detail = (
             f"{ledger.entries} entries in {allow_rel}; {ledger.active} active today, "
-            f"{ledger.expired} expired, {ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap (ignored on read)."
+            f"{ledger.expired} expired, {ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap (ignored on read), "
+            f"{ledger.retired} retired fingerprint(s), {ledger.invalid} invalid entry/entries."
             if ledger.present else
             f"no allow.toml yet. `checkwash allow` writes one; expiry is capped at "
             f"{MAX_EXPIRY_DAYS} days. Commit it and put `{allow_rel.split('/')[0]}/` in CODEOWNERS."
         )
         notes.append(Note("info", f"allowlist expiry is capped at {MAX_EXPIRY_DAYS} days", detail))
+        if ledger.retired or ledger.invalid:
+            entries, _error = load_allowlist(ledger_data, path=allow_rel)
+            notes.append(Note(
+                "warn", "retired or invalid exemptions are ignored",
+                f"{allow_rel}: " + "; ".join(fingerprint_diagnostics(entries))
+                + ". Re-run the intended diff and review a new content-bound fingerprint; "
+                "old approvals cannot be migrated without reviewing the actual change.",
+            ))
     notes.append(Note(
         "info", "use a three-dot range for pull requests",
         "`checkwash check BASE...HEAD` resolves through the merge base. A two-dot range drags "
@@ -451,15 +510,18 @@ def run(root: str = ".", stream=None) -> int:
     import sys
 
     stream = stream or sys.stdout
+    def w(text):
+        write_text(text, stream)
+
     notes = collect(Path(root))
     for note in notes:
-        stream.write(f"{_SYMBOL[note.level]}  {note.title}\n")
+        w(f"{_SYMBOL[note.level]}  {note.title}\n")
         for line in _wrap(note.detail):
-            stream.write(f"      {line}\n")
-        stream.write("\n")
+            w(f"      {line}\n")
+        w("\n")
     problems = [n for n in notes if n.level == "problem"]
     warns = [n for n in notes if n.level == "warn"]
-    stream.write(
+    w(
         f"summary: {len(problems)} problem(s), {len(warns)} warning(s). "
         "checkwash cannot verify branch protection; see the note above.\n"
     )
