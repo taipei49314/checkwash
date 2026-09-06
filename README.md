@@ -20,6 +20,12 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
+**Unreleased remediation branch:** the downloads below still install v0.2.13.
+Five file-wide exemption rules in that release can reuse an approval for a
+later change to the same path. The [next-minor upgrade notes](https://github.com/taipei49314/checkwash/blob/fix/first-hour-integration/docs/remediation-upgrade.md)
+describe the content-bound replacement, retired keys, and installation fixes.
+Record the commit when testing this candidate; it has not been released.
+
 ## Try it
 
 You need **Python 3.11+ and Git**. Download and try the offline examples first.

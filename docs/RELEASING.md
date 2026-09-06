@@ -1,5 +1,12 @@
 # Releasing
 
+The [unreleased remediation candidate](remediation-upgrade.md) needs a minor
+release for its fingerprint and machine-interface break, plus a separate
+subsequent promotion of the verified fixed Action SHA under the trust lag.
+Its local candidate builds do not replace v0.2.13 assets. Complete the
+maintainer contract review, exact ledger-cleanup review, runtime qualification
+and ordinary gates before calling the migration shipped.
+
 The order matters, and it is the whole answer to a question that has now been
 asked twice: *the tag-parity gate fails before I cut the tag — isn't that
 circular?*

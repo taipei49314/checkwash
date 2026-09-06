@@ -2,6 +2,22 @@
 
 Updated: 2026-09-06 (v0.2.13 public documentation, package metadata and trusted-pin maintenance).
 
+## Unreleased next-minor remediation candidate
+
+The remediation branch implements content-bound exemptions for five file-wide
+rules, retires their path-only keys, and advances IR/findings schemas to 2.
+It also fixes local-hook installation/doctor agreement, runtime binding,
+Windows output, workflow diagnostics, SARIF source locations and narrowly
+bounded numeric-restoration/root-helper precision. See the [upgrade notes](docs/remediation-upgrade.md)
+for migration, compatibility and runtime limits.
+
+These are draft changes. Public artifacts remain v0.2.13 and the recommended
+Action remains v0.2.12. The original benchmark records below are unchanged.
+The maintainer-owned contract patch and exact legacy-ledger cleanup require
+review; the release slot, published-source parity, full runtime/CI qualification
+and later Action promotion remain completion gates. A local candidate build
+does not mean that users installing a published package have these fixes.
+
 ## 2026-09-06: public package-page correction (v0.2.13)
 
 The owner authorized a one-time documentation/metadata release outside the
