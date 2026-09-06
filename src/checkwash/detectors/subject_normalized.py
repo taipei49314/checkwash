@@ -68,7 +68,12 @@ def detect(ir: IR) -> list[Finding]:
                 elif not (expr_wraps(before_subject, after_subject)
                           or argument_wraps(before_subject, after_subject)):
                     continue
-                if (unit.qualname, b.id, a.id) in file.normalization_equivalent_pairs:
+                # JSON represents the optional tuple records as arrays. A
+                # caller rebuilding the documented dataclasses may retain
+                # those lists; representation must not change the verdict.
+                if any(isinstance(record, (tuple, list))
+                       and tuple(record) == (unit.qualname, b.id, a.id)
+                       for record in (file.normalization_equivalent_pairs or ())):
                     continue
                 findings.append(
                     Finding(

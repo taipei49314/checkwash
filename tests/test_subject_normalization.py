@@ -1,12 +1,14 @@
 """Issue 131: retain wrapper evidence and require closed equivalence proof."""
 
 import datetime
+import json
 
 import pytest
 
 from checkwash.config import Config
 from checkwash.contract import Contract
-from checkwash.engine import EngineError, FileChange, analyze
+from checkwash.engine import EngineError, FileChange, analyze, run_detectors
+from checkwash.ir.model import Assertion, AssertionPair, DiffGlobals, FileIR, IR, Unit, UnitDelta, UnitSide, to_jsonable
 
 
 BEFORE = b'from app.parse_bool import parse_bool\n\ndef test_yes():\n    assert parse_bool("Yes") is True\n'
@@ -189,3 +191,34 @@ def test_plain_binding_hoist_is_not_normalization():
     _, findings, verdict = run(before, after)
     assert verdict == "pass"
     assert findings == []
+
+
+def test_json_array_proof_records_preserve_findings_after_dataclass_reconstruction():
+    original, original_findings, _ = run()
+    payload = json.loads(json.dumps(to_jsonable(original)))
+    files = []
+    for data in payload.pop("files"):
+        units = []
+        for unit in data.pop("units"):
+            for side in ("before", "after"):
+                if unit[side] is not None:
+                    side_data = unit[side]
+                    side_data["assertions"] = [Assertion(**a) for a in side_data["assertions"]]
+                    unit[side] = UnitSide(**side_data)
+            if unit["delta"] is not None:
+                delta = unit["delta"]
+                delta["assertion_pairs"] = [AssertionPair(**p) for p in delta["assertion_pairs"]]
+                unit["delta"] = UnitDelta(**delta)
+            units.append(Unit(**unit))
+        files.append(FileIR(**data, units=units))
+    payload["globals"] = DiffGlobals(**payload["globals"])
+    restored = IR(**payload, files=files)
+    assert restored.files[0].normalization_equivalent_pairs == [["test_yes", "a0", "a0"]]
+    assert run_detectors(restored, Config()) == original_findings == []
+
+
+@pytest.mark.parametrize("records", [None, [None], ["test_yes", "a0", "a0"], [["test_yes", "a0"]]])
+def test_malformed_optional_proof_record_does_not_hide_the_finding(records):
+    ir, _, _ = run()
+    ir.files[0].normalization_equivalent_pairs = records
+    assert any(f.rule == "SUBJECT_NORMALIZED" for f in run_detectors(ir, Config()))
