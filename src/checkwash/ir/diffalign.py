@@ -14,15 +14,19 @@ Assertion pairing inside a matched unit:
 
 from __future__ import annotations
 
+from collections import Counter
 from decimal import Decimal, InvalidOperation
 
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir.model import (
     AssertionPair,
     FileIR,
+    ParamTable,
     Unit,
     UnitDelta,
+    UnitSide,
     normalize_text,
+    param_tables,
 )
 
 JACCARD_THRESHOLD = 0.8  # frozen, SPEC §7
@@ -161,6 +165,14 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
         param_removed = before_cases - after_cases
     elif before_cases is not None and after_cases is None:
         param_removed = before_cases - 1
+    # The count above is satisfied by any edit that keeps the total; row
+    # identity is a floor on it, never a ceiling (see `_param_rows_lost`).
+    param_disabled = 0
+    identity = _param_rows_lost(before.side, after.side)
+    if identity is not None:
+        lost, disabled_only = identity
+        param_removed = max(param_removed, lost)
+        param_disabled = min(disabled_only, param_removed)
 
     return UnitDelta(
         assertion_pairs=assertion_pairs,
@@ -170,7 +182,97 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
         handlers_widened=handlers_widened,
         tolerance_changes=tolerance_changes,
         param_cases_removed=max(0, param_removed),
+        param_cases_disabled=max(0, param_disabled),
     )
+
+
+def _rows_lost(before: ParamTable, after: ParamTable) -> tuple[int, int, int]:
+    """(live rows before, rows deleted, rows no longer running) for one table.
+
+    A row's identity is its cell texts, read through `pytest.param`, so
+    marking a row does not change it. Of the rows that ran before:
+
+    - one still present but marked off is disabled -- the count rule cannot
+      see it, and it is the whole finding;
+    - one gone from the table entirely is a deletion *or* an edit, and the
+      rows alone cannot tell those apart. An edit belongs to
+      `EXPECTATION_DEFINITION_CHANGED`, so the residual is left to the count
+      rule's arithmetic (`vanished - arrived`): an edit brings a replacement
+      row with it and nets to zero, a deletion does not. That is also why a
+      deleted row *plus* an unrelated appended row stays silent here -- a
+      documented residual, not an accident.
+    """
+    live_before = Counter(r for r, d in zip(before.rows, before.disabled) if not d)
+    live_after = Counter(r for r, d in zip(after.rows, after.disabled) if not d)
+    dead_after = Counter(r for r, d in zip(after.rows, after.disabled) if d)
+    still = live_before & live_after
+    left = live_before - still
+    marked = left & dead_after
+    vanished = sum((left - marked).values())
+    arrived = sum((live_after - still).values())
+    deleted = max(0, vanished - arrived)
+    return sum(live_before.values()), deleted, sum(marked.values()) + deleted
+
+
+def _product(values) -> int:
+    total = 1
+    for v in values:
+        total *= v
+    return total
+
+
+def _param_rows_lost(
+    before_side: UnitSide, after_side: UnitSide
+) -> tuple[int, int] | None:
+    """Parametrized test items that ran before and do not run after, counted
+    by row *identity* rather than by how many rows are left.
+
+    `param_cases` is a count of live rows, so the arithmetic that reads it
+    (`before - after`) is satisfied by any edit that keeps the total: wrap one
+    row in `pytest.param(..., marks=pytest.mark.skip)` and append another, and
+    a disabled test item is reported as no event at all (F-063 -- the same
+    "count, not identity" mistake the column string makes for expectations in
+    F-060). Appending a row is not a reason to stop reporting the row that
+    stopped running.
+
+    Returns `(lost, disabled_only)`: the number of *original* test items
+    that no longer run, and how many of those are lost to marks alone (no
+    deleted row involved). Stacked decorators multiply into test items, so
+    both are computed on counts per table rather than by expanding the
+    cross product: with `b_i` live rows before, `v_i` deleted and `l_i` no
+    longer running in table `i`, the items that ran before are `prod(b_i)`,
+    the ones that still run `prod(b_i - l_i)`, and the ones that would still
+    run if only the deletions had happened `prod(b_i - v_i)`. Two tables of
+    two rows that each skip one row and append one lose 3 of their 4 items,
+    not 2 and not 4.
+
+    None -- and the caller keeps the count rule -- when the before side has
+    no readable tables, or when any of them cannot be paired with exactly one
+    after table binding the same argnames (a renamed or added column, the
+    same argnames bound twice, a table the frontend could not read). Pairing
+    on anything weaker would report rows as lost on nothing better than
+    decorator order. Extra tables on the after side do not block the
+    pairing: a new decorator multiplies the original items but does not
+    change whether their rows still run.
+    """
+    b_tables = param_tables(before_side)
+    if not b_tables:
+        return None
+    a_by_names: dict[tuple[str, ...], list[ParamTable]] = {}
+    for t in param_tables(after_side):
+        a_by_names.setdefault(t.names, []).append(t)
+    seen: set[tuple[str, ...]] = set()
+    per_table: list[tuple[int, int, int]] = []
+    for b in b_tables:
+        partners = a_by_names.get(b.names, [])
+        if b.names in seen or len(partners) != 1:
+            return None
+        seen.add(b.names)
+        per_table.append(_rows_lost(b, partners[0]))
+    original = _product(b for b, _, _ in per_table)
+    without_deletions = _product(b - deleted for b, deleted, _ in per_table)
+    surviving = _product(b - lost for b, _, lost in per_table)
+    return original - surviving, without_deletions - surviving
 
 
 def align_file(
