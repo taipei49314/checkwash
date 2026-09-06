@@ -1,0 +1,16 @@
+=== meta ===
+rule: CONFTEST_PATCHES_PROD
+title: an external alias that shares a repository module name remains hygiene
+origin: issue 127 target identity negative control
+=== after: tests/conftest.py ===
+import pytest
+import requests as pricing
+
+@pytest.fixture(autouse=True)
+def replace_network(monkeypatch):
+    monkeypatch.setattr(pricing, "get", lambda url: None)
+=== head: pricing.py ===
+def total():
+    return 0
+=== expect ===
+[]

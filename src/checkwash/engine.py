@@ -24,6 +24,7 @@ from checkwash.ci import (
     _scan_ci_weakening,
 )
 from checkwash.config import Config
+from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
 from checkwash.detectors import REGISTRY
@@ -387,6 +388,7 @@ def build_ir(
     raw_by_path: dict[str, tuple[bytes | None, bytes | None]] = {
         c.path.replace("\\", "/"): (c.before, c.after) for c in changes
     }
+    conftest_context = ConftestContext(changes, root_reader)
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
     oracle_sources: dict[tuple[str, int], bytes | None] = {}
     strict_oracle_sources: set[tuple[str, int]] = set()
@@ -721,18 +723,12 @@ def build_ir(
             g.dependency_manifest_changed = True
 
         if role == "conftest" and change.after is not None:
-            first_party = frozenset(
-                p.replace("\\", "/").split("/")[0].removesuffix(".py")
-                for p in (c.path for c in changes)
-            ) | frozenset(
-                _module_of(f.path).split(".")[0] for f in ir.files if f.role == "prod"
-            )
             before_patches = (
-                set(conftest_patch_targets(change.before, first_party))
+                set(conftest_patch_targets(change.before, module_exists=lambda module: conftest_context.contains(module, 0), module_name=_module_of(path)))
                 if change.before is not None
                 else set()
             )
-            for text in conftest_patch_targets(change.after, first_party):
+            for text in conftest_patch_targets(change.after, module_exists=lambda module: conftest_context.contains(module, 1), module_name=_module_of(path)):
                 if text not in before_patches:
                     g.conftest_prod_patches.append((path, text))
 
