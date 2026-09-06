@@ -120,6 +120,10 @@ def test_inventoried_source_disappearance_is_an_error():
     (".pytest.toml", b'[pytest]\npython_files = ["*.py"]\n'),
     ("pytest.ini", b"invalid config without a section\n"),
     ("pyproject.toml", b"invalid ! toml\n"),
+    ("pytest.ini", b"[pytest]\ntestpaths = tests/boot.py tests/test_bool.py\n"),
+    ("pytest.ini", b"[pytest]\ntestpaths = ../tests\n"),
+    ("pytest.ini", b"[pytest]\ntestpaths = tests/*\n"),
+    ("pyproject.toml", b"[tool.pytest.ini_options]\ntestpaths = [42]\n"),
 ])
 def test_unproved_pytest_configuration_withholds_default_collection_proof(path, source):
     assert run(snapshot={**SNAPSHOT, path: source})[2] == "block"
@@ -130,9 +134,21 @@ def test_unproved_pytest_configuration_withholds_default_collection_proof(path, 
     ("setup.cfg", b"[metadata]\nname = sample\n"),
     ("pyproject.toml", b'[project]\nname = "sample"\nversion = "0.1.0"\n'),
     ("pytest.toml", b"# empty config\n"),
+    ("pytest.ini", b"[pytest]\ntestpaths = tests\n"),
+    ("pytest.ini", b"[pytest]\ntestpaths =\n    tests\n    tests/unit\n"),
+    ("setup.cfg", b"[tool:pytest]\ntestpaths = tests\n"),
+    ("pyproject.toml", b'[tool.pytest.ini_options]\ntestpaths = ["tests"]\n'),
 ])
 def test_empty_pytest_options_and_nonpytest_metadata_preserve_the_proof(path, source):
     assert run(snapshot={**SNAPSHOT, path: source})[2] == "pass"
+
+
+@pytest.mark.parametrize("directory", ["build", "venv", "tests/build"])
+def test_explicit_excluded_directory_cannot_hide_a_collected_mutator(directory):
+    snapshot = {**SNAPSHOT,
+                "pytest.ini": f"[pytest]\ntestpaths = {directory} tests\n".encode(),
+                f"{directory}/test_boot.py": MUTATE}
+    assert run(snapshot=snapshot)[2] == "block"
 
 
 def test_git_and_worktree_empty_needle_inventory_agree_on_empty_sources(tmp_path):

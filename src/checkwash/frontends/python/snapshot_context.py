@@ -11,12 +11,28 @@ from __future__ import annotations
 import ast
 import configparser
 from pathlib import PurePosixPath
+import re
 import tomllib
 
 from checkwash.change import EngineError
 from checkwash.roles import collectable
 
 _CONFIG_FILES = ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg", "pytest.toml", ".pytest.toml")
+
+
+def _default_collection_options(options):
+    if not isinstance(options, dict) or set(options) - {"testpaths"}:
+        return False
+    paths = options.get("testpaths", [])
+    if isinstance(paths, str):
+        paths = paths.split()
+    if not isinstance(paths, list) or any(type(path) is not str for path in paths):
+        return False
+    # Selecting conventional descendant directories only narrows the files
+    # already inspected by the complete inventory. Explicit Python files,
+    # globs and parent/absolute paths can alter that collection boundary.
+    return all(re.fullmatch(r"[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*/?", path)
+               and collectable(path.rstrip("/") + "/test_probe.py") for path in paths)
 
 
 def _default_collection_config(source, filename):
@@ -27,12 +43,16 @@ def _default_collection_config(source, filename):
             parsed = tomllib.loads(text)
             if filename == "pyproject.toml":
                 tool = parsed.get("tool", {})
-                return isinstance(tool, dict) and not tool.get("pytest")
+                if not isinstance(tool, dict):
+                    return False
+                settings = tool.get("pytest", {})
+                return (isinstance(settings, dict) and not set(settings) - {"ini_options"}
+                        and _default_collection_options(settings.get("ini_options", {})))
             return not parsed
         parsed = configparser.ConfigParser(interpolation=None)
         parsed.read_string(text)
-        return not any(dict(parsed[section]) for section in parsed.sections()
-                       if section.lower() in ("pytest", "tool:pytest"))
+        return all(_default_collection_options(dict(parsed[section])) for section in parsed.sections()
+                   if section.lower() in ("pytest", "tool:pytest"))
     except (UnicodeError, ValueError, configparser.Error, RecursionError, MemoryError):
         return False
 
@@ -82,8 +102,8 @@ def inert_test_execution_context(path, read, search=None):
     Missing, failed or over-budget discovery withholds optional proof. Empty
     sources are inert. ``read`` distinguishes known absence from failures;
     selected-source read exceptions propagate. The caller owns its cache.
-    Nonempty pytest configuration withholds the default-collection proof;
-    configured collection names and plugin options must not hide siblings.
+    Only empty pytest options or literal descendant-directory testpaths earn
+    default-collection credit; names and plugin options must not hide siblings.
     """
     if read is None or search is None:
         return False
