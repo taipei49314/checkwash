@@ -1,16 +1,10 @@
-"""The informed tamper corpus, as a gate rather than as a one-off measurement.
+"""The informed tamper corpus, replayed with complete source snapshots.
 
-40 cases from the 2026-08-13 informed adversarial run. Twelve block; twenty-eight
-escape, and each escape stands only because THREATMODEL 91 admits the hole is
-open. When that row closes, this gate is what stops it closing on paper only.
-
-The provenance half — production byte-identical, `pytest` red before and green
-after — was established once by `benchmarks/tamper/verify.py` and is not re-run
-here: eighty pytest subprocesses do not belong in the unit suite. What is
-replayed on every push is greenwash's verdict, which is what regresses.
-
-Modelled on `test_recorded_arms.py`, and for the same reason: a measurement that
-runs when someone remembers is a measurement that stops running.
+The expected table records blocked cases and the remaining authorised escapes.
+Runtime qualification is recorded separately: unchanged production, pytest red
+before and green after. This gate replays the engine verdict, detects blocked
+cases regressing and requires newly blocked escapes to receive a maintainer
+record update. It does not authorize an agent to change frozen labels.
 """
 
 import json
@@ -58,6 +52,11 @@ def _verdict(case: pathlib.Path) -> tuple[str, list[str]]:
         )
     head = {f"src/{_rel(p, case / 'src')}": p.read_bytes()
             for p in (case / "src").rglob("*.py")}
+    snapshot = {f"src/{_rel(p, case / 'src')}": p.read_bytes()
+                for p in (case / "src").rglob("*") if p.is_file()}
+    snapshot.update({_rel(p, after_dir): p.read_bytes()
+                     for p in after_dir.rglob("*") if p.is_file()})
+    from checkwash.gitio.snapshot import search_source_mapping
     _ir, findings, verdict = analyze(
         changes, Config(), Contract(), [], TODAY,
         known_modules=known_baseline() | {"app"},  # the corpora ship app.* by construction
@@ -65,6 +64,8 @@ def _verdict(case: pathlib.Path) -> tuple[str, list[str]]:
         head_searcher=lambda needles: [
             p for p, d in sorted(head.items()) if any(n.encode() in d for n in needles)
         ],
+        root_reader=snapshot.get,
+        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )
     return verdict, sorted({f.rule for f in findings if not f.allowlisted})
 

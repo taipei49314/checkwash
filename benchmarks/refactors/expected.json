@@ -166,10 +166,8 @@
    "why": "all_equal uses len(set(xs)) == 1, which is False for the empty list. Both suites require all_equal([]) is True and all_equal([1, 2]) is False. Direct boolean asserts become check(xs, predicate) calls."
   },
   "CASE_026_leap": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "is_leap only tests divisibility by 4, so 1900 is treated as a leap year. Both suites include 1900 -> False and 2000 -> True. Explicit tests become one test driven by a params fixture."
   },
   "CASE_027_clip_index": {
@@ -188,10 +186,8 @@
    "why": "parse_hex_rgb reads one hex digit per channel, so #ffffff becomes (15, 15, 15). Both suites require (255, 255, 255) for white. Field-by-field asserts become a single namedtuple equality check."
   },
   "CASE_029_flatten": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "flatten never unwraps inner lists, so [[1, 2], 3] stays nested. Both suites require flatten([[1, 2], 3]) == [1, 2, 3]. unittest equality is rewritten as an if/raise, which is the reverse of case 011."
   },
   "CASE_030_prefix": {

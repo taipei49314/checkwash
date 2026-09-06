@@ -8,10 +8,11 @@ Issues #127–#131 have a separate unreleased source candidate covering conftest
 targets, stored expectations and bounded Python oracle forms. See the
 [scope and limitations](docs/issue-remediation-2026-09-06.md). The #125 CI
 results in the next section describe that earlier source, not qualification
-of these additional changes. Historical population records remain unchanged;
-the new source replays, contract wording and three changed benchmark records
-are presented separately for maintainer review. No new release or Action pin
-is implied by this candidate.
+of these additional changes. Historical population runs remain unchanged.
+After the exact review package was supplied, the owner directed continuation;
+the candidate now includes the contract wording, complete frozen snapshot
+adapters and three evidence-backed benchmark record updates. New source
+replays are recorded separately. No new release or Action pin is implied.
 
 ## Unreleased next-minor remediation candidate
 

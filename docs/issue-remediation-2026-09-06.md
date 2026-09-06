@@ -100,12 +100,16 @@ replays use immutable captured trees and identify their engine source.
 The original research records and published-version measurements remain
 historical. #132 tracks the remaining population; this work does not claim all
 559 saved families are fixed. Source improvements in CASE_026_leap and
-CASE_029_flatten require review of the frozen refactor records; the repaired
-tamper case 026-normalize also needs its captured expectation reviewed. The legacy
-frozen wrapper lacks the new strict callbacks, so its results alone do not
-qualify the precision path; complete-snapshot replays are recorded separately.
+CASE_029_flatten are recorded as passing; repaired tamper case 026-normalize
+is recorded as blocking. Before changing these three records, complete corpus
+replays identified every difference and actual pytest controls confirmed the
+original oracle behavior. Historical run data and WHY text are preserved.
+Both frozen wrappers now supply complete source snapshots so the gates
+exercise the same precision path as the supported benchmark adapters.
 
-SPEC/THREATMODEL and frozen-record updates are supplied as a separate exact
-maintainer review patch. They have not been applied, and an independent human
-review of the new fixture labels is not claimed. Release qualification and
-later recommended Action adoption remain separate steps.
+The owner directed continuation after the exact contract/record patch and
+the 18 new fixture rationales were supplied in PR #133. The candidate includes
+that patch under the owner's execution authorization. This records delegated
+implementation and its evidence; independent human label adjudication is not
+claimed. Release qualification and later recommended Action adoption remain
+separate steps.
