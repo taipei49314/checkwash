@@ -199,21 +199,25 @@ def _git_query(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | N
     return result
 
 
-def _tracked_blob(root: Path, relative: str | Path) -> bytes | None:
+def _tracked_blob(root: Path, relative: str | Path) -> tuple[bytes | None, str]:
     relative = Path(relative)
     if relative.is_absolute() or ".." in relative.parts:
-        return None
+        return None, "not a repository-relative path"
     requested = relative.as_posix()
     try:
         encoded = requested.encode("utf-8")
     except UnicodeEncodeError:
-        return None
+        return None, "path cannot be encoded as UTF-8"
     result = _git_query(root, "ls-files", "--stage", "-z", "--", requested)
     if result is None:
-        return None
+        return None, "Git index could not be inspected"
+    if result.returncode:
+        return None, "Git index is unavailable; run doctor from a Git repository"
+    if not result.stdout:
+        return None, f"untracked workflow; review it, then git add -- {requested} (a commit is not required)"
     records = result.stdout.split(b"\0")
     if result.returncode or len(records) != 2 or records[1]:
-        return None
+        return None, "multiple or unmerged index entries; resolve the index before retrying"
     header, separator, actual = records[0].partition(b"\t")
     fields = header.split(b" ")
     if not (
@@ -224,24 +228,35 @@ def _tracked_blob(root: Path, relative: str | Path) -> bytes | None:
         and re.fullmatch(rb"[0-9a-f]{40}|[0-9a-f]{64}", fields[1])
         and fields[2] == b"0"
     ):
-        return None
+        return None, "index entry is not a regular, stage-0 file with the exact path"
     oid = fields[1].decode("ascii")
     blob = _git_query(root, "cat-file", "blob", oid)
     worktree = _regular_bytes(root / relative)
     if blob is None or blob.returncode or worktree is None:
-        return None
+        return None, "indexed blob or regular worktree file could not be read"
     normalized_blob = blob.stdout.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
     normalized_worktree = worktree.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
     if worktree != blob.stdout and normalized_worktree != normalized_blob:
-        return None
-    return blob.stdout
+        return None, f"index and worktree differ (including intent-to-add); review, then git add -- {requested}"
+    return blob.stdout, ""
 
 
 def _uses(props: dict[str, str], owner: str) -> bool:
     return set(props) == {"uses", "with"} and props["uses"] == f"{owner}@{_PINS[owner]}"
 
 
-def _healthy_job(body: list[str]) -> bool:
+def _pin_issue(props: dict[str, str], owner: str) -> str:
+    """Explain a parsed ref mismatch without relaxing the trusted chain."""
+    actual = props.get("uses", "")
+    prefix = owner + "@"
+    if not actual.startswith(prefix):
+        return f"expected {prefix}{_PINS[owner]}; found {actual or '(no uses)'}"
+    ref = actual[len(prefix):]
+    kind = "unsupported SHA" if re.fullmatch(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}", ref) else "tag or non-SHA ref"
+    return f"{owner}: {kind} {ref}; this CLI requires {_PINS[owner]}"
+
+
+def _healthy_job(body: list[str], reasons: list[str]) -> bool:
     job_items: list[tuple[int, str, str]] = []
     for index, line in enumerate(body[1:], 1):
         if _indent(line) == 4:
@@ -272,19 +287,26 @@ def _healthy_job(body: list[str]) -> bool:
     if not _uses(checkout[0], "actions/checkout") or checkout[1] != {
         "fetch-depth": "0", "persist-credentials": "false"
     }:
+        if checkout[0].get("uses") != "actions/checkout@" + _PINS["actions/checkout"]:
+            reasons.append(_pin_issue(checkout[0], "actions/checkout"))
         return False
     if not _uses(setup[0], "actions/setup-python") or setup[1] != {"python-version": '"3.12"'}:
+        if setup[0].get("uses") != "actions/setup-python@" + _PINS["actions/setup-python"]:
+            reasons.append(_pin_issue(setup[0], "actions/setup-python"))
         return False
     props, with_values = gate
     remote = set(props) == {"uses"} and not with_values and props["uses"] == (
         "taipei49314/checkwash/action@" + _PINS["taipei49314/checkwash/action"]
     )
+    if not remote and props.get("uses") != "taipei49314/checkwash/action@" + _PINS["taipei49314/checkwash/action"]:
+        reasons.append(_pin_issue(props, "taipei49314/checkwash/action"))
     return remote
 
 
-def _workflow(data: bytes) -> tuple[list[str], bool]:
+def _workflow(data: bytes, reasons: list[str]) -> tuple[list[str], bool]:
     text = _decode_workflow(data)
     if text is None:
+        reasons.append("workflow is not supported UTF-8/YAML text")
         return [], True
     lines = _lines(text)
     blob = "\n".join(lines)
@@ -340,7 +362,7 @@ def _workflow(data: bytes) -> tuple[list[str], bool]:
     healthy = []
     for pos, (start, name) in enumerate(starts):
         stop = starts[pos + 1][0] if pos + 1 < len(starts) else end
-        if _healthy_job(lines[start:stop]):
+        if _healthy_job(lines[start:stop], reasons):
             healthy.append(name)
     return healthy, candidate
 
@@ -354,15 +376,18 @@ def _workflow_gates(root: Path) -> tuple[list[tuple[str, str]], list[str]]:
         return gates, [".github/workflows (linked path)"]
     for path in sorted(p for p in directory.iterdir() if p.is_file() and p.suffix in {".yml", ".yaml"}):
         relative = path.relative_to(root)
-        blob = _tracked_blob(root, relative) if _plain_chain(root, relative) else None
+        blob, issue = _tracked_blob(root, relative) if _plain_chain(root, relative) else (
+            None, "linked, nonregular, or case-mismatched workflow path"
+        )
         if blob is None:
-            incomplete.append(relative.as_posix())
+            incomplete.append(f"{relative.as_posix()}: {issue}")
             continue
-        names, candidate = _workflow(blob)
+        reasons: list[str] = []
+        names, candidate = _workflow(blob, reasons)
         rel = path.relative_to(root).as_posix()
         gates.extend((rel, name) for name in names)
         if candidate and not names:
-            incomplete.append(rel)
+            incomplete.append(f"{rel}: " + ("; ".join(reasons) or "unsupported or ambiguous workflow shape"))
     return gates, incomplete
 
 
@@ -381,7 +406,7 @@ def collect(root: Path) -> list[Note]:
     elif incomplete:
         notes.append(Note(
             "warn", "workflow analysis incomplete",
-            "No exact supported gate was proven in " + ", ".join(incomplete) + ". "
+            "No exact supported gate was proven. " + "; ".join(incomplete) + ". "
             "Use the three-step, hash-pinned workflow from the README; direct run steps are never trusted.",
         ))
     else:

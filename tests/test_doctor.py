@@ -572,3 +572,43 @@ def test_doctor_sees_the_renamed_config_directory(tmp_path):
     assert "present (.checkwash/allow.toml)" in base_side.detail
     cap = next(note for note in notes if "180 days" in note.title)
     assert "1 entries in .checkwash/allow.toml" in cap.detail
+
+
+def test_untracked_and_index_mismatch_have_actionable_distinct_reasons(tmp_path):
+    root = _repo(tmp_path, {"README.md": "baseline"})
+    path = root / CI / "checkwash.yml"
+    path.parent.mkdir(parents=True)
+    path.write_text(CANONICAL, encoding="utf-8")
+    detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
+    assert "untracked workflow" in detail
+    assert "git add -- .github/workflows/checkwash.yml" in detail
+    assert "a commit is not required" in detail
+    assert run(str(root), io.StringIO()) == 1
+    _stage(root)
+    _healthy(root)
+    path.write_text(CANONICAL + "# reviewed edit\n", encoding="utf-8")
+    detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
+    assert "index and worktree differ" in detail
+    assert "untracked workflow" not in detail
+    _stage(root)
+    _healthy(root)
+
+
+@pytest.mark.parametrize("ref,reason", [
+    ("v0.2.12", "tag or non-SHA ref"),
+    ("283db528cd3d8e5e38173e14d766a8915efa2c90", "unsupported SHA"),
+])
+def test_ref_diagnostics_name_actual_and_required_pins(tmp_path, ref, reason):
+    required = "e05c37f0e1673cdf218ec62fcfb7c6712cce704b"
+    root = _canonical_repo(tmp_path, CANONICAL.replace(required, ref))
+    detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
+    assert reason in detail
+    assert ref in detail and required in detail
+    assert run(str(root), io.StringIO()) == 1
+
+
+def test_unsupported_shape_does_not_get_a_pin_diagnosis(tmp_path):
+    root = _canonical_repo(tmp_path, CANONICAL.replace("on: [pull_request]", "on: push"))
+    detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
+    assert "unsupported or ambiguous workflow shape" in detail
+    assert "unsupported SHA" not in detail
