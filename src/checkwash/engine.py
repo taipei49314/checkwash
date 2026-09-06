@@ -515,6 +515,8 @@ def build_ir(
             _scope_match(path, glob) for glob in g.scope_allow
         ):
             g.scope_drift.append((path, role))
+            if file_ir.change_evidence is None:
+                file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
         if role in ("test", "conftest", "prod", "ci", "guardrail"):
             _scan_hidden_unicode(g, path, change.before, change.after)

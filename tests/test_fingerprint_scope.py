@@ -17,7 +17,7 @@ from checkwash.allowlist import (
 from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
-from checkwash.detectors.globals_rules import detect_ci_touched, detect_guardrail, detect_unparseable_test
+from checkwash.detectors.globals_rules import detect_ci_touched, detect_guardrail, detect_scope_drift, detect_unparseable_test
 from checkwash.engine import _classify_allowlist_change, analyze
 from checkwash.findings import fingerprint_issue, make_change_fingerprint, make_fingerprint
 from checkwash.ir.model import ChangeEvidence, IR, to_jsonable
@@ -245,3 +245,27 @@ def test_unparseable_identity_binds_content_pair_and_parser_state():
     ir.files.clear()
     with pytest.raises(EngineError, match="missing.*evidence"):
         detect_unparseable_test(ir)
+
+
+def test_scope_identity_binds_pair_and_effective_contract_without_revision_or_prose():
+    path, rule = "auth.py", "SCOPE_DRIFT"
+    change = FileChange(path, "modified", b"ALLOW = False\n", b"ALLOW = True\n")
+    def evaluate(contract, item=change):
+        ir, findings, _ = analyze([item], Config(), contract, [], TODAY)
+        return ir, next(f for f in findings if f.rule == rule)
+    contract = Contract(present=True, scope_allow=["billing.py", "docs/**"])
+    ir, first = evaluate(contract)
+    assert first.severity == "high"
+    assert evaluate(replace(contract, scope_allow=["docs/**", "billing.py", "docs/**"]))[1].fingerprint == first.fingerprint
+    assert evaluate(replace(contract, intent="different prose", oracle_freeze=True))[1].fingerprint == first.fingerprint
+    assert evaluate(replace(contract, scope_allow=["billing.py"]))[1].fingerprint != first.fingerprint
+    assert evaluate(contract, replace(change, before=b"ALLOW = None\n"))[1].fingerprint != first.fingerprint
+    assert evaluate(contract, replace(change, after=b"ALLOW = 1\n"))[1].fingerprint != first.fingerprint
+    ir.globals.scope_drift = [(path, "docs")]
+    assert detect_scope_drift(ir)[0].fingerprint != first.fingerprint
+    ir.files[0].change_evidence = None
+    with pytest.raises(EngineError, match="missing.*evidence"):
+        detect_scope_drift(ir)
+    ir.files.clear()
+    with pytest.raises(EngineError, match="missing.*evidence"):
+        detect_scope_drift(ir)

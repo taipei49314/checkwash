@@ -46,8 +46,8 @@ def _cli(repo, *args):
     )
 
 
-def _check(repo, rule, rev=None):
-    result = _cli(repo, "check", *([rev] if rev else []), "--format", "json")
+def _check(repo, rule, rev=None, *, extra=()):
+    result = _cli(repo, "check", *([rev] if rev else []), "--format", "json", *extra)
     assert result.returncode in (0, 1), result.stderr.decode()
     payload = json.loads(result.stdout)
     return result, payload, next(f for f in payload["findings"] if f["rule"] == rule)
@@ -105,6 +105,37 @@ def test_parser_approval_cannot_hide_a_later_parser_regression(repo, legacy):
         assert b"retired" in result.stderr and key.encode() in result.stderr
         refused = _cli(repo, "allow", key, "--reason", "retired parser key")
         assert refused.returncode == 2
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize("changed_context", ["contract", "content"])
+def test_scope_approval_cannot_cross_content_or_base_contract(repo, legacy, changed_context):
+    path, rule = "auth.py", "SCOPE_DRIFT"
+    contract = b'---\ncheckwash:\n  scope:\n    allow:\n      - "billing.py"\n---\n'
+    _write(repo, "TASK.md", contract)
+    _write(repo, path, b'def authorize(token):\n    return token == "expected"\n')
+    _commit(repo, "TASK.md", path)
+    _write(repo, path, b'def authorize(token):\n    return bool(token) and token == "expected"\n')
+    extra = ("--task", str(repo / "TASK.md"))
+    _, _, first = _check(repo, rule, extra=extra)
+    key = _legacy(rule, path) if legacy else first["fingerprint"]
+    _write(repo, ".greenwash/allow.toml", _ledger(key, "ASSERT_REMOVED" if legacy else None))
+    _commit(repo, ".greenwash/allow.toml")
+    _, _, exact = _check(repo, rule, extra=extra)
+    assert exact["allowlisted"] is (not legacy)
+    if changed_context == "contract":
+        _write(repo, "TASK.md", contract.replace(b"billing.py", b"docs/**"))
+        _commit(repo, "TASK.md")  # the exact same auth content pair, new trusted contract
+    else:
+        _write(repo, path, b"def authorize(token):\n    return True\n")
+    _commit(repo, path)
+    result, payload, later = _check(repo, rule, "HEAD~1..HEAD", extra=extra)
+    assert result.returncode == 1 and payload["verdict"] == "block"
+    assert later["severity"] == "high" and not later["allowlisted"]
+    assert later["fingerprint"] != key
+    if legacy:
+        assert b"retired" in result.stderr and key.encode() in result.stderr
+        assert _cli(repo, "allow", key, "--reason", "retired scope key").returncode == 2
 
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=["guardrail", "ci"])

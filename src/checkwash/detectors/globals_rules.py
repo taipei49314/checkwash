@@ -221,6 +221,10 @@ def detect_import_unresolved(ir: IR) -> list[Finding]:
 
 
 def detect_scope_drift(ir: IR) -> list[Finding]:
+    files = {file.path: file for file in ir.files}
+    for path, _role in ir.globals.scope_drift:
+        if path not in files:
+            raise EngineError(f"SCOPE_DRIFT/{path}: missing file evidence")
     role_weight = {"prod": "prod", "ci": "ci", "guardrail": "guardrail"}
     return [
         Finding(
@@ -232,7 +236,10 @@ def detect_scope_drift(ir: IR) -> list[Finding]:
             ),
             path=path,
             unit=None,
-            fingerprint=make_fingerprint("SCOPE_DRIFT", path, None, path),
+            fingerprint=make_change_fingerprint(
+                "SCOPE_DRIFT", files[path],
+                {"scope_allow": sorted(set(ir.globals.scope_allow)), "role": role},
+            ),
         )
         for path, role in ir.globals.scope_drift
     ]
