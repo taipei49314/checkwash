@@ -1,0 +1,17 @@
+=== meta ===
+bypass: 60
+rule: CONFTEST_PATCHES_PROD
+title: a conftest-only stand-in resolves an unchanged production module
+origin: GitHub issue 127; canonical monkeypatch with no production diff
+=== after: tests/conftest.py ===
+import pytest
+import pricing
+
+@pytest.fixture(autouse=True)
+def replace_total(monkeypatch):
+    monkeypatch.setattr(pricing, "total", lambda: 5)
+=== head: pricing.py ===
+def total():
+    return 0
+=== expect ===
+[{"rule": "CONFTEST_PATCHES_PROD", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

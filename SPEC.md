@@ -26,7 +26,7 @@ Paths are normalized to forward slashes before matching. Default role globs
 | test      | `tests/**`, `**/test_*.py`, `**/*_test.py` |
 | guardrail | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.claude/**`, `.greenwash/**`, `.checkwash/**` |
 | ci        | `.github/workflows/**`, `.gitlab-ci.yml`, `.pre-commit-config.yaml`, `pytest.ini`, `tox.ini`, `setup.cfg`, `**/pyproject.toml`, `.circleci/**`, `.buildkite/**`, `**/Jenkinsfile`, `.travis.yml`, `.drone.yml`, `appveyor.yml`, `azure-pipelines.yml`, `bitbucket-pipelines.yml`, `noxfile.py`, `**/justfile`, `**/Justfile`, `**/.justfile`, `**/JUSTFILE` |
-| snapshot  | `**/__snapshots__/**`, `**/golden/**`, `**/*.golden`, `**/*.snap` |
+| snapshot  | `**/__snapshots__/**`, `**/golden/**`, `**/*.golden`, `**/*.snap`, `**/expected/**`, `**/*.expected` |
 | lockfile  | `poetry.lock`, `uv.lock`, `package-lock.json`, `pnpm-lock.yaml`, `requirements*.txt`, `requirements*.in` |
 | docs      | `**/*.md`, `**/*.rst`, `**/README` |
 | prod      | everything else |
@@ -106,6 +106,77 @@ between the two is a laundering route (all confirmed by reproduction):
   `skipif(False)` → `skipif(True)` is a change; and the marker is matched on
   its trailing components, so `import pytest as p; @p.mark.skip` counts
 
+### Bounded Python carriers and table projection (unreleased candidate)
+
+A direct conditional failure, `if comparison: raise AssertionError`, can
+carry an oracle when its single comparison and built-in exception binding
+are known. It has no else/cause/side-effecting body or dynamic message.
+The analysis AST retains source spans and supplies the same carrier to
+reachability, inherited-oracle and exception-neutralization logic. General
+control-flow programs and custom exception semantics are not inferred.
+
+An inline transparent truthiness carrier can expose a scalar equality when
+its top-level class has only a two-field constructor and a one-return
+`__bool__` equality. Bases, decorators, metaclasses, special attribute fields,
+other methods, dynamic class hooks and module/test rebinding are excluded.
+The actual call and literal expectation must project to exact built-in
+str/int/bool/None values using unchanged, strict, pure production source;
+string projection is ASCII-only. Each source side is resolved independently,
+and unsupported types or context leave its ordinary truthy representation.
+The original native assert text/span is retained. This does not model general
+custom equality or execute a repository class.
+
+Literal parametrize, fixture(params=), and loop consolidation can project
+concrete oracle cases when the complete before-side call/input sequence is
+preserved as an ordered prefix; new cases may follow it. The baseline is an
+entire module of plain zero-argument, single-assert tests, and the diff changes
+only that collected test file. Repeated bound row references are rejected so
+substitution cannot turn aliases into separate literal objects. The bounds
+are 65,536 source bytes, 4,096 AST nodes and 64 concrete cases per side.
+Expected expressions remain separate so expectation edits still
+reach ordinary detectors. Generated `test_concrete_*` identities denote
+concrete cases rather than source function names; evidence spans still refer
+to the source. The bounded projection does not alter alignment thresholds,
+strength values, severities or the existing fallback restructure policy.
+Unsupported shapes retain their ordinary findings and do not gain this proof.
+
+A separate additive pass can compare concrete old native assertions or
+single-assert same-file helper calls with literal parametrize rows that add
+`abs(result)` or the fixed alphanumeric-filter/join/lower input wrapper.
+Callee imports, raw input, equality/identity operator and concrete expectation
+must match; unchanged raw comparisons are reserved first as a multiset.
+These events retain the original units and findings and give no equivalence
+credit. General helper programs and arbitrary table transformations are not
+inferred.
+
+Redundant input normalization can withhold an ordinary wrapper finding only
+for a closed ASCII-string literal call through fixed str methods or a
+transparent same-file helper into a pure single-return production function.
+Both concrete production expressions must project identically. The proof
+bounds include 64 reads, 100,000 source bytes, 4,096 AST nodes, 16 expression
+levels and 4,096-character ASCII strings. It proves the current concrete
+expression, not every possible future production mutant.
+
+Optional precision requires strict source context. Missing, failed,
+incomplete or over-budget discovery withholds credit; selected-source read
+failures retain their engine-error behavior. Inert repository test startup
+and a complete bounded inventory (fewer than 64 nonempty Python sources)
+reject conftest/package effects and unproved sibling test modules. Worktree
+inventory includes untracked/hidden source trees, so it can withhold precision
+when the committed range has a smaller complete snapshot. This is not a
+guarantee about arbitrary installed plugins or dynamic import hooks.
+
+The context also probes pytest.ini, .pytest.ini, pyproject.toml, tox.ini,
+setup.cfg, pytest.toml and .pytest.toml at source ancestors. Empty pytest
+options and unrelated packaging metadata are allowed. `[pytest]`/`[tool:pytest]`
+INI sections and pyproject `[tool.pytest.ini_options]` may also contain only
+`testpaths` naming literal relative descendant directories that remain within
+the ordinary collectability rules. Explicit files, globs, parent/absolute
+paths, collection naming overrides, addopts, other options and nonempty native
+pytest TOML files withhold the context-dependent proof rather than assuming
+default collection. Invalid encoding/config syntax or an over-limit config
+also withholds proof. Strict selected-source reader failures remain errors.
+
 ## 3. Assertion strength lattice
 
 **What counts as a unit's assertions (v0.1.26).** The IR records the
@@ -162,10 +233,10 @@ detectors can only be disabled whole.
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `ASSERT_SUBSTITUTED` | an aligned pair produced by the **order fallback** — position, not text or subject — where both halves moved: the subject differs structurally and so does the expectation. The old assertion is gone and a different one holds its slot, while `strength_change` reads 0 and `assertions_removed` is empty. Requires a subject on both sides, so folding an excinfo assert into `pytest.raises(match=)` is untouched; a *wrapped* subject is `SUBJECT_NORMALIZED`'s, and a rename that keeps the expectation is neither |
 | `EXPECTED_VALUE_HARDCODED` | new assertion literal equals a constant newly introduced in prod in the same diff |
-| `EXPECTED_VALUE_CHANGED` | an aligned assertion keeps its form, strength **and subject**, but its expected side was rewritten: a literal value, a call-expression replaced by a literal (issue #60), or a call rewritten to a different call (issue #61). Both sides used to have to be literals; that left independent-oracle calls invisible |
+| `EXPECTED_VALUE_CHANGED` | an aligned assertion keeps its form, strength **and subject**, but its expected side was rewritten: a literal value, a call-expression replaced by a literal (issue #60), or a call rewritten to a different call (issue #61). Both sides used to have to be literals; that left independent-oracle calls invisible. The file-scoped form also reports a modified stored snapshot/golden/expected file when no parsed production symbol changed and no opaque production change exists. It uses content-bound identity. New/deleted expectations and real or unrelated production co-changes retain the existing snapshot policy; this is a path-role heuristic, not proof of which test reads a file. |
 | `EXPECTED_VALUE_DERIVED` | an aligned assertion keeps its subject and its strength, but its expected side stopped being a literal and now resolves — through the unit's own assignments — to a name the subject also uses. `== 105.0` became `expected = sum(items)` / `== expected`. The transition is the signal: an expectation that was already computed before the diff is how the test was written. A literal replaced by a *named constant* or a parametrize argument shares no name with the subject and does not fire; a literal replaced by an expression over the subject's own inputs is the test computing the answer from the data it feeds the code. Escalates through repair evidence like every oracle rule |
 | `EXPECTATION_DEFINITION_CHANGED` | an aligned assertion whose **text is unchanged** and whose expectation resolves to something outside the assertion whose definition changed: a unit-local binding, a `parametrize` **column the expectation actually consumes**, a same-file `@pytest.fixture`'s return/yield, or a **same-file top-level constant** (canonical on both sides so reformatting is not a change; last-wins on both sides, which is module execution order, so an appended rebind is caught; a constant the subject also consumes is a shared producer and excluded — D-051, the 2026-08-25 census's largest blind bucket). Which column is the expectation is decided by consumption, not by position or by the name `expected`. Row additions and deletions are excluded — those are `TEST_DISABLED`'s event — and a cell is read through `pytest.param(...)`, so marking rows skipped is not an expectation edit. A binding that gains a **branch-exclusive alternative** is excluded the same way, and only then: the after side must have more definitions, every before-side definition must survive verbatim (multiset containment), and the name's bindings must sit in pairwise-exclusive `if`/`match` arms — a sequential rebind fails the third clause because the last unconditional binding is the one the assertion reads (THREATMODEL 95 records the tautological-gate residual). Compared structurally, so reformatting is not a change. Escalates through repair evidence like every oracle rule — and D9 `DEPENDENCY_DRIFT` and `PACKAGE_REPAIR` de-escalate it the same way. Blocking status is a measured decision taken twice, not a hedge: as a blocking rule in v0.1.19 it cost 12 extra blocks on 1800 human commits and shipped at `info`; after the T1.9/T1.10/T1.11 credit rounds the 2026-08-25 promotion sweep cost 5, each adjudicated false and named (`benchmarks/adjudication-2026-08-25.json`), inside the pre-registered line of five |
-| `SUBJECT_NORMALIZED` | an aligned assertion keeps its form, strength **and** expected literal, and the asserted subject now wraps its old self — `f(x)` became `f(x).replace(...)`, `sorted(f(x))`, `f(x)[0]`. Structural containment, so spelling does not matter. Resolved through **one hop** of the unit's own bindings, so hoisting the wrapper to the previous line is the same event; and applied to **argument positions** too, so `f(x)` becoming `f(normalise(x))` counts — same callee, same arity, every argument unchanged or containing its counterpart, at least one actually wrapped. Two hops are a stated residual; a subject replaced outright is a different test, not a laundered one. Escalates through repair evidence like every oracle rule, because wrapping is routine when production changed under it |
+| `SUBJECT_NORMALIZED` | an aligned assertion keeps its form, strength **and** expected literal, and the asserted subject now wraps its old self — `f(x)` became `f(x).replace(...)`, `sorted(f(x))`, `f(x)[0]`. Structural containment, so spelling does not matter. Resolved through **one hop** of the unit's own bindings, so hoisting the wrapper to the previous line is the same event; and applied to **argument positions** too, so `f(x)` becoming `f(normalise(x))` counts — same callee, same arity, every argument unchanged or containing its counterpart, at least one actually wrapped. Two hops are a stated residual; a subject replaced outright is a different test, not a laundered one. Escalates through repair evidence like every oracle rule, because wrapping is routine when production changed under it. Direct containment is retained alongside one-hop resolved containment. The bounded concrete ASCII-string proof below can establish that an added normalization is redundant for the unchanged production expression. Separate literal-table events can expose the same wrapper when ordinary assertion alignment does not; exact raw oracles that remain present are consumed first, so merely adding wrapped cases does not replace them. Neither extension changes severity or the ordinary restructure policy. |
 | `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` (JS forms in v0.2) added |
 | `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `tox.ini`, `setup.cfg`, `pyproject.toml`) and content-classified runner scripts (§2), **plus one hop**: a changed script that holds no runner token of its own but invokes another script that does is ci too, resolved against the diff or the head snapshot. Exactly one hop, and the hop must terminate in a real runner — a `ci.sh` calling `compile.sh` stays production, which is the line the content gate has drawn since v0.1.8; test command weakened → high. Weakening is two families, and the difference is the rule's precision. A **swallow** discards an exit code (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`): introducing one anywhere is a weakened command. A **narrowing** restricts which tests run (`--ignore`, `--deselect`, `-k`, `python_files`, `python_classes`, `python_functions`, `testpaths`, `norecursedirs`, `collect_ignore`, `-p no:`): it counts only when the diff *introduces* it — the token must be absent from the base side of every ci-role file in the diff, and the file carrying it must have existed at base. Restating a setting is not narrowing it, and a file that did not exist had no test command to narrow. Also weakening: a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests; deleting a runner script or a config file does not — that is consolidation until proven otherwise |
@@ -174,7 +245,7 @@ detectors can only be disabled whole.
 | `SCOPE_DRIFT` | changed file outside contract globs (disabled without a manifest) |
 | `HIDDEN_UNICODE` | zero-width / bidi control characters in changed lines → high |
 | `TEST_FILE_UNPARSEABLE` | a test/conftest file greenwash could not parse, so none of its oracles were checked → high if it parsed before this diff |
-| `CONFTEST_PATCHES_PROD` | a conftest `monkeypatch.setattr` newly aimed at first-party code or at `request.module` — the suite's assertions then check a stand-in while production and tests stay byte-identical. Stdlib / third-party stubbing (time, network, env) is hygiene and is not reported. Escalates like every oracle rule when no production change explains it. Found by a real agent on the decoy probe arm (2026-08-04), not by inspection |
+| `CONFTEST_PATCHES_PROD` | a newly observed conftest patch aimed at repository code or `request.module`. Standard pytest fixture parameters and imported unittest.mock patch APIs are recognized with local binding checks; root/src targets are resolved from strict source snapshots even when production is unchanged. No rule severity changes. Custom import roots, dynamic wrappers and ancestor/plugin fixture overrides remain unsupported. The source and boundary tests in the issue remediation notes define the bounded coverage. |
 | `TEST_PATCHES_SUBJECT` | a test unit that **existed before the diff** now installs a stand-in for something its own assertions check — a newly added `monkeypatch.setattr`/`setitem`, `patch("pkg.mod.attr")`, `patch.object(...)` or `mocker.patch(...)` whose patched **attribute** is reached by the unit's oracle, directly or through **one hop** of the unit's own bindings (`result = billing.total(x)` / `assert result == 105.3`). Three conditions, because inside a test function — unlike in a conftest — patching first-party code is the normal way to isolate a unit: the unit must have existed, the patch must be new, and the patched attribute must be reached. Patching a collaborator the oracle never names (a retry delay, a clock, a socket) is hygiene and is not reported, and neither is stdlib or a declared third-party dependency — where "declared" excludes the project's own distribution name, or the check would deny the first party. Escalates through repair evidence like every oracle rule. Residuals: stand-ins installed by a requested fixture, runtime-built targets, `respx`/`responses`-style HTTP dialects, two hops, and an attribute named only on a non-literal expectation side |
 
 All twenty-one are live (thirteen as of M1, `CONFTEST_PATCHES_PROD` as of
@@ -355,7 +426,7 @@ expires = "2026-10-01"
   pin it — else the current date. This is the only clock read that can affect
   a verdict, and it is overridable precisely so runs can be reproduced.
 
-For rules other than the five listed below, fingerprint remains
+Except for the content-bound forms and literal-table SUBJECT_NORMALIZED events described below, fingerprint remains
 `sha256(rule + "/" + path + "/" + qualname + "/" + normalize(before_text))[:12]`,
 prefixed `rule/path/qualname/` for readability. That legacy normalization
 strips whitespace outside string literals and preserves whitespace within
@@ -377,6 +448,39 @@ numeric-restoration source proof: exactly one non-artifact file change, no
 rename, at most one changed native bare assertion, and identical normalized
 surrounding source. Inherited assertions and unknown spans cannot provide
 this proof; it does not affect fingerprint identity.
+
+The stored-expectation form of EXPECTED_VALUE_CHANGED uses the same v2
+file identity and `stored_expectation_rewritten` event. Its assertion-level
+fingerprints retain their existing scheme and are not retired. SARIF labels
+the stored form `checkwash/v2`; a malformed v2 key cannot fall back to a legacy
+assertion key.
+
+FileIR.normalization_equivalent_pairs is an optional sequence, default empty,
+of (unit qualname, before assertion id, after assertion id) proof records.
+Only a bounded non-executing projection of a closed literal call against
+unchanged production may populate it. JSON arrays and typed tuple records
+preserve the same comparison behavior; malformed records grant no credit.
+The proof concerns the current concrete expression, not arbitrary future bugs.
+
+FileIR.table_normalization_events is an optional sequence, default empty,
+of (after unit, before text, before span, after text, after span, concrete
+before subject, concrete after subject, operator, concrete expected expression).
+These source-backed records add
+SUBJECT_NORMALIZED findings for bounded literal-table rewrites; they cannot
+remove an ordinary finding or grant equivalence/restructure credit. Records
+survive JSON arrays, and malformed records raise an engine error. Source
+locations are report evidence and do not enter fingerprint identity.
+
+For these literal-table SUBJECT_NORMALIZED events, the digest uses the same
+rule/path/unit prefix and normalization function, with canonical JSON of
+(unit, before text, after text, concrete before subject, concrete after
+subject, operator, concrete expected expression) as the fingerprint input.
+JSON uses ASCII escapes and compact separators. Operator is `Eq` or `Is`;
+the concrete expectation is canonical expression text from `ast.unparse`.
+Before/after spans
+are excluded. This retains distinct concrete row identities, including a
+fixed expectation declared inside an old helper rather than at its call.
+Ordinary aligned-assertion SUBJECT_NORMALIZED fingerprints are unchanged.
 
 Context includes guardrail creation/loosening, all detected CI weakening
 lines, the previous parser state, effective scope globs/role, or the complete

@@ -15,10 +15,11 @@ import datetime
 import importlib.resources as resources
 import sys
 
-from checkwash.cases import case_to_changes, parse_case
+from checkwash.cases import case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.engine import analyze
+from checkwash.gitio.snapshot import search_source_mapping
 from checkwash.report.textio import write_text
 
 _TODAY = datetime.date(2026, 1, 1)
@@ -61,7 +62,16 @@ def run(stream=None) -> int:
     for name, text in cases:
         case = parse_case(text)
         contract = parse_contract(case.task) if case.task else Contract()
-        _ir, findings, verdict = analyze(case_to_changes(case), Config(), contract, [], _TODAY)
+        head = {path: data.encode("utf-8") for path, data in case.head.items()}
+        snapshot = case_snapshot(case)
+        _ir, findings, verdict = analyze(
+            case_to_changes(case), Config(), contract, [], _TODAY,
+            head_reader=head.get,
+            # A declarative case is a complete snapshot: omitted paths are
+            # absent, including for conftest target and root-helper probes.
+            root_reader=snapshot.get,
+            root_searcher=lambda needles: search_source_mapping(snapshot, needles),
+        )
         visible = [f for f in findings if not f.allowlisted]
 
         title = case.meta.get("title", name)

@@ -21,8 +21,14 @@ _CONTENT_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 def fingerprint_state(fingerprint: str, rule: str | None = None) -> str:
     """`supported`, `retired`, or `invalid`; independent of entry expiry."""
     key_rule = fingerprint.split("/", 1)[0]
-    if key_rule in CHANGE_FINGERPRINT_RULES:
-        parts = fingerprint.split("/", 1)[1].rsplit("/", 2) if "/" in fingerprint else []
+    parts = fingerprint.split("/", 1)[1].rsplit("/", 2) if "/" in fingerprint else []
+    # Stored expectations are a file-scoped variant of an existing oracle
+    # rule. Assertion-level EXPECTED_VALUE_CHANGED identities stay compatible.
+    stored_expectation = (
+        key_rule == "EXPECTED_VALUE_CHANGED"
+        and fingerprint.rsplit("/", 1)[-1].startswith("v2:")
+    )
+    if key_rule in CHANGE_FINGERPRINT_RULES or stored_expectation:
         if len(parts) != 3 or not parts[0] or parts[1] != "-":
             return "invalid"
         if not parts[2].startswith("v2:"):
@@ -32,6 +38,16 @@ def fingerprint_state(fingerprint: str, rule: str | None = None) -> str:
         if rule and rule != key_rule:
             return "invalid"
     return "supported"
+
+
+def is_content_bound_fingerprint(fingerprint: str, rule: str | None = None) -> bool:
+    """Recognize supported v2 identities, including stored-expectation variants."""
+    key_rule = fingerprint.split("/", 1)[0]
+    return (
+        key_rule in CHANGE_FINGERPRINT_RULES | {"EXPECTED_VALUE_CHANGED"}
+        and bool(_CHANGE_DIGEST.fullmatch(fingerprint.rsplit("/", 1)[-1]))
+        and fingerprint_state(fingerprint, rule) == "supported"
+    )
 
 
 def fingerprint_issue(fingerprint: str, rule: str | None = None) -> str | None:
@@ -140,7 +156,8 @@ def make_change_fingerprint(rule: str, file: FileIR, context: dict) -> str:
     Full SHA256 and canonical JSON avoid truncated identities and ambiguous
     slash-joined evidence. No before-only, path-only or legacy-key fallback.
     """
-    if rule not in CHANGE_FINGERPRINT_RULES:
+    stored_expectation = rule == "EXPECTED_VALUE_CHANGED" and file.role == "snapshot"
+    if rule not in CHANGE_FINGERPRINT_RULES and not stored_expectation:
         raise EngineError(f"{rule}/{file.path}: unsupported content-bound fingerprint rule")
     payload = {
         "scheme": "checkwash/change-fingerprint/v2",

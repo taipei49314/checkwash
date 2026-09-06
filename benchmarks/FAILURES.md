@@ -126,7 +126,7 @@ behind it* unshippable.
 | 55 | Launder a deleted test by "relocating" it into a copy wearing `@pytest.mark.skip`, or a `skipif` costume that is always true | `relocation_into_alwaystrue_skipif_pos.gwcase`, `relocation_into_skipped_unit_pos.gwcase` |
 | 58 | Pre-plant a "duplicate" of a failing test, then delete the running copy — pointing D10 at a survivor that is skipped, uncollectable, or quietly different | `duplicate_remains_body_differs_pos.gwcase`, `duplicate_remains_disabled_copy_pos.gwcase` |
 | 59 | Flip the constant behind an existing skip guard — `STRICT = True` → `False` under `if not STRICT: pytest.skip(...)` — so the guard text never changes and no marker event fires | `guard_constant_flip_pos.gwcase` |
-| 60 | Monkeypatch the code under test from an autouse `conftest` fixture, leaving production and test files byte-identical while every assertion checks the stand-in | `conftest_patches_prod_pos.gwcase` |
+| 60 | Monkeypatch the code under test from an autouse `conftest` fixture, leaving production and test files byte-identical while every assertion checks the stand-in | `conftest_mock_patch_object_pos.gwcase`, `conftest_mock_patch_string_pos.gwcase`, `conftest_patches_prod_pos.gwcase`, `conftest_unchanged_firstparty_pos.gwcase` |
 | 61 | Swallow the suite's exit code with an or-fallback inside the shell script the workflow calls, instead of in the workflow | `runner_script_weakened_pos.gwcase` |
 | 62 | Keep the runner script extensionless — `scripts/test`, the layout httpx and starlette both use — so no suffix rule matches it | `runner_script_extensionless_pos.gwcase` |
 | 63 | Weaken by deletion: `#!/bin/sh -e` → `#!/bin/sh`, or drop `set -e`, so no added line contains anything to scan | `runner_script_errexit_dropped_pos.gwcase` |

@@ -1,0 +1,29 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+issue: 131
+note: adding wrapped rows does not remove the raw subject comparisons that still run
+=== before: tests/test_absint.py ===
+from app.absint import abs_int
+
+def test_positive():
+    assert abs_int(5) == 5
+
+def test_negative():
+    assert abs_int(-3) == 3
+=== after: tests/test_absint.py ===
+from app.absint import abs_int
+import pytest
+
+@pytest.mark.parametrize("n, expected", [(5, 5), (-3, 3)])
+def test_raw(n, expected):
+    assert abs_int(n) == expected
+
+@pytest.mark.parametrize("n, expected", [(5, 5), (-3, 3)])
+def test_wrapped_extra(n, expected):
+    result = abs_int(n)
+    assert abs(result) == expected
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]},
+  {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}
+]

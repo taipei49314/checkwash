@@ -1,0 +1,21 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+note: a once-bound literal table retains all old oracles before an added case
+=== before: tests/test_calc.py ===
+from app.calc import add
+
+def test_small():
+    assert add(1, 2) == 3
+
+def test_large():
+    assert add(5, 6) == 11
+=== after: tests/test_calc.py ===
+from app.calc import add
+
+def test_add():
+    cases = [(1, 2, 3), (5, 6, 11), (0, 0, 0)]
+    for a, b, expected in cases:
+        assert add(a, b) == expected
+=== expect ===
+[]

@@ -1,0 +1,15 @@
+=== meta ===
+bypass: 60
+rule: CONFTEST_PATCHES_PROD
+title: unittest.mock patch.object start installs a first-party stand-in
+origin: GitHub issue 128 object spelling control
+=== after: tests/conftest.py ===
+import pricing as product
+from unittest import mock as substitute
+
+substitute.patch.object(product, "total", return_value=5).start()
+=== head: pricing.py ===
+def total():
+    return 0
+=== expect ===
+[{"rule": "CONFTEST_PATCHES_PROD", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

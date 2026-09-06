@@ -1,0 +1,19 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: Rewriting a direct assert as a conditional AssertionError preserves its oracle
+origin: issue 94/96 — no existing frozen expectation is changed by this fixture
+=== before: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    assert value() == 3
+=== after: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    if value() != 3:
+        raise AssertionError("wrong value")
+=== expect ===
+[]

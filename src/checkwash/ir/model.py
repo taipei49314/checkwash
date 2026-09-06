@@ -277,6 +277,17 @@ class FileIR:
     # assertion, in a single non-artifact file change with no rename. Other
     # files could redefine the callee; unknown provenance defaults to false.
     native_assertion_context_unchanged: bool = False
+    # Optional closed-expression proof that added test-side normalization
+    # preserves the concrete production call. Each tuple identifies
+    # (unit qualname, before assertion id, after assertion id). Only strict
+    # snapshot reads and a bounded, non-executing Python projection may grant
+    # it; absent/unsupported evidence leaves the normal finding in place.
+    normalization_equivalent_pairs: tuple[tuple[str, str, str], ...] = ()
+    # Additive literal-table wrapper evidence, never equivalence credit.
+    # (after unit, before text/span, after text/span, concrete old/new subject,
+    # comparison operator, concrete expected expression).
+    # JSON arrays reconstruct directly; the detector validates the records.
+    table_normalization_events: tuple[tuple[str, str, tuple[int, int], str, tuple[int, int], str, str, str, str], ...] = ()
 
 
 @dataclass

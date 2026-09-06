@@ -308,6 +308,40 @@ knows four.
 | 100 | Two commits: **create** checkwash's own config (`.checkwash/config.toml` or `.greenwash/config.toml`, the file did not exist) containing `[detectors] disable = [...]` or `fail_on = "critical"` — a created guardrail file was warn under D-030, verdict pass — then weaken the test on the next diff under the disabled rule: zero findings. Configuration is read base-side, so the planting commit is the only place to catch it, and at warn it never blocked under the default `fail_on` | **Closed v0.2.12** (issue #79, D-054). A created own config whose content relaxes the defaults — any `detectors.disable`, or `fail_on` above `high` — is E4 like a modification: critical, `META`, and the finding says what the created file did. Tightening-only creations stay warn; hook and instruction files keep D-030. Pinned: `guardrail_config_created_disable_checkwash_pos`, `guardrail_config_created_disable_greenwash_pos`, `guardrail_config_created_failon_pos` (control: `guardrail_config_created_tighten_neg`). Residual, open by design: a created config whose `roles` table reclassifies test files as production — a monorepo's first role table cannot be told from a narrowing one, and blocking every adoption PR is the wrong trade — and the D-003 sibling, pre-seeding `allow.toml` with the fingerprint of the weakening to come, which stays a visible per-fingerprint `EXEMPTION_ADDED` rather than a blanket switch |
 | 101 | Reuse a path-only exemption for a later unrelated change to a guardrail, CI file, unparseable test, out-of-scope file, or snapshot/production pair | **Implemented in the unreleased next-minor candidate; owner authorized merge on 2026-09-06, release pending.** Content-bound v2 identity binds both snapshots and relevant context, and old keys in these five namespaces cannot suppress findings. The parser control uses module-level assertions so a separate TEST_DISABLED finding cannot mask reuse; snapshot reuse affects strict warn thresholds, not the default high gate. Multi-commit tests in `tests/e2e/test_allowlist_scope.py`, unit context controls in `tests/test_fingerprint_scope.py`, and per-rule audit receipts distinguish each case. Ledger cleanup remains a separate critical governance change; other namespaces and documented semantic blind spots are unchanged. D-055. |
 
+## 2026-09-06 issue remediation candidate (unreleased)
+
+Issues #127–#131 prompted bounded source work, not a general completeness
+claim. Conftest-only first-party targets are resolved through strict root/src
+snapshots; imported unittest.mock patch forms receive binding and activation
+checks. Normalization keeps direct result-wrapper evidence and can withhold
+a finding only with the closed concrete-call proof described in SPEC.
+Standalone rewrites in recognized snapshot/golden/expected paths emit the
+file-scoped EXPECTED_VALUE_CHANGED form; an unrelated production symbol or
+opaque co-change can still preserve the old snapshot warning behavior.
+
+Literal test-table projection preserves concrete inputs and leaves expected
+edits visible. Unsupported helper/multi-assert/control-flow tables still use
+the original frontend and restructure policy; bounded additive wrapper
+events do not remove their ordinary findings. Direct conditional
+AssertionError and the closed scalar-equality truthiness carrier described
+in SPEC expose the reported oracle spellings, without implying general
+custom truthiness or arbitrary Python oracle understanding. Exact raw-family
+replays and residuals are recorded in the
+issue remediation report; #132 remains a population tracker.
+
+The same scalar carrier exposes frozen tamper case `026-normalize`: its
+before-side equality becomes visible while an after-side `__bool__` that
+returns True retains the ordinary truthy representation. The existing
+ASSERT_WEAKENED rule therefore blocks it. The unchanged production bytes
+were requalified with pytest (one assertion failure before, one passing
+test after). This closes that case, not all of row 91a; its historical WHY
+and original recorded runs remain intact.
+
+Original published-version measurements above remain historical. A changed
+candidate result does not rewrite a captured run, assert a human review of new
+labels, or establish package availability. Release and recommended Action
+adoption remain separate steps.
+
 ## False positives closed in the same audit
 
 Bypasses are only half the failure surface; a tripwire nobody can live with

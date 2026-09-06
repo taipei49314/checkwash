@@ -1,0 +1,20 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: Wrapping a bound result retains the direct containment evidence
+origin: issue 131 — resolving only the before-side bare name hid abs(result)
+=== before: tests/test_calc.py ===
+from app import calculate
+
+
+def test_result():
+    result = calculate()
+    assert result == 2
+=== after: tests/test_calc.py ===
+from app import calculate
+
+
+def test_result():
+    result = calculate()
+    assert abs(result) == 2
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -3,10 +3,11 @@
 import datetime
 import pathlib
 
-from checkwash.cases import case_to_changes, parse_case
+from checkwash.cases import case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.engine import analyze
+from checkwash.gitio.snapshot import search_source_mapping
 from checkwash.report.jsonout import findings_to_json, ir_to_json
 
 CASES = sorted((pathlib.Path(__file__).parent / "cases").glob("*.gwcase"))
@@ -18,7 +19,12 @@ def _run_corpus() -> str:
     for case_path in CASES:
         case = parse_case(case_path.read_text(encoding="utf-8"))
         contract = parse_contract(case.task) if case.task else Contract()
-        ir, findings, verdict = analyze(case_to_changes(case), Config(), contract, [], TODAY)
+        snapshot = case_snapshot(case)
+        ir, findings, verdict = analyze(
+            case_to_changes(case), Config(), contract, [], TODAY,
+            root_reader=snapshot.get,
+            root_searcher=lambda needles: search_source_mapping(snapshot, needles),
+        )
         chunks.append(findings_to_json(ir, findings, verdict))
         chunks.append(ir_to_json(ir))
     return "".join(chunks)

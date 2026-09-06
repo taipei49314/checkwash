@@ -18,6 +18,22 @@ MAX_SEARCH_HITS = 64
 _SKIP = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
 
 
+def search_source_mapping(snapshot, needles):
+    """Search a caller-owned complete byte snapshot.
+
+    The empty needle has the same inventory meaning as the filesystem
+    adapters: nonempty Python files only, with no silent hit truncation.
+    Ordinary searches retain the historical in-memory matching behavior.
+    """
+    if "" in needles:
+        paths = [path for path, data in sorted(snapshot.items()) if path.endswith(".py") and data]
+        if len(paths) >= MAX_SEARCH_HITS:
+            raise EngineError("strict snapshot importer search exceeds the hit limit")
+        return paths
+    return [path for path, data in sorted(snapshot.items())
+            if any(needle.encode("utf-8") in data for needle in needles)]
+
+
 def _run(repo, args, *, data=None, no_matches=False):
     result = subprocess.run(["git", "-C", str(repo), *args], input=data, capture_output=True)
     if no_matches and result.returncode == 1:
@@ -63,6 +79,31 @@ class GitSnapshot:
     def search(self, needles):
         if not needles:
             return []
+        if "" in needles:
+            # grep skips symlink blobs; a complete startup inventory must not
+            # turn those omitted sources into known absence. Tree metadata
+            # also identifies empty files without parsing their contents.
+            raw = _run(self.repo, ["ls-tree", "-r", "-l", "-z", self._rev()])
+            paths = []
+            for record in raw.split(b"\0"):
+                if not record:
+                    continue
+                metadata, separator, path = record.partition(b"\t")
+                fields = metadata.split()
+                if not separator or len(fields) != 4:
+                    raise EngineError("strict snapshot inventory returned an invalid tree record")
+                mode, kind, _oid, size = fields
+                if kind == b"commit":
+                    raise EngineError("strict snapshot inventory cannot inspect a submodule")
+                if not path.endswith(b".py"):
+                    continue
+                if mode not in {b"100644", b"100755"} or kind != b"blob" or not size.isdigit():
+                    raise EngineError("strict snapshot inventory cannot inspect a nonregular Python source")
+                if int(size):
+                    paths.append(path.decode("utf-8"))
+                    if len(paths) >= MAX_SEARCH_HITS:
+                        raise EngineError("strict snapshot importer search exceeds the hit limit")
+            return paths
         args = ["grep", "-l", "-F", "-z"]
         for needle in needles:
             args.extend(["-e", needle])
@@ -106,17 +147,24 @@ class WorkingTreeSnapshot:
             raise EngineError("strict snapshot importer search failed") from error
 
         for directory, dirs, files in os.walk(self.root, onerror=fail):
-            dirs[:] = sorted(d for d in dirs if d not in _SKIP and not d.startswith("."))
+            # An empty needle requests the entire nonempty Python inventory.
+            # Importer searches may skip generated/hidden trees, but an
+            # optional startup-context proof cannot silently omit them.
+            dirs[:] = sorted(d for d in dirs if d != ".git" and (
+                "" in needles or (d not in _SKIP and not d.startswith("."))
+            ))
             if any(Path(directory, d).is_symlink() for d in dirs):
                 raise EngineError("strict snapshot importer search cannot follow directory symlinks")
             for filename in sorted(files):
                 if not filename.endswith(".py"):
                     continue
+                if "" in needles and Path(directory, filename).is_symlink():
+                    raise EngineError("strict snapshot inventory cannot inspect a nonregular Python source")
                 path = Path(directory, filename).relative_to(self.root).as_posix()
                 data = self.read(path)
                 if data is None:
                     raise EngineError("strict snapshot source disappeared during importer search")
-                if any(n in data for n in wanted):
+                if data and any(n in data for n in wanted):
                     paths.append(path)
                     if len(paths) >= MAX_SEARCH_HITS:
                         raise EngineError("strict snapshot importer search exceeds the hit limit")

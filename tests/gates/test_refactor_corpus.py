@@ -1,15 +1,12 @@
-"""The legitimate-refactor corpus, as a gate.
+"""The legitimate-refactor corpus, replayed with complete source snapshots.
 
-30 refactors that keep an oracle which still catches the bug. Twenty are false
-positives today (THREATMODEL 92). This gate does two things a one-off
-measurement cannot: it fails if one of the ten currently-silent cases starts
-blocking, and it fails if a false positive is quietly fixed without the table
-being updated — so the number in the README cannot drift from the behaviour.
+The expected table records which qualified refactors are currently false
+positives. It must be reviewed when a source fix changes that result. These
+checks reject new false positives and require repaired ones to be recorded;
+they do not authorize an agent to rewrite the table.
 
-The provenance half — four pytest runs proving both sides catch the bug — was
-established once by `benchmarks/refactors/verify.py` and is not repeated here;
-120 pytest subprocesses do not belong in the unit suite. What runs on every
-push is greenwash's verdict, which is what moves.
+Runtime oracle qualification is recorded separately by verify.py. This gate
+compares source-pinned engine behavior over every case in expected.json.
 """
 
 import datetime
@@ -56,6 +53,11 @@ def _verdict(case: pathlib.Path):
             )
         )
     head = {f"src/{_rel(p, src)}": p.read_bytes() for p in src.rglob("*.py")}
+    snapshot = {f"src/{_rel(p, src)}": p.read_bytes()
+                for p in src.rglob("*") if p.is_file()}
+    snapshot.update({_rel(p, after_root): p.read_bytes()
+                     for p in after_root.rglob("*") if p.is_file()})
+    from checkwash.gitio.snapshot import search_source_mapping
     _ir, findings, verdict = analyze(
         changes, Config(), Contract(), [], TODAY,
         known_modules=known_baseline() | {"app"},  # the corpora ship app.* by construction
@@ -63,6 +65,8 @@ def _verdict(case: pathlib.Path):
         head_searcher=lambda needles: [
             p for p, d in sorted(head.items()) if any(n.encode() in d for n in needles)
         ],
+        root_reader=snapshot.get,
+        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )
     return verdict, sorted({f.rule for f in findings if not f.allowlisted})
 
@@ -73,7 +77,7 @@ def replayed() -> dict:
 
 
 def test_no_silent_refactor_starts_blocking(replayed):
-    """The ten that pass must keep passing. These are the regression guard."""
+    """Recorded passing cases must keep passing. These are the regression guard."""
     problems = []
     for name, spec in _expected().items():
         if spec["blocks"]:
@@ -95,7 +99,7 @@ def test_fixed_false_positives_are_recorded(replayed):
             stale.append(name)
     assert not stale, (
         "these no longer block — good news, but expected.json and the README's "
-        f"20/30 still say they do: {stale}"
+        f"recorded expectations still say they do: {stale}"
     )
 
 

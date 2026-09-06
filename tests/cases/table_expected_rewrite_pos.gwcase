@@ -1,0 +1,21 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 130
+note: moving native expectations into a parametrize table cannot hide an edited expected row
+=== before: tests/test_calc.py ===
+from app.calc import add
+
+def test_small():
+    assert add(1, 2) == 3
+
+def test_large():
+    assert add(5, 6) == 11
+=== after: tests/test_calc.py ===
+from app.calc import add
+import pytest
+
+@pytest.mark.parametrize("a,b,expected", [(1, 2, 3), (5, 6, 10)])
+def test_add(a, b, expected):
+    assert add(a, b) == expected
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -24,6 +24,7 @@ from checkwash.ci import (
     _scan_ci_weakening,
 )
 from checkwash.config import Config
+from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
 from checkwash.detectors import REGISTRY
@@ -45,6 +46,10 @@ from checkwash.frontends.python.frontend import (
     parse_python,
 )
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
+from checkwash.frontends.python.normalization import mark_normalization_equivalence
+from checkwash.frontends.python.table_normalization import mark_table_normalization
+from checkwash.frontends.python.table_oracles import project_table_consolidation
+from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
@@ -387,6 +392,7 @@ def build_ir(
     raw_by_path: dict[str, tuple[bytes | None, bytes | None]] = {
         c.path.replace("\\", "/"): (c.before, c.after) for c in changes
     }
+    conftest_context = ConftestContext(changes, root_reader)
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
     oracle_sources: dict[tuple[str, int], bytes | None] = {}
     strict_oracle_sources: set[tuple[str, int]] = set()
@@ -612,6 +618,14 @@ def build_ir(
             if change.after is not None:
                 after_parsed = parse_javascript(change.after)
 
+        if (is_python and role == "test" and collect and len(changes) == 1
+                and change.status == "modified" and change.old_path is None
+                and before_parsed is not None and after_parsed is not None):
+            before_parsed, after_parsed = project_table_consolidation(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher,
+            )
+
         if report_context is not None:
             if is_python or is_js_test:
                 report_context.snapshot(path, 0, change.before)
@@ -641,6 +655,7 @@ def build_ir(
             )
 
         if is_python and role == "test" and collect:
+            project_truthiness_oracles(path, before_parsed, after_parsed, raw_by_path, root_reader, root_searcher)
             if before_parsed is not None:
                 _merge_crossfile_oracles(path, before_parsed, 0)
             if after_parsed is not None:
@@ -721,18 +736,12 @@ def build_ir(
             g.dependency_manifest_changed = True
 
         if role == "conftest" and change.after is not None:
-            first_party = frozenset(
-                p.replace("\\", "/").split("/")[0].removesuffix(".py")
-                for p in (c.path for c in changes)
-            ) | frozenset(
-                _module_of(f.path).split(".")[0] for f in ir.files if f.role == "prod"
-            )
             before_patches = (
-                set(conftest_patch_targets(change.before, first_party))
+                set(conftest_patch_targets(change.before, module_exists=lambda module: conftest_context.contains(module, 0), module_name=_module_of(path)))
                 if change.before is not None
                 else set()
             )
-            for text in conftest_patch_targets(change.after, first_party):
+            for text in conftest_patch_targets(change.after, module_exists=lambda module: conftest_context.contains(module, 1), module_name=_module_of(path)):
                 if text not in before_patches:
                     g.conftest_prod_patches.append((path, text))
 
@@ -886,6 +895,10 @@ def build_ir(
             _scan_ci_weakening(g, path, change.before, change.after, ci_base)
         elif role == "snapshot":
             g.snapshot_files_changed.append(path)
+            # Standalone stored-oracle rewrites need both content digests too.
+            # This remains valid when no production file appears in the diff.
+            if change.status == "modified":
+                file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
         if is_python and before_parsed is not None and before_parsed.parse_ok:
             base_literals.update(before_parsed.literals)
@@ -1054,6 +1067,8 @@ def build_ir(
                     if pu.side.body_hash in wanted and unit_is_live(pu.side, consts):
                         found.add(pu.side.body_hash)
             g.duplicate_unit_hashes = sorted(found)
+    mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
+    mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
     return ir
 
 

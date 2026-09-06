@@ -10,7 +10,7 @@ import json
 from urllib.parse import quote
 
 from checkwash import __version__
-from checkwash.findings import CHANGE_FINGERPRINT_RULES, Finding, fingerprint_state
+from checkwash.findings import Finding, is_content_bound_fingerprint
 from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
 
@@ -86,8 +86,7 @@ def _result(finding: Finding, context: ReportContext | None) -> dict:
         "partialFingerprints": {
             (
                 "checkwash/v2"
-                if finding.rule in CHANGE_FINGERPRINT_RULES
-                and fingerprint_state(finding.fingerprint, finding.rule) == "supported"
+                if is_content_bound_fingerprint(finding.fingerprint, finding.rule)
                 else "checkwash/v1"
             ): finding.fingerprint
         },
