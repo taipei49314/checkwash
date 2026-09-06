@@ -1,0 +1,39 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Reordering whole rows of a fully wrapped table
+note: Row identity is (inputs -> expected); a permutation of complete rows
+note2: changes no pairing, wrapped or not. Ids travel with their rows.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, id="pair"),
+        pytest.param([10.0], 10.5, id="single"),
+        pytest.param([], 0.0, id="empty"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([], 0.0, id="empty"),
+        pytest.param([10.0], 10.5, id="single"),
+        pytest.param([50.0, 50.0], 105.0, id="pair"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

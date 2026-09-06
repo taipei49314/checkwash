@@ -1,0 +1,43 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: A plain tuple row appended to a fully wrapped table does not change what is seen
+bypass: 86a
+note: The appended tuple gives `param_columns` an expectation key it did
+note2: not have before, which is the one way the old candidate filter could
+note3: have noticed a wrapped table. Whether the edit is seen must not
+note4: depend on it: the same rewrite blocks with and without the tuple
+note5: (param_row_all_wrapped_cell_edit_pos). The appended row is one a
+note6: tax-ignoring invoice_total cannot fail.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, id="pair"),
+        pytest.param([], 0.0, id="empty"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 100.0, id="pair"),
+        pytest.param([], 0.0, id="empty"),
+        ([0.0], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

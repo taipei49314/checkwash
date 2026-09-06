@@ -1,0 +1,40 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Swapping two rows' answers and appending a third keeps the column's multiset
+note: Research E-08b, maintainer review of E-08: a multiset comparison on
+note2: the column alone credits this as 'the old answers are still there'.
+note3: Both rows now assert the other row's expectation. Keyed by input,
+note4: [1] used to expect 2 and now expects 4.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([1], 2),
+        ([2], 4),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([1], 4),
+        ([2], 2),
+        ([3], 6),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

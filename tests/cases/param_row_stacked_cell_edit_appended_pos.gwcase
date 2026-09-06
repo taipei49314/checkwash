@@ -1,0 +1,46 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Rewriting an answer in one of two stacked tables while appending to it
+bypass: 86a
+note: Stacked decorators are independent tables. The expectation column
+note2: lives in the items table and is keyed by that table's own input
+note3: column only; the places table is a separate cross-product factor,
+note4: and its argname sits on both sides of the assertion, so it is a
+note5: shared producer and never a candidate. [50.0, 50.0] used to expect
+note6: 105.0 and now expects 100.0, what a tax-ignoring invoice_total
+note7: returns; the appended row is one that bug cannot fail.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize("places", [0, 2])
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 105.0),
+        ([], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected, places):
+    assert round(invoice_total(items, 0.05), places) == round(expected, places)
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize("places", [0, 2])
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 100.0),
+        ([], 0.0),
+        ([0.0], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected, places):
+    assert round(invoice_total(items, 0.05), places) == round(expected, places)
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

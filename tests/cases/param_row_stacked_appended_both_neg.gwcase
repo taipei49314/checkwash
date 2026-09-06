@@ -1,0 +1,42 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Appending a row to each of two stacked tables
+note: Paired control for param_row_stacked_cell_edit_appended_pos: both
+note2: tables grow, every existing input keeps its answer, and the new
+note3: places value multiplies the items table without pairing with any
+note4: row of it. The 105.0 row still catches a tax-ignoring invoice_total.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize("places", [0, 2])
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 105.0),
+        ([], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected, places):
+    assert round(invoice_total(items, 0.05), places) == round(expected, places)
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize("places", [0, 1, 2])
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 105.0),
+        ([], 0.0),
+        ([10.0], 10.5),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected, places):
+    assert round(invoice_total(items, 0.05), places) == round(expected, places)
+=== expect ===
+[]

@@ -1,0 +1,42 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Editing a middle-column expectation in a fully wrapped three-column table
+bypass: 86a
+note: F-067 with the expectation in neither the first nor the last
+note2: position. Which column is the expectation is decided by consumption,
+note3: not position, and every wrapped cell is read. The row keyed by its
+note4: inputs ([50.0, 50.0], 0.05) now expects 100.0 -- what a tax-ignoring
+note5: invoice_total returns -- instead of 105.0; the other row is one that
+note6: bug cannot fail.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected,rate",
+    [
+        pytest.param([50.0, 50.0], 105.0, 0.05, id="five-percent"),
+        pytest.param([], 0.0, 0.1, id="empty-ten-percent"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected, rate):
+    assert invoice_total(items, rate) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected,rate",
+    [
+        pytest.param([50.0, 50.0], 100.0, 0.05, id="five-percent"),
+        pytest.param([], 0.0, 0.1, id="empty-ten-percent"),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected, rate):
+    assert invoice_total(items, rate) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

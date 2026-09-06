@@ -1,0 +1,43 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Editing an expectation inside a pytest.param row
+bypass: 86a
+note: F-067 (research E-11). `_param_columns` reads a `pytest.param(...)`
+note2: row as one cell, so every cell after the first never reached the
+note3: column text. Wrapping a row for an id alone (no marks, no other
+note4: change) took its expectation out of the only text this rule
+note5: compared, and the edit was free. The row structure keeps every cell.
+note6: 100.0 is what a tax-ignoring invoice_total returns for the pair; the
+note7: other row is one that bug cannot fail.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, id="pair"),
+        ([], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 100.0, id="pair"),
+        ([], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

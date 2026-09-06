@@ -1,0 +1,38 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: One of two rows with the same input has its answer rewritten
+note: Research E-08b paired control: expectations are compared per input
+note2: as a multiset, so a duplicated input cannot be laundered by changing
+note3: one of its copies while the other keeps the old value in the column.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([1], 2),
+        ([1], 2),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([1], 2),
+        ([1], 3),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,43 @@
+=== meta ===
+rule: TEST_DISABLED
+title: Skip-marking a row while appending exactly one is one event, not two
+note: F-063 in its original shape (research E-08b's acceptance case, E-11).
+note2: With the row-identity floor the disabled item is TEST_DISABLED's
+note3: finding; with the row-keyed expectation comparison the wrapped row's
+note4: cells no longer drop out of the column text (F-067), so the base's
+note5: wrong-reason EXPECTATION_DEFINITION_CHANGED on this shape is gone and
+note6: exactly one finding remains. The marked row is the only one a
+note7: tax-ignoring bug can fail; the appended row is one it cannot.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([50.0, 50.0], 105.0),
+        ([], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        pytest.param([50.0, 50.0], 105.0, marks=pytest.mark.skip),
+        ([], 0.0),
+        ([0.0], 0.0),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,38 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Swapping two rows' answers with no row added
+note: The same-length column edit the column rule already caught; kept as
+note2: the row-keyed comparison's non-regression pin. Every cell text is
+note3: still present, every input keeps a different answer.
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([1], 2),
+        ([2], 4),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [
+        ([1], 4),
+        ([2], 2),
+    ],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
