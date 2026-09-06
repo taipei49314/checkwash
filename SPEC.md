@@ -476,7 +476,8 @@ rule/path/unit prefix and normalization function, with canonical JSON of
 (unit, before text, after text, concrete before subject, concrete after
 subject, operator, concrete expected expression) as the fingerprint input.
 JSON uses ASCII escapes and compact separators. Operator is `Eq` or `Is`;
-the concrete expectation is its location-free AST dump. Before/after spans
+the concrete expectation is canonical expression text from `ast.unparse`.
+Before/after spans
 are excluded. This retains distinct concrete row identities, including a
 fixed expectation declared inside an old helper rather than at its call.
 Ordinary aligned-assertion SUBJECT_NORMALIZED fingerprints are unchanged.
