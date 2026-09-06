@@ -1,0 +1,17 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: higher lattice strength does not justify an exact value outside the old numeric bound
+=== before: tests/test_calc.py ===
+from calc import add
+
+
+def test_add():
+    assert add(2, 3) > 0
+=== after: tests/test_calc.py ===
+from calc import add
+
+
+def test_add():
+    assert add(2, 3) == -1
+=== expect ===
+[{"rule":"EXPECTED_VALUE_CHANGED","severity":"high"}]

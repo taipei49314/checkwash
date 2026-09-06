@@ -1,0 +1,17 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+note: restoring exact 5 from a lower bound 0 increases strength and the exact value satisfies the old bound
+=== before: tests/test_calc.py ===
+from calc import add
+
+
+def test_add():
+    assert add(2, 3) > 0
+=== after: tests/test_calc.py ===
+from calc import add
+
+
+def test_add():
+    assert add(2, 3) == 5
+=== expect ===
+[]
