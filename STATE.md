@@ -1,6 +1,50 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-06 (v0.2.13 public documentation, package metadata and trusted-pin maintenance).
+Updated: 2026-09-07 (v0.3.0: release slot 2026-09-07; the dated section below lists what shipped, the maintainer pass adds the narrative)
+
+## 2026-09-07: release slot (v0.3.0)
+
+Release slot 2026-09-07, estate ledger T-198. Since v0.2.13, 35 commit(s) touched src, action, pyproject.toml:
+
+- 8dd3b80 fix(table_oracles): inline same-file assert helpers and literal-table fixtures per row
+- 6f0f5e2 fix(expectation_definition): key parametrize expectations by input, read wrapped rows
+- a545381 fix(diffalign): count disabled parametrize rows by identity, not by live count
+- fb7bb4e fix: preserve context proof for bounded default testpaths
+- f686ea6 fix: retain rename disappearance without truthiness raw provenance
+- e0ec59c fix: withhold context proof for configured pytest collection
+- ea352bf fix: expose normalized subjects across literal parameter tables
+- d02d527 fix: align complete snapshot inventory across consumers
+- 680a7fd fix: preserve row object identity in table projection
+- 6b56907 fix: distinguish mock patch construction from activation
+- 78543d0 fix(frontend): expose closed scalar truthiness oracles
+- 803576d fix: preserve concrete literal table oracles during consolidation
+- 951db7d fix: require closed repository startup context for normalization proof
+- f5cff22 fix(ir): preserve normalization proof after JSON reconstruction
+- 1ff39a3 fix(frontend): classify direct conditional AssertionError oracles
+- 600145c fix(subject): preserve wrapper evidence and prove redundant normalization
+- 2c2e9e9 fix: preserve conftest target evidence across adapter boundaries
+- 79bb62e fix: recognize imported unittest.mock conftest stand-ins (#128)
+- a855b46 fix: resolve conftest patch targets from strict snapshots (#127)
+- a8ef758 fix: detect standalone stored expectation rewrites (#129)
+- 4b98a38 Preserve concrete oracles through bounded root-helper extraction
+- b8591f5 fix: require unchanged context for numeric restoration
+- 290493d Add strict snapshot adapters for absence-sensitive oracle discovery
+- 10910b4 fix(hooks): exclude implicit working directory from shared CLI probe
+- 7793c2d fix(output): make human diagnostics safe across legacy Windows pipes
+- b96c53a fix: bind snapshot exemptions to production cochanges
+- bd43dc6 fix: scope out-of-contract exemptions to reviewed changes
+- b662336 fix: scope parser exemptions to content and parser state
+- 2f7aafb fix(hooks): explain the pre-commit template installation steps
+- 017a76a fix(doctor): recognize local and shared Stop hook configurations
+- 781223a fix(hooks): bind local hooks to an isolated executable runtime
+- 6456483 fix: bind exemptions to reviewed content (700 tests pass; release parity pending)
+- bb851af fix(doctor): explain rejected workflow configurations
+- 55c6f7d Fix numeric-bound assertion restoration false positives
+- c9e50fb fix: locate SARIF evidence in analyzed source (384 tests pass; dogfood 2 high)
+
+The one-release trust lag advances the Action pin to v0.2.13.
+
+Narrative for this round: pending the maintainer pass (THREATMODEL / DECISIONS are human-only).
 
 ## Additional September 6 issue candidate
 
@@ -1715,7 +1759,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.2.13 |
+| version | v0.3.0 |
 | detectors | 21 |
 | human-commit block rate | 42/1800 = 2.33% |
 | adjudicated false positive | 27/1800 = 1.50% |
