@@ -1,6 +1,21 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-07 (v0.3.1: documentation and metadata release on the v0.3.0 engine, D-057; v0.3.0 maintainer pass D-056; tracked sweep record 2026-09-07, T-201)
+Updated: 2026-09-07 (v0.3.2: documentation and metadata release on the v0.3.0 engine, D-058; v0.3.1 D-057; v0.3.0 maintainer pass D-056; tracked sweep record 2026-09-07, T-201)
+
+## 2026-09-07: release slot (v0.3.2)
+
+Release slot 2026-09-07, estate ledger T-216. Since v0.3.1, 0 commit(s) touched src, action, pyproject.toml:
+
+
+The one-release trust lag advances the Action pin to v0.3.1.
+
+Narrative for this round (D-058): a second documentation and metadata
+release on the v0.3.0 engine, cut so that the PyPI description — the README
+at the tag — carries the current-state corrections of PR #146 (22 of 60 on
+every line; the release, CLI and Action-pin sentences naming the versions
+actually shipped). No detector changed, so no sweep was re-run; the checks
+that stood in are named in D-058. The one-release trust lag advances the
+recommended Action pin to v0.3.1, which is the same v0.3.0 engine.
 
 ## 2026-09-07: release slot (v0.3.1)
 
@@ -1810,7 +1825,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.3.1 |
+| version | v0.3.2 |
 | detectors | 21 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

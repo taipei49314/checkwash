@@ -3,7 +3,8 @@
 This source work addresses issues [#126–#132](https://github.com/taipei49314/checkwash/issues/132).
 It shipped in v0.3.0 on 2026-09-07; installing v0.2.13 still installs the
 earlier behavior, and the recommended Action pin advanced to v0.3.0 with
-v0.3.1 (2026-09-07) under the one-release trust lag.
+v0.3.1 and to v0.3.1 with v0.3.2 (both 2026-09-07, the same engine) under
+the one-release trust lag.
 
 ## Exemptions and stored expectations
 

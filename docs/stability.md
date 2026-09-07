@@ -1,6 +1,6 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.3.1 is alpha** (engine v0.3.0). Its versioned interfaces and
+checkwash **v0.3.2 is alpha** (engine v0.3.0). Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
@@ -144,7 +144,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.3.1 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.3.2 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
@@ -187,9 +187,10 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.3.1 documentation pins the Action to v0.3.0 under the one-release
-trust-lag policy; v0.3.1 is a documentation and metadata release on the v0.3.0
-engine, so the pinned Action and the CLI run the same detector logic (D-057).
+The v0.3.2 documentation pins the Action to v0.3.1 under the one-release
+trust-lag policy; v0.3.1 and v0.3.2 are documentation and metadata releases
+on the v0.3.0 engine, so the pinned Action and the CLI run the same detector
+logic (D-057, D-058).
 Treat each installed surface as its own versioned dependency; see the
 [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 
