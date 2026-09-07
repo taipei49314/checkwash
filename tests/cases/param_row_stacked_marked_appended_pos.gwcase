@@ -1,5 +1,6 @@
 === meta ===
 rule: TEST_DISABLED
+bypass: 102
 title: Stacked parametrize tables that each skip one row and append one
 note: Two decorators of two rows are four test items. Marking one row in
 note2: each and appending one to each keeps both live counts (2 -> 2) and

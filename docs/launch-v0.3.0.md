@@ -13,8 +13,9 @@ issues **at posting time**. Re-derive each row of §6 before posting.
   install pins predate the rename. Its rules in §7 still apply and are
   repeated below.
 - **Two facts stated in the post, not hidden:** the maintainer pass
-  (`THREATMODEL.md` / `SPEC.md` rows for the 0.3.0 detector changes) is not
-  done as of this draft, and:
+  (`THREATMODEL.md` / `SPEC.md` / `DECISIONS.md` for the 0.3.0 detector
+  changes) landed on 2026-09-07 (D-056), written by the operator under the
+  maintainer's authorization and reviewed as any other change, and:
 - **The one fact that shapes this post:** the headline rates in the README
   are the v0.3.0 release commit's own sweep (2026-09-07, six clean checkouts
   on the estate runner pool, PR #141); the four blocks new since the v0.1.46
@@ -269,7 +270,7 @@ lesson is in the release notes, not hidden.
 | classic decoys blocked | 12/12 | `STATE.md`; `benchmarks/decoy/` |
 | honest refactors blocked, dedicated refactor corpus | 22/60 (v0.3.0; 24/60 up to v0.2.13) | `benchmarks/refactors/expected.json`, replayed by `tests/gates/test_refactor_corpus.py`; `README.md` measurements section |
 | three-rater cohort kappa | 0.844 (35 diffs) | `STATE.md` |
-| bypass table rows / Open / other non-Closed | 118 / 19 / 9 | `THREATMODEL.md` (count the status column at posting time) |
+| bypass table rows / Open / other non-Closed | 120 / 20 / 5 | `THREATMODEL.md` (count the status column at posting time by the verdict's leading bold text: Closed contains "closed" and not "open", Open starts with "open", other = the rest) |
 | informed-adversary arm | 3 of 3 passed, 3 of 6 tasks refused by the provider | `THREATMODEL.md` rows 70–73; `launch.md` §"where it fails" (historical, 2026-08-07) |
 | tags 2026-09-01 → 2026-09-07 | 17 (v0.1.48 … v0.3.0) | `git tag --sort=creatordate` |
 | LLM stress arm re-judged on v0.3.0 (CLI path, 2026-09-07) | 79/88 escapes pass; 65/90 honest blocked (v0.2.13 in-process: 85/88; 90/90; 60/90 one family) | issues #132, #130 (2026-09-07 comments); estate `hosts/DESKTOP-D127QSP/t201/llm-rejudge/34126628211-1` |
@@ -291,10 +292,11 @@ Anything not in this table does not go in the post.
    the numbers are in #132 and #130 and in §6. Quote them with the path and
    the population stated; the 383-family record of the same name is not
    re-judged.
-3. **Maintainer pass.** `THREATMODEL.md` and `SPEC.md` rows for the
-   parametrize-identity and table-delegation changes, and the `STATE.md`
-   narrative for the 0.3.0 section, are human-only edits and are still
-   pending. The post must not claim a row is Closed that the file does not.
+3. **Maintainer pass.** Done 2026-09-07 (D-056): rows 101 and 102 closed and
+   pinned, 102a open by design, the 86a cost line, the #130 entry, SPEC §2b
+   and §4, the `STATE.md` narrative; written by the operator under the
+   maintainer's authorization. The post must not claim a row is Closed that
+   the file does not.
 4. **README links.** Done in this PR (maintainer decision 2026-09-07): both
    README usage-guide links point at the v0.3.0 brief. This changes the
    GitHub README only; the PyPI description stays as published (v0.2.13

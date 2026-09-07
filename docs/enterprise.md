@@ -5,11 +5,11 @@ One page for a security or platform team evaluating checkwash v0.2.13
 review of its [coverage and adoption cost](stability.md#coverage-and-adoption-cost),
 then protect the deployed check and its policy files.
 
-**Candidate notice:** the unreleased remediation branch changes five
-exemption namespaces and local installation behavior. The public v0.2.13
-artifacts and recommended v0.2.12 Action have not received these fixes.
-Follow the [next-minor migration notes](remediation-upgrade.md); a CLI upgrade
-alone does not update a deployed Action or an existing hook.
+**v0.3.0 notice:** v0.3.0 (2026-09-07) changes five exemption namespaces and
+local installation behavior. The recommended Action pin is v0.2.13, which
+does not carry these fixes until the next release advances it. Follow the
+[migration notes](remediation-upgrade.md); a CLI upgrade alone does not
+update a deployed Action or an existing hook.
 
 ## 1. Required check
 

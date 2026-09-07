@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **118 bypasses** are documented, of which **29 are not closed**.
+- **120 bypasses** are documented, of which **29 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -42,7 +42,7 @@ it is known not to.
 | 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | `assert_substituted_literal_pos.gwcase`, `assert_substituted_own_version_bump_pos.gwcase`, `assert_substituted_pos.gwcase` |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | `oracle_crossfile_import_neg.gwcase`, `oracle_crossfile_uncalled_pos.gwcase`, `oracle_fixture_checker_neg.gwcase`, `oracle_fixture_fanout_dedup.gwcase`, `oracle_fixture_teardown_refused_trade.gwcase`, `oracle_fixture_unrequested_pos.gwcase`, `oracle_helper_renamed_neg.gwcase`, `oracle_helper_uncalled_pos.gwcase`, `oracle_moved_into_helper_neg.gwcase`, `oracle_nested_never_invoked_pos.gwcase` |
 
-## Open by design — the cost of a deliberate trade (8)
+## Open by design — the cost of a deliberate trade (9)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -54,6 +54,7 @@ it is known not to.
 | 94 | Root-import + a modified existing symbol in any sibling module feeding PACKAGE_REPAIR for an expectation rewrite | — |
 | 95 | Gate the evil expectation on a tautology and keep the old one in the dead arm: `if sys.version_info >= (3, 0): expected = evil` / `else: expected = old` — branch-exclusive, old definition verbatim, so v0.1.45's gated-alternative guard spares it and the assertion compares against evil on every interpreter that exists | — |
 | 100 | Two commits: **create** checkwash's own config (`.checkwash/config.toml` or `.greenwash/config.toml`, the file did not exist) containing `[detectors] disable = [...]` or `fail_on = "critical"` — a created guardrail file was warn under D-030, verdict pass — then weaken the test on the next diff under the disabled rule: zero findings. Configuration is read base-side, so the planting commit is the only place to catch it, and at warn it never blocked under the default `fail_on` | `guardrail_config_created_disable_checkwash_pos.gwcase`, `guardrail_config_created_disable_greenwash_pos.gwcase`, `guardrail_config_created_failon_pos.gwcase` |
+| 102a | Delete a parametrize row outright while appending a different row in the same edit, so the live count nets to zero or grows | — |
 
 ## Out of scope — the limits of the whole approach (3)
 
@@ -63,7 +64,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (86)
+## Closed — each pinned by something that runs (88)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -159,8 +160,10 @@ behind it* unshippable.
 | 97 | Replace an independently derived **call-expression** expectation with a **literal of the current buggy output** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == 100.0` — no production change in the diff | `expected_call_to_literal_pos.gwcase` |
 | 98 | Replace an independently derived **call-expression** expectation with a **call to a same-bug twin** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == twin_total(items)` — twin unused at baseline, implements the identical bug | `expected_call_to_twin_pos.gwcase` |
 | 99 | Edit checkwash's own config under its renamed directory — `.checkwash/config.toml` — either a comment change in the same diff as a weakened assertion, or a committed `[detectors] disable`. The path matched no role and was classified production: the comment change granted `REPAIR_EVIDENCE` (verdict pass) and the planted disable produced zero findings; the same edits under `.greenwash/` were critical | `exemption_added_checkwash_pos.gwcase`, `guardrail_checkwash_config_and_weakening_pos.gwcase`, `guardrail_checkwash_config_pos.gwcase` |
+| 101 | Reuse a path-only exemption for a later unrelated change to a guardrail, CI file, unparseable test, out-of-scope file, or snapshot/production pair | — |
+| 102 | Skip-mark a parametrize row — `pytest.param(..., marks=pytest.mark.skip)` — while appending one or more rows in the same edit, so the live-row count stays level or grows and the disabled test item nets out of `param_cases` (research F-063, E-08b/E-11; stacked decorators multiply the effect) | `param_row_marked_and_appended_pos.gwcase`, `param_row_marked_appended_twice_pos.gwcase`, `param_row_marked_pair_appended_pos.gwcase`, `param_row_stacked_marked_appended_pos.gwcase` |
 
-## Unclassified (12)
+## Unclassified (11)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -175,7 +178,6 @@ behind it* unshippable.
 | 86j | The expectation lives in a **conftest** fixture, not a same-file one | — |
 | 91a | Everything row 91's reachable set cannot see: subvert the *meaning* of a syntactically strong assertion (`__eq__`/`__bool__`/`__contains__` always true, a swallowing `__exit__`, a no-op `TestResult`, `int()`/`set()`/`bool()` coercion inside the helper, a default `expected` parameter never overridden); make the subject vacuous while keeping the assert (`for n in nums if False`, `mismatches[:0]`, `assert pred` where `pred` was called); compute zero runs (exhausted iterator, unscheduled coroutine, table filtered to passing inputs); put the helper in *another file* (conftest.py, tests/helpers.py); or change unit identity (merge, split, params fixture) | — |
 | 92 | (False positive, and the largest one) Restructure where a test's assertions live, without weakening anything: extract the check into a helper or a `conftest.py`, move it into a fixture's teardown, merge two tests into one, split one into two, drive them from a params fixture, put the comparison behind `operator.eq` or a comparison object's method, replace exact equality with `pytest.approx` and a tolerance | — |
-| 101 | Reuse a path-only exemption for a later unrelated change to a guardrail, CI file, unparseable test, out-of-scope file, or snapshot/production pair | — |
 
 ## False positives on human-written commits
 

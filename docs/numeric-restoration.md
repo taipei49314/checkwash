@@ -1,6 +1,6 @@
-# Numeric assertion restoration in the unreleased candidate
+# Numeric assertion restoration (v0.3.0)
 
-The candidate can recognize a narrow strengthening such as
+v0.3.0 can recognize a narrow strengthening such as
 `assert add(2, 3) > 0` becoming `assert add(2, 3) == 5`. The new exact numeric
 value must satisfy the old bound, the subject must be structurally identical,
 and the surrounding source must be proven unchanged. `> 0` becoming `== -1`,

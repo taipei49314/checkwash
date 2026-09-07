@@ -6,12 +6,12 @@ evidence do not meet a 1.0 claim. This page separates those contracts from the
 work still required. The [public-launch brief](releases/v0.2.13-public-launch.md)
 records this release's evidence and limitations.
 
-**Unreleased next-minor candidate:** five file-wide rules have content-bound
-v2 fingerprints and retire their old path-only exemptions. This intentionally
+**v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
+fingerprints and retire their old path-only exemptions. This intentionally
 breaks the matching promise below for those namespaces; existing v0.2.13
-installations retain their broad keys. IR and findings versions are 2 in the
-candidate and 1 in the public release. Read the [migration procedure and
-runtime limits](remediation-upgrade.md) before testing or upgrading.
+installations retain their broad keys. IR and findings versions are 2 since
+v0.3.0 and 1 in v0.2.13. Read the [migration procedure and
+runtime limits](remediation-upgrade.md) before upgrading.
 
 
 > **Known break: v0.1.19 violates this guarantee on Python 3.13** and no
@@ -30,7 +30,7 @@ changes with it and `DECISIONS.md` carries the entry explaining why.
 | Rule IDs | `SPEC.md` §4 | `ASSERT_WEAKENED` will never be renamed or reused for something else. Your allowlist entries and your log greps keep working |
 | Severity model | `SPEC.md` §5 | Every detector reports at `warn`; only the escalator table promotes to `high`/`critical`. A detector will never start blocking on its own |
 | Exit codes | `SPEC.md` §9 | `0` pass, `1` block, `2` engine error. A crash is never reported as a block — that distinction is gated by an end-to-end test, because it once was not |
-| Finding fingerprints | `src/checkwash/findings.py` | Within a compatible release line, a recorded exemption keeps matching. The next minor candidate deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. Other namespaces keep their identities |
+| Finding fingerprints | `src/checkwash/findings.py` | Within a compatible release line, a recorded exemption keeps matching. v0.3.0 deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. Other namespaces keep their identities |
 | IR / findings schema version | `checkwash.IR_VERSION`, `checkwash_findings_version` | `--format json` and `--emit-ir` are versioned machine interfaces. A shape change bumps the number; see the pre-rename compatibility note below. `--format sarif` is a separate 2.1.0 projection (T2.1), not this schema |
 | Config schema | `SPEC.md` §1, §6 | Both `.checkwash/config.toml` and `.greenwash/config.toml` are supported, with the precedence below. A malformed config is reported, never silently ignored |
 | Determinism | `SPEC.md` §8 | Same diff, same verdict — byte-identical across Linux, macOS and Windows on Python 3.11–3.13. Proved on every push by a job that diffs artifacts from all nine matrix legs |
@@ -47,9 +47,9 @@ release does not migrate that default. Protect both directories in
 
 ## Machine findings contract (`FINDINGS_VERSION` / `IR_VERSION`)
 
-`--format json` is the machine interface. Both numbers are **1 in public
-v0.2.13** and **2 in this unreleased next-minor candidate**. The envelope keys
-below remain; candidate IR adds reviewed-change evidence described in the
+`--format json` is the machine interface. Both numbers are **1 in
+v0.2.13** and **2 since v0.3.0**. The envelope keys
+below remain; the v0.3.0 IR adds reviewed-change evidence described in the
 [upgrade notes](remediation-upgrade.md#machine-interfaces-and-sarif).
 
 `checkwash.FINDINGS_VERSION` is the envelope. Current keys, closed:

@@ -33,6 +33,10 @@ E2E_PINNED = {
     # A .gwcase pair has no rename status, so only a real `git mv` can
     # exercise the base-side-role check that closes this row.
     "79": "test_rename_into_prod_earns_no_opaque_exemption",
+    # Content-bound exemptions (v0.3.0): a retired path-only key must not allow
+    # later content in any of the five namespaces, which only real commits and
+    # a real ledger can show.
+    "101": "test_retired_base_exemption_cannot_allow_later_content",
 }
 
 
