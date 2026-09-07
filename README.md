@@ -20,11 +20,10 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-**Unreleased remediation branch:** the downloads below still install v0.2.13.
-Five file-wide exemption rules in that release can reuse an approval for a
-later change to the same path. The [next-minor upgrade notes](https://github.com/taipei49314/checkwash/blob/fix/first-hour-integration/docs/remediation-upgrade.md)
+**v0.3.0 replaces five file-wide exemption rules with content-bound ones.**
+In v0.2.13 those rules could reuse a recorded approval for a later change to
+the same path; v0.3.0 retires their path-only keys. The [upgrade notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md)
 describe the content-bound replacement, retired keys, and installation fixes.
-Record the commit when testing this candidate; it has not been released.
 
 ## Try it
 
@@ -33,7 +32,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.13/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -42,7 +41,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.2.13/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -54,7 +53,7 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.2.13/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.3.0/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
@@ -73,7 +72,7 @@ For JSON/SARIF output and more examples, see the [usage guide](https://github.co
 
 ## Know the limits
 
-**v0.2.13 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.3.0 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
@@ -88,7 +87,7 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action is pinned to **v0.2.12**; the CLI above is **v0.2.13**.
+The recommended Action is pinned to **v0.2.13**; the CLI above is **v0.3.0**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
@@ -115,7 +114,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@e05c37f0e1673cdf218ec62fcfb7c6712cce704b # v0.2.12
+      - uses: taipei49314/checkwash/action@042f69da93f6bc3663b2ee707b9f6a619a90bc41 # v0.2.13
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -133,9 +132,10 @@ can inspect the local workflow, but cannot verify live branch protection.
 
 **Why the older Action pin?** A release cannot embed its own commit SHA,
 so the documented Action adopts a verified pin from the prior release.
-This release updates documentation, package metadata and the trusted pin;
-its detector logic is unchanged from v0.2.12. To verify another trusted
-release, use `git rev-parse 'vX.Y.Z^{commit}'`.
+v0.3.0 changes detector logic (content-bound exemptions, parametrize row
+identity, table-oracle delegation, schema 2); the recommended Action advances
+only to v0.2.13, the prior release, whose detector logic is unchanged from
+v0.2.12. To verify another trusted release, use `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
 </details>
@@ -149,9 +149,9 @@ release, use `git rev-parse 'vX.Y.Z^{commit}'`.
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.2.13
+pipx install checkwash==0.3.0
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.2.13
+pipx install git+https://github.com/taipei49314/checkwash@v0.3.0
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -170,7 +170,7 @@ You can run the same examples with `python checkwash.pyz demo`.
 The historical six-repo sweep recorded **42 / 1800 = 2.33%** blocks:
 **27 false positives (1.50%)**, 15 legitimate
   policy blocks (0.83%). The tracked artifacts record engine **v0.1.46**
-on a corpus used to tune the detectors, not a fresh v0.2.13 or held-out result.
+on a corpus used to tune the detectors, not a fresh v0.3.0 or held-out result.
 
 **1.33% of the corpus (24/1800) records opaque production changes**.
 That flag does not establish that each verdict changed or each diff was unanalyzed.

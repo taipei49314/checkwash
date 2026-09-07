@@ -1,10 +1,9 @@
-# Upgrade notes for the next minor candidate
+# Upgrade notes for v0.3.0
 
-**Unreleased.** The public release is still v0.2.13. These notes describe the
-remediation branch; the package version and release/Action pins advance only
-through the maintainer's release procedure. Record the candidate commit when
-testing a source build. Installing the public v0.2.13 artifact does not install
-these fixes.
+**Released as v0.3.0 on 2026-09-07.** These notes describe what changed from
+v0.2.13. The recommended Action and doctor's supported pin advance to v0.2.13 in
+this release and to v0.3.0 in the next (one-release trust lag). Installing the
+public v0.2.13 artifact does not install these fixes.
 
 ## Reviewed exemptions
 
