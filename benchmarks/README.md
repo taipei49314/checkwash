@@ -4,12 +4,21 @@ These corpora record behavior on human history and on constructed agent
 tasks. This file distinguishes those measurements from claims about unseen
 repositories or the current release.
 
-**Measurement provenance for the v0.2.12 public launch.** The checked-in
-six-repository sweep JSONs record engine **0.1.46**. Their matching
-`adjudication-2026-08-26b.json` is dated **2026-08-26**. The resulting
-42/1800 block rate and 27/1800 adjudicated false-positive rate are historical
-**in-sample** evidence, carried forward in the release documentation. This
-documentation update does not run a new v0.2.12 sweep, replace the original
+**Measurement provenance since 2026-09-07 (v0.3.0).** The checked-in
+six-repository sweep JSONs record engine **0.3.0**, swept from the release
+commit `4387097` on the estate runner pool (run 34121457167).
+Their matching `adjudication-2026-09-07.json` carries the 42 earlier verdicts
+verbatim and adds four maintainer single-pass judgments. The resulting
+46/1800 block rate and 31/1800 adjudicated false-positive rate are
+**in-sample** evidence: the corpus was used to tune the detectors, so this is
+not a held-out result.
+
+**Measurement provenance for the v0.2.12 public launch (superseded
+2026-09-07).** At that launch the checked-in sweep JSONs recorded engine
+**0.1.46**, with `adjudication-2026-08-26b.json` dated **2026-08-26**; the
+42/1800 block rate and 27/1800 adjudicated false-positive rate were historical
+**in-sample** evidence carried forward in the release documentation. That
+documentation update did not run a new v0.2.12 sweep, replace the original
 records, or relabel them as a current held-out result. See
 [`RESULTS.md`](RESULTS.md) for the generated historical report and
 [`STATE.md`](../STATE.md) for the release-history qualifications.
@@ -68,10 +77,10 @@ drop oracle coverage with nothing visible replacing it — the tool doing its
 documented job, to be allowlisted by a reviewer. So the blocks are adjudicated
 commit by commit, and `RESULTS.md` publishes the decomposition:
 
-| measure | historical tracked sweep (engine metadata 0.1.46) |
+| measure | tracked sweep (engine metadata 0.3.0, 2026-09-07) |
 |---|---:|
-| human-commit block rate | 42/1800 = 2.33% |
-| adjudicated **false positive** | **27/1800 = 1.50%** |
+| human-commit block rate | 46/1800 = 2.56% |
+| adjudicated **false positive** | **31/1800 = 1.72%** |
 | legitimate policy block | 0.83% |
 | unclear | 0.00% |
 
@@ -102,10 +111,15 @@ Several adjudication passes describe different historical populations.
 The generated report uses the snapshot matching the checked-in sweep;
 none of these dates is a fresh current-release evaluation:
 
+- `adjudication-2026-09-07.json` — the **46 tracked blocks of v0.3.0**:
+  31 false positive, 15 spec-correct, 0 unclear. Carries the 42 verdicts of
+  2026-08-26b forward verbatim and adds four maintainer single-pass judgments
+  (click 61bdc2ae81, click c498ced0e7, flask 0a00e1b608, httpx 7985f685ca).
+  This is the snapshot `make_results.py` uses.
 - `adjudication-2026-08-26b.json` — the **42 tracked blocks of v0.1.46**:
   27 false positive, 15 spec-correct, 0 unclear. Carries 41 prior verdicts
   forward and adds one maintainer single-pass judgment for the
-  module-constants round. This is the snapshot `make_results.py` uses.
+  module-constants round. The snapshot `make_results.py` used until 2026-09-07.
 - `adjudication-2026-08-26.json` — all 41 blocks of **v0.1.45**:
   26 false positive, 15 spec-correct, 0 unclear. Identical to 2026-08-25
   minus rich c8abbb3bd2, which v0.1.45's gated-alternative guard stopped
@@ -143,7 +157,7 @@ none of these dates is a fresh current-release evaluation:
 
 Each row below records a historical re-run over the same 1800 commits;
 this progression ends at v0.1.10. `RESULTS.md` describes the later checked-in
-v0.1.46 snapshot, with its source metadata and matching adjudication.
+v0.3.0 snapshot (2026-09-07), with its source metadata and matching adjudication.
 
 | block rate | what changed since the previous row |
 |---:|---|
@@ -210,7 +224,7 @@ The pattern across all three: the same *syntactic* shape appears on both
 sides of the adjudication, and what separates them is whether the rewrite is
 semantically equivalent — the judgement THREATMODEL #1 and #7 deliberately
 exclude from a zero-LLM, zero-execution differ. The later tracked
-adjudication reports **27/1800 = 1.50%** false positives under its documented
+adjudication reports **31/1800 = 1.72%** false positives under its documented
 mixture of review procedures; it does not establish an irreducible floor
 for the current engine or for unseen projects. The historical residual
 analysis names these clusters in the adjudication file: API-migration

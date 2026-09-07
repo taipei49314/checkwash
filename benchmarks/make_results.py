@@ -16,7 +16,7 @@ import sys
 REPOS = ["flask", "httpx", "attrs", "click", "rich", "starlette"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 # The adjudication is tied to one sweep. Bump both together, never one.
-ADJUDICATION = "adjudication-2026-08-26b.json"
+ADJUDICATION = "adjudication-2026-09-07.json"
 BLIND_RATER_FILES = (
     "adjudication-rater-B-2026-08-04.json",
     "adjudication-rater-C-2026-08-04.json",
@@ -88,7 +88,10 @@ def main() -> None:
     w("file regenerates identically from the same inputs.")
     w("")
     versions = sorted({
-        d.get("corpus", {}).get("greenwash_version", "unrecorded")
+        # `checkwash_version` since the v0.2.0 identity rename; the v0.1.46 records
+        # carry `greenwash_version`. Read both, or a newer record renders as "unrecorded".
+        d.get("corpus", {}).get("checkwash_version")
+        or d.get("corpus", {}).get("greenwash_version", "unrecorded")
         for d in r["per_repo"].values()
     })
     w(f"**Historical provenance:** the input sweep JSONs record engine version(s) "
@@ -102,7 +105,8 @@ def main() -> None:
     w("projects, 300 consecutive non-merge commits each. After the first")
     w("measurement on 2026-07-30, these same diffs were repeatedly reviewed")
     w("and used to tune the analyzer. The recorded result is in-sample,")
-    w("not a held-out estimate for unseen repositories or a fresh v0.2.12 sweep.")
+    w("not a held-out estimate for unseen repositories. The engine version the")
+    w("records carry is stated above; it is the version that swept them.")
     w("")
     w("```bash")
     w("checkwash sweep HEAD --limit 300 --repo <path>   # measurement command, not run by this generator")

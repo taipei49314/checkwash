@@ -167,16 +167,17 @@ You can run the same examples with `python checkwash.pyz demo`.
 <details>
 <summary>Read the measurements and their limits</summary>
 
-The historical six-repo sweep recorded **42 / 1800 = 2.33%** blocks:
-**27 false positives (1.50%)**, 15 legitimate
-  policy blocks (0.83%). The tracked artifacts record engine **v0.1.46**
-on a corpus used to tune the detectors, not a fresh v0.3.0 or held-out result.
+The historical six-repo sweep recorded **46 / 1800 = 2.56%** blocks:
+**31 false positives (1.72%)**, 15 legitimate
+  policy blocks (0.83%). The tracked artifacts record engine **v0.3.0**
+(the release commit, swept 2026-09-07) on a corpus used to tune the
+detectors, not a held-out result.
 
 **1.33% of the corpus (24/1800) records opaque production changes**.
 That flag does not establish that each verdict changed or each diff was unanalyzed.
 
 Review methods vary: the three-rater agreement study covers an older
-35-diff cohort, not all 42 blocks. The dedicated **22/60 refactor** result
+35-diff cohort, not all 46 blocks. The dedicated **22/60 refactor** result
 (`benchmarks/refactors/expected.json`, replayed by `tests/gates/`) is a
 separate population; the general-commit rate does not predict it.
 
