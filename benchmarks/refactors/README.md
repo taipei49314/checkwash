@@ -103,7 +103,12 @@ gives nothing away.
 assertions are now inherited once per unit-level call site, so a merge whose
 survivor calls the helper once per absorbed test conserves the oracle count —
 CASE_020_windows (two tests become one function calling `check()` twice)
-stops blocking, and the current total is **24 of 60**. `expected.json` is the
+stops blocking, and the total became **24 of 60**.
+
+2026-09-06 (PR #133, table consolidation): CASE_026_leap and CASE_029_flatten
+stop blocking, and the current total is **22 of 60** (replayed by
+`tests/gates/test_refactor_corpus.py`; `results-latest.json` still shows the
+2026-09-02 runtime run and has not been re-run since). `expected.json` is the
 per-case truth; the family table above is kept as the v0.1.26 record.
 
 ## Files
