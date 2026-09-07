@@ -2084,3 +2084,35 @@ the designated release host, went offline; pushes went over SSH because the
 host's `gh` token lacks the `workflow` scope the trust-lag edit of
 `.github/workflows/checkwash.yml` needs over HTTPS. The line is frozen again
 after this release: no bump, tag or release without a new owner decision.
+
+## D-058 (2026-09-07): v0.3.2 — a second documentation and metadata release so PyPI carries the corrected current-state sentences
+
+The owner unfroze the line once more ("解凍", 2026-09-07) after a pre-launch
+read of the public pages found sentences that contradicted each other on the
+same page: README line 80 still said 24 blocks out of 60 while line 181 said
+22/60, and `docs/stability.md`, `docs/enterprise.md` and four family pages
+still named v0.2.13 as the release or as the recommended Action pin. PR #146
+fixed the repository (issue #140 tracks the runtime record separately). The
+PyPI description of 0.3.1 is the README at tag v0.3.1 and cannot be replaced,
+so a release is again the only way to make the project page read what the
+repository says. D-057 applies unchanged: same reason, same shape.
+
+What v0.3.2 contains: the version strings, the README install pins and pyz
+links, the one-release trust lag (the recommended Action pin advances from
+v0.3.0 to v0.3.1 — the same v0.3.0 engine, because v0.3.1 changed no
+detector), the STATE section for the slot, the v0.3.2 wording of the
+current-state sentences PR #146 touched, and this entry. No file under
+`src/checkwash/` changed except the version string and the doctor's expected
+Action pin constant; no detector logic changed.
+
+The checks that stood in for the corpus sweep (RELEASING): the full suite
+gate on the release commit run by `release_slot.py` on LAPTOP-01AGNPJU;
+`tests/test_state_claims.py`, `tests/test_docs_links.py`,
+`tests/test_documentation_contracts.py` and `tests/test_packaging.py` on the
+patched release commit; and the release PR's CI, including the byte-compare
+job across the nine OS/Python legs. The sweep record of 2026-09-07 (run
+34121457167) describes this engine exactly.
+
+Cut by `release_slot.py slot --force-release` on LAPTOP-01AGNPJU as in
+D-057. The line is frozen again after this release: no bump, tag or release
+without a new owner decision.

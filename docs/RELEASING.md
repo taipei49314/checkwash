@@ -4,8 +4,9 @@ The remediation candidate of D-055 shipped as v0.3.0 on 2026-09-07 — the
 minor release its fingerprint and machine-interface break required
 ([upgrade notes](remediation-upgrade.md)). The promotion of the verified
 fixed Action SHA under the one-release trust lag was a separate, later step:
-v0.3.1 (2026-09-07) advanced the recommended pin to v0.3.0 (D-057). The exact
-ledger-cleanup review is still a separate governance change (D-055).
+v0.3.1 (2026-09-07) advanced the recommended pin to v0.3.0 (D-057) and v0.3.2
+advanced it to v0.3.1 (D-058). The exact ledger-cleanup review is still a
+separate governance change (D-055).
 
 The order matters, and it is the whole answer to a question that has now been
 asked twice: *the tag-parity gate fails before I cut the tag — isn't that
