@@ -108,10 +108,25 @@ stops blocking, and the total became **24 of 60**.
 2026-09-06 (PR #133, table consolidation): CASE_026_leap and CASE_029_flatten
 stop blocking, and the current total is **22 of 60** (replayed by
 `tests/gates/test_refactor_corpus.py`). `expected.json` is the per-case
-truth; the family table above is kept as the v0.1.26 record. The `verdict`
-column of `results-latest.json` is the 2026-09-02 runtime snapshot (commit
-`22b2a15`, 24 blocks, before #133); no test pins it, so it is not a
-current record (issue #140).
+truth; the family table above is kept as the v0.1.26 record.
+
+2026-09-07 (issue #140, re-run): `results-latest.json` is `verify.py` re-run on
+a clean checkout of `e6984de` (checkwash 0.3.1, the v0.3.0 engine) on
+the estate runner pool (run 34137702148, attempt 1, Python 3.12,
+pytest 9.1.1): all 240 pytest observations ran to a parsed report; **22 of
+60** block, CASE_026_leap and CASE_029_flatten now pass, and every verdict
+agrees with `expected.json`. The verifier marks the cohort *incomplete*: 3
+cases (CASE_007_running_sum, CASE_008_slugify, CASE_019_normalize) do not qualify
+under the post-#104 oracle because their seeded bug is caught by an assertion
+inside a pytest fixture, which pytest reports as a setup/teardown ERROR rather
+than a test failure (`valid: false` in the file, verdicts still recorded). The
+2026-09-02 run accepted any non-zero exit, so it showed them as valid. The
+file keeps the tracked row shape; the full receipt (schema_version 1: source
+commit, environment, per-case observations) is at
+`refs/heads/sweep-receipts/34137702148/1/refactor-results` in
+estate-consolidation, sha256
+`f9377b186c6a57794e48c944f711d1ec1aad148bb2b6d4438eaaefeff8afd675`.
+No test pins this file; `expected.json` remains the enforced truth.
 
 ## Files
 
