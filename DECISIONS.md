@@ -2001,3 +2001,52 @@ very content it would approve; maintainers must review the exact tightening
 diff through their existing governance route. Removing the legacy entry from
 head does not clean old bases, and rolling back to an old engine can reactivate
 its broad key. Prefer a forward fix or a previously qualified fixed release.
+
+## D-056 (2026-09-07): v0.3.0 shipped, measured after release, and the maintainer pass written by the operator under authorization
+
+The next-minor candidate of D-055 was released as v0.3.0 on 2026-09-07 (tag
+`4387097`, PyPI 0.3.0, Release assets; estate T-197). The owner froze the line
+after the release — no bump, tag or release without a new decision — and
+cancelled the weekly slot. The recommended Action pin stays v0.2.13 under the
+one-release trust lag.
+
+Two things were measured after release rather than promised, both on the
+estate runner pool from clean checkouts and never on a work machine:
+
+- The six-repository sweep was re-run on the release commit (RELEASING: a
+  round that changed detector behaviour must re-sweep). 46 of 1800 blocked,
+  gone 0, new 4, all adjudicated false in a maintainer single pass
+  (`benchmarks/adjudication-2026-09-07.json`). click 61bdc2ae81 is the price
+  of #135's row-keyed comparison and was accepted as such on 2026-09-07
+  rather than reverting #135 or adding a credit for the shape (estate
+  T-171); click c498ced0e7, flask 0a00e1b608 and httpx 7985f685ca are
+  `EXPECTED_VALUE_CHANGED` call-shape rewrites the reference arm had blocked
+  since v0.2.12 that nobody had adjudicated because the tracked record stayed
+  at v0.1.46. The floor moved 1.50% → 1.72%; `make_results.py` and
+  `make_failures.py` now read the engine-version key the sweep has written
+  since the v0.2.0 rename (`corpus.checkwash_version`), falling back to the
+  old one.
+- The LLM-arm record `llm-2026-09-03` (178 families) was re-judged through
+  the zipapp's CLI on a real two-commit repository per family, not
+  in-process: the corpus harness's in-process judge fails its own calibration
+  on v0.3.0 because it lacks the strict-snapshot wiring the product adapters
+  use (checkwash-corpus #15), so its verdicts are not the user path on this
+  line. 79 of 88 escape families still pass (9 newly blocked, all at high)
+  and 65 of 90 honest families still block (25 now pass); on v0.2.13,
+  in-process, 85 of 88 and 90 of 90 (#132, #130).
+
+The maintainer pass for the round — THREATMODEL row 101 closed and pinned
+end-to-end, rows 102 and 102a added (skip-marked rows by identity; the
+deleted-plus-appended residual left open by design), the 86a cost sentence,
+the remediation section's release status and measured effect, the
+false-positive table's #130 entry, SPEC §2b's delegation source and §4's two
+rule rows, the STATE narrative, and this entry — was written by the operator
+on 2026-09-07 under the owner's explicit authorization; these files are
+otherwise the maintainer's alone. Every number in it comes from a receipt
+named above, and the owner reviews the wording as any other change.
+
+Recorded here because the release found it: the cross-interpreter
+byte-compare gate failed on Python 3.13 the first time it ran on the
+candidate (`ast.dump` omits empty fields there), and `stable_dump` now pins
+the pre-3.13 text in both places that digested it, so keys computed on 3.11
+and 3.12 are unchanged and 3.13 agrees with them.

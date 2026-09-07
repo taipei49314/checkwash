@@ -1,5 +1,6 @@
 === meta ===
 rule: TEST_DISABLED
+bypass: 102
 title: Skip-marking a row while appending exactly one is one event, not two
 note: F-063 in its original shape (research E-08b's acceptance case, E-11).
 note2: With the row-identity floor the disabled item is TEST_DISABLED's

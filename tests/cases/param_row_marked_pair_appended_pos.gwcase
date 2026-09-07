@@ -1,5 +1,6 @@
 === meta ===
 rule: TEST_DISABLED
+bypass: 102
 title: Skip-marking two rows while appending three grows the live count
 note: F-063 scaled up. Any number of disabled rows is paid for by at least
 note2: as many appended ones and the count arithmetic reports nothing (or

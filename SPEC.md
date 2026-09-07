@@ -6,7 +6,7 @@ Changing anything here requires a version bump of the affected schema and a
 full fixture re-run. Coding agents have **read-only** authority over this file
 and over `tests/gates/**`; changes are made by the human maintainer only.
 
-Spec version: 2 (IR payload `version: 2`, findings envelope `checkwash_findings_version: 2`; next minor candidate, unreleased)
+Spec version: 2 (IR payload `version: 2`, findings envelope `checkwash_findings_version: 2`; released in v0.3.0, 2026-09-07)
 
 ## 1. Analysis unit
 
@@ -106,7 +106,7 @@ between the two is a laundering route (all confirmed by reproduction):
   `skipif(False)` → `skipif(True)` is a change; and the marker is matched on
   its trailing components, so `import pytest as p; @p.mark.skip` counts
 
-### Bounded Python carriers and table projection (unreleased candidate)
+### Bounded Python carriers and table projection (v0.3.0)
 
 A direct conditional failure, `if comparison: raise AssertionError`, can
 carry an oracle when its single comparison and built-in exception binding
@@ -139,6 +139,19 @@ concrete cases rather than source function names; evidence spans still refer
 to the source. The bounded projection does not alter alignment thresholds,
 strength values, severities or the existing fallback restructure policy.
 Unsupported shapes retain their ordinary findings and do not gain this proof.
+
+A table whose rows delegate is projected the same way (v0.3.0, #136) when the
+delegate is a same-file helper that is one message-free `assert` with plain
+named parameters, no decorator and a name pytest does not collect under the
+default `python_functions`, and each row's call passes only row names or
+literals: the helper's assertion is inlined per row with its parameters bound
+to that row's literals, so the helper is the oracle. A zero-argument
+`@pytest.fixture` returning a literal table is a table source under the same
+bounds. Anything else falls back to the general frontend. The name test is a
+cross-file assumption — it holds only under the default `python_functions` —
+so `snapshot_context._default_collection_options` withholds the projection's
+inert-startup proof whenever any collection option other than `testpaths` is
+configured.
 
 A separate additive pass can compare concrete old native assertions or
 single-assert same-file helper calls with literal parametrize rows that add
@@ -228,14 +241,14 @@ detectors can only be disabled whole.
 |---|---|
 | `ASSERT_REMOVED` | an assertion disappeared from a surviving test unit |
 | `ASSERT_WEAKENED` | aligned assertion strength decreased, **or** its polarity flipped with the subject unchanged (`==`→`!=`, `is`→`is not`, `assertTrue`→`assertFalse`, `assertIs`→`assertIsNot`) — same form and strength, opposite meaning. When the subject changed too it is reported as a rewrite, not as an inversion: greenwash cannot verify the replacement is equivalent, and saying "proves the opposite" would be a claim it has not established |
-| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, the module's `pytestmark`, `self.skipTest`, or a conftest suite control), a whole test unit disappeared (including out of collection, per §2b), or parametrized cases deleted |
+| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, the module's `pytestmark`, `self.skipTest`, or a conftest suite control), a whole test unit disappeared (including out of collection, per §2b), or parametrized cases deleted or disabled — since v0.3.0 counted by row identity (cell texts read through `pytest.param(...)`, one table per decorator, stacked decorators a cross product of items), so a marked-off row is reported however many rows are appended beside it, and the finding says how many items are marks rather than deletions; a vanished unmarked row is left to the count (`vanished − arrived`), which is why an edited input stays silent and a deletion beside an appended row does too (THREATMODEL 102, 102a) |
 | `TOLERANCE_LOOSENED` | any individual tolerance on the call got wider (each `rel`/`abs`/`places` compared separately, via Decimal) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `ASSERT_SUBSTITUTED` | an aligned pair produced by the **order fallback** — position, not text or subject — where both halves moved: the subject differs structurally and so does the expectation. The old assertion is gone and a different one holds its slot, while `strength_change` reads 0 and `assertions_removed` is empty. Requires a subject on both sides, so folding an excinfo assert into `pytest.raises(match=)` is untouched; a *wrapped* subject is `SUBJECT_NORMALIZED`'s, and a rename that keeps the expectation is neither |
 | `EXPECTED_VALUE_HARDCODED` | new assertion literal equals a constant newly introduced in prod in the same diff |
 | `EXPECTED_VALUE_CHANGED` | an aligned assertion keeps its form, strength **and subject**, but its expected side was rewritten: a literal value, a call-expression replaced by a literal (issue #60), or a call rewritten to a different call (issue #61). Both sides used to have to be literals; that left independent-oracle calls invisible. The file-scoped form also reports a modified stored snapshot/golden/expected file when no parsed production symbol changed and no opaque production change exists. It uses content-bound identity. New/deleted expectations and real or unrelated production co-changes retain the existing snapshot policy; this is a path-role heuristic, not proof of which test reads a file. |
 | `EXPECTED_VALUE_DERIVED` | an aligned assertion keeps its subject and its strength, but its expected side stopped being a literal and now resolves — through the unit's own assignments — to a name the subject also uses. `== 105.0` became `expected = sum(items)` / `== expected`. The transition is the signal: an expectation that was already computed before the diff is how the test was written. A literal replaced by a *named constant* or a parametrize argument shares no name with the subject and does not fire; a literal replaced by an expression over the subject's own inputs is the test computing the answer from the data it feeds the code. Escalates through repair evidence like every oracle rule |
-| `EXPECTATION_DEFINITION_CHANGED` | an aligned assertion whose **text is unchanged** and whose expectation resolves to something outside the assertion whose definition changed: a unit-local binding, a `parametrize` **column the expectation actually consumes**, a same-file `@pytest.fixture`'s return/yield, or a **same-file top-level constant** (canonical on both sides so reformatting is not a change; last-wins on both sides, which is module execution order, so an appended rebind is caught; a constant the subject also consumes is a shared producer and excluded — D-051, the 2026-08-25 census's largest blind bucket). Which column is the expectation is decided by consumption, not by position or by the name `expected`. Row additions and deletions are excluded — those are `TEST_DISABLED`'s event — and a cell is read through `pytest.param(...)`, so marking rows skipped is not an expectation edit. A binding that gains a **branch-exclusive alternative** is excluded the same way, and only then: the after side must have more definitions, every before-side definition must survive verbatim (multiset containment), and the name's bindings must sit in pairwise-exclusive `if`/`match` arms — a sequential rebind fails the third clause because the last unconditional binding is the one the assertion reads (THREATMODEL 95 records the tautological-gate residual). Compared structurally, so reformatting is not a change. Escalates through repair evidence like every oracle rule — and D9 `DEPENDENCY_DRIFT` and `PACKAGE_REPAIR` de-escalate it the same way. Blocking status is a measured decision taken twice, not a hedge: as a blocking rule in v0.1.19 it cost 12 extra blocks on 1800 human commits and shipped at `info`; after the T1.9/T1.10/T1.11 credit rounds the 2026-08-25 promotion sweep cost 5, each adjudicated false and named (`benchmarks/adjudication-2026-08-25.json`), inside the pre-registered line of five |
+| `EXPECTATION_DEFINITION_CHANGED` | an aligned assertion whose **text is unchanged** and whose expectation resolves to something outside the assertion whose definition changed: a unit-local binding, a `parametrize` **column the expectation actually consumes**, a same-file `@pytest.fixture`'s return/yield, or a **same-file top-level constant** (canonical on both sides so reformatting is not a change; last-wins on both sides, which is module execution order, so an appended rebind is caught; a constant the subject also consumes is a shared producer and excluded — D-051, the 2026-08-25 census's largest blind bucket). Which column is the expectation is decided by consumption, not by position or by the name `expected`. Row additions and deletions are excluded — those are `TEST_DISABLED`'s event — and a cell is read through `pytest.param(...)`, so marking rows skipped is not an expectation edit. Since v0.3.0 (#135) the parametrize comparison is row-keyed: rows are identified by their input cells and the consumed column is compared per key as a multiset — a key that disappeared is a deletion (`TEST_DISABLED`'s), a key whose answers still contain everything they had is an addition or a reorder, a key that lost an answer it had and gained one it did not is this rule's event — and every positional cell of a `pytest.param(...)` row is read, so a fully wrapped table is compared like a bare one; a single-column table has no inputs to key on, so its identity is position and the before cells must survive as a subsequence (insertion anywhere, edit or reshuffle reported). A binding that gains a **branch-exclusive alternative** is excluded the same way, and only then: the after side must have more definitions, every before-side definition must survive verbatim (multiset containment), and the name's bindings must sit in pairwise-exclusive `if`/`match` arms — a sequential rebind fails the third clause because the last unconditional binding is the one the assertion reads (THREATMODEL 95 records the tautological-gate residual). Compared structurally, so reformatting is not a change. Escalates through repair evidence like every oracle rule — and D9 `DEPENDENCY_DRIFT` and `PACKAGE_REPAIR` de-escalate it the same way. Blocking status is a measured decision taken twice, not a hedge: as a blocking rule in v0.1.19 it cost 12 extra blocks on 1800 human commits and shipped at `info`; after the T1.9/T1.10/T1.11 credit rounds the 2026-08-25 promotion sweep cost 5, each adjudicated false and named (`benchmarks/adjudication-2026-08-25.json`), inside the pre-registered line of five |
 | `SUBJECT_NORMALIZED` | an aligned assertion keeps its form, strength **and** expected literal, and the asserted subject now wraps its old self — `f(x)` became `f(x).replace(...)`, `sorted(f(x))`, `f(x)[0]`. Structural containment, so spelling does not matter. Resolved through **one hop** of the unit's own bindings, so hoisting the wrapper to the previous line is the same event; and applied to **argument positions** too, so `f(x)` becoming `f(normalise(x))` counts — same callee, same arity, every argument unchanged or containing its counterpart, at least one actually wrapped. Two hops are a stated residual; a subject replaced outright is a different test, not a laundered one. Escalates through repair evidence like every oracle rule, because wrapping is routine when production changed under it. Direct containment is retained alongside one-hop resolved containment. The bounded concrete ASCII-string proof below can establish that an added normalization is redundant for the unchanged production expression. Separate literal-table events can expose the same wrapper when ordinary assertion alignment does not; exact raw oracles that remain present are consumed first, so merely adding wrapped cases does not replace them. Neither extension changes severity or the ordinary restructure policy. |
 | `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` (JS forms in v0.2) added |
@@ -640,14 +653,14 @@ as history. The README "Honest cost" row still states its out-of-sample
 figure without an engine version, and STATE's authoritative table carries
 no class label: rule 1 applies to them from the next number published, and
 the label tests of rule 6 land with the first draw under rule 2. Until that
-draw, the only rate this project may call current is the in-sample 42/1800,
-labelled as in-sample.
+draw, the only rate this project may call current is the in-sample 46/1800
+(engine v0.3.0, swept 2026-09-07), labelled as in-sample.
 
 ### 10.4 What this does not promise
 
 Held-out measures precision on commits nobody tuned on. It does not measure
 recall against an adversary — the tamper, disguised-refactor and decoy arms
 under `benchmarks/` do that, and they are in-sample by construction. It does
-not make the in-sample rate wrong: 42/1800 is the honest answer to "how often
+not make the in-sample rate wrong: 46/1800 (v0.3.0, 2026-09-07) is the honest answer to "how often
 does it block the repositories it knows best", and it stays published as
 exactly that.

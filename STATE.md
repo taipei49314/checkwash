@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-07 (v0.3.0: release slot 2026-09-07; the dated section below lists what shipped, the maintainer pass adds the narrative; tracked sweep record 2026-09-07, T-201)
+Updated: 2026-09-07 (v0.3.0: release slot 2026-09-07; the dated section below lists what shipped, narrative added by the maintainer pass of 2026-09-07, D-056; tracked sweep record 2026-09-07, T-201)
 
 ## 2026-09-07: the six-repository sweep re-run on the v0.3.0 release commit (estate T-201)
 
@@ -67,11 +67,23 @@ Release slot 2026-09-07, estate ledger T-198. Since v0.2.13, 35 commit(s) touche
 
 The one-release trust lag advances the Action pin to v0.2.13.
 
-Narrative for this round: pending the maintainer pass (THREATMODEL / DECISIONS are human-only).
+Narrative for this round (maintainer pass 2026-09-07, D-056): five file-wide
+exemptions bind to content (D-055; THREATMODEL 101 closed); parametrize rows
+have an identity, so a skip-marked row is reported whatever is appended
+beside it (102 closed; 102a, the deleted-plus-appended residual, open by
+design) and the expectation comparison is row-keyed and reads wrapped cells
+(86a, F-060 / F-067); table-driven oracles that delegate to a same-file
+single-assert helper or a literal-table fixture are read per row (#136,
+SPEC §2b); conftest stand-ins and stored expectations resolve from strict
+snapshots (#127–#129); `stable_dump` pins `ast.dump` text on 3.13. Measured
+after release on the pool: sweep 46/1800 (four new blocks, all adjudicated
+false, click 61bdc2ae81 accepted as #135's price), LLM-arm CLI re-judge
+79/88 escapes still pass and 65/90 honest still block (v0.2.13 in-process:
+85/88, 90/90).
 
 ## Additional September 6 issue candidate
 
-Issues #127–#131 have a separate unreleased source candidate covering conftest
+Issues #127–#131 had a separate source candidate, released in v0.3.0, covering conftest
 targets, stored expectations and bounded Python oracle forms. See the
 [scope and limitations](docs/issue-remediation-2026-09-06.md). The #125 CI
 results in the next section describe that earlier source, not qualification

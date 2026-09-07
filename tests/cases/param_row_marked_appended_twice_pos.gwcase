@@ -1,5 +1,6 @@
 === meta ===
 rule: TEST_DISABLED
+bypass: 102
 title: Skip-marking a row while appending two is a disabled test item, not a wash
 note: F-063 (research E-08b / E-11). `param_cases` is a count of live rows,
 note2: so marking one row (-1) and appending rows (+2) reads as growth and
