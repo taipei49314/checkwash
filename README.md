@@ -115,7 +115,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@e05c37f0e1673cdf218ec62fcfb7c6712cce704b # v0.2.12
+      - uses: taipei49314/checkwash/action@042f69da93f6bc3663b2ee707b9f6a619a90bc41 # v0.2.13
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -149,9 +149,9 @@ release, use `git rev-parse 'vX.Y.Z^{commit}'`.
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.2.13
+pipx install checkwash==0.2.14
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.2.13
+pipx install git+https://github.com/taipei49314/checkwash@v0.2.14
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
