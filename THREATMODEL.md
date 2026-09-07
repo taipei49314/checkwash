@@ -75,7 +75,7 @@ hallucinated imports, scope drift, hidden Unicode.
    the residual false positives were each killed at design time by a
    spec-correct commit of the identical syntactic shape (the pairings are in
    benchmarks/README, "The floor"). On the 1800-commit corpus this design's
-   adjudicated false-positive floor is ~1.50% — 22 by the majority of three
+   adjudicated false-positive floor is ~1.72% — 22 by the majority of three
    raters (Fleiss' kappa 0.844), four of the five the 2026-08-25 #86a
    promotion knowingly added (two raters each, all judged false; the fifth,
    rich c8abbb3bd2, stopped blocking when v0.1.45's gated-alternative guard

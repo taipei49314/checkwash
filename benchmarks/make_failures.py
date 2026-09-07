@@ -30,7 +30,7 @@ _ROW_CELLS = re.compile(r"(?<!\\)\|")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-ADJUDICATION = "adjudication-2026-08-26b.json"
+ADJUDICATION = "adjudication-2026-09-07.json"
 BLIND_RATER_FILES = (
     "adjudication-rater-B-2026-08-04.json",
     "adjudication-rater-C-2026-08-04.json",
@@ -142,7 +142,10 @@ def main() -> None:
         if name.endswith(".json"):
             sweep = _load(HERE, "sweeps", name)
             total += sweep["commits_analysed"]
-            versions.add(sweep.get("corpus", {}).get("greenwash_version", "unrecorded"))
+            corpus = sweep.get("corpus", {})
+            # `checkwash_version` since the v0.2.0 identity rename; older records carry
+            # `greenwash_version`. Read both, or a newer record renders as "unrecorded".
+            versions.add(corpus.get("checkwash_version") or corpus.get("greenwash_version", "unrecorded"))
             swept.update((name[:-5], b["commit"]) for b in sweep["blocked_commits"])
     judged = {(v["repo"], v["commit"]) for v in adj["verdicts"]}
     if swept != judged:
