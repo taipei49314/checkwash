@@ -1,15 +1,16 @@
 # Enterprise checklist
 
-One page for a security or platform team evaluating checkwash v0.2.13
-(alpha) as a required gate, with a reviewed exemption path. Start with a
-review of its [coverage and adoption cost](stability.md#coverage-and-adoption-cost),
-then protect the deployed check and its policy files.
+One page for a security or platform team evaluating checkwash v0.3.1
+(alpha; engine v0.3.0) as a required gate, with a reviewed exemption path.
+Start with a review of its
+[coverage and adoption cost](stability.md#coverage-and-adoption-cost), then
+protect the deployed check and its policy files.
 
 **v0.3.0 notice:** v0.3.0 (2026-09-07) changes five exemption namespaces and
-local installation behavior. The recommended Action pin is v0.2.13, which
-does not carry these fixes until the next release advances it. Follow the
-[migration notes](remediation-upgrade.md); a CLI upgrade alone does not
-update a deployed Action or an existing hook.
+local installation behavior. The recommended Action pin is v0.3.0 (advanced
+by v0.3.1 under the one-release trust lag) and carries these changes. Follow
+the [migration notes](remediation-upgrade.md); a CLI upgrade alone still does
+not update a deployed Action or an existing hook.
 
 ## 1. Required check
 
@@ -25,8 +26,8 @@ the [README](../README.md):
 
 3. `checkwash doctor` — it cannot see branch protection; confirm step 2.
 
-The README's Action is hash-pinned to **v0.2.12** under the one-release
-trust-lag policy. Installing the v0.2.13 CLI does not update that Action;
+The README's Action is hash-pinned to **v0.3.0** under the one-release
+trust-lag policy. Installing the v0.3.1 CLI does not update that Action;
 record both deployed versions. A required check enforces that version's
 configured verdict, not a guarantee that the change is correct.
 
@@ -47,11 +48,11 @@ still outside that window — [process-windows.md](process-windows.md).
 
 ## 3. Allowlist — reviewed, time-boxed, base-side
 
-In v0.2.13, GUARDRAIL_TOUCHED, CI_WORKFLOW_TOUCHED,
-TEST_FILE_UNPARSEABLE, SCOPE_DRIFT and SNAPSHOT_CODE_COCHANGE use rule/path
+Up to v0.2.13, GUARDRAIL_TOUCHED, CI_WORKFLOW_TOUCHED,
+TEST_FILE_UNPARSEABLE, SCOPE_DRIFT and SNAPSHOT_CODE_COCHANGE used rule/path
 identities: a per-fingerprint exemption is file-wide for these rules and may
-cover later unrelated content. The candidate binds both snapshots and the
-rule's context, rejects old keys, and requires a newly reviewed v2 approval.
+cover later unrelated content. Since v0.3.0 the key binds both snapshots and
+the rule's context, rejects old keys, and requires a newly reviewed v2 approval.
 The expiry limits below do not narrow an old key's scope. Do not mechanically
 rewrite the digest or use a ledger entry to approve its own cleanup.
 

@@ -107,9 +107,11 @@ stops blocking, and the total became **24 of 60**.
 
 2026-09-06 (PR #133, table consolidation): CASE_026_leap and CASE_029_flatten
 stop blocking, and the current total is **22 of 60** (replayed by
-`tests/gates/test_refactor_corpus.py`; `results-latest.json` still shows the
-2026-09-02 runtime run and has not been re-run since). `expected.json` is the
-per-case truth; the family table above is kept as the v0.1.26 record.
+`tests/gates/test_refactor_corpus.py`). `expected.json` is the per-case
+truth; the family table above is kept as the v0.1.26 record. The `verdict`
+column of `results-latest.json` is the 2026-09-02 runtime snapshot (commit
+`22b2a15`, 24 blocks, before #133); no test pins it, so it is not a
+current record (issue #140).
 
 ## Files
 

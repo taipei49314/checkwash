@@ -2,8 +2,9 @@
 
 **Released as v0.3.0 on 2026-09-07.** These notes describe what changed from
 v0.2.13. The recommended Action and doctor's supported pin advance to v0.2.13 in
-this release and to v0.3.0 in the next (one-release trust lag). Installing the
-public v0.2.13 artifact does not install these fixes.
+this release and to v0.3.0 in the next (one-release trust lag); v0.3.1
+(2026-09-07) advanced them to v0.3.0. Installing the public v0.2.13 artifact
+does not install these fixes.
 
 ## Reviewed exemptions
 

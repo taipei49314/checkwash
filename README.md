@@ -77,7 +77,7 @@ Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
 Legitimate refactors can be flagged: the dedicated honest-refactor corpus
-records **24 blocks out of 60 (40%)**. Try it on your own changes before making
+records **22 blocks out of 60 (36.7%)**. Try it on your own changes before making
 it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
 

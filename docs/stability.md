@@ -1,10 +1,11 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.2.13 is alpha**. Its versioned interfaces and release checks
-support deliberate adoption, but its coverage, false-positive cost and adoption
-evidence do not meet a 1.0 claim. This page separates those contracts from the
-work still required. The [public-launch brief](releases/v0.2.13-public-launch.md)
-records this release's evidence and limitations.
+checkwash **v0.3.1 is alpha** (engine v0.3.0). Its versioned interfaces and
+release checks support deliberate adoption, but its coverage, false-positive
+cost and adoption evidence do not meet a 1.0 claim. This page separates those
+contracts from the work still required. The
+[public-launch brief](releases/v0.3.0-public-launch.md) records this release's
+evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
 fingerprints and retire their old path-only exemptions. This intentionally
@@ -131,8 +132,8 @@ positives out of 1800 commits (1.72%)**, on a corpus used to tune the
 detectors. Its adjudication combines an older three-rater study, later
 two-rater additions and maintainer-only additions; the kappa is not a study
 of all 46 entries in that adjudication.
-The dedicated honest-refactor corpus instead has **24 blocks out of 60
-(40%)**. These are different populations, and neither predicts another
+The dedicated honest-refactor corpus instead has **22 blocks out of 60
+(36.7%)**. These are different populations, and neither predicts another
 repository's review cost. Original versions, dates and adjudication scope are
 in [benchmarks](../benchmarks/README.md).
 
@@ -143,7 +144,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.2.13 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.3.1 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
@@ -186,10 +187,11 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.2.13 documentation pins the Action to v0.2.12 under the one-release
-trust-lag policy. This release updates documentation, package metadata and
-the trusted pin; detector logic is unchanged from v0.2.12. Treat each installed
-surface as its own versioned dependency; see the [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
+The v0.3.1 documentation pins the Action to v0.3.0 under the one-release
+trust-lag policy; v0.3.1 is a documentation and metadata release on the v0.3.0
+engine, so the pinned Action and the CLI run the same detector logic (D-057).
+Treat each installed surface as its own versioned dependency; see the
+[README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 
 If a new version blocks something it used to pass, that is either a bypass
 closing or a false positive shipping — and this project has done both. Read
