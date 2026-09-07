@@ -1,6 +1,15 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-07 (v0.3.0: release slot 2026-09-07; the dated section below lists what shipped, narrative added by the maintainer pass of 2026-09-07, D-056; tracked sweep record 2026-09-07, T-201)
+Updated: 2026-09-07 (v0.3.1: release slot 2026-09-07; the dated section below lists what shipped, the maintainer pass adds the narrative)
+
+## 2026-09-07: release slot (v0.3.1)
+
+Release slot 2026-09-07, estate ledger T-207. Since v0.3.0, 0 commit(s) touched src, action, pyproject.toml:
+
+
+The one-release trust lag advances the Action pin to v0.3.0.
+
+Narrative for this round: pending the maintainer pass (THREATMODEL / DECISIONS are human-only).
 
 ## 2026-09-07: the six-repository sweep re-run on the v0.3.0 release commit (estate T-201)
 
@@ -1795,7 +1804,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.3.0 |
+| version | v0.3.1 |
 | detectors | 21 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |
