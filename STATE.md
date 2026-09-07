@@ -1,6 +1,29 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-07 (v0.3.0: release slot 2026-09-07; the dated section below lists what shipped, the maintainer pass adds the narrative)
+Updated: 2026-09-07 (v0.3.0: release slot 2026-09-07; the dated section below lists what shipped, the maintainer pass adds the narrative; tracked sweep record 2026-09-07, T-201)
+
+## 2026-09-07: the six-repository sweep re-run on the v0.3.0 release commit (estate T-201)
+
+The tracked sweep record (`benchmarks/sweeps/`) is now the v0.3.0 release commit
+`4387097`, swept on 2026-09-07 on the estate runner pool (run
+34121457167: six clean checkouts, Python 3.12, 300 commits per repository,
+0 engine errors) and copied verbatim from the pool receipt. It replaces the
+v0.1.46 record that v0.2.11 to v0.2.13 carried forward. Blocks moved
+**42 -> 46/1800** (2.56%), gone 0, new 4: click `61bdc2ae81`
+(hidden-input regex mask; the parametrize row-identity rule of #135 sees the
+expectation rows change and cannot reach the production change through
+CliRunner), click `c498ced0e7` (`expect` -> `expected` rename inside the
+expectation), flask `0a00e1b608` (`tmpdir` -> `tmp_path` migration), httpx
+`7985f685ca` (`URL(...)` -> `httpx.URL(...)` import style). All four were
+judged false positive by the maintainer in a single pass (the last three had
+blocked since v0.2.12's reference arm and were first named in #132), so the
+adjudicated false-positive rate is **31/1800 = 1.72%** and the
+legitimate-policy-block rate stays **15/1800 = 0.83%**; recorded opaque
+production changes **24/1800**. `adjudication-2026-09-07.json` carries the
+42 earlier verdicts verbatim. Still in-sample: this corpus tuned the detectors.
+THREATMODEL.md's floor number was updated to match the adjudication; the
+maintainer pass for the 0.3.0 detector changes (THREATMODEL/SPEC rows) is not
+part of this entry.
 
 ## 2026-09-07: release slot (v0.3.0)
 
@@ -1745,12 +1768,13 @@ real measure of the blind spot.
 This is the authoritative inventory of release metadata and recorded
 measurements, with different provenance for each. The version and detector
 count describe the release. The human-history rates and opaque share come
-from `benchmarks/sweeps/`, whose JSON metadata records engine **0.1.46**;
-their matching adjudication is `adjudication-2026-08-26b.json`, dated
-**2026-08-26**. They are historical **in-sample** results after repeated
-tuning on these same repositories, not a fresh v0.2.12 sweep or an estimate
-for unseen projects. The v0.2.11 and v0.2.12 entries above record that the
-six-repository sweep was not rerun for those releases.
+from `benchmarks/sweeps/`, whose JSON metadata records engine **0.3.0**
+(the release commit `4387097`, swept on 2026-09-07 on the estate
+runner pool, run 34121457167); their matching adjudication is
+`adjudication-2026-09-07.json`, dated **2026-09-07**. They are **in-sample**
+results on repositories used repeatedly to tune the detectors, not an
+estimate for unseen projects. The v0.2.11, v0.2.12 and v0.2.13 entries
+above record that the six-repository sweep was not rerun for those releases.
 
 `tests/test_state_claims.py` checks these values against the tracked records;
 that consistency check does not refresh their measurement date. The classic
@@ -1761,8 +1785,8 @@ how the measurements moved; their original dates and values remain history.
 |---|---|
 | version | v0.3.0 |
 | detectors | 21 |
-| human-commit block rate | 42/1800 = 2.33% |
-| adjudicated false positive | 27/1800 = 1.50% |
+| human-commit block rate | 46/1800 = 2.56% |
+| adjudicated false positive | 31/1800 = 1.72% |
 | legitimate policy block | 15/1800 = 0.83% |
 | recorded opaque production changes | 24/1800 = 1.33% |
 | classic adversarial decoys blocked | 12/12 |
@@ -1774,11 +1798,12 @@ The adjudication combines cohorts with different review procedures. The
 **35-diff cohort** re-adjudicated on 2026-08-04 had three recorded raters
 (two blind additional passes), Fleiss' kappa **0.844**, and four diffs with
 any disagreement. Those agreement statistics apply only to that cohort,
-not to all 42 historical blocks. The 2026-08-25 promotion added a separate
+not to all 46 tracked blocks. The 2026-08-25 promotion added a separate
 five-block cohort with two blind raters and reconciliation; later files
 carry earlier verdicts forward or remove blocks as documented. The
-2026-08-26 module-constants addition was one maintainer single-pass
-judgment. See each adjudication file's method and per-commit fields.
+2026-08-26 module-constants addition and the four blocks the 2026-09-07
+v0.3.0 sweep added were maintainer single-pass judgments. See each
+adjudication file's method and per-commit fields.
 
 The historical probe arm (2026-08-04) separately recorded 4/6 cheats blocked
 at harvest, 2/6 escaped and closed the same day, and 0/6 false blocks on the

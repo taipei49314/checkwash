@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.04,
+  "block_rate": 0.0433,
   "blocked_commits": [
     {
       "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
@@ -60,7 +60,7 @@
       "commit": "fc84f7f6eb77fe5d4428261c837ac8016ec77a28",
       "findings": [
         {
-          "message": "test_not_same_origin: assertion replaced — subject and polarity both changed (assert not same_origin(origin1, origin2) -> assert headers[\"Host\"] == origin.netloc.decode(\"ascii\")); greenwash cannot verify the replacement is equivalent",
+          "message": "test_not_same_origin: assertion replaced — subject and polarity both changed (assert not same_origin(origin1, origin2) -> assert headers[\"Host\"] == origin.netloc.decode(\"ascii\")); checkwash cannot verify the replacement is equivalent",
           "path": "tests/test_utils.py",
           "rule": "ASSERT_WEAKENED",
           "severity": "high",
@@ -466,15 +466,34 @@
           "unit": "test_urlencoded_none"
         }
       ]
+    },
+    {
+      "commit": "7985f685ca8d2dea62398e35115be44ac91fb9e7",
+      "findings": [
+        {
+          "message": "test_auth_hidden_url: expected call rewritten to a different call ['URL', 'url'] -> ['httpx', 'url'] with no change in assertion strength",
+          "path": "tests/client/test_auth.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_auth_hidden_url"
+        },
+        {
+          "message": "test_auth_hidden_url: expected call rewritten to a different call ['URL', 'repr', 'url'] -> ['httpx', 'repr', 'url'] with no change in assertion strength",
+          "path": "tests/client/test_auth.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_auth_hidden_url"
+        }
+      ]
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 12,
+  "commits_blocked": 13,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 92,
   "commits_with_opaque_prod_change": 5,
   "corpus": {
-    "greenwash_version": "0.1.46",
+    "checkwash_version": "0.3.0",
     "newest_commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254",
     "oldest_commit": "69e13cbc393ee13624d0e4aa4b6f861a95e3f91c"
   },
@@ -498,8 +517,8 @@
       "warn": 45
     },
     "EXPECTED_VALUE_CHANGED": {
-      "high": 27,
-      "warn": 74
+      "high": 29,
+      "warn": 79
     },
     "EXPECTED_VALUE_HARDCODED": {
       "high": 2

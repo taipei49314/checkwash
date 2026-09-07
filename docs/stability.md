@@ -108,9 +108,10 @@ deliberately, read the release notes, and expect the block set to move.
 
 **The numbers move too.** Re-measurement after behavior changes is the intended
 procedure; published evidence must say what actually ran. The committed
-1800-commit sweep artifacts record v0.1.46. `STATE.md` records that v0.2.12
-carried that baseline forward without a fresh full sweep, because the corpus
-does not contain the affected configuration directories. Original evidence
+1800-commit sweep artifacts record v0.3.0 (swept 2026-09-07 from the release
+commit). `STATE.md` records that v0.2.11 to v0.2.13 carried the v0.1.46 baseline
+forward without a fresh full sweep, because the corpus does not contain the
+affected configuration directories. Original evidence
 and the progression — including increases in false positives — are published
 in [benchmarks/README.md](../benchmarks/README.md).
 
@@ -125,11 +126,11 @@ the engine cannot parse can still suppress escalation through the documented
 opaque-change rule. A second-language checkbox does not establish broad
 coverage.
 
-The historical six-repo sweep recorded **27 false positives out of 1800
-commits (1.50%)**, on a corpus used to tune the detectors. Its adjudication
-combines an older three-rater study, later two-rater additions and a
-maintainer-only addition; the kappa is not a study of all 42 entries in that
-historical adjudication.
+The tracked six-repo sweep (engine 0.3.0, 2026-09-07) recorded **31 false
+positives out of 1800 commits (1.72%)**, on a corpus used to tune the
+detectors. Its adjudication combines an older three-rater study, later
+two-rater additions and maintainer-only additions; the kappa is not a study
+of all 46 entries in that adjudication.
 The dedicated honest-refactor corpus instead has **24 blocks out of 60
 (40%)**. These are different populations, and neither predicts another
 repository's review cost. Original versions, dates and adjudication scope are

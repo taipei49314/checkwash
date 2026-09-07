@@ -30,7 +30,7 @@ _ROW_CELLS = re.compile(r"(?<!\\)\|")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-ADJUDICATION = "adjudication-2026-08-26b.json"
+ADJUDICATION = "adjudication-2026-09-07.json"
 BLIND_RATER_FILES = (
     "adjudication-rater-B-2026-08-04.json",
     "adjudication-rater-C-2026-08-04.json",

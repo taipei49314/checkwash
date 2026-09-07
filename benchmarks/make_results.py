@@ -16,7 +16,7 @@ import sys
 REPOS = ["flask", "httpx", "attrs", "click", "rich", "starlette"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 # The adjudication is tied to one sweep. Bump both together, never one.
-ADJUDICATION = "adjudication-2026-08-26b.json"
+ADJUDICATION = "adjudication-2026-09-07.json"
 BLIND_RATER_FILES = (
     "adjudication-rater-B-2026-08-04.json",
     "adjudication-rater-C-2026-08-04.json",

@@ -1,5 +1,5 @@
 {
-  "block_rate": 0.0233,
+  "block_rate": 0.0267,
   "blocked_commits": [
     {
       "commit": "06ea505ce2b2042af26e96d35ebf159af7c0869d",
@@ -81,7 +81,7 @@
           "unit": "test_client_pop_all_preserved"
         },
         {
-          "message": "test_client_pop_all_preserved: assertion replaced — subject and polarity both changed (assert _cv_request.get(None) is req_ctx -> assert not leaks); greenwash cannot verify the replacement is equivalent",
+          "message": "test_client_pop_all_preserved: assertion replaced — subject and polarity both changed (assert _cv_request.get(None) is req_ctx -> assert not leaks); checkwash cannot verify the replacement is equivalent",
           "path": "tests/test_testing.py",
           "rule": "ASSERT_WEAKENED",
           "severity": "high",
@@ -102,6 +102,60 @@
       ]
     },
     {
+      "commit": "0a00e1b6085f62fb776a95ef676ea661bff565f6",
+      "findings": [
+        {
+          "message": "test_explicit_instance_paths: expected call rewritten to a different call ['modules_tmpdir', 'str'] -> ['modules_tmp_path', 'os'] with no change in assertion strength",
+          "path": "tests/test_instance_config.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_explicit_instance_paths"
+        },
+        {
+          "message": "test_installed_module_paths: expected call rewritten to a different call ['modules_tmpdir'] -> ['modules_tmp_path', 'os'] with no change in assertion strength",
+          "path": "tests/test_instance_config.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_installed_module_paths"
+        },
+        {
+          "message": "test_installed_package_paths: expected call rewritten to a different call ['modules_tmpdir'] -> ['modules_tmp_path', 'os'] with no change in assertion strength",
+          "path": "tests/test_instance_config.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_installed_package_paths"
+        },
+        {
+          "message": "test_prefix_package_paths: expected call rewritten to a different call ['modules_tmpdir'] -> ['modules_tmp_path', 'os'] with no change in assertion strength",
+          "path": "tests/test_instance_config.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_prefix_package_paths"
+        },
+        {
+          "message": "test_uninstalled_module_paths: expected call rewritten to a different call ['modules_tmpdir', 'str'] -> ['modules_tmp_path', 'os'] with no change in assertion strength",
+          "path": "tests/test_instance_config.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_uninstalled_module_paths"
+        },
+        {
+          "message": "test_uninstalled_namespace_paths: expected call rewritten to a different call ['project2', 'str'] -> ['os', 'project2'] with no change in assertion strength",
+          "path": "tests/test_instance_config.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_uninstalled_namespace_paths"
+        },
+        {
+          "message": "test_uninstalled_package_paths: expected call rewritten to a different call ['modules_tmpdir', 'str'] -> ['modules_tmp_path', 'os'] with no change in assertion strength",
+          "path": "tests/test_instance_config.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "unit": "test_uninstalled_package_paths"
+        }
+      ]
+    },
+    {
       "commit": "1d7281fe0770a97229a2a75189a712cff866b448",
       "findings": [
         {
@@ -115,12 +169,12 @@
     }
   ],
   "commits_analysed": 300,
-  "commits_blocked": 7,
+  "commits_blocked": 8,
   "commits_skipped_no_parent": 0,
   "commits_touching_tests": 37,
   "commits_with_opaque_prod_change": 8,
   "corpus": {
-    "greenwash_version": "0.1.46",
+    "checkwash_version": "0.3.0",
     "newest_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
     "oldest_commit": "345f18442ceb29f9e365af99fc85bdc5986323d2"
   },
@@ -143,8 +197,8 @@
       "warn": 248
     },
     "EXPECTED_VALUE_CHANGED": {
-      "high": 1,
-      "warn": 7
+      "high": 8,
+      "warn": 13
     },
     "IMPORT_UNRESOLVED": {
       "warn": 6

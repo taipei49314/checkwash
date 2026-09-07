@@ -12,7 +12,7 @@ it is known not to.
 ## The short version
 
 - **118 bypasses** are documented, of which **29 are not closed**.
-- The **historical in-sample adjudication** labels **27 of 1800** human-written commits as blocked by mistake (1.50%), each one named below. The sweep JSONs record engine 0.1.46; the adjudication is dated 2026-08-26. This is not a new current-release measurement.
+- The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
@@ -179,8 +179,8 @@ behind it* unshippable.
 
 ## False positives on human-written commits
 
-These are the false-positive labels in `adjudication-2026-08-26b.json`, dated
-2026-08-26, matched to the historical tracked sweep.
+These are the false-positive labels in `adjudication-2026-09-07.json`, dated
+2026-09-07, matched to the historical tracked sweep.
 They are not a fresh list of the current engine's false positives.
 The review methods differ by cohort: the 2026-08-04 blind passes cover
 35 diffs; the later promotion round used two blind raters and
@@ -196,17 +196,21 @@ is recorded in that field, while `?` means an explicitly unclear call.
 | attrs `f520d9a89f` | FP/FP/FP | "Only soft-deprecate hash (#1330)" removes the `warnings.warn(DeprecationWarning(...))` calls from both `attrs()` and `make_class()` in src/attr/_make.py in the same diff, so the two `test_hash_is_deprecated` tests (which assert `pytest.deprecated_call()`) tes |
 | click `1557e26522` | FP/FP/FP | "Check for warning exception with idiomatic context manager" replaces `assert result.exit_code == 1` / `isinstance(result.exception, UserWarning)` / `"used more than once" in str(...)` with `with pytest.warns(UserWarning, match="used more than once"): runner.i |
 | click `5989375dc3` | FP/—/— | "ParamType typing improvements" adds typing across src/click/types.py (220 lines), core.py and termui.py; the typed code now imports abc and uuid at runtime, and the same diff adds exactly "abc" and "uuid" to ALLOWED_IMPORTS in tests/test_imports.py - the modu |
+| click `61bdc2ae81` | FP/—/— | "Implement a regex-based solution to hide hidden input" (Deldycke, 2026-05-08) changes src/click/termui.py (+41: the hidden-input mask moves from a whole-message fallback to a regex mask) and tests/test_termui.py (+142). In the parametrize table of test_hide_i |
 | click `777a89e232` | FP/FP/FP | "Add regular and stress tests for ``CliRunner`` stream lifecycle and ownership" deletes the 25-line tests/test_testing_logging.py but adds a 538-line tests/test_stream_lifecycle.py in the same diff whose "Category 3: Logging interaction (issues #824, #3110)" s |
 | click `bbe1eb6d41` | FP/FP/FP | "Remove duplicate test" drops the single line `assert value is not True` from test_unset_sentinel, but the same test body (unchanged, immediately below) contains `real_values` including `True` and loops `assert value != real_value; assert value is not real_val |
 | click `bd131e1ab6` | FP/FP/FP | "Fix test_edit to work with BSD sed" changes the test's own input from `"a\nb"` to `"a\nb\n"` in the same hunk, so the expected value necessarily becomes `"aTest\nbTest\n"`. It remains a single exact `==` comparison (greenwash itself notes "no change in assert |
 | click `becbde5cf4` | FP/FP/FP | "pager doesn't close std streams" adds a `_SkipClose` wrapper in src/click/_termui_impl.py so `_nullpager` now yields `_SkipClose(stream)` instead of the stream itself; `assert pager is created[0]` is therefore impossible by construction and is replaced with t |
+| click `c498ced0e7` | FP/—/— | "Add comments about the test cases" (Deldycke, 2025-08-21) touches only tests/test_basic.py and tests/test_options.py: it adds docstrings, renames the parametrize argument `expect` to `expected` in test_flag_value_dual_options (the assertion `assert result.out |
 | click `cf0c36d337` | FP/FP/FP | "Add parametrized tests for `should_strip_ansi`" does not invert polarity: `assert not should_strip_ansi(stream=...)` was replaced by `assert click._compat._is_jupyter_kernel_output(stream=...)`, a different predicate whose True is semantically the same claim, |
 | click `e3c0898975` | FP/FP/FP | "add codespell pre-commit hook" is a spelling fix that edits the fixture and the assertion in lockstep: the sentinel is changed at its definition (default=/help="you won't see me") and in the matching `assert "you won't see me" not in result.output`. The asser |
 | flask `06ea505ce2` | FP/FP/FP | "separate copy per call" moves `original.copy()` from decoration time into the wrapper in src/flask/ctx.py, and the same diff deletes the greenlet dependency from pyproject.toml while replacing both `TestGreenletContextCopying` tests with `test_copy_context_th |
+| flask `0a00e1b608` | FP/—/— | "use tmp_path instead of tmpdir" (Lord, 2023-05-02) is a tests-only migration from pytest's py.path `tmpdir` to pathlib `tmp_path`: `str(modules_tmpdir)` and `modules_tmpdir.join("instance")` become `os.fspath(modules_tmp_path)` and `os.fspath(modules_tmp_path |
 | flask `53b8f08218` | FP/FP/FP | "push preserved contexts in correct order" changes src/flask/testing.py from `while self._new_contexts: cm = self._new_contexts.pop()` to a forward `for cm in self._new_contexts`, and the flagged test is renamed test_redirect_keep_session -> test_redirect_sess |
 | flask `c2705ffd9c` | —/—/— | "merge app and request context" is a large honest refactor: the request context variable folds into _cv_app, so tests/test_testing.py rewrites `assert _cv_request.get(None) is req_ctx` to `assert _cv_app.get(None) is req_ctx` (same identity check against the r |
 | httpx `71a1589928` | FP/FP/FP | "Use httpx public API for 'test_content' tests" swaps every `encode_request(...)` call for `httpx.Request(method, url, ...)` in the same hunks; the Host header appears in the expectations because a real Request populates it, which is why `{'Transfer-Encoding': |
 | httpx `7947b56076` | FP/FP/FP | "Drop private import of 'encode_request' in test_multipart" rewrites the test to use the public `httpx.Request` API with a fixed BOUNDARY. Both oracles survive in the same hunk: the exact dict equality `request.headers == {Host, Content-Type, Transfer-Encoding |
+| httpx `7985f685ca` | FP/—/— | "Use consistent import style (#2493)" (Christie, 2022-12-06) touches only tests/client/test_auth.py: it drops `from httpx import URL, Auth, BasicAuth, ...` and spells every use as `httpx.URL`, `httpx.Auth`, `httpx.Response`, ... In test_auth_hidden_url, `URL(u |
 | httpx `9fd6f0ca66` | FP/FP/policy | "Ensure JSON representation is compact" changes encode_json to `json_dumps(json, ensure_ascii=False, separators=(",", ":"), allow_nan=False)` in httpx/_content.py in the same diff, which directly explains Content-Length 18 -> 17. The flagged edit `response.jso |
 | httpx `bddd774ce0` | FP/FP/FP | "Revert \"Raise `TypeError` on invalid query params. (#2523)\"" deletes the `raise TypeError(f"Expected str, int, float, bool, or None...")` from primitive_value_to_str in httpx/_utils.py in the same diff, so test_invalid_query_params (a `pytest.raises(TypeErr |
 | httpx `cca62060cb` | FP/FP/FP | "Drop private imports from test_decoders.py (#2570)" rewrites the decoder tests onto the public API, and the same diff compensates: test_byte_chunker/test_text_chunker are replaced by new chunk_size=7 cases in tests/models/test_responses.py (test_iter_raw_with |

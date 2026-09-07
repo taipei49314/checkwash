@@ -5,7 +5,7 @@
       "commit": "90b805fda70db2316d79aa577f4c3eb670f9a8a1",
       "findings": [
         {
-          "message": "test_file_response_multi_small_chunk_size: assertion replaced — subject and polarity both changed (assert headers.get(\"content-type\") == \"text/plain; charset=u -> assert \"content-range\" not in headers); greenwash cannot verify the replacement is equivalent",
+          "message": "test_file_response_multi_small_chunk_size: assertion replaced — subject and polarity both changed (assert headers.get(\"content-type\") == \"text/plain; charset=u -> assert \"content-range\" not in headers); checkwash cannot verify the replacement is equivalent",
           "path": "tests/test_responses.py",
           "rule": "ASSERT_WEAKENED",
           "severity": "high",
@@ -39,7 +39,7 @@
   "commits_touching_tests": 92,
   "commits_with_opaque_prod_change": 8,
   "corpus": {
-    "greenwash_version": "0.1.46",
+    "checkwash_version": "0.3.0",
     "newest_commit": "5174d4c8358a6f06aa8056bafd14c2272dab8dd1",
     "oldest_commit": "c78c9aac17a4d68e0647252310044502f1b7da71"
   },
@@ -58,7 +58,7 @@
       "warn": 3
     },
     "EXPECTED_VALUE_CHANGED": {
-      "warn": 9
+      "warn": 12
     },
     "IMPORT_UNRESOLVED": {
       "warn": 4
