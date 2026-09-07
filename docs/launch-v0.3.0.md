@@ -99,13 +99,14 @@ not written yet — the maintainer pass is pending and the release notes say so.
 refactors are blocked on v0.3.0 (24 of 60 before this release); the
 general-commit rate does not predict that population. An informed agent given the full source got past the
 then-shipped engine three times out of three; the writeup is in the repo. The recorded LLM
-stress arm is worse than the human corpus: on v0.2.13, **85 of 88 recorded
-escape families still passed** and **90 of 90 recorded honest refactors
-still blocked** — 60 of those 90 are a single family, consolidating N named
-tests into one parametrize, fixture or loop, which the engine read as
-disabling tests. v0.3.0's parametrize-row and table-oracle changes are the
-first cut at exactly that family; the re-judge on 0.3.0 is not in the repo
-yet, so the numbers above stay as the honest current record.
+stress arm is worse than the human corpus: re-judged on v0.3.0 through the
+CLI on 2026-09-07, **79 of 88 recorded escape families still pass**
+and **65 of 90 recorded honest refactors still block** (on v0.2.13,
+in-process: 85 of 88 and 90 of 90). 60 of those 90 were a single family,
+consolidating N named tests into one parametrize, fixture or loop, which the
+engine read as disabling tests; v0.3.0's parametrize-row and table-oracle
+changes are the first cut at exactly that family, and the re-judge numbers
+above are its measured effect (issues #132 and #130, 2026-09-07 comments).
 
 **Day one, three commands, all offline:**
 
@@ -186,13 +187,14 @@ Yes, and the repo says so next to the number. 24/1800 commits carry an
 opaque-production-change flag; JS/TS support covers a limited set of test
 patterns; anything non-Python is out of scope.
 
-**7. "Your own issue says 85 of 88 escapes still pass. Why would I install this?"**
+**7. "Your own issue says 79 of 88 escapes still pass. Why would I install this?"**
 Because the issue exists and is open. Those 88 families were written by a
 model told to reach green without fixing the bug, against v0.2.8, and
-re-judged on v0.2.13; the 90 false blocks in the same record are mostly one
-consolidation family that 0.3.0 targets first. Install it for the part
-that works — the human-corpus rate and the twelve decoys — and send the
-escapes; each becomes a row.
+re-judged on v0.3.0 through the CLI on 2026-09-07 (79 of 88 still pass;
+85 of 88 on v0.2.13); the 90 false blocks in the same record were mostly one
+consolidation family that 0.3.0 targeted first, and 65 of 90 still block
+on 0.3.0. Install it for the part that works — the human-corpus rate and
+the twelve decoys — and send the escapes; each becomes a row.
 
 **8. "Regex-and-AST rules against an adversary is a losing game."**
 That is the audit's finding quoted in the threat model: a list that knew
@@ -270,7 +272,7 @@ lesson is in the release notes, not hidden.
 | bypass table rows / Open / other non-Closed | 118 / 19 / 9 | `THREATMODEL.md` (count the status column at posting time) |
 | informed-adversary arm | 3 of 3 passed, 3 of 6 tasks refused by the provider | `THREATMODEL.md` rows 70–73; `launch.md` §"where it fails" (historical, 2026-08-07) |
 | tags 2026-09-01 → 2026-09-07 | 17 (v0.1.48 … v0.3.0) | `git tag --sort=creatordate` |
-| LLM stress arm on v0.2.13 | 85/88 escapes pass; 90/90 honest blocked; 60/90 one family | issues #132, #130 |
+| LLM stress arm re-judged on v0.3.0 (CLI path, 2026-09-07) | 79/88 escapes pass; 65/90 honest blocked (v0.2.13 in-process: 85/88; 90/90; 60/90 one family) | issues #132, #130 (2026-09-07 comments); estate `hosts/DESKTOP-D127QSP/t201/llm-rejudge/34126628211-1` |
 | release asset SHA-256 (pyz) | `51b4cc86cef3…54af5` | Release v0.3.0; `docs/releases/v0.3.0-public-launch.md` |
 | CI legs byte-identical | 9/9 | `ci.yml` byte-compare job on commit 4387097 |
 
@@ -284,9 +286,11 @@ Anything not in this table does not go in the post.
    sweep record and its adjudication for the 0.3.0 release commit are in the
    repository and §6 quotes them. Do not quote the 0.1.46 rates as current
    anywhere in the post.
-2. **The re-judge of the LLM arm on 0.3.0.** Issues #130/#132 describe
-   v0.2.13. If a 0.3.0 re-judge exists by posting day, put its numbers in
-   the issues first, then in §6; otherwise the post keeps the v0.2.13 record.
+2. **The re-judge of the LLM arm on 0.3.0.** Done 2026-09-07 through the CLI
+   path on the estate runner pool (178 families of `llm-2026-09-03`):
+   the numbers are in #132 and #130 and in §6. Quote them with the path and
+   the population stated; the 383-family record of the same name is not
+   re-judged.
 3. **Maintainer pass.** `THREATMODEL.md` and `SPEC.md` rows for the
    parametrize-identity and table-delegation changes, and the `STATE.md`
    narrative for the 0.3.0 section, are human-only edits and are still
