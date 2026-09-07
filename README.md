@@ -68,7 +68,7 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.13-public-launch.md#try-it-on-a-change-you-understand).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.3.0-public-launch.md#try-it-on-a-change-you-understand).
 
 ## Know the limits
 
@@ -187,7 +187,7 @@ above is a separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.2.13 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.2.13-public-launch.md) |
+| Installation checks, versions and first use | [v0.3.0 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.3.0-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
 | Contributing or reporting a problem | [Contributing](https://github.com/taipei49314/checkwash/blob/main/CONTRIBUTING.md) · [Issues](https://github.com/taipei49314/checkwash/issues) · [Security reports](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md) |

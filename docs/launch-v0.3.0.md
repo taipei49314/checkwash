@@ -12,6 +12,9 @@ issues **at posting time**. Re-derive each row of §6 before posting.
   for posting copy; that file's numbers are the 35/1800 era and its name and
   install pins predate the rename. Its rules in §7 still apply and are
   repeated below.
+- **Two facts stated in the post, not hidden:** the maintainer pass
+  (`THREATMODEL.md` / `SPEC.md` rows for the 0.3.0 detector changes) is not
+  done as of this draft, and:
 - **The one fact that shapes this post:** the headline rates in the README
   were measured on engine 0.1.46. v0.3.0 changed detector logic and no fresh
   sweep record is in the repository. Say so in the post, not in a footnote.
@@ -89,7 +92,8 @@ fixing the bug — and the repo says so wherever it shows one.
 
 **Where it fails (read this before the numbers above).** The bypass table
 is public and not all of it says Closed: 118 rows, 19 marked Open and 9 in
-other non-Closed states. On a dedicated refactor corpus, 24 of 60 honest
+other non-Closed states, and the rows for 0.3.0's own detector changes are
+not written yet — the maintainer pass is pending and the release notes say so. On a dedicated refactor corpus, 24 of 60 honest
 refactors were blocked; the general-commit rate does not predict that
 population. An informed agent given the full source got past the
 then-shipped engine three times out of three; the writeup is in the repo. The recorded LLM
