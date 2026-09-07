@@ -58,7 +58,7 @@ the candidate now includes the contract wording, complete frozen snapshot
 adapters and three evidence-backed benchmark record updates. New source
 replays are recorded separately. No new release or Action pin is implied.
 
-## Unreleased next-minor remediation candidate
+## Next-minor remediation candidate, released as v0.3.0 (2026-09-07)
 
 The remediation branch implements content-bound exemptions for five file-wide
 rules, retires their path-only keys, and advances IR/findings schemas to 2.
@@ -70,8 +70,8 @@ for migration, compatibility and runtime limits.
 The owner authorized merging the remediation on 2026-09-06. The integration
 candidate includes the contract update and removal of the exact legacy AGENTS
 ledger entry. It must enter main with the complete numeric-restoration follow-up,
-not through an intermediate state. Public artifacts remain v0.2.13 and the
-recommended Action remains v0.2.12. The original benchmark records below are
+not through an intermediate state. It shipped as v0.3.0 on 2026-09-07; the
+recommended Action advances to v0.2.13. The original benchmark records below are
 unchanged. The source-qualified stack has 912 passing tests on all nine CI
 OS/Python combinations; the published-tag parity test still fails because this
 source is unreleased, and the dependent cross-platform byte-compare is skipped.
