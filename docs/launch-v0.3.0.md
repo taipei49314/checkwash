@@ -16,8 +16,10 @@ issues **at posting time**. Re-derive each row of §6 before posting.
   (`THREATMODEL.md` / `SPEC.md` rows for the 0.3.0 detector changes) is not
   done as of this draft, and:
 - **The one fact that shapes this post:** the headline rates in the README
-  were measured on engine 0.1.46. v0.3.0 changed detector logic and no fresh
-  sweep record is in the repository. Say so in the post, not in a footnote.
+  are the v0.3.0 release commit's own sweep (2026-09-07, six clean checkouts
+  on the estate runner pool, PR #141); the four blocks new since the v0.1.46
+  record were judged in a maintainer single pass. Say so in the post, and
+  say the corpus tuned the detectors.
 
 ---
 
@@ -78,14 +80,14 @@ is now fixed and is the kind of thing "deterministic" has to mean in
 practice.
 
 **The numbers, with their provenance.** On six popular pure-Python
-repositories, 300 consecutive human commits each: **42/1800 blocked
-(2.33%)**, of which **27 (1.50%) were adjudicated false positives** and 15
+repositories, 300 consecutive human commits each: **46/1800 blocked
+(2.56%)**, of which **31 (1.72%) were adjudicated false positives** and 15
 (0.83%) really do drop oracle coverage with nothing visible replacing it.
 Those are in-sample numbers on a corpus the detectors were tuned against,
-measured on engine **0.1.46**, adjudicated 2026-08-26, and regenerated from
-tracked sweep JSONs by a script rather than typed. The release you can
-install today is **0.3.0**, which changed detector logic; a fresh sweep on
-it is not checked in yet, so read 2.33% as the older engine's rate. Twelve
+measured on engine **0.3.0** (the release commit, swept 2026-09-07 on clean
+checkouts), adjudicated 2026-09-07, and regenerated from tracked sweep JSONs
+by a script rather than typed. Four of the 46 blocks are new since the
+v0.1.46 record and were judged by one maintainer pass, not blind raters. Twelve
 constructed agent tasks with must-fail tests: **12/12 blocked**. The diff at
 the top of this post is elicited — the agent was told to reach green without
 fixing the bug — and the repo says so wherever it shows one.
@@ -151,11 +153,11 @@ paragraph; lead with the diff and the three commands.
 
 ## 5. Hostile questions, in the order they will arrive
 
-**1. "2.33% means one commit in forty-three fails CI. Nobody keeps that on."**
-2.33% is the block rate on a tuning corpus at engine 0.1.46; 1.50% is the
+**1. "2.56% means one commit in thirty-nine fails CI. Nobody keeps that on."**
+2.56% is the block rate on a tuning corpus at engine 0.3.0; 1.72% is the
 adjudicated false-positive rate and 0.83% are commits that really drop
 oracle coverage. The default only blocks `high`; everything else warns.
-The current engine's rate on that corpus is not published yet — see Q15.
+The corpus tuned the detectors, so it is not a held-out rate — see Q6 and Q15.
 
 **2. "An agent will just rewrite the production code so the weak test passes honestly."**
 Bounded, not pointless: that is threat model item #1 and the route the
@@ -227,11 +229,13 @@ re-judged; each release has a dated `STATE.md` section saying what moved
 and what it cost.
 
 **15. "Your headline rate was swept at 0.1.46 but you ship 0.3.0."**
-Correct, and both the README and `RESULTS.md` stamp it. 0.3.0 changed
-detector logic; the repository's own release process says the six-repo
-sweep is not optional in that case, and it is not checked in yet. Until it
-is, the honest reading is: the 0.1.46 engine measured 2.33% on that corpus;
-0.3.0's number is pending.
+Not any more: the tracked record is the 0.3.0 release commit's own sweep
+(2026-09-07, `benchmarks/sweeps/`, engine metadata 0.3.0, PR #141). 0.3.0
+changed detector logic and the release process says the six-repo sweep is
+not optional in that case, so it was re-run before this post. On the same
+1800 commits the blocks moved 42 -> 46; the four new blocks are
+adjudicated false positives (`benchmarks/adjudication-2026-09-07.json`),
+which is why the false-positive rate rose from 1.50% to 1.72%.
 
 **16. "PyPI since when? Is this shippable?"**
 On PyPI since 0.2.1 through the release workflow's trusted publishing; the
@@ -256,8 +260,8 @@ lesson is in the release notes, not hidden.
 |---|---|---|
 | version | 0.3.0 | `pyproject.toml`; `STATE.md` authoritative table |
 | detectors | 21 | `STATE.md` authoritative table |
-| human-commit block rate | 42/1800 = 2.33% | `STATE.md`; `benchmarks/RESULTS.md` (engine 0.1.46, adjudication 2026-08-26) |
-| adjudicated false positive | 27/1800 = 1.50% | same |
+| human-commit block rate | 46/1800 = 2.56% | `STATE.md`; `benchmarks/RESULTS.md` (engine 0.3.0, adjudication 2026-09-07) |
+| adjudicated false positive | 31/1800 = 1.72% | same |
 | legitimate policy block | 15/1800 = 0.83% | same |
 | opaque production changes | 24/1800 = 1.33% | same |
 | classic decoys blocked | 12/12 | `STATE.md`; `benchmarks/decoy/` |
@@ -276,10 +280,10 @@ Anything not in this table does not go in the post.
 
 **Blockers — do not post until these are decided.**
 
-1. **The 0.3.0 sweep.** `RELEASING.md` says a round that changes detector
-   behaviour must re-sweep the corpus. Either land the sweep record and its
-   adjudication for 0.3.0 before posting, or keep the post's wording that
-   the published rate is the 0.1.46 engine's. Do not blend the two.
+1. **The 0.3.0 sweep.** Done 2026-09-07 (PR #141, estate run 34121457167): the
+   sweep record and its adjudication for the 0.3.0 release commit are in the
+   repository and §6 quotes them. Do not quote the 0.1.46 rates as current
+   anywhere in the post.
 2. **The re-judge of the LLM arm on 0.3.0.** Issues #130/#132 describe
    v0.2.13. If a 0.3.0 re-judge exists by posting day, put its numbers in
    the issues first, then in §6; otherwise the post keeps the v0.2.13 record.
