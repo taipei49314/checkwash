@@ -1,8 +1,9 @@
-# September 6 issue remediation candidate
+# September 6 issue remediation (released in v0.3.0)
 
-This source candidate addresses issues [#126–#132](https://github.com/taipei49314/checkwash/issues/132).
-It is unreleased. Installing v0.2.13 still installs the published behavior;
-the package version and recommended Action pin have not advanced.
+This source work addresses issues [#126–#132](https://github.com/taipei49314/checkwash/issues/132).
+It shipped in v0.3.0 on 2026-09-07; installing v0.2.13 still installs the
+earlier behavior, and the recommended Action pin stays v0.2.13 under the
+one-release trust lag.
 
 ## Exemptions and stored expectations
 
