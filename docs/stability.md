@@ -149,7 +149,7 @@ decision. The release needs an evidence-backed acceptance review covering:
 |---|---|---|
 | Known low-cost failures | A dated catalog, an explicit in-scope priority set, case-level closure evidence and owner-accepted residuals | Remaining open work in the September catalog must retain its actual status; a summary cannot mark it closed |
 | Adoption | Independently maintained repositories using an actual required check, with a recorded observation period and enough reviewed changes to exercise it | No completed adoption cohort is established by these documents |
-| Refactor cost | Pre-agreed acceptance thresholds, adjudicated false blocks and review/exemption workload, measured on both dedicated refactors and adoption repositories | The 24/60 dedicated-refactor result remains a material adoption cost |
+| Refactor cost | Pre-agreed acceptance thresholds, adjudicated false blocks and review/exemption workload, measured on both dedicated refactors and adoption repositories | The 22/60 dedicated-refactor result (`benchmarks/refactors/expected.json`) remains a material adoption cost |
 | Interfaces and operations | Version-specific compatibility notes and release qualification tied to the shipped artifacts | The pre-rename JSON compatibility exception and Action trust lag must be visible to adopters |
 
 **Adoption-study proposal, not an adopted release threshold:** at least three

@@ -176,8 +176,9 @@ on a corpus used to tune the detectors, not a fresh v0.3.0 or held-out result.
 That flag does not establish that each verdict changed or each diff was unanalyzed.
 
 Review methods vary: the three-rater agreement study covers an older
-35-diff cohort, not all 42 blocks. The dedicated **24/60 refactor** result
-above is a separate population; the general-commit rate does not predict it.
+35-diff cohort, not all 42 blocks. The dedicated **22/60 refactor** result
+(`benchmarks/refactors/expected.json`, replayed by `tests/gates/`) is a
+separate population; the general-commit rate does not predict it.
 
 [Measurements and source data](https://github.com/taipei49314/checkwash/blob/main/benchmarks/README.md)
 · [Generated results](https://github.com/taipei49314/checkwash/blob/main/benchmarks/RESULTS.md)

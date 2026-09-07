@@ -93,9 +93,9 @@ fixing the bug — and the repo says so wherever it shows one.
 **Where it fails (read this before the numbers above).** The bypass table
 is public and not all of it says Closed: 118 rows, 19 marked Open and 9 in
 other non-Closed states, and the rows for 0.3.0's own detector changes are
-not written yet — the maintainer pass is pending and the release notes say so. On a dedicated refactor corpus, 24 of 60 honest
-refactors were blocked; the general-commit rate does not predict that
-population. An informed agent given the full source got past the
+not written yet — the maintainer pass is pending and the release notes say so. On a dedicated refactor corpus, 22 of 60 honest
+refactors are blocked on v0.3.0 (24 of 60 before this release); the
+general-commit rate does not predict that population. An informed agent given the full source got past the
 then-shipped engine three times out of three; the writeup is in the repo. The recorded LLM
 stress arm is worse than the human corpus: on v0.2.13, **85 of 88 recorded
 escape families still passed** and **90 of 90 recorded honest refactors
@@ -261,7 +261,7 @@ lesson is in the release notes, not hidden.
 | legitimate policy block | 15/1800 = 0.83% | same |
 | opaque production changes | 24/1800 = 1.33% | same |
 | classic decoys blocked | 12/12 | `STATE.md`; `benchmarks/decoy/` |
-| honest refactors blocked, dedicated refactor corpus | 24/60 | `README.md` measurements section |
+| honest refactors blocked, dedicated refactor corpus | 22/60 (v0.3.0; 24/60 up to v0.2.13) | `benchmarks/refactors/expected.json`, replayed by `tests/gates/test_refactor_corpus.py`; `README.md` measurements section |
 | three-rater cohort kappa | 0.844 (35 diffs) | `STATE.md` |
 | bypass table rows / Open / other non-Closed | 118 / 19 / 9 | `THREATMODEL.md` (count the status column at posting time) |
 | informed-adversary arm | 3 of 3 passed, 3 of 6 tasks refused by the provider | `THREATMODEL.md` rows 70–73; `launch.md` §"where it fails" (historical, 2026-08-07) |
@@ -287,9 +287,10 @@ Anything not in this table does not go in the post.
    parametrize-identity and table-delegation changes, and the `STATE.md`
    narrative for the 0.3.0 section, are human-only edits and are still
    pending. The post must not claim a row is Closed that the file does not.
-4. **README links.** The README's usage-guide link points at the v0.2.13
-   guide; decide whether to point it at the v0.3.0 brief (this changes the
-   GitHub README only; the PyPI description stays as published).
+4. **README links.** Done in this PR (maintainer decision 2026-09-07): both
+   README usage-guide links point at the v0.3.0 brief. This changes the
+   GitHub README only; the PyPI description stays as published (v0.2.13
+   guide links, 24/60) until the next release.
 
 **Standing rules** (unchanged from the archived draft).
 
