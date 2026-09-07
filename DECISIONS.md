@@ -2050,3 +2050,37 @@ byte-compare gate failed on Python 3.13 the first time it ran on the
 candidate (`ast.dump` omits empty fields there), and `stable_dump` now pins
 the pre-3.13 text in both places that digested it, so keys computed on 3.11
 and 3.12 are unchanged and 3.13 agrees with them.
+
+## D-057 (2026-09-07): v0.3.1 — a documentation and metadata release so PyPI reads what the repository says
+
+The owner unfroze the line for one release and asked for it to be frozen
+again once the process had been checked ("解凍 然後都確認沒流程沒問題就再凍結").
+The reason is mechanical: PyPI renders the README at the tag, and v0.3.0's tag
+predates the tracked sweep record (#141), the maintainer pass (#142) and the
+guide-link change (#139), so the project page still showed 42/1800, 27 false
+positives, engine v0.1.46, 24 of 60 and the v0.2.13 guide. A version number
+cannot be re-uploaded, so the fix is a release whose only content change is
+the documentation.
+
+What v0.3.1 contains: the version strings, the README install pins and pyz
+links, the one-release trust lag (the recommended Action pin advances from
+v0.2.13 to v0.3.0 — the Action now carries the v0.3.0 detector changes, which
+the README says), the STATE section for the slot, and this entry. No file
+under `src/checkwash/` changed except the version string and the doctor's
+expected Action pin constant; no detector logic changed.
+
+RELEASING says a round that changed only documentation must name the targeted
+checks that stood in for the corpus sweep. They are: the full suite gate on
+the release commit run by `release_slot.py` on LAPTOP-01AGNPJU;
+`tests/test_state_claims.py`, `tests/test_docs_links.py` and
+`tests/test_packaging.py` (README install pins, tag parity, the documented
+Action snippet) on the patched release commit; and the release PR's CI,
+including the byte-compare job across the nine OS/Python legs. The sweep
+record of 2026-09-07 (run 34121457167) describes this engine exactly.
+
+Cut by `release_slot.py slot --force-release` on LAPTOP-01AGNPJU — a work
+machine, which the owner's rule allows for releases — after LAPTOP-16NUA5I8,
+the designated release host, went offline; pushes went over SSH because the
+host's `gh` token lacks the `workflow` scope the trust-lag edit of
+`.github/workflows/checkwash.yml` needs over HTTPS. The line is frozen again
+after this release: no bump, tag or release without a new owner decision.

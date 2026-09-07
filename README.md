@@ -32,7 +32,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.0/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.1/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -41,7 +41,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.0/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.1/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -53,7 +53,7 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.3.0/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.3.1/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
@@ -72,7 +72,7 @@ For JSON/SARIF output and more examples, see the [usage guide](https://github.co
 
 ## Know the limits
 
-**v0.3.0 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.3.1 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
@@ -87,7 +87,7 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action is pinned to **v0.2.13**; the CLI above is **v0.3.0**.
+The recommended Action is pinned to **v0.3.0**; the CLI above is **v0.3.1**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
@@ -132,10 +132,11 @@ can inspect the local workflow, but cannot verify live branch protection.
 
 **Why the older Action pin?** A release cannot embed its own commit SHA,
 so the documented Action adopts a verified pin from the prior release.
-v0.3.0 changes detector logic (content-bound exemptions, parametrize row
-identity, table-oracle delegation, schema 2); the recommended Action advances
-only to v0.2.13, the prior release, whose detector logic is unchanged from
-v0.2.12. To verify another trusted release, use `git rev-parse 'vX.Y.Z^{commit}'`.
+v0.3.1 is a documentation and metadata release on the v0.3.0 engine
+(content-bound exemptions, parametrize row identity, table-oracle delegation,
+schema 2); the recommended Action advances to v0.3.0, the prior release,
+which carries that engine. To verify another trusted release, use
+`git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
 </details>
