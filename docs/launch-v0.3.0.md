@@ -94,9 +94,10 @@ the top of this post is elicited — the agent was told to reach green without
 fixing the bug — and the repo says so wherever it shows one.
 
 **Where it fails (read this before the numbers above).** The bypass table
-is public and not all of it says Closed: 118 rows, 19 marked Open and 9 in
-other non-Closed states, and the rows for 0.3.0's own detector changes are
-not written yet — the maintainer pass is pending and the release notes say so. On a dedicated refactor corpus, 22 of 60 honest
+is public and not all of it says Closed: 120 rows, 20 marked Open and 5 in
+other non-Closed states, including the rows for 0.3.0's own detector changes
+(101 and 102 closed, 102a open by design; maintainer pass of 2026-09-07,
+D-056). On a dedicated refactor corpus, 22 of 60 honest
 refactors are blocked on v0.3.0 (24 of 60 before this release); the
 general-commit rate does not predict that population. An informed agent given the full source got past the
 then-shipped engine three times out of three; the writeup is in the repo. The recorded LLM
