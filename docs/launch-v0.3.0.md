@@ -8,6 +8,9 @@ issues **at posting time**. Re-derive each row of §6 before posting.
 - **Drafted:** 2026-09-07, against tag `v0.3.0` (commit `4387097`), PyPI
   0.3.0, Release assets as listed in the
   [v0.3.0 public-launch brief](releases/v0.3.0-public-launch.md).
+- **Install version:** 0.3.1 (tag `v0.3.1`, commit `3a4cfcd`), the same
+  engine with the documentation brought up to date and the Action pin advanced
+  to v0.3.0 (D-057); the commands below say so.
 - **Supersedes** the archived pre-rename draft in [`launch.md`](launch.md)
   for posting copy; that file's numbers are the 35/1800 era and its name and
   install pins predate the rename. Its rules in §7 still apply and are
@@ -113,7 +116,7 @@ above are its measured effect (issues #132 and #130, 2026-09-07 comments).
 **Day one, three commands, all offline:**
 
 ```bash
-pipx install checkwash==0.3.0
+pipx install checkwash==0.3.1
 checkwash check HEAD~1..HEAD
 checkwash check HEAD~1..HEAD --format sarif
 ```
@@ -121,8 +124,8 @@ checkwash check HEAD~1..HEAD --format sarif
 Or download the single file and check its hash first:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.0/checkwash.pyz
-sha256sum checkwash.pyz   # 51b4cc86cef3b50b3ebf47fbf2fa4006b9861ef46639b84755eea27b86354af5
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.1/checkwash.pyz
+sha256sum checkwash.pyz   # 8fd7181effe05e9ef14532aafc646289caa64a71d16c269bb948dd9520a648f7
 python checkwash.pyz demo
 ```
 
@@ -227,10 +230,10 @@ It is, and the informed arm proves it read it. A private list would just be
 a list the author knows; a public one is a list that gets shorter.
 
 **14. "Seventeen tags in seven days. That reads like churn."**
-It was: v0.1.48 through v0.3.0 between 2026-09-01 and 2026-09-07. The
-release cadence is frozen after 0.3.0 while the current records get
-re-judged; each release has a dated `STATE.md` section saying what moved
-and what it cost.
+It was: v0.1.48 through v0.3.1 between 2026-09-01 and 2026-09-07, the last
+one a documentation release cut the same day so PyPI reads what the repo
+says. The release cadence is frozen after it; each release has a dated
+`STATE.md` section saying what moved and what it cost.
 
 **15. "Your headline rate was swept at 0.1.46 but you ship 0.3.0."**
 Not any more: the tracked record is the 0.3.0 release commit's own sweep
@@ -262,7 +265,7 @@ lesson is in the release notes, not hidden.
 
 | number | value | source of truth |
 |---|---|---|
-| version | 0.3.0 | `pyproject.toml`; `STATE.md` authoritative table |
+| version | 0.3.1 (engine 0.3.0) | `pyproject.toml`; `STATE.md` authoritative table; D-057 |
 | detectors | 21 | `STATE.md` authoritative table |
 | human-commit block rate | 46/1800 = 2.56% | `STATE.md`; `benchmarks/RESULTS.md` (engine 0.3.0, adjudication 2026-09-07) |
 | adjudicated false positive | 31/1800 = 1.72% | same |
@@ -273,10 +276,10 @@ lesson is in the release notes, not hidden.
 | three-rater cohort kappa | 0.844 (35 diffs) | `STATE.md` |
 | bypass table rows / Open / other non-Closed | 120 / 20 / 5 | `THREATMODEL.md` (count the status column at posting time by the verdict's leading bold text: Closed contains "closed" and not "open", Open starts with "open", other = the rest) |
 | informed-adversary arm | 3 of 3 passed, 3 of 6 tasks refused by the provider | `THREATMODEL.md` rows 70–73; `launch.md` §"where it fails" (historical, 2026-08-07) |
-| tags 2026-09-01 → 2026-09-07 | 17 (v0.1.48 … v0.3.0) | `git tag --sort=creatordate` |
+| tags 2026-09-01 → 2026-09-07 | 18 (v0.1.48 … v0.3.1) | `git tag --sort=creatordate` |
 | LLM stress arm re-judged on v0.3.0 (CLI path, 2026-09-07) | 79/88 escapes pass; 65/90 honest blocked (v0.2.13 in-process: 85/88; 90/90; 60/90 one family) | issues #132, #130 (2026-09-07 comments); estate `hosts/DESKTOP-D127QSP/t201/llm-rejudge/34126628211-1` |
-| release asset SHA-256 (pyz) | `51b4cc86cef3…54af5` | Release v0.3.0; `docs/releases/v0.3.0-public-launch.md` |
-| CI legs byte-identical | 9/9 | `ci.yml` byte-compare job on commit 4387097 |
+| release asset SHA-256 (pyz) | `8fd7181effe0…648f7` (v0.3.1); `51b4cc86cef3…54af5` (v0.3.0) | Releases v0.3.1 / v0.3.0; `docs/releases/v0.3.0-public-launch.md` |
+| CI legs byte-identical | 9/9 | `ci.yml` byte-compare job on commits 4387097 (v0.3.0) and 3a4cfcd (v0.3.1) |
 
 Anything not in this table does not go in the post.
 
