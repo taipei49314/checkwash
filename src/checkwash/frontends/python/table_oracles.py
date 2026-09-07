@@ -26,7 +26,7 @@ from pathlib import PurePosixPath
 
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
-from checkwash.ir.astutil import dotted_name
+from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
 MAX_AST_NODES = 4_096
@@ -431,7 +431,7 @@ def _project(parsed, text, cases):
 
 def _subject_key(case):
     compare = case.assertion.test
-    return ast.dump(compare.left, include_attributes=False) + ":" + type(compare.ops[0]).__name__
+    return stable_dump(compare.left) + ":" + type(compare.ops[0]).__name__
 
 
 def project_table_consolidation(before: bytes, after: bytes, before_parsed: ParsedFile, after_parsed: ParsedFile,

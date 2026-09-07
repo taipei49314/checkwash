@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
+from checkwash.ir.astutil import stable_dump as _stable_dump
 from checkwash.ir.model import Assertion, Handler, Marker, ParamTable, UnitSide, normalize_text
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
@@ -2726,7 +2727,7 @@ def _normalize_for_fingerprint(tree: ast.AST) -> ast.AST:
 
 
 def _fingerprint(node: ast.AST) -> str:
-    dump = ast.dump(node, include_attributes=False)
+    dump = _stable_dump(node)
     return hashlib.sha256(dump.encode("utf-8")).hexdigest()[:16]
 
 

@@ -16,9 +16,29 @@ reformatting a change and it makes `f( x )` a different subject from `f(x)`.
 from __future__ import annotations
 
 import ast
+import sys
 
 from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import normalize_text
+
+
+def stable_dump(node: ast.AST) -> str:
+    """`ast.dump` text that is byte-identical on every supported Python.
+
+    Python 3.13 changed `ast.dump` to omit empty lists and None fields by
+    default (`show_empty=False`). Anything that *digests* the dump text —
+    the synthesized `test_concrete_<digest>` names of projected table rows,
+    symbol fingerprints — then differs between interpreters, and the
+    cross-OS/Python byte-compare gate (SPEC §8) fails: v0.3.0 candidate
+    run 34109601179 emitted one corpus digest on 3.11/3.12 and another on
+    3.13. `show_empty=True` reproduces the pre-3.13 text exactly, so keys
+    computed on 3.11/3.12 do not change. Comparisons of two dumps made by
+    the same interpreter are unaffected either way and keep calling
+    `ast.dump` directly.
+    """
+    if sys.version_info >= (3, 13):
+        return ast.dump(node, include_attributes=False, show_empty=True)
+    return ast.dump(node, include_attributes=False)
 
 
 def dotted_name(node: ast.AST) -> str | None:
