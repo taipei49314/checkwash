@@ -59,7 +59,7 @@ An open issue is not made closed by a green unrelated CI run. Likewise,
 documenting a limitation is not itself evidence of acceptable adoption cost.
 
 The [1.0 review](stability.md#what-must-change-before-10) is **NOT MET**.
-The current [public-launch brief](releases/v0.3.0-public-launch.md) invites
+The current [public-launch brief](releases/v0.3.3-public-launch.md) invites
 bounded alpha trials while keeping these limitations visible. Dedicated
 refactor precision is the next-quarter focus; its current 22/60 block rate
 must remain separate from the tracked six-repo 31/1800 adjudicated
