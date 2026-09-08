@@ -46,8 +46,11 @@ printf '{"enforcement":"active"}' | gh api repos/taipei49314/checkwash/rulesets/
 
 ## The release slot
 
-Since 2026-09-03 (estate T-57) releases happen only at a weekly release slot.
-Between slots nothing is bumped, tagged or released, and the tag ruleset
+The weekly automatic slot introduced by estate T-57 was canceled by T-197.
+The current estate PLAN governs authorization: T-229 permits v0.3.3 once,
+then requires refreezing after publication and identity verification. There
+is no automatic next slot. Outside an explicitly authorized release,
+nothing is bumped, tagged or released, and the tag ruleset
 `release tags: cut only at the release slot` (id 22162219, empty bypass list)
 rejects any `v*` tag creation, update or deletion with `GH013` — for everyone,
 owner included. Steps 6 and 8 above are the only sanctioned way through it;

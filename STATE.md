@@ -1,6 +1,27 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-07 (v0.3.2: documentation and metadata release on the v0.3.0 engine, D-058; v0.3.1 D-057; v0.3.0 maintainer pass D-056; tracked sweep record 2026-09-07, T-201)
+Updated: 2026-09-08 (v0.3.3: bounded shared-fixture precision fix; release and refreeze authorized in estate T-229; prior measurements retain their recorded versions)
+
+## 2026-09-08: v0.3.3 bounded fixture precision release
+
+Estate T-229 publishes the T-228 candidate for multiple consumers of deeply
+immutable literal fixture parameters. Only historical cases 012 and 032
+change block to pass in the fixed 178-case CLI comparison; both before and
+after suites pass good production and fail buggy production with completed
+test failures. The existing execution-context checks and expansion cap stay.
+
+The fixed 1800-commit regression matches all cached-reference verdict and
+finding observations. The stricter refactor receipt remains 57 qualified,
+three fixture errors, 20 qualified blocks and 22 all-case blocks. These are
+different populations from the held-out raw rate, which belongs to v0.3.2
+and is not a new measurement of this detector. Original benchmark records
+and human labels are unchanged. See the [release evidence](docs/releases/v0.3.3-public-launch.md).
+
+The CLI is v0.3.3; the one-release trust lag advances the recommended Action
+to v0.3.2, which does not include this fixture precision fix. Schemas,
+fingerprint contracts, severities and alignment parameters do not change.
+The owner's publication instruction includes immediate refreezing after
+asset, metadata and family-pin verification; no recurring release slot.
 
 ## 2026-09-07: release slot (v0.3.2)
 
@@ -1825,7 +1846,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.3.2 |
+| version | v0.3.3 |
 | detectors | 21 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |
