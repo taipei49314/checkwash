@@ -6,14 +6,14 @@
 - **2026-09-01:** superseded as posting copy — the Show HN that actually
   posts uses same-day-verified material kept outside this file. This file
   stays as the archived pre-rename draft, and the warning below came true
-  inside it: its sweep numbers are the 35/1800 era (the current README
-  carries 42/1800 with the same-era three-rater study scoped explicitly),
+  inside it: its sweep numbers are the 35/1800 era (the README at that time
+  carried 42/1800 with the same-era three-rater study scoped explicitly),
   the name, URLs and install pins predate the checkwash rename, and "Not
   on PyPI yet" is no longer true (`pip install checkwash`). Do not quote
   this file without re-deriving every number from `benchmarks/`.
 - **Warning to whoever edits this next:** the previous version of this file said "blocks 2.2%" and told its own reader to re-check before posting. It was committed 2026-08-02 (`016a067`) and was still saying it five days and thirteen tagged releases later — every tag from `v0.1.0` to `v0.1.12` postdates it — because `tests/test_state_claims.py` pins `STATE.md` and `README.md` and nothing pins this file. Claim drift is the failure this tool exists to catch, and it survived inside the repository that catches it. Re-verify the table at the bottom before you post, or delete the numbers.
 
-**Current posting and adoption entry:** [v0.2.12 public-launch brief](releases/v0.2.12-public-launch.md). Use that dated brief instead of this archived draft. The test count in this archive is synchronized by the current packaging check; it is not a historical v0.1.25 test result.
+**Current posting and adoption entry:** [v0.3.3 public-launch brief](releases/v0.3.3-public-launch.md). Use that dated brief instead of this archived draft. The test count in this archive is synchronized by the current packaging check; it is not a historical v0.1.25 test result.
 
 ---
 
@@ -65,7 +65,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   after   assert total > 0
 ```
 
-Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. Historical draft version: v0.1.25; current source: 21 detectors, 1463 tests, Apache-2.0.
+Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. Historical draft version: v0.1.25; current source: 21 detectors, 1484 tests, Apache-2.0.
 
 When nothing fires, the report says **`no known tampering pattern detected`**. Not "no cheating". That wording is fixed in the source, because the second sentence is one a diff-layer tool cannot support.
 
@@ -275,7 +275,7 @@ Apache-2.0. https://github.com/taipei49314/greenwash
 
 Agents make CI green two ways: by fixing the bug, or by deleting the failing test, widening a tolerance, rewriting the expected value to whatever the broken code returns, or dropping `|| true` into `scripts/test.sh`. greenwash reads the *diff* and blocks the second kind — alignment, then a two-sided AST comparison against an assertion-strength lattice, so `assert total == 105.3` → `assert total > 0` is a finding and a genuine refactor is not.
 
-Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. Historical draft version: v0.1.25; current source: 21 detectors, 1463 tests, Apache-2.0.
+Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. Historical draft version: v0.1.25; current source: 21 detectors, 1484 tests, Apache-2.0.
 
 What is measured, all from a harness in `benchmarks/`:
 

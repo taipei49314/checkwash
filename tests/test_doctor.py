@@ -213,7 +213,7 @@ def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
     pins = {
         "checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
         "setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
-        "checkwash": "3a4cfcd5733d35915b87794c355af2df07ca24f7",
+        "checkwash": "4ad6e31019dd40e69f46f3f0ac24d37bbdad31ac",
     }
     for label, pin in pins.items():
         cases[f"zero-{label}"] = CANONICAL.replace(pin, "0" * 40)
@@ -601,7 +601,7 @@ def test_untracked_and_index_mismatch_have_actionable_distinct_reasons(tmp_path)
     ("283db528cd3d8e5e38173e14d766a8915efa2c90", "unsupported SHA"),
 ])
 def test_ref_diagnostics_name_actual_and_required_pins(tmp_path, ref, reason):
-    required = "3a4cfcd5733d35915b87794c355af2df07ca24f7"
+    required = "4ad6e31019dd40e69f46f3f0ac24d37bbdad31ac"
     root = _canonical_repo(tmp_path, CANONICAL.replace(required, ref))
     detail = next(n.detail for n in collect(root) if "incomplete" in n.title)
     assert reason in detail

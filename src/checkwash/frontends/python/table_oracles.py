@@ -137,6 +137,18 @@ def _fixture(node):
     return decorator.keywords[0].value
 
 
+def _immutable_param(node):
+    """A shared params object must contain no mutable object at any depth.
+
+    Pytest reuses the parameter objects across consumers, even at function
+    scope. Copying a list/dict/set into projected calls would lose that alias.
+    Tuple rows of literal scalars keep the existing concrete-prefix proof.
+    """
+    if isinstance(node, ast.Tuple):
+        return all(_immutable_param(item) for item in node.elts)
+    return isinstance(node, (ast.Constant, ast.UnaryOp)) and _literal(node)
+
+
 def _helper(node):
     """A same-file `def check(a, b): assert <...>` a table row can call.
 
@@ -222,8 +234,7 @@ def _table_fixture(node):
     table, for a test that walks it with a `for` loop.
 
     Unlike `params=`, this multiplies no collection: it is a shared literal
-    constant, so several tests may read it without the one-consumer rule
-    above. Nothing in it is executed here either — the rows are substituted
+    constant, so several tests may read it. Nothing in it is executed here — the rows are substituted
     into each concrete assertion exactly as an inline table's are.
     """
     if _args(node) != [] or len(node.decorator_list) != 1 or len(node.body) != 1:
@@ -389,8 +400,15 @@ def _module(source, *, baseline):
         table |= is_table and len(cases) >= 2
         if len(result) > MAX_CASES:
             return None
-    if fixtures.keys() != used_fixtures.keys() or any(count != 1 for count in used_fixtures.values()):
+    if fixtures.keys() != used_fixtures.keys():
         return None
+    for name, count in used_fixtures.items():
+        if count > 1:
+            params = fixtures[name]
+            if not isinstance(params, (ast.List, ast.Tuple)) or not all(
+                _immutable_param(row) for row in params.elts
+            ):
+                return None
     # A helper nobody calls never runs, but leaving one uninspected in an
     # otherwise transparent module weakens the "entire module" claim the
     # projection rests on. Same discipline as the fixtures above.
