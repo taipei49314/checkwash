@@ -1,0 +1,30 @@
+name: quality candidate intake
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - tools/collect_quality_candidates.py
+      - docs/quality-evaluation/protocol.json
+      - .github/workflows/quality-candidate-intake.yml
+permissions:
+  contents: read
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: python tools/collect_quality_candidates.py --output quality-candidates
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: quality-candidates
+          path: quality-candidates
+          if-no-files-found: error
