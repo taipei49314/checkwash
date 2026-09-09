@@ -27,7 +27,7 @@ def read_config(data, path, tool):
     text = decode(data)
     if path.endswith(".toml"):
         raw = toml(data)
-        if posixpath.basename(path) == "pyproject.toml":
+        if posixpath.basename(path) == "pyproject.toml" or tool in {"coverage", "mypy"}:
             tools = raw.get("tool", {})
             if not isinstance(tools, dict):
                 raise QualityError("SOURCE_INVALID", "Invalid tool section", kind="error")
