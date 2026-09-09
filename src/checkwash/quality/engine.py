@@ -199,19 +199,20 @@ def compare(payload, target, row, dimension, before, after, left, right, eligibl
     payload["findings"].append(finding)
 
 
-def scope_declarations(raw):
+def scope_declarations(raw, prefix=""):
     """Unordered declaration evidence only; never a scope inclusion proof."""
     from .resolver import strings
     found = []
     if isinstance(raw, dict):
         for key, value in raw.items():
+            qualified = prefix + "/" + key
             if key in {"omit", "exclude", "extend-exclude"}:
                 try:
-                    found.extend(key + ":" + p for p in strings(value))
+                    found.extend(qualified + ":" + p for p in strings(value))
                 except QualityError:
-                    found.append(key + ":" + canonical(value))
+                    found.append(qualified + ":" + canonical(value))
             else:
-                found.extend(scope_declarations(value))
+                found.extend(scope_declarations(value, qualified))
     return sorted(set(found))
 
 

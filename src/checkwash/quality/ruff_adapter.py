@@ -132,13 +132,13 @@ def ruff(snapshot, target, side, profile, common_paths=None):
             if selected is not None or not directory:
                 break
             directory = posixpath.dirname(directory)
-        config_path = selected[0] if selected else ".ruff.toml"
+        config_path = selected[0] if selected else ""
         selection_cache[initial_directory] = config_path
         domains.setdefault(config_path, []).append(subject)
     scopes = set()
     all_scope_known = True
     for config_path, subjects in sorted(domains.items()):
-        domain = replace(target, config=config_path, root=posixpath.dirname(config_path) or ".",
+        domain = replace(target, config=config_path or "auto", root=posixpath.dirname(config_path) or ".",
                          paths=[p for p in subjects if p] or target.paths)
         resolved = _ruff_flat(snapshot, domain, side, profile)
         result.sources.extend(resolved.sources)

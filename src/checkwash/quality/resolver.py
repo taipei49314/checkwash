@@ -67,6 +67,8 @@ def choose(snapshot, target, side, result, root=None):
         record, data = source(snapshot, side, path, "candidate")
         result.sources.append(record)
         if data is None:
+            if target.config != "auto":
+                raise QualityError("CONTEXT_UNRESOLVED", "Explicit configuration source is absent; tool defaults cannot be assumed")
             continue
         if chosen is not None:
             # A lower-precedence file is shadowed, not a second effective policy.

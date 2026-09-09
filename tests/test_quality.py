@@ -255,6 +255,28 @@ def test_scope_change_without_witness_is_still_visible():
     assert any(f["event_kind"] == "scope_without_witness" for f in p["findings"])
 
 
+def test_scope_stage_migration_without_witness_is_visible():
+    p, code = scan('[tool.coverage.run]\nomit=["src/future/**"]', '[tool.coverage.report]\nomit=["src/future/**"]')
+    assert code == 0 and not strong(p)
+    assert any(f["event_kind"] == "scope_without_witness" for f in p["findings"])
+
+
+@pytest.mark.parametrize("tool", ["coverage", "ruff", "mypy"])
+def test_missing_explicit_configuration_is_not_a_known_default(tool):
+    left = {POLICY_PATH: policy(tool, "enforce"), "pyproject.toml": ("[tool." + tool + "]").encode()}
+    right = {POLICY_PATH: left[POLICY_PATH]}
+    p, code = analyze(MappingSnapshot(left), MappingSnapshot(right), today=TODAY, profiles=profile(tool))
+    assert code == 2 and not strong(p)
+    assert any(d["code"] == "CONTEXT_UNRESOLVED" for d in p["diagnostics"])
+
+
+def test_ruff_absent_auto_source_uses_qualified_defaults():
+    base = {POLICY_PATH: policy("ruff", "enforce", "auto"), "src/code.py": b"import os"}
+    head = {**base, "ruff.toml": b'[lint]\nselect=[]'}
+    p, code = analyze(MappingSnapshot(base), MappingSnapshot(head), today=TODAY, profiles=profile("ruff"))
+    assert code == 1 and strong(p)[0]["lost"] == ["F401", "F821"]
+
+
 def test_mypy_implicit_reexport_has_permissive_direction():
     profiles = profile("mypy")
     profiles["mypy-fixture"]["mypy_defaults"] = {"implicit_reexport": True}
