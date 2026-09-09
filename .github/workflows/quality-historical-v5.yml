@@ -4,7 +4,9 @@ on:
     branches: [evaluation/historical-qualification-t255]
     paths:
       - tools/historical_qualification_v5.py
+      - tools/historical_qualification_v5_1.py
       - docs/quality-evaluation/historical-qualification-v5.json
+      - docs/quality-evaluation/historical-qualification-v5-1.json
       - .github/workflows/quality-historical-v5.yml
   workflow_dispatch:
 permissions:
@@ -30,9 +32,9 @@ jobs:
         env:
           PYTHONUTF8: '1'
         run: >-
-          python tools/historical_qualification_v5.py
+          python tools/historical_qualification_v5_1.py
           --tool ${{ matrix.tool }}
-          --matrix docs/quality-evaluation/historical-qualification-v5.json
+          --matrix docs/quality-evaluation/historical-qualification-v5-1.json
           --source .
           --output historical-results/${{ matrix.tool }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
