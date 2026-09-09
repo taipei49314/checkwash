@@ -158,6 +158,40 @@ class NaturalPreparationTests(unittest.TestCase):
             self.assertEqual(result["static_references"][0]["reason"], "snapshot-file-limit")
             self.assertEqual(result["closure_status"], "UNESTABLISHED")
 
+    def test_temporal_values_serialize_without_losing_types(self):
+        before = b'[tool.coverage.report]\nunknown_setting=2025-01-01\ntime=12:34:56\nstamp=2025-01-01T12:34:56Z\n'
+        after = b'[tool.coverage.report]\nunknown_setting="2025-01-01"\ntime="12:34:56"\nstamp="2025-01-01T12:34:56+00:00"\n'
+        result = subject.table_differences(before, after)
+        changes = result["tools"]["coverage"]
+        self.assertEqual(len(changes), 3)
+        self.assertEqual({c["base_value_types"][0]["toml_type"] for c in changes}, {"date", "time", "datetime"})
+        self.assertTrue(all(c["head_value_types"] == [] for c in changes))
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "manifest.json"
+            subject.dump(target, result)
+            self.assertEqual(json.loads(target.read_bytes()), result)
+
+    def test_nested_nonfinite_values_use_standard_json(self):
+        before = b'[[tool.mypy.overrides]]\nvalues=[nan, inf, -inf, 2025-01-01]\n'
+        after = b'[[tool.mypy.overrides]]\nvalues=["nan", "inf", "-inf", "2025-01-01"]\n'
+        result = subject.table_differences(before, after)
+        change = result["tools"]["mypy"][0]
+        self.assertEqual([t["path"] for t in change["base_value_types"]], [[0, "values", i] for i in range(4)])
+        self.assertEqual(change["head_value_types"], [])
+        self.assertEqual(json.loads(json.dumps(result, allow_nan=False)), result)
+        self.assertFalse(any(subject.table_differences(before, before)["tools"].values()))
+
+    def test_table_array_key_order_is_equivalent_but_array_order_is_visible(self):
+        before = b'[[tool.mypy.overrides]]\nmodule=["a", "b"]\nstrict=true\n'
+        reordered = b'[[tool.mypy.overrides]]\nstrict=true\nmodule=["a", "b"]\n'
+        changed = b'[[tool.mypy.overrides]]\nstrict=true\nmodule=["b", "a"]\n'
+        self.assertEqual(subject.table_differences(before, reordered)["tools"]["mypy"], [])
+        self.assertTrue(subject.table_differences(before, changed)["tools"]["mypy"])
+
+    def test_unconverted_nonfinite_json_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory, self.assertRaises(ValueError):
+            subject.dump(Path(directory) / "manifest.json", {"unconverted": float("nan")})
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

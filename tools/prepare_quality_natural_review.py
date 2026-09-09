@@ -10,9 +10,11 @@ import argparse
 import base64
 from collections import Counter
 import csv
+import datetime
 import difflib
 import hashlib
 import json
+import math
 import os
 from pathlib import Path, PurePosixPath
 import posixpath
@@ -46,7 +48,7 @@ def digest(data):
 
 
 def dump(path, value):
-    raw = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode()
+    raw = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False) + "\n").encode()
     path.write_bytes(raw)
     path.with_suffix(path.suffix + ".sha256").write_text(digest(raw) + "\n", encoding="utf-8")
     return digest(raw)
@@ -286,6 +288,41 @@ def flatten(value, prefix=()):
     return {prefix: value}
 
 
+def typed_value(value):
+    """Canonical TOML comparison: key order is immaterial, type/array order isn't."""
+    name = type(value).__name__
+    if isinstance(value, dict):
+        return (name, tuple((k, typed_value(v)) for k, v in sorted(value.items())))
+    if isinstance(value, list):
+        return (name, tuple(typed_value(v) for v in value))
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return (name, value.isoformat())
+    if isinstance(value, float):
+        return (name, repr(value))
+    return (name, value)
+
+
+def json_value(value, path=()):
+    """JSON-safe display plus out-of-band annotations, without string collisions."""
+    if isinstance(value, (dict, list)):
+        items = value.items() if isinstance(value, dict) else enumerate(value)
+        result = {} if isinstance(value, dict) else []
+        annotations = []
+        for key, child in items:
+            converted, types = json_value(child, (*path, key))
+            if isinstance(result, dict):
+                result[key] = converted
+            else:
+                result.append(converted)
+            annotations.extend(types)
+        return result, annotations
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return value.isoformat(), [{"path": list(path), "toml_type": type(value).__name__}]
+    if isinstance(value, float) and not math.isfinite(value):
+        return repr(value), [{"path": list(path), "toml_type": "float"}]
+    return value, []
+
+
 def table_differences(before, after):
     try:
         documents = [tomllib.loads(data.decode("utf-8")) for data in (before, after)]
@@ -299,9 +336,12 @@ def table_differences(before, after):
         for path in sorted(set(values[0]) | set(values[1])):
             bp, hp = path in values[0], path in values[1]
             b, h = values[0].get(path), values[1].get(path)
-            if bp != hp or repr(b) != repr(h):
+            if bp != hp or typed_value(b) != typed_value(h):
+                base, base_types = json_value(b)
+                head, head_types = json_value(h)
                 changes.append({"key_path": list(path), "base_present": bp, "head_present": hp,
-                                "base": b, "head": h})
+                                "base": base, "head": head,
+                                "base_value_types": base_types, "head_value_types": head_types})
         result[tool] = changes
     return {"state": "parsed", "tools": result,
             "review_aid": "changed tool tables" if any(result.values()) else "no changed tool tables",
@@ -417,7 +457,7 @@ def write_review(output, candidates, summary, manifest_hash):
                 lines += ["## " + row["id"], "", f"[Commit]({row['review_url']}) · source order {row['source_order']} · {row['intake']}", "",
                           "Changed tables: " + (", ".join(changed) or row["triage"].get("reason", "none")) + ". Human label: **UNREVIEWED**.", ""]
                 for tool in changed:
-                    lines += ["### " + tool, "", "```json", json.dumps(row["triage"]["tools"][tool], ensure_ascii=False, indent=2, default=str), "```", ""]
+                    lines += ["### " + tool, "", "```json", json.dumps(row["triage"]["tools"][tool], ensure_ascii=False, indent=2, allow_nan=False), "```", ""]
                 for side, snapshot in row.get("snapshots", {}).items():
                     lines += [f"{side}: `{row[side]}`; effective version / activation / source closure **UNESTABLISHED**.", ""]
                     for tool in changed or TOOLS:
