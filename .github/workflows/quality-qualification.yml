@@ -14,8 +14,11 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
-      - run: pip install -e '.[dev]' coverage==7.16.0 ruff==0.16.6 mypy==2.3.1 jsonschema==4.26.0
+      - run: |
+          mkdir -p quality-evidence
+          pip install --report quality-evidence/install.json -e '.[dev]' coverage==7.16.0 ruff==0.16.6 mypy==2.3.1 jsonschema==4.26.0
       - run: python tools/qualify_quality.py --output quality-evidence
+      - run: python tools/validate_quality_reports.py --profiles quality-evidence
       - run: pytest tests/test_quality.py
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()

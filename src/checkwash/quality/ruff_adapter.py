@@ -35,7 +35,7 @@ def selected_rules(select, ignore, profile):
     return sorted(code for code, enabled in selection_updates(select, ignore, profile).items() if enabled)
 
 
-def ruff(snapshot, target, side, profile):
+def _ruff_flat(snapshot, target, side, profile):
     result, raw, path, text = resolved_sources(snapshot, target, side)
     layers = result.layers or [(path, raw, text)]
     result.declarations = declarations({p: r for p, r, _ in layers})
@@ -98,6 +98,74 @@ def ruff(snapshot, target, side, profile):
         if exc.kind == "error":
             raise
         result.problem(exc.code, str(exc), ["ruff.scope"])
+    return result
+
+
+def ruff(snapshot, target, side, profile, common_paths=None):
+    """Resolve auto configuration per surviving source, on both snapshots.
+
+    Comparing by stable source path detects a new nested config even when the
+    old snapshot had no corresponding configuration domain.
+    """
+    if target.config != "auto":
+        return _ruff_flat(snapshot, target, side, profile)
+    from dataclasses import replace
+    from .model import Resolved, canonical
+    from .resolver import choose
+
+    paths = sorted(p for p in (snapshot.paths if common_paths is None else common_paths)
+                   if p.endswith((".py", ".pyi")) and any(p == s or (s.endswith("/") and p.startswith(s)) for s in target.paths))
+    if len(paths) * max(1, len(profile["rule_catalog"])) > 1_000_000:
+        raise QualityError("RESOURCE_LIMIT", "Ruff configuration-domain comparison budget exceeded")
+    result = Resolved()
+    domains = {}
+    selection_cache = {}
+    for subject in paths or [None]:
+        directory = posixpath.dirname(subject) if subject else ("" if target.root == "." else target.root)
+        initial_directory = directory
+        if directory in selection_cache:
+            domains.setdefault(selection_cache[directory], []).append(subject)
+            continue
+        selected = None
+        while True:
+            selected = choose(snapshot, target, side, result, root=directory or ".")
+            if selected is not None or not directory:
+                break
+            directory = posixpath.dirname(directory)
+        config_path = selected[0] if selected else ".ruff.toml"
+        selection_cache[initial_directory] = config_path
+        domains.setdefault(config_path, []).append(subject)
+    scopes = set()
+    all_scope_known = True
+    for config_path, subjects in sorted(domains.items()):
+        domain = replace(target, config=config_path, root=posixpath.dirname(config_path) or ".",
+                         paths=[p for p in subjects if p] or target.paths)
+        resolved = _ruff_flat(snapshot, domain, side, profile)
+        result.sources.extend(resolved.sources)
+        result.declarations[config_path] = resolved.declarations
+        for subject in subjects:
+            dim = "ruff.lint.rules@" + (subject or "root")
+            if "ruff.lint.rules" in resolved.values:
+                result.values[dim] = resolved.values["ruff.lint.rules"]
+                if "ruff.lint.rules" in resolved.locations:
+                    result.locations[dim] = resolved.locations["ruff.lint.rules"]
+            for code, message, dimensions in resolved.problems:
+                if "ruff.lint.rules" in dimensions:
+                    result.problem(code, message, [dim])
+        if "ruff.scope" in resolved.values:
+            scopes.update(resolved.values["ruff.scope"])
+            if "ruff.scope" in resolved.locations:
+                result.locations["ruff.scope"] = resolved.locations["ruff.scope"]
+        else:
+            all_scope_known = False
+            for code, message, dimensions in resolved.problems:
+                if "ruff.scope" in dimensions:
+                    result.problem(code, message, ["ruff.scope"])
+    if all_scope_known:
+        result.values["ruff.scope"] = sorted(scopes)
+    # Candidate absence is meaningful, but repeated discovery of the same
+    # source through two files is not two independent sources.
+    result.sources = [record for _, record in sorted({canonical(r): r for r in result.sources}.items())]
     return result
 
 

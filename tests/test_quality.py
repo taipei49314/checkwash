@@ -237,3 +237,62 @@ def test_known_strict_expansion_can_be_preserved_explicitly():
 def test_unknown_strict_expansion_is_not_treated_as_empty():
     p, code = scan('[tool.mypy]\nstrict=true', '[tool.mypy]\nstrict=false', "mypy")
     assert code == 2 and not strong(p)
+
+
+def test_nested_ruff_override_removes_only_its_domain():
+    root = '[tool.ruff.lint]\nselect=["F401"]'
+    base = {POLICY_PATH: policy("ruff", "enforce", "auto"), "pyproject.toml": root.encode(),
+            "src/one.py": b"import os", "src/private/two.py": b"import os"}
+    head = {**base, "src/private/ruff.toml": b'[lint]\nselect=[]'}
+    p, code = analyze(MappingSnapshot(base), MappingSnapshot(head), today=TODAY, profiles=profile("ruff"))
+    assert code == 1
+    assert [f["dimension"] for f in strong(p)] == ["ruff.lint.rules@src/private/two.py"]
+
+
+def test_scope_change_without_witness_is_still_visible():
+    p, code = scan("[tool.coverage.report]", "[tool.coverage.report]\nomit=['src/future/**']")
+    assert code == 0 and not strong(p)
+    assert any(f["event_kind"] == "scope_without_witness" for f in p["findings"])
+
+
+def test_mypy_implicit_reexport_has_permissive_direction():
+    profiles = profile("mypy")
+    profiles["mypy-fixture"]["mypy_defaults"] = {"implicit_reexport": True}
+    left = {POLICY_PATH: policy("mypy", "enforce"), "pyproject.toml": b'[tool.mypy]\nimplicit_reexport=false'}
+    right = {**left, "pyproject.toml": b'[tool.mypy]\nimplicit_reexport=true'}
+    p, code = analyze(MappingSnapshot(left), MappingSnapshot(right), today=TODAY, profiles=profiles)
+    assert code == 1 and strong(p)[0]["dimension"] == "mypy.implicit_reexport"
+
+
+def test_snapshot_failure_before_policy_never_becomes_report_pass(monkeypatch):
+    from argparse import Namespace
+    from checkwash.quality import cli
+    from checkwash.quality.model import QualityError
+    def fail(*args):
+        raise QualityError("RESOURCE_LIMIT", "Fixture inventory limit")
+    monkeypatch.setattr(cli, "Snapshot", fail)
+    text, code = cli.run(Namespace(range=None, rule=None, repo=".", format="json"), TODAY)
+    assert code == 2 and json.loads(text)["verdict"] == "error"
+
+
+def test_real_worktree_cli_preserves_uncommitted_quality_change(tmp_path, monkeypatch):
+    import subprocess
+    from argparse import Namespace
+    from checkwash.quality import cli, engine
+    monkeypatch.setattr(engine, "load_profile", lambda name, tool: profile(tool)[name])
+    def git(*args):
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+    git("init")
+    git("config", "user.name", "quality-fixture")
+    git("config", "user.email", "quality@example.invalid")
+    (tmp_path / ".checkwash").mkdir()
+    (tmp_path / POLICY_PATH).write_bytes(policy(mode="enforce"))
+    config = tmp_path / "pyproject.toml"
+    config.write_bytes(b"[tool.coverage.report]\nfail_under=85\n")
+    git("add", ".")
+    git("commit", "-m", "base")
+    config.write_bytes(b"[tool.coverage.report]\nfail_under=50\n")
+    text, code = cli.run(Namespace(range=None, rule=None, repo=str(tmp_path), format="json"), TODAY)
+    report = json.loads(text)
+    assert code == 1 and strong(report)[0]["before"]["data"] == "85"
+    assert config.read_bytes().endswith(b"fail_under=50\n")

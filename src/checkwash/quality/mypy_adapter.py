@@ -43,9 +43,11 @@ def mypy(snapshot, target, side, profile):
         attach(result, "mypy." + key, boolean(raw.get(key, default)), path, side, text, key)
     if result.values["mypy.ignore_errors"]:
         for key in defaults:
-            if key not in {"ignore_errors", "ignore_missing_imports"}:
+            if key not in {"ignore_errors", "ignore_missing_imports", "implicit_reexport"}:
                 result.values["mypy." + key] = False
         result.values["mypy.ignore_missing_imports"] = True
+        if "implicit_reexport" in defaults:
+            result.values["mypy.implicit_reexport"] = True
     disabled = set(strings(raw.get("disable_error_code", [])))
     enabled = set(strings(raw.get("enable_error_code", [])))
     if (disabled | enabled) - MYPY_CODES:

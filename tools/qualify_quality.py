@@ -51,8 +51,10 @@ def profiles(directory):
                 assert result.returncode == 0, result.stderr
                 catalog = json.loads(result.stdout)
                 (directory / "ruff-catalog.json").write_text(result.stdout, encoding="utf-8")
-                row["rule_catalog"] = sorted(r["code"] for r in catalog if isinstance(r.get("code"), str))
-                row["uncoded_rules"] = sorted(r["name"] for r in catalog if r.get("code") is None)
+                active = [r for r in catalog if "Removed" not in r.get("status", {})]
+                row["rule_catalog"] = sorted(r["code"] for r in active if isinstance(r.get("code"), str))
+                row["uncoded_rules"] = sorted(r["name"] for r in active if r.get("code") is None and not r.get("preview", False))
+                row["uncoded_preview_rules"] = sorted(r["name"] for r in active if r.get("code") is None and r.get("preview", False))
                 row["preview_rules"] = sorted(r["code"] for r in catalog if isinstance(r.get("code"), str) and r.get("preview", False))
                 settings = invoke([sys.executable, "-m", "ruff", "check", "--isolated", "--show-settings", "sample.py"], temp)
                 assert settings.returncode == 0, settings.stderr
@@ -93,6 +95,21 @@ def qualify(rows):
             actual = any(r["code"] == "F401" for r in json.loads(run.stdout))
             assert actual == expect_error
             results.append({"tool": "ruff", "case": "inheritance", "config": child, "expected": expect_error, "actual": actual})
+        (root / "src").mkdir()
+        (root / "src" / "code.py").write_text("import os\n", encoding="utf-8")
+        for pattern in (None, "src/code.py", "src/**"):
+            config = ('exclude=' + json.dumps([pattern]) + '\n' if pattern else '') + '[lint]\nselect=["F401"]\n'
+            (root / "ruff.toml").write_text(config, encoding="utf-8")
+            run = invoke([sys.executable, "-m", "ruff", "check", "--config", "ruff.toml", "--output-format", "json", "src"], temp)
+            assert run.returncode in {0, 1}, run.stderr
+            actual = any(r["code"] == "F401" for r in json.loads(run.stdout))
+            assert actual == (pattern is None)
+            results.append({"tool": "ruff", "case": "scope", "pattern": pattern, "reported": actual})
+        (root / "ruff.toml").write_text('[lint]\nselect=["F401"]\n', encoding="utf-8")
+        (root / "src" / "ruff.toml").write_text('[lint]\nselect=[]\n', encoding="utf-8")
+        run = invoke([sys.executable, "-m", "ruff", "check", "--output-format", "json", "src"], temp)
+        assert run.returncode == 0 and not json.loads(run.stdout), run.stderr
+        results.append({"tool": "ruff", "case": "nested-auto-override", "reported": False})
         (root / "typed.py").write_text("def f(x):\n    return x\n", encoding="utf-8")
         for setting, expect_error in ((True, True), (False, False)):
             (root / "mypy.ini").write_text("[mypy]\ndisallow_untyped_defs=" + str(setting).lower() + "\n", encoding="utf-8")
@@ -112,7 +129,7 @@ def qualify(rows):
             results.append({"tool": "mypy", "case": "strict-option-expansion", "strict": strict, "flags": len(mypy_profile["strict_expansion"]), "matched": True})
         # Build real trusted coverage data with one exercised and one missed
         # branch; threshold behavior is checked against the actual reporter.
-        (root / "covered.py").write_text("x = 1\nif x:\n    y = 2\nelse:\n    y = 3\n", encoding="utf-8")
+        (root / "covered.py").write_text("import src.code\nx = 1\nif x:\n    y = 2\nelse:\n    y = 3\n", encoding="utf-8")
         (root / "coverage.ini").write_text("[run]\n", encoding="utf-8")
         run = invoke([sys.executable, "-m", "coverage", "run", "--rcfile=coverage.ini", "covered.py"], temp)
         assert run.returncode == 0, run.stderr
@@ -121,6 +138,14 @@ def qualify(rows):
             run = invoke([sys.executable, "-m", "coverage", "report", "--rcfile=coverage.ini"], temp)
             assert run.returncode == expected, run.stdout + run.stderr
             results.append({"tool": "coverage", "fail_under": threshold, "expected_exit": expected, "actual_exit": run.returncode})
+        for pattern in (None, "src/code.py", "src/**"):
+            config = '[report]\n' + (f'omit={pattern}\n' if pattern else '')
+            (root / "coverage.ini").write_text(config, encoding="utf-8")
+            run = invoke([sys.executable, "-m", "coverage", "json", "--rcfile=coverage.ini", "-o", "coverage-result.json"], temp)
+            assert run.returncode == 0, run.stdout + run.stderr
+            reported = "src/code.py" in json.loads((root / "coverage-result.json").read_text())["files"]
+            assert reported == (pattern is None)
+            results.append({"tool": "coverage", "case": "scope", "pattern": pattern, "reported": reported})
     return results
 
 

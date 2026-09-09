@@ -161,7 +161,8 @@ def strings(value):
 
 def attach(result, dimension, value, path, side, text, key):
     result.values[dimension] = value
-    result.locations[dimension] = location(path, side, text, key)
+    if text:
+        result.locations[dimension] = location(path, side, text, key)
 
 
 def declarations(raw):

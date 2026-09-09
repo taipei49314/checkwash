@@ -58,7 +58,7 @@ def finish(payload):
         verdict, code = "block", 1
     elif incomplete:
         verdict, code = "incomplete", 0
-    elif payload["findings"]:
+    elif any(not f["allowlisted"] for f in payload["findings"]):
         verdict, code = "reported", 0
     else:
         verdict, code = "no_blocking_finding", 0
@@ -121,15 +121,16 @@ def _analyze(payload, base, head, today, profiles):
                     row["sources"].append(source(snap, side, path, "version")[0])
                 if base.read(path) != head.read(path):
                     raise QualityError("TOOL_VERSION_UNRESOLVED", "Tracked version source changed; target version is unresolved")
-            left = ADAPTERS[target.tool](base, target, "base", profile)
-            right = ADAPTERS[target.tool](head, target, "head", profile)
+            common = set(base.tracked) & set(head.tracked) & set(base.paths) & set(head.paths)
+            options = {"common_paths": common} if target.tool == "ruff" else {}
+            left = ADAPTERS[target.tool](base, target, "base", profile, **options)
+            right = ADAPTERS[target.tool](head, target, "head", profile, **options)
             row["sources"].extend(left.sources + right.sources)
             if len(row["sources"]) > 2 * MAX_SOURCES:
                 raise QualityError("RESOURCE_LIMIT", "Target source closure exceeds limit")
             # Discovery binds absent higher-priority candidates too. Source
             # digest includes both snapshots; unrelated repo paths are excluded.
             row["discovery_digest"] = digest(row["sources"])
-            common = set(base.tracked) & set(head.tracked) & set(base.paths) & set(head.paths)
             if target.tool == "coverage" and left.values.get("coverage.context") != right.values.get("coverage.context"):
                 for resolved in (left, right):
                     resolved.problem("CONTEXT_UNRESOLVED", "Coverage precision/measurement context changed", ["coverage.report.fail_under"])
@@ -145,6 +146,11 @@ def _analyze(payload, base, head, today, profiles):
                     after = sorted(set(after) & common)
                 row["checked_dimensions"].append(dimension)
                 compare(payload, target, row, dimension, before, after, left, right, eligible)
+            before_scope = scope_declarations(left.declarations)
+            after_scope = scope_declarations(right.declarations)
+            if before_scope != after_scope and not any(f["target_id"] == target.id and f["rule"] == "QW_SCOPE_NARROWED" for f in payload["findings"]):
+                payload["findings"].append(event("QW_POLICY_CHANGED", target.id, "scope.declaration", known(before_scope), known(after_scope), row["sources"], [],
+                                                 kind="scope_without_witness", message="Scope declaration changed without a proven surviving-file loss; future-file effects are not ruled out."))
             if left.declarations != right.declarations and row["unsupported_dimensions"]:
                 payload["findings"].append(event("QW_POLICY_CHANGED", target.id, "configuration", known(canonical(left.declarations)), known(canonical(right.declarations)), row["sources"], [],
                                                  message="Configuration changed; some effects could not be resolved."))
@@ -164,12 +170,12 @@ def compare(payload, target, row, dimension, before, after, left, right, eligibl
     if dimension == "coverage.report.fail_under":
         if int(after) < int(before):
             rule = "QW_THRESHOLD_LOWERED"
-    elif dimension.endswith(".scope") or dimension.endswith(".rules") or dimension == "mypy.error_codes":
+    elif dimension.endswith(".scope") or dimension.startswith("ruff.lint.rules") or dimension == "mypy.error_codes":
         lost, gained = sorted(set(before) - set(after)), sorted(set(after) - set(before))
         if lost:
             rule = "QW_SCOPE_NARROWED" if dimension.endswith(".scope") else "QW_RULE_DISABLED"
     elif dimension.startswith("mypy."):
-        reverse = dimension in {"mypy.ignore_errors", "mypy.ignore_missing_imports"}
+        reverse = dimension in {"mypy.ignore_errors", "mypy.ignore_missing_imports", "mypy.implicit_reexport"}
         if (before is False and after is True) if reverse else (before is True and after is False):
             rule = "QW_RULE_DISABLED"
     if rule is None:
@@ -191,6 +197,22 @@ def compare(payload, target, row, dimension, before, after, left, right, eligibl
     finding["allowlisted"] = finding["fingerprint"] in eligible
     finding["remediation"] = "Review the concrete loss; restore the requirement or record this exact change in a prior base-side exemption."
     payload["findings"].append(finding)
+
+
+def scope_declarations(raw):
+    """Unordered declaration evidence only; never a scope inclusion proof."""
+    from .resolver import strings
+    found = []
+    if isinstance(raw, dict):
+        for key, value in raw.items():
+            if key in {"omit", "exclude", "extend-exclude"}:
+                try:
+                    found.extend(key + ":" + p for p in strings(value))
+                except QualityError:
+                    found.append(key + ":" + canonical(value))
+            else:
+                found.extend(scope_declarations(value))
+    return sorted(set(found))
 
 
 def discover(payload, base, head):

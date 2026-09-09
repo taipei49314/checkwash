@@ -9,11 +9,21 @@ from .snapshot import Snapshot
 
 def run(args, today):
     if args.range == "profiles":
-        return json_report({"profiles": list(available().values())}), 0
+        if args.rule is not None or args.format == "sarif":
+            return "error: quality profiles accepts no rule or SARIF format\n", 2
+        rows = [{key: row[key] for key in ("id", "tool", "tool_version", "digest", "scope")} for row in available().values()]
+        return json_report({"profiles": rows}), 0
     if args.range == "explain":
         if args.rule not in RULES:
             return "error: expected a quality rule ID\n", 2
-        return f"{args.rule}: bounded configuration analysis. See docs/quality.md for evidence, exemptions and limitations.\n", 0
+        explanations = {
+            "QW_THRESHOLD_LOWERED": "A resolved integral coverage minimum decreased, for example 85 to 50. Changed precision, measurement context or dynamic values withhold this proof.",
+            "QW_RULE_DISABLED": "A previously enabled requirement was removed, for example selecting F401 and then ignoring F401. Gained rules do not cancel losses. Overrides must be resolved.",
+            "QW_SCOPE_NARROWED": "A supported exclusion removes an existing surviving source path. The report lists witnesses. It does not estimate coverage percentages or future-file effects.",
+            "QW_POLICY_CHANGED": "A declaration changed, or base-owned Checkwash policy was edited. Head policy never governs its own review. This event does not prove tool execution.",
+            "QW_ANALYSIS_INCOMPLETE": "An unsupported construct or bounded resource limit prevented analysis. This cannot be exempted; enforce returns 2 and report remains explicitly incomplete.",
+        }
+        return f"{args.rule}: {explanations[args.rule]}\nSee docs/quality.md for the support matrix and base-only exemptions.\n", 0
     base_label, head_label = "HEAD", "worktree"
     try:
         if args.rule is not None:
