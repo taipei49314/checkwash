@@ -32,7 +32,15 @@ def selection_updates(select, ignore, profile):
 
 
 def selected_rules(select, ignore, profile):
-    return sorted(code for code, enabled in selection_updates(select, ignore, profile).items() if enabled)
+    return final_rules({code for code, enabled in selection_updates(select, ignore, profile).items() if enabled}, profile)
+
+
+def final_rules(value, profile):
+    value = set(value)
+    for preferred, expendable in profile.get("incompatible_rules", []):
+        if preferred in value:
+            value.discard(expendable)
+    return sorted(value)
 
 
 def _ruff_flat(snapshot, target, side, profile):
@@ -74,7 +82,7 @@ def _ruff_flat(snapshot, target, side, profile):
                     value.add(code)
                 else:
                     value.discard(code)
-        attach(result, dimension, sorted(value), path, side, text, "ignore")
+        attach(result, dimension, final_rules(value, profile), path, side, text, "ignore")
     try:
         if unknown:
             raise QualityError("CONTEXT_UNRESOLVED", "Ruff scope context is not qualified")

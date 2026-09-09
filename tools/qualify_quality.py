@@ -44,6 +44,7 @@ def profiles(directory):
             row["mypy_defaults"] = {name: getattr(defaults, name) for name, _ in assignments}
             assert all(isinstance(v, bool) for v in row["strict_expansion"].values())
         if tool == "ruff":
+            row["incompatible_rules"] = [["D211", "D203"], ["D212", "D213"]]
             with tempfile.TemporaryDirectory(prefix="quality-qualification-") as temp:
                 path = Path(temp)
                 (path / "sample.py").write_text("x = 1\n", encoding="utf-8")
@@ -77,6 +78,16 @@ def qualify(rows):
         root = Path(temp)
         (root / "sample.py").write_text("import os\n", encoding="utf-8")
         ruff_profile = next(r for r in rows if r["tool"] == "ruff")
+        for selectors in [["ALL"], ["F"], ["E"], ["D"], ["C4"], ["PIE"], ["D203", "D211"], ["D212", "D213"], ["D203"], ["D213"]]:
+            (root / "ruff.toml").write_text("[lint]\nselect=" + json.dumps(selectors) + "\n", encoding="utf-8")
+            run = invoke([sys.executable, "-m", "ruff", "check", "--config", "ruff.toml", "--show-settings", "sample.py"], temp)
+            assert run.returncode == 0, run.stderr
+            match = re.search(r"linter\.rules\.enabled\s*=\s*\[(.*?)\]", run.stdout, re.S)
+            assert match, run.stdout
+            actual = sorted(set(re.findall(r"\(([A-Z]+\d+)\)", match.group(1))))
+            predicted = selected_rules(selectors, [], ruff_profile)
+            assert actual == predicted, {"selectors": selectors, "model_only": sorted(set(predicted) - set(actual)), "native_only": sorted(set(actual) - set(predicted))}
+            results.append({"tool": "ruff", "case": "full-selection-set", "selectors": selectors, "rules": len(actual), "matched": True})
         for select, ignore, should_report in [(["F401"], [], True), (["F401"], ["F401"], False), (["F401"], ["F"], True), (["F"], ["F401"], False)]:
             config = "[lint]\nselect=" + json.dumps(select) + "\nignore=" + json.dumps(ignore) + "\n"
             (root / "ruff.toml").write_text(config, encoding="utf-8")
@@ -158,6 +169,18 @@ def main():
     receipt = {"qualification_schema_version": 1, "versions": VERSIONS, "results": results,
                "status": "bounded-fixtures-passed", "not_claimed": ["full tool semantics", "natural corpus acceptance", "CI activation proof"]}
     (args.output / "qualification.json").write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    from checkwash.quality.model import digest
+    contract = json.loads((Path(__file__).parent / "quality-profile-contract.json").read_text(encoding="utf-8"))
+    fixture = Path(__file__).read_bytes().replace(b"\r\n", b"\n")
+    (args.output / "qualify_quality.py.txt").write_bytes(fixture)
+    result_digest = hashlib.sha256((args.output / "qualification.json").read_bytes()).hexdigest()
+    for row in rows:
+        row.update(contract[row["tool"]])
+        row["qualification_receipt"] = {"fixture": "qualification_data/qualify_quality.py.txt", "fixture_sha256": hashlib.sha256(fixture).hexdigest(),
+                                        "results": "qualification_data/results.json", "results_sha256": result_digest}
+        row.pop("digest")
+        row["digest"] = digest(row)
+        (args.output / (row["tool"] + ".json")).write_text(json.dumps(row, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(receipt, sort_keys=True))
 
 
