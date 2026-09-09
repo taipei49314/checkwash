@@ -13,6 +13,8 @@ def scope(snapshot, target, patterns, profile, result, side, stage):
         if ("/" not in literal or literal.startswith("/") or any(c in literal for c in "*?[]{}!\\\0:")
                 or any(p in {"", ".", ".."} for p in literal.split("/"))):
             raise QualityError("UNSUPPORTED_PATTERN", "Only qualified literal paths and directory/** patterns are supported")
+    if any(snapshot.modes[p] not in {"100644", "100755"} and any(inside(p, s.rstrip("/")) for s in target.paths) for p in snapshot.paths):
+        raise QualityError("EXTERNAL_SOURCE", "Target scope contains a symlink or submodule")
     paths = [p for p in snapshot.paths if p in snapshot.tracked and p.endswith((".py", ".pyi"))
              and snapshot.modes[p] in {"100644", "100755"}
              and any(p == s or (s.endswith("/") and p.startswith(s)) for s in target.paths)]

@@ -88,6 +88,7 @@ def resolved_sources(snapshot, target, side):
     if chosen is None:
         return result, {}, target.config if target.config != "auto" else joined(target.root, NAMES[target.tool][0]), ""
     path, raw, text = chosen
+    result.layers = [(path, raw, text)]
     # Nested configurations can override a root target. v0.4 does not silently
     # apply the root settings to a nested Ruff domain it has not resolved.
     if target.tool == "ruff" and target.config == "auto":
@@ -101,11 +102,12 @@ def resolved_sources(snapshot, target, side):
                 raise QualityError("CONTEXT_UNRESOLVED", "Nested Ruff configuration requires a separate explicit target")
     if target.tool == "ruff":
         seen = {path}
-        while "extend" in raw:
-            parent = raw["extend"]
+        current_path, current_raw = path, raw
+        while "extend" in current_raw:
+            parent = current_raw["extend"]
             if not isinstance(parent, str) or any(c in parent for c in "\\\0\r\n:$") or parent.startswith("/"):
                 raise QualityError("EXTERNAL_SOURCE", "Ruff extend must be a literal repository path")
-            parent = posixpath.normpath(posixpath.join(posixpath.dirname(path), parent))
+            parent = posixpath.normpath(posixpath.join(posixpath.dirname(current_path), parent))
             if parent == ".." or parent.startswith("../"):
                 raise QualityError("EXTERNAL_SOURCE", "Ruff extend leaves the repository")
             if parent in seen:
@@ -117,9 +119,11 @@ def resolved_sources(snapshot, target, side):
             result.sources.append(record)
             if data is None:
                 raise QualityError("CONTEXT_UNRESOLVED", "Ruff extend source is absent")
-            # Source capture precedes rejection. General rule/extend-select
-            # merge precedence is not guessed from dictionary overlay.
-            raise QualityError("CONTEXT_UNRESOLVED", "Ruff extend merge is not qualified in this preview")
+            parent_raw, parent_text = read_config(data, parent, "ruff")
+            if parent_raw is None:
+                raise QualityError("SOURCE_INVALID", "Extended file has no Ruff configuration", kind="error")
+            result.layers.insert(0, (parent, parent_raw, parent_text))
+            current_path, current_raw = parent, parent_raw
     return result, raw, path, text
 
 

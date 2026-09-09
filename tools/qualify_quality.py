@@ -35,6 +35,14 @@ def profiles(directory):
                "tool_version": version, "model_revision": 1,
                "qualification_fixture_sha256": hashlib.sha256(Path(__file__).read_bytes().replace(b"\r\n", b"\n")).hexdigest(),
                "scope": "bounded-preview", "pattern_subset": ["literal-relative-path", "literal-directory/**"]}
+        if tool == "mypy":
+            from mypy.main import define_options
+            from mypy.options import Options
+            _, _, assignments = define_options()
+            defaults = Options()
+            row["strict_expansion"] = dict(assignments)
+            row["mypy_defaults"] = {name: getattr(defaults, name) for name, _ in assignments}
+            assert all(isinstance(v, bool) for v in row["strict_expansion"].values())
         if tool == "ruff":
             with tempfile.TemporaryDirectory(prefix="quality-qualification-") as temp:
                 path = Path(temp)
@@ -42,8 +50,10 @@ def profiles(directory):
                 result = invoke([sys.executable, "-m", "ruff", "rule", "--all", "--output-format", "json"], temp)
                 assert result.returncode == 0, result.stderr
                 catalog = json.loads(result.stdout)
-                row["rule_catalog"] = sorted(r["code"] for r in catalog)
-                row["preview_rules"] = sorted(r["code"] for r in catalog if r.get("preview", False))
+                (directory / "ruff-catalog.json").write_text(result.stdout, encoding="utf-8")
+                row["rule_catalog"] = sorted(r["code"] for r in catalog if isinstance(r.get("code"), str))
+                row["uncoded_rules"] = sorted(r["name"] for r in catalog if r.get("code") is None)
+                row["preview_rules"] = sorted(r["code"] for r in catalog if isinstance(r.get("code"), str) and r.get("preview", False))
                 settings = invoke([sys.executable, "-m", "ruff", "check", "--isolated", "--show-settings", "sample.py"], temp)
                 assert settings.returncode == 0, settings.stderr
                 (directory / "ruff-settings.txt").write_text(settings.stdout, encoding="utf-8")
@@ -74,6 +84,15 @@ def qualify(rows):
             predicted = "F401" in selected_rules(select, ignore, ruff_profile)
             assert actual == predicted == should_report
             results.append({"tool": "ruff", "select": select, "ignore": ignore, "expected": should_report, "actual": actual})
+        # Exercise inherited selection order against the actual tool.
+        (root / "parent.toml").write_text('[lint]\nselect=["F401"]\n', encoding="utf-8")
+        for child, expect_error in [('extend="parent.toml"\n', True), ('extend="parent.toml"\n[lint]\nselect=[]\n', False), ('extend="parent.toml"\n[lint]\nignore=["F"]\n', False)]:
+            (root / "ruff.toml").write_text(child, encoding="utf-8")
+            run = invoke([sys.executable, "-m", "ruff", "check", "--config", "ruff.toml", "--output-format", "json", "sample.py"], temp)
+            assert run.returncode in {0, 1}, run.stderr
+            actual = any(r["code"] == "F401" for r in json.loads(run.stdout))
+            assert actual == expect_error
+            results.append({"tool": "ruff", "case": "inheritance", "config": child, "expected": expect_error, "actual": actual})
         (root / "typed.py").write_text("def f(x):\n    return x\n", encoding="utf-8")
         for setting, expect_error in ((True, True), (False, False)):
             (root / "mypy.ini").write_text("[mypy]\ndisallow_untyped_defs=" + str(setting).lower() + "\n", encoding="utf-8")
@@ -82,6 +101,15 @@ def qualify(rows):
             actual = "no-untyped-def" in run.stdout
             assert actual == expect_error, run.stdout
             results.append({"tool": "mypy", "disallow_untyped_defs": setting, "expected": expect_error, "actual": actual})
+        from mypy.main import process_options
+        mypy_profile = next(r for r in rows if r["tool"] == "mypy")
+        for strict in (False, True):
+            (root / "mypy.ini").write_text(f"[mypy]\nstrict={str(strict).lower()}\n", encoding="utf-8")
+            _, options = process_options(["--config-file", str(root / "mypy.ini"), str(root / "typed.py")])
+            for flag, value in mypy_profile["strict_expansion"].items():
+                expected = value if strict else mypy_profile["mypy_defaults"][flag]
+                assert getattr(options, flag) == expected, flag
+            results.append({"tool": "mypy", "case": "strict-option-expansion", "strict": strict, "flags": len(mypy_profile["strict_expansion"]), "matched": True})
         # Build real trusted coverage data with one exercised and one missed
         # branch; threshold behavior is checked against the actual reporter.
         (root / "covered.py").write_text("x = 1\nif x:\n    y = 2\nelse:\n    y = 3\n", encoding="utf-8")

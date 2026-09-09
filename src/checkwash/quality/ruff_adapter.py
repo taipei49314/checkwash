@@ -7,18 +7,20 @@ from .resolver import attach, boolean, check_dynamic, declarations, integer, res
 from .snapshot import source
 from .scope import scope
 
-def selected_rules(select, ignore, profile):
+def selection_updates(select, ignore, profile):
     catalog = set(profile["rule_catalog"])
     preview = set(profile.get("preview_rules", []))
     def matches(selector):
         if selector == "ALL":
+            if profile.get("uncoded_rules"):
+                raise QualityError("CONTEXT_UNRESOLVED", "ALL includes rules without qualified legacy codes")
             return catalog - preview
         found = {r for r in catalog if r.startswith(selector)}
         if not found:
             raise QualityError("UNSUPPORTED_KEY", "Unknown or unsupported Ruff rule selector: " + selector)
-        if found & preview:
+        if selector in preview:
             raise QualityError("CONTEXT_UNRESOLVED", "Preview rule selection is not qualified")
-        return found
+        return found - preview
     choices = {}
     for enabled, selectors in ((True, select), (False, ignore)):
         for selector in selectors:
@@ -26,30 +28,58 @@ def selected_rules(select, ignore, profile):
                 priority = 0 if selector == "ALL" else len(selector)
                 if code not in choices or priority >= choices[code][0]:
                     choices[code] = (priority, enabled)
-    return sorted(code for code, (_, enabled) in choices.items() if enabled)
+    return {code: enabled for code, (_, enabled) in choices.items()}
+
+
+def selected_rules(select, ignore, profile):
+    return sorted(code for code, enabled in selection_updates(select, ignore, profile).items() if enabled)
 
 
 def ruff(snapshot, target, side, profile):
     result, raw, path, text = resolved_sources(snapshot, target, side)
-    result.declarations = declarations(raw)
-    check_dynamic(raw)
-    lint = raw.get("lint", {})
-    if not isinstance(lint, dict):
-        raise QualityError("SOURCE_INVALID", "Ruff lint settings must be a table", kind="error")
+    layers = result.layers or [(path, raw, text)]
+    result.declarations = declarations({p: r for p, r, _ in layers})
     dimension = "ruff.lint.rules"
     allowed = {"select", "extend-select", "ignore"}
-    top_allowed = {"lint", "exclude", "extend-exclude", "format", "line-length", "indent-width", "cache-dir"}
-    unknown = (set(lint) - allowed) | (set(raw) - top_allowed)
+    top_allowed = {"extend", "lint", "exclude", "extend-exclude", "format", "line-length", "indent-width", "cache-dir"}
+    unknown = set()
+    selections, scope_raw = [], {}
+    for layer_path, layer, layer_text in layers:
+        check_dynamic(layer)
+        lint = layer.get("lint", {})
+        if not isinstance(lint, dict):
+            raise QualityError("SOURCE_INVALID", "Ruff lint settings must be a table", kind="error")
+        unknown.update((set(lint) - allowed) | (set(layer) - top_allowed))
+        selections.append(lint)
+        if "exclude" in layer:
+            scope_raw["exclude"] = layer["exclude"]
+        scope_raw["extend-exclude"] = strings(scope_raw.get("extend-exclude", [])) + strings(layer.get("extend-exclude", []))
     if unknown:
         result.problem("UNSUPPORTED_KEY", "Unqualified Ruff context: " + ", ".join(sorted(unknown)), [dimension, "ruff.scope"])
     else:
-        select = strings(lint["select"]) if "select" in lint else list(profile["default_rules"])
-        select += strings(lint.get("extend-select", []))
-        value = selected_rules(select, strings(lint.get("ignore", [])), profile)
-        attach(result, dimension, value, path, side, text, "ignore")
+        if not any("select" in lint for lint in selections) and profile.get("uncoded_rules"):
+            raise QualityError("CONTEXT_UNRESOLVED", "Default selection includes unqualified uncoded rules; declare explicit supported selectors")
+        value = set(profile["default_rules"])
+        carry = []
+        for lint in selections:
+            select = strings(lint.get("select", []))
+            extend = strings(lint.get("extend-select", []))
+            ignore = strings(lint.get("ignore", []))
+            updates = selection_updates(select + extend, ignore + carry, profile)
+            carry = ignore if "select" in lint and not select and not extend else []
+            if "select" in lint:
+                value = set()
+            for code, enabled in updates.items():
+                if enabled:
+                    value.add(code)
+                else:
+                    value.discard(code)
+        attach(result, dimension, sorted(value), path, side, text, "ignore")
     try:
         if unknown:
             raise QualityError("CONTEXT_UNRESOLVED", "Ruff scope context is not qualified")
+        if any(posixpath.dirname(p) != posixpath.dirname(path) and ("exclude" in r or r.get("extend-exclude")) for p, r, _ in layers):
+            raise QualityError("CONTEXT_UNRESOLVED", "Inherited exclude path anchoring is not qualified")
         # Respect gitignore only after a separate qualification. Existing
         # ignore files must not be mistaken for absent configuration.
         for candidate in snapshot.paths:
@@ -60,8 +90,8 @@ def ruff(snapshot, target, side, profile):
                     raise QualityError("CONTEXT_UNRESOLVED", "Ruff gitignore discovery is not qualified")
         # Native defaults do not match the accepted user-pattern grammar;
         # qualification supplies their known path-segment exclusions.
-        value = scope(snapshot, target, strings(raw.get("exclude", [])) + strings(raw.get("extend-exclude", [])), profile, result, side, "lint")
-        if "exclude" not in raw:
+        value = scope(snapshot, target, strings(scope_raw.get("exclude", [])) + strings(scope_raw.get("extend-exclude", [])), profile, result, side, "lint")
+        if "exclude" not in scope_raw:
             value = [p for p in value if not (set(p.split("/")) & set(profile["default_excludes"]))]
         attach(result, "ruff.scope", value, path, side, text, "exclude")
     except QualityError as exc:

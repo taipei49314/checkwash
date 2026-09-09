@@ -195,3 +195,45 @@ def test_machine_report_is_deterministic_and_separate():
     assert json_report(p) == json_report(copy.deepcopy(p))
     assert "checkwash_findings_version" not in p
     assert json.loads(sarif(p))["runs"][0]["tool"]["driver"]["name"] == "checkwash-quality"
+
+
+def test_ruff_extend_parent_loss_is_visible_when_child_unchanged():
+    config = '[tool.ruff]\nextend="parent.toml"'
+    p, code = scan(config, config, "ruff",
+                   base_extra={"parent.toml": b'[lint]\nselect=["F401"]'},
+                   head_extra={"parent.toml": b'[lint]\nselect=[]'})
+    assert code == 1 and strong(p)[0]["lost"] == ["F401"]
+
+
+def test_ruff_child_reset_discards_parent_selection():
+    config = '[tool.ruff]\nextend="parent.toml"\n[tool.ruff.lint]\nselect=["F821"]'
+    p, code = scan(config, config, "ruff",
+                   base_extra={"parent.toml": b'[lint]\nselect=["F401"]'},
+                   head_extra={"parent.toml": b'[lint]\nselect=[]'})
+    assert code == 0 and not strong(p)
+
+
+def test_ruff_extend_cycle_is_incomplete():
+    config = '[tool.ruff]\nextend="parent.toml"'
+    extra = {"parent.toml": b'extend="pyproject.toml"'}
+    p, code = scan(config, config, "ruff", base_extra=extra, head_extra=extra)
+    assert code == 2 and any(d["code"] == "INHERITANCE_CYCLE" for d in p["diagnostics"])
+
+
+def test_ruff_broad_ignore_can_remove_default_rules():
+    p, code = scan('[tool.ruff.lint]', '[tool.ruff.lint]\nignore=["F"]', "ruff")
+    assert code == 1 and strong(p)[0]["lost"] == ["F401", "F821"]
+
+
+def test_known_strict_expansion_can_be_preserved_explicitly():
+    profiles = profile("mypy")
+    profiles["mypy-fixture"].update(strict_expansion={"disallow_untyped_defs": True}, mypy_defaults={"disallow_untyped_defs": False})
+    left = {POLICY_PATH: policy("mypy", "enforce"), "pyproject.toml": b'[tool.mypy]\nstrict=true'}
+    right = {**left, "pyproject.toml": b'[tool.mypy]\nstrict=false\ndisallow_untyped_defs=true'}
+    p, code = analyze(MappingSnapshot(left), MappingSnapshot(right), today=TODAY, profiles=profiles)
+    assert code == 0 and not strong(p)
+
+
+def test_unknown_strict_expansion_is_not_treated_as_empty():
+    p, code = scan('[tool.mypy]\nstrict=true', '[tool.mypy]\nstrict=false', "mypy")
+    assert code == 2 and not strong(p)

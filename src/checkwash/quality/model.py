@@ -77,6 +77,7 @@ class Resolved:
     locations: dict = field(default_factory=dict)
     problems: list = field(default_factory=list)
     declarations: dict = field(default_factory=dict)
+    layers: list = field(default_factory=list)
 
     def problem(self, code, message, dimensions):
         self.problems.append((code, message, list(dimensions)))

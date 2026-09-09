@@ -17,9 +17,10 @@ def mypy(snapshot, target, side, profile):
     result, raw, path, text = resolved_sources(snapshot, target, side)
     result.declarations = declarations(raw)
     check_dynamic(raw)
-    dimensions = ["mypy." + k for k in MYPY_FLAGS] + ["mypy.error_codes"]
+    defaults = {**profile.get("mypy_defaults", {}), **MYPY_FLAGS}
+    dimensions = ["mypy." + k for k in defaults] + ["mypy.error_codes"]
     harmless = {"show_error_codes", "show_column_numbers", "pretty", "color_output", "cache_dir"}
-    allowed = set(MYPY_FLAGS) | harmless | {"strict", "enable_error_code", "disable_error_code"}
+    allowed = set(defaults) | harmless | {"strict", "enable_error_code", "disable_error_code"}
     unknown = set(raw) - allowed
     # Inline options override global options. Inventory only the declared
     # source universe; every relevant source becomes fingerprint context.
@@ -33,16 +34,25 @@ def mypy(snapshot, target, side, profile):
         result.problem("UNSUPPORTED_KEY", "Unqualified mypy context: " + ", ".join(sorted(unknown)), dimensions)
         return result
     if boolean(raw.get("strict", False)):
-        result.problem("CONTEXT_UNRESOLVED", "Full mypy strict expansion is not qualified in this preview", dimensions)
-        return result
-    for key, default in MYPY_FLAGS.items():
+        expansion = profile.get("strict_expansion")
+        if not expansion or set(expansion) - set(defaults):
+            result.problem("CONTEXT_UNRESOLVED", "Full mypy strict expansion is not qualified", dimensions)
+            return result
+        defaults.update(expansion)
+    for key, default in defaults.items():
         attach(result, "mypy." + key, boolean(raw.get(key, default)), path, side, text, key)
+    if result.values["mypy.ignore_errors"]:
+        for key in defaults:
+            if key not in {"ignore_errors", "ignore_missing_imports"}:
+                result.values["mypy." + key] = False
+        result.values["mypy.ignore_missing_imports"] = True
     disabled = set(strings(raw.get("disable_error_code", [])))
     enabled = set(strings(raw.get("enable_error_code", [])))
     if (disabled | enabled) - MYPY_CODES:
         result.problem("UNSUPPORTED_KEY", "Only qualified default mypy error codes can be compared", ["mypy.error_codes"])
     else:
-        attach(result, "mypy.error_codes", sorted((MYPY_CODES - disabled) | enabled), path, side, text, "disable_error_code")
+        codes = [] if result.values["mypy.ignore_errors"] else sorted((MYPY_CODES - disabled) | enabled)
+        attach(result, "mypy.error_codes", codes, path, side, text, "disable_error_code")
     return result
 
 
