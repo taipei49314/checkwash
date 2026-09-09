@@ -407,3 +407,71 @@ def test_worktree_untracked_higher_priority_ruff_source_is_analyzed(tmp_path, mo
     p = json.loads(text)
     assert code == 1 and strong(p)[0]["lost"] == ["F401"]
     assert any(s["path"] == ".ruff.toml" and s["side"] == "head" and s["role"] == "selected" for s in strong(p)[0]["sources"])
+
+
+@pytest.mark.parametrize("external", ["../private.toml", "/tmp/private.toml", "https://example.invalid/config", "${PRIVATE_CONFIG}"])
+def test_ruff_external_extend_is_incomplete_without_fetching(external):
+    config = '[tool.ruff]\nextend=' + json.dumps(external)
+    p, code = scan(config, config, "ruff")
+    assert code == 2 and not strong(p)
+    assert any(d["code"] in {"EXTERNAL_SOURCE", "DYNAMIC_VALUE"} for d in p["diagnostics"])
+
+
+def test_pattern_count_budget_cannot_be_treated_as_empty():
+    config = '[tool.ruff.lint]\nselect=["F401"]\nignore=' + json.dumps(["F401"] * 257)
+    p, code = scan('[tool.ruff.lint]\nselect=["F401"]', config, "ruff")
+    assert code == 2 and not strong(p)
+    assert any(d["code"] == "RESOURCE_LIMIT" for d in p["diagnostics"])
+
+
+@pytest.mark.parametrize("mode", ["120000", "160000"])
+def test_snapshot_does_not_follow_symlink_or_submodule_ancestors(mode):
+    from checkwash.quality.snapshot import Snapshot
+    from checkwash.quality.model import QualityError
+    snapshot = Snapshot.__new__(Snapshot)
+    snapshot.cache = {}
+    snapshot.modes = {"vendor": mode}
+    # No reader is provided: any attempt to follow it would fail this test.
+    with pytest.raises(QualityError) as caught:
+        snapshot.read("vendor/config.toml")
+    assert caught.value.code == "EXTERNAL_SOURCE"
+
+
+@pytest.mark.parametrize("budget", ["file", "total"])
+def test_snapshot_source_byte_budget_is_visible(budget):
+    from checkwash.quality.snapshot import Snapshot
+    from checkwash.quality.model import MAX_BYTES, MAX_TOTAL, QualityError
+    snapshot = Snapshot.__new__(Snapshot)
+    snapshot.cache, snapshot.modes = {}, {"config.toml": "100644"}
+    snapshot.bytes_read = MAX_TOTAL if budget == "total" else 0
+    class Reader:
+        def read(self, path):
+            return b"x" * (MAX_BYTES + 1 if budget == "file" else 1)
+    snapshot.reader = Reader()
+    with pytest.raises(QualityError) as caught:
+        snapshot.read("config.toml")
+    assert caught.value.code == "RESOURCE_LIMIT" and not snapshot.cache
+
+
+def test_target_count_budget_is_policy_error():
+    header, target = policy(mode="enforce").decode().split("[[targets]]")
+    raw = header + "".join("[[targets]]" + target.replace('id = "main"', f'id = "t{i}"') for i in range(33))
+    p, code = analyze(MappingSnapshot({POLICY_PATH: raw.encode()}), MappingSnapshot({}), today=TODAY)
+    assert code == 2 and p["verdict"] == "error"
+    assert p["diagnostics"][0]["code"] == "POLICY_INVALID"
+
+
+def test_ruff_extend_depth_budget_is_incomplete():
+    config = '[tool.ruff]\nextend="p0.toml"'
+    extra = {f"p{i}.toml": f'extend="p{i + 1}.toml"'.encode() for i in range(9)}
+    extra["p9.toml"] = b'[lint]\nselect=["F401"]'
+    p, code = scan(config, config, "ruff", base_extra=extra, head_extra=extra)
+    assert code == 2 and not strong(p)
+    assert any(d["code"] == "RESOURCE_LIMIT" for d in p["diagnostics"])
+
+
+@pytest.mark.parametrize("path", ["../private", "/tmp/private", "C:/private"])
+def test_target_path_cannot_escape_repository(path):
+    raw = policy().decode().replace('["src/"]', json.dumps([path])).encode()
+    p, code = analyze(MappingSnapshot({POLICY_PATH: raw}), MappingSnapshot({POLICY_PATH: raw}), today=TODAY)
+    assert code == 2 and p["verdict"] == "error"
