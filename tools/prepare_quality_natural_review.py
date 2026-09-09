@@ -13,6 +13,7 @@ import csv
 import datetime
 import difflib
 import hashlib
+import io
 import json
 import math
 import os
@@ -25,6 +26,7 @@ import time
 import tomllib
 import urllib.parse
 import urllib.request
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -131,6 +133,64 @@ def collect_history(repo, path, cutoff, initial, prereg, output):
                "omitted": omitted}
     dump(output / (repo.replace("/", "--") + ".json"), receipt)
     return selected, receipt
+
+
+def load_seed(seed_path, repair, prereg):
+    """Authenticate persistent inputs; never extract archive paths or resample."""
+    raw = seed_path.read_bytes()
+    require(len(raw) == repair["seed_bytes"] and digest(raw) == repair["seed_sha256"], "seed digest/size mismatch")
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        members = archive.infolist()
+        names = [m.filename for m in members]
+        require(len(names) == len(set(names)), "duplicate seed entry")
+        require(sum(m.file_size for m in members) <= repair["maximum_seed_expanded_bytes"], "seed expansion limit")
+        initial_raw = archive.read("candidate-manifest.json")
+        protocol_bytes = archive.read("protocol.json")
+        protocol, groups = validate_initial(initial_raw, protocol_bytes, prereg)
+        history_names = ["history/" + e["repo"].replace("/", "--") + ".json" for e in protocol["repository_candidates"]]
+        require(set(names) == {"candidate-manifest.json", "protocol.json", "prepared-manifest.json", *history_names}, "unexpected seed entries")
+        previous_raw = archive.read("prepared-manifest.json")
+        require(digest(previous_raw) == repair["source_prepared_manifest_sha256"], "previous manifest digest mismatch")
+        previous = json.loads(previous_raw)
+        histories = [json.loads(archive.read(name)) for name in history_names]
+    require(previous["original_manifest_sha256"] == digest(initial_raw) == repair["original_manifest_sha256"], "seed original digest mismatch")
+    require(previous["engine_commit"] == prereg["engine_commit"] and previous["engine_tree"] == prereg["engine_tree"], "frozen engine changed")
+    summary = previous["summary"]
+    require(summary["acceptance"] == summary["predictions"] == "NOT_RUN" and summary["human_reviewed_count"] == 0, "previous review state changed")
+    candidates = previous["candidates"]
+    require(len(candidates) == repair["candidate_count"] == summary["candidate_count"], "frozen cohort size mismatch")
+    require(len({r["id"] for r in candidates}) == len(candidates), "duplicate frozen candidate")
+    ordered = []
+    for entry, receipt in zip(protocol["repository_candidates"], histories):
+        repo, path = entry["repo"], entry["path"]
+        desired = len(groups[repo]) + prereg["additional_candidates_per_repository"]
+        require((receipt["repo"], receipt["path"], receipt["cutoff"], receipt["desired_count"]) == (repo, path, protocol["cutoff_utc"], desired), "history metadata mismatch")
+        selected, omitted = select_history(receipt["pages"], groups[repo], desired)
+        require(receipt["omitted"] == omitted and receipt["selected_count"] == len(selected), "history receipt mismatch")
+        rows = [r for r in candidates if r["repo"] == repo]
+        require([{k: r[k] for k in ("head", "base")} for r in rows] == selected, "frozen cohort order/revisions mismatch")
+        for order, row in enumerate(rows):
+            require(row["id"] == repo.replace("/", "--") + "-" + row["head"][:12] and row["source_order"] == order and row["path"] == path, "frozen candidate identity mismatch")
+            require(row["label"] == "UNREVIEWED" and row["intake"] == ("original" if order < len(groups[repo]) else "replenishment-1"), "frozen candidate state changed")
+            for side in ("base", "head"):
+                require(row["snapshots"][side]["commit"] == row[side], "frozen snapshot changed")
+                if order < len(groups[repo]):
+                    source = row["snapshots"][side]["sources"][path]
+                    original = groups[repo][order]["sources"][side]
+                    require(all(source[k] == original[k] for k in ("sha256", "git_blob")), "original source binding changed")
+        ordered.extend(rows)
+    require(ordered == candidates, "frozen repository order mismatch")
+    return initial_raw, protocol_bytes, protocol, groups, previous, histories
+
+
+def preserve_snapshot(snapshot, previous):
+    """Supplement sources without silently losing any previously captured bytes."""
+    require(all(snapshot[k] == previous[k] for k in ("commit", "inventory_sha256", "tracked_entries")), "frozen snapshot inventory mismatch")
+    for path, source in previous["sources"].items():
+        current = snapshot["sources"].get(path, {})
+        require(all(current.get(k) == source[k] for k in ("git_blob", "git_mode")), "previous source missing/changed: " + path)
+        if source["state"] == "present":
+            require(current.get("state") == "present" and current.get("sha256") == source["sha256"], "previous source bytes missing/changed: " + path)
 
 
 def git(repo_path, *args, timeout=120):
@@ -495,7 +555,7 @@ def write_review(output, candidates, summary, manifest_hash):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--initial", type=Path, required=True)
+    parser.add_argument("--seed", type=Path, default=ROOT / "docs/quality-evaluation/seeds/natural-540-v1.zip")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True)
     args = parser.parse_args()
@@ -504,9 +564,9 @@ def main():
     start = time.monotonic()
     prereg_bytes = (ROOT / "docs/quality-evaluation/natural-preparation-v1.json").read_bytes().replace(b"\r\n", b"\n")
     prereg = json.loads(prereg_bytes)
-    initial_raw = (args.initial / "candidate-manifest.json").read_bytes()
-    protocol_bytes = (args.initial / "protocol.json").read_bytes()
-    protocol, groups = validate_initial(initial_raw, protocol_bytes, prereg)
+    repair_bytes = (ROOT / "docs/quality-evaluation/natural-context-repair-v1.json").read_bytes().replace(b"\r\n", b"\n")
+    repair = json.loads(repair_bytes)
+    initial_raw, protocol_bytes, protocol, groups, previous, frozen_histories = load_seed(args.seed, repair, prereg)
     args.output.mkdir(parents=True)
     for name in ("history", "objects"):
         (args.output / name).mkdir()
@@ -514,11 +574,14 @@ def main():
     (args.output / "original-manifest.json").write_bytes(initial_raw)
     (args.output / "protocol.json").write_bytes(protocol_bytes)
     (args.output / "preregistration.json").write_bytes(prereg_bytes)
+    (args.output / "context-repair-preregistration.json").write_bytes(repair_bytes)
     candidates, histories, errors = [], [], []
     for entry in protocol["repository_candidates"]:
         repo, path = entry["repo"], entry["path"]
         try:
-            rows, receipt = collect_history(repo, path, protocol["cutoff_utc"], groups[repo], prereg, args.output / "history")
+            rows = [r for r in previous["candidates"] if r["repo"] == repo]
+            receipt = next(h for h in frozen_histories if h["repo"] == repo)
+            dump(args.output / "history" / (repo.replace("/", "--") + ".json"), receipt)
             histories.append(receipt)
             repo_path = args.cache / (repo.replace("/", "--") + ".git")
             require(not repo_path.exists(), "bare cache must be new")
@@ -529,17 +592,13 @@ def main():
             for order, row in enumerate(rows):
                 for sha in (row["base"], row["head"]):
                     if sha not in snapshots:
-                        snapshots[sha] = read_snapshot(repo_path, sha, prereg["context_limits"], blob_cache, args.output / "objects")
+                        snapshots[sha] = read_snapshot(repo_path, sha, repair["context_limits"], blob_cache, args.output / "objects")
                 pair = {side: snapshots[row[side]] for side in ("base", "head")}
-                if order < len(groups[repo]):
-                    original = groups[repo][order]
-                    for side in pair:
-                        source = pair[side]["sources"].get(path, {})
-                        require(source.get("sha256") == original["sources"][side]["sha256"] and source.get("git_blob") == original["sources"][side]["git_blob"], "frozen source mismatch")
+                for side in pair:
+                    preserve_snapshot(pair[side], row["snapshots"][side])
                 before, after = (source_bytes(pair[s], path, args.output) for s in ("base", "head"))
                 triage = table_differences(before, after) if before is not None and after is not None else {"state": "unknown", "reason": "source-absent-or-unavailable", "tools": {}}
-                candidates.append({"id": repo.replace("/", "--") + "-" + row["head"][:12], "repo": repo,
-                    "path": path, "source_order": order, **row, "intake": "original" if order < len(groups[repo]) else "replenishment-1",
+                candidates.append({**{k: row[k] for k in ("id", "repo", "path", "source_order", "base", "head", "intake")},
                     "review_url": "https://github.com/" + repo + "/commit/" + row["head"],
                     "label": "UNREVIEWED", "snapshots": pair, "triage": triage,
                     "version_evidence": {side: version_evidence(snapshot["sources"], args.output) for side, snapshot in pair.items()}})
@@ -550,8 +609,11 @@ def main():
             errors.append({"repo": repo, "error_type": type(error).__name__, "message": str(error)[:300]})
             print(repo + ": INCOMPLETE " + type(error).__name__, flush=True)
     summary = summarize(candidates, histories, errors)
+    summary["previous_source_binding_verified_candidates"] = len(candidates)
     manifest_hash = dump(args.output / "prepared-manifest.json", {"schema_version": 1,
         "original_manifest_sha256": digest(initial_raw), "preregistration_sha256": digest(prereg_bytes),
+        "context_repair_preregistration_sha256": digest(repair_bytes), "seed_sha256": repair["seed_sha256"],
+        "previous_prepared_manifest_sha256": repair["source_prepared_manifest_sha256"],
         "engine_commit": prereg["engine_commit"], "engine_tree": prereg["engine_tree"],
         "collector_commit": os.environ.get("GITHUB_SHA"), "run_id": os.environ.get("GITHUB_RUN_ID"),
         "candidates": candidates, "summary": summary})

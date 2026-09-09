@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+import zipfile
 
 import prepare_quality_natural_review as subject
 
@@ -191,6 +192,84 @@ class NaturalPreparationTests(unittest.TestCase):
     def test_unconverted_nonfinite_json_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory, self.assertRaises(ValueError):
             subject.dump(Path(directory) / "manifest.json", {"unconverted": float("nan")})
+
+
+class DurableSeedTests(unittest.TestCase):
+    def make_seed(self, directory, mutate=None, extra=None):
+        data = b'[tool.mypy]\nstrict=true\n'
+        source = {"state": "present", "git_blob": hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest(),
+                  "sha256": subject.digest(data), "git_mode": "100644", "content_base64": base64.b64encode(data).decode()}
+        protocol = {"repository_candidates": [{"repo": "example/demo", "path": "pyproject.toml"}], "initial_candidates_per_repository": 1, "cutoff_utc": "2026-01-01T00:00:00Z"}
+        encoded = lambda value: json.dumps(value).encode()
+        protocol_raw = encoded(protocol)
+        row = {"id": "example--demo-" + "b"*12, "repo": "example/demo", "path": "pyproject.toml", "source_order": 0,
+               "base": "a"*40, "head": "b"*40, "intake": "original", "label": "UNREVIEWED"}
+        original = {"protocol_sha256": subject.digest(protocol_raw), "reviewed_count": 0, "evaluation": "NOT_RUN",
+                    "candidates": [{**row, "sources": {s: source for s in ("base", "head")}}]}
+        original_raw = encoded(original)
+        snapshots = {s: {"commit": row[s], "inventory_sha256": "c"*64, "tracked_entries": 1,
+                         "sources": {"pyproject.toml": source}} for s in ("base", "head")}
+        previous = {"original_manifest_sha256": subject.digest(original_raw), "engine_commit": "d"*40, "engine_tree": "e"*40,
+                    "candidates": [{**row, "snapshots": snapshots}],
+                    "summary": {"acceptance": "NOT_RUN", "predictions": "NOT_RUN", "human_reviewed_count": 0, "candidate_count": 1}}
+        history = {"repo": row["repo"], "path": row["path"], "cutoff": protocol["cutoff_utc"], "desired_count": 1, "selected_count": 1,
+                   "pages": [[{"sha": row["head"], "parents": [{"sha": row["base"]}]}]], "omitted": []}
+        if mutate:
+            mutate(previous, history)
+        previous_raw = encoded(previous)
+        entries = {"candidate-manifest.json": original_raw, "protocol.json": protocol_raw, "prepared-manifest.json": previous_raw,
+                   "history/example--demo.json": encoded(history)}
+        if extra:
+            entries.update(extra)
+        path = Path(directory) / "seed.zip"
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, raw in entries.items():
+                archive.writestr(name, raw)
+        repair = {"seed_bytes": path.stat().st_size, "seed_sha256": subject.digest(path.read_bytes()), "maximum_seed_expanded_bytes": 100000,
+                  "source_prepared_manifest_sha256": subject.digest(previous_raw), "original_manifest_sha256": subject.digest(original_raw), "candidate_count": 1}
+        prereg = {"original_manifest_sha256": subject.digest(original_raw), "additional_candidates_per_repository": 0,
+                  "engine_commit": previous["engine_commit"], "engine_tree": previous["engine_tree"]}
+        return path, repair, prereg
+
+    def test_seed_replays_without_artifact_or_history_network(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(subject, "api", side_effect=AssertionError("network forbidden")):
+            result = subject.load_seed(*self.make_seed(directory))
+            self.assertEqual(len(result[4]["candidates"]), 1)
+            self.assertEqual(result[5][0]["selected_count"], 1)
+
+    def test_seed_authentication_and_expansion_bound(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, repair, prereg = self.make_seed(directory)
+            with self.assertRaisesRegex(ValueError, "expansion limit"):
+                subject.load_seed(path, {**repair, "maximum_seed_expanded_bytes": 1}, prereg)
+            path.write_bytes(path.read_bytes() + b"changed")
+            with self.assertRaisesRegex(ValueError, "digest/size"):
+                subject.load_seed(path, repair, prereg)
+
+    def test_unexpected_archive_paths_are_never_extracted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "unexpected seed entries"):
+                subject.load_seed(*self.make_seed(directory, extra={"../escape": b"untrusted"}))
+            self.assertFalse((Path(directory).parent / "escape").exists())
+
+    def test_history_and_candidate_identity_remain_frozen(self):
+        for change, reason in ((lambda p, h: h["pages"][0][0].update(sha="f"*40), "prefix"),
+                               (lambda p, h: p["candidates"][0].update(source_order=1), "identity"),
+                               (lambda p, h: p["candidates"][0].update(label="unsupported"), "state changed")):
+            with self.subTest(reason=reason), tempfile.TemporaryDirectory() as directory, self.assertRaisesRegex(ValueError, reason):
+                subject.load_seed(*self.make_seed(directory, mutate=change))
+
+    def test_previous_source_bytes_cannot_be_lost_to_new_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            previous = subject.load_seed(*self.make_seed(directory))[4]["candidates"][0]["snapshots"]["base"]
+            subject.preserve_snapshot(previous, previous)
+            changed = json.loads(json.dumps(previous))
+            changed["sources"]["pyproject.toml"].update(state="unknown", reason="snapshot-file-limit")
+            with self.assertRaisesRegex(ValueError, "bytes missing/changed"):
+                subject.preserve_snapshot(changed, previous)
+            changed["sources"] = {}
+            with self.assertRaisesRegex(ValueError, "source missing/changed"):
+                subject.preserve_snapshot(changed, previous)
 
 
 if __name__ == "__main__":

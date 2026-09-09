@@ -6,10 +6,11 @@ on:
       - tools/prepare_quality_natural_review.py
       - tools/test_quality_natural_preparation.py
       - docs/quality-evaluation/natural-preparation-v1.json
+      - docs/quality-evaluation/natural-context-repair-v1.json
+      - docs/quality-evaluation/seeds/**
       - .github/workflows/quality-natural-review.yml
 permissions:
   contents: read
-  actions: read
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -23,14 +24,8 @@ jobs:
           python-version: '3.12'
       - name: verify preparation on synthetic source packets
         run: python tools/test_quality_natural_preparation.py
-      - name: retrieve the frozen original intake
-        run: gh run download 34320615128 --repo taipei49314/checkwash --name quality-candidates --dir original-intake
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: collect source evidence without predictions
-        run: python tools/prepare_quality_natural_review.py --initial original-intake --output natural-review --cache bare-sources
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: replay the authenticated durable seed without predictions
+        run: python tools/prepare_quality_natural_review.py --output natural-review --cache bare-sources
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
