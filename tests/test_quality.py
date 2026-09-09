@@ -318,3 +318,92 @@ def test_real_worktree_cli_preserves_uncommitted_quality_change(tmp_path, monkey
     report = json.loads(text)
     assert code == 1 and strong(report)[0]["before"]["data"] == "85"
     assert config.read_bytes().endswith(b"fail_under=50\n")
+
+
+def test_coverage_auto_config_migration_preserves_threshold():
+    base = {POLICY_PATH: policy(config="auto"), ".coveragerc": b"[report]\nfail_under=85"}
+    head = {POLICY_PATH: base[POLICY_PATH], "pyproject.toml": b"[tool.coverage.report]\nfail_under=85"}
+    p, code = analyze(MappingSnapshot(base), MappingSnapshot(head), today=TODAY, profiles=profile("coverage"))
+    assert code == 0 and p["analysis_status"] == "complete" and not strong(p)
+
+
+def test_unknown_scope_preserves_independent_known_threshold_loss():
+    p, code = scan('[tool.coverage.report]\nfail_under=85', '[tool.coverage.report]\nfail_under=50\nomit=["**/private/*"]')
+    assert code == 2 and p["analysis_status"] == "partial"
+    assert [f["rule"] for f in strong(p)] == ["QW_THRESHOLD_LOWERED"]
+
+
+def test_error_in_one_target_preserves_other_target_finding():
+    declaration = policy("coverage", "enforce", "coverage.ini").decode()
+    declaration += '''[[targets]]
+id="lint"
+tool="ruff"
+root="."
+config="ruff.toml"
+profile="ruff-fixture"
+paths=["src/"]
+'''
+    base = {POLICY_PATH: declaration.encode(), "coverage.ini": b"[report]\nfail_under=85", "ruff.toml": b'[lint]\nselect=["F401"]'}
+    head = {**base, "coverage.ini": b"[broken", "ruff.toml": b'[lint]\nselect=[]'}
+    p, code = analyze(MappingSnapshot(base), MappingSnapshot(head), today=TODAY, profiles={**profile("ruff"), **profile("coverage")})
+    assert code == 2 and p["verdict"] == "error"
+    assert strong(p)[0]["target_id"] == "lint"
+
+
+def test_profile_digest_change_invalidates_base_exemption():
+    p, _ = scan('[tool.coverage.report]\nfail_under=85', '[tool.coverage.report]\nfail_under=50')
+    base = {POLICY_PATH: policy(mode="enforce"), ALLOW_PATH: allow_entry(strong(p)[0]["fingerprint"]),
+            "pyproject.toml": b"[tool.coverage.report]\nfail_under=85", "src/code.py": b"x = 1\n"}
+    head = {**base, "pyproject.toml": b"[tool.coverage.report]\nfail_under=50"}
+    changed = profile("coverage")
+    changed["coverage-fixture"]["digest"] = "0" * 64
+    p, code = analyze(MappingSnapshot(base), MappingSnapshot(head), today=TODAY, profiles=changed)
+    assert code == 1 and not strong(p)[0]["allowlisted"]
+
+
+def test_changed_snapshot_never_passes():
+    from checkwash.quality.model import QualityError
+    class Changed(MappingSnapshot):
+        def verify(self):
+            raise QualityError("SNAPSHOT_CHANGED", "Fixture changed during read", kind="error")
+    data = {POLICY_PATH: policy(), "pyproject.toml": b"[tool.coverage.report]"}
+    p, code = analyze(MappingSnapshot(data), Changed(data), today=TODAY, profiles=profile("coverage"))
+    assert code == 2 and p["verdict"] == "error"
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf"])
+def test_nonfinite_threshold_is_error(value):
+    p, code = scan('[tool.coverage.report]\nfail_under=85', '[tool.coverage.report]\nfail_under=' + value)
+    assert code == 2 and p["verdict"] == "error" and not strong(p)
+
+
+def test_terminal_escapes_repository_control_characters():
+    from checkwash.quality.report import terminal
+    p, _ = scan('[tool.ruff.lint]', '[tool.ruff.lint]\n"evil\\u001b[31m\\u202e"=true', "ruff")
+    text = terminal(p)
+    assert "\x1b" not in text and "\u202e" not in text
+    assert "\\u001b" in text and "\\u202e" in text
+
+
+def test_worktree_untracked_higher_priority_ruff_source_is_analyzed(tmp_path, monkeypatch):
+    import subprocess
+    from argparse import Namespace
+    from checkwash.quality import cli, engine
+    monkeypatch.setattr(engine, "load_profile", lambda name, tool: profile(tool)[name])
+    def git(*args):
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+    git("init")
+    git("config", "user.name", "quality-fixture")
+    git("config", "user.email", "quality@example.invalid")
+    (tmp_path / ".checkwash").mkdir()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/code.py").write_bytes(b"import os\n")
+    (tmp_path / POLICY_PATH).write_bytes(policy("ruff", "enforce", "auto"))
+    (tmp_path / "pyproject.toml").write_bytes(b'[tool.ruff.lint]\nselect=["F401"]')
+    git("add", ".")
+    git("commit", "-m", "base")
+    (tmp_path / ".ruff.toml").write_bytes(b'[lint]\nselect=[]')
+    text, code = cli.run(Namespace(range=None, rule=None, repo=str(tmp_path), format="json"), TODAY)
+    p = json.loads(text)
+    assert code == 1 and strong(p)[0]["lost"] == ["F401"]
+    assert any(s["path"] == ".ruff.toml" and s["side"] == "head" and s["role"] == "selected" for s in strong(p)[0]["sources"])

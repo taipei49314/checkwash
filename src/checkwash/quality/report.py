@@ -1,5 +1,6 @@
 """Versioned quality formats, separate from legacy findings schema 2."""
 import json
+import unicodedata
 
 
 def json_report(payload):
@@ -24,7 +25,11 @@ def terminal(payload):
     for diagnostic in payload["diagnostics"]:
         lines.append(f"{diagnostic['kind'].upper()} {diagnostic['code']}: {diagnostic['message']}")
     lines.append("Evidence concerns declared configuration only. CI execution was not verified.")
-    return "\n".join(lines) + "\n"
+    # Paths and diagnostic keys are repository input. Preserve visible text
+    # while preventing control/bidi characters from impersonating new output.
+    def visible(line):
+        return "".join(("\\u%04x" % ord(c)) if unicodedata.category(c) in {"Cc", "Cf"} else c for c in line)
+    return "\n".join(visible(line) for line in lines) + "\n"
 
 
 def sarif(payload):
