@@ -12,7 +12,13 @@ against trusted synthetic fixtures on existing hosted CI.
 
 ## Use
 
+For draft generation, setup diagnostics and a separate PR status, follow the
+[adoption guide](quality-adoption.md).
+
 ```text
+checkwash quality init
+checkwash quality doctor
+checkwash quality profiles --details
 checkwash quality BASE...HEAD
 checkwash quality BASE..HEAD --format json
 checkwash quality --format sarif

@@ -19,7 +19,7 @@ jobs:
           pip install --report quality-evidence/install.json -e '.[dev]' coverage==7.16.0 ruff==0.16.6 mypy==2.3.1 jsonschema==4.26.0
       - run: python tools/qualify_quality.py --output quality-evidence
       - run: python tools/validate_quality_reports.py --profiles quality-evidence
-      - run: pytest tests/test_quality.py tests/test_quality_profiles.py
+      - run: pytest tests/test_quality.py tests/test_quality_profiles.py tests/test_quality_setup.py tests/test_quality_action.py --junitxml=quality-evidence/tests.xml
       - run: python tools/qualify_quality_package.py --output quality-evidence
       - run: python tools/compare_quality_legacy.py --output quality-evidence
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -27,4 +27,43 @@ jobs:
         with:
           name: quality-qualification
           path: quality-evidence
+          if-no-files-found: error
+  action-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - id: fixture
+        run: python -I tools/quality_action_smoke.py prepare
+      - id: quality
+        uses: ./action/quality
+        continue-on-error: true
+        with:
+          repository: .quality-action-fixture
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+      - name: Verify expected blocking result and preserved report
+        env:
+          SMOKE_OUTCOME: ${{ steps.quality.outcome }}
+          SMOKE_EXIT: ${{ steps.quality.outputs.exit_code }}
+          SMOKE_ANALYSIS_EXIT: ${{ steps.quality.outputs.analysis_exit_code }}
+          SMOKE_REPORT: ${{ steps.quality.outputs.report_path }}
+          SMOKE_RECEIPT: ${{ steps.quality.outputs.receipt_path }}
+        run: python -I tools/quality_action_smoke.py verify
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: quality-action-${{ matrix.os }}
+          path: |
+            ${{ steps.quality.outputs.report_path }}
+            ${{ steps.quality.outputs.receipt_path }}
           if-no-files-found: error

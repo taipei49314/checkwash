@@ -388,10 +388,14 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--repo", default=".")
 
     quality = sub.add_parser("quality", help="review bounded quality configuration weakening")
-    quality.add_argument("range", nargs="?", help="BASE..HEAD, BASE...HEAD, profiles or explain")
+    quality.add_argument("range", nargs="?", help="BASE..HEAD, BASE...HEAD, init, doctor, profiles or explain")
     quality.add_argument("rule", nargs="?", help="rule ID for quality explain")
     quality.add_argument("--format", choices=["term", "json", "sarif"], default="term")
     quality.add_argument("--repo", default=".")
+    quality.add_argument("--root", help="init only: repository-relative target root")
+    quality.add_argument("--paths", action="append", help="init only: literal source file or directory ending /; repeatable")
+    quality.add_argument("--tool", action="append", choices=["coverage", "ruff", "mypy"], help="init only: requested tool; repeatable")
+    quality.add_argument("--details", action="store_true", help="profiles only: include supported settings and qualification receipts")
 
     sweep_p = sub.add_parser(
         "sweep", help="measure finding rates over a repo's commit history"
