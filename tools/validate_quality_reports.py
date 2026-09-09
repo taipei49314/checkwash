@@ -21,6 +21,8 @@ def main():
     for tool in ("coverage", "ruff", "mypy"):
         row = json.loads((args.profiles / (tool + ".json")).read_text(encoding="utf-8"))
         profiles[row["id"]] = row
+    from checkwash.quality.profiles import available
+    assert profiles == available(), "Regenerated native models differ from shipped profiles; review and re-qualify the model change"
     settings = {
         "coverage": ('[tool.coverage.report]\nfail_under=85', '[tool.coverage.report]\nfail_under=50'),
         "ruff": ('[tool.ruff.lint]\nselect=["F401"]', '[tool.ruff.lint]\nselect=[]'),

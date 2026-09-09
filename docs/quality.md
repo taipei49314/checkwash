@@ -38,8 +38,8 @@ paths = ["src/"]
 version_files = ["uv.lock"]
 ```
 
-Profile IDs become available only when their generated package-owned models
-are included with this branch. `quality profiles` is the authoritative inventory.
+This branch packages `coverage-7.16.0-q1`, `ruff-0.16.6-q1` and `mypy-2.3.1-q1`.
+`quality profiles` is the authoritative inventory, including content digests.
 Unknown profiles are incomplete, never an implicit current-version model.
 
 Report mode leaves findings visible and returns 0 for observed weakening or
@@ -53,18 +53,23 @@ and verdict; consumers must not interpret a report exit 0 as enforcement.
 
 - Coverage: integral `report.fail_under` comparisons under unchanged, known
   precision/measurement context; limited literal path and directory/** scope.
-- Ruff: qualified rule catalog selection/ignore comparison; bounded root
-  configuration scope. Preview settings, unqualified selection context,
+- Ruff: qualified rule catalog, namespace-aware selection/ignore comparison,
+  incompatible-rule resolution, bounded extend chains and nearest-config
+  resolution per surviving source file. Preview settings, unqualified context,
   per-file overrides and gitignore-dependent scope remain incomplete.
-- Mypy: explicitly listed global check flags and a small default error-code
-  set. General strict expansion, inline directives, overrides and regex scope
-  remain incomplete.
+- Mypy: global flags, the complete 13-flag strict expansion for the pinned
+  version, explicit overrides of those flags, and nine default error codes.
+  Inline directives, module overrides, other error codes and regex scope remain
+  incomplete. Mypy has no qualified scope adapter in this preview.
 - Configuration source inventory includes higher-priority candidate absence,
   selected source contents and declared version-source changes.
 
-At the initial implementation checkpoint, Ruff extend merging and nested auto
-configuration are detected but remain incomplete. The approved design includes
-their later qualification; this checkpoint does not claim that work complete.
+Deleting an explicitly selected configuration produces incomplete analysis:
+the tool may fail to start, so defaults cannot be assumed. Auto discovery can
+use a lower-priority source or qualified defaults; source candidates and their
+absence are included in evidence. Inherited exclusions anchored in different
+directories remain unsupported. Only literal relative file paths and literal
+directory/** exclusions are qualified for coverage/Ruff scope comparisons.
 The strict snapshot reader retains its existing 1,000,000-byte per-file limit,
 slightly below the draft's 1 MiB proposal. Limits and unsupported settings are
 visible and cannot be exempted.
@@ -94,6 +99,17 @@ Every qualification result must identify exact source and tool versions. Initial
 fixtures are engineering evidence, not natural-repository performance or a
 held-out result. New natural-corpus acceptance and maintainer label review are
 separate unfinished requirements until concrete receipts exist.
+
+The native qualification has 45 comparisons, including full Ruff selected-rule
+sets, precedence across configuration formats, inherited and nested Ruff
+configuration, coverage scope and mypy strict expansion. Packaged models include
+the qualification fixture and result hashes. Provenance and the remaining
+acceptance conditions are in [the qualification record](quality-qualification/README.md).
+
+For this unreleased candidate, install the exact reviewed branch SHA with
+`pip install git+https://github.com/taipei49314/checkwash.git@<reviewed-sha>`.
+The v0.3.3 tag does not include `quality`. This example intentionally requires a
+reviewed SHA; it is not a release or a recommendation to trust a moving branch.
 
 Keep quality in its own required CI status when enabling enforcement. Use a
 trusted pinned tool and trusted PR refs; do not swallow exit 2 or use

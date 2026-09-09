@@ -2,14 +2,17 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from importlib import resources
 
 from .model import QualityError, digest
 
 
 def available():
     result = {}
-    for path in sorted(Path(__file__).with_name("profile_data").glob("*.json")):
+    directory = resources.files("checkwash.quality").joinpath("profile_data")
+    if not directory.is_dir():
+        return result
+    for path in sorted((p for p in directory.iterdir() if p.name.endswith(".json")), key=lambda p: p.name):
         row = json.loads(path.read_text(encoding="utf-8"))
         expected = row.pop("digest")
         if expected != digest(row):
