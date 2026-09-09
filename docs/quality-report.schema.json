@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkwash quality report proposal version 1",
+  "description": "Proposed report contract, not a schema emitted by released Checkwash. Cross-field evidence, verdict and fingerprint semantics are specified in the accompanying specification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["checkwash_quality_version", "run", "analysis_status", "verdict", "targets", "findings", "diagnostics", "summary"],
+  "properties": {
+    "checkwash_quality_version": {"const": 1},
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base", "head", "checkwash_version", "mode", "discovery"],
+      "properties": {
+        "base": {"type": "string", "minLength": 1},
+        "head": {"type": "string", "minLength": 1},
+        "checkwash_version": {"type": "string", "minLength": 1},
+        "mode": {"enum": ["report", "enforce"]},
+        "discovery": {"type": "boolean"}
+      }
+    },
+    "analysis_status": {"$ref": "#/$defs/status"},
+    "verdict": {"enum": ["no_blocking_finding", "reported", "incomplete", "block", "error"]},
+    "targets": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/target"}},
+    "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "diagnostics": {"type": "array", "items": {"$ref": "#/$defs/diagnostic"}},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocking_findings", "incomplete_targets", "allowlisted_findings", "critical", "high", "warn", "info"],
+      "properties": {
+        "blocking_findings": {"$ref": "#/$defs/count"},
+        "incomplete_targets": {"$ref": "#/$defs/count"},
+        "allowlisted_findings": {"$ref": "#/$defs/count"},
+        "critical": {"$ref": "#/$defs/count"},
+        "high": {"$ref": "#/$defs/count"},
+        "warn": {"$ref": "#/$defs/count"},
+        "info": {"$ref": "#/$defs/count"}
+      }
+    }
+  },
+  "$defs": {
+    "count": {"type": "integer", "minimum": 0},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "targetId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
+    "status": {"enum": ["complete", "partial", "unsupported", "error"]},
+    "rule": {"enum": ["QW_THRESHOLD_LOWERED", "QW_RULE_DISABLED", "QW_SCOPE_NARROWED", "QW_POLICY_CHANGED", "QW_ANALYSIS_INCOMPLETE"]},
+    "path": {"type": "string", "minLength": 1, "description": "Repository-relative slash path. Traversal, absolute paths, backslashes and NUL are rejected by semantic validation."},
+    "strings": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": {"enum": ["known", "absent", "unknown"]},
+        "data": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "boolean"},
+            {"$ref": "#/$defs/strings"}
+          ],
+          "description": "Numbers use canonical decimal strings; rule and path sets use sorted unique arrays. Known compound dimensions must be split into named atomic dimensions."
+        }
+      },
+      "allOf": [
+        {"if": {"properties": {"state": {"const": "known"}}}, "then": {"required": ["data"]}, "else": {"not": {"required": ["data"]}}}
+      ]
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["side", "path", "start_line", "start_column", "end_line", "end_column"],
+      "properties": {
+        "side": {"enum": ["base", "head"]},
+        "path": {"$ref": "#/$defs/path"},
+        "start_line": {"type": "integer", "minimum": 1},
+        "start_column": {"type": "integer", "minimum": 1},
+        "end_line": {"type": "integer", "minimum": 1},
+        "end_column": {"type": "integer", "minimum": 1}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["side", "path", "state", "role", "selection_reason"],
+      "properties": {
+        "side": {"enum": ["base", "head"]},
+        "path": {"$ref": "#/$defs/path"},
+        "state": {"enum": ["present", "absent", "unreadable"]},
+        "digest": {"$ref": "#/$defs/digest"},
+        "role": {"enum": ["selected", "inherited", "shadowed", "candidate", "version", "policy", "context"]},
+        "selection_reason": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {"if": {"properties": {"state": {"const": "present"}}}, "then": {"required": ["digest"]}, "else": {"not": {"required": ["digest"]}}}
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tool", "profile", "activation_evidence", "status", "checked_dimensions", "unsupported_dimensions", "sources"],
+      "properties": {
+        "id": {"$ref": "#/$defs/targetId"},
+        "tool": {"enum": ["coverage", "ruff", "mypy"]},
+        "profile": {"type": "string", "minLength": 1},
+        "profile_digest": {"$ref": "#/$defs/digest"},
+        "activation_evidence": {"const": "declared_only"},
+        "status": {"$ref": "#/$defs/status"},
+        "checked_dimensions": {"$ref": "#/$defs/strings"},
+        "unsupported_dimensions": {"$ref": "#/$defs/strings"},
+        "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+        "discovery_digest": {"$ref": "#/$defs/digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "complete"}}}, "then": {"required": ["profile_digest", "discovery_digest"]}}
+      ]
+    },
+    "witnesses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "paths", "set_digest"],
+      "properties": {
+        "total": {"$ref": "#/$defs/count"},
+        "paths": {"type": "array", "maxItems": 20, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+        "set_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "severity", "target_id", "evidence_level", "dimension", "event_kind", "message", "before", "after", "allowlisted", "locations", "sources", "lost", "gained", "remediation"],
+      "properties": {
+        "rule": {"$ref": "#/$defs/rule"},
+        "severity": {"enum": ["info", "warn", "high", "critical"]},
+        "target_id": {"oneOf": [{"$ref": "#/$defs/targetId"}, {"type": "null"}]},
+        "evidence_level": {"enum": ["declaration", "resolved_config"]},
+        "dimension": {"type": "string", "minLength": 1},
+        "event_kind": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1},
+        "before": {"$ref": "#/$defs/value"},
+        "after": {"$ref": "#/$defs/value"},
+        "allowlisted": {"type": "boolean"},
+        "fingerprint": {"type": "string", "pattern": "^QW_[A-Z_]+/[a-z0-9][a-z0-9_-]{0,63}/q1:[0-9a-f]{64}$"},
+        "profile_digest": {"$ref": "#/$defs/digest"},
+        "discovery_digest": {"$ref": "#/$defs/digest"},
+        "locations": {"type": "array", "items": {"$ref": "#/$defs/location"}},
+        "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+        "lost": {"$ref": "#/$defs/strings"},
+        "gained": {"$ref": "#/$defs/strings"},
+        "witnesses": {"$ref": "#/$defs/witnesses"},
+        "remediation": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"rule": {"enum": ["QW_THRESHOLD_LOWERED", "QW_RULE_DISABLED", "QW_SCOPE_NARROWED"]}}},
+          "then": {
+            "required": ["fingerprint", "profile_digest", "discovery_digest"],
+            "properties": {"severity": {"const": "high"}, "evidence_level": {"const": "resolved_config"}, "target_id": {"$ref": "#/$defs/targetId"}, "locations": {"minItems": 1}, "sources": {"minItems": 1}}
+          }
+        },
+        {
+          "if": {"properties": {"rule": {"const": "QW_SCOPE_NARROWED"}}},
+          "then": {"required": ["witnesses"], "properties": {"witnesses": {"properties": {"total": {"minimum": 1}, "paths": {"minItems": 1}}}}}
+        },
+        {
+          "if": {"properties": {"rule": {"const": "QW_ANALYSIS_INCOMPLETE"}}},
+          "then": {"properties": {"severity": {"const": "warn"}, "allowlisted": {"const": false}}, "not": {"required": ["fingerprint"]}}
+        },
+        {
+          "if": {"properties": {"rule": {"const": "QW_POLICY_CHANGED"}}},
+          "then": {"properties": {"severity": {"enum": ["warn", "critical"]}, "allowlisted": {"const": false}}, "not": {"required": ["fingerprint"]}}
+        },
+        {
+          "if": {"properties": {"allowlisted": {"const": true}}},
+          "then": {"required": ["fingerprint"]}
+        }
+      ]
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "kind", "target_id", "dimensions", "message", "locations"],
+      "properties": {
+        "code": {"enum": ["UNKNOWN_PROFILE", "TOOL_VERSION_UNRESOLVED", "UNSUPPORTED_KEY", "UNSUPPORTED_PATTERN", "DYNAMIC_VALUE", "EXTERNAL_SOURCE", "INHERITANCE_CYCLE", "DISCOVERY_INCOMPLETE", "CONTEXT_UNRESOLVED", "RESOURCE_LIMIT", "NO_BASE_TARGETS", "POLICY_INVALID", "SOURCE_INVALID", "SOURCE_READ_FAILED", "SNAPSHOT_CHANGED", "INTERNAL_ERROR"]},
+        "kind": {"enum": ["incomplete", "error"]},
+        "target_id": {"oneOf": [{"$ref": "#/$defs/targetId"}, {"type": "null"}]},
+        "dimensions": {"$ref": "#/$defs/strings"},
+        "message": {"type": "string", "minLength": 1},
+        "locations": {"type": "array", "items": {"$ref": "#/$defs/location"}}
+      }
+    }
+  }
+}
