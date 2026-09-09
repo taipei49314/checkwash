@@ -9,6 +9,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -167,7 +168,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     rows = profiles(args.output)
-    results = qualify(rows)
+    results = qualify(rows) + qualify_sources(rows)
     receipt = {"qualification_schema_version": 1, "versions": VERSIONS, "results": results,
                "status": "bounded-fixtures-passed", "not_claimed": ["full tool semantics", "natural corpus acceptance", "CI activation proof"]}
     (args.output / "qualification.json").write_text(json.dumps(receipt, sort_keys=True, indent=2) + "\n", encoding="utf-8")
@@ -184,6 +185,66 @@ def main():
         row["digest"] = digest(row)
         (args.output / (row["tool"] + ".json")).write_text(json.dumps(row, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(receipt, sort_keys=True))
+
+
+def qualify_sources(rows):
+    """Native parsing versus modeled precedence, including equivalent moves."""
+    from checkwash.quality.adapters import ADAPTERS
+    from checkwash.quality.model import Target
+    from checkwash.quality.snapshot import MappingSnapshot
+    results = []
+    cases = {
+        "coverage": [
+            {".coveragerc": "[report]\nfail_under=85", "pyproject.toml": "[tool.coverage.report]\nfail_under=50"},
+            {"setup.cfg": "[coverage:report]\nfail_under=85", "pyproject.toml": "[tool.coverage.report]\nfail_under=50"},
+            {"tox.ini": "[coverage:report]\nfail_under=85", "pyproject.toml": "[tool.coverage.report]\nfail_under=50"},
+            {"pyproject.toml": "[tool.coverage.report]\nfail_under=85"},
+            {".coveragerc.toml": "[tool.coverage.report]\nfail_under=85", "pyproject.toml": "[tool.coverage.report]\nfail_under=50"},
+        ],
+        "ruff": [
+            {".ruff.toml": '[lint]\nselect=["F401"]', "ruff.toml": '[lint]\nselect=[]'},
+            {"ruff.toml": '[lint]\nselect=["F401"]', "pyproject.toml": '[tool.ruff.lint]\nselect=[]'},
+            {"pyproject.toml": '[tool.ruff.lint]\nselect=["F401"]'},
+        ],
+        "mypy": [
+            {"mypy.ini": "[mypy]\ndisallow_untyped_defs=true", ".mypy.ini": "[mypy]\ndisallow_untyped_defs=false"},
+            {".mypy.ini": "[mypy]\ndisallow_untyped_defs=true", "pyproject.toml": "[tool.mypy]\ndisallow_untyped_defs=false"},
+            {"pyproject.toml": "[tool.mypy]\ndisallow_untyped_defs=true", "setup.cfg": "[mypy]\ndisallow_untyped_defs=false"},
+            {"setup.cfg": "[mypy]\ndisallow_untyped_defs=yes"},
+        ],
+    }
+    previous = Path.cwd()
+    for row in rows:
+        tool = row["tool"]
+        for number, files in enumerate(cases[tool]):
+            with tempfile.TemporaryDirectory(prefix="quality-precedence-") as temp:
+                root = Path(temp)
+                for name, value in {**files, "sample.py": "import os\n"}.items():
+                    (root / name).write_text(value, encoding="utf-8")
+                snapshot = MappingSnapshot({name: value.encode() for name, value in {**files, "sample.py": "import os\n"}.items()})
+                target = Target("source", tool, ".", "auto", row["id"], ["sample.py"])
+                modeled = ADAPTERS[tool](snapshot, target, "base", row)
+                try:
+                    os.chdir(root)
+                    if tool == "coverage":
+                        from coverage import Coverage
+                        native = Coverage(config_file=True).get_option("report:fail_under")
+                        assert int(modeled.values["coverage.report.fail_under"]) == native == 85, (files, modeled.values, native)
+                    elif tool == "mypy":
+                        from mypy.main import process_options
+                        _, options = process_options(["sample.py"], require_targets=True)
+                        assert modeled.values["mypy.disallow_untyped_defs"] == options.disallow_untyped_defs is True
+                    else:
+                        native = invoke([sys.executable, "-m", "ruff", "check", "--show-settings", "sample.py"], temp)
+                        assert native.returncode == 0, native.stderr
+                        match = re.search(r"linter\.rules\.enabled\s*=\s*\[(.*?)\]", native.stdout, re.S)
+                        assert match
+                        enabled = sorted(set(re.findall(r"\(([A-Z]+\d+)\)", match.group(1))))
+                        assert modeled.values["ruff.lint.rules@sample.py"] == enabled == ["F401"]
+                finally:
+                    os.chdir(previous)
+                results.append({"tool": tool, "case": "source-precedence", "fixture": number, "config_paths": sorted(files), "matched": True})
+    return results
 
 
 if __name__ == "__main__":
