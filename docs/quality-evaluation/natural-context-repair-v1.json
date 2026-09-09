@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "status": "preregistered-source-context-repair-only",
+  "registered_at": "2026-09-09T09:24:36Z",
+  "seed": "docs/quality-evaluation/seeds/natural-540-v1.zip",
+  "seed_sha256": "8fae0ec1235a9bac59f5e0531f423f05fc4832bfb9cb4ae44790e7edeb4e3876",
+  "seed_bytes": 1045774,
+  "maximum_seed_expanded_bytes": 33554432,
+  "source_prepared_manifest_sha256": "2d59eff5f2e3039f608dfd59eec7153de91440f9ec00dd0d41ceb2b58429f10c",
+  "source_prepared_run_id": 34328792279,
+  "original_manifest_sha256": "6f44fa4836a903bad3bba4eea2667dde954abc81304e4fcfc02e4290606bcd32",
+  "candidate_count": 540,
+  "context_limits": {
+    "bytes_per_file": 1000000,
+    "files_per_snapshot": 128,
+    "total_bytes_per_snapshot": 16777216,
+    "references_per_snapshot": 512
+  },
+  "selection": "Replay exactly the 540 IDs, repository order, per-repository order, base and head revisions in the authenticated prior manifest. Authenticate its original 90-source intake and all saved API history pages. No fresh history selection or replacements, even if sources become unavailable.",
+  "source_binding": "Compare every previous snapshot inventory hash and Git blob ID. Every previously present source must retain its SHA-256; omitted or altered old evidence fails preparation. Added sources are supplemental. Preserve the original protocol, preregistration, manifests and prior run as historical evidence.",
+  "context_repair": "Include requirements/constraints names with separator-delimited prefixes or suffixes, and follow bounded static -r/-c/--requirement/--constraint references. Resolve dependency includes relative to their containing file; workflow paths use repository-root candidates only, with cwd and activation unverified. Dynamic/external/missing/non-regular/over-budget references remain unresolved. No subject code or workflows execute.",
+  "serialization_repair": "Represent TOML date/time/datetime and nonfinite floats as JSON-safe values with separate type/path annotations. Compare typed recursive values with dictionary key order ignored and array order retained. These remain screening aids, not labels or predictions.",
+  "acceptance": "Original quotas and human-review-before-scoring requirement unchanged. All human labels remain UNREVIEWED. Engine, profiles and oracle expectations remain frozen. No release, version bump, pin update or automatic merge."
+}

@@ -1,0 +1,632 @@
+"""Prepare source evidence, never predictions, for the frozen natural study.
+
+Only the standard library and read-only Git object commands are used. No import
+of Checkwash, subject checkout, dependency install or subject execution occurs.
+Run corpus collection on hosted CI; unit tests use small synthetic packets.
+"""
+from __future__ import annotations
+
+import argparse
+import base64
+from collections import Counter
+import csv
+import datetime
+import difflib
+import hashlib
+import io
+import json
+import math
+import os
+from pathlib import Path, PurePosixPath
+import posixpath
+import re
+import subprocess
+import sys
+import time
+import tomllib
+import urllib.parse
+import urllib.request
+import zipfile
+
+
+ROOT = Path(__file__).resolve().parents[1]
+TOOLS = ("coverage", "ruff", "mypy")
+QUALIFIED_VERSIONS = {"coverage": "7.16.0", "ruff": "0.16.6", "mypy": "2.3.1"}
+SHA = re.compile(r"[0-9a-f]{40}\Z")
+CONFIG_NAMES = {"pyproject.toml", "ruff.toml", ".ruff.toml", "mypy.ini",
+                ".mypy.ini", ".coveragerc", "setup.cfg", "tox.ini",
+                "pytest.ini", ".pre-commit-config.yaml", ".pre-commit-config.yml"}
+ROOT_CONTEXT = {"uv.lock", "poetry.lock", "pdm.lock", "Pipfile", "Pipfile.lock"}
+DEPENDENCY_NAME = re.compile(r"(?:^|[-_.])(?:requirements|constraints)(?:$|[-_.])", re.I)
+REFERENCE_OPTION = re.compile(
+    r"(?<![\w-])(?P<option>--requirement|--constraint|-r|-c)"
+    r"(?:[ \t]*=[ \t]*|[ \t]*)"
+    r"(?P<argument>\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s;|&<>]+)"
+)
+
+
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def dump(path, value):
+    raw = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False) + "\n").encode()
+    path.write_bytes(raw)
+    path.with_suffix(path.suffix + ".sha256").write_text(digest(raw) + "\n", encoding="utf-8")
+    return digest(raw)
+
+
+def require(condition, reason):
+    if not condition:
+        raise ValueError(reason)
+
+
+def validate_initial(raw, protocol_bytes, prereg):
+    require(digest(raw) == prereg["original_manifest_sha256"], "original manifest digest mismatch")
+    manifest = json.loads(raw)
+    protocol = json.loads(protocol_bytes)
+    require(manifest["protocol_sha256"] == digest(protocol_bytes), "original protocol digest mismatch")
+    require(manifest["reviewed_count"] == 0 and manifest["evaluation"] == "NOT_RUN", "original state changed")
+    groups = {}
+    for entry in protocol["repository_candidates"]:
+        rows = [r for r in manifest["candidates"] if r["repo"] == entry["repo"]]
+        require(len(rows) == protocol["initial_candidates_per_repository"], "original group size mismatch")
+        require([r["source_order"] for r in rows] == list(range(len(rows))), "original order mismatch")
+        for row in rows:
+            require(SHA.fullmatch(row["base"]) and SHA.fullmatch(row["head"]), "invalid commit ID")
+            require(row["path"] == entry["path"] and row["label"] == "UNREVIEWED", "original candidate changed")
+            for source in row["sources"].values():
+                require(source["state"] == "present", "original source missing")
+                data = base64.b64decode(source["content_base64"], validate=True)
+                require(digest(data) == source["sha256"], "original source digest mismatch")
+                blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+                require(blob == source["git_blob"], "original Git blob mismatch")
+        groups[entry["repo"]] = rows
+    require(sum(map(len, groups.values())) == len(manifest["candidates"]), "unexpected original repository")
+    return protocol, groups
+
+
+def api(endpoint, **params):
+    url = "https://api.github.com/" + endpoint + "?" + urllib.parse.urlencode(params)
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "checkwash-natural-review"}
+    if os.environ.get("GH_TOKEN"):
+        headers["Authorization"] = "Bearer " + os.environ["GH_TOKEN"]
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as response:
+        return json.load(response)
+
+
+def select_history(pages, initial, desired):
+    """Verify the frozen prefix, keeping API order without any content test."""
+    selected, omitted, seen = [], [], set()
+    for rows in pages:
+        for row in rows:
+            commit = row["sha"]
+            require(SHA.fullmatch(commit) and commit not in seen, "invalid or repeated API commit")
+            seen.add(commit)
+            parents = row["parents"]
+            if len(parents) != 1:
+                omitted.append({"sha": commit, "parent_count": len(parents)})
+                continue
+            require(SHA.fullmatch(parents[0]["sha"]), "invalid parent ID")
+            if len(selected) < desired:
+                selected.append({"head": commit, "base": parents[0]["sha"]})
+    prefix = [{"head": r["head"], "base": r["base"]} for r in initial]
+    require(selected[:len(prefix)] == prefix, "history no longer matches frozen original prefix")
+    return selected, omitted
+
+
+def collect_history(repo, path, cutoff, initial, prereg, output):
+    pages, exhausted = [], False
+    desired = len(initial) + prereg["additional_candidates_per_repository"]
+    for page in range(1, prereg["maximum_history_pages_per_repository"] + 1):
+        rows = api("repos/" + repo + "/commits", path=path, until=cutoff, per_page=100, page=page)
+        require(isinstance(rows, list), "unexpected history response")
+        # Store only provenance metadata; commit messages are not instructions or labels.
+        pages.append([{"sha": r["sha"], "parents": [{"sha": p["sha"]} for p in r["parents"]]} for r in rows])
+        exhausted = len(rows) < 100
+        if exhausted or sum(len(r["parents"]) == 1 for p in pages for r in p) >= desired:
+            break
+    selected, omitted = select_history(pages, initial, desired)
+    receipt = {"repo": repo, "path": path, "cutoff": cutoff, "pages": pages,
+               "selected_count": len(selected), "desired_count": desired,
+               "history_exhausted": exhausted, "page_limit_reached": not exhausted and len(selected) < desired,
+               "omitted": omitted}
+    dump(output / (repo.replace("/", "--") + ".json"), receipt)
+    return selected, receipt
+
+
+def load_seed(seed_path, repair, prereg):
+    """Authenticate persistent inputs; never extract archive paths or resample."""
+    raw = seed_path.read_bytes()
+    require(len(raw) == repair["seed_bytes"] and digest(raw) == repair["seed_sha256"], "seed digest/size mismatch")
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        members = archive.infolist()
+        names = [m.filename for m in members]
+        require(len(names) == len(set(names)), "duplicate seed entry")
+        require(sum(m.file_size for m in members) <= repair["maximum_seed_expanded_bytes"], "seed expansion limit")
+        initial_raw = archive.read("candidate-manifest.json")
+        protocol_bytes = archive.read("protocol.json")
+        protocol, groups = validate_initial(initial_raw, protocol_bytes, prereg)
+        history_names = ["history/" + e["repo"].replace("/", "--") + ".json" for e in protocol["repository_candidates"]]
+        require(set(names) == {"candidate-manifest.json", "protocol.json", "prepared-manifest.json", *history_names}, "unexpected seed entries")
+        previous_raw = archive.read("prepared-manifest.json")
+        require(digest(previous_raw) == repair["source_prepared_manifest_sha256"], "previous manifest digest mismatch")
+        previous = json.loads(previous_raw)
+        histories = [json.loads(archive.read(name)) for name in history_names]
+    require(previous["original_manifest_sha256"] == digest(initial_raw) == repair["original_manifest_sha256"], "seed original digest mismatch")
+    require(previous["engine_commit"] == prereg["engine_commit"] and previous["engine_tree"] == prereg["engine_tree"], "frozen engine changed")
+    summary = previous["summary"]
+    require(summary["acceptance"] == summary["predictions"] == "NOT_RUN" and summary["human_reviewed_count"] == 0, "previous review state changed")
+    candidates = previous["candidates"]
+    require(len(candidates) == repair["candidate_count"] == summary["candidate_count"], "frozen cohort size mismatch")
+    require(len({r["id"] for r in candidates}) == len(candidates), "duplicate frozen candidate")
+    ordered = []
+    for entry, receipt in zip(protocol["repository_candidates"], histories):
+        repo, path = entry["repo"], entry["path"]
+        desired = len(groups[repo]) + prereg["additional_candidates_per_repository"]
+        require((receipt["repo"], receipt["path"], receipt["cutoff"], receipt["desired_count"]) == (repo, path, protocol["cutoff_utc"], desired), "history metadata mismatch")
+        selected, omitted = select_history(receipt["pages"], groups[repo], desired)
+        require(receipt["omitted"] == omitted and receipt["selected_count"] == len(selected), "history receipt mismatch")
+        rows = [r for r in candidates if r["repo"] == repo]
+        require([{k: r[k] for k in ("head", "base")} for r in rows] == selected, "frozen cohort order/revisions mismatch")
+        for order, row in enumerate(rows):
+            require(row["id"] == repo.replace("/", "--") + "-" + row["head"][:12] and row["source_order"] == order and row["path"] == path, "frozen candidate identity mismatch")
+            require(row["label"] == "UNREVIEWED" and row["intake"] == ("original" if order < len(groups[repo]) else "replenishment-1"), "frozen candidate state changed")
+            for side in ("base", "head"):
+                require(row["snapshots"][side]["commit"] == row[side], "frozen snapshot changed")
+                if order < len(groups[repo]):
+                    source = row["snapshots"][side]["sources"][path]
+                    original = groups[repo][order]["sources"][side]
+                    require(all(source[k] == original[k] for k in ("sha256", "git_blob")), "original source binding changed")
+        ordered.extend(rows)
+    require(ordered == candidates, "frozen repository order mismatch")
+    return initial_raw, protocol_bytes, protocol, groups, previous, histories
+
+
+def preserve_snapshot(snapshot, previous):
+    """Supplement sources without silently losing any previously captured bytes."""
+    require(all(snapshot[k] == previous[k] for k in ("commit", "inventory_sha256", "tracked_entries")), "frozen snapshot inventory mismatch")
+    for path, source in previous["sources"].items():
+        current = snapshot["sources"].get(path, {})
+        require(all(current.get(k) == source[k] for k in ("git_blob", "git_mode")), "previous source missing/changed: " + path)
+        if source["state"] == "present":
+            require(current.get("state") == "present" and current.get("sha256") == source["sha256"], "previous source bytes missing/changed: " + path)
+
+
+def git(repo_path, *args, timeout=120):
+    proc = subprocess.run(["git", "-c", "core.hooksPath=/dev/null", "--no-replace-objects",
+                           "-C", str(repo_path), *args], stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, timeout=timeout, check=False)
+    if proc.returncode:
+        raise RuntimeError("Git object read failed: " + args[0])
+    return proc.stdout
+
+
+def wanted_context(path):
+    p = PurePosixPath(path)
+    if p.name in CONFIG_NAMES:
+        return True
+    if len(p.parts) == 1 and p.name in ROOT_CONTEXT:
+        return True
+    if path.startswith(".github/workflows/") and p.suffix in {".yml", ".yaml"}:
+        return True
+    return any(DEPENDENCY_NAME.search(part) for part in p.parts) and p.suffix in {".txt", ".in"}
+
+
+def static_references(path, data, dependency_file=False):
+    """Read hints only. Root-relative workflow paths never establish a cwd."""
+    try:
+        content = data.decode("utf-8")
+    except UnicodeError:
+        return
+    dependency_file = dependency_file or PurePosixPath(path).suffix in {".txt", ".in"}
+    for number, line in enumerate(content.splitlines(), 1):
+        if line.lstrip().startswith("#"):
+            continue
+        if not dependency_file and not (
+            re.search(r"\b(?:pip\d*|pip-compile|pip-sync)\b", line)
+            or re.match(r"\s*(?:deps\s*=\s*)?(?:-r|-c|--requirement|--constraint)", line)
+        ):
+            continue
+        for match in REFERENCE_OPTION.finditer(line):
+            # python/git -c is a command/config argument, not a constraint file.
+            if match["option"] == "-c" and re.search(r"\b(?:python[\d.]*|git)\s*$", line[:match.start()]):
+                continue
+            argument = match["argument"].strip("\"'")
+            record = {"source_path": path, "line": number, "option": match["option"],
+                      "argument": argument, "state": "unresolved"}
+            if "://" in argument:
+                yield {**record, "reason": "external-reference"}
+                continue
+            # These two tox substitutions have a defined repository-root anchor.
+            anchored = argument.startswith(("{toxinidir}/", "{tox_root}/"))
+            for prefix in ("{toxinidir}/", "{tox_root}/"):
+                if argument.startswith(prefix):
+                    argument = argument[len(prefix):]
+            if any(c in argument for c in "$\u0060{}*?[]"):
+                yield {**record, "reason": "dynamic-reference"}
+                continue
+            argument = argument.replace("\\", "/")
+            parent = str(PurePosixPath(path).parent) if dependency_file and not anchored else "."
+            resolved = posixpath.normpath(posixpath.join(parent, argument))
+            if not argument or resolved in {".", ".."} or resolved.startswith(("../", "/")) or ":" in resolved:
+                yield {**record, "reason": "outside-repository-or-invalid"}
+                continue
+            yield {**record, "state": "candidate", "target_path": resolved,
+                   "anchor": "dependency-file-relative" if dependency_file and not anchored else "repository-root-candidate",
+                   "activation": "UNESTABLISHED"}
+
+
+def object_bytes(repo_path, blob, limit):
+    size = int(git(repo_path, "cat-file", "-s", blob))
+    if size > limit:
+        return None, size
+    data = git(repo_path, "cat-file", "blob", blob)
+    require(len(data) == size, "Git blob size mismatch")
+    return data, size
+
+
+def read_snapshot(repo_path, sha, limits, blob_cache, object_dir):
+    require(SHA.fullmatch(sha), "invalid snapshot ID")
+    inventory = git(repo_path, "ls-tree", "-r", "-z", sha)
+    entries = {}
+    for row in inventory.split(b"\0"):
+        if row:
+            metadata, path_bytes = row.split(b"\t", 1)
+            mode, kind, blob = metadata.decode("ascii").split()
+            path = path_bytes.decode("utf-8", errors="strict")
+            entries[path] = (mode, kind, blob)
+    # Priority is fixed, never based on tool changes or model output.
+    queue = sorted((p for p in entries if wanted_context(p)),
+                   key=lambda p: (p != "pyproject.toml", len(PurePosixPath(p).parts), p))
+    queued = set(queue)
+    referenced = set()
+    references = []
+    reference_limit = limits.get("references_per_snapshot", 512)
+    references_truncated = False
+    sources, total, accepted = {}, 0, 0
+    for path in queue:
+        mode, kind, blob = entries[path]
+        record = {"git_blob": blob, "git_mode": mode}
+        if kind != "blob" or mode not in {"100644", "100755"}:
+            record.update(state="unknown", reason="non-regular-file")
+        elif accepted >= limits["files_per_snapshot"]:
+            record.update(state="unknown", reason="snapshot-file-limit")
+        else:
+            if blob not in blob_cache:
+                blob_cache[blob] = object_bytes(repo_path, blob, limits["bytes_per_file"])
+            data, size = blob_cache[blob]
+            record["size"] = size
+            if data is None:
+                record.update(state="unknown", reason="source-byte-limit")
+            elif total + size > limits["total_bytes_per_snapshot"]:
+                record.update(state="unknown", reason="snapshot-byte-limit")
+            else:
+                key = digest(data)
+                destination = object_dir / key
+                if not destination.exists():
+                    destination.write_bytes(data)
+                record.update(state="present", sha256=key, object="objects/" + key)
+                total += size
+                accepted += 1
+                for reference in static_references(path, data, path in referenced):
+                    if len(references) >= reference_limit:
+                        references_truncated = True
+                        break
+                    if reference["state"] == "candidate":
+                        target = reference["target_path"]
+                        if target not in entries:
+                            reference.update(state="unresolved", reason="not-in-tracked-tree")
+                        else:
+                            reference["state"] = "tracked-candidate"
+                            referenced.add(target)
+                            if target not in queued:
+                                queue.append(target)
+                                queued.add(target)
+                    references.append(reference)
+        sources[path] = record
+    for reference in references:
+        if reference["state"] == "tracked-candidate":
+            target = sources[reference["target_path"]]
+            reference["state"] = "captured-candidate" if target["state"] == "present" else "unresolved"
+            if target["state"] != "present":
+                reference["reason"] = target["reason"]
+    return {"commit": sha, "tracked_entries": inventory.count(b"\0"),
+            "inventory_sha256": digest(inventory), "sources": sources,
+            "static_references": references, "reference_limit_reached": references_truncated,
+            "closure_status": "UNESTABLISHED", "activation_status": "UNESTABLISHED"}
+
+
+def flatten(value, prefix=()):
+    if isinstance(value, dict):
+        result = {}
+        for key, child in value.items():
+            result.update(flatten(child, (*prefix, key)))
+        if not value and prefix:
+            result[prefix] = value
+        return result
+    return {prefix: value}
+
+
+def typed_value(value):
+    """Canonical TOML comparison: key order is immaterial, type/array order isn't."""
+    name = type(value).__name__
+    if isinstance(value, dict):
+        return (name, tuple((k, typed_value(v)) for k, v in sorted(value.items())))
+    if isinstance(value, list):
+        return (name, tuple(typed_value(v) for v in value))
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return (name, value.isoformat())
+    if isinstance(value, float):
+        return (name, repr(value))
+    return (name, value)
+
+
+def json_value(value, path=()):
+    """JSON-safe display plus out-of-band annotations, without string collisions."""
+    if isinstance(value, (dict, list)):
+        items = value.items() if isinstance(value, dict) else enumerate(value)
+        result = {} if isinstance(value, dict) else []
+        annotations = []
+        for key, child in items:
+            converted, types = json_value(child, (*path, key))
+            if isinstance(result, dict):
+                result[key] = converted
+            else:
+                result.append(converted)
+            annotations.extend(types)
+        return result, annotations
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return value.isoformat(), [{"path": list(path), "toml_type": type(value).__name__}]
+    if isinstance(value, float) and not math.isfinite(value):
+        return repr(value), [{"path": list(path), "toml_type": "float"}]
+    return value, []
+
+
+def table_differences(before, after):
+    try:
+        documents = [tomllib.loads(data.decode("utf-8")) for data in (before, after)]
+        require(all(isinstance(d.get("tool", {}), dict) for d in documents), "non-table tool value")
+    except (ValueError, UnicodeError):
+        return {"state": "unknown", "reason": "unparseable-pyproject", "tools": {}}
+    result = {}
+    for tool in TOOLS:
+        values = [flatten(d.get("tool", {}).get(tool, {})) for d in documents]
+        changes = []
+        for path in sorted(set(values[0]) | set(values[1])):
+            bp, hp = path in values[0], path in values[1]
+            b, h = values[0].get(path), values[1].get(path)
+            if bp != hp or typed_value(b) != typed_value(h):
+                base, base_types = json_value(b)
+                head, head_types = json_value(h)
+                changes.append({"key_path": list(path), "base_present": bp, "head_present": hp,
+                                "base": base, "head": head,
+                                "base_value_types": base_types, "head_value_types": head_types})
+        result[tool] = changes
+    return {"state": "parsed", "tools": result,
+            "review_aid": "changed tool tables" if any(result.values()) else "no changed tool tables",
+            "human_relevance": "UNREVIEWED", "human_label": "UNREVIEWED"}
+
+
+def version_evidence(sources, output):
+    result = {tool: {"mentions": [], "exact_version_candidates": [],
+                     "effective_version": None, "status": "UNESTABLISHED"} for tool in TOOLS}
+    for path, source in sources.items():
+        if source["state"] != "present":
+            continue
+        data = (output / source["object"]).read_bytes()
+        try:
+            content = data.decode("utf-8")
+        except UnicodeError:
+            continue
+        lines = content.splitlines()
+        for number, line in enumerate(lines, 1):
+            for tool in TOOLS:
+                if not re.search(r"(?<![A-Za-z0-9_-])" + tool + r"(?![A-Za-z0-9_-])", line, re.I):
+                    continue
+                if len(result[tool]["mentions"]) < 80:
+                    result[tool]["mentions"].append({"path": path, "line": number, "text": line[:400]})
+                match = re.search(r"\b" + tool + r"(?:\[[^\]]+\])?\s*==\s*([0-9]+(?:\.[0-9]+){1,3})(?![0-9A-Za-z.*+_-])", line)
+                if match:
+                    result[tool]["exact_version_candidates"].append({"version": match[1], "path": path,
+                                                                    "line": number, "kind": "requirement-mention",
+                                                                    "declaration": line.strip()[:512]})
+        if path.endswith((".toml", ".lock")):
+            try:
+                doc = tomllib.loads(content)
+            except ValueError:
+                continue
+            for package in doc.get("package", []) if isinstance(doc.get("package"), list) else []:
+                if isinstance(package, dict) and package.get("name") in TOOLS and isinstance(package.get("version"), str):
+                    result[package["name"]]["exact_version_candidates"].append(
+                        {"version": package["version"], "path": path, "kind": "lock-entry"})
+        if PurePosixPath(path).name in {".pre-commit-config.yaml", ".pre-commit-config.yml"}:
+            current_tool = None
+            for number, line in enumerate(lines, 1):
+                if re.search(r"\brepo\s*:", line):
+                    current_tool = "ruff" if "/ruff-pre-commit" in line else "mypy" if "/mirrors-mypy" in line else None
+                match = re.search(r"\brev:\s*['\"]?v?([0-9]+(?:\.[0-9]+){1,3})(?=['\"\s#]|$)", line)
+                if current_tool and match:
+                    result[current_tool]["exact_version_candidates"].append(
+                        {"version": match[1], "path": path, "line": number, "kind": "pre-commit-rev-mention"})
+    return result
+
+
+def source_bytes(snapshot, path, output):
+    source = snapshot["sources"].get(path)
+    if source and source["state"] == "present":
+        return (output / source["object"]).read_bytes()
+    return None
+
+
+def summarize(candidates, histories, errors):
+    counts = Counter()
+    repos = {}
+    for row in candidates:
+        group = repos.setdefault(row["repo"], {"candidates": 0, "table_changed_candidates": 0,
+                                              "tool_table_changes": dict.fromkeys(TOOLS, 0)})
+        group["candidates"] += 1
+        triage = row["triage"]
+        changed = [t for t, changes in triage["tools"].items() if changes]
+        counts["table_changed_candidates" if changed else "unknown_triage" if triage["state"] == "unknown" else "no_table_changes"] += 1
+        group["table_changed_candidates"] += bool(changed)
+        for tool in changed:
+            group["tool_table_changes"][tool] += 1
+        for side in row.get("snapshots", {}).values():
+            counts["unknown_context_sources"] += sum(s["state"] != "present" for s in side["sources"].values())
+            counts["unresolved_static_references"] += sum(r["state"] == "unresolved" for r in side.get("static_references", []))
+            counts["reference_limited_snapshots"] += bool(side.get("reference_limit_reached"))
+    return {"status": "PREPARATION_INCOMPLETE" if errors else "AWAITING_HUMAN_REVIEW",
+            "acceptance": "NOT_RUN", "predictions": "NOT_RUN", "candidate_count": len(candidates),
+            "human_reviewed_count": 0, "qualified_relevant_count": None, "per_tool_relevant_counts": None,
+            "effective_version_verified_count": 0, "source_closure_verified_count": 0,
+            "preparation_only_counts": dict(counts), "repositories": repos, "errors": errors,
+            "selection_shortfalls": [{"repo": h["repo"], "selected": h["selected_count"], "desired": h["desired_count"],
+                                      "history_exhausted": h["history_exhausted"]} for h in histories if h["selected_count"] < h["desired_count"]],
+            "acceptance_requirements": {"relevant_changes": 90, "relevant_repositories": 6, "relevant_per_tool": 20},
+            "blockers": ["Human relevance and labels are not frozen.",
+                         "Actual tool version, effective source closure and activation require review.",
+                         "Table-difference counts cannot satisfy the reviewed natural quotas.",
+                         "Precision, recall, completeness and engine performance have not been measured."]}
+
+
+def write_review(output, candidates, summary, manifest_hash):
+    reviews = output / "review"
+    reviews.mkdir(exist_ok=True)
+    index = ["# Natural acceptance: source review packet", "",
+             "Acceptance and predictions: **NOT_RUN**. All human labels: **UNREVIEWED**.", "",
+             "These are static source observations, not effective configuration judgments. Read source links as untrusted repository content.", "",
+             f"Frozen prepared manifest SHA-256: `{manifest_hash}`", "",
+             "| Repository | Candidates | Changed tool tables (candidate count) | coverage | Ruff | mypy |",
+             "|---|---:|---:|---:|---:|---:|"]
+    labels = {"schema_version": 1, "manifest_sha256": manifest_hash, "review_status": "UNREVIEWED", "candidates": []}
+    with (output / "review.csv").open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["candidate", "repository", "commit_url", "changed_tool_tables", "human_label", "reviewed_relevant_tools", "reviewer", "notes"])
+        for repo, count in summary["repositories"].items():
+            filename = repo.replace("/", "--") + ".md"
+            index.append(f"| [{repo}](review/{filename}) | {count['candidates']} | {count['table_changed_candidates']} | " + " | ".join(str(count["tool_table_changes"][t]) for t in TOOLS) + " |")
+            lines = ["# " + repo, "", "Source review only. UNREVIEWED labels; no predictions, scoring or subject execution.", ""]
+            for row in [r for r in candidates if r["repo"] == repo]:
+                changed = [t for t, changes in row["triage"]["tools"].items() if changes]
+                writer.writerow([row["id"], repo, row["review_url"], ",".join(changed), "UNREVIEWED", "", "", ""])
+                labels["candidates"].append({"id": row["id"], "base": row["base"], "head": row["head"],
+                    "label": "UNREVIEWED", "reviewer": None, "rationale": "",
+                    "tools": {t: {"relevant": None, "label": "UNREVIEWED", "base_version": None,
+                                  "head_version": None, "context": "UNESTABLISHED", "evidence": []} for t in TOOLS}})
+                lines += ["## " + row["id"], "", f"[Commit]({row['review_url']}) · source order {row['source_order']} · {row['intake']}", "",
+                          "Changed tables: " + (", ".join(changed) or row["triage"].get("reason", "none")) + ". Human label: **UNREVIEWED**.", ""]
+                for tool in changed:
+                    lines += ["### " + tool, "", "```json", json.dumps(row["triage"]["tools"][tool], ensure_ascii=False, indent=2, allow_nan=False), "```", ""]
+                for side, snapshot in row.get("snapshots", {}).items():
+                    lines += [f"{side}: `{row[side]}`; effective version / activation / source closure **UNESTABLISHED**.", ""]
+                    for tool in changed or TOOLS:
+                        pins = row["version_evidence"][side][tool]["exact_version_candidates"]
+                        lines.append(f"- {tool} exact version mentions: " + (", ".join(sorted({p["version"] for p in pins})) or "none") + f"; qualified model: {QUALIFIED_VERSIONS[tool]}.")
+                        for pin in pins:
+                            url = f"https://github.com/{repo}/blob/{row[side]}/{urllib.parse.quote(pin['path'])}"
+                            if pin.get("line"):
+                                url += "#L" + str(pin["line"])
+                            lines.append(f"  - [{pin['path']}]({url}): {pin['version']} ({pin['kind']}; activation unverified)")
+                    unavailable = [p + ": " + s["reason"] for p, s in snapshot["sources"].items() if s["state"] != "present"]
+                    if unavailable:
+                        lines += ["", "Unavailable context: " + "; ".join(unavailable)]
+                    references = snapshot.get("static_references", [])
+                    if references:
+                        lines += ["", "Static requirement/constraint references (workflow paths assume repository root only as a search hint; activation and cwd remain unverified):",
+                                  "", "```json", json.dumps(references, ensure_ascii=False, indent=2), "```"]
+                    if snapshot.get("reference_limit_reached"):
+                        lines += ["", "Reference scan reached its bound; remaining references are unknown."]
+                    lines += [""]
+                if changed:
+                    before = source_bytes(row["snapshots"]["base"], row["path"], output)
+                    after = source_bytes(row["snapshots"]["head"], row["path"], output)
+                    if before is not None and after is not None:
+                        diff = "\n".join(difflib.unified_diff(before.decode("utf-8", "replace").splitlines(), after.decode("utf-8", "replace").splitlines(), fromfile="base/" + row["path"], tofile="head/" + row["path"], lineterm=""))
+                        fence = "`" * max(3, max((len(m[0]) + 1 for m in re.finditer(r"`+", diff)), default=3))
+                        lines += ["<details><summary>Raw pyproject diff</summary>", "", fence + "diff", diff, fence, "", "</details>", ""]
+            (reviews / filename).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    index += ["", "Table changes are screening aids; the six repositories and 90/20 quotas still need human relevance review.", "",
+              "Review the per-repository before/after keys and version evidence, then fill review-labels.json. Record an identified reviewer, per-tool relevance/labels, actual version and source/activation evidence. Legitimate weakening is a subtype of weakening, not a second observation.", "",
+              "No scores are available until the labels and source hashes are frozen. Missing context remains unknown; version mentions never establish the version that ran upstream."]
+    (output / "review.md").write_text("\n".join(index) + "\n", encoding="utf-8")
+    dump(output / "review-labels.json", labels)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=Path, default=ROOT / "docs/quality-evaluation/seeds/natural-540-v1.zip")
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--cache", type=Path, required=True)
+    args = parser.parse_args()
+    require(os.environ.get("GITHUB_ACTIONS") == "true", "Corpus preparation runs on hosted CI; use synthetic unit tests locally")
+    require(not args.output.exists(), "output must be new; frozen artifacts cannot be overwritten")
+    start = time.monotonic()
+    prereg_bytes = (ROOT / "docs/quality-evaluation/natural-preparation-v1.json").read_bytes().replace(b"\r\n", b"\n")
+    prereg = json.loads(prereg_bytes)
+    repair_bytes = (ROOT / "docs/quality-evaluation/natural-context-repair-v1.json").read_bytes().replace(b"\r\n", b"\n")
+    repair = json.loads(repair_bytes)
+    initial_raw, protocol_bytes, protocol, groups, previous, frozen_histories = load_seed(args.seed, repair, prereg)
+    args.output.mkdir(parents=True)
+    for name in ("history", "objects"):
+        (args.output / name).mkdir()
+    args.cache.mkdir(parents=True, exist_ok=True)
+    (args.output / "original-manifest.json").write_bytes(initial_raw)
+    (args.output / "protocol.json").write_bytes(protocol_bytes)
+    (args.output / "preregistration.json").write_bytes(prereg_bytes)
+    (args.output / "context-repair-preregistration.json").write_bytes(repair_bytes)
+    candidates, histories, errors = [], [], []
+    for entry in protocol["repository_candidates"]:
+        repo, path = entry["repo"], entry["path"]
+        try:
+            rows = [r for r in previous["candidates"] if r["repo"] == repo]
+            receipt = next(h for h in frozen_histories if h["repo"] == repo)
+            dump(args.output / "history" / (repo.replace("/", "--") + ".json"), receipt)
+            histories.append(receipt)
+            repo_path = args.cache / (repo.replace("/", "--") + ".git")
+            require(not repo_path.exists(), "bare cache must be new")
+            subprocess.run(["git", "-c", "core.hooksPath=/dev/null", "clone", "--bare", "--single-branch",
+                            "https://github.com/" + repo + ".git", str(repo_path)], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=900)
+            blob_cache, snapshots = {}, {}
+            for order, row in enumerate(rows):
+                for sha in (row["base"], row["head"]):
+                    if sha not in snapshots:
+                        snapshots[sha] = read_snapshot(repo_path, sha, repair["context_limits"], blob_cache, args.output / "objects")
+                pair = {side: snapshots[row[side]] for side in ("base", "head")}
+                for side in pair:
+                    preserve_snapshot(pair[side], row["snapshots"][side])
+                before, after = (source_bytes(pair[s], path, args.output) for s in ("base", "head"))
+                triage = table_differences(before, after) if before is not None and after is not None else {"state": "unknown", "reason": "source-absent-or-unavailable", "tools": {}}
+                candidates.append({**{k: row[k] for k in ("id", "repo", "path", "source_order", "base", "head", "intake")},
+                    "review_url": "https://github.com/" + repo + "/commit/" + row["head"],
+                    "label": "UNREVIEWED", "snapshots": pair, "triage": triage,
+                    "version_evidence": {side: version_evidence(snapshot["sources"], args.output) for side, snapshot in pair.items()}})
+                if (order + 1) % 25 == 0:
+                    print(repo + ": " + str(order + 1) + " source packets prepared; no predictions", flush=True)
+            print(repo + ": complete, " + str(len(rows)) + " candidates", flush=True)
+        except Exception as error:
+            errors.append({"repo": repo, "error_type": type(error).__name__, "message": str(error)[:300]})
+            print(repo + ": INCOMPLETE " + type(error).__name__, flush=True)
+    summary = summarize(candidates, histories, errors)
+    summary["previous_source_binding_verified_candidates"] = len(candidates)
+    manifest_hash = dump(args.output / "prepared-manifest.json", {"schema_version": 1,
+        "original_manifest_sha256": digest(initial_raw), "preregistration_sha256": digest(prereg_bytes),
+        "context_repair_preregistration_sha256": digest(repair_bytes), "seed_sha256": repair["seed_sha256"],
+        "previous_prepared_manifest_sha256": repair["source_prepared_manifest_sha256"],
+        "engine_commit": prereg["engine_commit"], "engine_tree": prereg["engine_tree"],
+        "collector_commit": os.environ.get("GITHUB_SHA"), "run_id": os.environ.get("GITHUB_RUN_ID"),
+        "candidates": candidates, "summary": summary})
+    dump(args.output / "summary.json", summary)
+    write_review(args.output, candidates, summary, manifest_hash)
+    dump(args.output / "preparation-receipt.json", {"collector_commit": os.environ.get("GITHUB_SHA"),
+        "run_id": os.environ.get("GITHUB_RUN_ID"), "python": sys.version, "platform": sys.platform,
+        "elapsed_seconds": round(time.monotonic() - start, 3), "measurement": "source preparation only; not engine performance",
+        "manifest_sha256": manifest_hash, "predictions": "NOT_RUN", "acceptance": "NOT_RUN"})
+    print(json.dumps(summary, ensure_ascii=False), flush=True)
+    if errors:
+        raise SystemExit("Preparation incomplete; errors and partial evidence preserved")
+
+
+if __name__ == "__main__":
+    main()

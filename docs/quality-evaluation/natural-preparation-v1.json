@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "status": "preregistered-preparation-only",
+  "original_protocol": "docs/quality-evaluation/protocol.json",
+  "original_manifest_sha256": "6f44fa4836a903bad3bba4eea2667dde954abc81304e4fcfc02e4290606bcd32",
+  "original_run_id": 34320615128,
+  "engine_commit": "8800af906fd332ee24e700aa16785c4f7edfdf6b",
+  "engine_tree": "7042d22c8e3d488b1ca14c79a1279d9f11742e8d",
+  "additional_candidates_per_repository": 100,
+  "maximum_history_pages_per_repository": 20,
+  "selection": "Preserve the original 15 single-parent commits per repository byte-for-byte and verify they are still the prefix of the original cutoff/path API order. Append the next 100 single-parent commits in that same order, or all remaining commits if history is exhausted. Preserve page order, root and merge omissions and shortfalls. Retain every selected candidate regardless of content. This batch size is frozen before triage; no predictions are inspected.",
+  "source_collection": "Read public Git objects only, never check out or execute a candidate repository. Capture the candidate pyproject plus bounded static configuration, dependency and workflow context. Deduplicate bytes by SHA-256; compare original source hashes and Git blob IDs. A tracked-path inventory hash and static context packet do not establish effective configuration closure or activation.",
+  "context_limits": {"bytes_per_file": 1000000, "files_per_snapshot": 128, "total_bytes_per_snapshot": 16777216},
+  "triage": "Independent TOML table differences for coverage, Ruff and mypy are review aids, not ground truth, predictions, verified relevance or acceptance denominators. Record additions, removals and exact before/after values. Version mentions and lock entries are evidence to review, not proof of the version actually invoked. Invalid or missing sources remain unknown.",
+  "review": "Every human label remains UNREVIEWED until an identified human reviews the evidence. Review relevance, effective context, actual tool versions and the original label vocabulary before freezing labels. A general request to perform acceptance is not a human label. No acceptance scoring or Checkwash invocation on these candidates occurs in this preparation run.",
+  "acceptance": "The original minimum of 90 relevant changes, six relevant repository groups, 20 changes per tool, complete-target ratio, precision, recall and performance requirements remain unchanged. Report preparation counts separately. Missing context and exact-version support remain unknown; do not add benchmark policy and imply it existed upstream.",
+  "development": "Engine, profiles, qualification fixtures and old oracle expectations remain frozen. Natural repository groups remain held out and are not used for repairs. New evaluation tooling can be tested on synthetic source packets only. No release, version bump, downstream pin update or automatic merge."
+}
