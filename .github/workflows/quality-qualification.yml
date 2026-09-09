@@ -45,13 +45,12 @@ jobs:
         run: python -I tools/quality_action_smoke.py prepare
       - id: quality
         uses: ./action/quality
-        continue-on-error: true
         with:
           repository: .quality-action-fixture
           base: ${{ steps.fixture.outputs.base }}
           head: ${{ steps.fixture.outputs.head }}
-          require-enforce: 'true'
-      - name: Verify expected blocking result and preserved report
+          require-enforce: 'false'
+      - name: Verify report-mode findings and preserved report
         env:
           SMOKE_OUTCOME: ${{ steps.quality.outcome }}
           SMOKE_EXIT: ${{ steps.quality.outputs.exit_code }}

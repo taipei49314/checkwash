@@ -1,4 +1,4 @@
-"""Trusted hosted fixture for the actual composite action, including failed-step outputs."""
+"""Trusted hosted fixture for actual report-mode adoption through the composite action."""
 import json
 import os
 from pathlib import Path
@@ -15,7 +15,7 @@ def main():
         (repo / "src/code.py").write_text("x = 1\n", encoding="utf-8")
         (repo / ".checkwash").mkdir()
         (repo / ".checkwash/quality.toml").write_text(
-            'schema_version=1\nmode="enforce"\n[[targets]]\nid="coverage"\ntool="coverage"\n'
+            'schema_version=1\nmode="report"\n[[targets]]\nid="coverage"\ntool="coverage"\n'
             'root="."\nconfig="pyproject.toml"\nprofile="coverage-7.16.0-q1"\npaths=["src/"]\n', encoding="utf-8")
         def git(*args):
             return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, check=True).stdout.decode().strip()
@@ -31,14 +31,15 @@ def main():
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
             stream.write("base=" + revisions[0] + "\nhead=" + revisions[1] + "\n")
     elif sys.argv[1] == "verify":
-        assert os.environ["SMOKE_OUTCOME"] == "failure"
-        assert os.environ["SMOKE_EXIT"] == os.environ["SMOKE_ANALYSIS_EXIT"] == "1"
+        assert os.environ["SMOKE_OUTCOME"] == "success"
+        assert os.environ["SMOKE_EXIT"] == os.environ["SMOKE_ANALYSIS_EXIT"] == "0"
         report = json.loads(Path(os.environ["SMOKE_REPORT"]).read_text(encoding="utf-8"))
         receipt = json.loads(Path(os.environ["SMOKE_RECEIPT"]).read_text(encoding="utf-8"))
-        assert report["verdict"] == "block" and report["analysis_status"] == "complete"
-        assert receipt["integration_error"] is None and receipt["mode"] == "enforce"
+        assert report["verdict"] == "reported" and report["analysis_status"] == "complete"
+        assert report["summary"]["high"] == 1
+        assert receipt["integration_error"] is None and receipt["mode"] == "report"
         assert any(f["rule"] == "QW_THRESHOLD_LOWERED" for f in report["findings"])
-        print("Actual composite action preserved exit 1, report and failed-step outputs")
+        print("Actual composite action preserved report exit 0 and the visible high-severity finding")
     else:
         raise ValueError("Expected prepare or verify")
 
