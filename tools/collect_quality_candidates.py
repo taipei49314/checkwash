@@ -17,8 +17,8 @@ def main():
     protocol_bytes = protocol_path.read_bytes().replace(b"\r\n", b"\n")
     protocol = json.loads(protocol_bytes)
     args.output.mkdir(parents=True, exist_ok=True)
-    def get(path, **params):
-        url = "https://api.github.com/" + path + ("?" + urllib.parse.urlencode(params) if params else "")
+    def get(endpoint, **params):
+        url = "https://api.github.com/" + endpoint + ("?" + urllib.parse.urlencode(params) if params else "")
         headers = {"Accept": "application/vnd.github+json", "User-Agent": "checkwash-quality-candidate-intake"}
         if os.environ.get("GH_TOKEN"):
             headers["Authorization"] = "Bearer " + os.environ["GH_TOKEN"]
