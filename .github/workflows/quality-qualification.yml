@@ -21,6 +21,7 @@ jobs:
       - run: python tools/validate_quality_reports.py --profiles quality-evidence
       - run: pytest tests/test_quality.py tests/test_quality_profiles.py
       - run: python tools/qualify_quality_package.py --output quality-evidence
+      - run: python tools/compare_quality_legacy.py --output quality-evidence
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
