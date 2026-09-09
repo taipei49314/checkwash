@@ -1,0 +1,330 @@
+{
+  "bound_review_targets": {
+    "AI-02": {
+      "mypy": [
+        "1.8.0"
+      ]
+    },
+    "AI-03": {
+      "coverage": [
+        "7.2.2"
+      ]
+    },
+    "AI-04": {
+      "mypy": [
+        "1.0.1"
+      ]
+    },
+    "AI-05": {
+      "coverage": [
+        "7.3.2"
+      ]
+    },
+    "AI-06": {
+      "ruff": [
+        "0.4.3",
+        "0.4.4"
+      ]
+    },
+    "AI-07": {
+      "ruff": [
+        "0.6.8",
+        "0.6.9"
+      ]
+    },
+    "AI-08": {
+      "ruff": [
+        "0.16.4"
+      ]
+    },
+    "AI-09": {
+      "ruff": [
+        "0.9.5"
+      ]
+    },
+    "AI-10": {
+      "ruff": [
+        "0.9.5"
+      ]
+    },
+    "AI-11": {
+      "ruff": [
+        "0.2.1",
+        "0.4.8"
+      ]
+    },
+    "AI-12": {
+      "coverage": [
+        "7.10.7"
+      ]
+    },
+    "AI-13": {
+      "coverage": [
+        "7.10.7",
+        "7.11.0"
+      ]
+    },
+    "AI-14": {
+      "mypy": [
+        "1.4.1"
+      ]
+    },
+    "AI-15": {
+      "mypy": [
+        "1.6.1",
+        "1.8.0"
+      ]
+    },
+    "AI-16": {
+      "ruff": [
+        "0.1.13",
+        "0.3.5"
+      ]
+    },
+    "AI-17": {
+      "ruff": [
+        "0.15.21",
+        "0.15.22"
+      ]
+    },
+    "AI-20": {
+      "ruff": [
+        "0.12.9",
+        "0.15.10"
+      ]
+    },
+    "AI-22": {
+      "coverage": [
+        "7.10.7"
+      ]
+    }
+  },
+  "case_families": {
+    "coverage": [
+      "defaults",
+      "source-precedence-0..4",
+      "fail-under-0-and-100",
+      "run-branch-and-report-precision",
+      "run-omit-none/literal/directory",
+      "report-omit-none/literal/directory"
+    ],
+    "mypy": [
+      "default-global-flags",
+      "strict-expansion-map",
+      "strict-false/true",
+      "explicit-untyped-defs-false/true",
+      "source-precedence-0..3",
+      "error-code-catalog",
+      "error-disable-assignment",
+      "error-enable-assignment",
+      "ignore-errors"
+    ],
+    "ruff": [
+      "rule-catalog",
+      "preview-catalog",
+      "default-rules",
+      "selection-ALL/F/E/D/C4/PIE/PL/T10/FURB/D203+D211/D212+D213/D203/D213",
+      "select-ignore-specificity-0..3",
+      "inheritance-0..2",
+      "source-precedence-0..2",
+      "exclude-none/literal/directory",
+      "extend-exclude",
+      "nested-auto-override",
+      "default-excludes"
+    ]
+  },
+  "context_caveats": [
+    "AI-07 check.sh 0.6.8 and hook 0.6.9 are different contexts",
+    "AI-13 coverage 7.10.7 and 7.11.0 retain both Python conditions",
+    "AI-12/22 test-lock pins cannot be borrowed by unpinned reporting jobs",
+    "AI-20 unrelated core-build-wheels Ruff 0.5.0 excluded",
+    "declared-context binding is not activation evidence"
+  ],
+  "controls": {
+    "coverage": "7.16.0",
+    "mypy": "2.3.1",
+    "ruff": "0.16.6"
+  },
+  "created_at_utc": "2026-09-09T14:34:58.264346+00:00",
+  "decision_rules": {
+    "DIVERGENCE": "observed native facet differs from unchanged frozen current profile expectation",
+    "ERROR": "facet could not be measured; not evidence of incompatibility or agreement",
+    "MATCH": "observed native facet equals unchanged frozen current profile expectation",
+    "control": "current immutable adapter/profile comparison on same cases; any divergence/error must remain visible",
+    "historical_adapter": "NOT_QUALIFIED even if every sampled native facet matches; exact-version profile and listed qualification gaps still required",
+    "natural_acceptance": "NOT_RUN",
+    "negative_results": "retained, never edited to pass"
+  },
+  "execution_policy": {
+    "blocked_hosts": [
+      "5I8",
+      "PJU"
+    ],
+    "natural_predictions": false,
+    "platform": "Linux CPython 3.11 on GitHub-hosted runners only",
+    "profile_changes": false,
+    "release": false,
+    "subject_code_execution": false
+  },
+  "package_authentication": "pip isolated official PyPI wheel-only resolution; verify every dependency wheel filename+SHA256 against exact-version pypi.org JSON and METADATA Name/Version, then install local wheels with --no-index --no-deps; receipt keeps official metadata and wheel hashes",
+  "qualification_gaps": {
+    "coverage": [
+      "bounded synthetic behavior does not exhaust threshold/precision rounding or branch equivalence",
+      "run/report scope universe and path normalization exhaustiveness not requalified",
+      "harmless/interfering-key boundary exhaustiveness not requalified",
+      "historical version profile and digest-bound qualification receipt not authored or integrated"
+    ],
+    "mypy": [
+      "strict/default changes require an exact-version profile, never substitution",
+      "global flag Cartesian interactions and full enabled/disabled code semantics not requalified",
+      "all default error codes are checked for membership, only assignment behavior exercised",
+      "harmless/interfering-key boundary exhaustiveness not requalified",
+      "historical version profile and digest-bound qualification receipt not authored or integrated"
+    ],
+    "ruff": [
+      "catalog/default/selector differences require an exact-version profile, never substitution",
+      "all extend/extend-select precedence and cross-directory exclusion combinations not requalified",
+      "selector namespace completeness and version-specific incompatibility registry not independently qualified",
+      "native default-exclusion test checks frozen promised paths, not full discovery of historical defaults",
+      "harmless/interfering-key boundary exhaustiveness not requalified",
+      "historical version profile and digest-bound qualification receipt not authored or integrated"
+    ]
+  },
+  "reference_inputs": {
+    "checkwash-context-audit-v4.json": "ff39b07f1e44c43e1f23b75a9297a0c6b98582c5be05f0fb535c3332f1804176",
+    "checkwash-hook-bindings-v4.json": "f92574aa46763c1370864966aa34a3de91c574a36537f7535909e6e9cdfa96e5"
+  },
+  "runner_sha256_lf": "9a92c97745f4ed7ac2530c3fa618f8b41c8dc738546b5d85f66a2d37f26114f9",
+  "schema_version": 1,
+  "selection": "all exact tool versions bound to declared contexts in 22 already-reviewed targets, plus 3 unchanged qualified controls; not whole-cohort mention-only pins",
+  "source_hash_algorithm": "SHA256 of UTF-8 source bytes with CRLF normalized to LF; no other normalization",
+  "source_sha256_lf": {
+    "src/checkwash/__init__.py": "2e317f46ea0dc927ee9ce69458c6cbd786744bc2e2e9acda5afe80f1805f3750",
+    "src/checkwash/__main__.py": "1533c4066ad0fbdbf9a68dc0c155b32d015d4a26d0b3cb8a971d86638752450f",
+    "src/checkwash/allowlist.py": "08357985b9879bc23e3a1a96a2134159c002fb58117389b3c08c6cae1062dadc",
+    "src/checkwash/bench.py": "ddd5fbae03556139adb3b6ddc784bae54763b56a94785ca5d16581e008769080",
+    "src/checkwash/cases.py": "bfb82228851d42f506e4e984163f4b5c400b28c14258ab8fa0a980bb990c093e",
+    "src/checkwash/change.py": "a06c03de2814daf1d451308b1e599f59322d9653b2972dfd1e6726550bbe11a2",
+    "src/checkwash/ci.py": "315f74048851821076987fac03886ce1ce065324e58c5413596be8e1a3a47000",
+    "src/checkwash/cli.py": "3ef96ab44c201112183421f2478c9bd68d1a1280c00cd66ea1ed78a69285feb9",
+    "src/checkwash/compat.py": "d38740270427f4dbba449f6a7948e84bb1faf1486254e67f53d5c5ea5e2925b2",
+    "src/checkwash/config.py": "ea54e65c938e1059da34bc0d8414149c1fb200e657d24b9256c252c45dd74eec",
+    "src/checkwash/conftest_context.py": "5af8a2a5fbf49fa9245e3e29b7fb9c5be2c284e182904c50bed25453fdee4e74",
+    "src/checkwash/contract.py": "383e8d0ecf9d82d634513812716a2118f19f8042da34c3452017399009d63fd8",
+    "src/checkwash/demo.py": "1269b772c79c05e54dceb5d139677de29fc9179c7f25fd3ea71bcf4132ef2444",
+    "src/checkwash/deps.py": "b79b5ac133bfaf4b2109f6ee77bb84f2dd49d18acaafc67438b2ba831bc2a42a",
+    "src/checkwash/detectors/__init__.py": "6ae44e1e11ce3d97d5207ccdb4e97df4c231936ceb3c4c047a733861f2517a9f",
+    "src/checkwash/detectors/assert_removed.py": "c71df57ff748c1d1c4c97415bdbe662889b27e895d48504ae8bf71b7510f898a",
+    "src/checkwash/detectors/assert_substituted.py": "343957c61aebd9c74052d40e5d171ac1107b8030f96d3b558aa87d3ad938a62e",
+    "src/checkwash/detectors/assert_weakened.py": "5459419172fa152157833b58903d1cb2c48b73ec9b6b18eff9bf26dd441c1f03",
+    "src/checkwash/detectors/expectation_definition.py": "4867c9f773eae297492502ec246fcf0cbeb43ccdd8a8948146e965c65ea73156",
+    "src/checkwash/detectors/expected_changed.py": "671d1f2c95cff7d4704a29c1e00a4c3d1f9616aff64ac10e03faeaeba84725da",
+    "src/checkwash/detectors/expected_hardcoded.py": "57087fd8e4ff4324a668183af159f5e663e694af7caaba4e09bb29e0cd650cf4",
+    "src/checkwash/detectors/globals_rules.py": "9ddcb813be9d89ddec8cd801bfdb7acf3d59ba2f7044c7d2a67f2f041c6a10e3",
+    "src/checkwash/detectors/snapshot_expectation.py": "4f1454a9cba49f8cca2d7ac438f78b4e5e03cf2bad2691f45836fa56213024f2",
+    "src/checkwash/detectors/subject_normalized.py": "17e09e54ce177629782125dc9b9ad01bc3db1d70655ac8db147c838d1041b727",
+    "src/checkwash/detectors/test_disabled.py": "650cae9df74a4008a7f5e1e597ad549eec13fe80f85e9599f18f7233ed31d643",
+    "src/checkwash/detectors/test_patches.py": "df138a3b99e10a105bd33ef1cc4d9ee7cfe42586f6408c9ad40f160f21f3a84c",
+    "src/checkwash/detectors/tolerance_loosened.py": "758932ba13359a0224b51b48ef96a9fa399132f4e06ac6a131960888143fc5b6",
+    "src/checkwash/doctor.py": "4f7b12fb17efc3bf1dbac63f74dd1abf29bc25d47bcfa6d6b587ff92b7f6290e",
+    "src/checkwash/engine.py": "1000266c7633891925646185a664952e5089e280e2841079096981bd1140f136",
+    "src/checkwash/evidence.py": "8940bf7cef88ca9d070503d0518f466acc58dc7b11c93e3e468206cafa30456b",
+    "src/checkwash/findings.py": "50c73b18078490dbae11eb7860bbd39ddc0a8fc88c7e503931cc2c1cdc5b2e7a",
+    "src/checkwash/frontends/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/checkwash/frontends/javascript/__init__.py": "dc2d250d2a65c5decfc1c41da72610093795b76c458982fb94f71af03952b510",
+    "src/checkwash/frontends/javascript/frontend.py": "9f5353a25c032955f7482f18f2aa8b488c3a91c20e848044f05b66c1a39e0474",
+    "src/checkwash/frontends/python/__init__.py": "8343db47bb3b225db240e5916211528a7f05ad6e6f924947eafadddbb59b47c0",
+    "src/checkwash/frontends/python/conditional_oracles.py": "f5459b67828ca4073afa0db8473ecbe758df3f55062e9179d75d9b24b44fce10",
+    "src/checkwash/frontends/python/conftest_patches.py": "ccf2fd7f08782695a0e23a034878f2923bd4957cd64e7feb58a1f562f58c9e38",
+    "src/checkwash/frontends/python/frontend.py": "9539b97e775012cea95aa08a55484f35304d7a8e4e8c78bceb0ed12ff6d6e572",
+    "src/checkwash/frontends/python/normalization.py": "e8c75e43540c7f4ac5fe70f1de56bf0b470f22452d0768c9cd38d417f6de9c90",
+    "src/checkwash/frontends/python/root_oracles.py": "0a91a278c9d50638082b87520ecc84f667c153bdedff8bd51a0ed6b6a95e9060",
+    "src/checkwash/frontends/python/snapshot_context.py": "079f361c3a539ef620deba5619a54dcfbb14737fe7388bf9a4b980f5b85f61b6",
+    "src/checkwash/frontends/python/table_normalization.py": "96506fa603d1ad544a3a4f50270a4f489b07a994db0be5c263817cef1bca6cb6",
+    "src/checkwash/frontends/python/table_oracles.py": "5744a445f4c2cefed76b4ae1737d1edf37f77f3fc20c996bb1aa309ba61b6d8a",
+    "src/checkwash/frontends/python/truthiness_oracles.py": "3facaae6eeefcde24e5ba53563d4183024c0e415987f346bf74f1bc4534146b9",
+    "src/checkwash/gating.py": "370edc9e2f4a1faf8fe94986dcb8ec1ba4beb0440ee8314521805a11d75ecc2f",
+    "src/checkwash/gitio/__init__.py": "938ec2f6a55b2d7981f5a4289030c9f8b3f6a30f04bacfdddb2a6e90a253effe",
+    "src/checkwash/gitio/git.py": "a1d9d7a24f8f8221f10ab08d938e67433253805bd52565ab4c549d08e9b4cc1a",
+    "src/checkwash/gitio/snapshot.py": "0eda95a2a3322b54dbbda66ff6dfeb89e5a411beb8bc0155aad4e0af68d2bcfa",
+    "src/checkwash/hooks.py": "5fa75b0b77ddb886a4deb13186d76da8e3ae57a9b06c2ca0c0212458024f6fce",
+    "src/checkwash/ir/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/checkwash/ir/astutil.py": "6bb49c9fcb53172d15c1616f786cfaeeb042f0ef6081543226917c9e888cf0f9",
+    "src/checkwash/ir/diffalign.py": "d1a68b4abaeee06215b29bbe33a9a439f5158d2227ea9a12cc8fd127459f695a",
+    "src/checkwash/ir/markers.py": "88b9a4ab6ae9688bb09b0cb3690832e22710ec31bb342310d0f677442cf71db9",
+    "src/checkwash/ir/model.py": "552752854d624d6cbcb1096ca91a78b516b4d7350c5bfbc7695dc07951bdceaa",
+    "src/checkwash/ir/strength.py": "88f5425ca634ba0dbe0cd1c93a061380d141d8ae3840fe02cf4d8adab940a0e2",
+    "src/checkwash/pyenv.py": "f75d915de657921945206e0086895f175052619d7a57ac3372071753f245de15",
+    "src/checkwash/quality/__init__.py": "938af2f1a273e11707f087567b12b532efc77078e6519d1a88ec66d5ffff5197",
+    "src/checkwash/quality/adapters.py": "d0c1cac21fd02d79965fef4d8f1c96dbc0625a867953757b8f63568435aeeb07",
+    "src/checkwash/quality/cli.py": "94fada84d6ae023b4a5e13dc158b9d6761c120b4db6a3976392d699935625302",
+    "src/checkwash/quality/coverage_adapter.py": "a74171be442bb0d81997157aeae4baa376992e7586cf5cf836cba00cb53ce621",
+    "src/checkwash/quality/engine.py": "18c976fb9aa49258d316a8cbb8ece97d0e080118048c217ca013d28211cc43eb",
+    "src/checkwash/quality/model.py": "22cbe30979c629dd142866ade8e6bbbb183723d498ca85e810f4755693de3a6a",
+    "src/checkwash/quality/mypy_adapter.py": "aa590215939f8a8e2a3afae2a1ad468e00f731618fe6285b9f99118f114837ed",
+    "src/checkwash/quality/policy.py": "b428dbca45b48edcc52336a267b5dddf4428990bf04b65e653a2e158f760c74a",
+    "src/checkwash/quality/profile_data/coverage.json": "b0451478224c2d68a9da6b37e8708496d08f0910ab4dbefa377025506787aa55",
+    "src/checkwash/quality/profile_data/mypy.json": "dc09c4f1ba5fe86ebc3faba69aadc269343f5c98781401408945f3c4004196d6",
+    "src/checkwash/quality/profile_data/ruff.json": "bdf3433ca51d55bef78f0a28482d7cdff72b1fc468f654ef11f1d57d2d85e531",
+    "src/checkwash/quality/profiles.py": "ca73d14805d18cc7dc28c6ec204fa3836ad34fb6cacc4e8e299559d776d16d5c",
+    "src/checkwash/quality/qualification_data/qualify_quality.py.txt": "41be3398711535feb4fcca6a3693e9cef8f3df62df7439750184ab825c5a000b",
+    "src/checkwash/quality/qualification_data/results.json": "e3af8d55ac5052256d9df173e6e5e59da1b93ba1cfcb9080f7377749d08ab534",
+    "src/checkwash/quality/report.py": "f9db992e46115cb4a4e8940d6be40c021a14ca4471919a4231d48780ee318b8f",
+    "src/checkwash/quality/resolver.py": "49acb64b9e7adc8cd3339dec16013c4615c81f8e64cea7e569a17041185415ea",
+    "src/checkwash/quality/ruff_adapter.py": "24e42b0f58c2db45a8b8389b51c545410996eb07d3e114ca9eb347019d6fab1b",
+    "src/checkwash/quality/scope.py": "50e74160253dd771de9d3f5089442c75bbde13b701557618708397e268d4e929",
+    "src/checkwash/quality/setup.py": "073dca08d3d398be0526ab7155d90e10717860ca748faba1feb294f5eb916591",
+    "src/checkwash/quality/snapshot.py": "ebb4f478e7e424ab2db29bce85e78700dee2311350cf2d41ee8ea28a078134af",
+    "src/checkwash/report/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/checkwash/report/context.py": "8cfcda49fb1f06c1b8095899207b2bccf4ab9ab257383c4d01758c54b7e8da93",
+    "src/checkwash/report/jsonout.py": "402c8fbeae59d108aadde51ac81cc0bc5429952ff56b1695e3fb0a341c17bafb",
+    "src/checkwash/report/sarif.py": "00133d73fdc6ff1503f4b37439e8681f8b08c274bf497320902d9ec21ca8f5b4",
+    "src/checkwash/report/term.py": "d5011fe3b3395e1fd0913e98b8514ca7a892a826278c4d556af1775e5d266985",
+    "src/checkwash/report/textio.py": "7c42a6bbf7e30804fd85839cc192c38bcd283cfb11b59b8fba3c0a6dff23338a",
+    "src/checkwash/roles.py": "16cff1034a6dfd690d0e3e6811bc51ac15b7af0d61d04159d1840b8d59bb7207",
+    "src/checkwash/sweep.py": "6c7905bc814cce6e5425783339ae2ecc131b79a5ebc5aafd93f774a79187c2df",
+    "src/checkwash/zipapp_entry.py": "2ddbdfe554c04d4efb3d49b04a79f54140c50ef7a7d7a26231f655db1e45bddf",
+    "tools/qualify_quality.py": "41be3398711535feb4fcca6a3693e9cef8f3df62df7439750184ab825c5a000b",
+    "tools/quality-profile-contract.json": "93829056724bd3262e8adb9634610d5a26e49bc21d0b4bfaecf33418a6878e03"
+  },
+  "status": "PREREGISTERED_BEFORE_NATIVE_RUN",
+  "unknown_exact_version_targets": [
+    "AI-01",
+    "AI-18",
+    "AI-19",
+    "AI-21"
+  ],
+  "versions": {
+    "coverage": [
+      "7.2.2",
+      "7.3.2",
+      "7.10.7",
+      "7.11.0",
+      "7.16.0"
+    ],
+    "mypy": [
+      "1.0.1",
+      "1.4.1",
+      "1.6.1",
+      "1.8.0",
+      "2.3.1"
+    ],
+    "ruff": [
+      "0.1.13",
+      "0.2.1",
+      "0.3.5",
+      "0.4.3",
+      "0.4.4",
+      "0.4.8",
+      "0.6.8",
+      "0.6.9",
+      "0.9.5",
+      "0.12.9",
+      "0.15.10",
+      "0.15.21",
+      "0.15.22",
+      "0.16.4",
+      "0.16.6"
+    ]
+  }
+}

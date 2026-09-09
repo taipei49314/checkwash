@@ -1,0 +1,43 @@
+name: quality historical synthetic qualification v5
+on:
+  push:
+    branches: [evaluation/historical-qualification-t255]
+    paths:
+      - tools/historical_qualification_v5.py
+      - docs/quality-evaluation/historical-qualification-v5.json
+      - .github/workflows/quality-historical-v5.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  historical:
+    if: github.repository == 'taipei49314/checkwash' && github.actor == 'taipei49314'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        tool: [coverage, ruff, mypy]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.11'
+      - name: qualify frozen synthetic facets and retain incompatibilities
+        env:
+          PYTHONUTF8: '1'
+        run: >-
+          python tools/historical_qualification_v5.py
+          --tool ${{ matrix.tool }}
+          --matrix docs/quality-evaluation/historical-qualification-v5.json
+          --source .
+          --output historical-results/${{ matrix.tool }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: quality-history-${{ matrix.tool }}-${{ github.sha }}
+          path: historical-results/${{ matrix.tool }}
+          if-no-files-found: error
