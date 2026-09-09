@@ -387,6 +387,12 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--emit-ir", action="store_true", help="print the IR JSON and exit")
     check.add_argument("--repo", default=".")
 
+    quality = sub.add_parser("quality", help="review bounded quality configuration weakening")
+    quality.add_argument("range", nargs="?", help="BASE..HEAD, BASE...HEAD, profiles or explain")
+    quality.add_argument("rule", nargs="?", help="rule ID for quality explain")
+    quality.add_argument("--format", choices=["term", "json", "sarif"], default="term")
+    quality.add_argument("--repo", default=".")
+
     sweep_p = sub.add_parser(
         "sweep", help="measure finding rates over a repo's commit history"
     )
@@ -450,7 +456,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-_SUBCOMMANDS = ("check", "allow", "sweep", "hook", "demo", "doctor", "bench")
+_SUBCOMMANDS = ("check", "allow", "sweep", "hook", "demo", "doctor", "bench", "quality")
 
 
 def _edit_distance(left: str, right: str) -> int:
@@ -494,7 +500,7 @@ def main(argv: list[str] | None = None) -> int:
     # unlisted name is silently reinterpreted as a `check` range, so a typo'd
     # or newly added command reports a verdict instead of an error.
     elif argv[0] not in (
-        "check", "allow", "sweep", "hook", "demo", "doctor", "bench",
+        "check", "allow", "sweep", "hook", "demo", "doctor", "bench", "quality",
         "-h", "--help", "--version",
     ):
         hint = _closest_command(argv[0])
@@ -510,6 +516,12 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "check":
             return _cmd_check(args)
+        if args.command == "quality":
+            from checkwash.quality.cli import run as run_quality
+
+            output, code = run_quality(args, _today())
+            (_write_term if args.format == "term" else _write_machine)(output)
+            return code
         if args.command == "allow":
             return _cmd_allow(args)
         if args.command == "hook":
