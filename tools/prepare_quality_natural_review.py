@@ -201,7 +201,7 @@ def flatten(value, prefix=()):
         result = {}
         for key, child in value.items():
             result.update(flatten(child, (*prefix, key)))
-        if not value:
+        if not value and prefix:
             result[prefix] = value
         return result
     return {prefix: value}
