@@ -120,6 +120,22 @@ def test_doctor_configured_is_advice_not_a_review_verdict():
     assert not result["tool_versions_verified"]
 
 
+@pytest.mark.parametrize("work_crlf,head_crlf,change,expected", [(True, False, False, 0), (False, True, False, 0), (True, False, True, 2)])
+def test_doctor_normalizes_git_line_endings_but_still_detects_policy_changes(work_crlf, head_crlf, change, expected):
+    files = configured()
+    head = files[POLICY_PATH]
+    if work_crlf:
+        files[POLICY_PATH] = files[POLICY_PATH].replace(b"\n", b"\r\n")
+    if head_crlf:
+        head = head.replace(b"\n", b"\r\n")
+    if change:
+        files[POLICY_PATH] = files[POLICY_PATH].replace(b'mode = "report"', b'mode = "enforce"')
+    result, code = doctor(MappingSnapshot(files), head_policy=head, head_revision="a" * 40, today=TODAY)
+    assert code == expected
+    assert result["policy"]["matches_head"] is (not change)
+    assert ("POLICY_NOT_IN_HEAD" in codes(result)) is change
+
+
 @pytest.mark.parametrize("head_policy,head_revision,expected", [(None, "a" * 40, "POLICY_NOT_IN_HEAD"), (None, None, "HEAD_UNAVAILABLE")])
 def test_doctor_explains_uncommitted_or_unborn_policy(head_policy, head_revision, expected):
     result, code = doctor(MappingSnapshot(configured()), head_policy=head_policy, head_revision=head_revision, today=TODAY)

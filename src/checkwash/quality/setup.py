@@ -6,7 +6,7 @@ import json
 import posixpath
 
 from .engine import analyze
-from .model import POLICY_PATH, QualityError, Resolved, Target, inside, safe_path
+from .model import POLICY_PATH, QualityError, Resolved, Target, content_digest, inside, safe_path
 from .policy import load_policy
 from .profiles import available
 from .resolver import choose
@@ -132,8 +132,10 @@ def doctor(snapshot, *, head_policy=None, head_revision=None, today=None):
     policy = snapshot.read(POLICY_PATH)
     mode, targets = load_policy(policy)
     result["mode"] = mode
+    matches_head = (policy is not None and head_policy is not None and head_revision is not None
+                    and content_digest(policy) == content_digest(head_policy))
     result["policy"] = {"path": POLICY_PATH, "present": policy is not None, "head_revision": head_revision,
-                        "matches_head": policy is not None and head_revision is not None and policy == head_policy}
+                        "matches_head": matches_head, "comparison": "crlf_normalized_bytes"}
     if not targets:
         add_issue(result, "NO_BASE_TARGETS", "No worktree quality policy exists")
         snapshot.verify()
@@ -153,7 +155,7 @@ def doctor(snapshot, *, head_policy=None, head_revision=None, today=None):
         add_issue(result, diagnostic["code"], diagnostic["message"], diagnostic["target_id"])
     if head_revision is None:
         add_issue(result, "HEAD_UNAVAILABLE", "No committed HEAD policy could be established")
-    elif policy != head_policy:
+    elif not matches_head:
         add_issue(result, "POLICY_NOT_IN_HEAD", "The working policy is new or differs from HEAD")
     result["state"] = "error" if payload["analysis_status"] == "error" else "needs_attention" if result["diagnostics"] else "configured"
     result["next_steps"] = ["Review any unsupported dimensions without weakening existing checks to silence diagnostics.",

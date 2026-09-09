@@ -57,7 +57,9 @@ checkwash quality doctor --format json
 
 Doctor checks the working policy and configuration with the same bounded model
 as a review, counts matching tracked Python sources and compares the policy bytes
-with HEAD. It supplies remediation for unsupported settings, invalid paths,
+with HEAD after normalizing CRLF to LF, matching the existing source-digest convention.
+This avoids an uncommitted-policy warning caused solely by Git's Windows checkout
+line endings; other policy edits remain visible. It supplies remediation for unsupported settings, invalid paths,
 unresolved context, empty tracked scope and a new or uncommitted policy. It returns
 0 for `configured`, 2 for `needs_attention` or `error`, including in report mode.
 
