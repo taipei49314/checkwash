@@ -45,6 +45,8 @@ def profiles(directory):
             assert all(isinstance(v, bool) for v in row["strict_expansion"].values())
         if tool == "ruff":
             row["incompatible_rules"] = [["D211", "D203"], ["D212", "D213"]]
+            # Exact 0.16.6 registry namespaces; F must not select FURB/FAST.
+            row["selector_namespaces"] = "A AIR ANN ARG ASYNC B BLE C4 C90 COM CPY D DJ DOC DTZ E EM ERA EXE F FA FAST FBT FIX FLY FURB G I ICN INP INT ISC LOG N NPY PD PERF PGH PIE PL PT PTH PYI Q RET RSE RUF S SIM SLF SLOT T10 T20 TC TD TID TRY UP W YTT".split()
             with tempfile.TemporaryDirectory(prefix="quality-qualification-") as temp:
                 path = Path(temp)
                 (path / "sample.py").write_text("x = 1\n", encoding="utf-8")
@@ -78,7 +80,7 @@ def qualify(rows):
         root = Path(temp)
         (root / "sample.py").write_text("import os\n", encoding="utf-8")
         ruff_profile = next(r for r in rows if r["tool"] == "ruff")
-        for selectors in [["ALL"], ["F"], ["E"], ["D"], ["C4"], ["PIE"], ["D203", "D211"], ["D212", "D213"], ["D203"], ["D213"]]:
+        for selectors in [["ALL"], ["F"], ["E"], ["D"], ["C4"], ["PIE"], ["PL"], ["T10"], ["FURB"], ["D203", "D211"], ["D212", "D213"], ["D203"], ["D213"]]:
             (root / "ruff.toml").write_text("[lint]\nselect=" + json.dumps(selectors) + "\n", encoding="utf-8")
             run = invoke([sys.executable, "-m", "ruff", "check", "--config", "ruff.toml", "--show-settings", "sample.py"], temp)
             assert run.returncode == 0, run.stderr

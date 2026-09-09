@@ -10,12 +10,16 @@ from .scope import scope
 def selection_updates(select, ignore, profile):
     catalog = set(profile["rule_catalog"])
     preview = set(profile.get("preview_rules", []))
+    namespaces = profile.get("selector_namespaces", sorted({re.match(r"[A-Z]+", r).group() for r in catalog}))
+    def namespace(value):
+        return next((p for p in sorted(namespaces, key=lambda p: (-len(p), p)) if value.startswith(p)), None)
     def matches(selector):
         if selector == "ALL":
             if profile.get("uncoded_rules"):
                 raise QualityError("CONTEXT_UNRESOLVED", "ALL includes rules without qualified legacy codes")
             return catalog - preview
-        found = {r for r in catalog if r.startswith(selector)}
+        family = namespace(selector)
+        found = {r for r in catalog if family is not None and namespace(r) == family and r.startswith(selector)}
         if not found:
             raise QualityError("UNSUPPORTED_KEY", "Unknown or unsupported Ruff rule selector: " + selector)
         if selector in preview:
