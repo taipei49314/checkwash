@@ -1,0 +1,52 @@
+name: checkwash quality
+description: Review coverage, Ruff and mypy declarations under a base-owned policy.
+inputs:
+  base:
+    description: Full base commit SHA, already fetched in the subject repository.
+    required: true
+  head:
+    description: Full head commit SHA, already fetched in the subject repository.
+    required: true
+  repository:
+    description: Git repository root inside GITHUB_WORKSPACE; relative to that workspace.
+    default: '.'
+  require-enforce:
+    description: Fail setup with exit 2 unless the base policy selects enforce mode.
+    default: 'false'
+outputs:
+  exit_code:
+    description: Action exit (0, 1 or 2), including integration errors.
+    value: ${{ steps.review.outputs.exit_code }}
+  analysis_exit_code:
+    description: Original quality exit, or unavailable if analysis could not run.
+    value: ${{ steps.review.outputs.analysis_exit_code }}
+  analysis_status:
+    description: Original analysis completeness, or error on integration failure.
+    value: ${{ steps.review.outputs.analysis_status }}
+  verdict:
+    description: Original verdict, or error on integration failure.
+    value: ${{ steps.review.outputs.verdict }}
+  report_path:
+    description: Absolute path to quality JSON, empty if analysis could not produce a valid report.
+    value: ${{ steps.review.outputs.report_path }}
+  receipt_path:
+    description: Absolute path to the action receipt, including integration errors.
+    value: ${{ steps.review.outputs.receipt_path }}
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        CW_ACTION_PATH: ${{ github.action_path }}
+      run: 'python -I "$CW_ACTION_PATH/install.py"'
+    - id: review
+      shell: bash
+      env:
+        CW_PYTHON: ${{ steps.install.outputs.python }}
+        CW_ACTION_PATH: ${{ github.action_path }}
+        CW_QUALITY_BASE: ${{ inputs.base }}
+        CW_QUALITY_HEAD: ${{ inputs.head }}
+        CW_QUALITY_REPOSITORY: ${{ inputs.repository }}
+        CW_QUALITY_REQUIRE_ENFORCE: ${{ inputs.require-enforce }}
+      run: '"$CW_PYTHON" -I "$CW_ACTION_PATH/run.py"'
