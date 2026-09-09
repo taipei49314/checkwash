@@ -1,0 +1,394 @@
+{
+  "not_claimed": [
+    "full tool semantics",
+    "natural corpus acceptance",
+    "CI activation proof"
+  ],
+  "qualification_schema_version": 1,
+  "results": [
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 810,
+      "selectors": [
+        "ALL"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 43,
+      "selectors": [
+        "F"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 18,
+      "selectors": [
+        "E"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 44,
+      "selectors": [
+        "D"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 19,
+      "selectors": [
+        "C4"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 8,
+      "selectors": [
+        "PIE"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 95,
+      "selectors": [
+        "PL"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 1,
+      "selectors": [
+        "T10"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 22,
+      "selectors": [
+        "FURB"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 1,
+      "selectors": [
+        "D203",
+        "D211"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 1,
+      "selectors": [
+        "D212",
+        "D213"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 1,
+      "selectors": [
+        "D203"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "case": "full-selection-set",
+      "matched": true,
+      "rules": 1,
+      "selectors": [
+        "D213"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "actual": true,
+      "expected": true,
+      "ignore": [],
+      "select": [
+        "F401"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "actual": false,
+      "expected": false,
+      "ignore": [
+        "F401"
+      ],
+      "select": [
+        "F401"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "actual": true,
+      "expected": true,
+      "ignore": [
+        "F"
+      ],
+      "select": [
+        "F401"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "actual": false,
+      "expected": false,
+      "ignore": [
+        "F401"
+      ],
+      "select": [
+        "F"
+      ],
+      "tool": "ruff"
+    },
+    {
+      "actual": true,
+      "case": "inheritance",
+      "config": "extend=\"parent.toml\"\n",
+      "expected": true,
+      "tool": "ruff"
+    },
+    {
+      "actual": false,
+      "case": "inheritance",
+      "config": "extend=\"parent.toml\"\n[lint]\nselect=[]\n",
+      "expected": false,
+      "tool": "ruff"
+    },
+    {
+      "actual": false,
+      "case": "inheritance",
+      "config": "extend=\"parent.toml\"\n[lint]\nignore=[\"F\"]\n",
+      "expected": false,
+      "tool": "ruff"
+    },
+    {
+      "case": "scope",
+      "pattern": null,
+      "reported": true,
+      "tool": "ruff"
+    },
+    {
+      "case": "scope",
+      "pattern": "src/code.py",
+      "reported": false,
+      "tool": "ruff"
+    },
+    {
+      "case": "scope",
+      "pattern": "src/**",
+      "reported": false,
+      "tool": "ruff"
+    },
+    {
+      "case": "nested-auto-override",
+      "reported": false,
+      "tool": "ruff"
+    },
+    {
+      "actual": true,
+      "disallow_untyped_defs": true,
+      "expected": true,
+      "tool": "mypy"
+    },
+    {
+      "actual": false,
+      "disallow_untyped_defs": false,
+      "expected": false,
+      "tool": "mypy"
+    },
+    {
+      "case": "strict-option-expansion",
+      "flags": 13,
+      "matched": true,
+      "strict": false,
+      "tool": "mypy"
+    },
+    {
+      "case": "strict-option-expansion",
+      "flags": 13,
+      "matched": true,
+      "strict": true,
+      "tool": "mypy"
+    },
+    {
+      "actual_exit": 2,
+      "expected_exit": 2,
+      "fail_under": 100,
+      "tool": "coverage"
+    },
+    {
+      "actual_exit": 0,
+      "expected_exit": 0,
+      "fail_under": 0,
+      "tool": "coverage"
+    },
+    {
+      "case": "scope",
+      "pattern": null,
+      "reported": true,
+      "tool": "coverage"
+    },
+    {
+      "case": "scope",
+      "pattern": "src/code.py",
+      "reported": false,
+      "tool": "coverage"
+    },
+    {
+      "case": "scope",
+      "pattern": "src/**",
+      "reported": false,
+      "tool": "coverage"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        ".coveragerc",
+        "pyproject.toml"
+      ],
+      "fixture": 0,
+      "matched": true,
+      "tool": "coverage"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        "pyproject.toml",
+        "setup.cfg"
+      ],
+      "fixture": 1,
+      "matched": true,
+      "tool": "coverage"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        "pyproject.toml",
+        "tox.ini"
+      ],
+      "fixture": 2,
+      "matched": true,
+      "tool": "coverage"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        "pyproject.toml"
+      ],
+      "fixture": 3,
+      "matched": true,
+      "tool": "coverage"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        ".coveragerc.toml",
+        "pyproject.toml"
+      ],
+      "fixture": 4,
+      "matched": true,
+      "tool": "coverage"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        ".ruff.toml",
+        "ruff.toml"
+      ],
+      "fixture": 0,
+      "matched": true,
+      "tool": "ruff"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        "pyproject.toml",
+        "ruff.toml"
+      ],
+      "fixture": 1,
+      "matched": true,
+      "tool": "ruff"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        "pyproject.toml"
+      ],
+      "fixture": 2,
+      "matched": true,
+      "tool": "ruff"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        ".mypy.ini",
+        "mypy.ini"
+      ],
+      "fixture": 0,
+      "matched": true,
+      "tool": "mypy"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        ".mypy.ini",
+        "pyproject.toml"
+      ],
+      "fixture": 1,
+      "matched": true,
+      "tool": "mypy"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        "pyproject.toml",
+        "setup.cfg"
+      ],
+      "fixture": 2,
+      "matched": true,
+      "tool": "mypy"
+    },
+    {
+      "case": "source-precedence",
+      "config_paths": [
+        "setup.cfg"
+      ],
+      "fixture": 3,
+      "matched": true,
+      "tool": "mypy"
+    }
+  ],
+  "status": "bounded-fixtures-passed",
+  "versions": {
+    "coverage": "7.16.0",
+    "mypy": "2.3.1",
+    "ruff": "0.16.6"
+  }
+}

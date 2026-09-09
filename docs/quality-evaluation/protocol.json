@@ -1,0 +1,21 @@
+{
+  "protocol_version": 1,
+  "status": "candidate-intake-only",
+  "cutoff_utc": "2026-09-09T05:44:53Z",
+  "initial_candidates_per_repository": 15,
+  "repository_candidates": [
+    {"repo": "pydantic/pydantic", "path": "pyproject.toml"},
+    {"repo": "pytest-dev/pytest", "path": "pyproject.toml"},
+    {"repo": "encode/httpx", "path": "pyproject.toml"},
+    {"repo": "pallets/flask", "path": "pyproject.toml"},
+    {"repo": "python-trio/trio", "path": "pyproject.toml"},
+    {"repo": "Textualize/textual", "path": "pyproject.toml"}
+  ],
+  "selection": "For each repository, request path history at or before cutoff, newest first; retain the first 15 single-parent commits. Preserve the source API order and all omitted merge IDs. No content-based or Checkwash-output-based choice is permitted at intake.",
+  "grouping": "Every candidate from these repositories is reserved for the same held-out group. Development uses synthetic fixtures only. Any natural case used to repair a model is retired to development with its whole repository group; replacement repositories require a new preregistration before analysis.",
+  "labels": ["weakened_config", "equivalent_or_strengthened", "legitimate_weakening", "unsupported", "ambiguous", "unrelated"],
+  "label_rule": "Human reviewers establish tool relevance, effective configuration context and labels before acceptance scoring. Legitimate weakening is a subtype, never counted again as a separate observation.",
+  "quota_rule": "These 90 candidates are not automatically 90 relevant changes. Acceptance still requires at least 90 relevant natural changes from six repositories and at least 20 relevant changes per tool. Report shortfalls explicitly; continue older history in the same source order for quota replenishment, without inspecting model predictions. Do not fill the natural denominator with mutations.",
+  "scoring": "NOT_RUN. Freeze candidate hashes and human labels before scoring. Missing tool-version or source-closure context is unknown. No externally supplied benchmark policy may be presented as policy that actually existed in the original repository.",
+  "privacy": "Only public configuration contents, source hashes and commit links are captured. Repository programs, workflows and plugins are never executed."
+}

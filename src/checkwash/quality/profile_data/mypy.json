@@ -1,0 +1,143 @@
+{
+  "config_formats": [
+    "ini",
+    "toml"
+  ],
+  "defaults": {
+    "error_codes": [
+      "assignment",
+      "arg-type",
+      "call-arg",
+      "attr-defined",
+      "return-value",
+      "return",
+      "operator",
+      "index",
+      "union-attr"
+    ],
+    "ignore_errors": false,
+    "ignore_missing_imports": false,
+    "other_flags": "mypy_defaults",
+    "strict": false,
+    "strict_optional": true
+  },
+  "digest": "7548c9c9c8f4bccdd0505237a147dd58f10f90a41a76cb71eecaec1751f9135e",
+  "dimension_dependencies": {
+    "mypy.error_codes": {
+      "harmless_keys": [
+        "show_error_codes",
+        "show_column_numbers",
+        "pretty",
+        "color_output",
+        "cache_dir"
+      ],
+      "required_context_keys": [
+        "enable_error_code",
+        "disable_error_code",
+        "ignore_errors"
+      ],
+      "unsupported_interference_keys": [
+        "unqualified-error-code",
+        "overrides",
+        "inline-options",
+        "all-other-global-keys"
+      ]
+    },
+    "mypy.global_flags": {
+      "harmless_keys": [
+        "show_error_codes",
+        "show_column_numbers",
+        "pretty",
+        "color_output",
+        "cache_dir"
+      ],
+      "required_context_keys": [
+        "strict",
+        "strict_expansion",
+        "mypy_defaults",
+        "explicit-global-flags",
+        "ignore_errors",
+        "source-inline-options-inventory"
+      ],
+      "unsupported_interference_keys": [
+        "overrides",
+        "inline-options",
+        "exclude",
+        "files",
+        "python_version",
+        "all-other-global-keys"
+      ]
+    }
+  },
+  "discovery_precedence": [
+    "mypy.ini",
+    ".mypy.ini",
+    "pyproject.toml",
+    "setup.cfg"
+  ],
+  "id": "mypy-2.3.1-q1",
+  "model_revision": 1,
+  "mypy_defaults": {
+    "check_untyped_defs": false,
+    "disallow_any_generics": false,
+    "disallow_incomplete_defs": false,
+    "disallow_subclassing_any": false,
+    "disallow_untyped_calls": false,
+    "disallow_untyped_decorators": false,
+    "disallow_untyped_defs": false,
+    "extra_checks": false,
+    "implicit_reexport": true,
+    "strict_equality": false,
+    "warn_redundant_casts": false,
+    "warn_return_any": false,
+    "warn_unused_ignores": false
+  },
+  "pattern_subset": [],
+  "profile_schema_version": 1,
+  "qualification_fixture_sha256": "41be3398711535feb4fcca6a3693e9cef8f3df62df7439750184ab825c5a000b",
+  "qualification_receipt": {
+    "fixture": "qualification_data/qualify_quality.py.txt",
+    "fixture_sha256": "41be3398711535feb4fcca6a3693e9cef8f3df62df7439750184ab825c5a000b",
+    "results": "qualification_data/results.json",
+    "results_sha256": "e3af8d55ac5052256d9df173e6e5e59da1b93ba1cfcb9080f7377749d08ab534"
+  },
+  "scope": "bounded-preview",
+  "strict_expansion": {
+    "check_untyped_defs": true,
+    "disallow_any_generics": true,
+    "disallow_incomplete_defs": true,
+    "disallow_subclassing_any": true,
+    "disallow_untyped_calls": true,
+    "disallow_untyped_decorators": true,
+    "disallow_untyped_defs": true,
+    "extra_checks": true,
+    "implicit_reexport": false,
+    "strict_equality": true,
+    "warn_redundant_casts": true,
+    "warn_return_any": true,
+    "warn_unused_ignores": true
+  },
+  "supported_keys": [
+    "strict",
+    "disallow_untyped_defs",
+    "check_untyped_defs",
+    "disallow_incomplete_defs",
+    "warn_return_any",
+    "strict_optional",
+    "ignore_errors",
+    "ignore_missing_imports",
+    "disallow_any_generics",
+    "disallow_subclassing_any",
+    "disallow_untyped_calls",
+    "disallow_untyped_decorators",
+    "extra_checks",
+    "implicit_reexport",
+    "strict_equality",
+    "warn_redundant_casts",
+    "warn_unused_ignores",
+    "enable_error_code",
+    "disable_error_code"
+  ],
+  "tool": "mypy",
+  "tool_version": "2.3.1"
+}

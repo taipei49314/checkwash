@@ -1,0 +1,99 @@
+{
+  "config_formats": [
+    "ini",
+    "toml"
+  ],
+  "defaults": {
+    "report.fail_under": "0",
+    "report.omit": [],
+    "report.precision": "0",
+    "run.branch": false,
+    "run.omit": []
+  },
+  "digest": "a2bb637b429bc1ba8871cbb1be22d1f6aaf533e2f58925fad6d0da52725e19c9",
+  "dimension_dependencies": {
+    "coverage.report.fail_under": {
+      "harmless_keys": [
+        "run.data_file",
+        "run.parallel",
+        "report.show_missing",
+        "report.skip_covered",
+        "report.skip_empty",
+        "report.sort",
+        "report.format"
+      ],
+      "required_context_keys": [
+        "run.branch",
+        "report.precision"
+      ],
+      "unsupported_interference_keys": [
+        "run.source",
+        "run.include",
+        "report.include",
+        "report.exclude_lines",
+        "report.exclude_also",
+        "paths",
+        "all-other-run-or-report-keys"
+      ]
+    },
+    "coverage.report.scope": {
+      "harmless_keys": [],
+      "required_context_keys": [
+        "report.omit",
+        "target.root",
+        "target.paths",
+        "surviving-tracked-files"
+      ],
+      "unsupported_interference_keys": [
+        "source",
+        "include",
+        "unqualified-pattern"
+      ]
+    },
+    "coverage.run.scope": {
+      "harmless_keys": [],
+      "required_context_keys": [
+        "run.omit",
+        "target.root",
+        "target.paths",
+        "surviving-tracked-files"
+      ],
+      "unsupported_interference_keys": [
+        "source",
+        "include",
+        "unqualified-pattern"
+      ]
+    }
+  },
+  "discovery_precedence": [
+    ".coveragerc",
+    ".coveragerc.toml",
+    "setup.cfg",
+    "tox.ini",
+    "pyproject.toml"
+  ],
+  "id": "coverage-7.16.0-q1",
+  "model_revision": 1,
+  "pattern_subset": [
+    "literal-relative-path",
+    "literal-directory/**"
+  ],
+  "profile_schema_version": 1,
+  "qualification_fixture_sha256": "41be3398711535feb4fcca6a3693e9cef8f3df62df7439750184ab825c5a000b",
+  "qualification_receipt": {
+    "fixture": "qualification_data/qualify_quality.py.txt",
+    "fixture_sha256": "41be3398711535feb4fcca6a3693e9cef8f3df62df7439750184ab825c5a000b",
+    "results": "qualification_data/results.json",
+    "results_sha256": "e3af8d55ac5052256d9df173e6e5e59da1b93ba1cfcb9080f7377749d08ab534"
+  },
+  "scope": "bounded-preview",
+  "supported_keys": [
+    "run.branch",
+    "run.omit",
+    "report.fail_under",
+    "report.precision",
+    "report.omit"
+  ],
+  "tool": "coverage",
+  "tool_version": "7.16.0"
+}
