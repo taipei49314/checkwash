@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
+import posixpath
 import re
 import subprocess
 import sys
@@ -32,6 +33,12 @@ CONFIG_NAMES = {"pyproject.toml", "ruff.toml", ".ruff.toml", "mypy.ini",
                 ".mypy.ini", ".coveragerc", "setup.cfg", "tox.ini",
                 "pytest.ini", ".pre-commit-config.yaml", ".pre-commit-config.yml"}
 ROOT_CONTEXT = {"uv.lock", "poetry.lock", "pdm.lock", "Pipfile", "Pipfile.lock"}
+DEPENDENCY_NAME = re.compile(r"(?:^|[-_.])(?:requirements|constraints)(?:$|[-_.])", re.I)
+REFERENCE_OPTION = re.compile(
+    r"(?<![\w-])(?P<option>--requirement|--constraint|-r|-c)"
+    r"(?:[ \t]*=[ \t]*|[ \t]*)"
+    r"(?P<argument>\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s;|&<>]+)"
+)
 
 
 def digest(data):
@@ -141,7 +148,51 @@ def wanted_context(path):
         return True
     if path.startswith(".github/workflows/") and p.suffix in {".yml", ".yaml"}:
         return True
-    return ("requirements" in p.parts or p.name.startswith("requirements")) and p.suffix in {".txt", ".in"}
+    return any(DEPENDENCY_NAME.search(part) for part in p.parts) and p.suffix in {".txt", ".in"}
+
+
+def static_references(path, data, dependency_file=False):
+    """Read hints only. Root-relative workflow paths never establish a cwd."""
+    try:
+        content = data.decode("utf-8")
+    except UnicodeError:
+        return
+    dependency_file = dependency_file or PurePosixPath(path).suffix in {".txt", ".in"}
+    for number, line in enumerate(content.splitlines(), 1):
+        if line.lstrip().startswith("#"):
+            continue
+        if not dependency_file and not (
+            re.search(r"\b(?:pip\d*|pip-compile|pip-sync)\b", line)
+            or re.match(r"\s*(?:deps\s*=\s*)?(?:-r|-c|--requirement|--constraint)", line)
+        ):
+            continue
+        for match in REFERENCE_OPTION.finditer(line):
+            # python/git -c is a command/config argument, not a constraint file.
+            if match["option"] == "-c" and re.search(r"\b(?:python[\d.]*|git)\s*$", line[:match.start()]):
+                continue
+            argument = match["argument"].strip("\"'")
+            record = {"source_path": path, "line": number, "option": match["option"],
+                      "argument": argument, "state": "unresolved"}
+            if "://" in argument:
+                yield {**record, "reason": "external-reference"}
+                continue
+            # These two tox substitutions have a defined repository-root anchor.
+            anchored = argument.startswith(("{toxinidir}/", "{tox_root}/"))
+            for prefix in ("{toxinidir}/", "{tox_root}/"):
+                if argument.startswith(prefix):
+                    argument = argument[len(prefix):]
+            if any(c in argument for c in "$\u0060{}*?[]"):
+                yield {**record, "reason": "dynamic-reference"}
+                continue
+            argument = argument.replace("\\", "/")
+            parent = str(PurePosixPath(path).parent) if dependency_file and not anchored else "."
+            resolved = posixpath.normpath(posixpath.join(parent, argument))
+            if not argument or resolved in {".", ".."} or resolved.startswith(("../", "/")) or ":" in resolved:
+                yield {**record, "reason": "outside-repository-or-invalid"}
+                continue
+            yield {**record, "state": "candidate", "target_path": resolved,
+                   "anchor": "dependency-file-relative" if dependency_file and not anchored else "repository-root-candidate",
+                   "activation": "UNESTABLISHED"}
 
 
 def object_bytes(repo_path, blob, limit):
@@ -156,18 +207,24 @@ def object_bytes(repo_path, blob, limit):
 def read_snapshot(repo_path, sha, limits, blob_cache, object_dir):
     require(SHA.fullmatch(sha), "invalid snapshot ID")
     inventory = git(repo_path, "ls-tree", "-r", "-z", sha)
-    rows = []
+    entries = {}
     for row in inventory.split(b"\0"):
         if row:
             metadata, path_bytes = row.split(b"\t", 1)
             mode, kind, blob = metadata.decode("ascii").split()
             path = path_bytes.decode("utf-8", errors="strict")
-            if wanted_context(path):
-                rows.append((path, mode, kind, blob))
+            entries[path] = (mode, kind, blob)
     # Priority is fixed, never based on tool changes or model output.
-    rows.sort(key=lambda r: (r[0] != "pyproject.toml", len(PurePosixPath(r[0]).parts), r[0]))
+    queue = sorted((p for p in entries if wanted_context(p)),
+                   key=lambda p: (p != "pyproject.toml", len(PurePosixPath(p).parts), p))
+    queued = set(queue)
+    referenced = set()
+    references = []
+    reference_limit = limits.get("references_per_snapshot", 512)
+    references_truncated = False
     sources, total, accepted = {}, 0, 0
-    for path, mode, kind, blob in rows:
+    for path in queue:
+        mode, kind, blob = entries[path]
         record = {"git_blob": blob, "git_mode": mode}
         if kind != "blob" or mode not in {"100644", "100755"}:
             record.update(state="unknown", reason="non-regular-file")
@@ -190,9 +247,31 @@ def read_snapshot(repo_path, sha, limits, blob_cache, object_dir):
                 record.update(state="present", sha256=key, object="objects/" + key)
                 total += size
                 accepted += 1
+                for reference in static_references(path, data, path in referenced):
+                    if len(references) >= reference_limit:
+                        references_truncated = True
+                        break
+                    if reference["state"] == "candidate":
+                        target = reference["target_path"]
+                        if target not in entries:
+                            reference.update(state="unresolved", reason="not-in-tracked-tree")
+                        else:
+                            reference["state"] = "tracked-candidate"
+                            referenced.add(target)
+                            if target not in queued:
+                                queue.append(target)
+                                queued.add(target)
+                    references.append(reference)
         sources[path] = record
+    for reference in references:
+        if reference["state"] == "tracked-candidate":
+            target = sources[reference["target_path"]]
+            reference["state"] = "captured-candidate" if target["state"] == "present" else "unresolved"
+            if target["state"] != "present":
+                reference["reason"] = target["reason"]
     return {"commit": sha, "tracked_entries": inventory.count(b"\0"),
             "inventory_sha256": digest(inventory), "sources": sources,
+            "static_references": references, "reference_limit_reached": references_truncated,
             "closure_status": "UNESTABLISHED", "activation_status": "UNESTABLISHED"}
 
 
@@ -250,7 +329,8 @@ def version_evidence(sources, output):
                 match = re.search(r"\b" + tool + r"(?:\[[^\]]+\])?\s*==\s*([0-9]+(?:\.[0-9]+){1,3})(?![0-9A-Za-z.*+_-])", line)
                 if match:
                     result[tool]["exact_version_candidates"].append({"version": match[1], "path": path,
-                                                                    "line": number, "kind": "requirement-mention"})
+                                                                    "line": number, "kind": "requirement-mention",
+                                                                    "declaration": line.strip()[:512]})
         if path.endswith((".toml", ".lock")):
             try:
                 doc = tomllib.loads(content)
@@ -294,6 +374,8 @@ def summarize(candidates, histories, errors):
             group["tool_table_changes"][tool] += 1
         for side in row.get("snapshots", {}).values():
             counts["unknown_context_sources"] += sum(s["state"] != "present" for s in side["sources"].values())
+            counts["unresolved_static_references"] += sum(r["state"] == "unresolved" for r in side.get("static_references", []))
+            counts["reference_limited_snapshots"] += bool(side.get("reference_limit_reached"))
     return {"status": "PREPARATION_INCOMPLETE" if errors else "AWAITING_HUMAN_REVIEW",
             "acceptance": "NOT_RUN", "predictions": "NOT_RUN", "candidate_count": len(candidates),
             "human_reviewed_count": 0, "qualified_relevant_count": None, "per_tool_relevant_counts": None,
@@ -349,6 +431,12 @@ def write_review(output, candidates, summary, manifest_hash):
                     unavailable = [p + ": " + s["reason"] for p, s in snapshot["sources"].items() if s["state"] != "present"]
                     if unavailable:
                         lines += ["", "Unavailable context: " + "; ".join(unavailable)]
+                    references = snapshot.get("static_references", [])
+                    if references:
+                        lines += ["", "Static requirement/constraint references (workflow paths assume repository root only as a search hint; activation and cwd remain unverified):",
+                                  "", "```json", json.dumps(references, ensure_ascii=False, indent=2), "```"]
+                    if snapshot.get("reference_limit_reached"):
+                        lines += ["", "Reference scan reached its bound; remaining references are unknown."]
                     lines += [""]
                 if changed:
                     before = source_bytes(row["snapshots"]["base"], row["path"], output)

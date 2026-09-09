@@ -113,6 +113,51 @@ class NaturalPreparationTests(unittest.TestCase):
         result = subject.summarize([], [], [{"repo": "example/demo", "error_type": "ValueError"}])
         self.assertEqual(result["status"], "PREPARATION_INCOMPLETE")
 
+    def test_dependency_filename_variants_are_captured(self):
+        for path in ("test-requirements.txt", "docs-requirements.in", "requirements-skip/tests-min.txt",
+                     "ci/test-constraints.txt", "constraints/versions.in"):
+            self.assertTrue(subject.wanted_context(path), path)
+        self.assertFalse(subject.wanted_context("docs/notrequirements.txt"))
+
+    def test_relative_constraint_and_requirement_references(self):
+        data = b'-r ../shared/deps.lock\n--constraint="pins/base.lock"\n-c constraints.txt\n'
+        refs = list(subject.static_references("deps/test-requirements.in", data))
+        self.assertEqual([r["target_path"] for r in refs], ["shared/deps.lock", "deps/pins/base.lock", "deps/constraints.txt"])
+        self.assertTrue(all(r["activation"] == "UNESTABLISHED" for r in refs))
+
+    def test_workflow_references_remain_candidates_and_dynamic_stays_unknown(self):
+        data = b'run: python -m pip install -r "pins/deps.lock" -c $CONSTRAINTS\nrun: python -c "print(1)"\n'
+        refs = list(subject.static_references(".github/workflows/test.yml", data))
+        self.assertEqual(len(refs), 2)
+        self.assertEqual(refs[0]["target_path"], "pins/deps.lock")
+        self.assertEqual(refs[0]["anchor"], "repository-root-candidate")
+        self.assertEqual(refs[1]["reason"], "dynamic-reference")
+
+    def test_reference_boundaries_and_tox_anchor(self):
+        refs = list(subject.static_references("requirements/main.in", b'-r ../../outside\n-r https://example.test/deps\n'))
+        self.assertEqual([r["reason"] for r in refs], ["outside-repository-or-invalid", "external-reference"])
+        ref = list(subject.static_references("tox.ini", b'deps = -r{toxinidir}/pins/deps.lock\n'))[0]
+        self.assertEqual(ref["target_path"], "pins/deps.lock")
+
+    def test_nested_references_capture_nonstandard_names_and_stop_cycles(self):
+        entries = b"100644 blob " + b"a"*40 + b"\ttest-requirements.txt\0" + b"100644 blob " + b"b"*40 + b"\tpins/deps.lock\0"
+        data = {"a"*40: b'-r pins/deps.lock\n-c missing.lock\n', "b"*40: b'-r ../test-requirements.txt\nmypy==1.4.1\n'}
+        def read(_repo, blob, _limit):
+            return data[blob], len(data[blob])
+        with tempfile.TemporaryDirectory() as directory, patch.object(subject, "git", return_value=entries), patch.object(subject, "object_bytes", side_effect=read) as reader:
+            result = subject.read_snapshot(Path(directory), "c"*40, {"files_per_snapshot": 128, "bytes_per_file": 1000000, "total_bytes_per_snapshot": 16777216}, {}, Path(directory))
+            self.assertEqual(reader.call_count, 2)
+            self.assertEqual(result["sources"]["pins/deps.lock"]["state"], "present")
+            self.assertEqual([r["reason"] for r in result["static_references"] if r["state"] == "unresolved"], ["not-in-tracked-tree"])
+
+    def test_reference_capture_respects_source_limits(self):
+        entries = b"100644 blob " + b"a"*40 + b"\ttest-requirements.txt\0" + b"100644 blob " + b"b"*40 + b"\tpins/deps.lock\0"
+        data = b'-r pins/deps.lock\n'
+        with tempfile.TemporaryDirectory() as directory, patch.object(subject, "git", return_value=entries), patch.object(subject, "object_bytes", return_value=(data, len(data))):
+            result = subject.read_snapshot(Path(directory), "c"*40, {"files_per_snapshot": 1, "bytes_per_file": 1000000, "total_bytes_per_snapshot": 16777216}, {}, Path(directory))
+            self.assertEqual(result["static_references"][0]["reason"], "snapshot-file-limit")
+            self.assertEqual(result["closure_status"], "UNESTABLISHED")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
