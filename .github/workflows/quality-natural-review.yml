@@ -1,0 +1,39 @@
+name: quality natural review preparation
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - tools/prepare_quality_natural_review.py
+      - tools/test_quality_natural_preparation.py
+      - docs/quality-evaluation/natural-preparation-v1.json
+      - .github/workflows/quality-natural-review.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: verify preparation on synthetic source packets
+        run: python tools/test_quality_natural_preparation.py
+      - name: retrieve the frozen original intake
+        run: gh run download 34320615128 --repo taipei49314/checkwash --name quality-candidates --dir original-intake
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: collect source evidence without predictions
+        run: python tools/prepare_quality_natural_review.py --initial original-intake --output natural-review --cache bare-sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: quality-natural-review
+          path: natural-review
+          if-no-files-found: error
