@@ -22,6 +22,7 @@ from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.model import Assertion, FileIR, IR
 from checkwash.detectors.snapshot_expectation import detect as detect_stored_expectations
+from checkwash.frontends.python.constant_renames import assertions_renamed
 
 
 def _numeric_comparison(assertion: Assertion):
@@ -113,6 +114,8 @@ def detect(ir: IR) -> list[Finding]:
             for pair in unit.delta.assertion_pairs:
                 b, a = b_by_id.get(pair.before_id), a_by_id.get(pair.after_id)
                 if b is None or a is None:
+                    continue
+                if assertions_renamed(b, a, file.module_constant_renames):
                     continue
                 # Only unweakened pairs: a drop is ASSERT_WEAKENED's business.
                 if pair.strength_change is None or pair.strength_change < 0:

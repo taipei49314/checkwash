@@ -41,6 +41,7 @@ from __future__ import annotations
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.astutil import expr_wraps, same_expr
 from checkwash.ir.model import IR
+from checkwash.frontends.python.constant_renames import assertions_renamed
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -60,6 +61,8 @@ def detect(ir: IR) -> list[Finding]:
                     continue
                 b, a = b_by_id.get(pair.before_id), a_by_id.get(pair.after_id)
                 if b is None or a is None:
+                    continue
+                if assertions_renamed(b, a, file.module_constant_renames):
                     continue
                 # A drop in strength is already ASSERT_WEAKENED's finding.
                 if pair.strength_change is None or pair.strength_change < 0:

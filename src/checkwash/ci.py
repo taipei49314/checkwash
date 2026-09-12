@@ -7,6 +7,7 @@ from checkwash.change import FileChange
 from checkwash.deps import parse_manifest_pins
 from checkwash.config import Config
 from checkwash.ir.model import DiffGlobals
+from checkwash.pytest_collection import pytest_collection_changes
 from checkwash.roles import (
     _CI_NARROWING_TOKENS,
     _CI_SWALLOW_TOKENS,
@@ -85,7 +86,7 @@ def _make_ignores_error(line: str) -> bool:
 
 
 def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str] | None = None) -> str:
-    """Every ci-role file's *base* side, lowercased and concatenated.
+    """Every ci-role file's *base* side, concatenated without losing case.
 
     A narrowing that already existed somewhere on this surface is not being
     introduced by the diff, wherever in the diff it now appears. That is what
@@ -104,7 +105,7 @@ def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str
         ):
             role = "ci"
         if role == "ci":
-            parts.append(change.before.decode("utf-8", errors="replace").lower())
+            parts.append(change.before.decode("utf-8-sig", errors="replace"))
     return "\n".join(parts)
 
 
@@ -193,6 +194,9 @@ def _scan_ci_weakening(
     after: bytes | None,
     ci_base: str = "",
 ) -> None:
+    if after and (_runs_tests(before) or _runs_tests(after) or path.endswith(("pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml"))):
+        for reason in pytest_collection_changes(ci_base or (before or b"").decode("utf-8-sig", errors="replace"), after.decode("utf-8-sig", errors="replace")):
+            g.ci_weakening_lines.append((path, reason))
     # A file that did not exist at base cannot have *narrowed* anything —
     # there was no test command there to narrow. It can still swallow an exit
     # code, which is why the two families are separated.
@@ -207,7 +211,7 @@ def _scan_ci_weakening(
             and any(tok in lowered for tok in _TEST_RUNNER_TOKENS)
         )
         narrowed = existed and any(
-            token in lowered and token not in ci_base for token in _CI_NARROWING_TOKENS
+            token in lowered and token not in ci_base.lower() for token in _CI_NARROWING_TOKENS
         )
         if swallowed or narrowed or (
             _make_ignores_error(line) and any(t in lowered for t in _TEST_RUNNER_TOKENS)
@@ -243,4 +247,3 @@ def _scan_ci_weakening(
         # Swapping one runner for another (pytest -> nox) keeps the token and
         # earns nothing, which is the consolidation this must not punish.
         g.ci_weakening_lines.append((path, "the test suite is no longer invoked by this script"))
-

@@ -307,6 +307,9 @@ class FileIR:
     # execution order.
     module_constants: dict[str, str] = field(default_factory=dict)
     module_constants_before: dict[str, str] = field(default_factory=dict)
+    # Complete-file literal constant rename proof; never production repair
+    # credit. Only assertion pairs transformed by this bijection may use it.
+    module_constant_renames: dict[str, str] = field(default_factory=dict)
     # Same-file `@pytest.fixture` name -> canonical text of what it returns or
     # yields. A fixture is not a collected unit, so without this an expectation
     # supplied by one is invisible. Conftest fixtures are out of scope.

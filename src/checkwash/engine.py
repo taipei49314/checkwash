@@ -663,6 +663,9 @@ def build_ir(
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         file_ir.native_assertion_context_unchanged = native_context_unchanged
+        if role in ("test", "conftest") and path.endswith(".py"):
+            from checkwash.frontends.python.constant_renames import literal_constant_renames
+            file_ir.module_constant_renames = literal_constant_renames(change.before, change.after)
         if role in ("ci", "guardrail"):
             file_ir.change_evidence = _change_evidence(change, rename_destinations)
         parsed_for_helpers = after_parsed if after_parsed and after_parsed.parse_ok else before_parsed
