@@ -559,7 +559,8 @@ def _module(source, *, baseline):
     tree = ast.parse(text)
     if sum(1 for _ in ast.walk(tree)) > MAX_AST_NODES:
         return None
-    if any(isinstance(node, ast.FunctionDef) and (node.name in _IMPLICIT_HOOKS or node.name.startswith("pytest_"))
+    if any(isinstance(node, (ast.FunctionDef, ast.ClassDef))
+           and (node.name in _IMPLICIT_HOOKS or node.name.startswith(("pytest_", "__")))
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
     wrapper_tests = expand_wrappers(tree)
@@ -586,7 +587,7 @@ def _module(source, *, baseline):
                 return None
             bound = [alias.asname or (alias.name.split(".")[0] if isinstance(node, ast.Import) else alias.name)
                      for alias in node.names]
-            if names.intersection(bound) or len(set(bound)) != len(bound):
+            if names.intersection(bound) or len(set(bound)) != len(bound) or any(name.startswith("__") for name in bound):
                 return None
             names.update(bound)
             imports.update(bound)

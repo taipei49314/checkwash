@@ -96,6 +96,10 @@ def test_collection_dispatch_or_instance_state_cannot_be_erased_by_class_project
 def test_helper_extraction_keeps_startup_and_order_requirements():
     ir, _findings, _verdict = run((HEADER + HELPER).encode(), context={'conftest.py': b'patch()\n'})
     assert not projected(ir)
+    # New inputs do not prove preservation of the original sequence.
+    after = (HEADER + METHOD.replace('self.check(1, 2)', 'self.check(3, 6)')).encode()
+    ir, _findings, _verdict = run(after)
+    assert not projected(ir)
 
 
 def test_a_parameter_cannot_shadow_a_helper_class_constructor():
@@ -115,8 +119,11 @@ def test_implicitly_executed_hooks_cannot_be_erased_even_when_explicitly_called(
     after = (HEADER + 'def test_first():\n    assert double(1) == 2\n').encode()
     ir, _findings, _verdict = run(after, before)
     assert not projected(ir)
-    # New inputs do not prove preservation of the original sequence.
-    after = (HEADER + METHOD.replace('self.check(1, 2)', 'self.check(3, 6)')).encode()
+
+
+@pytest.mark.parametrize('name', ['__getattr__', '__builtins__'])
+def test_implicit_module_dunder_bindings_cannot_be_erased_as_helpers(name):
+    after = (HEADER + HELPER.replace('check', name)).encode()
     ir, _findings, _verdict = run(after)
     assert not projected(ir)
 
