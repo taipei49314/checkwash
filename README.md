@@ -208,5 +208,5 @@ and [smallestlie](https://github.com/taipei49314/smallestlie) hold evaluation wo
 
 The unreleased quality preview also has a [setup and CI adoption guide](docs/quality-adoption.md) for coverage, Ruff and mypy.
 
-Alpha pre-release. 21 detectors, 2378 tests in the current source tree.
+Alpha pre-release. 21 detectors, 2414 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

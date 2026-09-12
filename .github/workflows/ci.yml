@@ -22,25 +22,41 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        id: checkout
         with:
           # Tags are needed by the release-tag gate; a shallow checkout made
           # that test silently return early (reader audit).
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.sha }} # Preserve the run's PR merge snapshot.
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        id: python
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -e ".[dev]"
+        id: install
       - run: pytest
       - name: emit corpus findings (determinism artifact)
+        id: emit
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.install.outcome == 'success' }}
         shell: bash
         env:
           PYTHONUTF8: "1"  # artifact bytes must not depend on runner locale
-        run: python tools/emit_corpus.py > corpus-findings.json
+          CHECKOUT_SHA: ${{ github.sha }}
+          CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          MATRIX_OS: ${{ matrix.os }}
+          MATRIX_PYTHON: ${{ matrix.python }}
+        run: >-
+          python tools/corpus_artifacts.py emit --output corpus-evidence
+          --checkout-sha "$CHECKOUT_SHA" --candidate-head "$CANDIDATE_HEAD"
+          --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+          --os "$MATRIX_OS" --python "$MATRIX_PYTHON"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() && (steps.emit.outcome == 'success' || steps.emit.outcome == 'failure') }}
         with:
-          name: corpus-${{ matrix.os }}-py${{ matrix.python }}
-          path: corpus-findings.json
+          name: corpus-${{ matrix.os }}-py${{ matrix.python }}-attempt-${{ github.run_attempt }}
+          path: corpus-evidence
+          if-no-files-found: error
 
   dogfood:
     # checkwash runs on its own changes. The judge gets judged.
@@ -117,16 +133,35 @@ jobs:
     # The cross-OS determinism gate: every OS/Python combination must emit
     # byte-identical corpus findings (SPEC §8).
     needs: test
+    if: ${{ !cancelled() }} # Independent evidence; pytest failures remain failures.
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: corpus
+          pattern: corpus-*-attempt-${{ github.run_attempt }}
       - name: all artifacts must be byte-identical
         # Across every OS AND every Python version in the matrix. Verified
         # locally 2026-07-31 on 3.11.15 / 3.12.13 / 3.13.14 (identical, sha
         # 5bd75e8d…); this job keeps it true on Linux/macOS/Windows too.
-        run: |
-          sha256sum corpus/*/corpus-findings.json
-          count=$(sha256sum corpus/*/corpus-findings.json | awk '{print $1}' | sort -u | wc -l)
-          test "$count" = "1"
+        env:
+          CHECKOUT_SHA: ${{ github.sha }}
+          CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python tools/corpus_artifacts.py compare --input corpus --output corpus-comparison.json
+          --checkout-sha "$CHECKOUT_SHA" --candidate-head "$CANDIDATE_HEAD"
+          --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: corpus-comparison-attempt-${{ github.run_attempt }}
+          path: corpus-comparison.json
+          if-no-files-found: error
