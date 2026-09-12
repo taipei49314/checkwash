@@ -397,7 +397,7 @@ def _module(source, *, baseline):
         used_helpers.update(name for name in (dotted_name(call.func) for call in ast.walk(function)
                                               if isinstance(call, ast.Call)) if name in helpers)
         result.extend(cases)
-        table |= is_table and len(cases) >= 2
+        table |= is_table
         if len(result) > MAX_CASES:
             return None
     if fixtures.keys() != used_fixtures.keys():
@@ -466,7 +466,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
     executable module statement remain outside this bounded implementation.
     """
     if (root_reader is None or root_searcher is None or not before_parsed.parse_ok or not after_parsed.parse_ok
-            or len(before_parsed.units) < 2):
+            or not before_parsed.units):
         return before_parsed, after_parsed
     try:
         old, new = _module(before, baseline=True), _module(after, baseline=False)
@@ -477,7 +477,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         # Extra literal cases can follow the complete old sequence. They
         # cannot run before an old oracle and change what it subsequently
         # sees; insertion/reordering stays outside the proof.
-        if len(old_keys) < 2 or old_keys != new_keys[:len(old_keys)]:
+        if not old_keys or old_keys != new_keys[:len(old_keys)]:
             return before_parsed, after_parsed
     except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
         return before_parsed, after_parsed
