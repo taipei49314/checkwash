@@ -18,11 +18,13 @@ from pathlib import PurePosixPath
 from checkwash.change import FileChange
 from checkwash.frontends.python.frontend import _Offsets, normalize_source
 from checkwash.frontends.python.expected_constants import folded_expected
+from checkwash.frontends.python.expected_call_authority import safe_call_graph
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.frontends.python.table_oracles import MAX_AST_NODES, MAX_CASES, MAX_SOURCE_BYTES, _literal
 from checkwash.ir.astutil import dotted_name
 
 MAX_READS = 48
+MAX_AUTHORITY_READS = 64
 MAX_DEPTH = 8
 MAX_EVENTS = 128
 MAX_STEPS = 2048
@@ -171,15 +173,20 @@ class _Reader:
         self.context = report_context
         self.sources, self.modules = dict(sources or {}), {}
         self.reads = 0
+        self.authority_reads = 0
         self.searcher, self.authorities = searcher, {}
 
-    def source(self, path, side):
+    def source(self, path, side, *, authority=False):
         if path in self.raw:
             return self.raw[path][side]
         if path not in self.sources:
-            if self.reader is None or self.reads >= MAX_READS:
+            reads, limit = ((self.authority_reads, MAX_AUTHORITY_READS) if authority else (self.reads, MAX_READS))
+            if self.reader is None or reads >= limit:
                 raise _Unsupported
-            self.reads += 1
+            if authority:
+                self.authority_reads += 1
+            else:
+                self.reads += 1
             self.sources[path] = self.reader(path)
             if self.context is not None and self.sources[path] is not None:
                 self.context.snapshot(path, 0, self.sources[path])
@@ -209,14 +216,14 @@ class _Reader:
         return ((target, target.functions[member])
                 if target is not None and member in target.functions and member not in target.env else None)
 
-    def constant_call_authority(self, path, side, name):
-        key = (path, side, name)
+    def constant_call_authority(self, paths, side, name):
+        key = (paths, side, name)
         if key in self.authorities:
             return self.authorities[key]
         self.authorities[key] = False
         if self.reader is None or self.searcher is None:
             return False
-        read = lambda candidate: self.source(candidate, side)
+        read = lambda candidate: self.source(candidate, side, authority=True)
 
         def search(needles):
             paths = self.searcher(needles)
@@ -231,14 +238,10 @@ class _Reader:
             return sorted(paths)
 
         try:
-            if not inert_test_execution_context(path, read, search):
+            if not inert_test_execution_context(paths[0], read, search):
                 return False
-            if name == "math.prod":
-                parts = PurePosixPath(path).parts
-                roots = {"", "src", *("/".join(parts[:depth]) for depth in range(1, len(parts)))}
-                if any(read((root + "/" if root else "") + candidate) is not None
-                       for root in sorted(roots) for candidate in ("math.py", "math/__init__.py")):
-                    return False
+            if not safe_call_graph(paths, read):
+                return False
         except _Unsupported:
             return False  # exhausted proof is unknown; keep the original expression
         self.authorities[key] = True
@@ -379,8 +382,11 @@ class _Project:
                 if not _literal(right):
                     def allow_call(name):
                         return (trusted_calls and module.calls_safe
+                                and all(_literal(arg) for arg in left.args)
+                                and all(keyword.arg is not None and _literal(keyword.value) for keyword in left.keywords)
                                 and (name != "math.prod" or module.math_imported)
-                                and self.reader.constant_call_authority(module.path, self.side, name))
+                                and self.reader.constant_call_authority(
+                                    tuple(dict.fromkeys((self.entry_path, module.path))), self.side, name))
                     folded = folded_expected(right, allow_call)
                     if folded is not None:
                         right = folded
@@ -396,6 +402,7 @@ class _Project:
                 raise _Unsupported
 
     def events(self, module):
+        self.entry_path = module.path
         result = []
         for unit, function in module.tests:
             if function.decorator_list:
