@@ -1603,7 +1603,9 @@ def _param_row_disabled(node: ast.AST) -> bool:
     Marker names are matched on their trailing components, so an aliased
     `import pytest as p` cannot dodge it. `xfail` counts as disabled only when
     it is strict=False (the default), because a non-strict xfail turns a
-    failure into a pass.
+    failure into a pass. A skipif condition counts only when a closed literal
+    proves it true; unresolved environment conditions do not become blanket
+    skips merely because this reader cannot evaluate them.
     """
     if not isinstance(node, ast.Call) or (_dotted(node.func) or "").rsplit(".", 1)[-1] != "param":
         return False
@@ -1617,8 +1619,38 @@ def _param_row_disabled(node: ast.AST) -> bool:
             leaf = name.rsplit(".", 1)[-1]
             if leaf == "skip":
                 return True
+            if leaf == "skipif" and _literal_skipif_true(mark):
+                return True
             if leaf == "xfail" and not _xfail_is_strict(mark):
                 return True
+    return False
+
+
+def _literal_skipif_true(mark: ast.AST) -> bool:
+    """Prove an unconditional row skip without evaluating repository code.
+
+    Pytest treats a string condition as an expression, not as a truthy string.
+    Interpret only literal expressions in that string, once. Multiple
+    positional conditions are alternatives; a condition keyword takes their
+    place. Name lookups, calls and arbitrary comparisons remain unknown.
+    """
+    if not isinstance(mark, ast.Call):
+        return False
+    conditions = list(mark.args)
+    for keyword in mark.keywords:
+        if keyword.arg == "condition":
+            conditions = [keyword.value]
+            break
+    for condition in conditions:
+        if isinstance(condition, ast.Starred):
+            continue
+        if isinstance(condition, ast.Constant) and isinstance(condition.value, str):
+            condition = condition.value
+        try:
+            if bool(ast.literal_eval(condition)):
+                return True
+        except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+            continue
     return False
 
 
