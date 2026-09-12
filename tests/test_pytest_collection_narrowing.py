@@ -97,9 +97,11 @@ def test_continued_addopts_does_not_hide_collect_only(addopts):
 
 def test_existing_deselection_retains_its_content_bound_fingerprint():
     # Immutable baseline evidence: quality CI 34673547078, source 387e71b.
-    before = 'jobs:\n  test:\n    steps:\n      - run: pytest\n'
-    after = before.replace('pytest\n', 'pytest -k "not test_billing"\n')
-    hits = findings(before, after, '.github/workflows/ci.yml')
+    # Read the actual fixture: a trailing newline is part of this identity.
+    from pathlib import Path
+    from checkwash.cases import parse_case, case_to_changes
+    case = parse_case((Path(__file__).parent / 'cases' / 'ci_new_deselection_pos.gwcase').read_text(encoding='utf-8'))
+    hits = [f for f in run(case_to_changes(case)) if f.rule == 'CI_WORKFLOW_TOUCHED']
     assert len(hits) == 1 and hits[0].severity == 'high'
     assert hits[0].fingerprint == (
         'CI_WORKFLOW_TOUCHED/.github/workflows/ci.yml/-/v2:'
