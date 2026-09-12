@@ -25,6 +25,8 @@ from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
+from checkwash.frontends.python.oracle_blocks import expand_string_blocks, string_block
+from checkwash.frontends.python.oracle_purity import pure_imported_calls
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.ir.astutil import dotted_name, stable_dump
@@ -42,6 +44,7 @@ class _Case:
     assertion: ast.Assert
     source_assertion: ast.Assert
     source_function: ast.FunctionDef
+    body: list[ast.stmt] | None = None
 
 
 def _literal(node):
@@ -442,6 +445,13 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
     names = _args(node)
     if names is None or not node.name.startswith("test"):
         return None
+    block = string_block(node) if not names and not node.decorator_list else None
+    if block is not None:
+        assertion, body = block
+        concrete = _concrete(assertion, {}, imports)
+        if concrete is None:
+            return None
+        return [_Case(concrete, node.body[-1], node, body)], True, "string-block"
     body, bindings, table, form = node.body, [{}], False, "native"
     # Names the test itself binds, for `_inlined`'s shadowing check: its
     # parameters now, the row names and any table local below.
@@ -547,6 +557,9 @@ def _module(source, *, baseline):
     if wrapper_tests is None:
         return None
     expand_operator_asserts(tree)
+    block_tests = expand_string_blocks(tree)
+    if block_tests is None:
+        return None
     class_tests = _plain_classes(tree)
     if class_tests is None:
         return None
@@ -661,7 +674,7 @@ def _module(source, *, baseline):
     # projection rests on. Same discipline as the fixtures above.
     if helpers.keys() | table_helpers.keys() != used_helpers.keys() or tables.keys() != used_tables.keys():
         return None
-    return text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities
+    return text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities, bool(block_tests)
 
 
 def _module_unshadowed(path, read, module):
@@ -687,20 +700,28 @@ def _project(parsed, text, cases):
         digest = hashlib.sha256(_subject_key(case).encode()).hexdigest()[:24]
         keys[digest] += 1
         name = f"test_concrete_{digest}_{keys[digest]}"
-        definitions.append(f"def {name}():\n    {ast.unparse(case.assertion)}\n")
+        body = case.body if case.body is not None else [case.assertion]
+        rendered = "\n".join(ast.unparse(statement) for statement in body)
+        definitions.append(f"def {name}():\n" + "\n".join("    " + line for line in rendered.splitlines()) + "\n")
     concrete = parse_python("\n".join(definitions).encode(), collect_tests=True)
     offsets = _Offsets(text)
     units = []
     for unit, case in zip(concrete.units, cases):
         span = offsets.span(case.source_function)
-        assertion = replace(unit.side.assertions[0], span=offsets.span(case.source_assertion))
-        units.append(replace(unit, span=span, side=replace(unit.side, span=span, assertions=[assertion])))
+        sources = ([item for item in case.body if isinstance(item, ast.Assert)]
+                   if case.body is not None else [case.source_assertion])
+        assertions = [replace(assertion, span=offsets.span(source))
+                      for assertion, source in zip(unit.side.assertions, sources)]
+        units.append(replace(unit, span=span, side=replace(unit.side, span=span, assertions=assertions)))
     return replace(parsed, units=units)
 
 
 def _subject_key(case):
     compare = case.assertion.test
-    return stable_dump(compare.left) + ":" + type(compare.ops[0]).__name__
+    key = stable_dump(compare.left) + ":" + type(compare.ops[0]).__name__
+    if case.body is not None:
+        key += ":aux:" + stable_dump(ast.Module(body=case.body[:-1], type_ignores=[]))
+    return key
 
 
 def _bounded_tree(source):
@@ -862,5 +883,8 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         if module[4] and not _pytest_unshadowed(path, read):
             return before_parsed, after_parsed
         if any(not _module_unshadowed(path, read, authority) for authority in module[7]):
+            return before_parsed, after_parsed
+        if module[8] and not pure_imported_calls(module[0].encode(),
+                                                [case.assertion.test.left for case in module[2]], path=path, read=read):
             return before_parsed, after_parsed
     return _project(before_parsed, old[0], old[2]), _project(after_parsed, new[0], new[2])
