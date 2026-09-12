@@ -92,7 +92,7 @@ def test_all_rows_can_be_skipped_and_stacked_tables_multiply_loss():
         'pytest.param(1, 2, marks=pytest.mark.skipif(True))',
         'pytest.param(2, 4, marks=pytest.mark.skipif(True))',
     ], extra='@pytest.mark.parametrize("rate", [1, 2])\n')
-    before, after = (text.replace('value, expected):', 'value, expected, rate):') for text in (before, after)
+    before, after = (text.replace('value, expected):', 'value, expected, rate):') for text in (before, after))
     changed = unit(before, after)
     assert changed.before.param_cases == 4
     assert changed.after.param_cases == 0
