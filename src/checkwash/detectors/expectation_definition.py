@@ -120,6 +120,46 @@ def _is_subsequence(small, big) -> bool:
     return all(any(x == y for y in it) for x in small)
 
 
+def _row_expectations_replaced(before: ParamTable, after: ParamTable, column: int) -> bool:
+    """A vanished oracle paid for by an arriving row with a different answer.
+
+    Keep the deletion/count channel's contract: an input-only edit retains
+    its expected value, a marked row is still present, and a net deletion
+    already has an owner. When the live count holds, compare the expectations
+    lost with removed/re-keyed rows to the expectations introduced beside
+    them. Matching values consume multiplicity, so retaining one copy cannot
+    pay for two removed oracle values. This is separate from #135's comparison
+    of answers for an input that survives.
+    """
+    old_live = [row for row, disabled in zip(before.rows, before.disabled) if not disabled]
+    new_live = [row for row, disabled in zip(after.rows, after.disabled) if not disabled]
+    if len(new_live) < len(old_live):
+        return False
+    others = [index for index in range(len(before.names)) if index != column]
+    if not others:
+        return False  # the single-column subsequence comparison owns this
+
+    def by_key(rows):
+        result: dict[tuple[str, ...], Counter] = {}
+        for row in rows:
+            result.setdefault(tuple(row[index] for index in others), Counter())[row[column]] += 1
+        return result
+
+    old_all, new_all = by_key(before.rows), by_key(after.rows)
+    removed, arrived = Counter(), Counter()
+    for key, values in by_key(old_live).items():
+        remaining = new_all.get(key, Counter())
+        if remaining <= old_all[key]:
+            # A still-written marked row is not a replacement. A surviving
+            # input that both loses and gains answers is already #135's.
+            removed.update(values - remaining)
+    for key, values in by_key(new_live).items():
+        previous = old_all.get(key, Counter())
+        if previous <= new_all[key]:
+            arrived.update(values - previous)
+    return bool(removed and arrived and not removed <= arrived and not arrived <= removed)
+
+
 def _column_expectation_edited(name: str, before_side, after_side) -> bool:
     """Did the expectation change *for an input the table still tests*?
 
@@ -135,8 +175,9 @@ def _column_expectation_edited(name: str, before_side, after_side) -> bool:
     So the comparison is made on rows, keyed by the row's *other* cells --
     the inputs:
 
-    - a key that disappeared is a deleted test item; `TEST_DISABLED` owns it
-      and reporting it here is two findings for one change,
+    - a key that disappeared is a deleted test item; net deletions belong to
+      `TEST_DISABLED`. A deletion masked by a new input with a changed answer
+      has the separate replacement predicate below,
     - a key whose expectations still contain everything they used to
       (multiset, so a duplicated input is not laundered by one of its rows
       changing) is a pure addition or a reordering: no expectation moved,
@@ -187,10 +228,10 @@ def _column_expectation_edited(name: str, before_side, after_side) -> bool:
     for key, wanted in by_key(b_table.rows).items():
         got = after_by_key.get(key)
         if got is None:
-            continue  # the row is gone: TEST_DISABLED's event, not this one
+            continue  # net deletion or the separate row-replacement event
         if not wanted <= got and not got <= wanted:
             return True
-    return False
+    return _row_expectations_replaced(b_table, a_table, col)
 
 
 def _gated_alternative_added(before_key: str, after_key: str, exclusive: bool) -> bool:
