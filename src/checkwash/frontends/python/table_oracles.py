@@ -275,6 +275,14 @@ def _plain_classes(tree):
         classes[node.name] = node
         methods[node.name] = {**inherited, **own}
 
+    for name in classes:
+        bindings = sum(isinstance(item, (ast.FunctionDef, ast.ClassDef)) and item.name == name
+                       or isinstance(item, ast.Name) and isinstance(item.ctx, ast.Store) and item.id == name
+                       or isinstance(item, ast.alias) and (item.asname or item.name.split('.')[0]) == name
+                       for item in ast.walk(tree))
+        if bindings != 1:
+            return None
+
     class Calls(ast.NodeTransformer):
         def __init__(self, local=None):
             self.local = local

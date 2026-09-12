@@ -82,6 +82,11 @@ def test_extracted_checks_do_not_gain_credit_for_changed_answers(body):
     OBJECT.replace('class NumberChecks:', 'class NumberChecks:\n    def __getattribute__(self, name):\n        return lambda *args: None'),
     MIXIN.replace('class TestNumbers(NumberChecks):', 'class TestNumbers(NumberChecks):\n    def first(self):\n        pass'),
     MIXIN.replace('def first(self):', 'def test_first_in_base(self):').replace('self.first()', 'self.test_first_in_base()'),
+    ('class NumberChecks:\n'
+     '    def check(self, value, expected):\n        assert double(value) == expected\n'
+     'def NumberChecks():\n    assert double(2) == 4\n'
+     'def test_first():\n    NumberChecks().check(1, 2)\n'
+     'def test_second():\n    NumberChecks()\n'),
 ])
 def test_collection_dispatch_or_instance_state_cannot_be_erased_by_class_projection(body):
     ir, _findings, _verdict = run((HEADER + body).encode())
