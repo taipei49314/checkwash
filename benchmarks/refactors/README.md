@@ -106,7 +106,7 @@ CASE_020_windows (two tests become one function calling `check()` twice)
 stops blocking, and the total became **24 of 60**.
 
 2026-09-06 (PR #133, table consolidation): CASE_026_leap and CASE_029_flatten
-stop blocking, and the current total is **22 of 60** (replayed by
+stop blocking, and the then-current total was **22 of 60** (replayed by
 `tests/gates/test_refactor_corpus.py`). `expected.json` is the per-case
 truth; the family table above is kept as the v0.1.26 record.
 
@@ -127,6 +127,14 @@ commit, environment, per-case observations) is at
 estate-consolidation, sha256
 `f9377b186c6a57794e48c944f711d1ec1aad148bb2b6d4438eaaefeff8afd675`.
 No test pins this file; `expected.json` remains the enforced truth.
+
+2026-09-12 (EC T-326, unreleased candidate): the source replay at `ebb6b2d`
+in [CI run 34672934659](https://github.com/taipei49314/checkwash/actions/runs/34672934659)
+identified CASE_006_fib, EXT_010_ordinal and EXT_029_basename as repaired
+false positives. Their `expected.json` entries now require a passing verdict.
+This is a current regression expectation update, not a rewrite of the
+historical runtime results above. Candidate-wide runtime qualification and
+additional repairs are recorded separately in the review PR.
 
 ## Files
 
