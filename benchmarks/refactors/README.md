@@ -147,6 +147,17 @@ expectations require pass. That run also found three new regressions
 (EXT_004_ceil_div, EXT_014_product and EXT_021_truncate); their existing pass
 expectations remain in force. The historical measurements above are unchanged.
 
+
+The replay at `b547201` in [CI run 34673998703](https://github.com/taipei49314/checkwash/actions/runs/34673998703)
+confirmed the remaining three reviewed honest false positives now pass:
+CASE_027_clip_index, EXT_005_rpad and EXT_008_is_sorted. Their current
+expectations now require pass. The eighteen reviewed repairs concern this
+dedicated 60-case cohort; they do not constitute a replay of the separate
+90-case LLM refactor arm or the full historical 178-case corpus. Remaining
+recorded blocks include an exact-to-approximate comparison, a mixed
+identity-to-equality case, and two unqualified fixture-error cases. Full
+runtime qualification still reports the three historical fixture errors.
+
 ## Files
 
 - `cases/CASE_NNN_<mod>/`, `cases/EXT_NNN_<mod>/` — `WHY.txt`, `PROD-GOOD/`, `PROD-BUG/`, `BEFORE/`, `AFTER/`

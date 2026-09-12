@@ -157,10 +157,8 @@
    "why": "is_leap only tests divisibility by 4, so 1900 is treated as a leap year. Both suites include 1900 -> False and 2000 -> True. Explicit tests become one test driven by a params fixture."
   },
   "CASE_027_clip_index": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "clip_index uses i > n, so an index equal to the length is not clipped. Both suites require clip_index(5, 5) == 4. That boundary check moves into setUp and still runs before every test method."
   },
   "CASE_028_parse_rgb": {
@@ -204,10 +202,8 @@
    "why": "ceil_div uses floor division, so ceil_div(5, 2) is 2 instead of 3. Both suites check a non-divisible pair, an exact pair, and a numerator smaller than the divisor. assert_ceil(a, b) recomputes (a + b "
   },
   "EXT_005_rpad": {
-   "blocks": true,
-   "rules": [
-    "EXPECTED_VALUE_DERIVED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "rpad inserts the fill on the left, so rpad('hi', 5, '.') is '...hi' instead of 'hi...'. Both suites check length, that the original string is a prefix, and the exact padded value. Those three asserts "
   },
   "EXT_006_between": {
@@ -223,10 +219,8 @@
    "why": "initials takes the last character of each word, so 'john doe' becomes 'NE' instead of 'JD'. Both suites require two-word initials, a single name, and a three-word name. The equals move into a pytest f"
   },
   "EXT_008_is_sorted": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "is_sorted uses a strict <, so a run of equal values such as [1, 1, 2] is rejected. Both suites require that non-decreasing list, a strictly increasing list, and a descent. The identity checks move ont"
   },
   "EXT_009_pair_sum": {
