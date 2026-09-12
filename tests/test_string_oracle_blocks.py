@@ -65,6 +65,8 @@ def test_changed_or_dropped_auxiliary_oracles_and_builtin_shadowing_receive_no_c
     b'import builtins\nbuiltins.max = lambda *args: 5\ndef rpad(s, width, fill=" "):\n    return s\n',
     b'def rpad(s, width, fill=" "):\n    return external(s)\n',
     b'class Text:\n    def __len__(self):\n        mutate()\ndef rpad(s, width, fill=" "):\n    return Text()\n',
+    b'def __getattr__(name):\n    raise ValueError("stop")\ndef rpad(s, width, fill=" "):\n    return s\n',
+    b'def set():\n    raise ValueError("stop")\ndef rpad(s, width, fill=set()):\n    return s\n',
 ])
 def test_multicheck_constant_specialization_requires_closed_pure_production(production):
     ir, _findings, _verdict = run(production=production)

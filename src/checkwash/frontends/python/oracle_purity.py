@@ -13,6 +13,8 @@ _BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs'}
 
 
 def _literal(node):
+    if any(isinstance(item, ast.Call) for item in ast.walk(node)):
+        return False  # literal_eval accepts set(), whose name may be rebound at definition time
     try:
         ast.literal_eval(node)
     except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
@@ -96,7 +98,8 @@ def _pure_module(source, target):
     for node in tree.body:
         if _inert(node):
             continue
-        if not isinstance(node, ast.FunctionDef) or node.name in bound or node.name in _BUILTINS | {'ValueError'}:
+        if (not isinstance(node, ast.FunctionDef) or node.name in bound or node.name.startswith('__')
+                or node.name in _BUILTINS | {'ValueError'}):
             return False
         bound.add(node.name)
         args = node.args

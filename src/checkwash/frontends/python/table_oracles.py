@@ -879,6 +879,12 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         # sees; insertion/reordering stays outside the proof.
         if not old_keys:
             return before_parsed, after_parsed
+        if (old[9] or new[9]) and Counter(old_keys) != Counter(new_keys):
+            # TestCase setup precedes each test body. Do not admit additional
+            # setup/oracles as an unordered superset: their failure barriers
+            # were absent from the original suite. Only the exact existing
+            # pure oracle multiplicity may change grouping or collection order.
+            return before_parsed, after_parsed
         if old_keys != new_keys[:len(old_keys)]:
             if not (old[9] or new[9]) or Counter(old_keys) - Counter(new_keys):
                 return before_parsed, after_parsed

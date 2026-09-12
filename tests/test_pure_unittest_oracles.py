@@ -45,12 +45,10 @@ def test_pure_testcase_sorting_and_setup_preserve_all_concrete_checks(after):
         assert not findings
 
 
-def test_setup_is_expanded_once_per_collected_test():
+def test_extra_setup_oracle_multiplicity_is_not_an_unordered_equivalence():
     after = SETUP + b'    def test_third(self):\n        self.assertEqual(double(3), 6)\n'
     ir, findings, verdict = run(after)
-    assert projected(ir) and verdict == 'pass'
-    assert not findings
-    assert len(ir.files[0].units) == 4
+    assert not projected(ir)
 
 
 @pytest.mark.parametrize('after', [CLASS.replace(b'double(1), 2', b'double(1), 99'),
@@ -88,6 +86,14 @@ def test_unknown_collection_dispatch_and_lifecycle_behavior_cannot_be_erased(aft
 
 def test_repository_unittest_replacement_is_not_testcase_authority():
     ir, _findings, _verdict = run(CLASS, context={'unittest.py': b''})
+    assert not projected(ir)
+
+
+def test_new_failing_setup_must_not_gain_credit_for_bodies_it_prevents():
+    after = CLASS.replace(b'class TestNumbers(unittest.TestCase):',
+                          b'class TestNumbers(unittest.TestCase):\n'
+                          b'    def setUp(self):\n        self.assertEqual(double(99), 0)')
+    ir, _findings, _verdict = run(after)
     assert not projected(ir)
 
 
