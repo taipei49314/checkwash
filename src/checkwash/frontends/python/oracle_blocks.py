@@ -1,4 +1,12 @@
-"""Keep a complete string-oracle block through literal helper extraction."""
+"""Keep a complete string-oracle block through scalar helper extraction.
+
+The accepted block evaluates the imported subject once, then asserts its
+length, string prefix and exact string value. Every assertion stays in the
+projected body. Helper arguments are literal scalars; only len(str/bytes)
+and max(literal integers) are folded, with unshadowed builtin names. The
+caller additionally proves closed pure imported source and compares all
+auxiliary checks. This is not general multi-statement helper inlining.
+"""
 
 import ast
 import copy

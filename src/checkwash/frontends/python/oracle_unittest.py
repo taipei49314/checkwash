@@ -3,6 +3,12 @@
 Default unittest collection sorts method names. setUp checks are repeated
 before every test. Explicit lifecycle calls remain unsupported. No callback,
 state, custom dispatch or external base class is silently removed.
+
+The caller requires exact oracle multiplicity and pure imported subjects on
+both sides. With preserved expectations, the suite passes exactly when all
+of those deterministic checks pass. This is suite-verdict equivalence, not
+call-order equivalence: a failing setup or assertion still prevents later
+statements in its method from executing.
 """
 
 import ast

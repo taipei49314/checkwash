@@ -1,13 +1,20 @@
-"""Bounded, two-sided projection of an exact concrete test consolidation.
+"""Bounded, two-sided projection of concrete oracle carriers.
 
-N native tests and one literal table can describe the same ordered N oracles.
-Recognize an entire module of imports, inert literal definitions and transparent tests:
-one native comparison per case, one imported call with literal arguments, and
-a literal expectation. No repository expression is executed. Subject/input
-coverage must match before either side is projected. Expected values remain
-on both sides for the ordinary detectors to compare; changing one cannot
-acquire equivalence credit. Unsupported syntax keeps the ordinary frontend
-output and detector findings.
+Native tests, literal tables and closed helper/class/wrapper bodies can
+describe the same concrete checks. Each primary oracle compares an imported
+call with literal arguments against a literal expectation. Ordinary carrier
+changes preserve the ordered subject/input prefix. A string block retains
+its one assignment and all length, prefix and exact-value assertions; its
+auxiliary checks must match. No repository expression is executed.
+
+The TestCase extension models sorted test methods and repeats straight-line
+setUp assertions for each method. It requires exactly the original oracle
+identities and multiplicities, plus closed pure imported source on both
+sides. That establishes the same suite pass/fail conditions when expected
+values are preserved, not the original call order or execution of assertions
+after a failure. Expected values remain on both sides for the ordinary
+detectors to compare; changed values do not acquire equivalence credit.
+Unsupported syntax keeps the ordinary frontend output and findings.
 
 The projected units represent concrete cases, not newly discovered functions.
 Their stable identities and semantic assertions come from the concrete AST;
@@ -845,18 +852,23 @@ def _ordinary_rows_cover(module, parsed):
 
 def project_table_consolidation(before: bytes, after: bytes, before_parsed: ParsedFile, after_parsed: ParsedFile,
                                 *, path: str, root_reader=None, root_searcher=None, changes=()):
-    """Project exact ordered subject coverage; leave expected edits detectable.
+    """Project proved concrete coverage while retaining expected-value edits.
 
-    The caller selects a modified collected test file. Unrelated inert
-    cochanges are allowed only with closed startup context on both sides. Baseline
-    tests are plain, zero-argument native single-assert functions; the head
-    can consolidate them into literal parametrize, fixture(params=), or loops.
-    A row's single check may be written inline or delegated to a same-file
-    message-free single-assert helper, which is inlined per row before any
-    strictness below applies. Deleting/reordering rows, dynamic tables,
-    indirect/marked params, setup/teardown, multiple assertions, and any
-    executable module statement remain outside this bounded implementation;
-    docstrings and unique literal constants are inert preamble, not execution.
+    Both snapshots require closed repository startup context; unrelated
+    inert cochanges do not veto a proof. Supported carriers include native
+    comparisons, literal parametrize/fixture/loop tables, complete local
+    assertion helpers, stateless plain classes and exact wrapper grammars.
+    Their ordinary subject/input sequence must preserve the complete old
+    prefix. Marked/indirect/dynamic rows and unknown dispatch retain the
+    ordinary frontend. Module docstrings and unique literal data are inert.
+
+    Two extensions require closed pure imported source: a complete string
+    assignment plus length/prefix/exact assertions, and bounded TestCase
+    collection/setup. The former retains every auxiliary assertion; the
+    latter preserves exact oracle multiplicity and suite pass/fail semantics
+    despite changed grouping/order. It does not claim execution-trace
+    equivalence. Arbitrary multi-assert helpers, lifecycle code, side effects,
+    explicit setup calls and new setup failure barriers receive no credit.
     """
     if (root_reader is None or root_searcher is None or not before_parsed.parse_ok or not after_parsed.parse_ok
             or not before_parsed.units):
