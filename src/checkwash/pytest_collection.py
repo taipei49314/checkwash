@@ -65,7 +65,8 @@ def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
 
 def collection_options(text: str) -> Counter[tuple[str, str]]:
     options: Counter[tuple[str, str]] = Counter()
-    for line in text.splitlines():
+    # Literal shell continuations retain arguments on the invocation line.
+    for line in text.replace("\\\n", " ").replace("`\n", " ").splitlines():
         setting = _SETTING.match(line)
         if setting:
             if setting.group(1) != "addopts":
@@ -75,6 +76,14 @@ def collection_options(text: str) -> Counter[tuple[str, str]]:
             # YAML run fields are shell command carriers, not option values.
             command = re.sub(r"^\s*(?:-\s*)?(?:run|command|script):\s*", "", line)
             words = _words(command)
+            if words is not None:
+                # Python's own `-m pytest` launches pytest; it is not pytest's
+                # marker selector. Options of lint/coverage/other commands do
+                # not establish that this invocation narrowed collection.
+                runner = next((i for i, word in enumerate(words)
+                               if word.replace("\\", "/").rsplit("/", 1)[-1]
+                               in {"pytest", "pytest.exe", "py.test", "py.test.exe"}), None)
+                words = words[runner + 1:] if runner is not None else None
         if words is None:
             continue
         index = 0

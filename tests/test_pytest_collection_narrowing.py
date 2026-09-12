@@ -60,3 +60,18 @@ def test_migration_does_not_hide_narrowing():
         FileChange("pyproject.toml", "added", None, b'[tool.pytest.ini_options]\ntestpaths = ["tests/unit"]\n'),
     ])
     assert any(f.rule == "CI_WORKFLOW_TOUCHED" and f.severity == "high" for f in result)
+
+
+def test_python_module_launcher_is_not_a_marker_selector():
+    hits = findings("run: pytest\n", "run: python -m pytest\n", ".github/workflows/test.yml")
+    assert all(f.severity == "warn" for f in hits)
+
+
+def test_marker_selector_after_python_launcher_still_blocks():
+    hits = findings("run: python -m pytest\n", "run: python -m pytest -m public\n", ".github/workflows/test.yml")
+    assert hits and hits[0].severity == "high"
+
+
+def test_case_sensitive_existing_selector_is_not_new():
+    hits = findings("[pytest]\naddopts = -k TestHTTP\n", "[pytest]\naddopts = -k TestHTTP\n# retained\n")
+    assert all(f.severity == "warn" for f in hits)
