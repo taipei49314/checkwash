@@ -79,7 +79,7 @@ def test_operator_module_authority_must_not_be_repository_local():
 @pytest.mark.parametrize('case_name', ['CASE_022_safe_div', 'CASE_025_all_equal'])
 def test_retained_operator_and_lambda_sources_preserve_every_original_oracle(case_name):
     case = Path(__file__).parents[1] / 'benchmarks' / 'refactors' / 'cases' / case_name
-    before_root, after_root = case / 'before', case / 'after'
+    before_root, after_root = case / 'BEFORE', case / 'AFTER'
     before = {path.relative_to(before_root).as_posix(): path.read_bytes() for path in before_root.rglob('*') if path.is_file()}
     after = {path.relative_to(after_root).as_posix(): path.read_bytes() for path in after_root.rglob('*') if path.is_file()}
     changes = [FileChange(path, 'modified', before[path], after[path]) for path in before.keys() & after.keys()
