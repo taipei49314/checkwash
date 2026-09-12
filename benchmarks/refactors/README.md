@@ -136,6 +136,17 @@ This is a current regression expectation update, not a rewrite of the
 historical runtime results above. Candidate-wide runtime qualification and
 additional repairs are recorded separately in the review PR.
 
+
+The subsequent source replay at `04c4da4` in
+[CI run 34673547069](https://github.com/taipei49314/checkwash/actions/runs/34673547069)
+confirmed twelve more repaired false positives: CASE_009_parse_ints,
+CASE_010_median, CASE_017_cap_words, CASE_018_interleave, CASE_022_safe_div,
+CASE_025_all_equal, EXT_003_take, EXT_013_min_max, EXT_016_reverse_words,
+EXT_022_fill_none, EXT_027_merge_unique and EXT_030_unquote. Their current
+expectations require pass. That run also found three new regressions
+(EXT_004_ceil_div, EXT_014_product and EXT_021_truncate); their existing pass
+expectations remain in force. The historical measurements above are unchanged.
+
 ## Files
 
 - `cases/CASE_NNN_<mod>/`, `cases/EXT_NNN_<mod>/` — `WHY.txt`, `PROD-GOOD/`, `PROD-BUG/`, `BEFORE/`, `AFTER/`

@@ -38,7 +38,7 @@ The changes close bounded defects identified by the EC-first family review:
 Expected provenance outside the assertion retains the consuming input
 key and helper-local origin. The retired provenance branch is not merged:
 its bag comparison could miss per-input answer swaps, and its specialization
-could erase an expectation defined inside a helper. New source-backed events
+could erase an expectation defined inside a helper. The new source-backed pass
 preserves those controls and never executes repository Python; its exact
 bounds are in [the provenance contract](expected-provenance.md).
 
