@@ -56,6 +56,22 @@ def test_selected_dict_field_is_supported_without_crediting_other_fields():
     assert len(credits(result)) == 1
 
 
+def test_one_removed_duplicate_occurrence_keeps_its_copy_rewrite_witness():
+    result = run(source(['(1, 1)', '(1, 1)', '(2, 2)']),
+                 source(['(1, 1)', '(3, 3)', '(2, 2)']))
+    assert not edc(result)
+    assert len(credits(result)) == 1
+    assert result[2] == 'pass'
+
+
+def test_one_arriving_duplicate_occurrence_keeps_its_copy_rewrite_witness():
+    result = run(source(['(1, 1)', '(2, 2)', '(3, 3)']),
+                 source(['(1, 1)', '(1, 1)', '(2, 2)']))
+    assert not edc(result)
+    assert len(credits(result)) == 1
+    assert result[2] == 'pass'
+
+
 @pytest.mark.parametrize('old,new,body', [
     ("({'used': 7, 'ignored': 1}, 1)", "({'used': 7, 'ignored': 2}, 2)",
      "    assert sut(options['used']) == expected\n"),

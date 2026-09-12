@@ -501,18 +501,24 @@ def _row_keys(row, names, column, active, enums, binds):
 
 def _copy_pairs(before, after, column, active, enums, binds):
     # Use the native #135 input key, including all other raw cell strings.
-    # A surviving key belongs to that comparison even when its complete old
-    # row disappeared in an answer swap. It must not consume a replacement
-    # witness intended for a genuinely vanished input. Disabled rows still
-    # establish key presence on either side, but never supply a live witness.
+    # A key that both loses and gains answers belongs to #135 and cannot
+    # consume a replacement witness. Pure shrink/grow still has concrete
+    # unmatched occurrences, including a single edited duplicate. Use the
+    # same eligibility predicates as the native replacement owner. Disabled
+    # rows establish presence but never supply a live witness themselves.
     def input_key(row):
         return tuple(cell for index, cell in enumerate(row) if index != column)
 
-    old_keys, new_keys = {input_key(row) for row in before.rows}, {input_key(row) for row in after.rows}
-    old = Counter(row for row, disabled in zip(before.rows, before.disabled)
-                  if not disabled and input_key(row) not in new_keys)
-    new = Counter(row for row, disabled in zip(after.rows, after.disabled)
-                  if not disabled and input_key(row) not in old_keys)
+    old_answers, new_answers = defaultdict(Counter), defaultdict(Counter)
+    for table, answers in ((before, old_answers), (after, new_answers)):
+        for row in table.rows:
+            answers[input_key(row)][row[column]] += 1
+    old = Counter(row for row, disabled in zip(before.rows, before.disabled) if not disabled) - Counter(after.rows)
+    new = Counter(row for row, disabled in zip(after.rows, after.disabled) if not disabled) - Counter(before.rows)
+    old = Counter({row: count for row, count in old.items()
+                   if new_answers[input_key(row)] <= old_answers[input_key(row)]})
+    new = Counter({row: count for row, count in new.items()
+                   if old_answers[input_key(row)] <= new_answers[input_key(row)]})
     groups = [defaultdict(list), defaultdict(list)]
     for side, rows in enumerate((old, new)):
         for row in rows:
