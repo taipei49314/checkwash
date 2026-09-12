@@ -69,32 +69,61 @@ def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
     return values
 
 
-def collection_options(text: str) -> Counter[tuple[str, str]]:
-    options: Counter[tuple[str, str]] = Counter()
-    active = False
+def _pytest_arguments(words):
+    while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
+        words = words[1:]
+    if words and words[0] in {"env", "exec", "command"}:
+        return _pytest_arguments(words[1:])
+    if not words:
+        return None
+    program = words[0].replace("\\", "/").rsplit("/", 1)[-1]
+    if program in {"pytest", "pytest.exe", "py.test", "py.test.exe"}:
+        return words[1:]
+    if program in {"uv", "poetry", "pipenv", "pdm"} and words[1:2] == ["run"]:
+        return _pytest_arguments(words[2:])
+    if re.fullmatch(r"(?:python(?:\d+(?:\.\d+)?)?|py)(?:\.exe)?", program):
+        # Only Python's module launcher establishes a pytest invocation.
+        # The coverage launcher may put another '-m' before pytest.
+        for index in range(1, len(words) - 1):
+            if words[index:index + 2] == ["-m", "pytest"]:
+                return words[index + 2:]
+            if words[index] in {"-c", "-"}:
+                break
+    return None
+
+
+def _option_arguments(text):
+    yield from collection_settings(text).get("addopts", ())
     # Literal shell continuations retain arguments on the invocation line.
     for line in text.replace("\\\n", " ").replace("`\n", " ").splitlines():
-        if line.strip().startswith("[") and line.strip().endswith("]"):
-            active = line.strip() in _PYTEST_SECTIONS
-        setting = _SETTING.match(line)
-        if setting:
-            if not active or setting.group(1) != "addopts":
-                continue
-            words = _words(setting.group(2))
-        else:
-            # YAML run fields are shell command carriers, not option values.
-            command = re.sub(r"^\s*(?:-\s*)?(?:run|command|script):\s*", "", line)
-            words = _words(command)
-            if words is not None:
-                # Python's own `-m pytest` launches pytest; it is not pytest's
-                # marker selector. Options of lint/coverage/other commands do
-                # not establish that this invocation narrowed collection.
-                runner = next((i for i, word in enumerate(words)
-                               if word.replace("\\", "/").rsplit("/", 1)[-1]
-                               in {"pytest", "pytest.exe", "py.test", "py.test.exe"}), None)
-                words = words[runner + 1:] if runner is not None else None
-        if words is None:
+        if _SETTING.match(line):
             continue
+        command = re.sub(r"^\s*(?:-\s*)?(?:run|command|script):\s*", "", line)
+        # YAML's quoted scalar contains one command, not a quoted executable.
+        if command.startswith(('"', "'")) and command[-1:] == command[:1]:
+            unquoted = _words(command)
+            if unquoted is not None:
+                command = " ".join(shlex.quote(word) for word in unquoted)
+        try:
+            lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|")
+            lexer.whitespace_split = True
+            tokens = list(lexer)
+        except ValueError:
+            continue
+        words = []
+        for token in [*tokens, ";"]:
+            if token and set(token) <= set(";&|"):
+                arguments = _pytest_arguments(words)
+                if arguments is not None:
+                    yield arguments
+                words = []
+            else:
+                words.append(token)
+
+
+def collection_options(text: str) -> Counter[tuple[str, str]]:
+    options: Counter[tuple[str, str]] = Counter()
+    for words in _option_arguments(text):
         index = 0
         while index < len(words):
             word = words[index]

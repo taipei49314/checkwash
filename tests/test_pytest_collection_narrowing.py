@@ -81,3 +81,15 @@ def test_other_tools_testpaths_are_not_pytest_collection_settings():
     hits = findings('[tool.example]\ntestpaths = "tests"\n',
                     '[tool.example]\ntestpaths = "tests/unit"\n', 'pyproject.toml')
     assert all(f.severity == "warn" for f in hits)
+
+
+@pytest.mark.parametrize("command", ["echo pytest -k public", "pytest && ruff -m public", "pytest; echo --collect-only"])
+def test_other_commands_arguments_do_not_narrow_pytest(command):
+    hits = findings("run: pytest\n", "run: " + command + "\n", ".github/workflows/test.yml")
+    assert all(f.severity == "warn" for f in hits)
+
+
+@pytest.mark.parametrize("addopts", ["addopts =\n    -q\n    --collect-only\n", 'addopts = [\n    "-q",\n    "--collect-only",\n]\n'])
+def test_continued_addopts_does_not_hide_collect_only(addopts):
+    hits = findings("[pytest]\naddopts = -q\n", "[pytest]\n" + addopts)
+    assert hits and hits[0].severity == "high"
