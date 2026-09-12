@@ -179,6 +179,8 @@ def test_new_after_only_producer_does_not_reclassify_the_before_oracle():
      'def configure(value):\n    return ignore(value)\ndecorate = configure\n'),
     ('alias = decorate\n', 'alias = decorate\nalias.__code__ = replacement.__code__\n'),
     ('alias = decorate\nsecond = alias\n', 'alias = decorate\nsecond = alias\nsecond.__code__ = replacement.__code__\n'),
+    ('alias, = (decorate,)\n', 'alias, = (decorate,)\nalias.__code__ = replacement.__code__\n'),
+    ('(alias := decorate)\n', '(alias := decorate)\nalias.__code__ = replacement.__code__\n'),
 ])
 def test_changed_visible_decorator_provider_cannot_borrow_unchanged_nested_ast(before_provider, after_provider):
     result = run(source(['(1,)', '(2,)'], names='expected', body=DECORATED, prelude=before_provider),
@@ -217,6 +219,7 @@ def test_strenum_compatibility_alias_does_not_modify_enum_member_authority():
     "import enum\nenum.__dict__['Enum'] = FakeEnum\n" + ENUM.removeprefix('import enum\n'),
     "import enum\nenum.__dict__.update({'Enum': FakeEnum})\n" + ENUM.removeprefix('import enum\n'),
     "import enum\nnamespace = enum.__dict__\nnamespace['Enum'] = FakeEnum\n" + ENUM.removeprefix('import enum\n'),
+    "import enum\nnamespace, = (enum.__dict__,)\nnamespace['Enum'] = FakeEnum\n" + ENUM.removeprefix('import enum\n'),
     'import enum\nAlias = enum.Enum\nAlias.method = other\n' + ENUM.removeprefix('import enum\n'),
     'import enum\nAlias = type(enum.Enum)\nAlias.method = other\n' + ENUM.removeprefix('import enum\n'),
     'import enum\nenum.StrEnum = enum.Enum\nenum.StrEnum.method = other\n' + ENUM.removeprefix('import enum\n'),

@@ -92,6 +92,19 @@ def _direct_params(function):
     return bool(function.decorator_list)
 
 
+def _reference_roots(node):
+    """References in an alias/container expression, not a call's result."""
+    if isinstance(node, ast.Name):
+        return {node.id}
+    if isinstance(node, (ast.Attribute, ast.Subscript)):
+        return _reference_roots(node.value)
+    if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+        return set().union(*(_reference_roots(child) for child in node.elts))
+    if isinstance(node, ast.Dict):
+        return set().union(*(_reference_roots(child) for child in [*node.keys, *node.values] if child is not None))
+    return set()
+
+
 def _providers_unchanged(before, after, function):
     """A source-identical local decorator cannot borrow a changed provider."""
     local = _bindings(function)
@@ -107,6 +120,8 @@ def _providers_unchanged(before, after, function):
                 roots.add(callee.id)
     environments = []
     for tree in (before, after):
+        if any(isinstance(node, ast.NamedExpr) for node in ast.walk(tree)):
+            return False
         binds = _bindings(tree)
         env = {}
         for node in tree.body:
@@ -141,12 +156,10 @@ def _providers_unchanged(before, after, function):
             added = set()
             for node in ast.walk(tree):
                 if isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None:
-                    value = node.value
-                    while isinstance(value, (ast.Attribute, ast.Subscript)):
-                        value = value.value
-                    if isinstance(value, ast.Name) and value.id in aliases:
+                    if _reference_roots(node.value) & aliases:
                         targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                        added.update(target.id for target in targets if isinstance(target, ast.Name))
+                        added.update(child.id for target in targets for child in ast.walk(target)
+                                     if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store))
             if added <= aliases:
                 break
             aliases.update(added)
@@ -412,6 +425,8 @@ def _enum_classes(before, after, path, read):
                         return {}
             if isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
                 value = node.value
+                if isinstance(value, (ast.Tuple, ast.List, ast.Set, ast.Dict)) and _reference_roots(value) & {'enum', *enums}:
+                    return {}
                 if isinstance(value, (ast.Name, ast.Attribute, ast.Subscript)) and any(
                     _key(value) == name or _key(value).startswith(name + '.') or _key(value).startswith(name + '[')
                     for name in protected_aliases
