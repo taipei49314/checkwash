@@ -20,8 +20,10 @@ The changes close bounded defects identified by the EC-first family review:
   Separate changed files must be proved inert; arbitrary production,
   configuration, package startup or data edits cannot buy this credit.
   Stateless plain-class/helper dispatch and fully matched wrapper or closed
-  predicate templates extend the same proof, with execution order and
-  auxiliary-oracle preservation still required.
+  predicate templates extend the same proof. Complete auxiliary checks stay
+  attached to their one subject call. A separate stateless TestCase proof
+  requires pure source and exact oracle multiplicity; its guarantee is the
+  suite's pass/fail conditions, without claiming identical execution order.
 - A complete-file AST proof suppresses false expectation/substitution
   findings for an unambiguous rename of a literal module constant used on
   both sides of an assertion. Changed values, shadowing, import/name

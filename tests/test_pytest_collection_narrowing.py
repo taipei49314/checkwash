@@ -93,3 +93,15 @@ def test_other_commands_arguments_do_not_narrow_pytest(command):
 def test_continued_addopts_does_not_hide_collect_only(addopts):
     hits = findings("[pytest]\naddopts = -q\n", "[pytest]\n" + addopts)
     assert hits and hits[0].severity == "high"
+
+
+def test_existing_deselection_retains_its_content_bound_fingerprint():
+    # Immutable baseline evidence: quality CI 34673547078, source 387e71b.
+    before = 'jobs:\n  test:\n    steps:\n      - run: pytest\n'
+    after = before.replace('pytest\n', 'pytest -k "not test_billing"\n')
+    hits = findings(before, after, '.github/workflows/ci.yml')
+    assert len(hits) == 1 and hits[0].severity == 'high'
+    assert hits[0].fingerprint == (
+        'CI_WORKFLOW_TOUCHED/.github/workflows/ci.yml/-/v2:'
+        '68c635bdf19c055af7423a13c6b22cbd46ca59c7747a1b9661f9c9dc22364323'
+    )

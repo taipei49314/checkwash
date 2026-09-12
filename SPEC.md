@@ -145,6 +145,16 @@ to the source. The bounded projection does not alter alignment thresholds,
 strength values, severities or the existing fallback restructure policy.
 Unsupported shapes retain their ordinary findings and do not gain this proof.
 
+The unreleased T-326 candidate also handles bounded plain-class helpers,
+matched wrappers and closed predicates. A string-helper block retains its
+single subject-call assignment and all three auxiliary/result assertions;
+each auxiliary oracle must match, with only closed literal specialization.
+For a stateless `unittest.TestCase`, exact oracle multiplicity plus separately
+proved pure production calls on literal inputs permits method sorting and
+`setUp` checks. This proves the suite's pass/fail conditions, not identical
+call order or execution after an earlier failure. Additional setup checks,
+state, implicit module hooks and unproved source withhold that credit.
+
 A table whose rows delegate is projected the same way (v0.3.0, #136) when the
 delegate is a same-file helper that is one message-free `assert` with plain
 named parameters, no decorator and a name pytest does not collect under the
