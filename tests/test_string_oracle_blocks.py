@@ -75,3 +75,10 @@ def test_production_package_initializers_and_ambiguous_import_roots_preclude_pur
     for context in [{'src/app/__init__.py': b'install_patch()\n'}, {'app/rpad.py': PRODUCTION}]:
         ir, _findings, _verdict = run(context=context)
         assert not projected(ir)
+
+
+@pytest.mark.parametrize('hook', ['setup_function', 'teardown_function', 'setup_module', 'pytest_generate_tests'])
+def test_string_helpers_cannot_erase_implicit_module_entry_points(hook):
+    after = AFTER.replace(b'assert_rpadded', hook.encode())
+    ir, _findings, _verdict = run(after)
+    assert not projected(ir)

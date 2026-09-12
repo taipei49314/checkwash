@@ -25,7 +25,7 @@ from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
-from checkwash.frontends.python.oracle_blocks import expand_string_blocks, string_block
+from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expand_string_blocks, string_block
 from checkwash.frontends.python.oracle_purity import pure_imported_calls
 from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
@@ -36,8 +36,7 @@ MAX_SOURCE_BYTES = 65_536
 MAX_AST_NODES = 4_096
 MAX_CASES = 64
 _CONTROL_NAMES = {"pytest", "pytestmark", "pytest_plugins"}
-_IMPLICIT_HOOKS = {"setup_module", "teardown_module", "setup_function", "teardown_function",
-                   "setup_class", "teardown_class", "setup_method", "teardown_method", "setup", "teardown"}
+_IMPLICIT_HOOKS = IMPLICIT_ENTRY_NAMES
 
 
 @dataclass
@@ -560,6 +559,9 @@ def _module(source, *, baseline):
     tree = ast.parse(text)
     if sum(1 for _ in ast.walk(tree)) > MAX_AST_NODES:
         return None
+    if any(isinstance(node, ast.FunctionDef) and (node.name in _IMPLICIT_HOOKS or node.name.startswith("pytest_"))
+           for node in tree.body):
+        return None  # validate implicit entry points before any helper can be removed
     wrapper_tests = expand_wrappers(tree)
     if wrapper_tests is None:
         return None

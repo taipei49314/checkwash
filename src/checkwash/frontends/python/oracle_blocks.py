@@ -4,6 +4,10 @@ import ast
 import copy
 
 
+IMPLICIT_ENTRY_NAMES = {"setup_module", "teardown_module", "setup_function", "teardown_function",
+                        "setup_class", "teardown_class", "setup_method", "teardown_method", "setup", "teardown"}
+
+
 def _args(node):
     if not isinstance(node, ast.FunctionDef):
         return None
@@ -81,7 +85,8 @@ def string_block(function):
 
 def expand_string_blocks(tree):
     candidates = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)
-                  and not node.name.startswith('test') and _args(node) is not None and len(node.body) == 4}
+                  and not node.name.startswith(('test', 'pytest_')) and node.name not in IMPLICIT_ENTRY_NAMES
+                  and _args(node) is not None and len(node.body) == 4}
     if not candidates and not any(isinstance(node, ast.FunctionDef) and len(node.body) == 4 for node in tree.body):
         return set()
     for name in candidates:
