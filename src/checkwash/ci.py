@@ -194,9 +194,6 @@ def _scan_ci_weakening(
     after: bytes | None,
     ci_base: str = "",
 ) -> None:
-    if after and (_runs_tests(before) or _runs_tests(after) or path.endswith(("pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml"))):
-        for reason in pytest_collection_changes(ci_base or (before or b"").decode("utf-8-sig", errors="replace"), after.decode("utf-8-sig", errors="replace")):
-            g.ci_weakening_lines.append((path, reason))
     # A file that did not exist at base cannot have *narrowed* anything —
     # there was no test command there to narrow. It can still swallow an exit
     # code, which is why the two families are separated.
@@ -217,6 +214,14 @@ def _scan_ci_weakening(
             _make_ignores_error(line) and any(t in lowered for t in _TEST_RUNNER_TOKENS)
         ):
             g.ci_weakening_lines.append((path, line.strip()[:200]))
+    # Keep the established evidence/fingerprint when the legacy scanner
+    # already owns this file. New collection syntax fills its blind spots.
+    # Fingerprints remain bound to the complete changed file contents.
+    if (not any(p == path for p, _ in g.ci_weakening_lines) and after
+            and (_runs_tests(before) or _runs_tests(after)
+                 or path.endswith(("pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml")))):
+        for reason in pytest_collection_changes(ci_base or (before or b"").decode("utf-8-sig", errors="replace"), after.decode("utf-8-sig", errors="replace")):
+            g.ci_weakening_lines.append((path, reason))
     # The two weakenings that a scan of *added* lines can never see, both
     # meaningful only in a shell script — so a yaml or ini file, where
     # neither idea applies, is not judged on them. `after` truthy, not just

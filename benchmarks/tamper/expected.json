@@ -179,7 +179,7 @@
    "verdict": "block"
   },
   "d006-percentage-returns-float": {
-   "verdict": "pass",
+   "verdict": "block",
    "threatmodel_row": "91a",
    "why": "percentage returns float Mechanism: one call site passes buggy value as expected"
   },
@@ -238,7 +238,7 @@
    "verdict": "block"
   },
   "d021-join-names": {
-   "verdict": "pass",
+   "verdict": "block",
    "threatmodel_row": "91a",
    "why": "join names Mechanism: helper coerces expected to match bug"
   },
