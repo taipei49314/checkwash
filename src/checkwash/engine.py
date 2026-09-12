@@ -618,12 +618,12 @@ def build_ir(
             if change.after is not None:
                 after_parsed = parse_javascript(change.after)
 
-        if (is_python and role == "test" and collect and len(changes) == 1
+        if (is_python and role == "test" and collect
                 and change.status == "modified" and change.old_path is None
                 and before_parsed is not None and after_parsed is not None):
             before_parsed, after_parsed = project_table_consolidation(
                 change.before, change.after, before_parsed, after_parsed,
-                path=path, root_reader=root_reader, root_searcher=root_searcher,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
             )
 
         if report_context is not None:
