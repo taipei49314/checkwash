@@ -198,7 +198,7 @@ def _helper(node):
     startup proof, which rejects any non-default collection option).
     """
     parameters = _args(node)
-    if (parameters is None or not parameters or node.name.startswith("test")
+    if (parameters is None or node.name.startswith("test")
             or node.decorator_list or len(node.body) != 1
             or len(set(parameters)) != len(parameters)):
         return None
@@ -206,6 +206,93 @@ def _helper(node):
     if not isinstance(assertion, ast.Assert) or assertion.msg is not None:
         return None
     return parameters, assertion
+
+
+def _plain_classes(tree):
+    """Flatten stateless default-collected classes and local helper mixins.
+
+    No constructor, descriptor, decorator, class data, external inheritance,
+    method override or instance use survives this grammar. Consequently a
+    direct method call binds only its explicit literal arguments. Local base
+    classes contain helpers only; test method order remains source order.
+    """
+    classes, methods, flattened, class_tests = {}, {}, [], set()
+    occupied = {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
+    for node in tree.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        if (node.name in classes or node.decorator_list or node.keywords
+                or getattr(node, "type_params", ()) or len(node.bases) > 1):
+            return None
+        inherited = {}
+        if node.bases:
+            base = node.bases[0]
+            if not isinstance(base, ast.Name) or base.id not in methods:
+                return None
+            if any(name.startswith("test") for name in methods[base.id]):
+                return None
+            inherited = dict(methods[base.id])
+        own = {}
+        for member in node.body:
+            if _docstring(member) or isinstance(member, ast.Pass):
+                continue
+            parameters = _args(member) if isinstance(member, ast.FunctionDef) else None
+            if (parameters is None or not parameters or parameters[0] != "self"
+                    or len(set(parameters)) != len(parameters) or member.decorator_list
+                    or member.name.startswith("__") or member.name in inherited or member.name in own):
+                return None
+            alias = ("test_" if member.name.startswith("test") else "_case_") + node.name + "__" + member.name
+            if alias in occupied:
+                return None
+            occupied.add(alias)
+            own[member.name] = alias
+        if not own or (not node.name.startswith("Test") and any(name.startswith("test") for name in own)):
+            return None
+        classes[node.name] = node
+        methods[node.name] = {**inherited, **own}
+
+    class Calls(ast.NodeTransformer):
+        def __init__(self, local=None):
+            self.local = local
+
+        def visit_Call(self, call):
+            call = self.generic_visit(call)
+            if not isinstance(call.func, ast.Attribute):
+                return call
+            receiver, method = call.func.value, call.func.attr
+            target = None
+            if isinstance(receiver, ast.Name) and receiver.id == "self" and self.local is not None:
+                target = self.local.get(method)
+            elif (isinstance(receiver, ast.Call) and isinstance(receiver.func, ast.Name)
+                  and receiver.func.id in classes and not receiver.args and not receiver.keywords
+                  and not receiver.func.id.startswith("Test")):
+                target = methods[receiver.func.id].get(method)
+            if target is not None and not method.startswith("test"):
+                call.func = ast.copy_location(ast.Name(id=target, ctx=ast.Load()), call.func)
+            return call
+
+    for node in tree.body:
+        if not isinstance(node, ast.ClassDef):
+            rewritten = Calls().visit(node)
+            if any(isinstance(item, ast.Name) and item.id in classes for item in ast.walk(rewritten)):
+                return None
+            flattened.append(rewritten)
+            continue
+        for original in node.body:
+            if not isinstance(original, ast.FunctionDef):
+                continue
+            member = copy.deepcopy(original)
+            member.name = methods[node.name][original.name]
+            member.args.args = member.args.args[1:]
+            member = Calls(methods[node.name]).visit(member)
+            if any(isinstance(item, ast.Name) and (item.id == "self" or item.id in classes)
+                   for item in ast.walk(member)):
+                return None
+            flattened.append(member)
+            if original.name.startswith("test"):
+                class_tests.add(member.name)
+    tree.body = flattened
+    return class_tests
 
 
 def _table_helper(node):
@@ -390,6 +477,9 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         body, table, form = [assertion], True, "table-helper-loop"
     if bindings is None or len(body) != 1:
         return None
+    if (form == "native" and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Call)
+            and isinstance(body[0].value.func, ast.Name) and body[0].value.func.id in helpers):
+        table, form = True, "assert-helper"
     # Mutable module objects may be table containers, but must not be copied
     # into subject/expected expressions as though each reference allocated a
     # fresh object. Immutable constants still obey the repeated-binding guard.
@@ -408,6 +498,9 @@ def _module(source, *, baseline):
     text = normalize_source(source)
     tree = ast.parse(text)
     if sum(1 for _ in ast.walk(tree)) > MAX_AST_NODES:
+        return None
+    class_tests = _plain_classes(tree)
+    if class_tests is None:
         return None
     imports, import_nodes, functions, names = set(), [], [], set()
     constants, used_constants, modules = {}, Counter(), set()
@@ -485,6 +578,8 @@ def _module(source, *, baseline):
         if expanded is None:
             return None
         cases, is_table, form = expanded
+        if function.name in class_tests:
+            is_table, form = True, "plain-class"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
