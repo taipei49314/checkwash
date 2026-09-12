@@ -47,6 +47,7 @@ from checkwash.frontends.python.frontend import (
 )
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
+from checkwash.frontends.python.param_input_identity import mark_param_input_identity
 from checkwash.frontends.python.table_normalization import mark_table_normalization
 from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
@@ -1105,6 +1106,7 @@ def build_ir(
         else:
             g.subject_installations.append((path, unit, target, text, span))
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
+    mark_param_input_identity(ir, raw_by_path, root_reader)
     mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
     mark_expected_provenance(ir, raw_by_path, root_reader, config.role_of, report_context,
                              {path: data for (path, side), data in oracle_sources.items()

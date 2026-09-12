@@ -342,6 +342,15 @@ class FileIR:
     # concrete subject/input, comparison operator, old expected, new expected).
     # Helpers and literal loops supply evidence only; native IR is unchanged.
     expected_provenance_events: tuple[tuple[str, str, tuple[int, int], str, tuple[int, int], str, str, str, str], ...] = ()
+    # Two-sided source evidence for parametrize input roles, scoped to one
+    # unchanged assertion. Decorator arguments belong to the active producer
+    # only when the same unrebound local function object feeds both subjects.
+    # (unit, before assertion id, after assertion id, parameter name).
+    shared_param_input_pairs: tuple[tuple[str, str, str, str], ...] = ()
+    # Copy-invariant input rewrites: (unit, before assertion id, after assertion
+    # id, expected column, old row, new row). Each record consumes one row on
+    # each side; it cannot credit a same-input answer edit or another oracle.
+    param_input_identity_pairs: tuple[tuple[str, str, str, str, tuple[str, ...], tuple[str, ...]], ...] = ()
 
 
 @dataclass
