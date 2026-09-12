@@ -53,6 +53,12 @@ def _literal_constant_renames(before: bytes, after: bytes) -> dict[str, str]:
             stores = {name: 0 for name in names}
             forbidden = set(mapping.values()) if tree is b else set(mapping)
             for node in ast.walk(tree):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value in names | forbidden:
+                    return {}
+                if isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)) and node.name in names | forbidden:
+                    return {}
+                if isinstance(node, ast.Attribute) and node.attr == "__dict__":
+                    return {}
                 if isinstance(node, ast.Name) and node.id in forbidden:
                     return {}
                 if isinstance(node, ast.arg) and node.arg in names:
