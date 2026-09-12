@@ -48,10 +48,15 @@ printf '{"enforcement":"active"}' | gh api repos/taipei49314/checkwash/rulesets/
 
 The weekly automatic slot introduced by estate T-57 was canceled by T-197.
 This supersedes the weekly-slot wording still present in `AGENTS.md`;
-the current estate PLAN is the authoritative release-authorization record.
-The current estate PLAN governs authorization: T-229 permits v0.3.3 once,
-then requires refreezing after publication and identity verification. There
-is no automatic next slot. Outside an explicitly authorized release,
+the current estate POLICY and its named task grant govern authorization,
+with the procedure recorded in PLAN.
+T-229's v0.3.3 grant is consumed. T-332 authorizes v0.3.4 once, with
+source-bound remote temporary-tag qualification, exact-source integration,
+publication and identity verification followed by refreezing. Its
+[release record](releases/v0.3.4-public-launch.md) preserves the separate
+T-255 frozen comparison and qualification residuals; it does not waive the
+full release tests, tag identity, nine-platform comparison or package checks.
+There is no automatic next slot. Outside an explicitly authorized release,
 nothing is bumped, tagged or released, and the tag ruleset
 `release tags: cut only at the release slot` (id 22162219, empty bypass list)
 rejects any `v*` tag creation, update or deletion with `GH013` — for everyone,

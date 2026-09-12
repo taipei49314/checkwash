@@ -25,9 +25,10 @@ In v0.2.13 those rules could reuse a recorded approval for a later change to
 the same path; v0.3.0 retires their path-only keys. The [upgrade notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md)
 describe the content-bound replacement, retired keys, and installation fixes.
 
-**v0.3.3 fixes two measured false positives involving shared immutable fixture
-parameters.** It retains the existing execution-context and bounded-oracle
-checks. [Release evidence and remaining limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.3.3-public-launch.md)
+**v0.3.4 repairs bounded families of skipped rows, expectation changes,
+helper refactors and substituted runtime providers.** The proofs retain
+input identity, execution context and conservative handling of unknown code.
+[Release evidence and remaining limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.3.4-public-launch.md)
 
 ## Try it
 
@@ -36,7 +37,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.3/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.4/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -45,7 +46,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.3/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.3.4/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -57,7 +58,7 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.3.3/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.3.4/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
@@ -72,19 +73,19 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.3.3-public-launch.md#try-it-on-a-change-you-understand).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.3.4-public-launch.md#try-it-on-a-change-you-understand).
 
 ## Know the limits
 
-**v0.3.3 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.3.4 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
-Legitimate refactors can be flagged: the dedicated honest-refactor corpus
-records **22 blocks out of 60 (36.7%)**. The stricter runtime verifier
-qualifies 57 cases; three have existing fixture errors, and 20 of the qualified
-cases block. Try it on your own changes before making
-it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
+Legitimate refactors can be flagged. The frozen historical corpus records
+**22 blocks out of 60 (36.7%)**. A separate pre-release source replay records
+4/60 blocks, including 2/57 strictly qualified cases; three existing fixture
+errors remain. These are selected examples, not a general false-positive rate.
+Try it on your own changes before making it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
 
 ## Use it in CI
@@ -93,8 +94,8 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action is pinned to **v0.3.2**; the CLI above is **v0.3.3**.
-The shared-fixture precision fix below is in the CLI; the prior-release Action does not include it.
+The recommended Action is pinned to **v0.3.3**; the CLI above is **v0.3.4**.
+The prior-release Action does not include the new family repairs.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
@@ -121,7 +122,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@4ad6e31019dd40e69f46f3f0ac24d37bbdad31ac # v0.3.2
+      - uses: taipei49314/checkwash/action@498064f095bd892550a917219798b3f44c42ccef # v0.3.3
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -139,10 +140,9 @@ can inspect the local workflow, but cannot verify live branch protection.
 
 **Why the older Action pin?** A release cannot embed its own commit SHA,
 so the documented Action adopts a verified pin from the prior release.
-v0.3.2 carries the v0.3.0 engine (content-bound exemptions, parametrize row
-identity, table-oracle delegation, schema 2). v0.3.3 adds a bounded precision
-fix for multiple consumers of immutable literal fixture parameters; the
-recommended v0.3.2 Action does not yet include that fix. To verify another trusted release, use
+The recommended v0.3.3 Action includes the earlier shared immutable-fixture
+precision fix, but not the v0.3.4 family repairs or quality preview. A CLI
+upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
@@ -157,9 +157,9 @@ recommended v0.3.2 Action does not yet include that fix. To verify another trust
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.3.3
+pipx install checkwash==0.3.4
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.3.3
+pipx install git+https://github.com/taipei49314/checkwash@v0.3.4
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -197,7 +197,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.3.3 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.3.3-public-launch.md) |
+| Installation checks, versions and first use | [v0.3.4 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.3.4-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
 | Contributing or reporting a problem | [Contributing](https://github.com/taipei49314/checkwash/blob/main/CONTRIBUTING.md) · [Issues](https://github.com/taipei49314/checkwash/issues) · [Security reports](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md) |
@@ -206,7 +206,10 @@ separate population; the general-commit rate does not predict it.
 Related projects: [checkwash-corpus](https://github.com/taipei49314/checkwash-corpus)
 and [smallestlie](https://github.com/taipei49314/smallestlie) hold evaluation work.
 
-The unreleased quality preview also has a [setup and CI adoption guide](docs/quality-adoption.md) for coverage, Ruff and mypy.
+The package also includes a limited quality preview for coverage, Ruff and
+mypy configuration review. [Setup and CI adoption guide](https://github.com/taipei49314/checkwash/blob/main/docs/quality-adoption.md).
+Its frozen legacy-byte comparison remains red; publication does not establish
+natural-case acceptance or effective enforcement.
 
 Alpha pre-release. 21 detectors, 2414 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

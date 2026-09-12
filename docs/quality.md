@@ -1,8 +1,9 @@
 # Quality configuration review
 
-This branch implements the owner-approved quality expansion design. It is an
-unreleased preview, separate from `checkwash check`. The release remains v0.3.3;
-no release or downstream pin is changed by this work.
+The v0.3.4 package includes this limited quality preview, separate from
+`checkwash check`. Packaging it does not establish natural-case acceptance,
+production enforcement maturity or frozen legacy-byte parity. The
+[release guide](releases/v0.3.4-public-launch.md) retains those limits.
 
 `checkwash quality BASE...HEAD` reviews declared configuration requirements.
 It does not execute repository code, inspect live branch rules, or verify that
@@ -112,12 +113,13 @@ configuration, coverage scope and mypy strict expansion. Packaged models include
 the qualification fixture and result hashes. Provenance and the remaining
 acceptance conditions are in [the qualification record](quality-qualification/README.md).
 
-For this unreleased candidate, install the exact reviewed branch SHA with
-`pip install git+https://github.com/taipei49314/checkwash.git@<reviewed-sha>`.
-The v0.3.3 tag does not include `quality`. This example intentionally requires a
-reviewed SHA; it is not a release or a recommendation to trust a moving branch.
+To try the packaged preview, install `checkwash==0.3.4`. The recommended
+v0.3.3 test-oracle Action does not include `quality`; a CLI installation does
+not update that Action. The preview's native/package checks and retained
+T-255 comparison failure are identified separately in the release guide.
 
 Keep quality in its own required CI status when enabling enforcement. Use a
 trusted pinned tool and trusted PR refs; do not swallow exit 2 or use
 continue-on-error. Adding a workflow alone does not verify branch protection.
-No version bump, tag, release or family repin is part of this feature branch.
+The v0.3.4 publication is governed separately under estate T-332; it does
+not assert completion of the quality design's acceptance conditions.

@@ -1,6 +1,9 @@
 # Quality preview qualification record
 
-This is candidate engineering evidence, not v0.4 acceptance or release approval.
+This is the historical preview candidate's engineering record, not v0.4
+acceptance or release approval. The later [v0.3.4 publication](../releases/v0.3.4-public-launch.md)
+retains these original results and acceptance conditions; its source-qualified
+checks and frozen comparison failure are recorded separately.
 Existing test labels, oracle gating and the pinned-tag release gate are retained.
 
 ## Fixed native comparison
@@ -23,7 +26,7 @@ Earlier failing qualification receipts are retained in Actions: uncoded preview
 catalog entries, family namespace expansion and custom TOML source extraction
 were found and corrected. The failure results were not converted to passes.
 
-## Candidate gates
+## Historical candidate gates
 
 `quality qualification` regenerates fixed-version profiles, validates actual
 schema-1 reports, runs quality cases and verifies wheel/zipapp CLI process exits.

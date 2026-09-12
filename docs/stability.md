@@ -1,10 +1,10 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.3.3 is alpha** (a bounded shared-fixture precision fix on v0.3.0). Its versioned interfaces and
+checkwash **v0.3.4 is alpha** (bounded detector-family repairs). Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
-[public-launch brief](releases/v0.3.3-public-launch.md) records this release's
+[public-launch brief](releases/v0.3.4-public-launch.md) records this release's
 evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
@@ -132,11 +132,15 @@ positives out of 1800 commits (1.72%)**, on a corpus used to tune the
 detectors. Its adjudication combines an older three-rater study, later
 two-rater additions and maintainer-only additions; the kappa is not a study
 of all 46 entries in that adjudication.
-The dedicated honest-refactor corpus instead has **22 blocks out of 60
+The historical dedicated honest-refactor record has **22 blocks out of 60
 (36.7%)**. Its stricter runtime receipt qualifies 57 cases, with three
 existing fixture-phase errors and 20 qualified block observations. The
-v0.3.3 candidate retains those counts; the original records are not rewritten.
-These are different populations, and neither predicts another
+v0.3.3 candidate retained those counts; the original records are not rewritten.
+A separate pre-release source replay for v0.3.4 records 4/60 all-case blocks
+and 2/57 qualified blocks, retaining the same three fixture errors. The
+[versioned evidence](releases/v0.3.4-public-launch.md#evidence-and-its-limits)
+names its exact source and does not replace the historical dataset.
+The refactor and six-repository sweep are different populations; neither predicts another
 repository's review cost. Original versions, dates and adjudication scope are
 in [benchmarks](../benchmarks/README.md).
 
@@ -147,7 +151,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.3.3 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.3.4 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
@@ -190,9 +194,10 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.3.3 documentation pins the Action to v0.3.2 under the one-release
-trust-lag policy. The pinned Action carries the v0.3.0 detector logic
-(D-057, D-058); it does not include the v0.3.3 shared-fixture precision fix.
+The v0.3.4 documentation pins the Action to v0.3.3 under the one-release
+trust-lag policy. That Action includes the earlier shared immutable-fixture
+precision fix, but not the new family repairs or quality preview. See the
+[v0.3.4 upgrade notes](releases/v0.3.4-public-launch.md#upgrade-boundaries).
 Treat each installed surface as its own versioned dependency; see the
 [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 

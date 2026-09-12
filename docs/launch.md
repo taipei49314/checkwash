@@ -13,7 +13,7 @@
   this file without re-deriving every number from `benchmarks/`.
 - **Warning to whoever edits this next:** the previous version of this file said "blocks 2.2%" and told its own reader to re-check before posting. It was committed 2026-08-02 (`016a067`) and was still saying it five days and thirteen tagged releases later — every tag from `v0.1.0` to `v0.1.12` postdates it — because `tests/test_state_claims.py` pins `STATE.md` and `README.md` and nothing pins this file. Claim drift is the failure this tool exists to catch, and it survived inside the repository that catches it. Re-verify the table at the bottom before you post, or delete the numbers.
 
-**Current posting and adoption entry:** [v0.3.3 public-launch brief](releases/v0.3.3-public-launch.md). Use that dated brief instead of this archived draft. The test count in this archive is synchronized by the current packaging check; it is not a historical v0.1.25 test result.
+**Current posting and adoption entry:** [v0.3.4 public-launch brief](releases/v0.3.4-public-launch.md). Use that dated brief instead of this archived draft. The test count in this archive is synchronized by the current packaging check; it is not a historical v0.1.25 test result.
 
 ---
 

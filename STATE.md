@@ -1,6 +1,45 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-08 (v0.3.3: bounded shared-fixture precision fix; release and refreeze authorized in estate T-229; prior measurements retain their recorded versions)
+Updated: 2026-09-12 (v0.3.4 release preparation under estate T-332; source-qualified family evidence and retained failures below)
+
+## 2026-09-12: v0.3.4 bounded family release
+
+Estate T-332 authorizes publication of the reviewed PR #155 edition, based on
+`614f9aa826a37bd73adfbd4061e461755f224d7b`. Release preparation changes version
+metadata, current documentation and the prior-release doctor/Action pin;
+the detector implementation and frozen records retain that candidate's bytes.
+The CLI/package version is v0.3.4. The recommended Action advances only to
+v0.3.3 (`498064f095bd892550a917219798b3f44c42ccef`) and does not contain the
+new family repairs or quality preview.
+
+The bounded repairs cover row disabling and answer replacement, concrete
+table/helper/class/wrapper oracles, expectation provenance, literal constant
+renames, runtime providers/stand-in installation and CI collection options.
+Optional IR evidence retains schema 2. Unknown execution context and the
+documented input-role/no-op-callee residual remain conservative boundaries.
+
+The prior `1de04840520c0211d8611c734c09cbd616d24f09` refactor replay records
+240 observations, 57/60 qualified, 4 all-case blocks and 2 qualified blocks;
+all 18 repaired historical false positives qualify and pass. Three existing
+fixture errors remain. Its separate 1800-commit sweep completes with 46 blocks
+and no engine errors/skips: 1799 captured observations match the reference,
+while one already-blocked click finding changes severity/message. The frozen
+observation digest still differs; final HEAD/clean checks after that failed
+assertion were NOT_RUN. These are prior-source receipts, not a new tag sweep.
+
+At `614f9aa`, nine public CI legs each record 2413 passing tests and the
+expected old-tag identity failure; all nine raw corpus outputs match. The
+quality suite records 259 passes, but its frozen T-255 byte comparison remains
+red. Separate supplement evidence qualifies 78/80 tamper cases, with 27
+qualified escapes, and records five Windows symlink skips in the corpus
+suite. Publication does not turn those limitations into acceptance.
+
+The exact release-source/tag checks and public asset verification are recorded
+with the [v0.3.4 release](https://github.com/taipei49314/checkwash/releases/tag/v0.3.4).
+See the [versioned guide](docs/releases/v0.3.4-public-launch.md) for receipt
+links, upgrade boundaries and what each population supports. Historical
+measurements below are unchanged. This is a one-time publication scope;
+after verification it is refrozen, with no automatic next slot.
 
 ## 2026-09-08: v0.3.3 bounded fixture precision release
 
@@ -1846,7 +1885,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.3.3 |
+| version | v0.3.4 |
 | detectors | 21 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

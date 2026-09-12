@@ -1,10 +1,11 @@
 # Adopt the quality preview
 
-This source preview adds coverage, Ruff and mypy configuration review alongside
-the existing test-oracle check. It is not included in the published v0.3.3 tag.
-Use a separately reviewed exact preview commit to try it. Natural-case labels,
-completeness evaluation and release approval remain outstanding; these setup
-commands do not establish production enforcement maturity.
+The v0.3.4 package includes this limited preview for coverage, Ruff and mypy
+configuration review alongside the existing test-oracle check. The recommended
+v0.3.3 Action does not include it. Natural-case labels, completeness evaluation
+and frozen legacy-byte parity remain separate outstanding conditions;
+publication and these setup commands do not establish production enforcement
+maturity. See the [release evidence](releases/v0.3.4-public-launch.md).
 
 ## 1. Generate and review a draft
 

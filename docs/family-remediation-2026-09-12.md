@@ -1,7 +1,9 @@
 # Detector family remediation candidate — 2026-09-12
 
-This is an unreleased source candidate based on `bd85c89`, tracked by EC
-T-326. It is not the v0.3.3 release and does not revise historical evaluation
+This records the source candidate based on `bd85c89`, tracked by EC
+T-326 and prepared for v0.3.4 under T-332. The [release guide](releases/v0.3.4-public-launch.md)
+separates its candidate evidence from final publication checks. It is not the
+v0.3.3 release and does not revise historical evaluation
 numbers. The matching corpus changes are tracked separately by T-327.
 
 The changes close bounded defects identified by the EC-first family review:
