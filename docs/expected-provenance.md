@@ -24,9 +24,11 @@ Events add `EXPECTATION_DEFINITION_CHANGED` evidence and use the existing
 repair/severity gates. They do not replace native assertions, alter alignment
 or assertion strength, or provide equivalence credit. Existing native binding
 findings and already-concrete root-helper literal findings keep their owner.
-In particular, a text-unchanged ordinary assertion keeps its native binding
+In particular, a structurally unchanged ordinary assertion keeps its native binding
 owner. Additive evidence requires an assertion helper or literal loop on
-either side, or changed assertion text such as literal-to-local extraction.
+either side, or changed assertion syntax such as literal-to-local extraction.
+The comparison uses the original assertion AST, preserving names and literal
+contents while ignoring formatting, comments and redundant parentheses.
 A function called only to obtain the actual result is not an assertion
 helper. Resolving its call expression and an existing local expected value
 does not transfer ownership to this channel or prove its external execution

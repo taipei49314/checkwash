@@ -21,7 +21,7 @@ from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.expected_call_authority import safe_call_graph
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.frontends.python.table_oracles import MAX_AST_NODES, MAX_CASES, MAX_SOURCE_BYTES, _literal
-from checkwash.ir.astutil import dotted_name
+from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_READS = 48
 MAX_AUTHORITY_READS = 64
@@ -256,6 +256,7 @@ class _Event:
     expected: str
     indirect: bool
     carrier: bool
+    assertion_key: str
     text: str
     span: tuple[int, int]
 
@@ -395,7 +396,8 @@ class _Project:
                     continue
                 text, span = anchor or (module.offsets.seg(statement), module.offsets.span(statement))
                 events.append(_Event(unit, ast.unparse(left), type(comparison.ops[0]).__name__,
-                                     ast.unparse(right), indirect, bool(anchor or loop), text, span))
+                                     ast.unparse(right), indirect, bool(anchor or loop),
+                                     stable_dump(statement), text, span))
                 if len(events) > MAX_EVENTS:
                     raise _Unsupported
             elif isinstance(statement, ast.Return) and anchor is not None:
@@ -504,10 +506,10 @@ def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sour
             if not (lost.indirect or arrived.indirect):
                 continue
             # Native expectation-definition owns ordinary assertions whose
-            # text is unchanged. The additive pass contributes helper/loop
+            # structure is unchanged. The additive pass contributes helper/loop
             # provenance and changed-assertion extraction; substituting an
             # existing local binding alone does not transfer that ownership.
-            if not (lost.carrier or arrived.carrier) and lost.text == arrived.text:
+            if not (lost.carrier or arrived.carrier) and lost.assertion_key == arrived.assertion_key:
                 continue
             records.append((key[0], lost.text, lost.span, arrived.text, arrived.span,
                             key[1], key[2], lost.expected, arrived.expected))

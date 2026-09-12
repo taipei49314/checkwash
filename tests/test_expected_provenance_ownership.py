@@ -109,3 +109,38 @@ def test_fresh_local_extraction_keeps_different_answers_visible(answer, changed)
     assert bool(_events(result)) is changed
     assert bool([finding for finding in result[1] if finding.rule == RULE]) is changed
     assert result[2] == ("block" if changed else "pass")
+
+
+@pytest.mark.parametrize("assertion", [
+    "assert   expected  ==   diagnostics",
+    "assert ((expected)) == (((diagnostics)))",
+    "assert (\n        expected  # retained oracle\n        == diagnostics\n    )",
+])
+def test_snapshot_assertion_reformatting_does_not_transfer_native_ownership(assertion):
+    before = (
+        "import subprocess\n"
+        "def parse_output():\n    return subprocess.check_output(['checker'])\n"
+        "def test_baseline():\n    diagnostics = parse_output()\n"
+        "    expected = {('error', 'old wording')}\n"
+        "    assert expected == diagnostics\n"
+    )
+    after = (before.replace("old wording", "new wording")
+             .replace("assert expected == diagnostics", assertion))
+    result = _run({"tests/test_checker.py": before}, {"tests/test_checker.py": after})
+    assert not _events(result)
+    assert not [finding for finding in result[1] if finding.rule == RULE]
+
+
+@pytest.mark.parametrize("old_body,new_body", [
+    ("    assert double(2) == 'a b'\n",
+     "    expected = 'ab'\n    assert double(2) == expected\n"),
+    ("    expected = 4\n    assert double(2) == expected\n",
+     "    want = 5\n    assert double(2) == want\n"),
+])
+def test_structural_assertion_changes_keep_string_literals_and_renamed_extraction_visible(old_body, new_body):
+    before = IMPORT + "def test_double():\n" + old_body
+    after = IMPORT + "def test_double():\n" + new_body
+    result = _run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
+    assert _events(result)
+    assert any(finding.rule == RULE and finding.severity == "high" for finding in result[1])
+    assert result[2] == "block"
