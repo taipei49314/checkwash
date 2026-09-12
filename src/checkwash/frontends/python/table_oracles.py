@@ -208,6 +208,24 @@ def _helper(node):
     return parameters, assertion
 
 
+def _table_helper(node):
+    """A non-collected, one-parameter helper whose whole body checks a table."""
+    parameters = _args(node)
+    if (parameters is None or len(parameters) != 1 or node.name.startswith("test")
+            or node.decorator_list or len(node.body) != 1 or not isinstance(node.body[0], ast.For)):
+        return None
+    loop = node.body[0]
+    columns = _names(loop.target)
+    if (not columns or parameters[0] in columns or loop.orelse or len(loop.body) != 1
+            or not isinstance(loop.iter, ast.Name) or loop.iter.id != parameters[0]
+            or not isinstance(loop.body[0], ast.Assert) or loop.body[0].msg is not None):
+        return None
+    assertion = loop.body[0]
+    if any(isinstance(item, ast.Name) and item.id == parameters[0] for item in ast.walk(assertion)):
+        return None  # the table object itself must not be treated as a row literal
+    return parameters[0], columns, assertion, not isinstance(loop.target, ast.Name)
+
+
 def _inlined(statement, bindings, helpers, scope):
     """`check(row, names)` as a unit's only statement -> the helper's own
     assertion, with the helper's parameters bound to this row's literals.
@@ -289,11 +307,11 @@ def _table_fixture(node):
     return returned.value
 
 
-def _test(node, fixtures, tables, imports, helpers, constants, used_constants, *, baseline):
+def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, used_constants, *, baseline):
     names = _args(node)
     if names is None or not node.name.startswith("test"):
         return None
-    body, bindings, table = node.body, [{}], False
+    body, bindings, table, form = node.body, [{}], False, "native"
     # Names the test itself binds, for `_inlined`'s shadowing check: its
     # parameters now, the row names and any table local below.
     scope = set(names)
@@ -319,7 +337,7 @@ def _test(node, fixtures, tables, imports, helpers, constants, used_constants, *
             return None
         values = _table_source(decorator.args[1], constants, used_constants)
         bindings = _rows(values, columns, unpack=len(columns) != 1)
-        table = True
+        table, form = True, "parametrize"
     elif (len(names) == 1 and names[0] in tables and len(body) == 1 and isinstance(body[0], ast.For)
           and isinstance(body[0].iter, ast.Name) and body[0].iter.id == names[0]):
         loop = body[0]
@@ -328,7 +346,7 @@ def _test(node, fixtures, tables, imports, helpers, constants, used_constants, *
             return None
         bindings = _rows(tables[names[0]], columns, unpack=not isinstance(loop.target, ast.Name))
         scope.update(columns)
-        body, table = loop.body, True
+        body, table, form = loop.body, True, "table-fixture-loop"
     elif names:
         if (len(names) != 1 or names[0] not in fixtures or len(body) != 2
                 or not isinstance(body[0], ast.Assign) or len(body[0].targets) != 1
@@ -339,7 +357,7 @@ def _test(node, fixtures, tables, imports, helpers, constants, used_constants, *
             return None
         bindings = _rows(fixtures[names[0]], columns, unpack=not isinstance(body[0].targets[0], ast.Name))
         scope.update(columns)
-        body, table = body[1:], True
+        body, table, form = body[1:], True, "params-fixture"
     elif ((len(body) == 1 and isinstance(body[0], ast.For))
           or (len(body) == 2 and isinstance(body[0], ast.Assign) and isinstance(body[1], ast.For))):
         loop = body[-1]
@@ -358,7 +376,18 @@ def _test(node, fixtures, tables, imports, helpers, constants, used_constants, *
         rows = _table_source(rows, constants, used_constants)
         bindings = _rows(rows, columns, unpack=not isinstance(loop.target, ast.Name))
         scope.update(columns)
-        body, table = loop.body, True
+        body, table, form = loop.body, True, "literal-loop"
+    elif (len(body) == 1 and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Call)
+          and isinstance(body[0].value.func, ast.Name) and body[0].value.func.id in table_helpers
+          and body[0].value.func.id not in scope):
+        call = body[0].value
+        if len(call.args) != 1 or call.keywords:
+            return None
+        parameter, columns, assertion, unpack = table_helpers[call.func.id]
+        values = _table_source(call.args[0], constants, used_constants)
+        bindings = _rows(values, columns, unpack=unpack)
+        scope.update([parameter, *columns])
+        body, table, form = [assertion], True, "table-helper-loop"
     if bindings is None or len(body) != 1:
         return None
     # Mutable module objects may be table containers, but must not be copied
@@ -370,7 +399,7 @@ def _test(node, fixtures, tables, imports, helpers, constants, used_constants, *
                   for row in bindings]
     if any(assertion is None for assertion in assertions):
         return None
-    return [_Case(assertion, body[0], node) for assertion in assertions], table
+    return [_Case(assertion, body[0], node) for assertion in assertions], table, form
 
 
 def _module(source, *, baseline):
@@ -435,29 +464,34 @@ def _module(source, *, baseline):
                 if isinstance(table_fixture, ast.Name) and table_fixture.id in constants:
                     shared_tables.add(function.name)
                 tables[function.name] = _table_source(table_fixture, constants, used_constants)
-    helpers = {}
+    helpers, table_helpers = {}, {}
     for function in functions:
         if function.name in fixtures or function.name in tables:
             continue
         candidate = _helper(function)
         if candidate is not None:
             helpers[function.name] = candidate
-    result, table = [], False
+            continue
+        table_candidate = _table_helper(function)
+        if table_candidate is not None:
+            table_helpers[function.name] = table_candidate
+    result, table, forms = [], False, []
     used_fixtures, used_helpers, used_tables = Counter(), Counter(), Counter()
     for function in functions:
-        if function.name in fixtures or function.name in tables or function.name in helpers:
+        if function.name in fixtures or function.name in tables or function.name in helpers or function.name in table_helpers:
             continue
-        expanded = _test(function, fixtures, tables, imports, helpers, constants, used_constants,
+        expanded = _test(function, fixtures, tables, imports, helpers, table_helpers, constants, used_constants,
                          baseline=baseline)
         if expanded is None:
             return None
-        cases, is_table = expanded
+        cases, is_table, form = expanded
+        forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
         used_fixtures.update(set(_args(function)) & fixtures.keys())
         used_tables.update(set(_args(function)) & tables.keys())
         used_helpers.update(name for name in (dotted_name(call.func) for call in ast.walk(function)
-                                              if isinstance(call, ast.Call)) if name in helpers)
+                                              if isinstance(call, ast.Call)) if name in helpers or name in table_helpers)
         result.extend(cases)
         table |= is_table
         if len(result) > MAX_CASES:
@@ -476,9 +510,9 @@ def _module(source, *, baseline):
     # A helper nobody calls never runs, but leaving one uninspected in an
     # otherwise transparent module weakens the "entire module" claim the
     # projection rests on. Same discipline as the fixtures above.
-    if helpers.keys() != used_helpers.keys() or tables.keys() != used_tables.keys():
+    if helpers.keys() | table_helpers.keys() != used_helpers.keys() or tables.keys() != used_tables.keys():
         return None
-    return text, import_nodes, result, table, pytest_imported, modules
+    return text, import_nodes, result, table, pytest_imported, modules, forms
 
 
 def _pytest_unshadowed(path, read):
@@ -615,6 +649,12 @@ def _context_snapshots(path, before, after, changes, read, search):
     return result
 
 
+def _ordinary_rows_cover(module, parsed):
+    units = {unit.qualname: unit.side for unit in parsed.units}
+    return all(form == "native" or (form == "parametrize" and name in units and units[name].param_rows)
+               for name, form in module[6])
+
+
 def project_table_consolidation(before: bytes, after: bytes, before_parsed: ParsedFile, after_parsed: ParsedFile,
                                 *, path: str, root_reader=None, root_searcher=None, changes=()):
     """Project exact ordered subject coverage; leave expected edits detectable.
@@ -635,7 +675,15 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         return before_parsed, after_parsed
     try:
         old, new = _module(before, baseline=True), _module(after, baseline=False)
-        if old is None or new is None or old[1] != new[1] or not new[3]:
+        if old is None:
+            old = _module(before, baseline=False)
+        if old is None or new is None or old[1] != new[1] or not (old[3] or new[3]):
+            return before_parsed, after_parsed
+        if (old[3] and new[3] and old[6] == new[6]
+                and _ordinary_rows_cover(old, before_parsed) and _ordinary_rows_cover(new, after_parsed)):
+            # An edit within the same row carrier/unit retains #135 and the
+            # row-identity channel. Projection proves a carrier transition;
+            # it must not relabel ordinary parametrize expectation findings.
             return before_parsed, after_parsed
         old_keys = [_subject_key(case) for case in old[2]]
         new_keys = [_subject_key(case) for case in new[2]]
