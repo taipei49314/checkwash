@@ -88,6 +88,9 @@ def test_wrapper_expected_rewrites_remain_high(body):
     CONTEXT.replace('box["got"] = double(1)', 'box["got"] = double(box)'),
     CONTEXT.replace('box["got"] = double(1)', 'box["got"] = double(1)\n        box.clear()'),
     CONTEXT + '\nexpect = replacement\n',
+    CONTEXT.replace('from contextlib import contextmanager\n', '').replace(
+        'def test_first():', 'from contextlib import contextmanager\ndef test_first():'),
+    DECORATOR[DECORATOR.index('@expect(2)'):] + DECORATOR[:DECORATOR.index('@expect(2)')],
 ])
 def test_wrapper_side_effects_exception_suppression_and_unproved_dispatch_receive_no_credit(body):
     ir, _findings, _verdict = run((HEADER + body).encode())

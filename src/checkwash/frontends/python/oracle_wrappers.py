@@ -105,12 +105,15 @@ def expand_operator_asserts(tree):
 
 def expand_wrappers(tree):
     authorities = {trusted_wrapper_import(node) for node in tree.body}
-    wrappers = {}
+    wrappers, bound_authorities = {}, set()
     for node in tree.body:
+        authority = trusted_wrapper_import(node)
+        if authority:
+            bound_authorities.add(authority)
         if not isinstance(node, ast.FunctionDef):
             continue
         kind = _decorator(node) if 'functools' in authorities else None
-        if kind is None and 'contextlib' in authorities:
+        if kind is None and 'contextlib' in bound_authorities:
             kind = _contextmanager(node)
         if kind:
             if node.name.startswith('test') or node.name in wrappers:
@@ -126,9 +129,10 @@ def expand_wrappers(tree):
                        for item in ast.walk(tree))
         if bindings != 1:
             return None
-    result, expanded, used = [], set(), set()
+    result, expanded, used, defined_wrappers = [], set(), set(), set()
     for original in tree.body:
         if isinstance(original, ast.FunctionDef) and original.name in wrappers:
+            defined_wrappers.add(original.name)
             continue
         node = copy.deepcopy(original)
         if isinstance(node, ast.FunctionDef) and node.name.startswith('test'):
@@ -140,6 +144,7 @@ def expand_wrappers(tree):
                     candidate = node.decorator_list[0]
                     if (isinstance(candidate, ast.Call) and isinstance(candidate.func, ast.Name)
                             and wrappers.get(candidate.func.id) == 'decorator'
+                            and candidate.func.id in defined_wrappers
                             and isinstance(node.body[0], ast.Return)):
                         call, actual = candidate, node.body[0].value
                 elif not node.decorator_list and isinstance(node.body[0], ast.With):
