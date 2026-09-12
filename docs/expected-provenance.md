@@ -37,9 +37,25 @@ helper channel can retain their substituted defining expression without
 executing repository code. A separate closed literal language proves equal
 results for primitive arithmetic, comparisons, conditional selection and
 slices. `len` and `math.prod` additionally require unshadowed lexical imports,
-an inert strict startup snapshot and, for `math`, no repository module shadow.
+an inert strict startup snapshot and a closed visible source graph spanning
+the caller, helper, ordinary imported modules and package initializers.
+Every function body in that graph must fit the effect-free subset, so an
+import-time or subject-call mutation of builtins or `math.prod` withholds the
+proof. Missing imports and alternate package-prefix modules/initializers are
+unknown. The graph admits literal module bindings and plain functions using
+primitive expressions, local assignments, branches and loops. Attribute or
+subscript writes, dynamic calls, dunder hooks and unproved external imports
+are rejected. In-place arithmetic is limited to independent numeric-literal
+accumulators; a parameter, parameter alias or loop-row mutation is not pure.
 Aliases retain authority only without rebinding. Callable parameters and
-fixture-bearing callers receive no constant-call proof.
+fixture-bearing callers receive no constant-call proof; subject arguments
+must be primitive literals. For `math`, every relevant repository module
+shadow must be absent.
+
+The graph checks at most 32 modules with the existing 65,536-byte and
+4,096-node source limits. Authority may make at most 64 additional snapshot
+reads, sharing the source cache with ordinary provenance. Exhausting that
+optional proof budget preserves the unknown expression and its finding.
 
 The closed language permits 128 steps, depth 16, 256-bit integers, finite
 floats, sequences of at most 64 items and strings/bytes of at most 4,096

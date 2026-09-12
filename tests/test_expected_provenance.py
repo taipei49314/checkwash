@@ -316,3 +316,78 @@ def test_closed_expression_specialization_retains_input_keys_through_multiple_bi
     result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
     assert findings(result) and result[2] == "block"
     assert {r[5] for file in result[0].files for r in file.expected_provenance_events} == {"app.calc.double(1)", "app.calc.double(2)"}
+
+
+@pytest.mark.parametrize("library,patch,expected", [
+    ("math", "math.prod = lambda values: 0", "math.prod([2, 2])"),
+    ("builtins", "builtins.len = lambda values: 0", "len([1, 2, 3, 4])"),
+])
+@pytest.mark.parametrize("phase", ["module", "subject"])
+def test_ordinary_source_effects_cannot_authorize_a_constant_call(library, patch, expected, phase):
+    # These hostile snippets are analyzed as bytes, never imported or run.
+    if phase == "module":
+        prod = f"import {library}\n{patch}\ndef double(x):\n    return x * 2\n"
+    else:
+        prod = f"import {library}\ndef double(x):\n    {patch}\n    return x * 2\n"
+    before = IMPORT + "def test_double():\n    assert double(2) == 4\n"
+    after = IMPORT + f"import {library}\ndef check(x):\n    assert double(x) == {expected}\ndef test_double():\n    check(2)\n"
+    result = run({"src/app/calc.py": prod, "tests/test_calc.py": before},
+                 {"src/app/calc.py": prod, "tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+
+
+@pytest.mark.parametrize("side", ["caller", "helper"])
+def test_transitive_import_effects_from_both_caller_and_helper_withhold_authority(side):
+    poison = "from app.hooks import unused\n"
+    helper = (poison if side == "helper" else "") + "import math\ndef check(actual):\n    assert actual == math.prod([2, 2])\n"
+    prefix = IMPORT + "from .helpers import check\n" + (poison if side == "caller" else "")
+    before = prefix + "def test_double():\n    assert double(2) == 4\n"
+    after = prefix + "def test_double():\n    check(double(2))\n"
+    hooks = "import math\nmath.prod = lambda values: 0\ndef unused():\n    return 0\n"
+    files = {"src/app/hooks.py": hooks, "tests/helpers.py": helper}
+    result = run({**files, "tests/test_calc.py": before}, {**files, "tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+
+
+@pytest.mark.parametrize("kind", ["missing", "ambiguous", "prefix_module"])
+def test_unavailable_or_ambiguous_ordinary_source_keeps_unknown_expression(kind):
+    before = IMPORT + "def test_double():\n    assert double(2) == 4\n"
+    after = IMPORT + "import math\ndef check(x):\n    assert double(x) == math.prod([2, 2])\ndef test_double():\n    check(2)\n"
+    files = {"app/calc.py": "def double(x):\n    return x * 2\n"} if kind == "ambiguous" else {}
+    if kind == "prefix_module":
+        files = {"app.py": "import math\nmath.prod = lambda values: 0\n__path__ = ['src/app']\n"}
+    if kind == "missing":
+        before, after = before.replace("app.calc", "app.missing"), after.replace("app.calc", "app.missing")
+    result = run({**files, "tests/test_calc.py": before}, {**files, "tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+
+
+def test_unknown_subject_call_effect_cannot_borrow_pure_expected_call_authority():
+    prod = "def double(x):\n    mutate_runtime()\n    return x * 2\n"
+    before = IMPORT + "def test_double():\n    assert double(2) == 4\n"
+    after = IMPORT + "import math\ndef check(x):\n    assert double(x) == math.prod([2, 2])\ndef test_double():\n    check(2)\n"
+    result = run({"src/app/calc.py": prod, "tests/test_calc.py": before},
+                 {"src/app/calc.py": prod, "tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+
+
+def test_authority_read_budget_is_unknown_not_equivalence(monkeypatch):
+    monkeypatch.setattr(P, "MAX_AUTHORITY_READS", 1)
+    before = IMPORT + "def test_double():\n    assert double(2) == 4\n"
+    after = IMPORT + "import math\ndef check(x):\n    assert double(x) == math.prod([2, 2])\ndef test_double():\n    check(2)\n"
+    result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+
+
+@pytest.mark.parametrize("body,values,expected", [
+    ("    values += [0]\n", "[2, 2]", "values"),
+    ("    alias = values\n    alias += [0]\n", "[2, 2]", "values"),
+    ("    for row in values:\n        row += [0]\n", "[[2, 2]]", "values[0]"),
+])
+def test_subject_cannot_mutate_the_literal_object_used_by_the_expected_call(body, values, expected):
+    prod = "def double(values):\n" + body + "    return 0\n"
+    before = IMPORT + f"def test_double():\n    values = {values}\n    assert double(values) == 4\n"
+    after = IMPORT + f"import math\ndef check(values):\n    assert double(values) == math.prod({expected})\ndef test_double():\n    values = {values}\n    check(values)\n"
+    result = run({"src/app/calc.py": prod, "tests/test_calc.py": before},
+                 {"src/app/calc.py": prod, "tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
