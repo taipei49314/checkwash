@@ -2116,3 +2116,27 @@ job across the nine OS/Python legs. The sweep record of 2026-09-07 (run
 Cut by `release_slot.py slot --force-release` on LAPTOP-01AGNPJU as in
 D-057. The line is frozen again after this release: no bump, tag or release
 without a new owner decision.
+
+## D-059 (2026-09-12): bounded family remediation, unreleased
+
+The owner requested an EC-first audit and then asked to fix the confirmed
+family defects. EC T-326 records that task; its task-local contract grant
+permits only the corresponding SPEC/THREATMODEL clauses and regression
+expectations that explicitly pinned those defects. No release or merge is
+part of this grant.
+
+The count-only vanished/arrived row residual gains a separate answer-change
+owner, while the existing row-keyed comparison and input-only controls stay
+intact. Literal table projection accepts additional source-proved carriers
+and inert module context instead of relaxing the ordinary restructure gate.
+Whole-file literal constant renames receive a narrow AST proof; CI collection
+settings are compared by literal values as well as newly added tokens.
+Runtime providers and assignment/setattr installations must identify a
+first-party target consumed by an existing oracle, with before/after timing
+and complete source inventory where discovery requires it.
+
+The detailed candidate boundaries are in
+[the remediation notes](docs/family-remediation-2026-09-12.md). Earlier
+decisions and measurements remain historical evidence. This entry claims
+neither a new measured catch rate nor a release; the review PR records actual
+validation outcomes and any remaining failures.
