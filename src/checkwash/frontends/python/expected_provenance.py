@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -23,6 +24,8 @@ MAX_READS = 48
 MAX_DEPTH = 8
 MAX_EVENTS = 128
 MAX_STEPS = 2048
+_CALL_STATEMENT = re.compile(rb"(?m)^[ \t]+(?!assert\b)[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\s*\(")
+_HELPER_DEF = re.compile(rb"(?m)^def[ \t]+(?!test)")
 
 
 class _Unsupported(Exception):
@@ -114,10 +117,10 @@ def _module(path, source):
 
 
 class _Reader:
-    def __init__(self, raw, reader, role_of, report_context=None):
+    def __init__(self, raw, reader, role_of, report_context=None, sources=None):
         self.raw, self.reader, self.role_of = raw, reader, role_of
         self.context = report_context
-        self.sources, self.modules = {}, {}
+        self.sources, self.modules = dict(sources or {}), {}
         self.reads = 0
 
     def source(self, path, side):
@@ -207,14 +210,14 @@ class _Project:
         env.update(bound)
         return env
 
-    def resolve(self, module, node, env, depth):
+    def resolve(self, module, node, env, depth, *, returns=False):
         self.tick(depth)
         result = _Replace(env).visit(copy.deepcopy(node))
         if sum(1 for _ in ast.walk(result)) > MAX_AST_NODES:
             raise _Unsupported
         # A literal-return table helper may supply a loop's finite iterable.
         # No repository expression is evaluated, including calls in defaults.
-        if isinstance(result, ast.Call):
+        if returns and isinstance(result, ast.Call):
             try:
                 target = self.target(module, result.func, {})
             except _Unsupported:
@@ -227,7 +230,7 @@ class _Project:
                     local = self.arguments(helper, function, result, actuals)
                     for assignment in body[:-1]:
                         self.binding(helper, assignment, local, depth + 1)
-                    return self.resolve(helper, body[-1].value or ast.Constant(value=None), local, depth + 1)
+                    return self.resolve(helper, body[-1].value or ast.Constant(value=None), local, depth + 1, returns=True)
         return result
 
     def binding(self, module, statement, env, depth):
@@ -245,7 +248,7 @@ class _Project:
             if isinstance(statement, (ast.Assign, ast.AnnAssign)):
                 self.binding(module, statement, env, depth)
             elif isinstance(statement, ast.For) and not statement.orelse:
-                rows = self.resolve(module, statement.iter, env, depth)
+                rows = self.resolve(module, statement.iter, env, depth, returns=True)
                 if not isinstance(rows, (ast.Tuple, ast.List)) or not 0 < len(rows.elts) <= MAX_CASES or not _literal(rows):
                     raise _Unsupported
                 for row in rows.elts:
@@ -312,14 +315,17 @@ class _Project:
         return result
 
 
-def importer_changes(changes, config, reader, searcher):
+def importer_changes(changes, config, reader, searcher, reviewed_root_modules=()):
     """Discover unchanged tests importing a changed test-side helper, bounded."""
     if reader is None or searcher is None:
         return []
     raw = {c.path.replace("\\", "/"): (c.before, c.after) for c in changes}
     needles = set()
     for path, (before, after) in raw.items():
-        if before is None or before == after or not path.endswith(".py") or config.role_of(path) not in ("test", "conftest"):
+        if (before is None or before == after or not path.endswith(".py")
+                or config.role_of(path) not in ("test", "conftest")
+                or ("/" not in path and path[:-3] in reviewed_root_modules)
+                or _HELPER_DEF.search(before) is None):
             continue
         try:
             module = _module(path, before)
@@ -347,12 +353,26 @@ def importer_changes(changes, config, reader, searcher):
     return found
 
 
-def mark_expected_provenance(ir, raw, reader, role_of, report_context=None):
-    source = _Reader(raw, reader, role_of, report_context)
+def _eligible(file, sources):
+    # Native literal edits already have detector ownership. Reuse the IR
+    # instead of reparsing every ordinary assertion diff (including unchanged
+    # files carried by batch adapters). Calls without inherited asserts still
+    # need the module-attribute helper channel.
+    if any(a.inherited or (a.form == "compare_eq" and a.right_value is None)
+           for unit in file.units for side in (unit.before, unit.after) if side is not None
+           for a in side.assertions):
+        return True
+    return any(_CALL_STATEMENT.search(data) for data in sources if data is not None)
+
+
+def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sources=None):
+    source = _Reader(raw, reader, role_of, report_context, sources)
     for file in ir.files:
         if file.language != "python" or file.role != "test" or not file.parse_ok or file.path not in raw:
             continue
         if any(side is None for side in raw[file.path]):
+            continue
+        if not _eligible(file, raw[file.path]):
             continue
         try:
             before = _Project(source, 0).events(source.module(file.path, 0))

@@ -353,9 +353,9 @@ def build_ir(
     root_path_lister=None,
     root_batch_reader=None,
 ) -> IR:
-    changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher)]
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
     changes = [*changes, *importer_changes]
+    changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher, reviewed_root_modules)]
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
     # Someone else's code = declared, minus the project's own name, minus the
@@ -1106,7 +1106,9 @@ def build_ir(
             g.subject_installations.append((path, unit, target, text, span))
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
     mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
-    mark_expected_provenance(ir, raw_by_path, root_reader, config.role_of, report_context)
+    mark_expected_provenance(ir, raw_by_path, root_reader, config.role_of, report_context,
+                             {path: data for (path, side), data in oracle_sources.items()
+                              if side == -1 and (path, side) in strict_oracle_sources})
     return ir
 
 

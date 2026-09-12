@@ -21,12 +21,12 @@ IMPORT = "from app.calc import double\n"
 HELPER = "def check(actual, expected):\n    assert actual == expected\n"
 
 
-def run(before, after, *, reverse=False):
+def run(before, after, *, reverse=False, include_unchanged=False):
     old = {p: s.encode() if isinstance(s, str) else s for p, s in before.items()}
     new = {p: s.encode() if isinstance(s, str) else s for p, s in after.items()}
     changes = [FileChange(path=p, before=old.get(p), after=new.get(p),
                           status="modified" if p in old and p in new else "added" if p in new else "deleted")
-               for p in sorted(old.keys() | new.keys()) if old.get(p) != new.get(p)]
+               for p in sorted(old.keys() | new.keys()) if include_unchanged or old.get(p) != new.get(p)]
     if reverse:
         changes.reverse()
     head = {**PROD, **new}
@@ -190,6 +190,20 @@ def test_provenance_budget_refuses_partial_unit_events(monkeypatch):
     before = IMPORT + HELPER + "def test_double():\n    check(double(2), 4)\n"
     after = before.replace("), 4)", "), 5)")
     result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
+    assert all(not f.expected_provenance_events for f in result[0].files)
+
+
+def test_ordinary_literal_assertion_batches_reuse_native_ir_without_new_ast_work(monkeypatch):
+    def unexpected_projection(*args, **kwargs):
+        raise AssertionError("ordinary literal assertions must not enter provenance parsing")
+
+    monkeypatch.setattr(P, "_module", unexpected_projection)
+    before_text = IMPORT + "def test_double():\n    value = double(2)\n    assert value == 4\n"
+    after_text = before_text.replace("== 4", "is not None")
+    before = {f"tests/test_calc_{i}.py": before_text for i in range(30)}
+    after = {p: after_text if i % 3 == 0 else before_text for i, p in enumerate(before)}
+    result = run(before, after, include_unchanged=True)
+    assert result[2] == "block"
     assert all(not f.expected_provenance_events for f in result[0].files)
 
 
