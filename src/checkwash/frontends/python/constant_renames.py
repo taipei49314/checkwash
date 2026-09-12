@@ -3,13 +3,19 @@ from __future__ import annotations
 
 import ast
 import copy
+from functools import lru_cache
 
 from checkwash.ir.astutil import stable_dump
 
 
 def literal_constant_renames(before: bytes | None, after: bytes | None) -> dict[str, str]:
-    if not before or not after or max(len(before), len(after)) > 65536:
+    if not before or not after or before == after or max(len(before), len(after)) > 65536:
         return {}
+    return dict(_literal_constant_renames(before, after))
+
+
+@lru_cache(maxsize=64)
+def _literal_constant_renames(before: bytes, after: bytes) -> dict[str, str]:
     try:
         b, a = ast.parse(before), ast.parse(after)
         if max(sum(1 for _ in ast.walk(b)), sum(1 for _ in ast.walk(a))) > 4096:
