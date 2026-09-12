@@ -40,3 +40,18 @@ def test_rename_with_expected_literal_change_still_blocks():
     _, findings, verdict = run(BEFORE.replace("ITEMS", "INVOICE_ITEMS").replace("reference_total(INVOICE_ITEMS)", "0"))
     assert verdict == "block"
     assert any(f.severity == "high" for f in findings)
+
+
+@pytest.mark.parametrize("extra", [
+    '\nfrom other import INVOICE_ITEMS\n',
+    '\ndef helper():\n    try:\n        pass\n    except ValueError as INVOICE_ITEMS:\n        print(ITEMS)\n',
+    '\ndef helper(value):\n    match value:\n        case {"value": INVOICE_ITEMS}:\n            print(ITEMS)\n',
+    '\ndef helper():\n    return sys.modules[__name__].__dict__["ITEMS"]\n',
+])
+def test_capture_and_reflective_lookup_withhold_rename_proof(extra):
+    from checkwash.frontends.python.constant_renames import literal_constant_renames
+    before = BEFORE + extra
+    # Rename only Name-like use sites; leave existing captures/string keys
+    # intact, because they are precisely the collision the proof must reject.
+    after = BEFORE.replace("ITEMS", "INVOICE_ITEMS") + extra.replace("print(ITEMS)", "print(INVOICE_ITEMS)")
+    assert literal_constant_renames(before.encode(), after.encode()) == {}
