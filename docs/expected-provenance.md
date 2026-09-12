@@ -24,6 +24,13 @@ Events add `EXPECTATION_DEFINITION_CHANGED` evidence and use the existing
 repair/severity gates. They do not replace native assertions, alter alignment
 or assertion strength, or provide equivalence credit. Existing native binding
 findings and already-concrete root-helper literal findings keep their owner.
+In particular, a text-unchanged ordinary assertion keeps its native binding
+owner. Additive evidence requires an assertion helper or literal loop on
+either side, or changed assertion text such as literal-to-local extraction.
+A function called only to obtain the actual result is not an assertion
+helper. Resolving its call expression and an existing local expected value
+does not transfer ownership to this channel or prove its external execution
+environment unchanged.
 
 The pass is bounded by 65,536 source bytes and 4,096 AST nodes per module,
 48 new source reads per discovery/projection pass, depth eight, 2,048

@@ -255,6 +255,7 @@ class _Event:
     operator: str
     expected: str
     indirect: bool
+    carrier: bool
     text: str
     span: tuple[int, int]
 
@@ -393,7 +394,8 @@ class _Project:
                 if isinstance(comparison.ops[0], ast.Is) and not (isinstance(right, ast.Constant) and type(right.value) in (bool, type(None))):
                     continue
                 text, span = anchor or (module.offsets.seg(statement), module.offsets.span(statement))
-                events.append(_Event(unit, ast.unparse(left), type(comparison.ops[0]).__name__, ast.unparse(right), indirect, text, span))
+                events.append(_Event(unit, ast.unparse(left), type(comparison.ops[0]).__name__,
+                                     ast.unparse(right), indirect, bool(anchor or loop), text, span))
                 if len(events) > MAX_EVENTS:
                     raise _Unsupported
             elif isinstance(statement, ast.Return) and anchor is not None:
@@ -500,6 +502,12 @@ def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sour
             lost = next(e for e in old[key] if e.expected in wanted - got)
             arrived = next(e for e in new[key] if e.expected in got - wanted)
             if not (lost.indirect or arrived.indirect):
+                continue
+            # Native expectation-definition owns ordinary assertions whose
+            # text is unchanged. The additive pass contributes helper/loop
+            # provenance and changed-assertion extraction; substituting an
+            # existing local binding alone does not transfer that ownership.
+            if not (lost.carrier or arrived.carrier) and lost.text == arrived.text:
                 continue
             records.append((key[0], lost.text, lost.span, arrived.text, arrived.span,
                             key[1], key[2], lost.expected, arrived.expected))
