@@ -412,7 +412,7 @@ def _enum_classes(before, after, path, read):
                         return {}
             if isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
                 value = node.value
-                if value is not None and any(
+                if isinstance(value, (ast.Name, ast.Attribute, ast.Subscript)) and any(
                     _key(value) == name or _key(value).startswith(name + '.') or _key(value).startswith(name + '[')
                     for name in protected_aliases
                 ) and not (
