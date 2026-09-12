@@ -73,7 +73,7 @@ def _contextmanager(node):
 def trusted_wrapper_import(node):
     if isinstance(node, ast.Import) and len(node.names) == 1:
         alias = node.names[0]
-        if alias.name in {'functools', 'operator'} and alias.asname is None:
+        if alias.name in {'functools', 'operator', 'unittest'} and alias.asname is None:
             return alias.name
     if (isinstance(node, ast.ImportFrom) and node.module == 'contextlib' and not node.level
             and len(node.names) == 1 and node.names[0].name == 'contextmanager'

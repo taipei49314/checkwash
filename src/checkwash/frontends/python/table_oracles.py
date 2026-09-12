@@ -27,6 +27,7 @@ from pathlib import PurePosixPath
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
 from checkwash.frontends.python.oracle_blocks import expand_string_blocks, string_block
 from checkwash.frontends.python.oracle_purity import pure_imported_calls
+from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.ir.astutil import dotted_name, stable_dump
@@ -441,10 +442,16 @@ def _table_fixture(node):
     return returned.value
 
 
-def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, used_constants, *, baseline):
+def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, used_constants, *, baseline,
+          multiple=False):
     names = _args(node)
     if names is None or not node.name.startswith("test"):
         return None
+    if multiple and not names and not node.decorator_list and 1 <= len(node.body) <= MAX_CASES:
+        assertions = [_checked(statement, {}, imports, helpers, set(), {}) for statement in node.body]
+        if any(assertion is None for assertion in assertions):
+            return None
+        return [_Case(assertion, statement, node) for assertion, statement in zip(assertions, node.body)], True, "unittest"
     block = string_block(node) if not names and not node.decorator_list else None
     if block is not None:
         assertion, body = block
@@ -560,6 +567,9 @@ def _module(source, *, baseline):
     block_tests = expand_string_blocks(tree)
     if block_tests is None:
         return None
+    unittest_tests = expand_unittest_classes(tree)
+    if unittest_tests is None:
+        return None
     class_tests = _plain_classes(tree)
     if class_tests is None:
         return None
@@ -639,7 +649,7 @@ def _module(source, *, baseline):
         if function.name in fixtures or function.name in tables or function.name in helpers or function.name in table_helpers:
             continue
         expanded = _test(function, fixtures, tables, imports, helpers, table_helpers, constants, used_constants,
-                         baseline=baseline)
+                         baseline=baseline, multiple=function.name in unittest_tests)
         if expanded is None:
             return None
         cases, is_table, form = expanded
@@ -674,7 +684,8 @@ def _module(source, *, baseline):
     # projection rests on. Same discipline as the fixtures above.
     if helpers.keys() | table_helpers.keys() != used_helpers.keys() or tables.keys() != used_tables.keys():
         return None
-    return text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities, bool(block_tests)
+    return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
+            bool(block_tests or unittest_tests), bool(unittest_tests))
 
 
 def _module_unshadowed(path, read, module):
@@ -864,8 +875,16 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         # Extra literal cases can follow the complete old sequence. They
         # cannot run before an old oracle and change what it subsequently
         # sees; insertion/reordering stays outside the proof.
-        if not old_keys or old_keys != new_keys[:len(old_keys)]:
+        if not old_keys:
             return before_parsed, after_parsed
+        if old_keys != new_keys[:len(old_keys)]:
+            if not (old[9] or new[9]) or Counter(old_keys) - Counter(new_keys):
+                return before_parsed, after_parsed
+            # Default TestCase sorts test methods and repeats setup per test.
+            # Reordering earns credit only after both imported-source purity
+            # proofs below; every original concrete oracle remains present.
+            old[2].sort(key=_subject_key)
+            new[2].sort(key=_subject_key)
     except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
         return before_parsed, after_parsed
     # A loop runs function-scope autouse fixtures once, while separate
@@ -884,7 +903,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         if any(not _module_unshadowed(path, read, authority) for authority in module[7]):
             return before_parsed, after_parsed
-        if module[8] and not pure_imported_calls(module[0].encode(),
+        if (old[8] or new[8]) and not pure_imported_calls(module[0].encode(),
                                                 [case.assertion.test.left for case in module[2]], path=path, read=read):
             return before_parsed, after_parsed
     return _project(before_parsed, old[0], old[2]), _project(after_parsed, new[0], new[2])
