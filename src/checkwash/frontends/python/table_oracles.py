@@ -25,7 +25,7 @@ from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
-from checkwash.frontends.python.oracle_wrappers import expand_wrappers, trusted_wrapper_import
+from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.ir.astutil import dotted_name, stable_dump
 
@@ -132,6 +132,17 @@ class _Substitute(ast.NodeTransformer):
 def _concrete(node, bindings, imports):
     if not isinstance(node, ast.Assert) or node.msg is not None:
         return None
+    # A literal one-argument predicate adds no closure or dynamic dispatch.
+    # Substitute its sole input once, before substituting helper bindings;
+    # otherwise an identically named lambda parameter could be captured.
+    if (isinstance(node.test, ast.Call) and isinstance(node.test.func, ast.Name)
+            and node.test.func.id in bindings):
+        predicate = bindings[node.test.func.id]
+        if _literal_predicate(predicate) and len(node.test.args) == 1 and not node.test.keywords:
+            node = copy.deepcopy(node)
+            compare = copy.deepcopy(predicate.body)
+            compare.left = node.test.args[0]
+            node.test = compare
     original = node.test
     if isinstance(original, ast.Compare):
         # Substitution copies a row's AST into each use. Reusing the same
@@ -161,6 +172,18 @@ def _concrete(node, bindings, imports):
             or not all(keyword.arg is not None and _literal(keyword.value) for keyword in actual.keywords)):
         return None
     return concrete
+
+
+def _literal_predicate(node):
+    if not isinstance(node, ast.Lambda):
+        return False
+    args, body = node.args, node.body
+    return (not args.posonlyargs and len(args.args) == 1 and not args.kwonlyargs
+            and not args.defaults and not args.vararg and not args.kwarg
+            and isinstance(body, ast.Compare) and len(body.ops) == 1
+            and isinstance(body.ops[0], (ast.Eq, ast.Is))
+            and isinstance(body.left, ast.Name) and body.left.id == args.args[0].arg
+            and _literal(body.comparators[0]))
 
 
 def _fixture(node):
@@ -349,6 +372,14 @@ def _inlined(statement, bindings, helpers, scope):
             inner[parameter] = bindings[argument.id]
         elif _literal(argument):
             inner[parameter] = argument
+        elif isinstance(argument, ast.Call) or _literal_predicate(argument):
+            # A call is effectful. It must reach the single concrete subject
+            # exactly once; unused or duplicated evaluated arguments cannot
+            # disappear through helper expansion. _concrete validates the
+            # imported callee and all literal call arguments afterwards.
+            if sum(isinstance(item, ast.Name) and item.id == parameter for item in ast.walk(assertion)) != 1:
+                return None
+            inner[parameter] = argument
         else:
             return None
     if any(count > 1 for count in consumed.values()):
@@ -503,6 +534,7 @@ def _module(source, *, baseline):
     wrapper_tests = expand_wrappers(tree)
     if wrapper_tests is None:
         return None
+    expand_operator_asserts(tree)
     class_tests = _plain_classes(tree)
     if class_tests is None:
         return None

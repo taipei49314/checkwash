@@ -73,13 +73,34 @@ def _contextmanager(node):
 def trusted_wrapper_import(node):
     if isinstance(node, ast.Import) and len(node.names) == 1:
         alias = node.names[0]
-        if alias.name == 'functools' and alias.asname is None:
-            return 'functools'
+        if alias.name in {'functools', 'operator'} and alias.asname is None:
+            return alias.name
     if (isinstance(node, ast.ImportFrom) and node.module == 'contextlib' and not node.level
             and len(node.names) == 1 and node.names[0].name == 'contextmanager'
             and node.names[0].asname is None):
         return 'contextlib'
     return None
+
+
+def expand_operator_asserts(tree):
+    """Canonicalize only direct standard-library equality/identity asserts."""
+    if not any(trusted_wrapper_import(node) == 'operator' for node in tree.body):
+        return
+    if any((isinstance(node, ast.arg) and node.arg == 'operator')
+           or (isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store) and node.id == 'operator')
+           for node in ast.walk(tree)):
+        return
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assert) or node.msg is not None:
+            continue
+        call = node.test
+        if (not isinstance(call, ast.Call) or not isinstance(call.func, ast.Attribute)
+                or not isinstance(call.func.value, ast.Name) or call.func.value.id != 'operator'
+                or call.func.attr not in {'eq', 'is_'} or len(call.args) != 2 or call.keywords):
+            continue
+        node.test = ast.copy_location(ast.Compare(left=call.args[0],
+                                                  ops=[ast.Eq() if call.func.attr == 'eq' else ast.Is()],
+                                                  comparators=[call.args[1]]), call)
 
 
 def expand_wrappers(tree):
