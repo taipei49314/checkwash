@@ -25,6 +25,7 @@ from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
+from checkwash.frontends.python.oracle_wrappers import expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.ir.astutil import dotted_name, stable_dump
 
@@ -499,11 +500,14 @@ def _module(source, *, baseline):
     tree = ast.parse(text)
     if sum(1 for _ in ast.walk(tree)) > MAX_AST_NODES:
         return None
+    wrapper_tests = expand_wrappers(tree)
+    if wrapper_tests is None:
+        return None
     class_tests = _plain_classes(tree)
     if class_tests is None:
         return None
     imports, import_nodes, functions, names = set(), [], [], set()
-    constants, used_constants, modules = {}, Counter(), set()
+    constants, used_constants, modules, wrapper_authorities = {}, Counter(), set(), set()
     pytest_imported = False
     for node in tree.body:
         if _docstring(node) or isinstance(node, ast.Pass):
@@ -529,7 +533,11 @@ def _module(source, *, baseline):
                 # Aliased pytest could be a shadowing decorator authority.
                 if "pytest" in bound:
                     return None
-                import_nodes.append(ast.dump(node, include_attributes=False))
+                wrapper_authority = trusted_wrapper_import(node)
+                if wrapper_authority:
+                    wrapper_authorities.add(wrapper_authority)
+                else:
+                    import_nodes.append(ast.dump(node, include_attributes=False))
         elif not functions and (constant := _constant(node, names)) is not None:
             name, value = constant
             names.add(name)
@@ -580,6 +588,8 @@ def _module(source, *, baseline):
         cases, is_table, form = expanded
         if function.name in class_tests:
             is_table, form = True, "plain-class"
+        if function.name in wrapper_tests:
+            is_table, form = True, "oracle-wrapper"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
@@ -607,19 +617,23 @@ def _module(source, *, baseline):
     # projection rests on. Same discipline as the fixtures above.
     if helpers.keys() | table_helpers.keys() != used_helpers.keys() or tables.keys() != used_tables.keys():
         return None
-    return text, import_nodes, result, table, pytest_imported, modules, forms
+    return text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities
 
 
-def _pytest_unshadowed(path, read):
-    """Reject repository-local substitutes for the table decorator authority."""
+def _module_unshadowed(path, read, module):
+    """Reject repository-local substitutes for a standard wrapper authority."""
     parts = PurePosixPath(path.replace("\\", "/")).parts
     directories = {"", "src"}
     directories.update("/".join(parts[:depth]) for depth in range(1, len(parts)))
     for directory in sorted(directories):
         prefix = directory + "/" if directory else ""
-        if any(read(prefix + candidate) is not None for candidate in ("pytest.py", "pytest/__init__.py")):
+        if any(read(prefix + candidate) is not None for candidate in (module + ".py", module + "/__init__.py")):
             return False
     return True
+
+
+def _pytest_unshadowed(path, read):
+    return _module_unshadowed(path, read, "pytest")
 
 
 def _project(parsed, text, cases):
@@ -802,5 +816,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         if not inert_test_execution_context(path, read, search):
             return before_parsed, after_parsed
         if module[4] and not _pytest_unshadowed(path, read):
+            return before_parsed, after_parsed
+        if any(not _module_unshadowed(path, read, authority) for authority in module[7]):
             return before_parsed, after_parsed
     return _project(before_parsed, old[0], old[2]), _project(after_parsed, new[0], new[2])
