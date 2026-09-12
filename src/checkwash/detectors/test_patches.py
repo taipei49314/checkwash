@@ -137,6 +137,13 @@ def detect(ir: IR) -> list[Finding]:
                         ),
                     )
                 )
+    for path, unit, target, text, span in ir.globals.subject_installations:
+        findings.append(Finding(
+            rule="TEST_PATCHES_SUBJECT", severity="warn", path=path, unit=unit,
+            message=f"{unit}: this test installs a replacement for {target} that its existing oracle consumes",
+            after=Evidence(text=text, span=tuple(span)),
+            fingerprint=make_fingerprint("TEST_PATCHES_SUBJECT", path, unit, target),
+        ))
     # Import resolution replaces the subject before any test unit runs.
     # Keep the audited rule and deny provider self-repair through unit=None.
     for path, module, before, after, test_path, trigger in ir.globals.runtime_subject_shadows:

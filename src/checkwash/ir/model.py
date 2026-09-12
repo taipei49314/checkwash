@@ -419,6 +419,9 @@ class DiffGlobals:
     # (finding path, module, base provider, head provider, test path, trigger).
     # Equivalent switches are excluded here, but still cannot buy repair.
     runtime_subject_shadows: list[tuple[str, str, str, str, str, str]] = field(default_factory=list)
+    # Source-proved assignment/setattr/module installation reaching an existing
+    # oracle: (source path, test unit, canonical target, source text, span).
+    subject_installations: list[tuple[str, str, str, str, tuple[int, int]]] = field(default_factory=list)
 
 
 @dataclass

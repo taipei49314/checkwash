@@ -50,6 +50,7 @@ from checkwash.frontends.python.normalization import mark_normalization_equivale
 from checkwash.frontends.python.table_normalization import mark_table_normalization
 from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
+from checkwash.frontends.python.standin_installations import installation_events
 from checkwash.shadow import find_runtime_subject_shadows
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
@@ -1093,6 +1094,14 @@ def build_ir(
                     if pu.side.body_hash in wanted and unit_is_live(pu.side, consts):
                         found.add(pu.side.body_hash)
             g.duplicate_unit_hashes = sorted(found)
+    for path, unit, target, text, span in installation_events(
+        ir, changes, config, root_reader=root_reader, root_path_lister=root_path_lister,
+    ):
+        if unit is None:
+            if (path, text) not in g.conftest_prod_patches:
+                g.conftest_prod_patches.append((path, text))
+        else:
+            g.subject_installations.append((path, unit, target, text, span))
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
     mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
     return ir
