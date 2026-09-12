@@ -32,6 +32,9 @@ dictionary field. Other input cells and fields must retain their canonical
 values. The selected path must actually feed the subject; an unused field
 cannot stand in for an active input. Each concrete row occurrence is consumed
 at most once, and every unproved disappearance retains the replacement rule.
+A surviving input that both loses and gains answers supplies no copy
+witnesses. Pure duplicate shrink/grow can still supply its unmatched concrete
+occurrences, using the same eligibility conditions as the replacement rule.
 This permits an identity input rewrite such as `(1, 1)` to `(2, 2)` without
 claiming that the two tests cover the same concrete input. It does not exempt
 the general transformation `(1, 2), (2, 4)` to `(2, 4), (3, 6)`.
