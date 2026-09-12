@@ -123,8 +123,9 @@ def _covered(child: str, parent: str, *, paths: bool) -> bool:
     # can be compared without assuming the repository's test inventory.
     if not any(c in child for c in "*?["):
         return fnmatch.fnmatchcase(child, parent)
-    if parent.endswith("*") and not any(c in parent[:-1] for c in "*?["):
-        return child.startswith(parent[:-1])
+    if parent.count("*") == 1 and not any(c in parent for c in "?["):
+        prefix, suffix = parent.split("*")
+        return child.startswith(prefix) and child.endswith(suffix)
     return False
 
 
