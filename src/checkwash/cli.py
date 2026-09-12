@@ -217,6 +217,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         report_context=report_context,
         root_reader=root_snapshot.read,
         root_searcher=root_snapshot.search,
+        root_path_lister=root_snapshot.list_paths,
+        root_batch_reader=root_snapshot.read_many,
     )
 
     if args.emit_ir:

@@ -50,6 +50,7 @@ from checkwash.frontends.python.normalization import mark_normalization_equivale
 from checkwash.frontends.python.table_normalization import mark_table_normalization
 from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
+from checkwash.shadow import find_runtime_subject_shadows
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
@@ -347,6 +348,8 @@ def build_ir(
     report_context: ReportContext | None = None,
     root_reader=None,
     root_searcher=None,
+    root_path_lister=None,
+    root_batch_reader=None,
 ) -> IR:
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
     changes = [*changes, *importer_changes]
@@ -365,6 +368,22 @@ def build_ir(
             sorted(set(known_modules) - set(self_modules or ()) - repo_roots - known_baseline())
         )
     ir = IR(base=base_label, head=head_label, globals=g)
+    shadow_hits = find_runtime_subject_shadows(
+        changes, config, g.third_party_roots,
+        head_path_lister=root_path_lister,
+        head_batch_reader=root_batch_reader,
+        include_equivalent=True,
+    )
+    g.runtime_subject_shadows = [
+        (hit.finding_path, hit.module, hit.before_provider, hit.after_provider,
+         hit.test_path, hit.trigger)
+        for hit in shadow_hits if hit.reportable
+    ]
+    shadow_evidence_paths = {
+        path for hit in shadow_hits
+        for path in (hit.after_provider, *hit.after_chain, *hit.related_evidence_paths,
+                     *hit.control_paths, hit.trigger)
+    }
     removed_texts: Counter[str] = Counter()
     added_texts: Counter[str] = Counter()
     base_literals: set[str] = set()
@@ -755,7 +774,11 @@ def build_ir(
         elif role == "prod":
             g.prod_files_changed.append(path)
             package = _module_of(path)
-            if is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
+            if path in shadow_evidence_paths:
+                # Provider copies and controls changed what the oracle runs;
+                # they are not repairs for this or another weakened oracle.
+                pass
+            elif is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
                 for q in sorted(set(before_parsed.symbols) | set(after_parsed.symbols)):
                     if before_parsed.symbols.get(q) != after_parsed.symbols.get(q):
                         g.prod_symbols_changed.append(f"{_module_of(path)}::{q}")
@@ -1100,6 +1123,8 @@ def analyze(
     report_context: ReportContext | None = None,
     root_reader=None,
     root_searcher=None,
+    root_path_lister=None,
+    root_batch_reader=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -1114,6 +1139,8 @@ def analyze(
         report_context=report_context,
         root_reader=root_reader,
         root_searcher=root_searcher,
+        root_path_lister=root_path_lister,
+        root_batch_reader=root_batch_reader,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

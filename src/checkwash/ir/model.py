@@ -416,6 +416,9 @@ class DiffGlobals:
     # Empty when no manifest was read, which leaves the stdlib list as the only
     # deny and is deliberately the quieter half of the error.
     third_party_roots: tuple[str, ...] = ()
+    # (finding path, module, base provider, head provider, test path, trigger).
+    # Equivalent switches are excluded here, but still cannot buy repair.
+    runtime_subject_shadows: list[tuple[str, str, str, str, str, str]] = field(default_factory=list)
 
 
 @dataclass
