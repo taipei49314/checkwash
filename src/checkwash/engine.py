@@ -1108,7 +1108,7 @@ def build_ir(
     mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
     mark_expected_provenance(ir, raw_by_path, root_reader, config.role_of, report_context,
                              {path: data for (path, side), data in oracle_sources.items()
-                              if side == -1 and (path, side) in strict_oracle_sources})
+                              if side == -1 and (path, side) in strict_oracle_sources}, root_searcher)
     return ir
 
 

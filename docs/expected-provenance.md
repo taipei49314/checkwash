@@ -34,7 +34,19 @@ frontend behavior. Dynamic iterators, decorated helpers, varargs, conditional
 control flow and ambiguous imports receive no invented provenance. Direct
 nonliteral expected expressions remain with the existing detectors; the
 helper channel can retain their substituted defining expression without
-evaluating it. Rebound helper names and local reads before their first
+executing repository code. A separate closed literal language proves equal
+results for primitive arithmetic, comparisons, conditional selection and
+slices. `len` and `math.prod` additionally require unshadowed lexical imports,
+an inert strict startup snapshot and, for `math`, no repository module shadow.
+Aliases retain authority only without rebinding. Callable parameters and
+fixture-bearing callers receive no constant-call proof.
+
+The closed language permits 128 steps, depth 16, 256-bit integers, finite
+floats, sequences of at most 64 items and strings/bytes of at most 4,096
+characters. Unknown calls, unavailable authority, oversized literals or
+different results do not become equal: the original expression or the
+different literal remains in the input-keyed evidence. Rebound helper names
+and local reads before their first
 binding are declined rather than borrowing stale functions or module values.
 
 Ordinary native literal assertions use their existing IR without another

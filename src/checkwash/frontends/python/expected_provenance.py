@@ -17,6 +17,8 @@ from pathlib import PurePosixPath
 
 from checkwash.change import FileChange
 from checkwash.frontends.python.frontend import _Offsets, normalize_source
+from checkwash.frontends.python.expected_constants import folded_expected
+from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.frontends.python.table_oracles import MAX_AST_NODES, MAX_CASES, MAX_SOURCE_BYTES, _literal
 from checkwash.ir.astutil import dotted_name
 
@@ -88,6 +90,8 @@ class _Module:
     env: dict
     functions: dict
     tests: list
+    calls_safe: bool
+    math_imported: bool
 
 
 def _module(path, source):
@@ -133,15 +137,41 @@ def _module(path, source):
                 _assign(target, value, env)
         else:
             raise _Unsupported
-    return _Module(path, _Offsets(text), env, functions, tests)
+    # Optional constant-call folding needs unambiguous lexical authority.
+    # Decline every collision, even in another scope, rather than treating a
+    # fixture/parameter/class as the builtin or a standard-library module.
+    aliases, allowed_imports = {"len", "math"}, set()
+    math_imported = False
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "math":
+                    aliases.add(alias.asname or "math")
+                    allowed_imports.add(id(alias))
+                    math_imported = True
+        elif isinstance(node, ast.ImportFrom) and not node.level and node.module == "math":
+            for alias in node.names:
+                if alias.name == "prod":
+                    aliases.add(alias.asname or "prod")
+                    allowed_imports.add(id(alias))
+                    math_imported = True
+    calls_safe = not any(
+        (isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)) and node.id in aliases)
+        or (isinstance(node, ast.arg) and node.arg in aliases)
+        or (isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name in aliases)
+        or (isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) in aliases
+            and id(node) not in allowed_imports)
+        for node in ast.walk(tree))
+    return _Module(path, _Offsets(text), env, functions, tests, calls_safe, math_imported)
 
 
 class _Reader:
-    def __init__(self, raw, reader, role_of, report_context=None, sources=None):
+    def __init__(self, raw, reader, role_of, report_context=None, sources=None, searcher=None):
         self.raw, self.reader, self.role_of = raw, reader, role_of
         self.context = report_context
         self.sources, self.modules = dict(sources or {}), {}
         self.reads = 0
+        self.searcher, self.authorities = searcher, {}
 
     def source(self, path, side):
         if path in self.raw:
@@ -178,6 +208,41 @@ class _Reader:
         target = self.module(present[0], side)
         return ((target, target.functions[member])
                 if target is not None and member in target.functions and member not in target.env else None)
+
+    def constant_call_authority(self, path, side, name):
+        key = (path, side, name)
+        if key in self.authorities:
+            return self.authorities[key]
+        self.authorities[key] = False
+        if self.reader is None or self.searcher is None:
+            return False
+        read = lambda candidate: self.source(candidate, side)
+
+        def search(needles):
+            paths = self.searcher(needles)
+            if not isinstance(paths, (list, tuple)) or any(not isinstance(p, str) for p in paths):
+                return paths
+            paths = set(paths)
+            for candidate, pair in self.raw.items():
+                paths.discard(candidate)
+                data = pair[side]
+                if candidate.endswith(".py") and data and any(n.encode() in data for n in needles):
+                    paths.add(candidate)
+            return sorted(paths)
+
+        try:
+            if not inert_test_execution_context(path, read, search):
+                return False
+            if name == "math.prod":
+                parts = PurePosixPath(path).parts
+                roots = {"", "src", *("/".join(parts[:depth]) for depth in range(1, len(parts)))}
+                if any(read((root + "/" if root else "") + candidate) is not None
+                       for root in sorted(roots) for candidate in ("math.py", "math/__init__.py")):
+                    return False
+        except _Unsupported:
+            return False  # exhausted proof is unknown; keep the original expression
+        self.authorities[key] = True
+        return True
 
 
 @dataclass
@@ -262,7 +327,7 @@ class _Project:
         for target in (statement.targets if isinstance(statement, ast.Assign) else [statement.target]):
             _assign(target, value, env)
 
-    def walk(self, module, body, env, unit, events, depth=0, anchor=None, loop=False):
+    def walk(self, module, body, env, unit, events, depth=0, anchor=None, loop=False, trusted_calls=True):
         for statement in body:
             self.tick(depth)
             if _doc(statement) or isinstance(statement, ast.Pass):
@@ -276,7 +341,7 @@ class _Project:
                 for row in rows.elts:
                     local = dict(env)
                     _assign(statement.target, row, local)
-                    self.walk(module, statement.body, local, unit, events, depth + 1, anchor, True)
+                    self.walk(module, statement.body, local, unit, events, depth + 1, anchor, True, trusted_calls)
                     env.update(local)
             elif isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call):
                 call = statement.value
@@ -287,7 +352,11 @@ class _Project:
                 actuals = [self.resolve(module, a, env, depth + 1) for a in [*call.args, *(k.value for k in call.keywords)]]
                 local = self.arguments(helper, function, call, actuals)
                 at = anchor or (module.offsets.seg(statement), module.offsets.span(statement))
-                self.walk(helper, function.body, local, unit, events, depth + 1, at, loop)
+                parameters = {a.arg for a in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]}
+                bound_callable = any(isinstance(n, ast.Call) and (dotted_name(n.func) or "").split(".")[0] in parameters
+                                     for statement in function.body for n in ast.walk(statement))
+                self.walk(helper, function.body, local, unit, events, depth + 1, at, loop,
+                          trusted_calls and not bound_callable)
             elif isinstance(statement, ast.Assert) and statement.msg is None:
                 comparison = statement.test
                 if not isinstance(comparison, ast.Compare) or len(comparison.ops) != 1 or not isinstance(comparison.ops[0], (ast.Eq, ast.Is)):
@@ -307,6 +376,14 @@ class _Project:
                     continue
                 if any(isinstance(n, (ast.Lambda, ast.NamedExpr, ast.Await, ast.Yield, ast.comprehension)) for n in ast.walk(right)):
                     raise _Unsupported
+                if not _literal(right):
+                    def allow_call(name):
+                        return (trusted_calls and module.calls_safe
+                                and (name != "math.prod" or module.math_imported)
+                                and self.reader.constant_call_authority(module.path, self.side, name))
+                    folded = folded_expected(right, allow_call)
+                    if folded is not None:
+                        right = folded
                 if isinstance(comparison.ops[0], ast.Is) and not (isinstance(right, ast.Constant) and type(right.value) in (bool, type(None))):
                     continue
                 text, span = anchor or (module.offsets.seg(statement), module.offsets.span(statement))
@@ -329,7 +406,8 @@ class _Project:
                 _declare_locals(function.body, env)
                 for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]:
                     env[arg.arg] = ast.Name(id=arg.arg, ctx=ast.Load())
-                self.walk(module, function.body, env, unit, events)
+                self.walk(module, function.body, env, unit, events,
+                          trusted_calls=not (function.args.posonlyargs or function.args.args or function.args.kwonlyargs))
             except _Unsupported:
                 continue
             result.extend(events)
@@ -388,8 +466,8 @@ def _eligible(file, sources):
     return any(_CALL_STATEMENT.search(data) for data in sources if data is not None)
 
 
-def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sources=None):
-    source = _Reader(raw, reader, role_of, report_context, sources)
+def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sources=None, searcher=None):
+    source = _Reader(raw, reader, role_of, report_context, sources, searcher)
     for file in ir.files:
         if file.language != "python" or file.role != "test" or not file.parse_ok or file.path not in raw:
             continue

@@ -3,6 +3,7 @@
 import datetime
 from dataclasses import replace
 import json
+from pathlib import Path
 
 import pytest
 
@@ -40,13 +41,21 @@ def findings(result):
     return [f for f in result[1] if f.rule == RULE]
 
 
-@pytest.mark.parametrize("call", ["check(double(2), 4)", "check(expected=4, actual=double(2))"])
-def test_same_file_helper_actual_literal_change_blocks(call):
+@pytest.mark.parametrize("call,owner", [("check(double(2), 4)", "EXPECTED_VALUE_CHANGED"),
+                                       ("check(expected=4, actual=double(2))", RULE)])
+def test_same_file_helper_actual_literal_change_blocks(call, owner):
     before = IMPORT + HELPER + "def test_double():\n    " + call + "\n"
     after = before.replace("), 4)", "), 5)").replace("expected=4", "expected=5")
     result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
-    assert findings(result) and result[2] == "block"
-    assert all(f.unit == "test_double" and f.severity == "high" for f in findings(result))
+    hits = [f for f in result[1] if f.rule == owner]
+    assert hits and result[2] == "block"
+    assert all(f.severity == "high" for f in hits)
+    # The exact positional carrier is already specialized by the table
+    # projector. Keyword actuals retain their ordinary named-unit provenance.
+    if owner == "EXPECTED_VALUE_CHANGED":
+        assert all(f.unit.startswith("test_concrete_") for f in hits)
+    else:
+        assert all(f.unit == "test_double" for f in hits)
 
 
 @pytest.mark.parametrize("module,import_line", [
@@ -94,18 +103,28 @@ def test_helper_input_only_change_does_not_rewrite_an_existing_answer():
     assert not findings(run({"tests/test_calc.py": before}, {"tests/test_calc.py": after}))
 
 
-@pytest.mark.parametrize("table", [
-    "CASES = [(1, 2), (2, 4)]\n",
-    "def cases():\n    return [(1, 2), (2, 4)]\n",
+@pytest.mark.parametrize("table,owner", [
+    ("CASES = [(1, 2), (2, 4)]\n", "EXPECTED_VALUE_CHANGED"),
+    ("def cases():\n    return [(1, 2), (2, 4)]\n", RULE),
 ])
-def test_for_unpack_expectations_are_keyed_by_the_subject_input(table):
+def test_for_unpack_expectations_are_keyed_by_the_subject_input(table, owner):
     iterator = "cases()" if table.startswith("def") else "CASES"
     before = IMPORT + table + f"def test_double():\n    for value, expected in {iterator}:\n        assert double(value) == expected\n"
     after = before.replace("(1, 2), (2, 4)", "(1, 4), (2, 2), (3, 6)")
     result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
-    assert findings(result) and result[2] == "block"
-    records = next(f for f in result[0].files if f.path == "tests/test_calc.py").expected_provenance_events
-    assert {r[5] for r in records} == {"app.calc.double(1)", "app.calc.double(2)"}
+    hits = [f for f in result[1] if f.rule == owner]
+    assert hits and result[2] == "block" and all(f.severity == "high" for f in hits)
+    file = next(f for f in result[0].files if f.path == "tests/test_calc.py")
+    if owner == "EXPECTED_VALUE_CHANGED":
+        # The literal table route owns concrete assertions. Pin each input's
+        # old/new answer, not merely a block or an unchanged global answer bag.
+        rewritten = {(u.before.assertions[0].left, u.before.assertions[0].right_value,
+                      u.after.assertions[0].right_value)
+                     for u in file.units if u.before and u.after
+                     and u.before.assertions[0].right_value != u.after.assertions[0].right_value}
+        assert rewritten == {("double(1)", "2", "4"), ("double(2)", "4", "2")}
+    else:
+        assert {r[5] for r in file.expected_provenance_events} == {"app.calc.double(1)", "app.calc.double(2)"}
 
 
 def test_for_unpack_and_helper_actuals_compose_without_losing_rows():
@@ -230,3 +249,70 @@ def test_invalid_serialized_events_cannot_be_used_as_findings():
     ir.files[0].expected_provenance_events = [("invalid",)]
     with pytest.raises(EngineError, match="expected provenance"):
         detect(ir, [])
+
+
+@pytest.mark.parametrize("case,old,new", [
+    ("EXT_004_ceil_div", "(a + b - 1) // b", "(a + b - 1) // b + 1"),
+    ("EXT_014_product", "math.prod(xs)", "math.prod(xs) + 1"),
+    ("EXT_021_truncate", "== expected", "== expected + '!'"),
+])
+@pytest.mark.parametrize("changed", [False, True])
+def test_closed_helper_expressions_preserve_honest_cases_but_block_different_results(case, old, new, changed):
+    root = Path(__file__).resolve().parents[1] / "benchmarks" / "refactors" / "cases" / case
+    tree = lambda folder: {p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob("*.py")}
+    prod, before, after = tree(root / "PROD-GOOD"), tree(root / "BEFORE"), tree(root / "AFTER")
+    if changed:
+        after = {p: data.replace(old.encode(), new.encode()) for p, data in after.items()}
+    result = run({**prod, **before}, {**prod, **after})
+    assert bool(findings(result)) is changed
+    assert result[2] == ("block" if changed else "pass")
+
+
+@pytest.mark.parametrize("import_line,call", [("import math as m", "m.prod"),
+                                             ("from math import prod as multiply", "multiply")])
+def test_math_import_aliases_have_the_same_closed_literal_result(import_line, call):
+    before = IMPORT + "def test_double():\n    assert double(2) == 4\n"
+    after = IMPORT + import_line + f"\ndef check(x):\n    assert double(x) == {call}([2, 2])\ndef test_double():\n    check(2)\n"
+    assert not findings(run({"tests/test_calc.py": before}, {"tests/test_calc.py": after}))
+
+
+@pytest.mark.parametrize("shadow", ["math.py", "math/__init__.py", "tests/math.py", "conftest.py"])
+def test_shadowed_or_mutated_math_has_no_constant_call_authority(shadow):
+    before = IMPORT + "def test_double():\n    assert double(2) == 4\n"
+    after = IMPORT + "import math\ndef check(x):\n    assert double(x) == math.prod([2, 2])\ndef test_double():\n    check(2)\n"
+    shadow_source = "import math\nmath.prod = lambda values: 0\n" if shadow == "conftest.py" else "def prod(values):\n    return 0\n"
+    result = run({"tests/test_calc.py": before, shadow: shadow_source}, {"tests/test_calc.py": after, shadow: shadow_source})
+    assert findings(result) and result[2] == "block"
+
+
+def test_rebound_math_alias_does_not_keep_import_authority():
+    before = IMPORT + "def test_double():\n    assert double(2) == 4\n"
+    after = IMPORT + "import math as m\nm = object()\ndef check(x):\n    assert double(x) == m.prod([2, 2])\ndef test_double():\n    check(2)\n"
+    result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+
+
+@pytest.mark.parametrize("literal", [repr(1 << 300), repr("x" * 4097)])
+def test_oversized_literal_computation_is_unknown_not_equal(literal):
+    zero = "''" if literal.startswith("'") else "0"
+    before = IMPORT + f"def test_double():\n    assert double(2) == {literal}\n"
+    after = IMPORT + f"def check(x):\n    assert double(x) == {literal} + {zero}\ndef test_double():\n    check(2)\n"
+    result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+
+
+def test_unknown_computation_is_not_silently_equal_to_the_old_literal():
+    before = IMPORT + "def test_double():\n    assert double(2) == 4\n"
+    after = IMPORT + "def check(x):\n    expected = unknown_answer(x)\n    assert double(x) == expected\ndef test_double():\n    check(2)\n"
+    result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+
+
+def test_closed_expression_specialization_retains_input_keys_through_multiple_bindings():
+    helper = "def check(actual, expected):\n    answer = expected + 0\n    alias = answer\n    assert actual == alias\n"
+    before = IMPORT + helper + "def test_double():\n    check(double(1), 1 + 1)\n    check(double(2), 2 + 2)\n"
+    after = before.replace("double(1), 1 + 1", "double(1), 2 + 2").replace("double(2), 2 + 2", "double(2), 1 + 1")
+    after += "    check(double(3), 3 + 3)\n"
+    result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
+    assert findings(result) and result[2] == "block"
+    assert {r[5] for file in result[0].files for r in file.expected_provenance_events} == {"app.calc.double(1)", "app.calc.double(2)"}
