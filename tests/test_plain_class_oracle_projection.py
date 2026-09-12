@@ -96,6 +96,25 @@ def test_collection_dispatch_or_instance_state_cannot_be_erased_by_class_project
 def test_helper_extraction_keeps_startup_and_order_requirements():
     ir, _findings, _verdict = run((HEADER + HELPER).encode(), context={'conftest.py': b'patch()\n'})
     assert not projected(ir)
+
+
+def test_a_parameter_cannot_shadow_a_helper_class_constructor():
+    after = (HEADER + 'import pytest\nclass NumberChecks:\n'
+             '    def check(self, value, expected):\n        assert double(value) == expected\n'
+             '@pytest.mark.parametrize("NumberChecks", [None])\n'
+             'def test_first(NumberChecks):\n    NumberChecks().check(1, 2)\n').encode()
+    before = (HEADER + 'def test_first():\n    assert double(1) == 2\n').encode()
+    ir, _findings, _verdict = run(after, before)
+    assert not projected(ir)
+
+
+@pytest.mark.parametrize('hook', ['setup_method', 'teardown_method', 'setup_class', 'teardown_class'])
+def test_implicitly_executed_hooks_cannot_be_erased_even_when_explicitly_called(hook):
+    before = (HEADER + f'class TestNumbers:\n    def {hook}(self):\n        assert double(1) == 2\n'
+              f'    def test_first(self):\n        self.{hook}()\n').encode()
+    after = (HEADER + 'def test_first():\n    assert double(1) == 2\n').encode()
+    ir, _findings, _verdict = run(after, before)
+    assert not projected(ir)
     # New inputs do not prove preservation of the original sequence.
     after = (HEADER + METHOD.replace('self.check(1, 2)', 'self.check(3, 6)')).encode()
     ir, _findings, _verdict = run(after)

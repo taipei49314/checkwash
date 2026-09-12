@@ -33,6 +33,8 @@ MAX_SOURCE_BYTES = 65_536
 MAX_AST_NODES = 4_096
 MAX_CASES = 64
 _CONTROL_NAMES = {"pytest", "pytestmark", "pytest_plugins"}
+_IMPLICIT_HOOKS = {"setup_module", "teardown_module", "setup_function", "teardown_function",
+                   "setup_class", "teardown_class", "setup_method", "teardown_method", "setup", "teardown"}
 
 
 @dataclass
@@ -222,7 +224,7 @@ def _helper(node):
     startup proof, which rejects any non-default collection option).
     """
     parameters = _args(node)
-    if (parameters is None or node.name.startswith("test")
+    if (parameters is None or node.name.startswith(("test", "pytest_")) or node.name in _IMPLICIT_HOOKS
             or node.decorator_list or len(node.body) != 1
             or len(set(parameters)) != len(parameters)):
         return None
@@ -263,7 +265,8 @@ def _plain_classes(tree):
             parameters = _args(member) if isinstance(member, ast.FunctionDef) else None
             if (parameters is None or not parameters or parameters[0] != "self"
                     or len(set(parameters)) != len(parameters) or member.decorator_list
-                    or member.name.startswith("__") or member.name in inherited or member.name in own):
+                    or member.name.startswith(("__", "pytest_")) or member.name in _IMPLICIT_HOOKS
+                    or member.name in inherited or member.name in own):
                 return None
             alias = ("test_" if member.name.startswith("test") else "_case_") + node.name + "__" + member.name
             if alias in occupied:
@@ -278,6 +281,7 @@ def _plain_classes(tree):
     for name in classes:
         bindings = sum(isinstance(item, (ast.FunctionDef, ast.ClassDef)) and item.name == name
                        or isinstance(item, ast.Name) and isinstance(item.ctx, ast.Store) and item.id == name
+                       or isinstance(item, ast.arg) and item.arg == name
                        or isinstance(item, ast.alias) and (item.asname or item.name.split('.')[0]) == name
                        for item in ast.walk(tree))
         if bindings != 1:
