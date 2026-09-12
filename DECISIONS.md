@@ -2116,3 +2116,38 @@ job across the nine OS/Python legs. The sweep record of 2026-09-07 (run
 Cut by `release_slot.py slot --force-release` on LAPTOP-01AGNPJU as in
 D-057. The line is frozen again after this release: no bump, tag or release
 without a new owner decision.
+
+## D-059 (2026-09-12): bounded family remediation, unreleased
+
+The owner requested an EC-first audit and then asked to fix the confirmed
+family defects. EC T-326 records that task; its task-local contract grant
+permits only the corresponding SPEC/THREATMODEL clauses and regression
+expectations that explicitly pinned those defects. No release or merge is
+part of this grant.
+
+The count-only vanished/arrived row residual gains a separate answer-change
+owner, while the existing row-keyed comparison and input-only controls stay
+intact. Literal table projection accepts additional source-proved carriers
+and inert module context instead of relaxing the ordinary restructure gate.
+Whole-file literal constant renames receive a narrow AST proof; CI collection
+settings are compared by literal values as well as newly added tokens.
+Runtime providers and assignment/setattr installations must identify a
+first-party target consumed by an existing oracle, with before/after timing
+and complete source inventory where discovery requires it.
+
+The first full candidate sweep exposed three new false-positive blocks.
+Unchanged ordinary assertions now retain their native expectation owner;
+the additive provenance pass is reserved for an assertion helper, literal
+loop or changed assertion structure. Parameter input evidence additionally
+tracks an unchanged produced function's evaluated decorator inputs and
+literal input/answer-copy row rewrites with concrete multiplicity. These are
+syntactic input-role checks, not a claim of arbitrary callee dependence or
+preserved concrete coverage. Surviving-input answer changes remain with the
+original row-keyed rule. The detailed limits and no-op-callee residual are in
+[the input-role contract](docs/param-input-roles.md).
+
+The detailed candidate boundaries are in
+[the remediation notes](docs/family-remediation-2026-09-12.md). Earlier
+decisions and measurements remain historical evidence. This entry claims
+neither a new measured catch rate nor a release; the review PR records actual
+validation outcomes and any remaining failures.

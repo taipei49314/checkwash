@@ -92,3 +92,14 @@ which is exactly why they are cheap to hide behind.
 - `cases/<name>/` — `WHY.txt`, `src/`, `before/`, `after/`
 - `verify.py` — the replay harness; writes `results-latest.json`
 - `results-2026-08-13.json` — the per-case verdicts of the v0.1.25 run
+
+
+## 2026-09-12 candidate regression update (EC T-326)
+
+Source `04c4da4` in [CI run 34673547069](https://github.com/taipei49314/checkwash/actions/runs/34673547069)
+now blocks two recorded escapes: `d006-percentage-returns-float` changes
+the expected value from 33.33 to 33 (`EXPECTED_VALUE_CHANGED`), and
+`d021-join-names` changes the helper's expected result from `a, b` to
+`a, b,` (`EXPECTATION_DEFINITION_CHANGED`). The current expectations now
+require block; original case intent, historical measurements and raw receipts
+are retained. These two bounded repairs do not close all of THREATMODEL 91.

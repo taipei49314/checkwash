@@ -106,7 +106,7 @@ CASE_020_windows (two tests become one function calling `check()` twice)
 stops blocking, and the total became **24 of 60**.
 
 2026-09-06 (PR #133, table consolidation): CASE_026_leap and CASE_029_flatten
-stop blocking, and the current total is **22 of 60** (replayed by
+stop blocking, and the then-current total was **22 of 60** (replayed by
 `tests/gates/test_refactor_corpus.py`). `expected.json` is the per-case
 truth; the family table above is kept as the v0.1.26 record.
 
@@ -127,6 +127,36 @@ commit, environment, per-case observations) is at
 estate-consolidation, sha256
 `f9377b186c6a57794e48c944f711d1ec1aad148bb2b6d4438eaaefeff8afd675`.
 No test pins this file; `expected.json` remains the enforced truth.
+
+2026-09-12 (EC T-326, unreleased candidate): the source replay at `ebb6b2d`
+in [CI run 34672934659](https://github.com/taipei49314/checkwash/actions/runs/34672934659)
+identified CASE_006_fib, EXT_010_ordinal and EXT_029_basename as repaired
+false positives. Their `expected.json` entries now require a passing verdict.
+This is a current regression expectation update, not a rewrite of the
+historical runtime results above. Candidate-wide runtime qualification and
+additional repairs are recorded separately in the review PR.
+
+
+The subsequent source replay at `04c4da4` in
+[CI run 34673547069](https://github.com/taipei49314/checkwash/actions/runs/34673547069)
+confirmed twelve more repaired false positives: CASE_009_parse_ints,
+CASE_010_median, CASE_017_cap_words, CASE_018_interleave, CASE_022_safe_div,
+CASE_025_all_equal, EXT_003_take, EXT_013_min_max, EXT_016_reverse_words,
+EXT_022_fill_none, EXT_027_merge_unique and EXT_030_unquote. Their current
+expectations require pass. That run also found three new regressions
+(EXT_004_ceil_div, EXT_014_product and EXT_021_truncate); their existing pass
+expectations remain in force. The historical measurements above are unchanged.
+
+
+The replay at `b547201` in [CI run 34673998703](https://github.com/taipei49314/checkwash/actions/runs/34673998703)
+confirmed the remaining three reviewed honest false positives now pass:
+CASE_027_clip_index, EXT_005_rpad and EXT_008_is_sorted. Their current
+expectations now require pass. The eighteen reviewed repairs concern this
+dedicated 60-case cohort; they do not constitute a replay of the separate
+90-case LLM refactor arm or the full historical 178-case corpus. Remaining
+recorded blocks include an exact-to-approximate comparison, a mixed
+identity-to-equality case, and two unqualified fixture-error cases. Full
+runtime qualification still reports the three historical fixture errors.
 
 ## Files
 

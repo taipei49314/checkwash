@@ -1,0 +1,21 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: Replacing a live input row and its answer does not hide behind equal row counts
+origin: EC T-326 family audit; frozen row-replacement regression
+bypass: 102a
+=== before: tests/test_billing.py ===
+import pytest
+from billing import total
+
+@pytest.mark.parametrize('value,expected', [(1, 2), (2, 4)])
+def test_total(value, expected):
+    assert total(value) == expected
+=== after: tests/test_billing.py ===
+import pytest
+from billing import total
+
+@pytest.mark.parametrize('value,expected', [(2, 4), (3, 6)])
+def test_total(value, expected):
+    assert total(value) == expected
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

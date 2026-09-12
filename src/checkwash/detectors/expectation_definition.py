@@ -71,6 +71,7 @@ from collections import Counter
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.model import IR, ParamTable, normalize_text, param_tables
+from checkwash.detectors.expected_provenance import detect as detect_provenance
 
 
 def _column_values_edited(before: str, after: str) -> bool:
@@ -120,7 +121,64 @@ def _is_subsequence(small, big) -> bool:
     return all(any(x == y for y in it) for x in small)
 
 
-def _column_expectation_edited(name: str, before_side, after_side) -> bool:
+def _row_expectations_replaced(before: ParamTable, after: ParamTable, column: int, identity_pairs=()) -> bool:
+    """A vanished oracle paid for by an arriving row with a different answer.
+
+    Keep the deletion/count channel's contract: an input-only edit retains
+    its expected value, a marked row is still present, and a net deletion
+    already has an owner. When the live count holds, compare the expectations
+    lost with removed/re-keyed rows to the expectations introduced beside
+    them. Matching values consume multiplicity, so retaining one copy cannot
+    pay for two removed oracle values. This is separate from #135's comparison
+    of answers for an input that survives.
+    """
+    old_live = [row for row, disabled in zip(before.rows, before.disabled) if not disabled]
+    new_live = [row for row, disabled in zip(after.rows, after.disabled) if not disabled]
+    if len(new_live) < len(old_live):
+        return False
+    others = [index for index in range(len(before.names)) if index != column]
+    if not others:
+        return False  # the single-column subsequence comparison owns this
+
+    def by_key(rows):
+        result: dict[tuple[str, ...], Counter] = {}
+        for row in rows:
+            result.setdefault(tuple(row[index] for index in others), Counter())[row[column]] += 1
+        return result
+
+    def complete_row(key, answer):
+        values = iter(key)
+        return tuple(answer if index == column else next(values) for index in range(len(before.names)))
+
+    old_all, new_all = by_key(before.rows), by_key(after.rows)
+    removed_rows, arrived_rows = Counter(), Counter()
+    for key, values in by_key(old_live).items():
+        remaining = new_all.get(key, Counter())
+        if remaining <= old_all[key]:
+            # A still-written marked row is not a replacement. A surviving
+            # input that both loses and gains answers is already #135's.
+            removed_rows.update({complete_row(key, answer): count for answer, count in (values - remaining).items()})
+    for key, values in by_key(new_live).items():
+        previous = old_all.get(key, Counter())
+        if previous <= new_all[key]:
+            arrived_rows.update({complete_row(key, answer): count for answer, count in (values - previous).items()})
+    # Two-sided AST evidence can identify a copy-invariant input rewrite.
+    # Consume concrete pairs, never a value bag or a whole-table waiver. The
+    # surviving-key #135 predicate ran first and cannot receive this credit.
+    for old, new in identity_pairs:
+        old, new = tuple(old), tuple(new)  # JSON-reconstructed IR uses lists
+        if removed_rows[old] and arrived_rows[new]:
+            removed_rows[old] -= 1
+            arrived_rows[new] -= 1
+    removed, arrived = Counter(), Counter()
+    for row, count in removed_rows.items():
+        removed[row[column]] += count
+    for row, count in arrived_rows.items():
+        arrived[row[column]] += count
+    return bool(removed and arrived and not removed <= arrived and not arrived <= removed)
+
+
+def _column_expectation_edited(name: str, before_side, after_side, identity_pairs=()) -> bool:
     """Did the expectation change *for an input the table still tests*?
 
     The column string answers "are these the same cells"; a laundering edit
@@ -135,8 +193,9 @@ def _column_expectation_edited(name: str, before_side, after_side) -> bool:
     So the comparison is made on rows, keyed by the row's *other* cells --
     the inputs:
 
-    - a key that disappeared is a deleted test item; `TEST_DISABLED` owns it
-      and reporting it here is two findings for one change,
+    - a key that disappeared is a deleted test item; net deletions belong to
+      `TEST_DISABLED`. A deletion masked by a new input with a changed answer
+      has the separate replacement predicate below,
     - a key whose expectations still contain everything they used to
       (multiset, so a duplicated input is not laundered by one of its rows
       changing) is a pure addition or a reordering: no expectation moved,
@@ -187,10 +246,10 @@ def _column_expectation_edited(name: str, before_side, after_side) -> bool:
     for key, wanted in by_key(b_table.rows).items():
         got = after_by_key.get(key)
         if got is None:
-            continue  # the row is gone: TEST_DISABLED's event, not this one
+            continue  # net deletion or the separate row-replacement event
         if not wanted <= got and not got <= wanted:
             return True
-    return False
+    return _row_expectations_replaced(b_table, a_table, col, identity_pairs)
 
 
 def _gated_alternative_added(before_key: str, after_key: str, exclusive: bool) -> bool:
@@ -325,6 +384,12 @@ def detect(ir: IR) -> list[Finding]:
     for file in ir.files:
         if file.role not in ("test", "conftest"):
             continue
+        shared_inputs = {}
+        for qualname, before_id, after_id, name in file.shared_param_input_pairs:
+            shared_inputs.setdefault((qualname, before_id, after_id), set()).add(name)
+        input_rewrites = {}
+        for qualname, before_id, after_id, name, old, new in file.param_input_identity_pairs:
+            input_rewrites.setdefault((qualname, before_id, after_id, name), []).append((old, new))
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
@@ -362,6 +427,7 @@ def detect(ir: IR) -> list[Finding]:
                 ):
                     consumed, subject_seeds = subject_seeds, consumed
                 subject_names = _name_closure(subject_seeds, unit.after.bindings)
+                subject_names.update(shared_inputs.get((unit.qualname, b.id, a.id), ()))
                 moved = sorted(
                     name
                     for name in (
@@ -378,7 +444,10 @@ def detect(ir: IR) -> list[Finding]:
                             name
                             for name in consumed & _param_names(unit.after)
                             if name in _param_names(unit.before)
-                            and _column_expectation_edited(name, unit.before, unit.after)
+                            and _column_expectation_edited(
+                                name, unit.before, unit.after,
+                                input_rewrites.get((unit.qualname, b.id, a.id, name), ()),
+                            )
                         }
                         | {
                             # The fourth source: a same-file top-level
@@ -423,4 +492,5 @@ def detect(ir: IR) -> list[Finding]:
                         ),
                     )
                 )
+    findings.extend(detect_provenance(ir, findings))
     return findings

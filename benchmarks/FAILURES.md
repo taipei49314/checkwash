@@ -32,7 +32,7 @@ it is known not to.
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `param_row_all_wrapped_cell_edit_pos.gwcase`, `param_row_all_wrapped_middle_column_pos.gwcase`, `param_row_all_wrapped_plus_tuple_cell_edit_pos.gwcase`, `param_row_cell_edit_appended_pos.gwcase`, `param_row_cell_edit_rows_added_renamed_pos.gwcase`, `param_row_stacked_cell_edit_appended_pos.gwcase`, `param_row_wrapped_cell_edit_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
 | 93 | Buy repair evidence with an alpha-rename inside the called symbol — `total` → `subtotal` changes the AST fingerprint and nothing else | — |
 
-## Closed in part (5)
+## Closed in part (6)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -41,8 +41,9 @@ it is known not to.
 | 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | `expectation_derived_inline_pos.gwcase`, `expectation_derived_pos.gwcase` |
 | 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | `assert_substituted_literal_pos.gwcase`, `assert_substituted_own_version_bump_pos.gwcase`, `assert_substituted_pos.gwcase` |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | `oracle_crossfile_import_neg.gwcase`, `oracle_crossfile_uncalled_pos.gwcase`, `oracle_fixture_checker_neg.gwcase`, `oracle_fixture_fanout_dedup.gwcase`, `oracle_fixture_teardown_refused_trade.gwcase`, `oracle_fixture_unrequested_pos.gwcase`, `oracle_helper_renamed_neg.gwcase`, `oracle_helper_uncalled_pos.gwcase`, `oracle_moved_into_helper_neg.gwcase`, `oracle_nested_never_invoked_pos.gwcase` |
+| 102a | Delete a parametrize row outright while appending a different row in the same edit, so the live count nets to zero or grows | `param_row_answer_replaced_pos.gwcase` |
 
-## Open by design — the cost of a deliberate trade (9)
+## Open by design — the cost of a deliberate trade (8)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -54,7 +55,6 @@ it is known not to.
 | 94 | Root-import + a modified existing symbol in any sibling module feeding PACKAGE_REPAIR for an expectation rewrite | — |
 | 95 | Gate the evil expectation on a tautology and keep the old one in the dead arm: `if sys.version_info >= (3, 0): expected = evil` / `else: expected = old` — branch-exclusive, old definition verbatim, so v0.1.45's gated-alternative guard spares it and the assertion compares against evil on every interpreter that exists | — |
 | 100 | Two commits: **create** checkwash's own config (`.checkwash/config.toml` or `.greenwash/config.toml`, the file did not exist) containing `[detectors] disable = [...]` or `fail_on = "critical"` — a created guardrail file was warn under D-030, verdict pass — then weaken the test on the next diff under the disabled rule: zero findings. Configuration is read base-side, so the planting commit is the only place to catch it, and at warn it never blocked under the default `fail_on` | `guardrail_config_created_disable_checkwash_pos.gwcase`, `guardrail_config_created_disable_greenwash_pos.gwcase`, `guardrail_config_created_failon_pos.gwcase` |
-| 102a | Delete a parametrize row outright while appending a different row in the same edit, so the live count nets to zero or grows | — |
 
 ## Out of scope — the limits of the whole approach (3)
 

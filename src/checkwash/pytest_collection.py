@@ -1,0 +1,193 @@
+"""Compare bounded pytest collection settings, including option arguments.
+
+The old CI token scan cannot see a narrower value of a token that already
+exists. This parser recognizes literal settings and command-line selectors;
+it neither imports pytest nor executes configuration or shell expressions.
+"""
+from __future__ import annotations
+
+import ast
+from collections import Counter
+import fnmatch
+import re
+import shlex
+
+_SETTING = re.compile(r"^\s*(testpaths|python_files|python_classes|python_functions|norecursedirs|addopts)\s*=\s*(.*)$")
+_VALUE_OPTIONS = {"--ignore", "--ignore-glob", "--deselect", "-k", "-m"}
+_COLLECT_ONLY = {"--co", "--collect-only"}
+_INCLUDE = {"testpaths", "python_files", "python_classes", "python_functions"}
+_PYTEST_SECTIONS = {"[pytest]", "[tool:pytest]", "[tool.pytest.ini_options]"}
+
+
+def _words(value: str) -> tuple[str, ...] | None:
+    try:
+        literal = ast.literal_eval(value)
+    except (ValueError, SyntaxError, TypeError, RecursionError, MemoryError):
+        literal = None
+    if isinstance(literal, (list, tuple)):
+        return tuple(literal) if all(isinstance(v, str) for v in literal) else None
+    if isinstance(literal, str):
+        value = literal
+    try:
+        return tuple(shlex.split(value, comments=True, posix=True))
+    except ValueError:
+        return None
+
+
+def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
+    """Literal INI/TOML values; ambiguous duplicate values remain distinct."""
+    values: dict[str, set[tuple[str, ...]]] = {}
+    lines = text.splitlines()
+    active = False
+    for index, line in enumerate(lines):
+        if line.strip().startswith("[") and line.strip().endswith("]"):
+            active = line.strip() in _PYTEST_SECTIONS
+        if not active:
+            continue
+        match = _SETTING.match(line)
+        if not match:
+            continue
+        name, value = match.groups()
+        # INI continuation lists and multiline TOML arrays are both bounded
+        # by the next non-indented setting/section, never evaluated.
+        if not value.strip() or value.strip() == "[":
+            continued = []
+            for following in lines[index + 1:]:
+                stripped = following.strip()
+                if stripped == "]":
+                    continued.append("]")
+                    break
+                if not stripped or stripped.startswith(("#", ";")):
+                    continue
+                if not following[:1].isspace() or "=" in stripped or stripped.startswith("["):
+                    break
+                continued.append(stripped)
+            value = value + " " + " ".join(continued)
+        words = _words(value)
+        if words is not None:
+            values.setdefault(name, set()).add(words)
+    return values
+
+
+def _pytest_arguments(words):
+    while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
+        words = words[1:]
+    if words and words[0] in {"env", "exec", "command"}:
+        return _pytest_arguments(words[1:])
+    if not words:
+        return None
+    program = words[0].replace("\\", "/").rsplit("/", 1)[-1]
+    if program in {"pytest", "pytest.exe", "py.test", "py.test.exe"}:
+        return words[1:]
+    if program in {"uv", "poetry", "pipenv", "pdm"} and words[1:2] == ["run"]:
+        return _pytest_arguments(words[2:])
+    if re.fullmatch(r"(?:python(?:\d+(?:\.\d+)?)?|py)(?:\.exe)?", program):
+        # Only Python's module launcher establishes a pytest invocation.
+        # The coverage launcher may put another '-m' before pytest.
+        for index in range(1, len(words) - 1):
+            if words[index:index + 2] == ["-m", "pytest"]:
+                return words[index + 2:]
+            if words[index] in {"-c", "-"}:
+                break
+    return None
+
+
+def _option_arguments(text):
+    yield from collection_settings(text).get("addopts", ())
+    # Literal shell continuations retain arguments on the invocation line.
+    for line in text.replace("\\\n", " ").replace("`\n", " ").splitlines():
+        if _SETTING.match(line):
+            continue
+        command = re.sub(r"^\s*(?:-\s*)?(?:run|command|script):\s*", "", line)
+        # YAML's quoted scalar contains one command, not a quoted executable.
+        if command.startswith(('"', "'")) and command[-1:] == command[:1]:
+            try:
+                unquoted = ast.literal_eval(command)
+            except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
+                unquoted = None
+            if isinstance(unquoted, str):
+                command = unquoted
+        try:
+            lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|")
+            lexer.whitespace_split = True
+            tokens = list(lexer)
+        except ValueError:
+            continue
+        words = []
+        for token in [*tokens, ";"]:
+            if token and set(token) <= set(";&|"):
+                arguments = _pytest_arguments(words)
+                if arguments is not None:
+                    yield arguments
+                words = []
+            else:
+                words.append(token)
+
+
+def collection_options(text: str) -> Counter[tuple[str, str]]:
+    options: Counter[tuple[str, str]] = Counter()
+    for words in _option_arguments(text):
+        index = 0
+        while index < len(words):
+            word = words[index]
+            name, equals, value = word.partition("=")
+            if word in _COLLECT_ONLY:
+                options[("collect-only", "")] += 1
+            elif name in _VALUE_OPTIONS:
+                if not equals and index + 1 < len(words):
+                    index += 1
+                    value = words[index]
+                if value and not value.startswith("-"):
+                    options[(name, value)] += 1
+            index += 1
+    return options
+
+
+def _covered(child: str, parent: str, *, paths: bool) -> bool:
+    if child == parent:
+        return True
+    if paths:
+        child, parent = child.rstrip("/\\"), parent.rstrip("/\\")
+        if not any(c in parent for c in "*?["):
+            return child.startswith(parent + "/") or child.startswith(parent + "\\")
+    # A literal belongs to a glob; two arbitrary globs need a language
+    # inclusion proof we do not have. The common terminal-star prefix form
+    # can be compared without assuming the repository's test inventory.
+    if not any(c in child for c in "*?["):
+        return fnmatch.fnmatchcase(child, parent)
+    if parent.count("*") == 1 and not any(c in parent for c in "?["):
+        prefix, suffix = parent.split("*")
+        return child.startswith(prefix) and child.endswith(suffix)
+    return False
+
+
+def pytest_collection_changes(before_surface: str, after: str) -> list[str]:
+    """New selectors or a provably stricter literal collection setting.
+
+    Comparing against the whole before CI surface preserves config moves.
+    First-time ordinary testpaths configuration is deliberately not treated
+    as a narrowing; a new collect-only command does stop test execution.
+    """
+    findings = []
+    old_options = collection_options(before_surface)
+    for option in sorted(collection_options(after) if before_surface.strip() else ()):
+        if option not in old_options:
+            name, value = option
+            findings.append("pytest collection option introduced: " + name + (" " + value if value else ""))
+    old, new = collection_settings(before_surface), collection_settings(after)
+    for name in sorted(_INCLUDE & old.keys() & new.keys()):
+        # A config migration can produce several old values. Do not claim a
+        # narrowing from only one arbitrarily chosen source.
+        if len(old[name]) != 1 or len(new[name]) != 1:
+            continue
+        b, a = next(iter(old[name])), next(iter(new[name]))
+        if not b or not a or set(a) == set(b):
+            continue
+        if (all(any(_covered(x, y, paths=name == "testpaths") for y in b) for x in a)
+                and not all(any(_covered(y, x, paths=name == "testpaths") for x in a) for y in b)):
+            findings.append("pytest " + name + " narrowed: " + " ".join(b) + " -> " + " ".join(a))
+    if len(old.get("norecursedirs", ())) == 1 and len(new.get("norecursedirs", ())) == 1:
+        b, a = next(iter(old["norecursedirs"])), next(iter(new["norecursedirs"]))
+        if set(a) > set(b):
+            findings.append("pytest norecursedirs gained exclusions")
+    return findings

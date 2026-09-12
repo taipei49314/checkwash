@@ -47,9 +47,13 @@ from checkwash.frontends.python.frontend import (
 )
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
+from checkwash.frontends.python.param_input_identity import mark_param_input_identity
 from checkwash.frontends.python.table_normalization import mark_table_normalization
 from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
+from checkwash.frontends.python.standin_installations import installation_events
+from checkwash.shadow import find_runtime_subject_shadows
+from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
@@ -347,9 +351,12 @@ def build_ir(
     report_context: ReportContext | None = None,
     root_reader=None,
     root_searcher=None,
+    root_path_lister=None,
+    root_batch_reader=None,
 ) -> IR:
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
     changes = [*changes, *importer_changes]
+    changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher, reviewed_root_modules)]
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
     # Someone else's code = declared, minus the project's own name, minus the
@@ -365,6 +372,22 @@ def build_ir(
             sorted(set(known_modules) - set(self_modules or ()) - repo_roots - known_baseline())
         )
     ir = IR(base=base_label, head=head_label, globals=g)
+    shadow_hits = find_runtime_subject_shadows(
+        changes, config, g.third_party_roots,
+        head_path_lister=root_path_lister,
+        head_batch_reader=root_batch_reader,
+        include_equivalent=True,
+    )
+    g.runtime_subject_shadows = [
+        (hit.finding_path, hit.module, hit.before_provider, hit.after_provider,
+         hit.test_path, hit.trigger)
+        for hit in shadow_hits if hit.reportable
+    ]
+    shadow_evidence_paths = {
+        path for hit in shadow_hits
+        for path in (hit.after_provider, *hit.after_chain, *hit.related_evidence_paths,
+                     *hit.control_paths, hit.trigger)
+    }
     removed_texts: Counter[str] = Counter()
     added_texts: Counter[str] = Counter()
     base_literals: set[str] = set()
@@ -618,12 +641,12 @@ def build_ir(
             if change.after is not None:
                 after_parsed = parse_javascript(change.after)
 
-        if (is_python and role == "test" and collect and len(changes) == 1
+        if (is_python and role == "test" and collect
                 and change.status == "modified" and change.old_path is None
                 and before_parsed is not None and after_parsed is not None):
             before_parsed, after_parsed = project_table_consolidation(
                 change.before, change.after, before_parsed, after_parsed,
-                path=path, root_reader=root_reader, root_searcher=root_searcher,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
             )
 
         if report_context is not None:
@@ -663,6 +686,9 @@ def build_ir(
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         file_ir.native_assertion_context_unchanged = native_context_unchanged
+        if role in ("test", "conftest") and path.endswith(".py"):
+            from checkwash.frontends.python.constant_renames import literal_constant_renames
+            file_ir.module_constant_renames = literal_constant_renames(change.before, change.after)
         if role in ("ci", "guardrail"):
             file_ir.change_evidence = _change_evidence(change, rename_destinations)
         parsed_for_helpers = after_parsed if after_parsed and after_parsed.parse_ok else before_parsed
@@ -722,7 +748,7 @@ def build_ir(
                     ):
                         g.test_logic_changed = True
 
-        if change.synthetic != "root_helper_importer" and g.scope_allow and not any(
+        if change.synthetic not in ("root_helper_importer", "expected_provenance_importer") and g.scope_allow and not any(
             _scope_match(path, glob) for glob in g.scope_allow
         ):
             g.scope_drift.append((path, role))
@@ -752,7 +778,11 @@ def build_ir(
         elif role == "prod":
             g.prod_files_changed.append(path)
             package = _module_of(path)
-            if is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
+            if path in shadow_evidence_paths:
+                # Provider copies and controls changed what the oracle runs;
+                # they are not repairs for this or another weakened oracle.
+                pass
+            elif is_python and before_parsed and after_parsed and before_parsed.parse_ok and after_parsed.parse_ok:
                 for q in sorted(set(before_parsed.symbols) | set(after_parsed.symbols)):
                     if before_parsed.symbols.get(q) != after_parsed.symbols.get(q):
                         g.prod_symbols_changed.append(f"{_module_of(path)}::{q}")
@@ -1067,8 +1097,20 @@ def build_ir(
                     if pu.side.body_hash in wanted and unit_is_live(pu.side, consts):
                         found.add(pu.side.body_hash)
             g.duplicate_unit_hashes = sorted(found)
+    for path, unit, target, text, span in installation_events(
+        ir, changes, config, root_reader=root_reader, root_searcher=root_searcher, root_path_lister=root_path_lister,
+    ):
+        if unit is None:
+            if (path, text) not in g.conftest_prod_patches:
+                g.conftest_prod_patches.append((path, text))
+        else:
+            g.subject_installations.append((path, unit, target, text, span))
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
+    mark_param_input_identity(ir, raw_by_path, root_reader)
     mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
+    mark_expected_provenance(ir, raw_by_path, root_reader, config.role_of, report_context,
+                             {path: data for (path, side), data in oracle_sources.items()
+                              if side == -1 and (path, side) in strict_oracle_sources}, root_searcher)
     return ir
 
 
@@ -1097,6 +1139,8 @@ def analyze(
     report_context: ReportContext | None = None,
     root_reader=None,
     root_searcher=None,
+    root_path_lister=None,
+    root_batch_reader=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -1111,6 +1155,8 @@ def analyze(
         report_context=report_context,
         root_reader=root_reader,
         root_searcher=root_searcher,
+        root_path_lister=root_path_lister,
+        root_batch_reader=root_batch_reader,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

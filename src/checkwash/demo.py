@@ -71,6 +71,8 @@ def run(stream=None) -> int:
             # absent, including for conftest target and root-helper probes.
             root_reader=snapshot.get,
             root_searcher=lambda needles: search_source_mapping(snapshot, needles),
+            root_path_lister=lambda: sorted(snapshot),
+            root_batch_reader=lambda paths: {path: snapshot.get(path) for path in paths},
         )
         visible = [f for f in findings if not f.allowlisted]
 

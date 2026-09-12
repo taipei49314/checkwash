@@ -127,6 +127,8 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
                 head_searcher=lambda needles, _sha=sha: grep_head_paths(repo, _sha, needles),
                 root_reader=root_snapshot.read,
                 root_searcher=root_snapshot.search,
+                root_path_lister=root_snapshot.list_paths,
+                root_batch_reader=root_snapshot.read_many,
             )
         except Exception:  # noqa: BLE001 - a sweep must survive one bad commit
             result.errors += 1

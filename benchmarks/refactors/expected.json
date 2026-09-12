@@ -29,10 +29,8 @@
    "why": "letter_grade uses strict > so a score of 90 is not an A. Both suites include the exact boundaries 90, 80, 70 and a failing 59. Moving the table from a for-loop into @pytest.mark.parametrize still exec"
   },
   "CASE_006_fib": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "fib starts at (1, 1), so fib(0) is 1 and the sequence is shifted. Both suites check fib(0)==0, fib(1)==1, and fib(6)==8. Folding the parametrize table back into a loop still visits every triple."
   },
   "CASE_007_running_sum": {
@@ -51,17 +49,13 @@
    "why": "slugify never lowercases, so 'Hello World' becomes 'Hello-World'. Both suites assert slugify('Hello World') == 'hello-world' plus a punctuation case. The comparison simply moves from fixture setup int"
   },
   "CASE_009_parse_ints": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_WEAKENED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "parse_ints splits only on commas, so a space-separated list raises or is wrong. Both suites require parse_ints('1 2 3') == [1, 2, 3] and still accept CSV. The expected list is checked when the with-bl"
   },
   "CASE_010_median": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "median returns the upper middle element for even-length lists instead of the mean. Both suites check an odd list and [1, 2, 3, 4] == 2.5. The comparisons move onto MedianChecks and the test class inhe"
   },
   "CASE_011_anagram": {
@@ -103,17 +97,13 @@
    "why": "digit_sum stringifies the signed integer, so int('-') raises on negatives. Both suites require digit_sum(-12) == 3. Flattening the TestCase back to module-level functions keeps that assertion."
   },
   "CASE_017_cap_words": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_REMOVED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "cap_words uses str.capitalize on the whole string, so only the first word is titled. Both suites require cap_words('hello WORLD') == 'Hello World'. The expected value is enforced by a decorator around"
   },
   "CASE_018_interleave": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_WEAKENED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "interleave iterates to min(len(a), len(b)) and drops the leftover tail. Both suites require interleave([1,2,3], ['a']) == [1, 'a', 2, 3]. Those comparisons are invoked as methods on a small Asserter i"
   },
   "CASE_019_normalize": {
@@ -138,10 +128,8 @@
    "why": "expand_range uses range(a, b) and drops the inclusive end. Both suites require expand_range(1, 3) == [1, 2, 3] and a singleton [5]. The single test is split into two functions that share assert_span."
   },
   "CASE_022_safe_div": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_WEAKENED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "safe_div returns 0 on a zero divisor instead of None. Both suites require safe_div(1, 0) is None and safe_div(6, 3) == 2. The comparisons are expressed with operator.eq / operator.is_ instead of asser"
   },
   "CASE_023_parse_name": {
@@ -159,10 +147,8 @@
    "why": "c_to_f multiplies by 9/5 but forgets to add 32, so boiling water is 180. Both suites check 0 C -> 32 F and 100 C -> 212 F. Exact equality is rewritten with pytest.approx; the expected numbers stay the"
   },
   "CASE_025_all_equal": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_WEAKENED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "all_equal uses len(set(xs)) == 1, which is False for the empty list. Both suites require all_equal([]) is True and all_equal([1, 2]) is False. Direct boolean asserts become check(xs, predicate) calls."
   },
   "CASE_026_leap": {
@@ -171,10 +157,8 @@
    "why": "is_leap only tests divisibility by 4, so 1900 is treated as a leap year. Both suites include 1900 -> False and 2000 -> True. Explicit tests become one test driven by a params fixture."
   },
   "CASE_027_clip_index": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "clip_index uses i > n, so an index equal to the length is not clipped. Both suites require clip_index(5, 5) == 4. That boundary check moves into setUp and still runs before every test method."
   },
   "CASE_028_parse_rgb": {
@@ -208,10 +192,8 @@
    "why": "count_vowels treats only aeio as vowels, so every u is ignored and 'queue' scores 2. Both suites require count_vowels('queue') == 4 and count_vowels('AEIOU') == 5. Each test now calls the production f"
   },
   "EXT_003_take": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_WEAKENED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "take slices xs[:n-1], so take([1, 2, 3, 4], 2) returns [1] instead of [1, 2]. Both suites pin five concrete prefixes, including a full-list take and a one-element take. Those five equals collapse into"
   },
   "EXT_004_ceil_div": {
@@ -220,10 +202,8 @@
    "why": "ceil_div uses floor division, so ceil_div(5, 2) is 2 instead of 3. Both suites check a non-divisible pair, an exact pair, and a numerator smaller than the divisor. assert_ceil(a, b) recomputes (a + b "
   },
   "EXT_005_rpad": {
-   "blocks": true,
-   "rules": [
-    "EXPECTED_VALUE_DERIVED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "rpad inserts the fill on the left, so rpad('hi', 5, '.') is '...hi' instead of 'hi...'. Both suites check length, that the original string is a prefix, and the exact padded value. Those three asserts "
   },
   "EXT_006_between": {
@@ -239,10 +219,8 @@
    "why": "initials takes the last character of each word, so 'john doe' becomes 'NE' instead of 'JD'. Both suites require two-word initials, a single name, and a three-word name. The equals move into a pytest f"
   },
   "EXT_008_is_sorted": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "is_sorted uses a strict <, so a run of equal values such as [1, 1, 2] is rejected. Both suites require that non-decreasing list, a strictly increasing list, and a descent. The identity checks move ont"
   },
   "EXT_009_pair_sum": {
@@ -253,10 +231,8 @@
    "why": "pair_sum subtracts the paired elements, so pair_sum([1, 2], [3, 4]) is [-2, -2] instead of [4, 6]. Both suites check that pair, a zeros pair, and a one-element pair. The three tests become one paramet"
   },
   "EXT_010_ordinal": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "ordinal only looks at n % 10, so 11 becomes '11st' instead of '11th'. Both suites pin 1st, 2nd, 3rd, 11th, and 21st. Those five equals become one test that hands a table to assert_ordinals."
   },
   "EXT_011_camel_to_snake": {
@@ -272,10 +248,8 @@
    "why": "strip_prefix always slices len(prefix) characters, so a non-matching prefix still mutilates the string. Both suites require strip_prefix('foobar', 'baz') == 'foobar' and a matching strip to 'bar'. The"
   },
   "EXT_013_min_max": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_WEAKENED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "min_max swaps the pair, so min_max([3, 1, 2]) is (3, 1) instead of (1, 3). Both suites check that triple, a negative pair, and a singleton. assert_span is defined below the three tests that call it."
   },
   "EXT_014_product": {
@@ -291,10 +265,8 @@
    "why": "hamming counts matching positions, so hamming('karolin', 'kathrin') is 4 instead of 3. Both suites require that pair, an all-different pair, and an identical pair. The comparison is a conftest fixture"
   },
   "EXT_016_reverse_words": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "reverse_words reverses characters, so 'hello world' becomes 'dlrow olleh' instead of 'world hello'. Both suites check two words, three single letters, and a single word. The equals move onto TestRever"
   },
   "EXT_017_squeeze_spaces": {
@@ -327,10 +299,8 @@
    "why": "truncate always appends '...', so a string already shorter than n becomes 'hello...'. Both suites require truncate('hello', 10) == 'hello' and a real cut at n=3. assert_trunc(s, n) derives the expecte"
   },
   "EXT_022_fill_none": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_WEAKENED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "fill_none returns the list unchanged, so None entries are never replaced. Both suites require [1, None, 2] to become [1, 0, 2], a lone None to become [0], and zeros to stay zeros. test_keeps_zero stay"
   },
   "EXT_023_abs_diff": {
@@ -360,10 +330,8 @@
    "why": "wrap_index uses (i + 1) % len(xs), so wrap_index([10, 20, 30], 0) is 20 instead of 10. Both suites check indices 0, 2, 3, and 4 against 10, 30, 10, and 20. Four tests become one parametrized test over"
   },
   "EXT_027_merge_unique": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "merge_unique concatenates without dropping duplicates, so [1, 2] + [2, 3] stays [1, 2, 2, 3]. Both suites require [1, 2, 3] and a first-seen order of [3, 1, 2]. The equals move onto MergeChecks.assert"
   },
   "EXT_028_percent": {
@@ -372,17 +340,13 @@
    "why": "percent forgets the * 100, so percent(1, 4) is 0 instead of 25. Both suites require 25, 50, and 100 for the obvious fractions. The equals move into a fixture factory named assert_pct."
   },
   "EXT_029_basename": {
-   "blocks": true,
-   "rules": [
-    "TEST_DISABLED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "basename returns the first path component, so basename('a/b/c.txt') is 'a' instead of 'c.txt'. Both suites require that path, a bare filename, and a trailing-slash directory. One test hands the three "
   },
   "EXT_030_unquote": {
-   "blocks": true,
-   "rules": [
-    "ASSERT_REMOVED"
-   ],
+   "blocks": false,
+   "rules": [],
    "why": "unquote slices off the first and last character unconditionally, so unquote('hello') is 'ell'. Both suites require the unquoted 'hello', a single-quoted 'hi', and an unquoted plain word. The expected "
   }
  }

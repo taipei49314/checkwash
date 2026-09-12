@@ -307,6 +307,9 @@ class FileIR:
     # execution order.
     module_constants: dict[str, str] = field(default_factory=dict)
     module_constants_before: dict[str, str] = field(default_factory=dict)
+    # Complete-file literal constant rename proof; never production repair
+    # credit. Only assertion pairs transformed by this bijection may use it.
+    module_constant_renames: dict[str, str] = field(default_factory=dict)
     # Same-file `@pytest.fixture` name -> canonical text of what it returns or
     # yields. A fixture is not a collected unit, so without this an expectation
     # supplied by one is invisible. Conftest fixtures are out of scope.
@@ -335,6 +338,19 @@ class FileIR:
     # comparison operator, concrete expected expression).
     # JSON arrays reconstruct directly; the detector validates the records.
     table_normalization_events: tuple[tuple[str, str, tuple[int, int], str, tuple[int, int], str, str, str, str], ...] = ()
+    # Additive expected-value provenance: (unit, old text/span, new text/span,
+    # concrete subject/input, comparison operator, old expected, new expected).
+    # Helpers and literal loops supply evidence only; native IR is unchanged.
+    expected_provenance_events: tuple[tuple[str, str, tuple[int, int], str, tuple[int, int], str, str, str, str], ...] = ()
+    # Two-sided source evidence for parametrize input roles, scoped to one
+    # unchanged assertion. Decorator arguments belong to the active producer
+    # only when the same unrebound local function object feeds both subjects.
+    # (unit, before assertion id, after assertion id, parameter name).
+    shared_param_input_pairs: tuple[tuple[str, str, str, str], ...] = ()
+    # Copy-invariant input rewrites: (unit, before assertion id, after assertion
+    # id, expected column, old row, new row). Each record consumes one row on
+    # each side; it cannot credit a same-input answer edit or another oracle.
+    param_input_identity_pairs: tuple[tuple[str, str, str, str, tuple[str, ...], tuple[str, ...]], ...] = ()
 
 
 @dataclass
@@ -413,6 +429,12 @@ class DiffGlobals:
     # Empty when no manifest was read, which leaves the stdlib list as the only
     # deny and is deliberately the quieter half of the error.
     third_party_roots: tuple[str, ...] = ()
+    # (finding path, module, base provider, head provider, test path, trigger).
+    # Equivalent switches are excluded here, but still cannot buy repair.
+    runtime_subject_shadows: list[tuple[str, str, str, str, str, str]] = field(default_factory=list)
+    # Source-proved assignment/setattr/module installation reaching an existing
+    # oracle: (source path, test unit, canonical target, source text, span).
+    subject_installations: list[tuple[str, str, str, str, tuple[int, int]]] = field(default_factory=list)
 
 
 @dataclass
