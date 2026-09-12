@@ -14,6 +14,9 @@ The changes close bounded defects identified by the EC-first family review:
   retaining old answers, pure additions and skip-plus-append keep their
   prior ownership. The engine does not claim every coverage replacement is
   distinguishable from an honest input edit.
+  The bounded [parameter input-role checks](param-input-roles.md) additionally
+  retain evaluated construction inputs and literal input/answer-copy
+  rewrites; surviving-input answer edits retain the original rule first.
 - Literal table projection accepts a single baseline case, module
   docstrings and unique literal constants/tables, supported reverse carrier
   transitions, and a same-file helper taking a table into one assertion loop.
@@ -43,6 +46,9 @@ its bag comparison could miss per-input answer swaps, and its specialization
 could erase an expectation defined inside a helper. The new source-backed pass
 preserves those controls and never executes repository Python; its exact
 bounds are in [the provenance contract](expected-provenance.md).
+An unchanged ordinary assertion retains its native expectation owner.
+Resolving the function that computes its actual result does not create an
+additional helper-assertion event or prove its external environment stable.
 
 The unchanged rule registry, severity/strength values, alignment parameters,
 release pins and historical records remain the comparison baseline. New

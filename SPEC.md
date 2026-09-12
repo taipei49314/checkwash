@@ -297,6 +297,17 @@ key. Existing native and root-helper findings keep their ownership. The
 [bounded provenance contract](docs/expected-provenance.md) specifies limits,
 unchanged-caller discovery and unsupported control flow.
 
+An unchanged ordinary assertion retains its native expectation owner; a
+callee used only to compute the actual result is not an assertion helper.
+The row replacement extension also uses bounded, two-sided syntactic input
+roles for an unchanged produced function's evaluated decorator arguments,
+and concrete row pairing when an expected cell copies the same active
+literal input projection. The surviving-input comparison runs first, and
+each disappeared/arrived row occurrence can supply at most one copy witness.
+These checks do not prove arbitrary callee dependence or equivalent coverage;
+the [parameter input-role contract](docs/param-input-roles.md) records the
+exact scope and no-op-callee residual.
+
 The T-326 subject extension adds assignment/native-setattr and literal
 dictionary/module installations reaching an existing oracle, including
 supported active fixtures and setup hooks. Runtime import-provider changes

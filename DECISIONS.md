@@ -2135,6 +2135,17 @@ Runtime providers and assignment/setattr installations must identify a
 first-party target consumed by an existing oracle, with before/after timing
 and complete source inventory where discovery requires it.
 
+The first full candidate sweep exposed three new false-positive blocks.
+Unchanged ordinary assertions now retain their native expectation owner;
+the additive provenance pass is reserved for an assertion helper, literal
+loop or changed assertion structure. Parameter input evidence additionally
+tracks an unchanged produced function's evaluated decorator inputs and
+literal input/answer-copy row rewrites with concrete multiplicity. These are
+syntactic input-role checks, not a claim of arbitrary callee dependence or
+preserved concrete coverage. Surviving-input answer changes remain with the
+original row-keyed rule. The detailed limits and no-op-callee residual are in
+[the input-role contract](docs/param-input-roles.md).
+
 The detailed candidate boundaries are in
 [the remediation notes](docs/family-remediation-2026-09-12.md). Earlier
 decisions and measurements remain historical evidence. This entry claims

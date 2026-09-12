@@ -334,6 +334,16 @@ collection values. The [candidate remediation notes](docs/family-remediation-202
 and remaining unsupported cases. They do not relabel an earlier Open row as
 generally Closed or revise any historical measurement.
 
+For row 102a, the candidate also distinguishes a literal input/answer-copy
+rewrite using the same active projection on both sides and one-to-one
+concrete row accounting. Same-input answer swaps retain the existing rule.
+Evaluated decorator arguments of an unchanged, actually consumed produced
+function follow the existing syntactic input convention. A no-op callee can
+still accept a syntactic input without depending on it; this is not a proof
+of semantic independence or preserved test coverage. Unselected objects,
+visible mutation and fixture-indirect literal transformations receive no
+such evidence. See [parameter input roles](docs/param-input-roles.md).
+
 Issues #127–#131 prompted bounded source work, not a general completeness
 claim. Conftest-only first-party targets are resolved through strict root/src
 snapshots; imported unittest.mock patch forms receive binding and activation
