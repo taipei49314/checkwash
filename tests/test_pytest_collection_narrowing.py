@@ -75,3 +75,9 @@ def test_marker_selector_after_python_launcher_still_blocks():
 def test_case_sensitive_existing_selector_is_not_new():
     hits = findings("[pytest]\naddopts = -k TestHTTP\n", "[pytest]\naddopts = -k TestHTTP\n# retained\n")
     assert all(f.severity == "warn" for f in hits)
+
+
+def test_other_tools_testpaths_are_not_pytest_collection_settings():
+    hits = findings('[tool.example]\ntestpaths = "tests"\n',
+                    '[tool.example]\ntestpaths = "tests/unit"\n', 'pyproject.toml')
+    assert all(f.severity == "warn" for f in hits)

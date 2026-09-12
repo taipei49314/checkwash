@@ -16,6 +16,7 @@ _SETTING = re.compile(r"^\s*(testpaths|python_files|python_classes|python_functi
 _VALUE_OPTIONS = {"--ignore", "--ignore-glob", "--deselect", "-k", "-m"}
 _COLLECT_ONLY = {"--co", "--collect-only"}
 _INCLUDE = {"testpaths", "python_files", "python_classes", "python_functions"}
+_PYTEST_SECTIONS = {"[pytest]", "[tool:pytest]", "[tool.pytest.ini_options]"}
 
 
 def _words(value: str) -> tuple[str, ...] | None:
@@ -37,7 +38,12 @@ def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
     """Literal INI/TOML values; ambiguous duplicate values remain distinct."""
     values: dict[str, set[tuple[str, ...]]] = {}
     lines = text.splitlines()
+    active = False
     for index, line in enumerate(lines):
+        if line.strip().startswith("[") and line.strip().endswith("]"):
+            active = line.strip() in _PYTEST_SECTIONS
+        if not active:
+            continue
         match = _SETTING.match(line)
         if not match:
             continue
@@ -65,11 +71,14 @@ def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
 
 def collection_options(text: str) -> Counter[tuple[str, str]]:
     options: Counter[tuple[str, str]] = Counter()
+    active = False
     # Literal shell continuations retain arguments on the invocation line.
     for line in text.replace("\\\n", " ").replace("`\n", " ").splitlines():
+        if line.strip().startswith("[") and line.strip().endswith("]"):
+            active = line.strip() in _PYTEST_SECTIONS
         setting = _SETTING.match(line)
         if setting:
-            if setting.group(1) != "addopts":
+            if not active or setting.group(1) != "addopts":
                 continue
             words = _words(setting.group(2))
         else:
