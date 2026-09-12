@@ -57,6 +57,8 @@ def _literal_constant_renames(before: bytes, after: bytes) -> dict[str, str]:
                     return {}
                 if isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)) and node.name in names | forbidden:
                     return {}
+                if isinstance(node, ast.MatchMapping) and node.rest in names | forbidden:
+                    return {}
                 if isinstance(node, ast.Attribute) and node.attr == "__dict__":
                     return {}
                 if isinstance(node, ast.Name) and node.id in forbidden:

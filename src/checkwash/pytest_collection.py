@@ -101,9 +101,12 @@ def _option_arguments(text):
         command = re.sub(r"^\s*(?:-\s*)?(?:run|command|script):\s*", "", line)
         # YAML's quoted scalar contains one command, not a quoted executable.
         if command.startswith(('"', "'")) and command[-1:] == command[:1]:
-            unquoted = _words(command)
-            if unquoted is not None:
-                command = " ".join(shlex.quote(word) for word in unquoted)
+            try:
+                unquoted = ast.literal_eval(command)
+            except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
+                unquoted = None
+            if isinstance(unquoted, str):
+                command = unquoted
         try:
             lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|")
             lexer.whitespace_split = True

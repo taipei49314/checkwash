@@ -83,7 +83,7 @@ def test_other_tools_testpaths_are_not_pytest_collection_settings():
     assert all(f.severity == "warn" for f in hits)
 
 
-@pytest.mark.parametrize("command", ["echo pytest -k public", "pytest && ruff -m public", "pytest; echo --collect-only"])
+@pytest.mark.parametrize("command", ["echo pytest -k public", "pytest && ruff -m public", "pytest; echo --collect-only", '"pytest && ruff -m public"'])
 def test_other_commands_arguments_do_not_narrow_pytest(command):
     hits = findings("run: pytest\n", "run: " + command + "\n", ".github/workflows/test.yml")
     assert all(f.severity == "warn" for f in hits)

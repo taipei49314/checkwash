@@ -46,6 +46,7 @@ def test_rename_with_expected_literal_change_still_blocks():
     '\nfrom other import INVOICE_ITEMS\n',
     '\ndef helper():\n    try:\n        pass\n    except ValueError as INVOICE_ITEMS:\n        print(ITEMS)\n',
     '\ndef helper(value):\n    match value:\n        case {"value": INVOICE_ITEMS}:\n            print(ITEMS)\n',
+    '\ndef helper(value):\n    match value:\n        case {"value": captured, **INVOICE_ITEMS}:\n            print(ITEMS)\n',
     '\ndef helper():\n    return sys.modules[__name__].__dict__["ITEMS"]\n',
 ])
 def test_capture_and_reflective_lookup_withhold_rename_proof(extra):
