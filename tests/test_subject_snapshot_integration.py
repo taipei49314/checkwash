@@ -13,6 +13,7 @@ from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 from checkwash.shadow import (
     HeadSearchResult, _ShadowAnalysisCache, _active_test_imports,
     _complete_head_search, _source_package,
+    _source_key,
 )
 
 
@@ -33,6 +34,32 @@ def test_import_cache_separates_identical_bytes_in_different_packages():
     assert "alpha.billing" in cache.active_test_imports(data, package="alpha")
     assert "beta.billing" in cache.active_test_imports(data, package="beta")
     assert "alpha.billing" not in cache.active_test_imports(data, package="beta")
+
+
+def test_provider_identity_honors_python_encoding_cookies():
+    before = b"# coding: latin1\nVALUE = '\xe9'\n"
+    after = b"# coding: latin1\nVALUE = '\xea'\n"
+    assert _source_key(before) != _source_key(after)
+
+
+def test_relative_import_cannot_climb_above_its_known_package():
+    source = b"from ..billing import total\ndef test_total():\n    assert total() == 3\n"
+    assert not _active_test_imports(source, package="app")
+
+
+def test_unused_relative_import_is_not_a_live_subject():
+    source = b"from .billing import total\ndef test_other():\n    assert 3 == 3\n"
+    assert not _active_test_imports(source, package="app")
+
+
+@pytest.mark.parametrize("bad", ["../tests/test_total.py", "/tests/test_total.py", "C:/tests/test_total.py", None])
+def test_shadow_rejects_unrepresentable_inventory_paths(bad):
+    from checkwash.shadow import find_runtime_subject_shadows
+    with pytest.raises(EngineError, match="inventory returned an unsafe path"):
+        find_runtime_subject_shadows(
+            [FileChange("tests/src/billing.py", "added", None, b"def total(): return 3\n")], Config(),
+            head_path_lister=lambda: [bad], head_batch_reader=lambda paths: {},
+        )
 
 
 def test_empty_initializers_establish_relative_package_context():
@@ -59,7 +86,9 @@ def test_snapshots_inventory_empty_sources_controls_and_exact_bytes(tmp_path):
         target = tmp_path / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
-    subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True)
+    # This temporary repository records exact fixture bytes, independent of
+    # the runner's global newline-conversion setting.
+    subprocess.run(["git", "-C", str(tmp_path), "-c", "core.autocrlf=false", "add", "."], check=True)
     subprocess.run(["git", "-C", str(tmp_path), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
                     "commit", "-qm", "snapshot"], check=True)
     for snapshot in (WorkingTreeSnapshot(tmp_path), GitSnapshot(tmp_path, "HEAD")):
@@ -99,4 +128,13 @@ def test_shadow_inventory_missing_a_selected_source_fails_closed():
             changes, Config(),
             head_path_lister=lambda: ["src/billing.py", "tests/src/billing.py", "tests/test_total.py"],
             head_batch_reader=lambda paths: {path: None for path in paths},
+        )
+
+
+def test_shadow_inventory_requires_its_matching_byte_reader():
+    from checkwash.shadow import find_runtime_subject_shadows
+    with pytest.raises(EngineError, match="requires both path and byte readers"):
+        find_runtime_subject_shadows(
+            [FileChange("tests/src/billing.py", "added", None, b"def total(): return 3\n")], Config(),
+            head_path_lister=lambda: ["tests/src/billing.py"],
         )

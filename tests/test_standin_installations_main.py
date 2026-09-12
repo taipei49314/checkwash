@@ -8,11 +8,13 @@ import datetime
 
 import pytest
 
-from checkwash.change import FileChange
+from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
 from checkwash.gitio.snapshot import search_source_mapping
+from checkwash.frontends.python.standin_installations import _candidate, installation_events
+from checkwash.ir.model import IR, DiffGlobals
 
 
 PROD = b"def total():\n    return 1\n"
@@ -163,3 +165,56 @@ def test_stdlib_setattr_is_hygiene():
     before = b"import time\ndef test_time():\n    assert time.time() > 0\n"
     after = b"import time\ndef test_time():\n    setattr(time, 'time', lambda: 3)\n    assert time.time() > 0\n"
     assert not hits(judge({"tests/test_time.py": before}, {"tests/test_time.py": after}))
+
+
+def test_legacy_diff_only_api_keeps_ordinary_conftest_assignment_coverage():
+    changes = [FileChange("conftest.py", "modified", b"collect_ignore = []\n",
+                          b"collect_ignore = []\ncollect_ignore[:] = ['tests/test_total.py']\n"),
+               FileChange("tests/test_total.py", "modified", TEST, TEST)]
+    result = analyze(changes, Config(), Contract(), [], datetime.date(2026, 9, 12))
+    assert any(f.rule == "TEST_DISABLED" for f in result[1])
+
+
+def test_empty_ancestor_conftest_is_valid_installation_context():
+    before = b"import app.billing as billing\ndef test_total():\n    assert billing.total() == 3\n"
+    after = before.replace(b"    assert", b"    billing.total = lambda: 3\n    assert")
+    assert len(hits(judge({"tests/test_total.py": before}, {"tests/test_total.py": after},
+                          {"conftest.py": b""}))) == 1
+
+
+def test_legacy_strict_search_discovers_unchanged_installation_consumers():
+    source = b"import app.billing as billing\nbilling.total = lambda: 3\n"
+    snapshot = {"app/__init__.py": b"", "app/billing.py": PROD,
+                "conftest.py": source, "tests/test_total.py": TEST}
+    result = analyze([FileChange("conftest.py", "added", None, source)],
+                     Config(), Contract(), [], datetime.date(2026, 9, 12),
+                     root_reader=snapshot.get,
+                     root_searcher=lambda needles: search_source_mapping(snapshot, needles))
+    assert len(hits(result, "CONFTEST_PATCHES_PROD")) == 1
+
+
+@pytest.mark.parametrize("before,after", [
+    (b"import sys\nsys.path[:] = ['src']\n", b"import sys\nsys.path[:] = ['app']\n"),
+    (b"import app.billing as billing\nbilling.total = lambda: 3\n",
+     b"import app.billing as billing\nbilling.total = (lambda : 3)\n"),
+])
+def test_unrelated_or_unchanged_installation_does_not_reverse_scan(before, after):
+    def forbidden(_needles):
+        raise AssertionError("unchanged or stdlib setup must not inventory consumers")
+
+    ir = IR(base="base", head="head", globals=DiffGlobals())
+    assert installation_events(ir, [FileChange("conftest.py", "modified", before, after)], Config(),
+                               root_reader=lambda path: None, root_searcher=forbidden) == []
+
+
+def test_installation_source_byte_limit_is_checked_before_parsing(monkeypatch):
+    monkeypatch.setattr("checkwash.frontends.python.standin_installations._MAX_SOURCE_BYTES", 32)
+    with pytest.raises(EngineError, match="source exceeds the byte limit"):
+        _candidate(b"x = " + b"1" * 33)
+
+
+def test_installation_consumer_reads_share_a_total_budget(monkeypatch):
+    monkeypatch.setattr("checkwash.frontends.python.standin_installations._MAX_CONTEXT_READS", 2)
+    source = b"import app.billing as billing\nbilling.total = lambda: 3\n"
+    with pytest.raises(EngineError, match="context exceeds the source read limit"):
+        judge({}, {"conftest.py": source}, {"tests/test_total.py": TEST})

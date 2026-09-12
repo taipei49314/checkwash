@@ -14,6 +14,7 @@ positive installation proof. Repository code is never executed.
 from __future__ import annotations
 
 import ast
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
 from checkwash.change import EngineError
@@ -23,6 +24,28 @@ from checkwash.gating import unit_is_live
 from checkwash.ir.astutil import stable_dump
 from checkwash.pyenv import known_baseline
 from checkwash.roles import collectable
+
+_MAX_SOURCE_BYTES = 1_000_000
+_MAX_SOURCE_NODES = 30_000
+_MAX_CONTEXT_READS = 4096
+_MAX_CONTEXT_BYTES = 64_000_000
+_MAX_ANALYSIS_STEPS = 1_000_000
+
+
+def _syntax(source):
+    if source is not None and not isinstance(source, bytes):
+        raise EngineError("stand-in source is not bytes")
+    if source is None:
+        return None
+    if len(source) > _MAX_SOURCE_BYTES:
+        raise EngineError("stand-in source exceeds the byte limit")
+    try:
+        tree = ast.parse(source.decode("utf-8-sig"))
+    except (SyntaxError, UnicodeError, ValueError, RecursionError):
+        return None
+    if sum(1 for _node in ast.walk(tree)) > _MAX_SOURCE_NODES:
+        raise EngineError("stand-in source exceeds the syntax node limit")
+    return tree
 
 
 @dataclass(frozen=True)
@@ -97,11 +120,8 @@ def _package(path, exists):
 
 
 def _candidate(source, imported_names=()):
-    if not source:
-        return False
-    try:
-        tree = ast.parse(source.decode("utf-8-sig"))
-    except (SyntaxError, UnicodeError, ValueError):
+    tree = _syntax(source)
+    if tree is None:
         return False
     imports = set(imported_names)
     imports.update(a.asname or a.name.split(".")[0] for node in ast.walk(tree)
@@ -126,18 +146,15 @@ def _candidate(source, imported_names=()):
 
 
 def _imports(source):
-    if not source:
-        return set()
-    try:
-        tree = ast.parse(source.decode("utf-8-sig"))
-    except (SyntaxError, UnicodeError, ValueError):
+    tree = _syntax(source)
+    if tree is None:
         return set()
     return {a.asname or a.name.split(".")[0] for n in ast.walk(tree)
             if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
 
 
 class _Trace:
-    def __init__(self, modules, context, side, deny):
+    def __init__(self, modules, context, side, deny, budget=None):
         self.modules = modules
         self.context = context
         self.side = side
@@ -147,6 +164,7 @@ class _Trace:
         self.stack = []
         self.steps = 0
         self.test_module = None
+        self.budget = budget if budget is not None else [0]
 
     def owned(self, target):
         if target.startswith("@") or target.split(".", 1)[0] in self.deny:
@@ -155,7 +173,8 @@ class _Trace:
 
     def _step(self):
         self.steps += 1
-        if self.steps > 20_000:
+        self.budget[0] += 1
+        if self.steps > 20_000 or self.budget[0] > _MAX_ANALYSIS_STEPS:
             raise EngineError("stand-in execution proof exceeds the source step limit")
 
     def effect(self, target, kind="attribute"):
@@ -399,13 +418,10 @@ class _Trace:
 
 
 def _module(path, source, package, baseline=None):
-    try:
-        text = source.decode("utf-8-sig")
-        tree = ast.parse(text)
-    except (SyntaxError, UnicodeError, ValueError, RecursionError):
+    tree = _syntax(source)
+    if tree is None:
         return None
-    if sum(1 for _node in ast.walk(tree)) > 30_000:
-        raise EngineError("stand-in module exceeds the syntax node limit")
+    text = source.decode("utf-8-sig")
     module = _Module(path, text, tree, package, baseline_imports=dict(baseline or {}))
 
     def imports(statements, qualname=""):
@@ -453,8 +469,8 @@ def _fixture_requests(function):
     return [name for name in names if name not in direct]
 
 
-def _observed_for_test(modules, test_path, qualname, context, side, deny):
-    trace = _Trace(modules, context, side, deny)
+def _observed_for_test(modules, test_path, qualname, context, side, deny, budget):
+    trace = _Trace(modules, context, side, deny, budget)
     active_modules = []
     for module in modules:
         if module.path == test_path:
@@ -522,8 +538,13 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny):
     return trace.observed
 
 
-def installation_events(ir, changes, config, *, root_reader=None, root_path_lister=None):
+def installation_events(ir, changes, config, *, root_reader=None, root_searcher=None, root_path_lister=None):
     """(path, unit, target, text, span) for new effects on existing oracles."""
+    # Legacy direct callers (including frozen corpus emitters) do not provide
+    # a complete repository view. Preserve that API's established coverage;
+    # absence of callbacks is not evidence that a provider is repository-owned.
+    if root_reader is None:
+        return []
     changed = {}
     for change in changes:
         path = change.path.replace("\\", "/")
@@ -531,40 +552,74 @@ def installation_events(ir, changes, config, *, root_reader=None, root_path_list
         changed[path] = (change.before if old == path else None, change.after)
         if old != path:
             changed[old] = (change.before, None)
-    candidates = {path for path, sides in changed.items()
-                  if config.role_of(path) in {"test", "conftest"}
-                  and any(_candidate(source, _imports(sides[0])) for source in sides)}
+    deny = known_baseline() | set(ir.globals.third_party_roots)
+    candidates = set()
+    candidate_bytes = 0
+    for path, sides in changed.items():
+        role = config.role_of(path)
+        if role not in {"test", "conftest"}:
+            continue
+        candidate_bytes += sum(len(source) for source in sides if source is not None)
+        if candidate_bytes > _MAX_CONTEXT_BYTES:
+            raise EngineError("stand-in changed context exceeds the source byte limit")
+        imported = _imports(sides[0])
+        if any(_candidate(source, imported) for source in sides) and (
+            role == "test" or _new_assignment_candidate(sides, deny)
+        ):
+            candidates.add(path)
     if not candidates:
         return []
     conftest_changed = {path for path in candidates if config.role_of(path) == "conftest"}
-    inventory = set(root_path_lister()) if root_path_lister is not None and conftest_changed else set()
-    if conftest_changed and root_path_lister is None:
-        # Existing patch APIs continue through their old path. This additional
-        # family never treats an unavailable consumer inventory as absence.
-        if any(_new_assignment_candidate(changed[path]) for path in conftest_changed):
-            raise EngineError("conftest installation discovery requires a complete strict path inventory")
+    raw_inventory = ()
+    if conftest_changed:
+        if root_path_lister is not None:
+            raw_inventory = root_path_lister()
+        elif root_searcher is not None:
+            # Legacy STRICT search's empty needle inventories every nonempty
+            # Python file. That is complete for oracle consumers (an empty
+            # module has none), but is NOT a shadow/package inventory.
+            raw_inventory = root_searcher([""])
+    if (not isinstance(raw_inventory, Sequence) or isinstance(raw_inventory, (str, bytes))
+            or len(raw_inventory) > 200_000):
+        raise EngineError("stand-in strict inventory is invalid or exceeds the path limit")
+    inventory = set()
+    for path in raw_inventory:
+        if not isinstance(path, str):
+            raise EngineError("stand-in strict inventory contains an invalid path")
+        path = path.replace("\\", "/")
+        if not path or path.startswith("/") or ":" in path or any(p in {"", ".", ".."} for p in path.split("/")):
+            raise EngineError("stand-in strict inventory contains an unsafe path")
+        inventory.add(path)
     test_paths = {path for path in candidates if config.role_of(path) == "test"}
     test_paths.update(path for path in inventory if config.role_of(path) == "test" and collectable(path)
                       and any(not c.rpartition("/")[0] or path.startswith(c.rpartition("/")[0] + "/")
                               for c in conftest_changed))
-    context = ConftestContext(changes, root_reader)
     memo = {}
+    read_bytes = [0]
+    budget = [0]
 
     def read(path, side):
         if path in changed:
             return changed[path][side]
         if path not in memo:
+            if len(memo) >= _MAX_CONTEXT_READS:
+                raise EngineError("stand-in context exceeds the source read limit")
             if root_reader is None:
                 memo[path] = None
             else:
                 memo[path] = root_reader(path)
             if memo[path] is not None and not isinstance(memo[path], bytes):
                 raise EngineError("stand-in strict snapshot returned invalid source bytes")
+            if memo[path] is not None:
+                read_bytes[0] += len(memo[path])
+                if len(memo[path]) > _MAX_SOURCE_BYTES or read_bytes[0] > _MAX_CONTEXT_BYTES:
+                    raise EngineError("stand-in context exceeds the source byte limit")
             if path in inventory and memo[path] is None:
                 raise EngineError("stand-in inventoried source disappeared")
         return memo[path]
 
-    deny = known_baseline() | set(ir.globals.third_party_roots)
+    # Ownership probes share the same bounded reader as consumer discovery.
+    context = ConftestContext(changes, lambda path: read(path, 1))
     events = []
     for path in sorted(test_paths):
         if not collectable(path):
@@ -572,6 +627,8 @@ def installation_events(ir, changes, config, *, root_reader=None, root_path_list
         sides = [read(path, side) for side in (0, 1)]
         if any(source is None for source in sides):
             continue  # a new test has no existing oracle to replace
+        if any(_syntax(source) is None for source in sides):
+            continue
         parsed = [parse_python(source, collect_tests=True) for source in sides]
         if not all(p.parse_ok for p in parsed):
             continue
@@ -596,14 +653,14 @@ def installation_events(ir, changes, config, *, root_reader=None, root_path_list
                     raise EngineError("stand-in provider context could not be parsed")
                 # Baseline imports identify the removal-and-assignment form;
                 # they do not execute or activate a provider on the head side.
-                seed = _Trace([], context, side, deny)
+                seed = _Trace([], context, side, deny, budget)
                 seed.block(module.tree.body, module, module.env, "")
                 if side == 0:
                     baseline = dict(module.baseline_imports)
                 modules[side].append(module)
         for qualname in sorted(live[0] & live[1]):
-            before = _observed_for_test(modules[0], path, qualname, context, 0, deny)
-            after = _observed_for_test(modules[1], path, qualname, context, 1, deny)
+            before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget)
+            after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget)
             previous = {effect.key for effect in before}
             for effect in sorted(after, key=lambda e: (e.path, e.target, e.text, e.span)):
                 if effect.key not in previous:
@@ -612,21 +669,71 @@ def installation_events(ir, changes, config, *, root_reader=None, root_path_list
     return sorted(set(events), key=lambda row: (row[0], row[1] or "", row[2], row[3], row[4]))
 
 
-def _new_assignment_candidate(sides):
-    """Avoid adding snapshot requirements to the legacy patch-only channel."""
-    for source in sides:
-        if not source:
-            continue
-        try:
-            tree = ast.parse(source.decode("utf-8-sig"))
-        except (SyntaxError, UnicodeError, ValueError):
-            continue
-        imported = _imports(sides[0]) | _imports(source)
+def _new_assignment_candidate(sides, deny=()):
+    """Only changed, potentially first-party effects need reverse discovery.
+
+    This is a scheduling filter, not the finding predicate: positional
+    bindings, ownership and actual oracle reach are checked by the trace.
+    It keeps ordinary sys.path setup and unchanged legacy installations from
+    acquiring a new whole-repository inventory requirement.
+    """
+    def keys(source, inherited=()):
+        tree = _syntax(source)
+        if tree is None:
+            return set(), (), dict(inherited)
+        aliases = {"request": "@request", **dict(inherited)}
         for node in ast.walk(tree):
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "setattr":
-                return True
-            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+            if isinstance(node, ast.Import):
+                for item in node.names:
+                    aliases[item.asname or item.name.split(".")[0]] = item.name if item.asname else item.name.split(".")[0]
+            elif isinstance(node, ast.ImportFrom):
+                for item in node.names:
+                    # This broad filter must retain relative bindings. The
+                    # execution trace later requires a real package anchor.
+                    module = f"@relative.{node.module or ''}" if node.level else node.module
+                    if module:
+                        aliases[item.asname or item.name] = f"{module}.{item.name}"
+
+        def path(node):
+            if isinstance(node, ast.Name):
+                return aliases.get(node.id)
+            if isinstance(node, ast.Attribute):
+                base = path(node.value)
+                return f"{base}.{node.attr}" if base else None
+            if isinstance(node, ast.Call):
+                fn = path(node.func)
+                if fn == "importlib.import_module" and node.args:
+                    return _literal(node.args[0])
+                if ((isinstance(node.func, ast.Name) and node.func.id == "vars" and "vars" not in aliases)
+                        or fn == "builtins.vars") and len(node.args) == 1:
+                    return path(node.args[0])
+            return None
+
+        found = set()
+        for node in ast.walk(tree):
+            target = None
+            if isinstance(node, ast.Call) and node.args:
+                fn = path(node.func)
+                if (isinstance(node.func, ast.Name) and node.func.id == "setattr") or fn == "builtins.setattr":
+                    target = path(node.args[0])
+                elif isinstance(node.func, ast.Attribute) and node.func.attr == "setitem":
+                    target = path(node.args[0])
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
                 targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                if any(isinstance(t, (ast.Attribute, ast.Subscript)) or isinstance(t, ast.Name) and t.id in imported for t in targets):
-                    return True
-    return False
+                for item in targets:
+                    selected = path(item.value) if isinstance(item, (ast.Attribute, ast.Subscript)) else path(item)
+                    if selected == "sys.modules" and isinstance(item, ast.Subscript):
+                        selected = _literal(item.slice)
+                    if selected and selected.split(".", 1)[0] not in deny:
+                        target = selected
+                        break
+            if target and target.split(".", 1)[0] not in deny:
+                found.add(stable_dump(node))
+        registrations = tuple(stable_dump(ast.FunctionDef(name=n.name, args=n.args, body=[],
+                              decorator_list=n.decorator_list, returns=None, type_comment=None))
+                              for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)))
+        return found, registrations, aliases
+
+    before, b_registration, aliases = keys(sides[0])
+    after, a_registration, _ = keys(sides[1], aliases)
+    return bool(after - before or after and a_registration != b_registration)

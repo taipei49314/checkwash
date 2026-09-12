@@ -555,14 +555,14 @@ def test_arbitrary_provider_ancestor_is_not_invented_as_an_installed_root():
     ) is None
 
 
-def test_repository_inventory_is_lazy_for_an_ordinary_edit():
-    def forbidden():
-        raise AssertionError("ordinary diffs must not inventory the repository")
+def test_diff_only_ordinary_edit_does_not_parse_provider_bytes(monkeypatch):
+    def forbidden(_source):
+        raise AssertionError("ordinary diff-only edits must not parse provider bytes")
 
-    hits = find_runtime_subject_shadows(
+    monkeypatch.setattr("checkwash.shadow._source_key", forbidden)
+    assert find_runtime_subject_shadows(
         [FileChange("src/app.py", "modified", b"VALUE = 1\n", b"VALUE = 2\n")],
         Config(),
-        head_path_lister=forbidden,
     ) == []
 
 
@@ -575,6 +575,7 @@ def test_inventory_callback_failure_is_not_silently_treated_as_no_shadow():
             [FileChange("app/normalize.py", "added", None, b"VALUE = 2\n")],
             Config(),
             head_path_lister=failed_inventory,
+            head_batch_reader=lambda paths: {},
         )
 
 

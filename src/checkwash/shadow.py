@@ -1389,7 +1389,10 @@ def _source_key(data: bytes | None) -> tuple[str, str] | None:
     if len(data) > _MAX_SOURCE_KEY_PARSE_BYTES:
         return _bytes_source_key(data)
     try:
-        tree = ast.parse(_decode(data))
+        # Python's bytes parser honors an encoding cookie. Lossy UTF-8
+        # replacement could otherwise equate different executable literals
+        # in two valid non-UTF-8 providers.
+        tree = ast.parse(data)
         return "ast", stable_dump(tree)
     except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
         # Attacker-controlled Python can exhaust the recursive AST builder or
@@ -2233,10 +2236,14 @@ def find_runtime_subject_shadows(
         in _PYTEST_CONFIGS
     }
     search_order_changed = bool(changed_control_paths)
-    inventory = [
-        path.replace("\\", "/")
-        for path in (head_path_lister() if head_path_lister is not None else [])
-    ]
+    raw_inventory = head_path_lister() if head_path_lister is not None else []
+    if not isinstance(raw_inventory, Sequence) or isinstance(raw_inventory, (str, bytes)):
+        raise EngineError("runtime-shadow inventory returned invalid paths")
+    if len(raw_inventory) > 200_000:
+        raise EngineError("runtime-shadow inventory exceeds the path limit")
+    inventory = [_normalized_head_search_path(path) for path in raw_inventory]
+    if any(path is None for path in inventory):
+        raise EngineError("runtime-shadow inventory returned an unsafe path")
     listed = [
         path
         for path in inventory
@@ -2476,6 +2483,11 @@ def find_runtime_subject_shadows(
     snapshot: dict[str, bytes | None] = {}
     if initial_reads and head_batch_reader is not None:
         read = head_batch_reader(initial_reads)
+        if not isinstance(read, Mapping) or any(
+            path in read and read[path] is not None and not isinstance(read[path], bytes)
+            for path in initial_reads
+        ):
+            raise EngineError("runtime-shadow snapshot returned invalid source bytes")
         missing = [path for path in initial_reads if read.get(path) is None]
         if missing:
             raise EngineError(
@@ -2539,6 +2551,11 @@ def find_runtime_subject_shadows(
     provider_reads = sorted(provider_paths - set(side_change_by_path) - set(snapshot))
     if provider_reads and head_batch_reader is not None:
         read = head_batch_reader(provider_reads)
+        if not isinstance(read, Mapping) or any(
+            path in read and read[path] is not None and not isinstance(read[path], bytes)
+            for path in provider_reads
+        ):
+            raise EngineError("runtime-shadow provider returned invalid source bytes")
         missing = [path for path in provider_reads if read.get(path) is None]
         if missing:
             raise EngineError(

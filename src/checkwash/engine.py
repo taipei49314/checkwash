@@ -1097,7 +1097,7 @@ def build_ir(
                         found.add(pu.side.body_hash)
             g.duplicate_unit_hashes = sorted(found)
     for path, unit, target, text, span in installation_events(
-        ir, changes, config, root_reader=root_reader, root_path_lister=root_path_lister,
+        ir, changes, config, root_reader=root_reader, root_searcher=root_searcher, root_path_lister=root_path_lister,
     ):
         if unit is None:
             if (path, text) not in g.conftest_prod_patches:
