@@ -185,6 +185,22 @@ def test_ambiguous_absolute_helper_import_does_not_invent_a_target():
     assert all(not f.expected_provenance_events for f in result[0].files)
 
 
+@pytest.mark.parametrize("rebound", ["check = opaque\n", "from other import opaque as check\n", "class check:\n    pass\n"])
+def test_rebound_cross_file_helper_does_not_use_the_stale_definition(rebound):
+    caller = IMPORT + "from .helpers import check\ndef test_double():\n    check(double(2), 4)\n"
+    before = {"tests/helpers.py": HELPER + rebound, "tests/test_calc.py": caller}
+    after = {**before, "tests/test_calc.py": caller.replace("), 4)", "), 5)")}
+    result = run(before, after)
+    assert all(not f.expected_provenance_events for f in result[0].files)
+
+
+def test_unbound_helper_local_does_not_borrow_the_module_constant():
+    before = IMPORT + "expected = 4\ndef check(actual):\n    assert actual == expected\n    expected = 0\ndef test_double():\n    check(double(2))\n"
+    after = before.replace("expected = 4", "expected = 5")
+    result = run({"tests/test_calc.py": before}, {"tests/test_calc.py": after})
+    assert all(not f.expected_provenance_events for f in result[0].files)
+
+
 def test_provenance_budget_refuses_partial_unit_events(monkeypatch):
     monkeypatch.setattr(P, "MAX_STEPS", 1)
     before = IMPORT + HELPER + "def test_double():\n    check(double(2), 4)\n"

@@ -49,6 +49,8 @@ class _Replace(ast.NodeTransformer):
         self.env = env
 
     def visit_Name(self, node):
+        if node.id in self.env and self.env[node.id] is None:
+            raise _Unsupported  # a local name read before its first binding
         return copy.deepcopy(self.env.get(node.id, node))
 
 
@@ -61,6 +63,22 @@ def _assign(target, value, env):
             _assign(child, item, env)
     else:
         raise _Unsupported
+
+
+def _declare_locals(body, env):
+    for statement in body:
+        if isinstance(statement, (ast.Assign, ast.AnnAssign)):
+            targets = statement.targets if isinstance(statement, ast.Assign) else [statement.target]
+        elif isinstance(statement, ast.For):
+            targets = [statement.target]
+            _declare_locals(statement.body, env)
+            _declare_locals(statement.orelse, env)
+        else:
+            continue
+        for target in targets:
+            for node in ast.walk(target):
+                if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+                    env[node.id] = None
 
 
 @dataclass
@@ -105,6 +123,8 @@ def _module(path, source):
             if node.name.startswith("test"):
                 tests.append((node.name, node))
         elif isinstance(node, ast.ClassDef):
+            functions.pop(node.name, None)
+            env[node.name] = ast.Name(id=node.name, ctx=ast.Load())
             tests.extend((node.name + "." + fn.name, fn) for fn in node.body
                          if isinstance(fn, ast.FunctionDef) and fn.name.startswith("test"))
         elif isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None:
@@ -156,7 +176,8 @@ class _Reader:
         if len(present) != 1 or self.role_of(present[0]) not in ("test", "conftest"):
             return None
         target = self.module(present[0], side)
-        return (target, target.functions[member]) if target is not None and member in target.functions else None
+        return ((target, target.functions[member])
+                if target is not None and member in target.functions and member not in target.env else None)
 
 
 @dataclass
@@ -195,6 +216,7 @@ class _Project:
         if len(call.args) > len(params) or any(isinstance(a, ast.Starred) for a in call.args):
             raise _Unsupported
         env = dict(module.env)
+        _declare_locals(function.body, env)
         bound = dict(zip(params, actuals[:len(call.args)]))
         for key, value in zip(call.keywords, actuals[len(call.args):]):
             if key.arg is None or key.arg in bound or key.arg not in params + kwonly or key.arg in [a.arg for a in args.posonlyargs]:
@@ -304,6 +326,7 @@ class _Project:
             events = []
             try:
                 env = dict(module.env)
+                _declare_locals(function.body, env)
                 for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]:
                     env[arg.arg] = ast.Name(id=arg.arg, ctx=ast.Load())
                 self.walk(module, function.body, env, unit, events)

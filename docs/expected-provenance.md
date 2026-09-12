@@ -34,7 +34,8 @@ frontend behavior. Dynamic iterators, decorated helpers, varargs, conditional
 control flow and ambiguous imports receive no invented provenance. Direct
 nonliteral expected expressions remain with the existing detectors; the
 helper channel can retain their substituted defining expression without
-evaluating it.
+evaluating it. Rebound helper names and local reads before their first
+binding are declined rather than borrowing stale functions or module values.
 
 Ordinary native literal assertions use their existing IR without another
 AST pass. Helper discovery skips root modules already reviewed by the
