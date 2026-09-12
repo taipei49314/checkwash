@@ -71,6 +71,7 @@ from collections import Counter
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.model import IR, ParamTable, normalize_text, param_tables
+from checkwash.detectors.expected_provenance import detect as detect_provenance
 
 
 def _column_values_edited(before: str, after: str) -> bool:
@@ -464,4 +465,5 @@ def detect(ir: IR) -> list[Finding]:
                         ),
                     )
                 )
+    findings.extend(detect_provenance(ir, findings))
     return findings

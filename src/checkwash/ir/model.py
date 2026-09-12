@@ -338,6 +338,10 @@ class FileIR:
     # comparison operator, concrete expected expression).
     # JSON arrays reconstruct directly; the detector validates the records.
     table_normalization_events: tuple[tuple[str, str, tuple[int, int], str, tuple[int, int], str, str, str, str], ...] = ()
+    # Additive expected-value provenance: (unit, old text/span, new text/span,
+    # concrete subject/input, comparison operator, old expected, new expected).
+    # Helpers and literal loops supply evidence only; native IR is unchanged.
+    expected_provenance_events: tuple[tuple[str, str, tuple[int, int], str, tuple[int, int], str, str, str, str], ...] = ()
 
 
 @dataclass

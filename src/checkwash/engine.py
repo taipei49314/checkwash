@@ -52,6 +52,7 @@ from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
 from checkwash.frontends.python.standin_installations import installation_events
 from checkwash.shadow import find_runtime_subject_shadows
+from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
@@ -352,6 +353,7 @@ def build_ir(
     root_path_lister=None,
     root_batch_reader=None,
 ) -> IR:
+    changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher)]
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
     changes = [*changes, *importer_changes]
     g = DiffGlobals()
@@ -745,7 +747,7 @@ def build_ir(
                     ):
                         g.test_logic_changed = True
 
-        if change.synthetic != "root_helper_importer" and g.scope_allow and not any(
+        if change.synthetic not in ("root_helper_importer", "expected_provenance_importer") and g.scope_allow and not any(
             _scope_match(path, glob) for glob in g.scope_allow
         ):
             g.scope_drift.append((path, role))
@@ -1104,6 +1106,7 @@ def build_ir(
             g.subject_installations.append((path, unit, target, text, span))
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
     mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)
+    mark_expected_provenance(ir, raw_by_path, root_reader, config.role_of, report_context)
     return ir
 
 
