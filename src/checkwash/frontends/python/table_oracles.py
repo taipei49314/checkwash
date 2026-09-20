@@ -49,6 +49,7 @@ from checkwash.frontends.python.snapshot_context import inert_test_execution_con
 from checkwash.frontends.python.literal_expected_bindings import expand_literal_expected_bindings
 from checkwash.frontends.python.literal_subject_bindings import expand_literal_subject_bindings
 from checkwash.frontends.python.captured_assert_helpers import expand_captured_assert_helpers
+from checkwash.frontends.python.regrouped_captures import regroup_complete_captures
 from checkwash.frontends.python.inert_signatures import strip_none_test_returns
 from checkwash.frontends.python.table_factories import expand_literal_table_factories
 from checkwash.frontends.python.inert_helpers import prune_inert_helpers
@@ -1059,6 +1060,7 @@ def _module(source, *, baseline):
     literal_expected_tests = expand_literal_expected_bindings(tree, _literal)
     literal_subject_tests = expand_literal_subject_bindings(tree, _literal)
     captured_helper_tests = expand_captured_assert_helpers(tree, _literal)
+    regrouped_capture_tests = regroup_complete_captures(tree, _literal)
     local_auxiliary = extract_local_auxiliary_oracles(tree)
     raises_oracles = extract_raises_oracles(tree)
     tuple_tests = expand_tuple_oracles(tree)
@@ -1250,6 +1252,8 @@ def _module(source, *, baseline):
             is_table, form = True, "literal-subject-local"
         if function.name in captured_helper_tests:
             is_table, form = True, "captured-assert-helper"
+        if function.name in regrouped_capture_tests:
+            is_table, form = True, "regrouped-complete-capture"
         if function.name in inert_signature_tests:
             is_table, form = True, "literal-none-test-return"
         forms.append((function.name, form))
@@ -1307,7 +1311,7 @@ def _module(source, *, baseline):
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or membership_fixture_tests
                  or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
-                 or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests or literal_subject_tests or captured_helper_tests or inert_signature_tests
+                 or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests or literal_subject_tests or captured_helper_tests or inert_signature_tests or regrouped_capture_tests
                  or any(form in {'string-block', 'grouped-assert-helper'} for _, form in forms)
                  or any(getattr(case.assertion, '_requires_closed_helper', False) for case in result)),
             bool(unittest_tests),
