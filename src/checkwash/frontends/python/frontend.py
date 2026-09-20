@@ -2853,7 +2853,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     raw = normalize_source(data)
     try:
         tree = ast.parse(raw)
-        if collect_tests and "raise" in raw and "AssertionError" in raw:
+        if collect_tests and "if" in raw and ("assert" in raw or "raise" in raw and "AssertionError" in raw):
             tree = conditional_oracle_carriers(tree)
     except SyntaxError:
         return ParsedFile(parse_ok=False)

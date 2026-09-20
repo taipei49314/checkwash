@@ -1,10 +1,13 @@
-"""One closed conditional-failure spelling becomes a native oracle carrier.
+"""Closed conditional-failure spellings become native oracle carriers.
 
 ``if value != expected: raise AssertionError("literal")`` has the same
 failure predicate as ``assert not (value != expected)``. Transform only the
 analysis AST, preserving original source positions, so reachability, inherited
 oracles and exception neutralization all consume the same carrier. No source
 is rewritten or executed.
+
+``if predicate: assert True; else: assert False`` likewise checks the
+predicate, rather than merely containing two unrelated Boolean assertions.
 """
 
 from __future__ import annotations
@@ -57,7 +60,32 @@ def _failure(node):
 
 
 class _OracleCarriers(ast.NodeTransformer):
+    def __init__(self, allow_raises):
+        self.allow_raises = allow_raises
+
     def visit_If(self, node):
+        # A closed pair of literal assert outcomes checks the branch predicate,
+        # not the two tautologies written inside it. Preserve the predicate's
+        # single evaluation, polarity, and the original conditional's span.
+        if isinstance(node.test, ast.Compare) and len(node.test.ops) == 1:
+            def outcome(body):
+                if len(body) != 1 or not isinstance(body[0], ast.Assert):
+                    return None
+                statement = body[0]
+                if (not isinstance(statement.test, ast.Constant)
+                        or type(statement.test.value) is not bool
+                        or statement.msg is not None and not isinstance(statement.msg, ast.Constant)):
+                    return None
+                return statement.test.value, statement.msg
+
+            yes, no = outcome(node.body), outcome(node.orelse)
+            if yes is not None and no is not None and yes[0] != no[0]:
+                test = node.test if yes[0] else ast.copy_location(
+                    ast.UnaryOp(op=ast.Not(), operand=node.test), node.test)
+                message = no[1] if yes[0] else yes[1]
+                return ast.copy_location(ast.Assert(test=test, msg=message), node)
+        if not self.allow_raises:
+            return self.generic_visit(node)
         message = _failure(node)
         if message is None:
             return self.generic_visit(node)
@@ -68,10 +96,9 @@ class _OracleCarriers(ast.NodeTransformer):
 def conditional_oracle_carriers(tree):
     """Return the same tree with recognized failure predicates represented.
 
-    A shadowed/dynamic exception constructor declines the whole module rather
-    than guessing which binding reaches the raise. Unsupported conditional
-    failures retain their original AST and existing behavior.
+    A shadowed/dynamic exception constructor declines raise-based projection
+    rather than guessing which binding reaches the raise. Native assertions
+    do not depend on that name. Unsupported conditional failures retain their
+    original AST and existing behavior.
     """
-    if _constructor_uncertain(tree):
-        return tree
-    return _OracleCarriers().visit(tree)
+    return _OracleCarriers(allow_raises=not _constructor_uncertain(tree)).visit(tree)
