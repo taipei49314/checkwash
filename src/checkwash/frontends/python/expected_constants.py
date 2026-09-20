@@ -15,6 +15,24 @@ class _Unknown(Exception):
 
 
 def folded_expected(node, allow_call, *, boolean_logic=False):
+    # Lazy value evaluation must not skip Python's whole-function binding
+    # and compilation rules. A dead walrus can make a builtin local; a dead
+    # yield turns its function into a generator. Validate the complete closed
+    # expression language before evaluating only the selected value branch.
+    allowed = (ast.Constant, ast.Tuple, ast.List, ast.JoinedStr, ast.Name, ast.Load, ast.Attribute,
+               ast.UnaryOp, ast.UAdd, ast.USub, ast.Not, ast.BinOp, ast.Add, ast.Sub, ast.Mult,
+               ast.Div, ast.FloorDiv, ast.Mod, ast.Compare, ast.Eq, ast.NotEq, ast.Lt, ast.LtE,
+               ast.Gt, ast.GtE, ast.IfExp, ast.Subscript, ast.Slice, ast.Call, ast.BoolOp, ast.And, ast.Or)
+    for count, part in enumerate(ast.walk(node)):
+        if count >= 512 or not isinstance(part, allowed):
+            return None
+        if isinstance(part, ast.Call):
+            function = part.func
+            known = (isinstance(function, ast.Name) and function.id == 'len'
+                     or isinstance(function, ast.Attribute) and function.attr == 'prod'
+                     and isinstance(function.value, ast.Name) and function.value.id == 'math')
+            if not known or len(part.args) != 1 or part.keywords:
+                return None
     steps = 0
 
     def bounded(value):
