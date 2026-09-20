@@ -69,7 +69,7 @@ def expand_literal_table_factories(tree: ast.Module) -> set[str]:
         if unsafe or definitions != 1 or not loads:
             continue
         replacements = []
-        for function in tree.body:
+        for function in ast.walk(tree):
             if not isinstance(function, ast.FunctionDef):
                 continue
             for decorator in function.decorator_list:
@@ -90,6 +90,10 @@ def expand_literal_table_factories(tree: ast.Module) -> set[str]:
                                           for key, cell in zip(value.keys, value.values)], ctx=ast.Load())
                     ast.copy_location(rows, value)
                 replacements.append((decorator, "args", [decorator.args[0], copy.deepcopy(rows)], call.func, function.name))
+            if (len(function.body) == 1 and isinstance(function.body[0], ast.For)
+                    and _factory_call(function.body[0].iter, name) and isinstance(value, (ast.List, ast.Tuple))):
+                loop = function.body[0]
+                replacements.append((loop, "iter", copy.deepcopy(value), loop.iter.func, function.name))
             # A fresh table allocation, one literal row, then ordinary helper
             # argument binding. No row object is shared across invocations.
             if not function.decorator_list and len(function.body) == 1 and isinstance(function.body[0], ast.Expr):

@@ -41,6 +41,39 @@ def _assertion(statement):
     return ast.copy_location(assertion, statement)
 
 
+def _subtest_loop(statement):
+    """Default subTest preserves suite failure for each deterministic row.
+
+    Only inert diagnostic keyword values are admitted. The caller verifies
+    the class has no overrides, both subjects are pure, and oracle counts
+    match before allowing changed assertion continuation after a failure.
+    """
+    if (not isinstance(statement, ast.For) or statement.orelse or len(statement.body) != 1
+            or not isinstance(statement.iter, (ast.List, ast.Tuple))
+            or not isinstance(statement.target, ast.Tuple)
+            or not all(isinstance(item, ast.Name) for item in statement.target.elts)):
+        return statement
+    names = {item.id for item in statement.target.elts}
+    block = statement.body[0]
+    if not isinstance(block, ast.With) or len(block.items) != 1 or len(block.body) != 1:
+        return statement
+    context = block.items[0]
+    call = context.context_expr
+    if (context.optional_vars is not None or not isinstance(call, ast.Call) or call.args
+            or not isinstance(call.func, ast.Attribute) or call.func.attr != 'subTest'
+            or not isinstance(call.func.value, ast.Name) or call.func.value.id != 'self'
+            or any(keyword.arg is None or not (
+                isinstance(keyword.value, ast.Name) and keyword.value.id in names
+                or isinstance(keyword.value, ast.Constant) and type(keyword.value.value) in (str, int, bool, type(None))
+            ) for keyword in call.keywords)):
+        return statement
+    assertion = _assertion(block.body[0])
+    if not isinstance(assertion, ast.Assert) or assertion.msg is not None:
+        return statement
+    statement.body = [assertion]
+    return statement
+
+
 def expand_unittest_classes(tree):
     authority, expanded = False, set()
     for node in tree.body:
@@ -65,7 +98,7 @@ def expand_unittest_classes(tree):
             names.add(member.name)
             if not (member.name == 'setUp' or member.name.startswith(('test', 'check', 'assert_'))):
                 return None
-            member.body = [_assertion(statement) for statement in member.body]
+            member.body = [_subtest_loop(_assertion(statement)) for statement in member.body]
             if member.name == 'setUp':
                 if len(member.args.args) != 1 or not member.body or not all(
                         isinstance(statement, ast.Assert) and statement.msg is None for statement in member.body):

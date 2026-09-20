@@ -670,7 +670,7 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         if all(assertion is not None for assertion in assertions):
             return ([_Case(assertion, statement, node) for assertion, statement in zip(assertions, node.body)],
                     multiple, "unittest" if multiple else "native")
-        if multiple:
+        if multiple and not (len(node.body) == 1 and isinstance(node.body[0], ast.For)):
             return None
     block = string_block(node) if not names and not node.decorator_list else None
     if block is not None:
