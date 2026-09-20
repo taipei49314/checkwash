@@ -85,6 +85,7 @@ def _code_positions(text: str) -> bytearray:
     operand = True
     previous = ""
     parens: list[bool] = []
+    braces: list[bool] = []
     while i < len(text):
         start = i
         if text.startswith("//", i):
@@ -136,6 +137,12 @@ def _code_positions(text: str) -> bytearray:
             previous = "literal"
         else:
             char = text[i]
+            if text[i:i + 2] in {"++", "--"}:
+                # Prefix operators still await an operand; postfix ones
+                # complete it. Neither turns subsequent division into regex.
+                previous = text[i:i + 2]
+                i += 2
+                continue
             if char.isalpha() or char in "_$":
                 i += 1
                 while i < len(text) and (text[i].isalnum() or text[i] in "_$"):
@@ -149,6 +156,11 @@ def _code_positions(text: str) -> bytearray:
                 operand = True
             elif char == ")":
                 operand = parens.pop() if parens else False
+            elif char == "{":
+                braces.append(previous not in {"=", "(", "[", ",", ":", "return"})
+                operand = True
+            elif char == "}":
+                operand = braces.pop() if braces else True
             elif char == "]" or char.isdigit():
                 operand = False
             elif not char.isspace():

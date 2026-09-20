@@ -82,6 +82,7 @@ def test_regex_start_context_keeps_literal_declarations_inert(prefix):
     assert [u.qualname for u in parsed.units] == ["real"]
 
 
-def test_division_does_not_hide_a_real_test_call():
-    parsed = parse_javascript(b'const x = value / test("real", () => {}) / divisor;')
+@pytest.mark.parametrize("left", ["value", "value++", "value--", "{}", "({})"])
+def test_division_does_not_hide_a_real_test_call(left):
+    parsed = parse_javascript((f'const x = {left} / test("real", () => {{}}) / divisor;').encode())
     assert [u.qualname for u in parsed.units] == ["real"]
