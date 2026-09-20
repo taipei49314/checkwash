@@ -1492,7 +1492,8 @@ def _native_renames(old, new):
 
     This optional proof additionally requires pure production on both sides;
     source-order-sensitive subjects cannot acquire renamed-unit identities.
-    Each complete body contains only the already-proved native assertions,
+    Each complete body contains only already-proved native assertions or
+    direct calls whose helper assertions `_checked` has fully expanded,
     and exact call multiplicity survives a merge or split. Grouping may change
     which assertion executes after a failure, but not pure suite pass/fail.
     """
@@ -1501,7 +1502,7 @@ def _native_renames(old, new):
     for module in (old, new):
         if any(form != 'native' for _, form in module[6]):
             return False
-        if any(not case.source_function.body or not all(isinstance(statement, ast.Assert)
+        if any(not case.source_function.body or not all(isinstance(statement, (ast.Assert, ast.Expr))
                for statement in case.source_function.body)
                for case in module[2]):
             return False
