@@ -448,6 +448,58 @@ def _table_fixture(node):
     return returned.value
 
 
+def _forwarded_functions(functions, imports):
+    """Inline only exact positional forwarding to an imported production call.
+
+    Every formal is forwarded once in the same order, and every use must be
+    a direct call. The final concrete-oracle checks still prove the actual
+    literal inputs, retained call order and complete original coverage.
+    """
+    forwarders = {}
+    for function in functions:
+        parameters = _args(function)
+        if (parameters is None or function.name.startswith(("test", "pytest_")) or function.decorator_list
+                or len(function.body) != 1 or not isinstance(function.body[0], ast.Return)):
+            continue
+        value = function.body[0].value
+        if (not isinstance(value, ast.Call) or value.keywords or not all(isinstance(arg, ast.Name) for arg in value.args)
+                or [arg.id for arg in value.args] != parameters or len(set(parameters)) != len(parameters)):
+            continue
+        callee = dotted_name(value.func)
+        if not callee or callee.split(".")[0] not in imports - {"pytest"}:
+            continue
+        forwarders[function.name] = parameters, value
+    if not forwarders:
+        return functions
+    for function in functions:
+        if any((isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store) and node.id in forwarders)
+               or (isinstance(node, ast.arg) and node.arg in forwarders)
+               for node in ast.walk(function)):
+            return None
+    used = set()
+
+    class Calls(ast.NodeTransformer):
+        def visit_Call(self, node):
+            node = self.generic_visit(node)
+            if not isinstance(node.func, ast.Name) or node.func.id not in forwarders:
+                return node
+            parameters, value = forwarders[node.func.id]
+            if node.keywords or len(node.args) != len(parameters) or any(isinstance(arg, ast.Starred) for arg in node.args):
+                return node
+            used.add(node.func.id)
+            return ast.copy_location(_Substitute(dict(zip(parameters, node.args))).visit(copy.deepcopy(value)), node)
+
+    result = []
+    for function in functions:
+        if function.name in forwarders:
+            continue
+        function = Calls().visit(function)
+        if any(isinstance(node, ast.Name) and node.id in forwarders for node in ast.walk(function)):
+            return None
+        result.append(function)
+    return result if used == forwarders.keys() else None
+
+
 def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, used_constants, *, baseline,
           multiple=False):
     names = _args(node)
@@ -502,7 +554,7 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         scope.update(columns)
         body, table, form = loop.body, True, "table-fixture-loop"
     elif names:
-        if (len(names) != 1 or names[0] not in fixtures or len(body) != 2
+        if (len(names) != 1 or names[0] not in fixtures or not 2 <= len(body) <= MAX_CASES
                 or not isinstance(body[0], ast.Assign) or len(body[0].targets) != 1
                 or not isinstance(body[0].value, ast.Name) or body[0].value.id != names[0]):
             return None
@@ -552,12 +604,22 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         aliases = {}
         for statement in body[:-1]:
             if (not isinstance(statement, ast.Assign) or len(statement.targets) != 1
-                    or not isinstance(statement.targets[0], ast.Name)
-                    or not isinstance(statement.value, ast.Name)):
+                    or not isinstance(statement.targets[0], ast.Name)):
                 return None
             name = statement.targets[0].id
-            if (name in scope or name in imports or name in constants
-                    or statement.value.id not in scope | aliases.keys()):
+            if name in scope or name in imports or name in constants:
+                return None
+            if isinstance(statement.value, ast.Name):
+                if statement.value.id not in scope | aliases.keys():
+                    return None
+            elif isinstance(statement.value, ast.Call):
+                callee = dotted_name(statement.value.func)
+                if (not callee or callee.split(".")[0] not in imports - {"pytest"}
+                        or sum(isinstance(node, ast.Name) and node.id == name for node in ast.walk(body[-1])) != 1
+                        or any(isinstance(node, ast.Name) and node.id == name
+                               for later in body[:-1] if later is not statement for node in ast.walk(later))):
+                    return None
+            else:
                 return None
             aliases[name] = _Substitute(aliases).visit(copy.deepcopy(statement.value))
             scope.add(name)
@@ -646,6 +708,9 @@ def _module(source, *, baseline):
             functions.append(node)
         else:
             return None
+    functions = _forwarded_functions(functions, imports)
+    if functions is None:
+        return None
     fixtures, tables, shared_tables = {}, {}, set()
     if not baseline:
         for function in functions:
