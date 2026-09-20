@@ -130,6 +130,10 @@ def _candidate(source, imported_names=()):
                              if isinstance(node, ast.ImportFrom) and node.module == "builtins" and not node.level
                              for a in node.names if a.name == "setattr"}
     for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            parameters = node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+            if any(arg.arg in imports for arg in parameters):
+                return True
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name) and node.func.id in setters:
                 return True
@@ -534,6 +538,28 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
     for name in sorted(autouse):
         activate(name)
     kwargs = {name: activate(name) for name in _fixture_requests(function)}
+    # Pytest argument injection is another local binding installation. A
+    # newly added fixture parameter may mask the imported production callable
+    # while leaving every assertion and import byte-identical (#88).
+    for name, value in list(kwargs.items()):
+        provider = fixtures.get(name)
+        original = test_module.baseline_imports.get(("", name))
+        if provider is None or original is None or not trace.owned(original):
+            continue
+        returned = provider.node.body[-1] if provider.node.body else None
+        replacement = returned.value if isinstance(returned, ast.Return) else None
+        if not (isinstance(replacement, ast.Lambda)
+                or isinstance(replacement, (ast.Name, ast.Attribute)) and value.alias):
+            # A fixture that computes the production result then supplies it
+            # to an assertion is ordinary fixture extraction, not a stand-in.
+            continue
+        if value.alias == original and not value.effects:
+            continue  # a fixture forwarding the original provider is honest
+        effect = _Effect(test_path, original, "binding",
+                         value.alias or stable_dump(provider.node),
+                         ast.get_source_segment(test_module.source, function.node) or ast.unparse(function.node),
+                         (function.node.lineno, function.node.end_lineno))
+        kwargs[name] = replace(value, effects=value.effects | {effect})
     trace.function(function, kwargs=kwargs)
     return trace.observed
 
