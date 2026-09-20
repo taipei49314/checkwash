@@ -1544,6 +1544,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         if Counter(oracle.key for oracle in old[12]) - Counter(oracle.key for oracle in new[12]):
             return before_parsed, after_parsed  # local checks keep their full definitions and multiplicity
         native_renames = _native_renames(old, new)
+        if (any(getattr(case.assertion, '_requires_closed_helper', False) for case in old[2])
+                and any(getattr(case.assertion, '_requires_closed_helper', False) for case in new[2])):
+            return before_parsed, after_parsed  # preserve same-carrier keyword expectation provenance
         if (any(form == 'literal-fixtures' for _, form in old[6])
                 and any(form == 'literal-fixtures' for _, form in new[6])):
             return before_parsed, after_parsed  # retain existing same-carrier fixture provenance ownership

@@ -43,6 +43,12 @@ def test_keyword_helper_answer_rewrite_remains_detected():
     assert any(f.rule == 'EXPECTED_VALUE_CHANGED' and f.severity == 'high' for f in findings)
 
 
+def test_existing_keyword_helper_preserves_expectation_provenance_owner():
+    ir, findings, verdict = run(AFTER, AFTER.replace('expected=2', 'expected=0'), PRODUCTION)
+    assert not projected(ir) and verdict == 'block'
+    assert any(f.rule == 'EXPECTATION_DEFINITION_CHANGED' for f in findings)
+
+
 @pytest.mark.parametrize('arguments', ['actual=increment(1)',
     'actual=increment(1), other=2', 'increment(1), actual=2',
     'actual=increment(1), expected=2, expected=2',
