@@ -53,6 +53,7 @@ from checkwash.frontends.python.table_normalization import mark_table_normalizat
 from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.frontends.python.classic_raises import mark_classic_exception_removal
 from checkwash.frontends.python.empty_parameter_sets import mark_empty_parameter_introduction
+from checkwash.frontends.python.neutralizing_aliases import mark_neutralizing_aliases
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
 from checkwash.frontends.python.standin_installations import installation_events
 from checkwash.frontends.python.subject_replacements import subject_replacement_events
@@ -657,6 +658,10 @@ def build_ir(
                 path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
             )
             before_parsed, after_parsed = mark_empty_parameter_introduction(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_neutralizing_aliases(
                 change.before, change.after, before_parsed, after_parsed,
                 path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
             )
