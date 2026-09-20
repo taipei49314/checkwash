@@ -533,6 +533,61 @@ def _forwarded_functions(functions, imports):
     return result if used == forwarders.keys() else None
 
 
+def _callable_fixtures(functions, imports):
+    """Preserve a scalar-string fixture's assertions before its callable.
+
+    Default function scope, no fixture inputs, no cleanup and only direct
+    collected consumers are admitted. Each consumer receives the complete
+    ordered assertion prefix before its own assertions.
+    """
+    fixtures = {}
+    for function in functions:
+        plain = copy.copy(function)
+        plain.decorator_list = []
+        if (_args(plain) != [] or len(function.decorator_list) != 1
+                or not 2 <= len(function.body) <= MAX_CASES or not isinstance(function.body[-1], ast.Return)):
+            continue
+        decorator = function.decorator_list[0]
+        if isinstance(decorator, ast.Call):
+            if decorator.args or decorator.keywords:
+                continue
+            decorator = decorator.func
+        returned = function.body[-1].value
+        assertions = [_concrete(statement, {}, imports) for statement in function.body[:-1]]
+        if (dotted_name(decorator) != "pytest.fixture" or not isinstance(returned, ast.Name)
+                or returned.id not in imports - {"pytest"}
+                or any(assertion is None for assertion in assertions)):
+            continue
+        if any(not all(isinstance(value, ast.Constant) and type(value.value) is str
+                       for value in [*assertion.test.left.args, *assertion.test.comparators])
+               or assertion.test.left.keywords for assertion in assertions):
+            continue
+        fixtures[function.name] = function.body[:-1], returned
+    if not fixtures:
+        return functions, set()
+    result, used, expanded = [], set(), set()
+    for function in functions:
+        if function.name in fixtures:
+            continue
+        parameters = _args(function)
+        if parameters and any(name in fixtures for name in parameters):
+            if (len(parameters) != 1 or not function.name.startswith("test") or function.decorator_list
+                    or not all(isinstance(statement, ast.Assert) for statement in function.body)):
+                return None, set()
+            name = parameters[0]
+            prefix, returned = fixtures[name]
+            function = copy.deepcopy(function)
+            function.args.args = []
+            function.body = [*copy.deepcopy(prefix), *[_Substitute({name: returned}).visit(statement)
+                                                      for statement in function.body]]
+            used.add(name)
+            expanded.add(function.name)
+        if any(isinstance(node, ast.Name) and node.id in fixtures for node in ast.walk(function)):
+            return None, set()
+        result.append(function)
+    return (result, expanded) if used == fixtures.keys() else (None, set())
+
+
 def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, used_constants, *, baseline,
           multiple=False):
     names = _args(node)
@@ -601,6 +656,27 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         values = _table_source(decorator.args[1], constants, used_constants)
         bindings = _rows(values, columns, unpack=len(columns) != 1)
         table, form = True, "parametrize"
+    elif (len(names) == 1 and names[0] in tables and len(body) == 2
+          and isinstance(body[0], ast.Assign) and len(body[0].targets) == 1
+          and isinstance(body[0].targets[0], ast.Name) and isinstance(body[1], ast.For)):
+        assignment, loop = body
+        local_name = assignment.targets[0].id
+        columns = _names(loop.target)
+        iterator = loop.iter
+        values = tables[names[0]]
+        expected = assignment.value
+        if (local_name in imports | scope | {"zip"} or not columns or len(columns) != 2 or loop.orelse
+                or set(columns) & (imports | scope | {local_name, "zip"})
+                or not isinstance(iterator, ast.Call) or dotted_name(iterator.func) != "zip"
+                or iterator.keywords or [dotted_name(arg) for arg in iterator.args] != [names[0], local_name]
+                or not isinstance(values, (ast.List, ast.Tuple)) or not isinstance(expected, (ast.List, ast.Tuple))
+                or not 0 < len(values.elts) == len(expected.elts) <= MAX_CASES
+                or not all(isinstance(value, ast.Constant) and type(value.value) is str
+                           for value in [*values.elts, *expected.elts])):
+            return None
+        bindings = [dict(zip(columns, pair)) for pair in zip(values.elts, expected.elts)]
+        scope.update([local_name, *columns])
+        body, table, form = loop.body, True, "zip-fixture"
     elif (len(names) == 1 and names[0] in tables and len(body) == 1 and isinstance(body[0], ast.For)
           and isinstance(body[0].iter, ast.Name) and body[0].iter.id == names[0]):
         loop = body[0]
@@ -769,6 +845,9 @@ def _module(source, *, baseline):
     functions = _forwarded_functions(functions, imports)
     if functions is None:
         return None
+    functions, callable_fixture_tests = _callable_fixtures(functions, imports)
+    if functions is None:
+        return None
     fixtures, tables, shared_tables = {}, {}, set()
     if not baseline:
         for function in functions:
@@ -802,7 +881,7 @@ def _module(source, *, baseline):
         if function.name in fixtures or function.name in tables or function.name in helpers or function.name in table_helpers:
             continue
         expanded = _test(function, fixtures, tables, imports, helpers, table_helpers, constants, used_constants,
-                         baseline=baseline, multiple=function.name in unittest_tests)
+                         baseline=baseline, multiple=function.name in unittest_tests | callable_fixture_tests)
         if expanded is None:
             return None
         cases, is_table, form = expanded
@@ -810,6 +889,8 @@ def _module(source, *, baseline):
             is_table, form = True, "plain-class"
         if function.name in wrapper_tests:
             is_table, form = True, "oracle-wrapper"
+        if function.name in callable_fixture_tests:
+            is_table, form = True, "callable-fixture"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
@@ -836,6 +917,8 @@ def _module(source, *, baseline):
     # otherwise transparent module weakens the "entire module" claim the
     # projection rests on. Same discipline as the fixtures above.
     if helpers.keys() | table_helpers.keys() != used_helpers.keys() or tables.keys() != used_tables.keys():
+        return None
+    if any(form == "zip-fixture" for _, form in forms) and "zip" in names:
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests), bool(unittest_tests))
@@ -1069,7 +1152,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         message_calls = [case.assertion.test.left for case in module[2]
                          if getattr(case.assertion, "_requires_primitive_string", False)]
-        if message_calls:
+        if message_calls or any(form in {"zip-fixture", "callable-fixture"} for _, form in module[6]):
             calls = [case.assertion.test.left for case in module[2]]
             called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
             # Another module import or oracle could replace a function or a
@@ -1085,6 +1168,8 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                         return before_parsed, after_parsed
             if not pure_imported_calls(module[0].encode(), calls, path=path, read=read,
                                        result_proof=primitive_string_result):
+                return before_parsed, after_parsed
+            if not _module_unshadowed(path, read, "re"):
                 return before_parsed, after_parsed
         if (old[8] or new[8]) and not pure_imported_calls(module[0].encode(),
                                                 [case.assertion.test.left for case in module[2]], path=path, read=read):

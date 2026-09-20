@@ -115,3 +115,68 @@ def test_unused_import_with_runtime_effects_withholds_message_proof():
     before = "import mutator\n" + STRIP_BEFORE
     after = "import mutator\n" + STRIP_AFTER
     assert run(before, after, STRIP_PROD, context={"mutator.py": b"change_runtime()\n"})[2] == "block"
+
+
+SLUG_BEFORE = ("import pytest\nfrom app.prod import slugify\n@pytest.fixture\ndef slugged():\n"
+               "    assert slugify('Hello World') == 'hello-world'\n    return slugify\n"
+               "def test_punctuation(slugged):\n    assert slugged('Hello, World!') == 'hello-world'\n")
+SLUG_AFTER = ("import pytest\nfrom app.prod import slugify\n@pytest.fixture\ndef input_strings():\n"
+              "    return ['Hello World', 'Hello, World!']\n"
+              "def test_slugify(input_strings):\n    expected = ['hello-world', 'hello-world']\n"
+              "    for s, expected_slug in zip(input_strings, expected):\n        assert slugify(s) == expected_slug\n")
+SLUG_PROD = ("import re\ndef slugify(s):\n    s = s.lower().strip()\n"
+             "    s = re.sub(r'[^a-z0-9]+', '-', s)\n    return s.strip('-')\n")
+
+
+def test_callable_fixture_assertion_and_returned_alias_survive_literal_zip_consolidation():
+    result = run(SLUG_BEFORE, SLUG_AFTER, SLUG_PROD)
+    assert result[2] == "pass"
+    units = result[0].files[0].units
+    assert len(units) == 2
+    assert all(unit.before and unit.after for unit in units)
+    assert {unit.after.assertions[0].left for unit in units} == {"slugify('Hello World')", "slugify('Hello, World!')"}
+    assert all(unit.before.assertions[0].left == unit.after.assertions[0].left for unit in units)
+
+
+@pytest.mark.parametrize("old,new", [
+    ("['hello-world', 'hello-world']", "['Hello-World', 'hello-world']"),
+    ("['hello-world', 'hello-world']", "['hello-world']"),
+    ("['Hello World', 'Hello, World!']", "['Hello, World!']"),
+    ("zip(input_strings, expected)", "zip(expected, input_strings)"),
+    ("zip(input_strings, expected)", "zip(input_strings, expected, strict=False)"),
+    ("return ['Hello World', 'Hello, World!']", "return get_inputs()"),
+])
+def test_zip_consolidation_does_not_hide_answers_or_disappeared_fixture_assertions(old, new):
+    assert run(SLUG_BEFORE, SLUG_AFTER.replace(old, new), SLUG_PROD)[2] == "block"
+
+
+@pytest.mark.parametrize("definition", [
+    "@pytest.fixture(scope='module')", "@pytest.fixture(autouse=True)",
+])
+def test_unknown_fixture_execution_semantics_do_not_gain_callable_prefix_credit(definition):
+    before = SLUG_BEFORE.replace("@pytest.fixture", definition)
+    assert run(before, SLUG_AFTER, SLUG_PROD)[2] == "block"
+
+
+def test_fixture_return_yield_and_extra_effects_remain_unproved():
+    before = SLUG_BEFORE.replace("    return slugify", "    change_runtime()\n    return slugify")
+    assert run(before, SLUG_AFTER, SLUG_PROD)[2] == "block"
+
+
+@pytest.mark.parametrize("shadow", ["zip = 1\n", "zip = custom_zip\n"])
+def test_rebound_zip_cannot_authorize_literal_rows(shadow):
+    after = SLUG_AFTER.replace("@pytest.fixture", shadow + "@pytest.fixture")
+    assert run(SLUG_BEFORE, after, SLUG_PROD)[2] == "block"
+
+
+@pytest.mark.parametrize("context", [
+    {"re.py": b"def sub(pattern, replacement, value):\n    change_runtime()\n    return value\n"},
+    {"conftest.py": b"def pytest_sessionstart(session):\n    configure_runtime()\n"},
+])
+def test_zip_requires_closed_source_and_standard_regex_authority(context):
+    assert run(SLUG_BEFORE, SLUG_AFTER, SLUG_PROD, context=context)[2] == "block"
+
+
+def test_effectful_source_cannot_prove_builtin_zip_is_stable():
+    production = SLUG_PROD.replace("    s = s.lower().strip()", "    poison_zip()\n    s = s.lower().strip()")
+    assert run(SLUG_BEFORE, SLUG_AFTER, production)[2] == "block"

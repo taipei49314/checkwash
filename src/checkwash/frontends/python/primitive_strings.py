@@ -2,7 +2,8 @@
 
 Only one plain function over literal strings is admitted. No repository code
 is executed: string operations, slices and branch returns prove that an
-untrusted formatting hook cannot run on the returned value.
+untrusted formatting hook cannot run on the returned value. A sole standard
+``re`` import permits string ``re.sub``; the caller must prove its authority.
 """
 
 import ast
@@ -19,6 +20,11 @@ def primitive_string_result(source, target, call):
         return False
     body = [node for node in tree.body if not isinstance(node, ast.Pass)
             and not (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and type(node.value.value) is str)]
+    regex = False
+    if (body and isinstance(body[0], ast.Import) and len(body[0].names) == 1
+            and body[0].names[0].name == "re" and body[0].names[0].asname is None):
+        regex = True
+        body = body[1:]
     if len(body) != 1 or not isinstance(body[0], ast.FunctionDef) or body[0].name != target or target == "len":
         return False
     function = body[0]
@@ -28,7 +34,7 @@ def primitive_string_result(source, target, call):
             or any(arg.annotation for arg in args.args) or len(args.args) != len(call.args)):
         return False
     names = {arg.arg for arg in args.args}
-    if "len" in names or len(names) != len(args.args):
+    if names & {"len", "re"} or len(names) != len(args.args):
         return False
     steps = 0
 
@@ -53,10 +59,16 @@ def primitive_string_result(source, target, call):
         if isinstance(node, ast.Call) and not node.keywords:
             if isinstance(node.func, ast.Name) and node.func.id == "len" and len(node.args) == 1 and kind(node.args[0]) is str:
                 return int
+            if (regex and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == "re" and node.func.attr == "sub" and len(node.args) == 3
+                    and all(kind(arg) is str for arg in node.args)):
+                return str
             if isinstance(node.func, ast.Attribute) and kind(node.func.value) is str:
                 if node.func.attr in {"startswith", "endswith"} and len(node.args) == 1 and kind(node.args[0]) is str:
                     return bool
                 if node.func.attr in {"lower", "upper", "strip", "lstrip", "rstrip", "casefold"} and not node.args:
+                    return str
+                if node.func.attr in {"strip", "lstrip", "rstrip"} and len(node.args) == 1 and kind(node.args[0]) is str:
                     return str
         if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not) and kind(node.operand) is bool:
             return bool
@@ -80,6 +92,13 @@ def primitive_string_result(source, target, call):
             return False
         return False
 
+    statements_left = list(function.body)
+    while statements_left and isinstance(statements_left[0], ast.Assign):
+        assignment = statements_left.pop(0)
+        if (len(assignment.targets) != 1 or not isinstance(assignment.targets[0], ast.Name)
+                or assignment.targets[0].id in {"len", "re"} or kind(assignment.value) is not str):
+            return False
+        names.add(assignment.targets[0].id)
     # Each branch independently reaches a primitive-string return. There are
-    # no local assignments, imports, decorators, calls to user code or hooks.
-    return statements(function.body)
+    # no object mutation, decorators, calls to user code or hooks.
+    return statements(statements_left)
