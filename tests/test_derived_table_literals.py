@@ -75,8 +75,14 @@ def test_dynamic_or_oversized_expression_has_no_fold(expression):
 def test_scalar_fixture_params_need_no_unpack_assignment():
     before, _, production = sources(*CASES[0])
     after = ("import pytest\nfrom app.prod import bit_count\n"
-             "@pytest.fixture(params=[5, 0, 7])\ndef n(request):\n    return request.param\n"
+             "@pytest.fixture(params=[5, 0, -7])\ndef n(request):\n    return request.param\n"
              "def test_values(n):\n    assert bit_count(n) == bin(n).count('1')\n")
+    assert run(before, after, production)[2] == "pass"
+
+
+def test_signed_range_bound_remains_a_primitive_scalar():
+    case = ("expand_range", "a,b", "-2,2", "[-2,-1,0,1,2]", "list(range(a,b+1))", "return list(range(a,b+1))")
+    before, after, production = sources(*case, alias=True)
     assert run(before, after, production)[2] == "pass"
 
 

@@ -215,7 +215,7 @@ def _concrete(node, bindings, imports):
     if any(count > 1 for count in uses.values()):
         actual_uses = Counter(n.id for n in ast.walk(original.left) if isinstance(n, ast.Name))
         if not (derived is not None and all(count <= 1 or (
-                isinstance(bindings[name], ast.Constant) and type(bindings[name].value) in (int, float, str, bytes, bool, type(None))
+                isinstance(bindings[name], (ast.Constant, ast.UnaryOp)) and _literal(bindings[name])
                 and actual_uses[name] <= 1) for name, count in uses.items())):
             return None
     approximate = _approx_expected(expected)
@@ -749,7 +749,7 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         body, table, form = [assertion], True, "table-fixture-helper"
     elif (len(names) == 1 and names[0] in fixtures
           and isinstance(fixtures[names[0]], (ast.List, ast.Tuple))
-          and all(isinstance(value, ast.Constant) and type(value.value) in (str, bytes, int, float, bool, type(None))
+          and all(isinstance(value, (ast.Constant, ast.UnaryOp)) and _literal(value)
                   for value in fixtures[names[0]].elts)
           and body and not (isinstance(body[0], ast.Assign) and isinstance(body[0].value, ast.Name)
                            and body[0].value.id == names[0])):
