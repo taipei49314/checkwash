@@ -131,31 +131,157 @@ def _standin(value, bindings):
     return expression is not None and _pure(expression, parameters, scoped)
 
 
-def _subject_call(assertion):
-    """Follow only source-ordered local aliases of the asserted root value."""
-    node = parse_expr(assertion.left or "")
-    seen = set()
-    for _ in range(8):
-        if isinstance(node, ast.Call):
-            return node
-        if not isinstance(node, ast.Name) or node.id in seen:
-            return None
-        seen.add(node.id)
-        expression = (assertion.reaching or {}).get(node.id)
-        if not expression:
-            return None
-        node = parse_expr(expression)
-    return None
-
-
-def _scoped_bindings(tree, qualname, assertion):
-    bindings = _bindings(tree.body)
+def _scope(tree, qualname):
     scope = tree
     for part in qualname.split("."):
         scope = next((node for node in scope.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part), None)
         if scope is None:
             return None
-    if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+    return scope if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)) else None
+
+
+def _binding_sites(statements):
+    """Inventory writes in one namespace, without entering nested scopes."""
+    sites = {}
+
+    class Writes(ast.NodeVisitor):
+        def add(self, name, node):
+            sites.setdefault(name, []).append(node)
+
+        def visit_Name(self, node):
+            if isinstance(node.ctx, (ast.Store, ast.Del)):
+                self.add(node.id, node)
+
+        def visit_Import(self, node):
+            for alias in node.names:
+                self.add(alias.asname or alias.name.split(".")[0], node)
+
+        def visit_ImportFrom(self, node):
+            for alias in node.names:
+                self.add(alias.asname or alias.name, node)
+
+        def visit_FunctionDef(self, node):
+            self.add(node.name, node)
+
+        visit_AsyncFunctionDef = visit_FunctionDef
+        visit_ClassDef = visit_FunctionDef
+
+    visitor = Writes()
+    for statement in statements:
+        visitor.visit(statement)
+    return sites
+
+
+def _subject_call(assertion, tree, qualname):
+    """Project only stable, straight-line captures of the asserted value.
+
+    Assertion.reaching describes bindings at the assertion, not at an earlier
+    assignment. Require a concrete assignment chain and stable dependencies
+    before using that environment to resolve the captured call.
+    """
+    node = parse_expr(assertion.left or "")
+    if isinstance(node, ast.Call):
+        return node
+    if not isinstance(node, ast.Name):
+        return None
+    scope = _scope(tree, qualname)
+    if scope is None:
+        return None
+    if any(isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
+           for statement in tree.body):
+        return None
+    try:
+        statements = ast.parse(assertion.text).body
+    except (SyntaxError, ValueError):
+        return None
+    if len(statements) != 1 or not isinstance(statements[0], ast.Assert):
+        return None
+    matches = [i for i, statement in enumerate(scope.body)
+               if isinstance(statement, ast.Assert) and stable_dump(statement) == stable_dump(statements[0])]
+    if len(matches) != 1:
+        return None
+    prefix = scope.body[:matches[0]]
+    assignments = {}
+    for statement in prefix:
+        if any(isinstance(part, (ast.NamedExpr, ast.Delete, ast.Global, ast.Nonlocal)) for part in ast.walk(statement)):
+            return None
+        if isinstance(statement, (ast.Assign, ast.AnnAssign)):
+            targets = statement.targets if isinstance(statement, ast.Assign) else [statement.target]
+            if len(targets) != 1 or not isinstance(targets[0], ast.Name) or statement.value is None:
+                return None
+            assignments[targets[0].id] = (statement, statement.value)
+        elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if statement.decorator_list or statement.args.defaults or any(statement.args.kw_defaults):
+                return None
+        elif not (isinstance(statement, (ast.Import, ast.ImportFrom, ast.Pass))
+                  or isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant)):
+            return None
+    local_sites = _binding_sites(scope.body)
+    module_sites = _binding_sites(tree.body)
+    local_values = _bindings(prefix)
+    module_values = _bindings(tree.body)
+    boundary = (scope.body[matches[0]].lineno, scope.body[matches[0]].col_offset)
+    seen = set()
+    for _ in range(8):
+        if isinstance(node, ast.Call):
+            break
+        if not isinstance(node, ast.Name) or node.id in seen:
+            return None
+        seen.add(node.id)
+        if len(local_sites.get(node.id, [])) != 1 or node.id not in assignments:
+            return None
+        capture, node = assignments[node.id]
+        position = (capture.lineno, capture.col_offset)
+        if position >= boundary:
+            return None
+        boundary = position
+    else:
+        return None
+    # Other calls can change the names or objects whose earlier values were
+    # captured. This bounded proof accepts only the one subject invocation.
+    for statement in prefix:
+        if isinstance(statement, (ast.Assign, ast.AnnAssign)) and any(
+                isinstance(part, ast.Call) and part is not node for part in ast.walk(statement)):
+            return None
+    pending = [part.id for part in ast.walk(node) if isinstance(part, ast.Name) and isinstance(part.ctx, ast.Load)]
+    checked = set()
+    while pending:
+        name = pending.pop()
+        if name in checked:
+            continue
+        checked.add(name)
+        if name in local_sites:
+            sites = local_sites[name]
+            if len(sites) != 1 or (sites[0].lineno, sites[0].col_offset) >= boundary:
+                return None
+            # The assertion environment does not carry local import bindings.
+            # Never fall back to a same-named module import for this capture.
+            if isinstance(sites[0], (ast.Import, ast.ImportFrom)):
+                return None
+            value = local_values.get(name)
+        else:
+            if len(module_sites.get(name, [])) > 1:
+                return None
+            value = module_values.get(name)
+            if name in module_sites and value is None:
+                return None
+            if isinstance(value, (ast.Name, ast.Attribute, ast.Call)):
+                # A module alias or constructed object captured its inputs at
+                # its assignment, before any subsequent module rebinding.
+                for dependency in ast.walk(value):
+                    if isinstance(dependency, ast.Name) and isinstance(dependency.ctx, ast.Load):
+                        if any((site.lineno, site.col_offset) > (value.lineno, value.col_offset)
+                               for site in module_sites.get(dependency.id, [])):
+                            return None
+        if isinstance(value, ast.AST):
+            pending.extend(part.id for part in ast.walk(value) if isinstance(part, ast.Name) and isinstance(part.ctx, ast.Load))
+    return node
+
+
+def _scoped_bindings(tree, qualname, assertion):
+    bindings = _bindings(tree.body)
+    scope = _scope(tree, qualname)
+    if scope is None:
         return None
     for arg in scope.args.posonlyargs + scope.args.args + scope.args.kwonlyargs:
         bindings[arg.arg] = None
@@ -193,16 +319,16 @@ def subject_replacement_events(ir, changes, *, root_reader=None):
                         or not b.positive or not a.positive or b.right_literal is None
                         or a.right_literal != b.right_literal):
                     continue
-                old_call, new_call = _subject_call(b), _subject_call(a)
+                if trees is None:
+                    trees = (_parse(change.before), _parse(change.after))
+                if any(tree is None for tree in trees):
+                    continue
+                old_call, new_call = _subject_call(b, trees[0], unit.qualname), _subject_call(a, trees[1], unit.qualname)
                 if not isinstance(old_call, ast.Call) or not isinstance(new_call, ast.Call):
                     continue
                 if (stable_dump(old_call.func) == stable_dump(new_call.func)
                         or stable_dump(ast.Tuple(elts=old_call.args, ctx=ast.Load())) != stable_dump(ast.Tuple(elts=new_call.args, ctx=ast.Load()))
                         or [stable_dump(k) for k in old_call.keywords] != [stable_dump(k) for k in new_call.keywords]):
-                    continue
-                if trees is None:
-                    trees = (_parse(change.before), _parse(change.after))
-                if any(tree is None for tree in trees):
                     continue
                 old_bindings = _scoped_bindings(trees[0], unit.qualname, b)
                 new_bindings = _scoped_bindings(trees[1], unit.qualname, a)
