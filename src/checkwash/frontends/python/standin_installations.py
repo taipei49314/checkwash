@@ -364,7 +364,7 @@ def _imports(source):
 
 
 class _Trace:
-    def __init__(self, modules, context, side, deny, budget=None):
+    def __init__(self, modules, context, side, deny, budget=None, search=None):
         self.modules = modules
         self.context = context
         self.side = side
@@ -377,6 +377,7 @@ class _Trace:
         self.steps = 0
         self.test_module = None
         self.budget = budget if budget is not None else [0]
+        self.search = search
 
     def owned(self, target):
         if target.startswith("@") or target.split(".", 1)[0] in self.deny:
@@ -461,7 +462,7 @@ class _Trace:
         return _value(*(self.expression(child, module, env, qualname, native_setattr=native_setattr)
                         for child in ast.iter_child_nodes(node) if isinstance(child, ast.expr)))
 
-    def patch_result(self, item, previous, body, module, env, qualname):
+    def patch_result(self, item, previous, body, module, env, qualname, *, require_authority=False):
         call = item.context_expr
         if not isinstance(call, ast.Call) or not isinstance(item.optional_vars, ast.Name):
             return None
@@ -487,8 +488,9 @@ class _Trace:
                     if isinstance(child, ast.Name)}
         captures -= {arg.arg for value in keywords.values() if isinstance(value, ast.Lambda)
                      for arg in value.args.posonlyargs + value.args.args + value.args.kwonlyargs}
+        record_context = self.closed_record_context(item, module, qualname)
         if not _patch_assertion_body(body, item.optional_vars.id, captures, previous, keywords,
-                                     call_records=self.closed_record_context(item, module, qualname)):
+                                     call_records=record_context):
             return None
         if fn.alias == "unittest.mock.patch" and len(call.args) == 1:
             target = _literal(call.args[0])
@@ -500,6 +502,8 @@ class _Trace:
             return None
         if not target or not all(part.isidentifier() for part in target.split(".")) or not self.owned(target):
             return None
+        if (require_authority or record_context) and not self.patch_authority(module, target):
+            return None
         identity = f"@patch_result:{module.path}:{call.lineno}:{call.col_offset}"
         self.patch_results[identity] = _Effect(
             module.path, target, "mock-result", _patch_signature(keywords, previous),
@@ -507,6 +511,18 @@ class _Trace:
             (call.lineno, call.end_lineno),
         )
         return _Value(identity)
+
+    def patch_authority(self, module, target):
+        from .replacement_authority import closed_replacement_authority
+
+        def read(path):
+            return (self.context.changed[path][self.side] if path in self.context.changed
+                    else self.context.reader(path))
+
+        return closed_replacement_authority(
+            module.tree, target.removesuffix('.__call__'), path=module.path, read=read,
+            search=self.search, modules={'unittest', 'unittest.mock'},
+            symbols={'unittest': {'mock'}, 'unittest.mock': {'patch'}})
 
     def closed_test_context(self, function):
         """A single test definition with no other executable startup context."""
@@ -556,7 +572,8 @@ class _Trace:
             return None
         name = parameters[0].arg
         item = ast.withitem(context_expr=node.decorator_list[0], optional_vars=ast.Name(id=name, ctx=ast.Store()))
-        value = self.patch_result(item, None, node.body, function.module, function.patch_env, function.qualname)
+        value = self.patch_result(item, None, node.body, function.module, function.patch_env, function.qualname,
+                                  require_authority=True)
         return (name, value) if value is not None else None
 
     def observe(self, value):
@@ -806,8 +823,8 @@ def _fixture_requests(function):
     return [name for name in names if name not in direct]
 
 
-def _observed_for_test(modules, test_path, qualname, context, side, deny, budget):
-    trace = _Trace(modules, context, side, deny, budget)
+def _observed_for_test(modules, test_path, qualname, context, side, deny, budget, search=None):
+    trace = _Trace(modules, context, side, deny, budget, search)
     active_modules = []
     for module in modules:
         if module.path == test_path:
@@ -983,6 +1000,9 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
 
     # Ownership probes share the same bounded reader as consumer discovery.
     context = ConftestContext(changes, lambda path: read(path, 1))
+    authority_search = root_searcher
+    if authority_search is None and root_path_lister is not None:
+        authority_search = lambda _needles: root_path_lister()
     events = []
     for path in sorted(test_paths):
         if not collectable(path):
@@ -1022,8 +1042,8 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                     baseline = dict(module.baseline_imports)
                 modules[side].append(module)
         for qualname in sorted(live[0] & live[1]):
-            before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget)
-            after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget)
+            before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget, authority_search)
+            after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget, authority_search)
             previous = {effect.key for effect in before}
             for effect in sorted(after, key=lambda e: (e.path, e.target, e.text, e.span)):
                 if effect.key not in previous:
