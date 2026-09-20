@@ -52,6 +52,7 @@ from checkwash.frontends.python.param_input_identity import mark_param_input_ide
 from checkwash.frontends.python.table_normalization import mark_table_normalization
 from checkwash.frontends.python.table_oracles import project_table_consolidation
 from checkwash.frontends.python.classic_raises import mark_classic_exception_removal
+from checkwash.frontends.python.empty_parameter_sets import mark_empty_parameter_introduction
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
 from checkwash.frontends.python.standin_installations import installation_events
 from checkwash.frontends.python.subject_replacements import subject_replacement_events
@@ -651,6 +652,10 @@ def build_ir(
                 and change.status == "modified" and change.old_path is None
                 and before_parsed is not None and after_parsed is not None):
             before_parsed, after_parsed = mark_classic_exception_removal(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_empty_parameter_introduction(
                 change.before, change.after, before_parsed, after_parsed,
                 path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
             )
