@@ -2390,7 +2390,7 @@ def _collect_unit(
     root_closures: dict[str, list] = {}
     inherited_rows: dict[int, list] = {}
     for site_node, root in _helper_entry_sites(func, nodes_cache):
-        if root not in local_scopes:
+        if id(site_node) in dead or root not in local_scopes:
             continue
         closure = root_closures.get(root)
         if closure is None:
