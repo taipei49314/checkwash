@@ -9,7 +9,7 @@ import ast
 from pathlib import PurePosixPath
 
 
-_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs'}
+_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'zip'}
 
 
 def _literal(node):
@@ -49,12 +49,19 @@ def _expression(node, names):
     if isinstance(node, ast.Call):
         return (isinstance(node.func, ast.Name) and node.func.id in _BUILTINS and node.func.id not in names
                 and not node.keywords and all(_expression(arg, names) for arg in node.args))
-    if isinstance(node, ast.GeneratorExp) and len(node.generators) == 1:
+    if isinstance(node, (ast.GeneratorExp, ast.ListComp)) and len(node.generators) == 1:
         generator = node.generators[0]
-        if (generator.is_async or not isinstance(generator.target, ast.Name) or generator.target.id in names
+        target = generator.target
+        if isinstance(target, ast.Name):
+            bound = [target.id]
+        elif isinstance(target, (ast.Tuple, ast.List)) and all(isinstance(item, ast.Name) for item in target.elts):
+            bound = [item.id for item in target.elts]
+        else:
+            return False
+        if (generator.is_async or len(bound) != len(set(bound)) or set(bound) & names
                 or not _expression(generator.iter, names)):
             return False
-        inner = names | {generator.target.id}
+        inner = names | set(bound)
         return _expression(node.elt, inner) and all(_expression(item, inner) for item in generator.ifs)
     return False
 
@@ -115,6 +122,18 @@ def _pure_module(source, target):
             return False
         found |= node.name == target
     return found
+
+
+def primitive_literal_result(source, target, call):
+    """Import-free primitive operations on literal inputs have no user format hooks.
+
+    The function grammar cannot construct custom objects, import callbacks or
+    mutate an input. Literal defaults and built-in containers keep all reachable
+    values primitive; failures raise before the assertion rather than passing it.
+    """
+    return (all(_literal(arg) for arg in call.args)
+            and all(keyword.arg is not None and _literal(keyword.value) for keyword in call.keywords)
+            and _pure_module(source, target))
 
 
 def pure_imported_calls(source, calls, *, path, read, result_proof=None):

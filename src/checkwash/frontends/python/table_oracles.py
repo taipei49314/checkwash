@@ -35,7 +35,7 @@ from pathlib import PurePosixPath
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
 from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expand_string_blocks, string_block
-from checkwash.frontends.python.oracle_purity import pure_imported_calls
+from checkwash.frontends.python.oracle_purity import primitive_literal_result, pure_imported_calls
 from checkwash.frontends.python.primitive_strings import primitive_string_result
 from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
@@ -233,7 +233,7 @@ def _concrete(node, bindings, imports):
                     continue
                 if not isinstance(part, ast.FormattedValue) or part.format_spec is not None or part.conversion not in (-1, 97, 114, 115):
                     return None
-                if isinstance(part.value, ast.Constant) and type(part.value.value) in (str, bytes, int, float, bool, type(None)):
+                if _literal(part.value):
                     continue
                 if stable_dump(part.value) != stable_dump(actual):
                     return None
@@ -795,8 +795,9 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
                     return None
             elif isinstance(statement.value, ast.Call):
                 callee = dotted_name(statement.value.func)
+                checked_expression = body[-1].test if isinstance(body[-1], ast.Assert) else body[-1]
                 if (not callee or callee.split(".")[0] not in imports - {"pytest"}
-                        or sum(isinstance(node, ast.Name) and node.id == name for node in ast.walk(body[-1])) != 1
+                        or sum(isinstance(node, ast.Name) and node.id == name for node in ast.walk(checked_expression)) != 1
                         or any(isinstance(node, ast.Name) and node.id == name
                                for later in body[:-1] if later is not statement for node in ast.walk(later))):
                     return None
@@ -1245,8 +1246,12 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                 elif isinstance(node, ast.ImportFrom):
                     if node.level or any((alias.asname or alias.name) not in called for alias in node.names):
                         return before_parsed, after_parsed
+            strings_only = any(form in {"zip-fixture", "callable-fixture"} for _, form in module[6])
+            def primitive_result(source, target, call):
+                return (primitive_string_result(source, target, call)
+                        or not strings_only and primitive_literal_result(source, target, call))
             if not pure_imported_calls(module[0].encode(), calls, path=path, read=read,
-                                       result_proof=primitive_string_result):
+                                       result_proof=primitive_result):
                 return before_parsed, after_parsed
             if not _module_unshadowed(path, read, "re"):
                 return before_parsed, after_parsed

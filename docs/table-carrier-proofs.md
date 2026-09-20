@@ -49,3 +49,9 @@ These carriers additionally require unshadowed pytest and closed pure source
 for every subject call, because construction during collection can precede
 an inline assertion. Dynamic tolerances, approximate subject inputs, unknown
 imports and mutating production source receive no projection.
+Diagnostic f-strings may format literal containers and a production result
+when an import-free source proof establishes only primitive operations on
+literal arguments. The grammar includes bounded single-generator list
+comprehensions and builtin `zip`; imported callbacks, object constructors,
+mutation and formatting expressions remain unsupported. Callable fixture
+and zip-fixture carriers retain their narrower scalar-string proof.
