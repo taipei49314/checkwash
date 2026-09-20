@@ -869,7 +869,7 @@ def _module(source, *, baseline):
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
     prune_inert_helpers(tree)
-    expand_literal_table_factories(tree)
+    factory_tests = expand_literal_table_factories(tree)
     wrapper_tests = expand_wrappers(tree)
     if wrapper_tests is None:
         return None
@@ -975,6 +975,8 @@ def _module(source, *, baseline):
             is_table, form = True, "oracle-wrapper"
         if function.name in callable_fixture_tests:
             is_table, form = True, "callable-fixture"
+        if function.name in factory_tests:
+            is_table, form = True, "literal-table-factory"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
