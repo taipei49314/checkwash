@@ -52,6 +52,13 @@ def _module(source):
             or not isinstance(comparison, ast.Compare) or len(comparison.ops) != 1
             or not isinstance(comparison.ops[0], ast.Eq)):
         return None
+    # A dead expression can still bind an enclosing local (PEP 572), change
+    # generator kind or be compile-invalid. Constant folding must not erase
+    # those lexical facts before builtin all/range authority is established.
+    if any(isinstance(node, (ast.NamedExpr, ast.Lambda, ast.comprehension,
+                             ast.Yield, ast.YieldFrom, ast.Await))
+           for node in ast.walk(comparison.comparators[0])):
+        return None
     names = [provider, test.name, stored, loop.target.id]
     if (len(set(names)) != 4 or any(name in _RESERVED or name.startswith(('__', 'pytest_')) for name in names)):
         return None

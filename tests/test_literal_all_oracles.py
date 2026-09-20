@@ -106,3 +106,22 @@ def test_unknown_or_mutating_production_cannot_prove_builtin_all(production):
 def test_active_collection_and_startup_authority_are_required(context):
     ir, _, _ = run(BEFORE, literal_after(), PROD, context=context)
     assert not marked(ir)
+
+
+@pytest.mark.parametrize('dead_expression', ['(all := False)', '(range := False)',
+    '(square := False)', '(checks := False)', '(other := False)', '(yield 5)',
+    '(yield from [5])', '(await unknown())', '(lambda all: all)', '[all for all in [1]]'])
+def test_dead_expected_expression_cannot_hide_lexical_bindings_or_generator_kind(dead_expression):
+    expression = f'(i * i if i > 0 else {dead_expression})'
+    before = BEFORE.replace('i * i', expression)
+    after = literal_after().replace('i * i', expression)
+    ir, _, _ = run(before, after, PROD)
+    assert not marked(ir)
+
+
+def test_inert_conditional_expected_arithmetic_without_binders_remains_supported():
+    expression = '(i * i if i > 0 else 0)'
+    ir, findings, verdict = run(BEFORE.replace('i * i', expression),
+                                literal_after().replace('i * i', expression), PROD)
+    assert marked(ir) and verdict == 'block'
+    assert any(f.rule == 'ASSERT_WEAKENED' and f.severity == 'high' for f in findings)
