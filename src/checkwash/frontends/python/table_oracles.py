@@ -58,6 +58,7 @@ from checkwash.frontends.python.parametrized_membership_oracles import expand_pa
 from checkwash.frontends.python.parameter_helper_answers import expand_parameter_helper_answers
 from checkwash.frontends.python.failing_exception_wrappers import expand_failing_exception_wrappers
 from checkwash.frontends.python.fixture_conditional_answers import expand_fixture_conditional_answers
+from checkwash.frontends.python.hex_tuple_answers import expand_hex_tuple_answers
 from checkwash.frontends.python.literal_iteration_oracles import expand_literal_iteration_oracles
 from checkwash.frontends.python.fixture_row_helpers import expand_fixture_row_helpers
 from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
@@ -1066,6 +1067,7 @@ def _module(source, *, baseline):
     captured_helper_tests = expand_captured_assert_helpers(tree, _literal)
     regrouped_capture_tests = regroup_complete_captures(tree, _literal)
     local_auxiliary = extract_local_auxiliary_oracles(tree)
+    hex_tuple_tests = expand_hex_tuple_answers(tree)
     raises_oracles = extract_raises_oracles(tree)
     tuple_tests = expand_tuple_oracles(tree)
     iteration_tests = expand_literal_iteration_oracles(tree)
@@ -1274,6 +1276,8 @@ def _module(source, *, baseline):
             is_table, form = True, "literal-none-test-return"
         if function.name in conditional_fixture_tests:
             is_table, form = True, "fixture-conditional-answer"
+        if function.name in hex_tuple_tests:
+            is_table, form = True, "hex-tuple-answer"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
@@ -1328,7 +1332,7 @@ def _module(source, *, baseline):
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or membership_fixture_tests or parameter_helper_tests or failing_wrapper_tests or conditional_fixture_tests
-                 or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
+                 or auxiliary or raises_oracles or tuple_tests or hex_tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
                  or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests or literal_subject_tests or captured_helper_tests or inert_signature_tests or regrouped_capture_tests
                  or any(form in {'string-block', 'grouped-assert-helper'} for _, form in forms)
                  or any(getattr(case.assertion, '_requires_closed_helper', False) for case in result)),
