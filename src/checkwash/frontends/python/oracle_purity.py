@@ -54,7 +54,7 @@ def _expression(node, names):
         return all(item is None or _expression(item, names) for item in (node.lower, node.upper, node.step))
     if isinstance(node, ast.Call):
         if (isinstance(node.func, ast.Attribute)
-                and node.func.attr in {'replace', 'strip', 'lstrip', 'rstrip', 'split', 'rsplit', 'join', 'lower', 'upper', 'casefold', 'startswith'}):
+                and node.func.attr in {'replace', 'strip', 'lstrip', 'rstrip', 'split', 'rsplit', 'join', 'lower', 'upper', 'casefold', 'startswith', 'isdigit'}):
             # Parameters and every admitted intermediate value are concrete
             # builtins. These string/bytes methods cannot mutate a receiver
             # or invoke an external callback; other receivers raise normally.
