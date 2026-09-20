@@ -70,7 +70,7 @@ from checkwash.frontends.python.prefix_predicates import expand_prefix_predicate
 from checkwash.frontends.python.callable_fixture_rows import consumer_rows, fixture_prefix_rows
 from checkwash.frontends.python.normalized_result_tables import project_normalized_result_table
 from checkwash.frontends.python.unique_predicates import (complete_unique_helper, expand_unique_predicates,
-                                                       _unique_literal, unshadowed_unique_builtins)
+                                                       _unique_literal, input_unique_count, unshadowed_unique_builtins)
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -256,6 +256,8 @@ def _concrete(node, bindings, imports):
             return None
     approximate = _approx_expected(expected)
     if getattr(concrete, '_requires_unique_expected', False) and not _unique_literal(expected):
+        return None
+    if getattr(concrete, '_requires_input_unique_count', False) and not input_unique_count(actual, expected):
         return None
     if not isinstance(compare.ops[0], (ast.Eq, ast.Is)) or not (_literal(expected) or approximate):
         return None

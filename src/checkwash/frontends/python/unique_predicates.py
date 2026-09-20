@@ -1,8 +1,9 @@
 """Keep an exact primitive sequence oracle beside an entailed uniqueness check.
 
-The sole supported helper is len(value) == len(set(value)). Its complete
-predicate must hold for the exact flat literal sequence required by the same
-test. Neither a predicate alone nor a partial element check becomes an oracle.
+Supported clauses count unique output or unique input elements. The complete
+predicate must follow from the exact flat literal answer and, for input counts,
+the concrete input row. Neither a predicate alone nor partial element checks
+become an exact oracle.
 """
 import ast
 import copy
@@ -31,11 +32,28 @@ def _unique_literal(node):
             and len(values) == len(set(values)))
 
 
+def input_unique_count(actual, expected):
+    """The exact answer entails the helper's input-cardinality clause.
+
+    These are concrete flat primitive row values. The caller separately
+    proves that production cannot mutate the input before the second check.
+    """
+    if (not isinstance(actual, ast.Call) or actual.keywords or len(actual.args) != 1
+            or not isinstance(actual.args[0], (ast.List, ast.Tuple)) or not _unique_literal(expected)):
+        return False
+    try:
+        values, answer = ast.literal_eval(actual.args[0]), ast.literal_eval(expected)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return False
+    return (len(values) <= 64 and all(type(value) in (type(None), bool, int, float, str, bytes) for value in values)
+            and len(answer) == len(set(values)))
+
+
 def complete_unique_helper(node):
     """Capture, exact expected argument, then the complete uniqueness clause.
 
-    A later concrete-row check must prove the expected sequence is unique;
-    this syntactic normalization alone grants no predicate or oracle credit.
+    Later concrete-row checks prove a unique expected sequence and any input
+    cardinality obligation. This syntax alone grants no equivalence credit.
     """
     names = _args(node)
     if names is None or len(names) != 2 or len(set(names)) != 2 or len(node.body) != 3:
@@ -46,20 +64,29 @@ def complete_unique_helper(node):
             or not isinstance(assignment.value.func, ast.Name) or assignment.value.keywords
             or len(assignment.value.args) != 1 or not isinstance(assignment.value.args[0], ast.Name)
             or assignment.value.args[0].id != names[0]
-            or not isinstance(exact, ast.Assert) or exact.msg is not None
-            or not isinstance(predicate, ast.Assert) or predicate.msg is not None):
+            or not isinstance(exact, ast.Assert) or not isinstance(predicate, ast.Assert)):
         return None
     local = assignment.targets[0].id
     if local in names or local == assignment.value.func.id:
         return None
     expected = ast.parse(f'{local} == {names[1]}', mode='eval').body
     unique = ast.parse(f'len({local}) == len(set({local}))', mode='eval').body
-    if stable_dump(exact.test) != stable_dump(expected) or stable_dump(predicate.test) != stable_dump(unique):
+    input_count = ast.parse(f'len({local}) == len(set({names[0]}))', mode='eval').body
+    counted_input = stable_dump(predicate.test) == stable_dump(input_count)
+    if (stable_dump(exact.test) != stable_dump(expected)
+            or not (stable_dump(predicate.test) == stable_dump(unique) and exact.msg is None and predicate.msg is None
+                    or counted_input and (predicate.msg is None or isinstance(predicate.msg, ast.Constant)
+                                           and type(predicate.msg.value) is str))):
         return None
     assertion = copy.deepcopy(exact)
-    assertion.test.left = copy.deepcopy(assignment.value)
+    class Captured(ast.NodeTransformer):
+        def visit_Name(self, item):
+            return copy.deepcopy(assignment.value) if item.id == local else item
+    assertion = Captured().visit(assertion)
     assertion._requires_unique_expected = True
     assertion._requires_primitive_string = True
+    if counted_input:
+        assertion._requires_input_unique_count = True
     return assertion
 
 
