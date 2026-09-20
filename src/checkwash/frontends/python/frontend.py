@@ -2043,6 +2043,7 @@ def _executed_scopes(
     max_depth: int = 4,
     caches: tuple[dict, dict] | None = None,
     roots: tuple[str, ...] | None = None,
+    local_scopes: dict[str, ast.AST] | None = None,
 ) -> list:
     """The unit, plus every same-file scope it actually reaches.
 
@@ -2057,13 +2058,8 @@ def _executed_scopes(
     per-root depth is counted from the root exactly as the default counts
     it from the frontier.
     """
-    scopes = _local_scopes(func, module_scopes)
-    with_entered = {
-        _callee_root(item.context_expr)
-        for node in _scope_nodes(func)
-        if isinstance(node, (ast.With, ast.AsyncWith))
-        for item in node.items
-    }
+    scopes = local_scopes if local_scopes is not None else _local_scopes(func, module_scopes)
+    with_entered = None
     out = [func]
     seen: set[int] = {id(func)}
     frontier = [
@@ -2076,8 +2072,16 @@ def _executed_scopes(
             continue
         # A @contextmanager runs its body only when entered: building the
         # generator and never using `with` runs nothing (tamper 004).
-        if _is_contextmanager(target) and name not in with_entered:
-            continue
+        if _is_contextmanager(target):
+            if with_entered is None:
+                with_entered = {
+                    _callee_root(item.context_expr)
+                    for node in _scope_nodes_cached(func, caches[0] if caches is not None else None)
+                    if isinstance(node, (ast.With, ast.AsyncWith))
+                    for item in node.items
+                }
+            if name not in with_entered:
+                continue
         seen.add(id(target))
         out.append(target)
         if isinstance(target, ast.ClassDef):
@@ -2159,6 +2163,10 @@ def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
             ):
                 bound[stmt.targets[0].id] = stmt.value
                 continue
+            # Without an earlier candidate binding there is nothing to match
+            # or invalidate; scanning this assertion cannot add a vacuity id.
+            if not bound:
+                continue
             if isinstance(stmt, ast.Assert) and id(stmt) not in out:
                 t = stmt.test
                 if (
@@ -2225,7 +2233,10 @@ def _collect_unit(
     # helper's assertions are this unit's oracle, a helper's `except` is not
     # this unit's handler. Only the assertion set follows reachability.
     nodes_cache = caches[0] if caches is not None else None
-    executed = _executed_scopes(func, module_scopes or {}, caches=caches)
+    # The callable map is stable for this unit; reuse it for the initial walk
+    # and each helper entry instead of rediscovering the same nested scopes.
+    local_scopes = _local_scopes(func, module_scopes or {})
+    executed = _executed_scopes(func, module_scopes or {}, caches=caches, local_scopes=local_scopes)
     reached_asserts = {
         id(n)
         for scope in executed
@@ -2372,7 +2383,6 @@ def _collect_unit(
     # downstream — so a site's copies differ by `reaching_sig` alone, and
     # deleting one of N calls surfaces as a removed assertion instead of
     # vanishing into a same-size set.
-    local_scopes = _local_scopes(func, module_scopes or {})
     root_closures: dict[str, list] = {}
     inherited_rows: dict[int, list] = {}
     for site_node, root in _helper_entry_sites(func, nodes_cache):
@@ -2380,7 +2390,8 @@ def _collect_unit(
             continue
         closure = root_closures.get(root)
         if closure is None:
-            closure = _executed_scopes(func, module_scopes or {}, caches=caches, roots=(root,))
+            closure = _executed_scopes(func, module_scopes or {}, caches=caches,
+                                       roots=(root,), local_scopes=local_scopes)
             root_closures[root] = closure
         for scope in closure:
             if scope is func:
