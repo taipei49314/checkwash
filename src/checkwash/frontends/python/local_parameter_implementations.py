@@ -21,7 +21,7 @@ from checkwash.pyenv import known_baseline
 _RESERVED = IMPLICIT_ENTRY_NAMES | {'pytest', 'pytestmark', 'pytest_plugins', 'request', 'round'}
 
 
-def _module(source, after):
+def _module(source, after, *, after_count=2):
     tree = _tree(source)
     if tree is None:
         return None
@@ -45,7 +45,7 @@ def _module(source, after):
                 or name in _RESERVED and not (name == 'pytest' and isinstance(node, ast.Import))):
             return None
         occupied.add(name)
-    if imported is None or not functions or (after and (not pytest or len(functions) != 2)):
+    if imported is None or not functions or (after and (not pytest or len(functions) != after_count)):
         return None
     provider = imported.names[0].asname or imported.names[0].name
     if provider.startswith('test'):
