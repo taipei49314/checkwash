@@ -953,9 +953,11 @@ def _module(source, *, baseline):
             functions.append(node)
         else:
             return None
+    count_before_forwarding = len(functions)
     functions = _forwarded_functions(functions, imports)
     if functions is None:
         return None
+    expanded_forwarders = len(functions) != count_before_forwarding
     functions, callable_fixture_tests = _callable_fixtures(functions, imports)
     if functions is None:
         return None
@@ -1040,7 +1042,8 @@ def _module(source, *, baseline):
                                          for node in ast.walk(tree)):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
-            bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers), bool(unittest_tests))
+            bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers or expanded_forwarders),
+            bool(unittest_tests))
 
 
 def _module_unshadowed(path, read, module):

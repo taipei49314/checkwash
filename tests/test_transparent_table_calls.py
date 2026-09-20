@@ -75,6 +75,16 @@ def test_unknown_fixture_startup_withholds_forwarding_credit():
     assert run(BEFORE, AFTER, PRODUCTION, context={"conftest.py": b"def pytest_sessionstart(session):\n    configure()\n"})[2] == "block"
 
 
+@pytest.mark.parametrize("production", [
+    "from tests.test_cases import calculate_abs_diff\ndef abs_diff(a,b):\n    return calculate_abs_diff(a,b)\n",
+    "def abs_diff(a,b):\n    from tests.test_cases import calculate_abs_diff\n    return calculate_abs_diff(a,b)\n",
+    "def abs_diff(a,b):\n    return getattr(__import__('tests.test_cases'), 'calculate_abs_diff')(a,b)\n",
+])
+def test_production_backreference_withholds_transparent_forwarding_credit(production):
+    ir, _, _ = run(BEFORE, AFTER, production)
+    assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
+
+
 STRIP_BEFORE = ("from app.prod import strip_prefix\ndef test_hit():\n    assert strip_prefix('foobar', 'foo') == 'bar'\n"
                 "def test_miss():\n    assert strip_prefix('foobar', 'baz') == 'foobar'\n"
                 "def test_empty_prefix():\n    assert strip_prefix('ab', '') == 'ab'\n")
