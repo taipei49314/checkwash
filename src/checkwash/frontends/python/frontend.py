@@ -1450,13 +1450,14 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None
     completely silent before (confirmed red-team finding).
     """
     dead: set[int] = set()
-    resolved_guards = guard_truths(func, fixtures or {}, _static_truth)
+    resolved_guards = None
 
     def kill(node: ast.AST) -> None:
         for sub in ast.walk(node):
             dead.add(id(sub))
 
     def scan(body: list[ast.stmt]) -> None:
+        nonlocal resolved_guards
         stop = False
         for stmt in body:
             if stop:
@@ -1472,6 +1473,10 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None
                 kill(stmt)
                 continue
             if isinstance(stmt, (ast.If, ast.While)):
+                # Most tests have no branch. Resolve bindings only when the
+                # reachability walk needs a guard, using the same whole scope.
+                if resolved_guards is None:
+                    resolved_guards = guard_truths(func, fixtures or {}, _static_truth)
                 truth = resolved_guards.get(id(stmt), _static_truth(stmt.test))
                 if truth is False:
                     for inner in stmt.body:

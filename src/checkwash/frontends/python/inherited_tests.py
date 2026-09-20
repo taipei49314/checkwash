@@ -19,6 +19,8 @@ def inherited_test_methods(tree: ast.Module):
             if node.name in classes:
                 ambiguous.add(node.name)
             classes[node.name] = node
+    if not any(name.startswith("Test") for name in classes):
+        return
     # A class name or one of its attributes may be rebound after definition.
     # Such a file no longer describes the concrete hierarchy used below.
     for node in ast.walk(tree):
