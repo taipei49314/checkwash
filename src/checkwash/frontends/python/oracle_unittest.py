@@ -36,6 +36,14 @@ def _assertion(statement):
     if not isinstance(statement, ast.Expr) or not isinstance(statement.value, ast.Call):
         return statement
     call = statement.value
+    if (isinstance(call.func, ast.Attribute) and isinstance(call.func.value, ast.Name)
+            and call.func.value.id == 'self' and call.func.attr == 'assertTrue'
+            and len(call.args) == 1 and not call.keywords and isinstance(call.args[0], ast.Compare)
+            and len(call.args[0].ops) == 1 and isinstance(call.args[0].ops[0], (ast.Eq, ast.Is))):
+        # Default assertTrue applies the same truth test as a native assert.
+        # Keep the complete comparison and operator; the caller still owns
+        # TestCase authority, primitive source purity and exact multiplicity.
+        return ast.copy_location(ast.Assert(test=copy.deepcopy(call.args[0]), msg=None), statement)
     if (not isinstance(call.func, ast.Attribute) or not isinstance(call.func.value, ast.Name)
             or call.func.value.id != 'self' or call.func.attr not in {'assertEqual', 'assertIs'}
             or len(call.args) != 2 or call.keywords):
