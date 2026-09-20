@@ -35,6 +35,7 @@ from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
+from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expand_string_blocks, string_block
 from checkwash.frontends.python.oracle_purity import primitive_literal_result, pure_imported_calls, shared_literal_collection_inputs
@@ -960,6 +961,19 @@ def _module(source, *, baseline):
            and (node.name in _IMPLICIT_HOOKS or node.name.startswith(("pytest_", "__")))
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
+    conditional_tests = set()
+    if b'if' in source:
+        # Share the ordinary frontend's exact conditional-failure grammar.
+        # Capture positions before lowering so every newly exposed oracle
+        # requires closed production proof before table-equivalence credit.
+        conditional_spans = {(node.lineno, node.col_offset) for node in ast.walk(tree)
+                             if isinstance(node, ast.If)}
+        if conditional_spans:
+            tree = conditional_oracle_carriers(tree)
+            conditional_tests = {function.name for function in ast.walk(tree)
+                if isinstance(function, ast.FunctionDef) and any(
+                    isinstance(node, ast.Assert) and (node.lineno, node.col_offset) in conditional_spans
+                    for node in ast.walk(function))}
     local_auxiliary = extract_local_auxiliary_oracles(tree)
     raises_oracles = extract_raises_oracles(tree)
     tuple_tests = expand_tuple_oracles(tree)
@@ -1138,6 +1152,8 @@ def _module(source, *, baseline):
             is_table, form = True, "literal-fixtures"
         if function.name in iteration_tests:
             is_table, form = True, "literal-iteration"
+        if function.name in conditional_tests:
+            is_table, form = True, "conditional-oracle"
         if function.name in prefix_tests:
             is_table, form = True, "literal-prefix-predicate"
         if function.name in unique_tests:
@@ -1190,7 +1206,7 @@ def _module(source, *, baseline):
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
                  or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
-                 or predicate_tests or prefix_tests or unique_tests or unique_helpers
+                 or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests
                  or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles, local_auxiliary)
