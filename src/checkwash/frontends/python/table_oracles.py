@@ -1240,6 +1240,23 @@ def _ordinary_rows_cover(module, parsed):
                for name, form in module[6])
 
 
+def _closed_proof_imports(module, calls):
+    """Every import must be an inspected subject or a proved standard wrapper."""
+    called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
+    for node in ast.parse(module[0]).body:
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        authority = trusted_wrapper_import(node)
+        if authority is not None and authority in module[7]:
+            continue  # the caller checked this wrapper's unshadowed source
+        if isinstance(node, ast.Import):
+            if any(alias.name != "pytest" or alias.asname for alias in node.names):
+                return False
+        elif node.level or any((alias.asname or alias.name) not in called for alias in node.names):
+            return False
+    return True
+
+
 def project_table_consolidation(before: bytes, after: bytes, before_parsed: ParsedFile, after_parsed: ParsedFile,
                                 *, path: str, root_reader=None, root_searcher=None, changes=()):
     """Project proved concrete coverage while retaining expected-value edits.
@@ -1373,7 +1390,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                 return before_parsed, after_parsed
             if not _module_unshadowed(path, read, "re"):
                 return before_parsed, after_parsed
-        if (old[8] or new[8]) and not pure_imported_calls(module[0].encode(),
-                                                [case.assertion.test.left for case in module[2]], path=path, read=read):
-            return before_parsed, after_parsed
+        if old[8] or new[8]:
+            calls = [case.assertion.test.left for case in module[2]]
+            if not _closed_proof_imports(module, calls) or not pure_imported_calls(
+                    module[0].encode(), calls, path=path, read=read):
+                return before_parsed, after_parsed
     return _project(before_parsed, old[0], old[2]), _project(after_parsed, new[0], new[2])

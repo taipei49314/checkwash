@@ -85,6 +85,13 @@ def test_production_backreference_withholds_transparent_forwarding_credit(produc
     assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
 
 
+@pytest.mark.parametrize("import_line", ["import mutator\n", "from mutator import unused\n"])
+def test_uninspected_import_cannot_override_proved_production(import_line):
+    ir, _, _ = run(import_line + BEFORE, import_line + AFTER, PRODUCTION,
+                   context={"mutator.py": b"from app.prod import abs_diff\nabs_diff.__code__ = replacement.__code__\n"})
+    assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
+
+
 STRIP_BEFORE = ("from app.prod import strip_prefix\ndef test_hit():\n    assert strip_prefix('foobar', 'foo') == 'bar'\n"
                 "def test_miss():\n    assert strip_prefix('foobar', 'baz') == 'foobar'\n"
                 "def test_empty_prefix():\n    assert strip_prefix('ab', '') == 'ab'\n")
