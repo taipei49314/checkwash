@@ -1097,13 +1097,19 @@ def _module(source, *, baseline):
                        and node.names[0].name == "pytest" and node.names[0].asname is None for node in tree.body)
     retained = []
     for node in tree.body:
+        unused_parameter_fixture = False
+        if (plain_pytest and isinstance(node, ast.FunctionDef) and node.name not in references
+                and definitions[node.name] == 1):
+            parameters = _fixture(node)
+            unused_parameter_fixture = (isinstance(parameters, (ast.List, ast.Tuple))
+                                        and 0 < len(parameters.elts) <= MAX_CASES and _immutable_rows(parameters))
         unused_fixture = (plain_pytest and isinstance(node, ast.FunctionDef) and _args(node) == []
                           and node.name not in references and definitions[node.name] == 1
                           and not node.name.startswith("test") and len(node.decorator_list) == 1
                           and dotted_name(node.decorator_list[0]) == "pytest.fixture"
                           and len(node.body) == 1 and isinstance(node.body[0], ast.Return)
                           and _literal(node.body[0].value))
-        if not unused_fixture:
+        if not (unused_fixture or unused_parameter_fixture):
             retained.append(node)
     pruned_fixtures = len(retained) != len(tree.body)
     tree.body = retained
