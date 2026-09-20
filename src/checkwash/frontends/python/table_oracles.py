@@ -1292,6 +1292,24 @@ def _closed_proof_imports(module, calls):
     return True
 
 
+def _native_renames(old, new):
+    """Renamed/reordered one-assert tests retain every concrete call input.
+
+    This optional proof additionally requires pure production on both sides;
+    source-order-sensitive subjects cannot acquire renamed-unit identities.
+    """
+    if old[3] or new[3] or not old[2] or len(old[2]) != len(new[2]):
+        return False
+    for module in (old, new):
+        if any(form != 'native' for _, form in module[6]):
+            return False
+        if any(len(case.source_function.body) != 1 or not isinstance(case.source_function.body[0], ast.Assert)
+               for case in module[2]):
+            return False
+    return ([case.source_function.name for case in old[2]] != [case.source_function.name for case in new[2]]
+            and Counter(_subject_key(case) for case in old[2]) == Counter(_subject_key(case) for case in new[2]))
+
+
 def project_table_consolidation(before: bytes, after: bytes, before_parsed: ParsedFile, after_parsed: ParsedFile,
                                 *, path: str, root_reader=None, root_searcher=None, changes=()):
     """Project proved concrete coverage while retaining expected-value edits.
@@ -1319,7 +1337,10 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         old, new = _module(before, baseline=True), _module(after, baseline=False)
         if old is None:
             old = _module(before, baseline=False)
-        if old is None or new is None or old[1] != new[1] or not (old[3] or new[3]):
+        if old is None or new is None or old[1] != new[1]:
+            return before_parsed, after_parsed
+        native_renames = _native_renames(old, new)
+        if not (old[3] or new[3] or native_renames):
             return before_parsed, after_parsed
         if (old[3] and new[3] and old[6] == new[6]
                 and _ordinary_rows_cover(old, before_parsed) and _ordinary_rows_cover(new, after_parsed)):
@@ -1352,7 +1373,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             # preserves every original check without a new failure barrier.
             return before_parsed, after_parsed
         if old_keys != new_keys[:len(old_keys)]:
-            if not (old[9] or new[9] or indexed_extension) or Counter(old_keys) - Counter(new_keys):
+            if not (old[9] or new[9] or indexed_extension or native_renames) or Counter(old_keys) - Counter(new_keys):
                 return before_parsed, after_parsed
             # Default TestCase sorts test methods and repeats setup per test.
             # Reordering earns credit only after both imported-source purity
@@ -1433,7 +1454,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                 return before_parsed, after_parsed
             if not _module_unshadowed(path, read, "re"):
                 return before_parsed, after_parsed
-        if old[8] or new[8]:
+        if old[8] or new[8] or native_renames:
             calls = [case.assertion.test.left for case in module[2]]
             if not _closed_proof_imports(module, calls) or not pure_imported_calls(
                     module[0].encode(), calls, path=path, read=read):

@@ -8,8 +8,10 @@ list of builtins. No repository function is evaluated by this proof.
 import ast
 from pathlib import PurePosixPath
 
+from checkwash.frontends.python.oracle_collections import fresh_unique_merge
 
-_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip', 'int', 'str'}
+
+_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip', 'int', 'str', 'list', 'set'}
 
 
 def _literal(node):
@@ -171,7 +173,7 @@ def _pure_module(source, target):
         if len(names) != len(args.args) or names & (_BUILTINS | {'ValueError'}):
             return False
         body = node.body[1:] if node.body and _inert(node.body[0]) else node.body
-        if not body or not _body(body, names):
+        if not body or not (_body(body, names) or fresh_unique_merge(body, [arg.arg for arg in args.args])):
             return False
         found |= node.name == target
     return found
