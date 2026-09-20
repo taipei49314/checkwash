@@ -8,7 +8,7 @@ checks. No repository function is evaluated by this proof.
 import ast
 from pathlib import PurePosixPath
 
-from checkwash.frontends.python.oracle_collections import fresh_interleave, fresh_unique_merge
+from checkwash.frontends.python.oracle_collections import fresh_interleave, fresh_unique_merge, fresh_unique_sequence
 from checkwash.frontends.python.oracle_regex import closed_regex_body
 
 
@@ -184,6 +184,7 @@ def _pure_module(source, target):
         body = node.body[1:] if node.body and _inert(node.body[0]) else node.body
         if not body or not (_body(body, names) or fresh_unique_merge(body, [arg.arg for arg in args.args])
                             or fresh_interleave(body, [arg.arg for arg in args.args])
+                            or fresh_unique_sequence(body, [arg.arg for arg in args.args])
                             or regex and closed_regex_body(body, [arg.arg for arg in args.args])):
             return False
         found |= node.name == target

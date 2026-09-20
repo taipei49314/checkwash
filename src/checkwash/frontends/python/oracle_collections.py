@@ -50,3 +50,27 @@ for {index} in range({limit}):
 return {output}
 ''')
     return ast.dump(ast.Module(body=body, type_ignores=[])) == ast.dump(expected)
+
+
+def fresh_unique_sequence(body, parameters):
+    """An exact fresh-local stable deduplication loop over one sequence."""
+    if len(parameters) != 1 or len(body) != 4:
+        return False
+    first, second, loop, returned = body
+    if (not isinstance(first, ast.Assign) or len(first.targets) != 1 or not isinstance(first.targets[0], ast.Name)
+            or not isinstance(second, ast.Assign) or len(second.targets) != 1 or not isinstance(second.targets[0], ast.Name)
+            or not isinstance(loop, ast.For) or not isinstance(loop.target, ast.Name)):
+        return False
+    seen, output, item = first.targets[0].id, second.targets[0].id, loop.target.id
+    bindings = [*parameters, seen, output, item]
+    if len(set(bindings)) != len(bindings) or {'list', 'set'} & set(bindings):
+        return False
+    expected = ast.parse(f'''{seen} = set()
+{output} = []
+for {item} in {parameters[0]}:
+    if {item} not in {seen}:
+        {seen}.add({item})
+        {output}.append({item})
+return {output}
+''')
+    return ast.dump(ast.Module(body=body, type_ignores=[])) == ast.dump(expected)
