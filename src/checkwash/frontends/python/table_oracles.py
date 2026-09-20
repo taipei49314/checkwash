@@ -736,6 +736,44 @@ def _callable_fixtures(functions, imports):
     return (result, expanded) if used == fixtures.keys() else (None, set())
 
 
+def _captured_blocks(node, imports, forbidden):
+    """Partition complete capture/check blocks without carrying local aliases.
+
+    Every block must independently satisfy the existing string/dictionary
+    grammar and literal imported-call proof. Reassigning the result name is
+    harmless only under the two-sided production purity check required by
+    the string-block carrier; no value can flow across block boundaries.
+    """
+    if forbidden & {'len', 'max'}:
+        return None
+    groups = []
+    for statement in node.body:
+        if isinstance(statement, ast.Assign) and isinstance(statement.value, ast.Call):
+            if (len(statement.targets) != 1 or not isinstance(statement.targets[0], ast.Name)
+                    or statement.targets[0].id in forbidden | {'len', 'max'}):
+                return None
+            groups.append([statement])
+        elif isinstance(statement, ast.Assert) and groups:
+            groups[-1].append(statement)
+        else:
+            return None
+    if not 2 <= len(groups) <= MAX_CASES:
+        return None
+    result = []
+    for group in groups:
+        function = copy.copy(node)
+        function.body = group
+        block = string_block(function)
+        if block is None:
+            return None
+        assertion, body = block
+        concrete = _concrete(assertion, {}, imports)
+        if concrete is None:
+            return None
+        result.append(_Case(concrete, group[-1], node, body))
+    return result
+
+
 def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, used_constants, *, baseline,
           multiple=False):
     names = _args(node)
@@ -778,6 +816,10 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
                     "unittest" if multiple else "grouped-assert-helper" if grouped_helpers else "native")
         if multiple and not (len(node.body) == 1 and isinstance(node.body[0], ast.For)):
             return None
+    if not names and not node.decorator_list:
+        blocks = _captured_blocks(node, imports, imports | helpers.keys() | table_helpers.keys() | constants.keys())
+        if blocks is not None:
+            return blocks, True, 'string-block'
     block = string_block(node) if not names and not node.decorator_list else None
     if block is not None:
         assertion, body = block
