@@ -505,11 +505,13 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
     names = _args(node)
     if names is None or not node.name.startswith("test"):
         return None
-    if multiple and not names and not node.decorator_list and 1 <= len(node.body) <= MAX_CASES:
+    if not names and not node.decorator_list and 1 <= len(node.body) <= MAX_CASES and (multiple or len(node.body) > 1):
         assertions = [_checked(statement, {}, imports, helpers, set(), {}) for statement in node.body]
-        if any(assertion is None for assertion in assertions):
+        if all(assertion is not None for assertion in assertions):
+            return ([_Case(assertion, statement, node) for assertion, statement in zip(assertions, node.body)],
+                    multiple, "unittest" if multiple else "native")
+        if multiple:
             return None
-        return [_Case(assertion, statement, node) for assertion, statement in zip(assertions, node.body)], True, "unittest"
     block = string_block(node) if not names and not node.decorator_list else None
     if block is not None:
         assertion, body = block
