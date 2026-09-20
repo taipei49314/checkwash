@@ -18,6 +18,7 @@ from pathlib import PurePosixPath
 from checkwash.change import FileChange
 from checkwash.frontends.python.frontend import _Offsets, normalize_source
 from checkwash.frontends.python.expected_constants import folded_expected
+from checkwash.frontends.python.callable_fixture_expectations import callable_fixture_events
 from checkwash.frontends.python.expected_call_authority import safe_call_graph
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
@@ -620,4 +621,8 @@ def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sour
                 continue
             records.append((key[0], lost.text, lost.span, arrived.text, arrived.span,
                             key[1], key[2], lost.expected, arrived.expected))
+        try:
+            records.extend(callable_fixture_events(file.path, *raw[file.path], source))
+        except _Unsupported:
+            pass  # exhausted optional source authority is unknown
         file.expected_provenance_events = tuple(records)
