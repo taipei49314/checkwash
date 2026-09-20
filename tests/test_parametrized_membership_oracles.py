@@ -118,7 +118,6 @@ def test_unproved_fixture_or_parameter_binding_retains_original_tree(after):
 @pytest.mark.parametrize('after', [AFTER.replace('[200, 201, 204]', '[201, 200, 204]'),
     AFTER.replace('[200, 201, 204]', '[200, 204]'),
     AFTER.replace('[200, 201, 204]', '[200, 202, 204]'),
-    AFTER.replace('== (code in', 'is (code in'),
 ])
 def test_existing_input_operator_order_and_count_checks_still_own_projection(after):
     assert not projected(run(BEFORE, after, PRODUCTION))
@@ -161,3 +160,9 @@ def test_imported_test_named_callable_is_not_treated_as_an_inert_provider():
     original = ast.dump(tree)
     assert not expand_parametrized_membership(tree)
     assert ast.dump(tree) == original
+
+
+def test_numeric_result_cannot_make_equality_and_identity_interchangeable():
+    production = 'def is_success(code):\n    return 1 if code in (200, 201, 204) else 0\n'
+    after = AFTER.replace('== (code in', 'is (code in')
+    assert not projected(run(BEFORE, after, production))
