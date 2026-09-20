@@ -133,6 +133,15 @@ def _implied_membership_block(function):
 
 def string_block(function):
     """One subject call, length/prefix checks, then the exact string oracle."""
+    # Literal string messages have no deferred calls or formatting effects.
+    # Normalize only these diagnostics before comparing complete auxiliary
+    # bodies; every checked expression and expected value stays intact.
+    if any(isinstance(node, ast.Assert) and isinstance(node.msg, ast.Constant)
+           and type(node.msg.value) is str for node in function.body):
+        function = copy.deepcopy(function)
+        for node in function.body:
+            if isinstance(node, ast.Assert) and isinstance(node.msg, ast.Constant) and type(node.msg.value) is str:
+                node.msg = None
     dictionary = _dictionary_field_block(function)
     if dictionary is not None:
         return dictionary
