@@ -1424,17 +1424,21 @@ def _closed_proof_imports(module, calls):
 
 
 def _native_renames(old, new):
-    """Renamed/reordered one-assert tests retain every concrete call input.
+    """Renamed or regrouped native tests retain every concrete call input.
 
     This optional proof additionally requires pure production on both sides;
     source-order-sensitive subjects cannot acquire renamed-unit identities.
+    Each complete body contains only the already-proved native assertions,
+    and exact call multiplicity survives a merge or split. Grouping may change
+    which assertion executes after a failure, but not pure suite pass/fail.
     """
     if old[3] or new[3] or not old[2] or len(old[2]) != len(new[2]):
         return False
     for module in (old, new):
         if any(form != 'native' for _, form in module[6]):
             return False
-        if any(len(case.source_function.body) != 1 or not isinstance(case.source_function.body[0], ast.Assert)
+        if any(not case.source_function.body or not all(isinstance(statement, ast.Assert)
+               for statement in case.source_function.body)
                for case in module[2]):
             return False
     return ([case.source_function.name for case in old[2]] != [case.source_function.name for case in new[2]]
