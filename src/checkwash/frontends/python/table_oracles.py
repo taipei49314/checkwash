@@ -47,6 +47,7 @@ from checkwash.frontends.python.snapshot_context import inert_test_execution_con
 from checkwash.frontends.python.table_factories import expand_literal_table_factories
 from checkwash.frontends.python.inert_helpers import prune_inert_helpers
 from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
+from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -916,6 +917,7 @@ def _module(source, *, baseline):
            and (node.name in _IMPLICIT_HOOKS or node.name.startswith(("pytest_", "__")))
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
+    raises_oracles = extract_raises_oracles(tree)
     inert_helpers = prune_inert_helpers(tree)
     literal_fixture_tests = expand_literal_fixtures(tree)
     factory_tests = expand_literal_table_factories(tree)
@@ -1114,10 +1116,10 @@ def _module(source, *, baseline):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
-                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or auxiliary
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or auxiliary or raises_oracles
                  or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),
-            subtest_only and all(name in unittest_tests for name, _ in forms))
+            subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles)
 
 
 def _module_unshadowed(path, read, module):
@@ -1377,6 +1379,8 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             old = _module(before, baseline=False)
         if old is None or new is None or old[1] != new[1]:
             return before_parsed, after_parsed
+        if Counter(oracle.key for oracle in old[11]) - Counter(oracle.key for oracle in new[11]):
+            return before_parsed, after_parsed  # never discard a removed/changed exception or its exact message
         native_renames = _native_renames(old, new)
         if (any(form == 'literal-fixtures' for _, form in old[6])
                 and any(form == 'literal-fixtures' for _, form in new[6])):
@@ -1496,8 +1500,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             if not _module_unshadowed(path, read, "re"):
                 return before_parsed, after_parsed
         if old[8] or new[8] or native_renames:
-            calls = [case.assertion.test.left for case in module[2]]
+            calls = [case.assertion.test.left for case in module[2]] + [oracle.call for oracle in module[11]]
             if not _closed_proof_imports(module, calls) or not pure_imported_calls(
                     module[0].encode(), calls, path=path, read=read):
                 return before_parsed, after_parsed
-    return _project(before_parsed, old[0], old[2]), _project(after_parsed, new[0], new[2])
+    return (retain_raises_units(_project(before_parsed, old[0], old[2]), old[0], old[11]),
+            retain_raises_units(_project(after_parsed, new[0], new[2]), new[0], new[11]))
