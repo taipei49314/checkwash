@@ -79,3 +79,13 @@ def test_startup_and_import_authority_are_required(context):
 def test_custom_return_cannot_supply_safe_message_formatting():
     production = 'class Result:\n    def __format__(self, spec):\n        mutate()\n        return ""\ndef divide(a,b):\n    return Result()\n'
     assert not has_exception(projected(production=production)[0])
+
+
+@pytest.mark.parametrize('after', [AFTER, AFTER.split('@pytest.mark.parametrize')[0]])
+def test_duplicate_keyword_compilation_error_cannot_supply_exception_evidence(after):
+    before = BEFORE.replace('divide(1, 0)', 'divide(a=1, a=1)')
+    after = after.replace('divide(1, 0)', 'divide(a=1, a=1)')
+    for source in (before, after):
+        with pytest.raises(SyntaxError, match='keyword argument repeated'):
+            compile(source, '<test>', 'exec')
+    assert not has_exception(run(before, after, PROD)[0])

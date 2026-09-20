@@ -164,6 +164,7 @@ def mark_classic_exception_removal(before, after, before_parsed, after_parsed, *
         return before_parsed, after_parsed
     body, call = new[1].body, invoked.value
     if (not all(_literal(arg) for arg in call.args)
+            or len({keyword.arg for keyword in call.keywords}) != len(call.keywords)
             or any(keyword.arg is None or not _literal(keyword.value) for keyword in call.keywords)):
         return before_parsed, after_parsed
     capture = None
