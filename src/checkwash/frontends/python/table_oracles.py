@@ -505,6 +505,28 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
     names = _args(node)
     if names is None or not node.name.startswith("test"):
         return None
+    if not names and not node.decorator_list and node.body and isinstance(node.body[0], ast.FunctionDef):
+        local_helpers = dict(helpers)
+        local_names, remaining = set(), list(node.body)
+        while remaining and isinstance(remaining[0], ast.FunctionDef):
+            helper = remaining.pop(0)
+            candidate = _helper(helper)
+            if (candidate is None or helper.name in local_helpers or helper.name in imports
+                    or helper.name in constants or helper.name in table_helpers):
+                return None
+            local_helpers[helper.name] = candidate
+            local_names.add(helper.name)
+        if not 1 <= len(remaining) <= MAX_CASES:
+            return None
+        used = {call.func.id for statement in remaining for call in ast.walk(statement)
+                if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)}
+        if not local_names <= used:
+            return None
+        assertions = [_checked(statement, {}, imports, local_helpers, set(), {}) for statement in remaining]
+        if any(assertion is None for assertion in assertions):
+            return None
+        return ([_Case(assertion, statement, node) for assertion, statement in zip(assertions, remaining)],
+                True, "local-assert-helper")
     if not names and not node.decorator_list and 1 <= len(node.body) <= MAX_CASES and (multiple or len(node.body) > 1):
         assertions = [_checked(statement, {}, imports, helpers, set(), {}) for statement in node.body]
         if all(assertion is not None for assertion in assertions):

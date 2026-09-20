@@ -74,3 +74,38 @@ def test_impure_statement_between_assertions_does_not_get_projection():
     before = BEFORE.replace("    assert expand_range(5", "    mutate()\n    assert expand_range(5")
     ir, _, _ = run(before)
     assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
+
+
+NESTED = HEADER + '''def test_spans():
+    def check(start, end, expected):
+        assert expand_range(start, end) == expected
+    check(1, 3, [1, 2, 3])
+    check(5, 5, [5])
+'''
+
+
+def test_local_assert_helper_can_be_consolidated_into_a_table():
+    _, findings, verdict = run(NESTED)
+    assert verdict == "pass"
+    assert not findings
+
+
+@pytest.mark.parametrize("after", [
+    AFTER.replace("(5, 5, [5])", "(5, 5, [])"),
+    AFTER.replace(", (5, 5, [5])", ""),
+])
+def test_local_helper_oracles_cannot_be_rewritten_or_dropped(after):
+    _, findings, verdict = run(NESTED, after)
+    assert verdict == "block"
+    assert any(f.severity == "high" for f in findings)
+
+
+@pytest.mark.parametrize("before", [
+    NESTED.replace("def check(start, end, expected):", "def check(start, end, expected=external()):"),
+    NESTED.replace("        assert expand_range", "        mutate()\n        assert expand_range"),
+    NESTED.replace("check(1, 3, [1, 2, 3])", "check(*load_case())"),
+    NESTED.replace("check(5, 5, [5])", "reference = check"),
+])
+def test_dynamic_nested_helper_does_not_get_projection(before):
+    ir, _, _ = run(before)
+    assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
