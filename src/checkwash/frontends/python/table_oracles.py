@@ -262,6 +262,7 @@ def _concrete(node, bindings, imports):
     name = dotted_name(actual.func)
     if (not name or name.split(".")[0] not in imports or name.split(".")[0] == "pytest"
             or not all(_literal(arg) for arg in actual.args)
+            or len({keyword.arg for keyword in actual.keywords}) != len(actual.keywords)
             or not all(keyword.arg is not None and _literal(keyword.value) for keyword in actual.keywords)):
         return None
     if approximate:
