@@ -14,6 +14,7 @@ positive installation proof. Repository code is never executed.
 from __future__ import annotations
 
 import ast
+import copy
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
@@ -96,6 +97,187 @@ def _literal(node):
     return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
 
 
+def _literal_data(node):
+    """A closed literal container cannot call a production provider."""
+    if isinstance(node, ast.Constant):
+        return type(node.value) in {str, bytes, int, float, complex, bool, type(None)}
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return all(_literal_data(child) for child in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(key is not None and _literal_data(key) and _literal_data(value)
+                   for key, value in zip(node.keys, node.values))
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        return isinstance(node.operand, ast.Constant) and type(node.operand.value) in {int, float, complex}
+    return False
+
+
+def _previous_literal(previous, name):
+    # Adjacency excludes intervening mutation/callbacks, including mutations
+    # through an alias. This is deliberately not final reaching provenance.
+    if (isinstance(previous, ast.Assign) and len(previous.targets) == 1
+            and isinstance(previous.targets[0], ast.Name) and previous.targets[0].id == name
+            and _literal_data(previous.value)):
+        return previous.value
+    return None
+
+
+def _literal_stub(node, previous):
+    if _literal_data(node):
+        return True
+    if not isinstance(node, ast.Lambda):
+        return False  # a named callback may delegate to real production
+    if not all(_literal_data(value) for value in [*node.args.defaults, *node.args.kw_defaults] if value is not None):
+        return False
+    parameters = {arg.arg for arg in node.args.posonlyargs + node.args.args + node.args.kwonlyargs}
+    body = node.body
+    if _literal_data(body):
+        return True
+
+    def scalar(value):
+        return isinstance(value, ast.Constant) or isinstance(value, ast.Name) and value.id in parameters
+
+    receiver = None
+    if isinstance(body, ast.Subscript) and scalar(body.slice):
+        receiver = body.value
+    elif (isinstance(body, ast.Call) and isinstance(body.func, ast.Attribute) and body.func.attr == "get"
+          and len(body.args) in {1, 2} and not body.keywords and all(scalar(arg) for arg in body.args)):
+        receiver = body.func.value
+    if isinstance(receiver, ast.Name) and receiver.id not in parameters:
+        return isinstance(_previous_literal(previous, receiver.id), ast.Dict)
+    return False
+
+
+def _literal_assertion_loop(node, previous):
+    """Only a definitely entered literal loop of direct assertions is traced."""
+    if (not isinstance(node.target, ast.Name) or node.orelse
+            or not node.body or not all(isinstance(statement, ast.Assert) for statement in node.body)):
+        return False
+    rows = node.iter
+    if isinstance(rows, ast.Name):
+        rows = _previous_literal(previous, rows.id)
+    return isinstance(rows, (ast.List, ast.Tuple)) and 0 < len(rows.elts) <= 64 and _literal_data(rows)
+
+
+def _patch_signature(keywords, previous):
+    values = []
+    for name, value in sorted(keywords.items()):
+        value = copy.deepcopy(value)
+        if isinstance(value, ast.Lambda):
+            parameters = value.args.posonlyargs + value.args.args + value.args.kwonlyargs
+            names = {arg.arg: f"__argument_{index}" for index, arg in enumerate(parameters)}
+
+            class Normalize(ast.NodeTransformer):
+                def visit_Name(self, node):
+                    if node.id in names:
+                        return ast.Name(id=names[node.id], ctx=ast.Load())
+                    literal = _previous_literal(previous, node.id)
+                    return copy.deepcopy(literal) if literal is not None else node
+
+            value.body = Normalize().visit(value.body)
+            for arg in parameters:
+                arg.arg = names[arg.arg]
+        values.append(ast.Tuple(elts=[ast.Constant(value=name), value], ctx=ast.Load()))
+    # Patch API/import/local names do not create a new subject installation.
+    return stable_dump(ast.Tuple(elts=values, ctx=ast.Load()))
+
+
+def _patch_assertion_body(statements, mock_name, captures, previous, keywords):
+    """No callback or rebinding can change a literal stub's closure here."""
+    unknown = object()
+    names = {}
+
+    def value(node, bindings):
+        try:
+            if _literal_data(node):
+                return ast.literal_eval(node)
+            if isinstance(node, ast.Name):
+                return bindings.get(node.id, unknown)
+            if isinstance(node, ast.Subscript):
+                container, key = value(node.value, bindings), value(node.slice, bindings)
+                if type(container) in {dict, list, tuple, str, bytes} and key is not unknown:
+                    return container[key]
+        except (ValueError, TypeError, KeyError, IndexError, OverflowError):
+            pass
+        return unknown
+
+    for name in captures:
+        literal = _previous_literal(previous, name)
+        if literal is not None:
+            names[name] = value(literal, {})
+
+    def returns(call):
+        if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name) or call.func.id != mock_name:
+            return False
+        args = [value(arg, names) for arg in call.args]
+        if any(arg is unknown for arg in args) or call.keywords:
+            return False
+        effect = keywords.get("side_effect")
+        if effect is None or isinstance(effect, ast.Constant) and effect.value is None:
+            returned = keywords.get("return_value")
+            return returned is None or value(returned, {}) is not unknown
+        if isinstance(effect, ast.Lambda):
+            parameters = effect.args.posonlyargs + effect.args.args
+            if (len(parameters) != len(args) or effect.args.kwonlyargs or effect.args.vararg or effect.args.kwarg
+                    or any(value(default, {}) is unknown for default in effect.args.defaults)):
+                return False
+            bindings = {**names, **{arg.arg: actual for arg, actual in zip(parameters, args)}}
+            body = effect.body
+            if isinstance(body, ast.Call) and isinstance(body.func, ast.Attribute) and body.func.attr == "get":
+                container = value(body.func.value, bindings)
+                lookup = [value(arg, bindings) for arg in body.args]
+                if type(container) is not dict or any(arg is unknown for arg in lookup):
+                    return False
+                try:
+                    container.get(*lookup)
+                except TypeError:
+                    return False
+                return True
+            return value(body, bindings) is not unknown
+        sequence = value(effect, {})
+        return type(sequence) in {list, tuple, str, bytes, dict, set} and bool(sequence)
+
+    def assertion(node):
+        test = node.test
+        if node.msg is not None and value(node.msg, names) is unknown:
+            return False
+        # A mock to the right of a short-circuit or raising expression has not
+        # necessarily run. Keep one direct call on the left of one comparison.
+        return returns(test) or (isinstance(test, ast.Compare) and len(test.ops) == 1
+                                 and returns(test.left) and value(test.comparators[0], names) is not unknown)
+
+    consumers = 0
+    for index, statement in enumerate(statements):
+        if isinstance(statement, ast.Assign):
+            if (len(statement.targets) != 1 or not isinstance(statement.targets[0], ast.Name)
+                    or statement.targets[0].id in captures | {mock_name} or not _literal_data(statement.value)):
+                return False
+            literal = value(statement.value, names)
+            if literal is unknown:
+                return False
+            names[statement.targets[0].id] = literal
+        elif isinstance(statement, ast.Assert):
+            if not assertion(statement):
+                return False
+            consumers += 1
+        elif isinstance(statement, ast.For):
+            previous = statements[index - 1] if index else None
+            if (not _literal_assertion_loop(statement, previous)
+                    or statement.target.id in captures | {mock_name}
+                    or len(statement.body) != 1):
+                return False
+            rows = value(statement.iter, names)
+            if type(rows) not in {list, tuple} or not rows:
+                return False
+            names[statement.target.id] = rows[0]
+            if not assertion(statement.body[0]):
+                return False
+            consumers += 1
+        else:
+            return False
+    # A preceding failing assertion must not manufacture later execution.
+    return consumers == 1
+
+
 def _import_module(node, package):
     module = node.module or ""
     if node.level:
@@ -129,12 +311,20 @@ def _candidate(source, imported_names=()):
     setters = {"setattr"} | {a.asname or a.name for node in ast.walk(tree)
                              if isinstance(node, ast.ImportFrom) and node.module == "builtins" and not node.level
                              for a in node.names if a.name == "setattr"}
+    patchers = {a.asname or a.name for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module == "unittest.mock" and not node.level
+                for a in node.names if a.name == "patch"}
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             parameters = node.args.posonlyargs + node.args.args + node.args.kwonlyargs
             if any(arg.arg in imports for arg in parameters):
                 return True
         if isinstance(node, ast.Call):
+            if (isinstance(node.func, ast.Name) and node.func.id in patchers
+                    or isinstance(node.func, ast.Attribute) and (node.func.attr == "patch"
+                        or node.func.attr == "object" and (isinstance(node.func.value, ast.Name) and node.func.value.id in patchers
+                            or isinstance(node.func.value, ast.Attribute) and node.func.value.attr == "patch"))):
+                return True  # the trace requires exact stdlib binding and result use
             if isinstance(node.func, ast.Name) and node.func.id in setters:
                 return True
             if isinstance(node.func, ast.Attribute) and node.func.attr in {"setattr", "setitem"}:
@@ -165,6 +355,7 @@ class _Trace:
         self.deny = deny
         self.active: dict[tuple[str, str], _Effect] = {}
         self.observed: set[_Effect] = set()
+        self.patch_results: dict[str, _Effect] = {}
         self.stack = []
         self.steps = 0
         self.test_module = None
@@ -237,6 +428,10 @@ class _Trace:
             helper = module.functions.get(fn.alias.removeprefix("@function:") if fn.alias else "")
             if helper is not None:
                 return _value(fn, *args, *kwargs.values(), self.function(helper, args, kwargs))
+            if fn.alias in self.patch_results:
+                # Inspecting call_count/assert_called is instrumentation. Only
+                # calling the returned substitute creates subject-result evidence.
+                return _Value(effects=frozenset({self.patch_results[fn.alias]}))
             result = _value(fn, *args, *kwargs.values())
             if isinstance(node.func, ast.Attribute) and node.func.attr.startswith("assert"):
                 self.observe(result)
@@ -245,6 +440,52 @@ class _Trace:
             return _Value()  # separate dynamic execution scope
         return _value(*(self.expression(child, module, env, qualname, native_setattr=native_setattr)
                         for child in ast.iter_child_nodes(node) if isinstance(child, ast.expr)))
+
+    def patch_result(self, item, previous, body, module, env, qualname):
+        call = item.context_expr
+        if not isinstance(call, ast.Call) or not isinstance(item.optional_vars, ast.Name):
+            return None
+        fn = self.expression(call.func, module, env, qualname)
+        if fn.effects or fn.alias not in {"unittest.mock.patch", "unittest.mock.patch.object"}:
+            return None
+        if self.context.contains("unittest", self.side):
+            return None
+        directory = module.path.rpartition("/")[0]
+        if directory:
+            for suffix in ("unittest.py", "unittest/__init__.py"):
+                path = f"{directory}/{suffix}"
+                source = (self.context.changed[path][self.side] if path in self.context.changed
+                          else self.context.reader(path))
+                if source is not None:
+                    return None
+        keywords = {keyword.arg: keyword.value for keyword in call.keywords}
+        if len(keywords) != len(call.keywords) or set(keywords) - {"side_effect", "return_value"}:
+            return None  # wraps/new/new_callable and arbitrary factories are not stubs
+        if any(not _literal_stub(value, previous) for value in keywords.values()):
+            return None
+        captures = {child.id for value in keywords.values() for child in ast.walk(value)
+                    if isinstance(child, ast.Name)}
+        captures -= {arg.arg for value in keywords.values() if isinstance(value, ast.Lambda)
+                     for arg in value.args.posonlyargs + value.args.args + value.args.kwonlyargs}
+        if not _patch_assertion_body(body, item.optional_vars.id, captures, previous, keywords):
+            return None
+        if fn.alias == "unittest.mock.patch" and len(call.args) == 1:
+            target = _literal(call.args[0])
+        elif fn.alias == "unittest.mock.patch.object" and len(call.args) == 2:
+            base = self.expression(call.args[0], module, env, qualname)
+            attr = _literal(call.args[1])
+            target = f"{base.alias}.{attr}" if base.alias and not base.effects and attr else None
+        else:
+            return None
+        if not target or not all(part.isidentifier() for part in target.split(".")) or not self.owned(target):
+            return None
+        identity = f"@patch_result:{module.path}:{call.lineno}:{call.col_offset}"
+        self.patch_results[identity] = _Effect(
+            module.path, target, "mock-result", _patch_signature(keywords, previous),
+            ast.get_source_segment(module.source, call) or ast.unparse(call),
+            (call.lineno, call.end_lineno),
+        )
+        return _Value(identity)
 
     def observe(self, value):
         self.observed.update(e for e in value.effects if self.owned(e.target))
@@ -299,8 +540,9 @@ class _Trace:
 
     def block(self, statements, module, env, qualname, *, native_setattr=True):
         result = _Value()
-        for node in statements:
+        for index, node in enumerate(statements):
             self._step()
+            previous = statements[index - 1] if index else None
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     local = alias.asname or alias.name.split(".")[0]
@@ -365,13 +607,29 @@ class _Trace:
                     for child in ast.walk(node):
                         if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
                             env.pop(child.id, None)
+            elif (isinstance(node, ast.For) and _literal_assertion_loop(node, previous)
+                  and any(value.alias in self.patch_results for value in env.values())):
+                # One iteration suffices to prove a consumed installation;
+                # no loop state or equality/refactor credit is inferred.
+                env[node.target.id] = _Value()
+                result = self.block(node.body, module, env, qualname, native_setattr=native_setattr)
             elif isinstance(node, (ast.With, ast.AsyncWith)):
-                # Ordinary context managers do not make an explicit setattr
-                # or assignment inert. Patch API lifetimes remain the existing
-                # frontend's responsibility, so no API effect is invented.
+                # Track only the bound result of a closed stdlib patch context.
+                # Attribute installation/lifetime remains the frontend's job.
+                patch_values = set()
                 for item in node.items:
                     self.expression(item.context_expr, module, env, qualname, native_setattr=native_setattr)
+                    if len(node.items) == 1 and isinstance(node, ast.With):
+                        value = self.patch_result(item, previous, node.body, module, env, qualname)
+                        if value is not None:
+                            env[item.optional_vars.id] = value
+                            patch_values.add(value.alias)
                 result = self.block(node.body, module, env, qualname, native_setattr=native_setattr)
+                # This bounded proof covers the closed context body. A later
+                # closure mutation requires its own source-order provenance.
+                for name, value in list(env.items()):
+                    if value.alias in patch_values:
+                        env[name] = _Value()
         return result
 
     def function(self, function, args=(), kwargs=None):
