@@ -8,6 +8,8 @@ untrusted formatting hook cannot run on the returned value. A sole standard
 
 import ast
 
+_STRING_SEQUENCE = object()
+
 
 def primitive_string_result(source, target, call):
     if call.keywords or not all(isinstance(value, ast.Constant) and type(value.value) is str for value in call.args):
@@ -64,6 +66,10 @@ def primitive_string_result(source, target, call):
                     and all(kind(arg) is str for arg in node.args)):
                 return str
             if isinstance(node.func, ast.Attribute) and kind(node.func.value) is str:
+                if node.func.attr == "split" and not node.args:
+                    return _STRING_SEQUENCE
+                if node.func.attr == "join" and len(node.args) == 1 and kind(node.args[0]) is _STRING_SEQUENCE:
+                    return str
                 if node.func.attr in {"startswith", "endswith"} and len(node.args) == 1 and kind(node.args[0]) is str:
                     return bool
                 if node.func.attr in {"lower", "upper", "strip", "lstrip", "rstrip", "casefold"} and not node.args:

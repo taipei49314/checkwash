@@ -595,19 +595,39 @@ def _forwarded_functions(functions, imports):
     return result if used == forwarders.keys() else None
 
 
+def _captured_result(body, unavailable):
+    """A fresh local holds one primitive subject result used once by its check."""
+    if len(body) != 2:
+        return None
+    assignment, check = body
+    if (not isinstance(assignment, ast.Assign) or len(assignment.targets) != 1
+            or not isinstance(assignment.targets[0], ast.Name) or not isinstance(assignment.value, ast.Call)
+            or not isinstance(check, ast.Assert) or check.msg is not None):
+        return None
+    name = assignment.targets[0].id
+    if (name in unavailable or name.startswith(('__', 'pytest_'))
+            or any(isinstance(node, ast.Name) and node.id == name for node in ast.walk(assignment.value))
+            or sum(isinstance(node, ast.Name) and node.id == name for node in ast.walk(check)) != 1):
+        return None
+    assertion = _Substitute({name: assignment.value}).visit(copy.deepcopy(check))
+    assertion._requires_primitive_string = True
+    return assertion
+
+
 def _callable_fixtures(functions, imports):
     """Preserve a scalar-string fixture's assertions before its callable.
 
     Default function scope, no fixture inputs, no cleanup and only direct
     collected consumers are admitted. Each consumer receives the complete
-    ordered assertion prefix before its own assertions.
+    ordered assertion prefix, including an empty prefix. A two-statement
+    result capture becomes one check only under the primitive-result proof.
     """
     fixtures = {}
     for function in functions:
         plain = copy.copy(function)
         plain.decorator_list = []
         if (_args(plain) != [] or len(function.decorator_list) != 1
-                or not 2 <= len(function.body) <= MAX_CASES or not isinstance(function.body[-1], ast.Return)):
+                or not 1 <= len(function.body) <= MAX_CASES or not isinstance(function.body[-1], ast.Return)):
             continue
         decorator = function.decorator_list[0]
         if isinstance(decorator, ast.Call):
@@ -633,15 +653,20 @@ def _callable_fixtures(functions, imports):
             continue
         parameters = _args(function)
         if parameters and any(name in fixtures for name in parameters):
-            if (len(parameters) != 1 or not function.name.startswith("test") or function.decorator_list
-                    or not all(isinstance(statement, ast.Assert) for statement in function.body)):
+            if len(parameters) != 1 or not function.name.startswith("test") or function.decorator_list:
                 return None, set()
             name = parameters[0]
             prefix, returned = fixtures[name]
+            body = function.body
+            if not all(isinstance(statement, ast.Assert) for statement in body):
+                captured = _captured_result(body, imports | fixtures.keys())
+                if captured is None:
+                    return None, set()
+                body = [captured]
             function = copy.deepcopy(function)
             function.args.args = []
             function.body = [*copy.deepcopy(prefix), *[_Substitute({name: returned}).visit(statement)
-                                                      for statement in function.body]]
+                                                      for statement in copy.deepcopy(body)]]
             used.add(name)
             expanded.add(function.name)
         if any(isinstance(node, ast.Name) and node.id in fixtures for node in ast.walk(function)):
@@ -655,6 +680,12 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
     names = _args(node)
     if names is None or not node.name.startswith("test"):
         return None
+    if not names and not node.decorator_list:
+        captured = _captured_result(node.body, imports | helpers.keys() | table_helpers.keys() | constants.keys())
+        if captured is not None:
+            concrete = _concrete(captured, {}, imports)
+            if concrete is not None:
+                return [_Case(concrete, node.body[-1], node)], True, 'captured-result'
     if not names and not node.decorator_list and node.body and isinstance(node.body[0], ast.FunctionDef):
         local_helpers = dict(helpers)
         local_names, remaining = set(), list(node.body)
@@ -975,6 +1006,8 @@ def _module(source, *, baseline):
     expanded_forwarders = len(functions) != count_before_forwarding
     functions, callable_fixture_tests = _callable_fixtures(functions, imports)
     if functions is None:
+        return None
+    if callable_fixture_tests and not pytest_imported:
         return None
     fixtures, tables, shared_tables = {}, {}, set()
     if not baseline:
