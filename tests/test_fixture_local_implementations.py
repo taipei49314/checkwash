@@ -1,4 +1,5 @@
 """A fresh fixture loop must not replace the imported subject with local code."""
+import ast
 import pytest
 
 from checkwash import engine
@@ -124,6 +125,22 @@ def test_fixture_ownership_row_identity_and_primitive_consumer_are_required(afte
     AFTER.replace('def calculate_percentage(part, total):', 'def calculate_percentage(round, total):'),
 ])
 def test_helper_must_return_closed_numbers_on_every_fixture_row(after):
+    assert not evidence(run(BEFORE,after,PRODUCTION))
+
+
+@pytest.mark.parametrize('parameter', ['part', 'total'])
+def test_uncompilable_helper_parameter_cannot_supply_replacement_execution(parameter):
+    after = AFTER.replace(HELPER, HELPER.replace(parameter, '__debug__'))
+    ast.parse(after)
+    with pytest.raises(SyntaxError, match='__debug__'):
+        compile(after, '<invalid-fixture-implementation>', 'exec')
+    assert not evidence(run(BEFORE,after,PRODUCTION))
+
+
+@pytest.mark.parametrize('parameter', ['part', 'total'])
+def test_reserved_dunder_helper_parameters_have_no_closed_execution_proof(parameter):
+    after = AFTER.replace(HELPER, HELPER.replace(parameter, '__value'))
+    compile(after, '<reserved-parameter>', 'exec')
     assert not evidence(run(BEFORE,after,PRODUCTION))
 
 

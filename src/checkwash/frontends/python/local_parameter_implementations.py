@@ -66,7 +66,8 @@ def _expression(node, names):
 
 def _helper(helper, occupied):
     names = _parameters(helper)
-    if (helper.name.startswith('test') or helper.decorator_list or len(names) != 2
+    if (names is None or helper.name.startswith('test') or helper.decorator_list or len(names) != 2
+            or any(name.startswith('__') for name in names)
             or set(names) & (occupied | _RESERVED) or not 1 <= len(helper.body) <= 2
             or not isinstance(helper.body[-1], ast.Return) or not _expression(helper.body[-1].value, set(names))):
         return None
@@ -132,6 +133,7 @@ def _rows(old, new):
     names = _helper(helper, new[3])
     arguments = _parameters(test)
     if (names is None or not test.name.startswith('test') or len(arguments) != 3
+            or any(name.startswith('__') for name in arguments)
             or set(arguments) & (new[3] | _RESERVED) or len(test.decorator_list) != 1
             or len(test.body) != 1 or not isinstance(test.body[0], ast.Assert) or test.body[0].msg is not None):
         return None

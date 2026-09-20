@@ -1,4 +1,5 @@
 """A closed local implementation cannot replace the imported tested provider."""
+import ast
 import pytest
 
 from checkwash import engine
@@ -120,6 +121,24 @@ def test_complete_parameter_inventory_and_collected_binding_are_required(after):
     AFTER.replace('return round(n / total * 100)', 'yield round(n / total * 100)'),
 ])
 def test_only_a_closed_terminating_numeric_helper_supplies_the_standin(after):
+    assert not installations(run(BEFORE, after, PRODUCTION))
+
+
+@pytest.mark.parametrize('scope', ['helper', 'consumer'])
+def test_ast_parsed_but_uncompilable_parameter_has_no_subject_execution_evidence(scope):
+    after = (AFTER.replace(HELPER, HELPER.replace('total', '__debug__')) if scope == 'helper'
+             else AFTER.replace('expected', '__debug__'))
+    ast.parse(after)
+    with pytest.raises(SyntaxError, match='__debug__'):
+        compile(after, '<invalid-local-implementation>', 'exec')
+    assert not installations(run(BEFORE, after, PRODUCTION))
+
+
+@pytest.mark.parametrize('scope', ['helper', 'consumer'])
+def test_reserved_dunder_parameters_remain_outside_the_closed_grammar(scope):
+    after = (AFTER.replace(HELPER, HELPER.replace('total', '__value')) if scope == 'helper'
+             else AFTER.replace('expected', '__value'))
+    compile(after, '<reserved-parameter>', 'exec')
     assert not installations(run(BEFORE, after, PRODUCTION))
 
 
