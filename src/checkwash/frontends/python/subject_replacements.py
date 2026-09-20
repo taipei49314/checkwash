@@ -296,6 +296,44 @@ def _scoped_bindings(tree, qualname, assertion):
     return bindings
 
 
+def _assertion_scope(tree, qualname, assertion):
+    """Locate one directly called, zero-argument assertion helper.
+
+    Inherited assertions normally carry the caller's environment. That is
+    insufficient to resolve helper parameters or nested closures, so admit
+    only an unshadowed module helper with one literal assertion and a caller
+    consisting solely of that call. Other inherited channels stay separate.
+    """
+    if not assertion.inherited:
+        return qualname
+    caller = _scope(tree, qualname)
+    if (caller is None or caller.decorator_list or caller.args.args or caller.args.posonlyargs
+            or caller.args.kwonlyargs or caller.args.vararg or caller.args.kwarg
+            or len(caller.body) != 1 or not isinstance(caller.body[0], ast.Expr)):
+        return None
+    call = caller.body[0].value
+    if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name) or call.args or call.keywords:
+        return None
+    if any(isinstance(node, ast.ImportFrom) and any(alias.name == '*' for alias in node.names)
+           for node in tree.body):
+        return None
+    sites = _binding_sites(tree.body).get(call.func.id, [])
+    if len(sites) != 1 or not isinstance(sites[0], ast.FunctionDef):
+        return None
+    helper = sites[0]
+    if (helper.decorator_list or helper.args.args or helper.args.posonlyargs or helper.args.kwonlyargs
+            or helper.args.vararg or helper.args.kwarg or len(helper.body) != 1
+            or not isinstance(helper.body[0], ast.Assert)):
+        return None
+    try:
+        expected = ast.parse(assertion.text).body
+    except (SyntaxError, ValueError):
+        return None
+    if len(expected) != 1 or stable_dump(helper.body[0]) != stable_dump(expected[0]):
+        return None
+    return helper.name
+
+
 def subject_replacement_events(ir, changes, *, root_reader=None):
     if root_reader is None:
         return []
@@ -315,7 +353,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None):
             after = {a.id: a for a in unit.after.assertions}
             for pair in unit.delta.assertion_pairs:
                 b, a = before[pair.before_id], after[pair.after_id]
-                if (a.inherited or b.inherited or b.form != "compare_eq" or a.form != b.form
+                if (b.form != "compare_eq" or a.form != b.form
                         or not b.positive or not a.positive or b.right_literal is None
                         or a.right_literal != b.right_literal):
                     continue
@@ -323,15 +361,19 @@ def subject_replacement_events(ir, changes, *, root_reader=None):
                     trees = (_parse(change.before), _parse(change.after))
                 if any(tree is None for tree in trees):
                     continue
-                old_call, new_call = _subject_call(b, trees[0], unit.qualname), _subject_call(a, trees[1], unit.qualname)
+                old_scope = _assertion_scope(trees[0], unit.qualname, b)
+                new_scope = _assertion_scope(trees[1], unit.qualname, a)
+                if old_scope is None or new_scope is None:
+                    continue
+                old_call, new_call = _subject_call(b, trees[0], old_scope), _subject_call(a, trees[1], new_scope)
                 if not isinstance(old_call, ast.Call) or not isinstance(new_call, ast.Call):
                     continue
                 if (stable_dump(old_call.func) == stable_dump(new_call.func)
                         or stable_dump(ast.Tuple(elts=old_call.args, ctx=ast.Load())) != stable_dump(ast.Tuple(elts=new_call.args, ctx=ast.Load()))
                         or [stable_dump(k) for k in old_call.keywords] != [stable_dump(k) for k in new_call.keywords]):
                     continue
-                old_bindings = _scoped_bindings(trees[0], unit.qualname, b)
-                new_bindings = _scoped_bindings(trees[1], unit.qualname, a)
+                old_bindings = _scoped_bindings(trees[0], old_scope, b)
+                new_bindings = _scoped_bindings(trees[1], new_scope, a)
                 if old_bindings is None or new_bindings is None:
                     continue
                 target = _resolve(old_call.func, old_bindings)
