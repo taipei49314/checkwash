@@ -1437,9 +1437,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         # equality may replace them, but the reverse loses an oracle even
         # when the field values match. Keep every original complete check
         # and its multiplicity before granting carrier equivalence.
-        old_complete = Counter(_subject_key(case) for case in old[2]
+        old_complete = Counter((_subject_key(case), stable_dump(case.assertion.test.comparators[0])) for case in old[2]
                                if not getattr(case.assertion, '_partial_dictionary_fields', False))
-        new_complete = Counter(_subject_key(case) for case in new[2]
+        new_complete = Counter((_subject_key(case), stable_dump(case.assertion.test.comparators[0])) for case in new[2]
                                if not getattr(case.assertion, '_partial_dictionary_fields', False))
         if (any(getattr(case.assertion, '_partial_dictionary_fields', False) for case in new[2])
                 and old_complete - new_complete):

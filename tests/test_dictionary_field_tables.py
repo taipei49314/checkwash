@@ -97,3 +97,26 @@ def test_exact():
 '''
     ir, _, _ = run(before, after, PRODUCTION)
     assert not any(u.qualname.startswith('test_concrete') for f in ir.files for u in f.units)
+
+
+def test_complete_obligation_cannot_move_to_another_expected_dictionary():
+    before = '''from app.prod import parse_name
+def test_full():
+    assert parse_name("Ada") == {"first": "Ada", "last": "Lovelace"}
+def test_partial():
+    got = parse_name("Ada")
+    assert got["first"] == "Ada"
+    assert got["last"] == "Lovelace"
+    assert got["extra"] == 1
+'''
+    after = '''from app.prod import parse_name
+def test_full():
+    got = parse_name("Ada")
+    assert got["first"] == "Ada"
+    assert got["last"] == "Lovelace"
+def test_partial():
+    assert parse_name("Ada") == {"first": "Ada", "last": "Lovelace", "extra": 1}
+'''
+    production = 'def parse_name(s):\n    return {"first": "Ada", "last": "Lovelace", "extra": 1}\n'
+    ir, _, _ = run(before, after, production)
+    assert not any(u.qualname.startswith('test_concrete') for f in ir.files for u in f.units)
