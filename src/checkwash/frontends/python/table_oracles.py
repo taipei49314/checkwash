@@ -10,7 +10,9 @@ auxiliary checks must match. No repository expression is executed.
 The TestCase extension models sorted test methods and repeats straight-line
 setUp assertions for each method. It requires exactly the original oracle
 identities and multiplicities, plus closed pure imported source on both
-sides. That establishes the same suite pass/fail conditions when expected
+sides. Default subTest-only after-suites may add rows while retaining every
+original identity and count, since a failed row does not stop later checks.
+The general exact-multiplicity proof establishes the same pass/fail conditions when expected
 values are preserved, not the original call order or execution of assertions
 after a failure. Expected values remain on both sides for the ordinary
 detectors to compare; changed values do not acquire equivalence credit.
@@ -904,9 +906,10 @@ def _module(source, *, baseline):
     block_tests = expand_string_blocks(tree)
     if block_tests is None:
         return None
-    unittest_tests = expand_unittest_classes(tree)
-    if unittest_tests is None:
+    unittest_expansion = expand_unittest_classes(tree)
+    if unittest_expansion is None:
         return None
+    unittest_tests, subtest_only = unittest_expansion
     class_tests = _plain_classes(tree)
     if class_tests is None:
         return None
@@ -1044,7 +1047,8 @@ def _module(source, *, baseline):
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests),
-            bool(unittest_tests))
+            bool(unittest_tests),
+            subtest_only and all(name in unittest_tests for name, _ in forms))
 
 
 def _module_unshadowed(path, read, module):
@@ -1302,11 +1306,15 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         # sees; insertion/reordering stays outside the proof.
         if not old_keys:
             return before_parsed, after_parsed
-        if (old[9] or new[9]) and Counter(old_keys) != Counter(new_keys):
+        if ((old[9] or new[9]) and Counter(old_keys) != Counter(new_keys)
+                and not (new[10] and not Counter(old_keys) - Counter(new_keys))):
             # TestCase setup precedes each test body. Do not admit additional
             # setup/oracles as an unordered superset: their failure barriers
             # were absent from the original suite. Only the exact existing
             # pure oracle multiplicity may change grouping or collection order.
+            # An after-suite of only default subTest loops is different: a
+            # failing added row still runs later rows, so a pure superset
+            # preserves every original check without a new failure barrier.
             return before_parsed, after_parsed
         if old_keys != new_keys[:len(old_keys)]:
             if not (old[9] or new[9]) or Counter(old_keys) - Counter(new_keys):

@@ -9,7 +9,7 @@ import ast
 from pathlib import PurePosixPath
 
 
-_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip'}
+_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip', 'int', 'str'}
 
 
 def _literal(node):

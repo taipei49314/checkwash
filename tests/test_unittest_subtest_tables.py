@@ -54,7 +54,8 @@ def test_subtest_expected_rewrite_stays_high():
 
 @pytest.mark.parametrize('after', [
     AFTER.replace('(1, 2), (2, 4)', '(1, 2)'),
-    AFTER.replace('(1, 2), (2, 4)', '(1, 2), (2, 4), (3, 6)'),
+    AFTER.replace('(1, 2), (2, 4)', '(1, 2), (2, 4), (3, 6)').replace(
+        '            with self.subTest(value=value, expected=expected):\n                ', '            '),
     AFTER.replace('value=value', 'value=external(value)'),
     AFTER.replace('with self.subTest(', 'with external('),
     AFTER.replace('expected=expected):', 'expected=expected) as context:'),

@@ -1,11 +1,14 @@
 """Expand a closed TestCase lifecycle only when the caller proves purity.
 
 Default unittest collection sorts method names. setUp checks are repeated
-before every test. Explicit lifecycle calls remain unsupported. No callback,
-state, custom dispatch or external base class is silently removed.
+before every test. Explicit lifecycle calls remain unsupported. Immutable
+literal row providers are expanded only at fully accounted loop consumers;
+callbacks, other state, custom dispatch and external bases remain unproved.
 
-The caller requires exact oracle multiplicity and pure imported subjects on
-both sides. With preserved expectations, the suite passes exactly when all
+The caller requires pure imported subjects on both sides. General lifecycle
+changes retain exact oracle multiplicity; an after-suite of only default
+subTest loops may add rows because failures still continue to every original
+check. With preserved expectations, the suite passes exactly when all
 of those deterministic checks pass. This is suite-verdict equivalence, not
 call-order equivalence: a failing setup or assertion still prevents later
 statements in its method from executing.
@@ -13,6 +16,8 @@ statements in its method from executing.
 
 import ast
 import copy
+
+from checkwash.frontends.python.unittest_tables import expand_class_tables
 
 
 def _plain_method(node):
@@ -71,11 +76,13 @@ def _subtest_loop(statement):
     if not isinstance(assertion, ast.Assert) or assertion.msg is not None:
         return statement
     statement.body = [assertion]
+    statement._checkwash_subtest = True
     return statement
 
 
 def expand_unittest_classes(tree):
     authority, expanded = False, set()
+    subtest_only = True
     for node in tree.body:
         if isinstance(node, ast.Import) and len(node.names) == 1:
             authority |= node.names[0].name == 'unittest' and node.names[0].asname is None
@@ -89,6 +96,7 @@ def expand_unittest_classes(tree):
             return None
         methods, setup = [], []
         names = set()
+        expand_class_tables(node, tree)
         for member in node.body:
             if isinstance(member, ast.Pass) or (isinstance(member, ast.Expr)
                     and isinstance(member.value, ast.Constant) and isinstance(member.value.value, str)):
@@ -113,7 +121,9 @@ def expand_unittest_classes(tree):
             if len(method.args.args) != 1:
                 return None
             method.body = copy.deepcopy(setup) + method.body
+            subtest_only &= (not setup and len(method.body) == 1
+                             and getattr(method.body[0], '_checkwash_subtest', False))
             expanded.add('test_' + node.name + '__' + method.name)
         node.body = [method for method in methods if not method.name.startswith('test')] + tests
         node.bases = []
-    return expanded
+    return expanded, bool(expanded) and subtest_only
