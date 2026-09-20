@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.frontends.python.runtime_controls import runtime_controls
+from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
@@ -2941,6 +2942,13 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 visit(child, prefix, inherited, collectible)
 
     visit(tree, "", module_markers, True)
+    if collect_tests:
+        for cls, owner, method in inherited_test_methods(tree):
+            units.append(_collect_unit(
+                method, f"{cls.name}.{method.name}", text, off,
+                module_markers + _decorator_markers(owner, text, off)
+                + _decorator_markers(cls, text, off), module_scopes, file_caches,
+            ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
 
