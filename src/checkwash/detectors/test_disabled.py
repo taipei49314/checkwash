@@ -46,7 +46,9 @@ def detect(ir: IR) -> list[Finding]:
                     m = marker_by_name.get(name)
                     collection = name.startswith("conftest.")
                     what = (
-                        "suite-level collection control added"
+                        "suite-level execution/report suppression added"
+                        if name.startswith("conftest.runtime.")
+                        else "suite-level collection control added"
                         if collection
                         else "disabling marker added"
                     )

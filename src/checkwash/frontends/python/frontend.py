@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, field
 
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
@@ -2587,6 +2588,9 @@ def _ignored_paths(controls) -> tuple[str, ...]:
 def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
     """Suite-level collection controls in a conftest, as one synthetic unit."""
     markers: list[Marker] = _pytestmark_markers(tree, text, off)
+
+    for name, node in runtime_controls(tree):
+        markers.append(Marker(name=name, text=text.seg(node) or name, span=off.span(node)))
 
     controls = _collection_controls(tree, text)
     ignored: tuple[str, ...] = _ignored_paths(controls)
