@@ -47,6 +47,7 @@ from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.frontends.python.literal_expected_bindings import expand_literal_expected_bindings
+from checkwash.frontends.python.literal_subject_bindings import expand_literal_subject_bindings
 from checkwash.frontends.python.captured_assert_helpers import expand_captured_assert_helpers
 from checkwash.frontends.python.inert_signatures import strip_none_test_returns
 from checkwash.frontends.python.table_factories import expand_literal_table_factories
@@ -1055,6 +1056,7 @@ def _module(source, *, baseline):
                     for node in ast.walk(function))}
     inert_signature_tests = strip_none_test_returns(tree)
     literal_expected_tests = expand_literal_expected_bindings(tree, _literal)
+    literal_subject_tests = expand_literal_subject_bindings(tree, _literal)
     captured_helper_tests = expand_captured_assert_helpers(tree, _literal)
     local_auxiliary = extract_local_auxiliary_oracles(tree)
     raises_oracles = extract_raises_oracles(tree)
@@ -1242,6 +1244,8 @@ def _module(source, *, baseline):
             is_table, form = True, "exact-unique-predicate"
         if function.name in literal_expected_tests:
             is_table, form = True, "literal-expected-local"
+        if function.name in literal_subject_tests:
+            is_table, form = True, "literal-subject-local"
         if function.name in captured_helper_tests:
             is_table, form = True, "captured-assert-helper"
         if function.name in inert_signature_tests:
@@ -1301,7 +1305,7 @@ def _module(source, *, baseline):
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
                  or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
-                 or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests or captured_helper_tests or inert_signature_tests
+                 or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests or literal_subject_tests or captured_helper_tests or inert_signature_tests
                  or any(form in {'string-block', 'grouped-assert-helper'} for _, form in forms)
                  or any(getattr(case.assertion, '_requires_closed_helper', False) for case in result)),
             bool(unittest_tests),
@@ -1586,6 +1590,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         if (any(form == 'literal-expected-local' for _, form in old[6])
                 and any(form == 'literal-expected-local' for _, form in new[6])):
             return before_parsed, after_parsed  # retain ordinary same-carrier expectation provenance
+        if (any(form == 'literal-subject-local' for _, form in old[6])
+                and any(form == 'literal-subject-local' for _, form in new[6])):
+            return before_parsed, after_parsed  # retain existing same-carrier input/expectation policy
         if (any(form == 'literal-fixtures' for _, form in old[6])
                 and any(form == 'literal-fixtures' for _, form in new[6])):
             return before_parsed, after_parsed  # retain existing same-carrier fixture provenance ownership
