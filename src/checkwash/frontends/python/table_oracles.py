@@ -57,6 +57,7 @@ from checkwash.frontends.python.local_auxiliary_oracles import (extract_local_au
 from checkwash.frontends.python.helper_predicates import expand_predicate_helpers
 from checkwash.frontends.python.prefix_predicates import expand_prefix_predicates
 from checkwash.frontends.python.callable_fixture_rows import consumer_rows, fixture_prefix_rows
+from checkwash.frontends.python.normalized_result_tables import project_normalized_result_table
 from checkwash.frontends.python.unique_predicates import (complete_unique_helper, expand_unique_predicates,
                                                        _unique_literal, unshadowed_unique_builtins)
 from checkwash.ir.astutil import dotted_name, stable_dump
@@ -1463,6 +1464,11 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
     if (root_reader is None or root_searcher is None or not before_parsed.parse_ok or not after_parsed.parse_ok
             or not before_parsed.units):
         return before_parsed, after_parsed
+    normalized = project_normalized_result_table(
+        before, after, before_parsed, after_parsed, path=path,
+        root_reader=root_reader, root_searcher=root_searcher, changes=changes)
+    if normalized is not None:
+        return normalized
     try:
         old, new = _module(before, baseline=True), _module(after, baseline=False)
         if old is None:
