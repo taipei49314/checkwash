@@ -18,6 +18,7 @@ from checkwash.frontends.python.conditional_oracles import conditional_oracle_ca
 from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
+from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
@@ -2187,6 +2188,7 @@ def _collect_unit(
     module_scopes: dict[str, ast.AST] | None = None,
     caches: tuple[dict, dict] | None = None,
     fixtures: dict[str, ast.Constant] | None = None,
+    doctests: list[Assertion] | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -2429,6 +2431,7 @@ def _collect_unit(
                 )
                 counter += 1
 
+    assertions.extend(checked_examples(func, doctests or [], dead))
     body = text.seg(func) or ""
     body_hash = hashlib.sha256(normalize_text(body).encode("utf-8")).hexdigest() if body else ""
 
@@ -2866,10 +2869,11 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # noise statements, dead literal bindings) so a cosmetic prod edit buys
     # no repair evidence. Test files never fingerprint symbols, so they skip
     # the pass entirely — collection semantics never see a mutated tree.
+    text = off = _Offsets(raw)
+    doctests = module_examples(tree, off) if collect_tests and ">>>" in raw and "doctest" in raw else []
     _strip_docstrings(tree)
     if not collect_tests:
         _normalize_for_fingerprint(tree)
-    text = off = _Offsets(raw)
     units: list[ParsedUnit] = []
     symbols: dict[str, str] = {}
     symbol_calls: dict[str, tuple[str, ...]] = {}
@@ -2913,7 +2917,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 if collect_tests and collectible and _is_test_name(child.name):
                     units.append(
                         _collect_unit(
-                            child, qual, text, off, inherited, module_scopes, file_caches, branch_fixtures
+                            child, qual, text, off, inherited, module_scopes, file_caches, branch_fixtures, doctests
                         )
                     )
                 # Nested defs are never collected as pytest items.
@@ -2951,7 +2955,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
             units.append(_collect_unit(
                 method, f"{cls.name}.{method.name}", text, off,
                 module_markers + _decorator_markers(owner, text, off)
-                + _decorator_markers(cls, text, off), module_scopes, file_caches, branch_fixtures,
+                + _decorator_markers(cls, text, off), module_scopes, file_caches, branch_fixtures, doctests,
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
