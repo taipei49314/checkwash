@@ -36,7 +36,7 @@ def _comparison(statement):
             and isinstance(test.ops[0], ast.Eq) and isinstance(test.left, ast.Call) else None)
 
 
-def parameterized_abs_event(unit, trees, path, source, context, deny):
+def parameterized_abs_event(unit, trees, path, source, context, deny, search=None):
     """Compare complete literal rows, then prove the first replacement runs.
 
     Later helper calls may be behind a failing assertion, so only the first
@@ -44,6 +44,8 @@ def parameterized_abs_event(unit, trees, path, source, context, deny):
     input and answer, and every test in the module must have this closed form.
     """
     from .frontend import _Offsets
+    from .literal_stdlib_standins import _read
+    from .replacement_authority import closed_replacement_authority
     from .subject_replacements import _bindings, _helper_module_inert, _resolve
 
     if any(tree is None or not _helper_module_inert(tree) for tree in trees):
@@ -74,6 +76,7 @@ def parameterized_abs_event(unit, trees, path, source, context, deny):
     argument_index, answer_index = parameters.index(argument.id), parameters.index(answer.id)
     first = None
     rows = 0
+    targets = set()
     for name, before in old_functions.items():
         after = new_functions[name]
         if not _plain(after, 0) or not before.body or len(before.body) != len(after.body):
@@ -96,7 +99,12 @@ def parameterized_abs_event(unit, trees, path, source, context, deny):
             if (not isinstance(target, str) or target.split(".", 1)[0] in deny
                     or not context.contains(target, 0)):
                 return None
+            targets.add(target)
             if name == unit.qualname and index == 0:
                 offsets = _Offsets(source.decode("utf-8-sig"))
                 first = (path, unit.qualname, target, offsets.seg(call), offsets.span(call))
+    if len(targets) != 1 or not closed_replacement_authority(
+            trees[1], next(iter(targets)), path=path, read=lambda candidate: _read(context, candidate),
+            search=search, modules={'builtins', 'pytest'}, symbols={'builtins': {'abs'}}):
+        return None
     return first

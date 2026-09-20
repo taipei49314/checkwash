@@ -86,3 +86,37 @@ def test_literal_helper_masks_bug_without_exercising_production():
     new['test_total']()
     assert calls == [5, -3]
     assert any(finding.rule == 'TEST_PATCHES_SUBJECT' for finding in judge(BEFORE, AFTER))
+
+
+@pytest.mark.parametrize('extra', [
+    {'app/billing.py': b'import builtins\ndef total(n):\n    return n\nbuiltins.abs=total\n'},
+    {'app/__init__.py': b'import builtins\nfrom .billing import total\nbuiltins.abs=total\n'},
+    {'tests/conftest.py': b'def pytest_configure():\n    import builtins\n    from app.billing import total\n    builtins.abs=total\n'},
+    {'tests/test_aaa.py': b'import builtins\nfrom app.billing import total\nbuiltins.abs=total\n'},
+    {'tests/__init__.py': b'import builtins\nfrom app.billing import total\nbuiltins.abs=total\n'},
+    {'pytest.ini': b'[pytest]\naddopts=-p mutator\n'},
+    {'pytest.py': b'import builtins\nfrom app.billing import total\nbuiltins.abs=total\n'},
+])
+def test_imported_source_and_startup_cannot_rebind_the_builtin(extra):
+    assert not [f for f in judge(BEFORE, AFTER, extra) if f.rule == 'TEST_PATCHES_SUBJECT']
+
+
+def test_extra_import_cannot_borrow_production_source_authority():
+    after = AFTER.replace('import pytest', 'import pytest\nimport mutator')
+    assert not [f for f in judge(BEFORE, after) if f.rule == 'TEST_PATCHES_SUBJECT']
+
+
+def test_rebound_builtin_helper_still_calls_production(monkeypatch):
+    import builtins
+    calls = []
+    def total(value):
+        calls.append(value)
+        return value if value >= 0 else -value
+    monkeypatch.setattr(builtins, 'abs', total)
+    for source in (BEFORE, AFTER):
+        namespace = {'total': total}
+        exec(source.removeprefix(PREFIX), namespace)
+        namespace['test_total']()
+    assert calls == [5, -3, 0, 5, -3, 0]
+    production = b'import builtins\ndef total(n):\n    return n if n >= 0 else -n\nbuiltins.abs=total\n'
+    assert not [f for f in judge(BEFORE, AFTER, {'app/billing.py': production}) if f.rule == 'TEST_PATCHES_SUBJECT']

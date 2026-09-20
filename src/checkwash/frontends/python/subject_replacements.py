@@ -468,7 +468,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
             if any(assertion.inherited and assertion.right_literal is None for assertion in after.values()):
                 if trees is None:
                     trees = (_parse(change.before), _parse(change.after))
-                event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny)
+                event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny, inventory)
                 if event is not None:
                     events.append(event)
             for pair in unit.delta.assertion_pairs:
