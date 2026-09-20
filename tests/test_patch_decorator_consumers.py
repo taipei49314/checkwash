@@ -63,6 +63,11 @@ def test_executable_conftest_withholds_closed_decorator_proof():
     assert not run(AFTER, {'tests/conftest.py': b'def pytest_runtest_setup(item):\n    mutate(item)\n'})[0].globals.subject_installations
 
 
+@pytest.mark.parametrize('path', ['conftest.py', 'tests/conftest.py'])
+def test_docstring_only_conftest_is_inert_and_does_not_crash(path):
+    assert run(AFTER, {path: b'"""Shared test documentation."""\n'})[0].globals.subject_installations
+
+
 def test_decorator_alias_and_mock_parameter_rename_do_not_create_new_installation():
     changed = AFTER.replace('import patch', 'import patch as standin').replace('@patch(', '@standin(').replace('replacement', 'substitute')
     assert not run(changed, before=AFTER)[0].globals.subject_installations

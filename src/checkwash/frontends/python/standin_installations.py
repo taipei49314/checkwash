@@ -526,7 +526,7 @@ class _Trace:
         for module in self.modules:
             if module.path != function.module.path and any(not (
                     isinstance(statement, ast.Pass) or isinstance(statement, ast.Expr)
-                    and isinstance(statement.value, ast.Constant) and type(statement.value.value.value) is str)
+                    and isinstance(statement.value, ast.Constant) and type(statement.value.value) is str)
                     for statement in module.tree.body):
                 return False
         return defined

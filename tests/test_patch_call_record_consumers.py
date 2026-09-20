@@ -61,6 +61,10 @@ def test_unknown_startup_and_patch_authority_withhold_record_proof(extra):
     assert not run(AFTER, extra)[0].globals.subject_installations
 
 
+def test_docstring_only_conftest_is_inert_for_call_record_proof():
+    assert run(AFTER, {'tests/conftest.py': b'"""Shared test documentation."""\n'})[0].globals.subject_installations
+
+
 def test_record_consumer_alias_rename_does_not_create_new_installation():
     changed = AFTER.replace('import patch', 'import patch as standin').replace('with patch(', 'with standin(').replace('replacement', 'substitute')
     assert not run(changed, before=AFTER)[0].globals.subject_installations
