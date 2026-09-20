@@ -2,6 +2,27 @@
 import ast
 
 
+def fresh_running_sum(body, parameters):
+    """Only a fresh list is mutated; the scalar accumulator starts at zero."""
+    if (len(parameters) != 1 or len(body) != 4 or not isinstance(body[0], ast.Assign)
+            or not isinstance(body[1], ast.Assign) or not isinstance(body[2], ast.For)
+            or len(body[0].targets) != 1 or len(body[1].targets) != 1
+            or not all(isinstance(node, ast.Name) for node in (body[0].targets[0], body[1].targets[0], body[2].target))):
+        return False
+    values = parameters[0]
+    output, accumulator, item = body[0].targets[0].id, body[1].targets[0].id, body[2].target.id
+    if len({values, output, accumulator, item}) != 4:
+        return False
+    expected = ast.parse(f'''{output} = []
+{accumulator} = 0
+for {item} in {values}:
+    {accumulator} += {item}
+    {output}.append({accumulator})
+return {output}
+''')
+    return ast.dump(ast.Module(body=body, type_ignores=[])) == ast.dump(expected)
+
+
 def fresh_unique_merge(body, parameters):
     if len(parameters) != 2 or len(body) != 4:
         return False
