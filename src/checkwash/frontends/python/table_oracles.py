@@ -32,6 +32,7 @@ from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
+from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expand_string_blocks, string_block
 from checkwash.frontends.python.oracle_purity import pure_imported_calls
 from checkwash.frontends.python.primitive_strings import primitive_string_result
@@ -759,6 +760,19 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         body = [_Substitute(aliases).visit(copy.deepcopy(body[-1]))]
     if bindings is None or len(body) != 1:
         return None
+    if table and isinstance(body[0], ast.If):
+        condition = body[0]
+        if condition.orelse or len(condition.body) != 1:
+            return None
+        filtered = []
+        for row in bindings:
+            predicate = _Substitute(row).visit(copy.deepcopy(condition.test))
+            value = folded_expected(predicate, lambda _name: False)
+            if not isinstance(value, ast.Constant) or type(value.value) is not bool:
+                return None
+            if value.value:
+                filtered.append(row)
+        bindings, body, form = filtered, [condition.body[0]], "filtered-" + form
     if (form == "native" and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Call)
             and isinstance(body[0].value.func, ast.Name) and body[0].value.func.id in helpers):
         table, form = True, "assert-helper"
