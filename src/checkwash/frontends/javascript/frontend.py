@@ -15,13 +15,18 @@ from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir import strength as S
 from checkwash.ir.model import Assertion, Marker, UnitSide, normalize_text
 
+# Word boundary before every declaration word: `split("\n")` contains `it`
+# and `exit(` contains `xit`, so an unanchored match minted a test unit whose
+# name was the following string literal (issue #156 — a diff that touched no
+# assertion reported the pseudo-unit `"\n"` as a removed test).
 _TEST_RE = re.compile(
-    r"""(?P<skip>test\.skip|it\.skip|test\.todo|it\.todo|xtest|xit)|(?P<kind>test|it)"""
+    r"""(?P<skip>\btest\.skip|\bit\.skip|\btest\.todo|\bit\.todo|\bxtest|\bxit)"""
+    r"""|(?P<kind>\btest|\bit)"""
     r"""\s*\(\s*(?P<q>['"`])(?P<name>(?:\\.|(?!(?P=q)).)*)(?P=q)""",
     re.MULTILINE,
 )
 _EXPECT_RE = re.compile(
-    r"""expect\s*\((?P<subject>[^;]{1,200}?)\)\s*\.\s*(?P<not>not\s*\.\s*)?(?P<matcher>"""
+    r"""\bexpect\s*\((?P<subject>[^;]{1,200}?)\)\s*\.\s*(?P<not>not\s*\.\s*)?(?P<matcher>"""
     r"""toBe|toEqual|toStrictEqual|toBeCloseTo|toContain|toMatch|"""
     r"""toBeTruthy|toBeFalsy|toBeDefined|toBeUndefined|toBeNull|"""
     r"""toBeGreaterThan|toBeGreaterThanOrEqual|toBeLessThan|toBeLessThanOrEqual"""
