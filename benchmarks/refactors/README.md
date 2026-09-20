@@ -5,6 +5,16 @@ ships a particular bug that the original and refactored tests are meant to catch
 The execution qualification below checks that claim; human review must still
 decide whether the refactor preserves the intended semantics.
 
+`results-latest.json` is the retained **2026-09-07 / v0.3.1 runtime snapshot**,
+not the current engine's result. Its filename is historical. `expected.json`
+and the frozen corpus gates define the current per-case verdict ledger; new
+runtime receipts are written to new, source-qualified paths by `verify.py`.
+Never infer current runtime qualification from that dated snapshot. The three
+fixture-error cases named below remain explicitly unqualified; their original
+trees and results are retained, and they are excluded from qualified-rate
+claims. This is the documentation resolution of issue #140, not a claim that
+those fixture errors were repaired.
+
 - `CASE_*`: 30 mixed refactors (extraction, merge, split, fixtures, `approx`)
 - `EXT_*`: 30 more of the single hardest family — a concrete assertion
   extracted into a shared, parameterised helper — generated after the
