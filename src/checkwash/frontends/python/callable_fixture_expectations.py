@@ -56,7 +56,7 @@ def _tree(source):
     return tree if sum(1 for _ in ast.walk(tree)) <= 4096 else None
 
 
-def _module(source, after):
+def _module(source, after, *, fixture_factory=False):
     tree = _tree(source)
     if tree is None:
         return None
@@ -93,16 +93,32 @@ def _module(source, after):
             return None
         fixture = functions.get(parameters[0])
         if (fixture is None or fixture.name.startswith(('test', 'pytest_', '__')) or _parameters(fixture) != []
-                or len(fixture.decorator_list) != 1 or len(fixture.body) != 1
-                or not isinstance(fixture.body[0], ast.Return) or not isinstance(fixture.body[0].value, ast.Lambda)):
+                or len(fixture.decorator_list) != 1):
             return None
         decorator = fixture.decorator_list[0]
         if isinstance(decorator, ast.Call) and not decorator.args and not decorator.keywords:
             decorator = decorator.func
-        callback = fixture.body[0].value
+        if dotted_name(decorator) != 'pytest.fixture':
+            return None
+        if fixture_factory:
+            if (len(fixture.body) != 2 or not isinstance(fixture.body[0], ast.FunctionDef)
+                    or not isinstance(fixture.body[1], ast.Return) or not isinstance(fixture.body[1].value, ast.Name)
+                    or fixture.body[1].value.id != fixture.body[0].name):
+                return None
+            factory = fixture.body[0]
+            captured = _parameters(factory)
+            if (factory.decorator_list or captured is None or not captured or len(factory.body) != 1
+                    or not isinstance(factory.body[0], ast.Return) or not isinstance(factory.body[0].value, ast.Lambda)):
+                return None
+            callback = factory.body[0].value
+        else:
+            if (len(fixture.body) != 1 or not isinstance(fixture.body[0], ast.Return)
+                    or not isinstance(fixture.body[0].value, ast.Lambda)):
+                return None
+            callback, captured = fixture.body[0].value, []
         callback_parameters = _parameters(callback)
-        if (dotted_name(decorator) != 'pytest.fixture' or callback_parameters is None or not callback_parameters
-                or not _numeric(callback.body, set(callback_parameters))):
+        if (callback_parameters is None or not callback_parameters
+                or not _numeric(callback.body, set(captured) | set(callback_parameters))):
             return None
     return imports, test, fixture
 

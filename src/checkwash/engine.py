@@ -56,6 +56,7 @@ from checkwash.frontends.python.empty_parameter_sets import mark_empty_parameter
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
 from checkwash.frontends.python.standin_installations import installation_events
 from checkwash.frontends.python.subject_replacements import subject_replacement_events
+from checkwash.frontends.python.callable_fixture_subjects import callable_fixture_subject_events
 from checkwash.shadow import find_runtime_subject_shadows
 from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
@@ -1122,6 +1123,9 @@ def build_ir(
             g.subject_installations.append((path, unit, target, text, span))
     for event in subject_replacement_events(ir, changes, root_reader=root_reader,
                                           root_searcher=root_searcher, root_path_lister=root_path_lister):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    for event in callable_fixture_subject_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
