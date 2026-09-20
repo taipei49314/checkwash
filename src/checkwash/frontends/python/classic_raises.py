@@ -17,6 +17,7 @@ from checkwash.frontends.python.table_oracles import (_args, _bounded_tree, _con
                                                     _CONTROL_NAMES, _IMPLICIT_HOOKS)
 from checkwash.frontends.python.frontend import _Offsets, normalize_source, parse_python
 from checkwash.ir.astutil import stable_dump
+from checkwash.frontends.python.classic_raises_additions import added_literal_tests
 
 _EXCEPTIONS = {'ZeroDivisionError', 'ValueError', 'TypeError', 'IndexError', 'KeyError', 'OverflowError'}
 _IMPORTED_CONTROLS = _CONTROL_NAMES | _IMPLICIT_HOOKS | {'setUpModule', 'tearDownModule'}
@@ -139,6 +140,11 @@ def mark_classic_exception_removal(before, after, before_parsed, after_parsed, *
             or not before_parsed.parse_ok or not after_parsed.parse_ok):
         return before_parsed, after_parsed
     old, new = _module(before), _after_module(after)
+    additional_calls = []
+    if old is not None and new is None:
+        expanded = added_literal_tests(after, old[1].name, _EXCEPTIONS | _IMPORTED_CONTROLS, _inert_message)
+        if expanded is not None:
+            new, additional_calls = expanded
     if (old is None or new is None or stable_dump(old[0]) != stable_dump(new[0])
             or old[1].name != new[1].name or len(old[1].body) != 1):
         return before_parsed, after_parsed
@@ -183,7 +189,7 @@ def mark_classic_exception_removal(before, after, before_parsed, after_parsed, *
             path, before, after, tuple(changes), root_reader, root_searcher)):
         if (not inert_test_execution_context(path, read, search) or not _pytest_unshadowed(path, read)
                 or not pure_imported_calls(
-                source, [call], path=path, read=read, result_proof=primitive_literal_result)):
+                source, [call, *additional_calls], path=path, read=read, result_proof=primitive_literal_result)):
             return before_parsed, after_parsed
     if len(before_parsed.units) != 1 or len(before_parsed.units[0].side.assertions) != 1:
         return before_parsed, after_parsed
@@ -196,14 +202,15 @@ def mark_classic_exception_removal(before, after, before_parsed, after_parsed, *
     # wrongly let that apparent strength compensate for the removed exception.
     rendered = ast.unparse(ast.fix_missing_locations(ast.Module(body=[new[0], new[1]], type_ignores=[])))
     normalized_after = parse_python(rendered.encode(), collect_tests=True)
-    if (len(after_parsed.units) != 1 or len(after_parsed.units[0].side.assertions) != 1
+    targets = [unit for unit in after_parsed.units if unit.qualname == old[1].name]
+    if (len(targets) != 1 or len(targets[0].side.assertions) != 1
             or len(normalized_after.units) != 1 or len(normalized_after.units[0].side.assertions) != 1):
         return before_parsed, after_parsed
-    after_unit = after_parsed.units[0]
+    after_unit = targets[0]
     after_assertion = replace(normalized_after.units[0].side.assertions[0],
                               span=_Offsets(normalize_source(after)).span(check))
-    after_parsed = replace(after_parsed, units=[replace(after_unit, side=replace(
-        after_unit.side, assertions=[after_assertion]))])
+    after_parsed = replace(after_parsed, units=[replace(unit, side=replace(
+        unit.side, assertions=[after_assertion])) if unit is after_unit else unit for unit in after_parsed.units])
     unit = before_parsed.units[0]
     offsets = _Offsets(normalize_source(before))
     assertion = replace(unit.side.assertions[0], form='raises', strength=None, text=offsets.seg(expected) or '',
