@@ -56,6 +56,24 @@ def expand_tuple_oracles(tree):
             continue
         scope = forbidden | {arg.arg for arg in function.args.args + function.args.posonlyargs + function.args.kwonlyargs}
         replacement = _block(function.body, scope)
+        if replacement is None:
+            # A merge may repeat a complete unpack/check block. Every group
+            # independently retains all ordered components; literal subject
+            # arguments and closed tuple production are still proved by the
+            # caller. No partial component or cross-block alias is invented.
+            groups = []
+            for statement in function.body:
+                if isinstance(statement, ast.Assign) and isinstance(statement.value, ast.Call):
+                    groups.append([statement])
+                elif isinstance(statement, ast.Assert) and groups:
+                    groups[-1].append(statement)
+                else:
+                    groups = []
+                    break
+            if 2 <= len(groups) <= 64:
+                blocks = [_block(group, scope) for group in groups]
+                if all(block is not None for block in blocks):
+                    replacement = [assertion for block in blocks for assertion in block]
         if replacement is not None:
             function.body = replacement
             result.add(function.name)
