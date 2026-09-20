@@ -7,6 +7,20 @@ import copy
 
 def literal_fixtures(tree: ast.Module) -> dict[str, ast.Constant]:
     """Only direct, argument-free pytest fixtures returning one scalar."""
+    if not any(isinstance(node, ast.Import) and any(alias.name == "pytest" and not alias.asname
+                                                  for alias in node.names) for node in tree.body):
+        return {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id == "pytest" and isinstance(node.ctx, (ast.Store, ast.Del)):
+            return {}
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == "pytest":
+            return {}
+        if isinstance(node, ast.alias) and (node.asname or node.name.split('.')[0]) == "pytest":
+            if node.name != "pytest" or node.asname:
+                return {}
+        if isinstance(node, ast.Attribute) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            if isinstance(node.value, ast.Name) and node.value.id == "pytest":
+                return {}
     result = {}
     names = {}
     for node in tree.body:

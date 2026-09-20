@@ -64,6 +64,17 @@ def test_false_branch_does_not_overwrite_later_binding():
     assert len(parse_python(source.encode(), collect_tests=True).units[0].side.assertions) == 1
 
 
+@pytest.mark.parametrize("source", [
+    FIXTURE.replace("import pytest\n", ""),
+    FIXTURE.replace("import pytest", "import external as pytest"),
+    FIXTURE.replace("import pytest", "import pytest\npytest = external"),
+    FIXTURE.replace("import pytest", "import pytest\npytest.fixture = external"),
+])
+def test_unknown_fixture_decorator_does_not_establish_a_false_value(source):
+    source = source.replace("return True", "return False")
+    assert len(parse_python(source.encode(), collect_tests=True).units[0].side.assertions) == 1
+
+
 @pytest.mark.parametrize("before", [LOCAL, FIXTURE])
 def test_runtime_closed_branch_hides_failed_oracle(tmp_path, before):
     import os

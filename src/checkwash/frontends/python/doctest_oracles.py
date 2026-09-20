@@ -14,6 +14,9 @@ def module_examples(tree: ast.Module, offsets) -> list[Assertion]:
     if not any(isinstance(node, ast.Import) and any(alias.name == "doctest" and not alias.asname
                                                   for alias in node.names) for node in tree.body):
         return []
+    if not any(isinstance(node, ast.Import) and any(alias.name == "sys" and not alias.asname
+                                                  for alias in node.names) for node in tree.body):
+        return []
     for node in ast.walk(tree):
         if isinstance(node, ast.Name) and node.id in {"doctest", "sys", "__name__"} and isinstance(node.ctx, (ast.Store, ast.Del)):
             return []
@@ -81,7 +84,7 @@ def checked_examples(func, examples, dead):
                 or not isinstance(call.func, ast.Attribute) or call.func.attr != "testmod"
                 or not isinstance(call.func.value, ast.Name) or call.func.value.id != "doctest"):
             continue
-        if call.args and not (len(call.args) == 1 and ast.unparse(call.args[0]) == "sys.modules[__name__]"):
+        if not (len(call.args) == 1 and ast.unparse(call.args[0]) == "sys.modules[__name__]"):
             continue
         target = statement.targets[0]
         if not isinstance(target, (ast.Tuple, ast.List)) or len(target.elts) != 2 or not isinstance(target.elts[0], ast.Name):
