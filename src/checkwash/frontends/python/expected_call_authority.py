@@ -55,7 +55,7 @@ def _target_names(node):
     raise _Unsafe  # attribute/subscript writes can mutate shared authorities
 
 
-def safe_call_graph(paths: tuple[str, ...], read) -> bool:
+def safe_call_graph(paths: tuple[str, ...], read, *, scalar_fixtures=False) -> bool:
     """Check entry/helper sources and their complete bounded import closure.
 
     The supplied strict reader owns I/O failures and its overall read budget.
@@ -80,10 +80,10 @@ def safe_call_graph(paths: tuple[str, ...], read) -> bool:
         return (isinstance(path, str) and bool(path) and "\\" not in path and ":" not in path
                 and not path.startswith("/") and all(p not in {"", ".", ".."} for p in path.split("/")))
 
-    def math_authority(owner):
+    def external_authority(owner, name):
         for root in sorted(roots(owner)):
             prefix = root + "/" if root else ""
-            for suffix in ("math.py", "math/__init__.py"):
+            for suffix in (name + ".py", name + "/__init__.py"):
                 if source(prefix + suffix) is not None:
                     raise _Unsafe
 
@@ -162,8 +162,11 @@ def safe_call_graph(paths: tuple[str, ...], read) -> bool:
                     name = item.asname or item.name.split(".")[0]
                     bind(name)
                     if item.name == "math":
-                        math_authority(path)
+                        external_authority(path, "math")
                         imports[name] = ("math",)
+                    elif scalar_fixtures and item.name == "pytest" and item.asname is None:
+                        external_authority(path, "pytest")
+                        imports[name] = ("pytest",)
                     else:
                         imported = resolve(path, item.name)
                         tail = "" if item.asname else item.name.partition(".")[2]
@@ -175,14 +178,14 @@ def safe_call_graph(paths: tuple[str, ...], read) -> bool:
                     name = item.asname or item.name
                     bind(name)
                     if node.module == "math" and not node.level and item.name == "prod":
-                        math_authority(path)
+                        external_authority(path, "math")
                         imports[name] = ("prod",)
                     else:
                         imports[name] = ("member", resolve(path, node.module, node.level), item.name)
             else:
                 raise _Unsafe
 
-        protected = _PROTECTED | {name for name, value in imports.items() if value[0] in {"math", "prod"}}
+        protected = _PROTECTED | {name for name, value in imports.items() if value[0] in {"math", "prod", "pytest"}}
         imported_modules = {value[1] for value in imports.values() if value[0] in {"module", "member"}}
         for imported in sorted(imported_modules):
             load(imported)
@@ -301,17 +304,35 @@ def safe_call_graph(paths: tuple[str, ...], read) -> bool:
                 else:
                     raise _Unsafe
 
+        # This optional fixture mode establishes only effect-free binding
+        # authority. The provenance caller separately folds a closed Boolean
+        # return expression and verifies pytest startup/provider ownership.
+        fixtures = set()
+        if scalar_fixtures and imports.get("pytest") == ("pytest",):
+            for name, function in functions.items():
+                if len(function.decorator_list) != 1 or function.args.args or function.args.defaults:
+                    continue
+                decorator = function.decorator_list[0]
+                if isinstance(decorator, ast.Call) and not decorator.args and not decorator.keywords:
+                    decorator = decorator.func
+                if (isinstance(decorator, ast.Attribute) and decorator.attr == "fixture"
+                        and isinstance(decorator.value, ast.Name) and decorator.value.id == "pytest"
+                        and len(function.body) == 1 and isinstance(function.body[0], ast.Return)):
+                    fixtures.add(name)
+
         for function in functions.values():
             args = function.args
-            if (function.decorator_list or function.returns or getattr(function, "type_params", ())
+            if ((function.decorator_list and function.name not in fixtures) or function.returns or getattr(function, "type_params", ())
                     or args.posonlyargs or args.kwonlyargs or args.vararg or args.kwarg
                     or any(a.annotation for a in args.args) or not all(_literal(d) for d in args.defaults)):
                 raise _Unsafe
             arguments = {arg.arg for arg in args.args}
             if arguments & protected or len(arguments) != len(args.args):
                 raise _Unsafe
-            if function.name.startswith("test") and arguments:
+            if function.name.startswith("test") and arguments and not (scalar_fixtures and arguments <= fixtures):
                 raise _Unsafe
+            if function.name.startswith("test") and arguments and args.defaults:
+                raise _Unsafe  # pytest does not inject fixture arguments having defaults
             local = arguments | {item.id for item in ast.walk(function)
                                  if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Store)}
             if local & protected:

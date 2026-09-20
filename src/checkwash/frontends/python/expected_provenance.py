@@ -246,7 +246,7 @@ class _Reader:
         try:
             if not inert_test_execution_context(paths[0], read, lambda needles: self.search(needles, side)):
                 return False
-            if not safe_call_graph(paths, read):
+            if not safe_call_graph(paths, read, scalar_fixtures=name == "fixture-boolean"):
                 return False
         except _Unsupported:
             return False  # exhausted proof is unknown; keep the original expression
@@ -372,7 +372,12 @@ class _Project:
         # Mutable fixtures retain identity and effects; do not copy them into
         # multiple calls or treat their source as a fresh literal each time.
         if not (isinstance(value, ast.Constant) and type(value.value) in (str, bytes, int, float, bool, type(None))):
-            return None
+            folded = folded_expected(value, lambda _: False, boolean_logic=True)
+            if not (isinstance(folded, ast.Constant) and type(folded.value) is bool
+                    and self.reader.constant_call_authority(
+                        tuple(dict.fromkeys((self.entry_path, module.path))), self.side, "fixture-boolean")):
+                return None
+            return folded
         return value
 
     def fixture_context(self, module):

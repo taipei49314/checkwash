@@ -48,6 +48,11 @@ def folded_expected(node, allow_call, *, boolean_logic=False):
                 raise _Unknown
             values = [sub(item) for item in expr.elts]
             return bounded(tuple(values) if isinstance(expr, ast.Tuple) else values)
+        if boolean_logic and isinstance(expr, ast.UnaryOp) and isinstance(expr.op, ast.Not):
+            value = sub(expr.operand)
+            if type(value) is not bool:
+                raise _Unknown
+            return not value
         if isinstance(expr, ast.UnaryOp) and isinstance(expr.op, (ast.UAdd, ast.USub)):
             value = sub(expr.operand)
             if type(value) not in (int, float):
