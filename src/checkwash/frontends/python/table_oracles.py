@@ -873,7 +873,7 @@ def _module(source, *, baseline):
            and (node.name in _IMPLICIT_HOOKS or node.name.startswith(("pytest_", "__")))
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
-    prune_inert_helpers(tree)
+    inert_helpers = prune_inert_helpers(tree)
     factory_tests = expand_literal_table_factories(tree)
     # A default-scope literal fixture that no source requests contributes no
     # oracle or setup effects. Keep every reference, shadowed definition,
@@ -1040,7 +1040,7 @@ def _module(source, *, baseline):
                                          for node in ast.walk(tree)):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
-            bool(block_tests or unittest_tests or pruned_fixtures), bool(unittest_tests))
+            bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers), bool(unittest_tests))
 
 
 def _module_unshadowed(path, read, module):

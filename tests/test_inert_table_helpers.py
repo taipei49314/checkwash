@@ -34,10 +34,13 @@ def test_data():
 '''
 
 
-def run(after):
-    return analyze([FileChange("tests/test_hamming.py", "modified", BEFORE.encode(), after.encode())],
+def run(after, before=BEFORE, production=None):
+    sources = production if production is not None else {
+        'app/hamming.py': HELPER.replace('def hamming_distance(', 'def hamming(').encode(),
+    }
+    return analyze([FileChange("tests/test_hamming.py", "modified", before.encode(), after.encode())],
                    Config(), Contract(), [], datetime.date(2026, 9, 21),
-                   root_reader={}.get, root_searcher=lambda _: [])
+                   root_reader=sources.get, root_searcher=lambda _: [])
 
 
 def test_unused_pure_helper_keeps_exact_table_oracles():
@@ -69,9 +72,45 @@ def test_unused_pure_helper_does_not_hide_rewritten_or_missing_row(after):
     HELPER.replace("return sum", "mutate()\n    return sum"),
     "from other import sum\n" + HELPER,
     HELPER.replace("def hamming_distance", "def test_hamming_distance"),
+    "def load_tests(loader, tests, pattern):\n    return []\n",
+    "def setUpModule():\n    return 1\n",
+    "def tearDownModule():\n    return 1\n",
 ])
 def test_callable_context_and_non_inert_helpers_are_retained(source):
     tree = ast.parse(source)
     before = ast.dump(tree)
     prune_inert_helpers(tree)
     assert ast.dump(tree) == before
+
+
+@pytest.mark.parametrize('production', [
+    {},
+    {'app/hamming.py': b'from tests.test_hamming import hamming_distance\ndef hamming(a,b):\n    return hamming_distance(a,b)\n'},
+    {'app/hamming.py': b'def hamming(a,b):\n    return globals()["callback"](a,b)\n'},
+    {'app/hamming.py': b'def sum(values):\n    return 0\ndef hamming(a,b):\n    return sum(x != y for x,y in zip(a,b))\n'},
+])
+def test_unreferenced_local_helper_needs_closed_production_call_graph(production):
+    ir, _, _ = run(AFTER, production=production)
+    assert not any(unit.qualname.startswith('test_concrete_') for unit in ir.files[0].units)
+
+
+def test_production_backlink_cannot_hide_red_to_green_helper_change():
+    before = '''from app.prod import f
+def hidden(value):
+    return 0
+def test_one():
+    assert f(1) == 1
+def test_two():
+    assert f(2) == 2
+'''
+    after = '''import pytest
+from app.prod import f
+def hidden(value):
+    return value
+@pytest.mark.parametrize("value,expected", [(1, 1), (2, 2)])
+def test_values(value, expected):
+    assert f(value) == expected
+'''
+    sources = {'app/prod.py': b'def f(value):\n    from tests.test_hamming import hidden\n    return hidden(value)\n'}
+    ir, _, _ = run(after, before, sources)
+    assert not any(unit.qualname.startswith('test_concrete_') for unit in ir.files[0].units)

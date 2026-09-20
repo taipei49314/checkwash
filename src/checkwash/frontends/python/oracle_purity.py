@@ -9,7 +9,7 @@ import ast
 from pathlib import PurePosixPath
 
 
-_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'zip'}
+_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip'}
 
 
 def _literal(node):
@@ -58,7 +58,8 @@ def _expression(node, names):
             bound = [item.id for item in target.elts]
         else:
             return False
-        if (generator.is_async or len(bound) != len(set(bound)) or set(bound) & names
+        if (generator.is_async or not bound or len(bound) != len(set(bound))
+                or set(bound) & (names | _BUILTINS | {'ValueError'})
                 or not _expression(generator.iter, names)):
             return False
         inner = names | set(bound)

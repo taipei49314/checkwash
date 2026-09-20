@@ -19,16 +19,18 @@ _NODES = (
 )
 
 
-def prune_inert_helpers(tree: ast.Module) -> None:
+def prune_inert_helpers(tree: ast.Module) -> set[str]:
+    pruned = set()
     nodes = list(ast.walk(tree))
     if any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
            and node.func.id in _REFLECTION for node in nodes):
-        return
+        return pruned
     bound = {node.id for node in nodes if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load)}
     bound.update(node.asname or node.name.split(".")[0] for node in nodes if isinstance(node, ast.alias))
     bound.update(node.name for node in nodes if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)))
     for function in list(tree.body):
         if (not isinstance(function, ast.FunctionDef) or function.name.startswith(("test", "pytest_", "__"))
+                or function.name in {'load_tests', 'setUpModule', 'tearDownModule'}
                 or function.decorator_list or function.returns or getattr(function, "type_params", ())):
             continue
         args = function.args
@@ -70,3 +72,5 @@ def prune_inert_helpers(tree: ast.Module) -> None:
         if any(isinstance(node, ast.comprehension) and node.is_async for node in body):
             continue
         tree.body.remove(function)
+        pruned.add(function.name)
+    return pruned
