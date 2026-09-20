@@ -56,6 +56,7 @@ from checkwash.frontends.python.inert_helpers import prune_inert_helpers
 from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
 from checkwash.frontends.python.parametrized_membership_oracles import expand_parametrized_membership
 from checkwash.frontends.python.parameter_helper_answers import expand_parameter_helper_answers
+from checkwash.frontends.python.failing_exception_wrappers import expand_failing_exception_wrappers
 from checkwash.frontends.python.literal_iteration_oracles import expand_literal_iteration_oracles
 from checkwash.frontends.python.fixture_row_helpers import expand_fixture_row_helpers
 from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
@@ -1058,6 +1059,7 @@ def _module(source, *, baseline):
                     isinstance(node, ast.Assert) and (node.lineno, node.col_offset) in conditional_spans
                     for node in ast.walk(function))}
     inert_signature_tests = strip_none_test_returns(tree)
+    failing_wrapper_tests = expand_failing_exception_wrappers(tree)
     literal_expected_tests = expand_literal_expected_bindings(tree, _literal)
     literal_subject_tests = expand_literal_subject_bindings(tree, _literal)
     captured_helper_tests = expand_captured_assert_helpers(tree, _literal)
@@ -1254,6 +1256,8 @@ def _module(source, *, baseline):
             is_table, form = True, "literal-subject-local"
         if function.name in parameter_helper_tests:
             is_table, form = True, "parameter-helper-answer"
+        if function.name in failing_wrapper_tests:
+            is_table, form = True, "failing-exception-wrapper"
         if function.name in captured_helper_tests:
             is_table, form = True, "captured-assert-helper"
         if function.name in regrouped_capture_tests:
@@ -1313,7 +1317,7 @@ def _module(source, *, baseline):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
-                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or membership_fixture_tests or parameter_helper_tests
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or membership_fixture_tests or parameter_helper_tests or failing_wrapper_tests
                  or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
                  or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests or literal_subject_tests or captured_helper_tests or inert_signature_tests or regrouped_capture_tests
                  or any(form in {'string-block', 'grouped-assert-helper'} for _, form in forms)
