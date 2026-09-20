@@ -9,7 +9,7 @@ from dataclasses import replace
 
 from .oracle_purity import pure_imported_calls
 from .snapshot_context import inert_test_execution_context
-from .table_oracles import _args, _bounded_tree, _context_snapshots, _pytest_unshadowed, _IMPLICIT_HOOKS
+from .table_oracles import _args, _bounded_tree, _context_snapshots, _pytest_unshadowed, _IMPLICIT_HOOKS, _CONTROL_NAMES
 
 
 def _empty(node, bound, depth=0):
@@ -62,7 +62,11 @@ def _module(source, *, after):
             functions[node.name] = node
         else:
             return None
-        if len(set(names)) != len(names) or set(names) & bound:
+        if (len(set(names)) != len(names) or set(names) & bound
+                or any((name in _CONTROL_NAMES or name in _IMPLICIT_HOOKS
+                        or name in {'setUpModule', 'tearDownModule', 'setUpClass', 'tearDownClass'}
+                        or name.startswith(('pytest_', '__')))
+                       and not (name == 'pytest' and isinstance(node, ast.Import)) for name in names)):
             return None
         bound.update(names)
     empty = set()

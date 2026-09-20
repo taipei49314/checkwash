@@ -82,3 +82,16 @@ def test_plain_function_body_does_not_execute_during_collection():
 def test_evaluated_signatures_and_imports_are_not_inert(production):
     ir, _, _ = run(BEFORE, AFTER, production)
     assert all(unit.before.param_cases is None for file in ir.files for unit in file.units if unit.before)
+
+
+@pytest.mark.parametrize('name', ['pytestmark', 'pytest_plugins', 'pytest_generate_tests',
+                                 'setup_module', 'setUpModule', 'tearDownModule'])
+@pytest.mark.parametrize('binding', ['definition', 'import'])
+def test_every_binding_form_rejects_implicit_framework_control(name, binding):
+    extra = f'def {name}():\n    pass\n'
+    production = PROD
+    if binding == 'import':
+        extra = f'from app.prod import {name}\n'
+        production += f'def {name}():\n    pass\n'
+    ir, _, _ = run(extra + BEFORE, extra + AFTER, production)
+    assert all(unit.before.param_cases is None for file in ir.files for unit in file.units if unit.before)
