@@ -64,6 +64,10 @@ def test_unchanged_checked_doctest_passes():
     BEFORE.replace("def test_twice():", "def test_twice(sys):"),
     BEFORE.replace("import doctest", "import doctest\nimport external as doctest"),
     BEFORE.replace("def test_twice():", "doctest.testmod = external\ndef test_twice():"),
+    BEFORE.replace("def test_twice():", "_oracle = None\ndef test_twice():"),
+    BEFORE.replace("def test_twice():", "del _oracle\ndef test_twice():"),
+    BEFORE.replace("def test_twice():", "from external import _oracle\ndef test_twice():"),
+    BEFORE.replace("def test_twice():", "_oracle.__doc__ = ''\ndef test_twice():"),
     BEFORE[:BEFORE.index("def test_twice")],
 ])
 def test_unchecked_or_dynamic_runner_does_not_claim_execution(source):

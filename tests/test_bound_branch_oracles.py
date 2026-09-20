@@ -45,6 +45,8 @@ def test_constant_flip_removes_the_executed_oracle(before):
     LOCAL.replace("enabled = True", "enabled = False\n    for enabled in [True]:\n        pass"),
     LOCAL.replace("enabled = True", "enabled = False\n    def activate():\n        nonlocal enabled\n        enabled = True\n    activate()"),
     LOCAL.replace("enabled = True", "enabled = False\n    exec('enabled = True')"),
+    LOCAL.replace("enabled = True", "enabled = False\n    import sys as enabled"),
+    LOCAL.replace("enabled = True", "enabled = False\n    from sys import modules as enabled"),
     FIXTURE.replace("return True", "return False").replace("def test_total(enabled):", "@pytest.mark.parametrize('enabled', [True])\ndef test_total(enabled):"),
     FIXTURE.replace("return True", "return external()"),
 ])

@@ -34,6 +34,14 @@ def module_examples(tree: ast.Module, offsets) -> list[Assertion]:
             return []
     result = []
     parser = doctest.DocTestParser()
+    mutated = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            root = node.value
+            while isinstance(root, (ast.Attribute, ast.Subscript)):
+                root = root.value
+            if isinstance(root, ast.Name):
+                mutated.add(root.id)
 
     def visit(scope, prefix):
         body = scope.body
@@ -62,8 +70,20 @@ def module_examples(tree: ast.Module, offsets) -> list[Assertion]:
                 ))
         # testmod finds module/class members, not unconstructed nested defs.
         if isinstance(scope, (ast.Module, ast.ClassDef)):
+            bindings = {}
+            for statement in body:
+                if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    bindings[statement.name] = bindings.get(statement.name, 0) + 1
+                else:
+                    for bound in ast.walk(statement):
+                        if isinstance(bound, ast.Name) and isinstance(bound.ctx, (ast.Store, ast.Del)):
+                            bindings[bound.id] = bindings.get(bound.id, 0) + 1
+                        elif isinstance(bound, ast.alias):
+                            name = bound.asname or bound.name.split('.')[0]
+                            bindings[name] = bindings.get(name, 0) + 1
             for node in body:
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not node.decorator_list:
+                if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                        and not node.decorator_list and bindings.get(node.name) == 1 and node.name not in mutated):
                     visit(node, f"{prefix}.{node.name}" if prefix else node.name)
     visit(tree, "")
     return result

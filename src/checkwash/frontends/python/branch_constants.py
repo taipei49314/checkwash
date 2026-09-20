@@ -83,6 +83,8 @@ def guard_truths(func, fixtures, static_truth):
                 bindings.pop(node.name, None)
             elif isinstance(node, ast.ExceptHandler) and node.name:
                 bindings.pop(node.name, None)
+            elif isinstance(node, ast.alias):
+                bindings.pop(node.asname or node.name.split('.')[0], None)
 
     def scan(body, bindings):
         for statement in body:

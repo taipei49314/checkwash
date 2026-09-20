@@ -99,6 +99,11 @@ def test_rebound_hierarchy_has_no_inherited_proof(mutation):
     assert not parse_python(source.encode(), collect_tests=True).units
 
 
+def test_inherited_property_is_not_a_callable_pytest_method():
+    source = BEFORE.replace("    def test_total", "    @property\n    def test_total")
+    assert not parse_python(source.encode(), collect_tests=True).units
+
+
 def test_runtime_inherited_rewrite_hides_the_bug(tmp_path):
     import os
     import subprocess

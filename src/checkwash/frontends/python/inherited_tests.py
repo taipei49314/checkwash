@@ -108,7 +108,8 @@ def inherited_test_methods(tree: ast.Module):
             for attribute, value in local.items():
                 if (attribute not in bound and attribute.startswith("test")
                         and owner != name
-                        and isinstance(value, (ast.FunctionDef, ast.AsyncFunctionDef))):
+                        and isinstance(value, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and not value.decorator_list):
                     methods.append((node, parent, value))
             bound.update(local)
         if not disabled:
