@@ -77,6 +77,8 @@ What the slot changes in the README, and what already guards it:
 - `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
   `tests/test_packaging.py::test_readme_install_refs_match_version`
 - the Action pin is the newest *prior* stable tag (one-release trust lag) —
+  `tests/test_packaging.py::test_readme_action_snippet_is_zizmor_blanket`
+- the advertised CLI tag contains the current public install surfaces —
   `tests/test_packaging.py::test_pinned_tag_ships_the_current_source`
 - STATE.md's authoritative `version` row —
   `tests/test_state_claims.py::test_version_row_matches_package`
