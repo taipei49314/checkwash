@@ -351,7 +351,8 @@ def _assertion_scope(tree, qualname, assertion):
     Inherited assertions normally carry the caller's environment. That is
     insufficient to resolve helper parameters or nested closures, so admit
     only an unshadowed module helper with one literal assertion and a caller
-    consisting solely of that call. Other inherited channels stay separate.
+    that begins with that call. Later assertions cannot change that dispatch,
+    but every lexical local binding and reflective mutation remains unknown.
     """
     if not assertion.inherited:
         return qualname
@@ -360,7 +361,10 @@ def _assertion_scope(tree, qualname, assertion):
     caller = _scope(tree, qualname)
     if (caller is None or caller.decorator_list or caller.returns or caller.args.args or caller.args.posonlyargs
             or caller.args.kwonlyargs or caller.args.vararg or caller.args.kwarg
-            or len(caller.body) != 1 or not isinstance(caller.body[0], ast.Expr)):
+            or not caller.body or not isinstance(caller.body[0], ast.Expr)
+            or any(not isinstance(statement, ast.Assert) for statement in caller.body[1:])
+            or _binding_sites(caller.body)
+            or any(isinstance(node, (ast.NamedExpr, ast.Global, ast.Nonlocal)) for node in ast.walk(caller))):
         return None
     call = caller.body[0].value
     if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name) or call.args or call.keywords:
