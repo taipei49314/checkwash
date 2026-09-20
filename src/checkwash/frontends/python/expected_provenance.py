@@ -19,6 +19,7 @@ from checkwash.change import FileChange
 from checkwash.frontends.python.frontend import _Offsets, normalize_source
 from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.expected_call_authority import safe_call_graph
+from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.frontends.python.table_oracles import MAX_AST_NODES, MAX_CASES, MAX_SOURCE_BYTES, _literal
 from checkwash.ir.astutil import dotted_name, stable_dump
@@ -139,6 +140,11 @@ def _module(path, source):
                 _assign(target, value, env)
         else:
             raise _Unsupported
+    # The event owner is the collected consumer, not the uncollected class
+    # that supplies its method. Reuse the frontend's closed hierarchy proof;
+    # unknown bases, descriptor methods and rebound classes remain opaque.
+    tests.extend((cls.name + "." + function.name, function)
+                 for cls, _, function in inherited_test_methods(tree))
     # Optional constant-call folding needs unambiguous lexical authority.
     # Decline every collision, even in another scope, rather than treating a
     # fixture/parameter/class as the builtin or a standard-library module.
