@@ -27,6 +27,7 @@ from __future__ import annotations
 import ast
 import copy
 import hashlib
+import math
 from collections import Counter
 from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
@@ -68,6 +69,38 @@ def _literal(node):
         return all(key is not None and _literal(key) and _literal(value)
                    for key, value in zip(node.keys, node.values))
     return False
+
+
+def _approx_expected(node):
+    """A standard approx object over finite numeric literals, never inputs."""
+    if (not isinstance(node, ast.Call) or dotted_name(node.func) != "pytest.approx"
+            or len(node.args) != 1 or not _literal(node.args[0])):
+        return False
+
+    def numeric(value):
+        if type(value) in (int, float):
+            return type(value) is int or math.isfinite(value)
+        if isinstance(value, (list, tuple)):
+            return bool(value) and all(type(item) in (int, float) and numeric(item) for item in value)
+        return False
+
+    try:
+        if not numeric(ast.literal_eval(node.args[0])):
+            return False
+        keys = set()
+        for keyword in node.keywords:
+            if keyword.arg in keys or keyword.arg not in {"rel", "abs", "nan_ok"} or not _literal(keyword.value):
+                return False
+            keys.add(keyword.arg)
+            value = ast.literal_eval(keyword.value)
+            if keyword.arg == "nan_ok":
+                if type(value) is not bool:
+                    return False
+            elif type(value) not in (int, float) or not numeric(value) or value < 0:
+                return False
+    except (ValueError, TypeError, OverflowError, RecursionError, MemoryError):
+        return False
+    return True
 
 
 def _docstring(node):
@@ -130,7 +163,7 @@ def _rows(table, names, *, unpack=True):
     result = []
     for row in table.elts:
         values = row.elts if unpack and isinstance(row, (ast.List, ast.Tuple)) else [row]
-        if len(values) != len(names) or not all(_literal(value) for value in values):
+        if len(values) != len(names) or not all(_literal(value) or _approx_expected(value) for value in values):
             return None
         result.append(dict(zip(names, values)))
     return result
@@ -172,7 +205,8 @@ def _concrete(node, bindings, imports):
     if not isinstance(compare, ast.Compare) or len(compare.ops) != 1:
         return None
     actual, expected = compare.left, compare.comparators[0]
-    if not isinstance(compare.ops[0], (ast.Eq, ast.Is)) or not _literal(expected):
+    approximate = _approx_expected(expected)
+    if not isinstance(compare.ops[0], (ast.Eq, ast.Is)) or not (_literal(expected) or approximate):
         return None
     if isinstance(compare.ops[0], ast.Is) and not (
         isinstance(expected, ast.Constant) and expected.value in (None, True, False)
@@ -186,6 +220,8 @@ def _concrete(node, bindings, imports):
             or not all(_literal(arg) for arg in actual.args)
             or not all(keyword.arg is not None and _literal(keyword.value) for keyword in actual.keywords)):
         return None
+    if approximate:
+        concrete._requires_approx_authority = True
     if concrete.msg is not None:
         concrete._requires_primitive_string = True
         message = concrete.msg
@@ -945,6 +981,8 @@ def _module(source, *, baseline):
         return None
     if any(form == "zip-fixture" for _, form in forms) and "zip" in names:
         return None
+    if any(getattr(case.assertion, "_requires_approx_authority", False) for case in result) and not pytest_imported:
+        return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests), bool(unittest_tests))
 
@@ -1177,6 +1215,22 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         message_calls = [case.assertion.test.left for case in module[2]
                          if getattr(case.assertion, "_requires_primitive_string", False)]
+        approximate = any(getattr(case.assertion, "_requires_approx_authority", False) for case in module[2])
+        if approximate:
+            calls = [case.assertion.test.left for case in module[2]]
+            called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
+            # Approx objects in a parameter decorator are constructed before
+            # test execution. Production or another import must not replace
+            # pytest.approx between collection and an inline assertion.
+            for node in ast.parse(module[0]).body:
+                if isinstance(node, ast.Import):
+                    if any(alias.name != "pytest" or alias.asname for alias in node.names):
+                        return before_parsed, after_parsed
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level or any((alias.asname or alias.name) not in called for alias in node.names):
+                        return before_parsed, after_parsed
+            if not pure_imported_calls(module[0].encode(), calls, path=path, read=read):
+                return before_parsed, after_parsed
         if message_calls or any(form in {"zip-fixture", "callable-fixture"} for _, form in module[6]):
             calls = [case.assertion.test.left for case in module[2]]
             called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}

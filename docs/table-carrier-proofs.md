@@ -40,3 +40,12 @@ their shapes alongside changed-answer, missing-input, rebinding, formatting
 and execution-context controls. This does not establish equivalence for
 arbitrary helpers, fixtures or dynamic iterables, or relabel historical
 benchmark records.
+
+`pytest.approx` over finite numeric literals or a flat numeric sequence may
+also be carried in a parameter row or in the assertion. The expected value
+and every explicit tolerance remain in the projected assertion; converting
+an exact answer to an approximate one retains ordinary weakening detection.
+These carriers additionally require unshadowed pytest and closed pure source
+for every subject call, because construction during collection can precede
+an inline assertion. Dynamic tolerances, approximate subject inputs, unknown
+imports and mutating production source receive no projection.
