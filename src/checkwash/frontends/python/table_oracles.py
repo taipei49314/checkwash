@@ -52,7 +52,7 @@ from checkwash.frontends.python.tuple_oracles import expand_tuple_oracles, primi
 from checkwash.frontends.python.helper_predicates import expand_predicate_helpers
 from checkwash.frontends.python.prefix_predicates import expand_prefix_predicates
 from checkwash.frontends.python.unique_predicates import expand_unique_predicates
-from checkwash.frontends.python.callable_fixture_rows import fixture_prefix_rows
+from checkwash.frontends.python.callable_fixture_rows import consumer_rows, fixture_prefix_rows
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -658,22 +658,34 @@ def _callable_fixtures(functions, imports):
             continue
         parameters = _args(function)
         if parameters and any(name in fixtures for name in parameters):
-            if len(parameters) != 1 or not function.name.startswith("test") or function.decorator_list:
+            requested = [name for name in parameters if name in fixtures]
+            if len(requested) != 1 or not function.name.startswith("test"):
                 return None, set()
-            name = parameters[0]
+            name = requested[0]
             prefixes, returned = fixtures[name]
+            rows = consumer_rows(function, parameters, name)
+            if rows is None or function.decorator_list and len(prefixes) != 1:
+                return None, set()  # no unproved product of fixture and decorator parameter axes
             body = function.body
             if not all(isinstance(statement, ast.Assert) for statement in body):
-                captured = _captured_result(body, imports | fixtures.keys())
+                captured = _captured_result(body, imports | fixtures.keys() | set(parameters))
                 if captured is None:
                     return None, set()
                 body = [captured]
             function = copy.deepcopy(function)
             function.args.args = []
-            function.body = [statement for prefix in prefixes
-                             for statement in [*copy.deepcopy(prefix),
-                                               *[_Substitute({name: returned}).visit(statement)
-                                                 for statement in copy.deepcopy(body)]]]
+            function.decorator_list = []
+            function.body = []
+            for prefix in prefixes:
+                for row in rows:
+                    checks = [_Substitute({name: returned}).visit(statement) for statement in copy.deepcopy(body)]
+                    if row:
+                        # Keep row-use accounting inside _concrete; eager
+                        # substitution must not bypass its alias guard.
+                        checks = [_concrete(statement, row, imports) for statement in checks]
+                        if any(statement is None for statement in checks):
+                            return None, set()
+                    function.body.extend([*copy.deepcopy(prefix), *checks])
             if len(function.body) > MAX_CASES:
                 return None, set()
             used.add(name)

@@ -29,6 +29,12 @@ def fixture_prefix_rows(function, parameters):
         return None
     if rows is None:
         return [function.body[:-1]]
+    for statement in function.body[:-1]:
+        indexes = [node.slice.value for node in ast.walk(statement)
+                   if isinstance(node, ast.Subscript) and dotted_name(node.value) == 'request.param'
+                   and isinstance(node.slice, ast.Constant) and type(node.slice.value) is int]
+        if len(indexes) != len(set(indexes)):
+            return None  # preserve the ordinary row projection's repeated-binding guard
 
     class Cells(ast.NodeTransformer):
         def __init__(self, row):
@@ -46,4 +52,34 @@ def fixture_prefix_rows(function, parameters):
         if any(isinstance(node, ast.Name) and node.id == 'request' for statement in prefix for node in ast.walk(statement)):
             return None
         result.append(prefix)
+    return result
+
+
+def consumer_rows(function, parameters, fixture):
+    """A sole direct parametrize decorator covers exactly the non-fixture args."""
+    if not function.decorator_list:
+        return [{}] if parameters == [fixture] else None
+    if len(function.decorator_list) != 1:
+        return None
+    decorator = function.decorator_list[0]
+    if (not isinstance(decorator, ast.Call) or dotted_name(decorator.func) != 'pytest.mark.parametrize'
+            or len(decorator.args) != 2 or decorator.keywords):
+        return None
+    names, rows = decorator.args
+    if isinstance(names, ast.Constant) and type(names.value) is str:
+        names = [name.strip() for name in names.value.split(',')]
+    elif isinstance(names, (ast.Tuple, ast.List)) and all(isinstance(item, ast.Constant) and type(item.value) is str for item in names.elts):
+        names = [item.value for item in names.elts]
+    else:
+        return None
+    if (not names or len(names) != len(set(names)) or not all(name.isidentifier() for name in names)
+            or fixture in names or set(names) != set(parameters) - {fixture}
+            or not isinstance(rows, (ast.List, ast.Tuple)) or not 1 <= len(rows.elts) <= 64):
+        return None
+    result = []
+    for row in rows.elts:
+        values = row.elts if len(names) > 1 and isinstance(row, (ast.List, ast.Tuple)) else [row]
+        if len(values) != len(names) or not all(isinstance(value, ast.Constant) and type(value.value) is str for value in values):
+            return None
+        result.append(dict(zip(names, values)))
     return result
