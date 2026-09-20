@@ -107,6 +107,19 @@ def _body(statements, names, numbers=frozenset()):
         if (isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name) and node.target.id in numbers
                 and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult)) and _numeric(node.value, numbers)):
             continue
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1
+                and isinstance(node.targets[0], (ast.Tuple, ast.List))
+                and isinstance(node.value, (ast.Tuple, ast.List))
+                and len(node.targets[0].elts) == len(node.value.elts)
+                and all(isinstance(target, ast.Name) and target.id not in _BUILTINS | {'ValueError'}
+                        and not target.id.startswith('__') for target in node.targets[0].elts)
+                and all(_numeric(value, numbers) for value in node.value.elts)):
+            targets = [target.id for target in node.targets[0].elts]
+            if not targets or len(targets) != len(set(targets)):
+                return False
+            names.update(targets)
+            numbers.update(targets)
+            continue
         if (isinstance(node, ast.For) and isinstance(node.target, ast.Name)
                 and node.target.id not in _BUILTINS | {'ValueError'} and not node.target.id.startswith('__')
                 and not node.orelse and isinstance(node.iter, ast.Call) and isinstance(node.iter.func, ast.Name)

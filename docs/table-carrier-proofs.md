@@ -64,3 +64,11 @@ production source, inert startup and unshadowed builtin names; their folded
 answers remain available to ordinary expectation-change detection. Repeated
 row references are allowed only for scalar values with at most one use in
 the subject, so mutable subject argument identities are not duplicated.
+An existing parametrized test may select expected values from a same-file,
+default-scope literal fixture by a finite `range` index. The proof retains
+each old subject/input identity exactly once and permits additional independent
+parameter rows only after closed production and import checks on both sides.
+Every original answer remains in the projected assertion, so changing a
+selected fixture cell still reports an expected-value change. The purity
+grammar admits simultaneous assignments only between proven numeric locals;
+mutable aliases, callbacks, stateful imports and missing old rows are rejected.

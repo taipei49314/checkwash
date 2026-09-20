@@ -40,6 +40,7 @@ from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expan
 from checkwash.frontends.python.oracle_purity import primitive_literal_result, pure_imported_calls
 from checkwash.frontends.python.primitive_strings import primitive_string_result
 from checkwash.frontends.python.derived_literals import derived_shape, fold_derived, primitive_derived_result
+from checkwash.frontends.python.indexed_fixture_tables import expand_indexed_fixture_tables
 from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
@@ -877,6 +878,7 @@ def _module(source, *, baseline):
         return None  # validate implicit entry points before any helper can be removed
     inert_helpers = prune_inert_helpers(tree)
     factory_tests = expand_literal_table_factories(tree)
+    indexed_fixture_tests = expand_indexed_fixture_tables(tree)
     # A default-scope literal fixture that no source requests contributes no
     # oracle or setup effects. Keep every reference, shadowed definition,
     # marker string and non-default decorator visible to the ordinary parser.
@@ -1009,6 +1011,8 @@ def _module(source, *, baseline):
             is_table, form = True, "callable-fixture"
         if function.name in factory_tests:
             is_table, form = True, "literal-table-factory"
+        if function.name in indexed_fixture_tests:
+            is_table, form = True, "indexed-fixture-parametrize"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
@@ -1046,7 +1050,7 @@ def _module(source, *, baseline):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
-                 or expanded_forwarders or factory_tests),
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms))
 
@@ -1301,6 +1305,10 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         if old_keys != new_keys[:len(old_keys)] and _pair_approximate_identity(old[2], new[2]):
             old_keys = [_subject_key(case) for case in old[2]]
             new_keys = [_subject_key(case) for case in new[2]]
+        indexed_extension = (len(old[6]) == len(new[6]) == 1 and old[6][0][0] == new[6][0][0]
+                             and old[6][0][1] == "parametrize" and new[6][0][1] == "indexed-fixture-parametrize"
+                             and len(set(old_keys)) == len(old_keys) and len(set(new_keys)) == len(new_keys)
+                             and not (Counter(old_keys) - Counter(new_keys)))
         # Extra literal cases can follow the complete old sequence. They
         # cannot run before an old oracle and change what it subsequently
         # sees; insertion/reordering stays outside the proof.
@@ -1317,7 +1325,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             # preserves every original check without a new failure barrier.
             return before_parsed, after_parsed
         if old_keys != new_keys[:len(old_keys)]:
-            if not (old[9] or new[9]) or Counter(old_keys) - Counter(new_keys):
+            if not (old[9] or new[9] or indexed_extension) or Counter(old_keys) - Counter(new_keys):
                 return before_parsed, after_parsed
             # Default TestCase sorts test methods and repeats setup per test.
             # Reordering earns credit only after both imported-source purity
