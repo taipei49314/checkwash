@@ -12,6 +12,7 @@ from dataclasses import dataclass, field, replace
 import hashlib
 
 from checkwash.ir.astutil import stable_dump
+from .setup_skip_controls import setup_skip_controls
 
 _HOOKS = {"pytest_pyfunc_call", "pytest_runtest_call", "pytest_runtest_protocol",
           "pytest_runtest_makereport", "pytest_runtest_logreport"}
@@ -150,6 +151,7 @@ def _walk(statements, states, hook, wrapper):
 
 def runtime_controls(tree: ast.Module):
     """Return stable effect names and concrete source evidence for live hooks."""
+    yield from setup_skip_controls(tree)
     bindings = {}
     for stmt in tree.body:
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
