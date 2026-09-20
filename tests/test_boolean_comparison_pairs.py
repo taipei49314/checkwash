@@ -1,4 +1,4 @@
-"""Boolean Eq/Is spellings pair only after exact return-type authority."""
+"""Boolean Eq-to-Is strengthening pairs only after return-type authority."""
 import pytest
 
 from test_issue_expectation_families import run
@@ -22,11 +22,9 @@ def projected(ir):
     return any(unit.qualname.startswith('test_concrete_') for file in ir.files for unit in file.units)
 
 
-@pytest.mark.parametrize('reverse', [False, True])
 @pytest.mark.parametrize('changed', [False, True])
-def test_exact_boolean_result_keeps_answer_changes_visible(reverse, changed):
-    before = BEFORE.replace(' == ', ' is ') if reverse else BEFORE
-    after = AFTER.replace(' is ', ' == ') if reverse else AFTER
+def test_exact_boolean_result_keeps_answer_changes_visible(changed):
+    before, after = BEFORE, AFTER
     if changed:
         after = after.replace('(201, False)', '(201, True)')
     ir, findings, verdict = run(before, after, PROD)

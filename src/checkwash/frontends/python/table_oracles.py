@@ -1778,8 +1778,8 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                     module[0].encode(), [case.assertion.test.left], path=path, read=read,
                     result_proof=lambda source, target, call: primitive_tuple_result(source, target, call, arity)):
                 return before_parsed, after_parsed
-    # Only after both complete source proofs succeed are Eq/Is interchangeable
-    # for these exact builtin Boolean results. Keep all concrete answers.
+    # Only equality-to-identity strengthening is paired, and only after both
+    # complete source proofs establish Boolean results. Keep concrete answers.
     for module in (old, new):
         for case in module[2]:
             if getattr(case.assertion, '_requires_boolean_result', False):

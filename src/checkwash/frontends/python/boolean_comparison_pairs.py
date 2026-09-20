@@ -1,4 +1,4 @@
-"""Pair Boolean equality/identity only with exact Boolean production results."""
+"""Pair Boolean equality-to-identity strengthening with exact Boolean results."""
 import ast
 
 from .oracle_purity import _tree, primitive_literal_result
@@ -15,13 +15,16 @@ def pair_boolean_comparisons(old, new, subject_key):
         previous, current = before.assertion.test, after.assertion.test
         if (before.body is not None or after.body is not None
                 or stable_dump(previous.left) != stable_dump(current.left)
-                or {type(previous.ops[0]), type(current.ops[0])} != {ast.Eq, ast.Is}
+                or not isinstance(previous.ops[0], ast.Eq) or not isinstance(current.ops[0], ast.Is)
                 or any(not isinstance(expected, ast.Constant) or type(expected.value) is not bool
                        for expected in (previous.comparators[0], current.comparators[0]))):
             return False
         pairs.append((before, after))
     if not pairs:
         return False
+    # Boolean output in today's source does not preserve an identity oracle
+    # against a future wrong-type implementation returning 1 or 0. Equality
+    # to identity can strengthen that check; the reverse must keep ordinary IR.
     for before, after in pairs:
         for case in (before, after):
             case.assertion._paired_operator = 'Eq'
