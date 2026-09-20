@@ -65,3 +65,23 @@ def test_escaped_quote_in_a_skip_name():
 def test_empty_skip_name_is_preserved():
     unit, = parse_javascript(b'test.skip("", () => {});').units
     assert unit.qualname == ""
+
+
+@pytest.mark.parametrize("expression", ["/'/", '/"/', '/["\\/]/g',
+                                        '/test("fake", /', '/expect(x).toBe(1)/'])
+def test_regex_literals_do_not_create_or_hide_units(expression):
+    parsed = parse_javascript((f"const inert = {expression};\n"
+                               'test("real", () => { expect(value).toBe(1); });').encode())
+    assert [u.qualname for u in parsed.units] == ["real"]
+    assert [a.left for a in parsed.units[0].side.assertions] == ["value"]
+
+
+@pytest.mark.parametrize("prefix", ["return ", "if (flag) ", "while (flag) ", "x = ", "fn("])
+def test_regex_start_context_keeps_literal_declarations_inert(prefix):
+    parsed = parse_javascript((prefix + '/test("fake", /;\ntest("real", () => {});').encode())
+    assert [u.qualname for u in parsed.units] == ["real"]
+
+
+def test_division_does_not_hide_a_real_test_call():
+    parsed = parse_javascript(b'const x = value / test("real", () => {}) / divisor;')
+    assert [u.qualname for u in parsed.units] == ["real"]

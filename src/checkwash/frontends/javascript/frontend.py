@@ -82,6 +82,9 @@ def _code_positions(text: str) -> bytearray:
     """
     code = bytearray(b"\x01") * len(text)
     i = 0
+    operand = True
+    previous = ""
+    parens: list[bool] = []
     while i < len(text):
         start = i
         if text.startswith("//", i):
@@ -102,7 +105,56 @@ def _code_positions(text: str) -> bytearray:
                 else:
                     i += 1
             i = min(i, len(text))
+            operand = False
+            previous = "literal"
+        elif text[i] == "/" and operand:
+            # A slash at expression start introduces a regex, whose quotes
+            # are data. Division after an operand must remain executable.
+            j = i + 1
+            bracket = False
+            while j < len(text) and text[j] not in "\r\n":
+                if text[j] == "\\":
+                    j += 2
+                    continue
+                if text[j] == "[":
+                    bracket = True
+                elif text[j] == "]":
+                    bracket = False
+                elif text[j] == "/" and not bracket:
+                    j += 1
+                    while j < len(text) and (text[j].isalnum() or text[j] in "_$"):
+                        j += 1
+                    break
+                j += 1
+            else:
+                # Malformed/unsupported literal: do not consume the next
+                # source line as regex content.
+                i += 1
+                continue
+            i = min(j, len(text))
+            operand = False
+            previous = "literal"
         else:
+            char = text[i]
+            if char.isalpha() or char in "_$":
+                i += 1
+                while i < len(text) and (text[i].isalnum() or text[i] in "_$"):
+                    i += 1
+                previous = text[start:i]
+                operand = previous in {"return", "throw", "yield", "await", "typeof",
+                                       "void", "delete", "new", "in", "of", "case", "else", "do"}
+                continue
+            if char == "(":
+                parens.append(previous in {"if", "while", "for", "with", "switch", "catch"})
+                operand = True
+            elif char == ")":
+                operand = parens.pop() if parens else False
+            elif char == "]" or char.isdigit():
+                operand = False
+            elif not char.isspace():
+                operand = char != "."
+            if not char.isspace():
+                previous = char
             i += 1
             continue
         code[start:i] = b"\x00" * (i - start)
