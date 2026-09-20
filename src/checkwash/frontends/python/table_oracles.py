@@ -687,6 +687,17 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         bindings = _rows(tables[names[0]], columns, unpack=not isinstance(loop.target, ast.Name))
         scope.update(columns)
         body, table, form = loop.body, True, "table-fixture-loop"
+    elif (len(names) == 1 and names[0] in tables and len(body) == 1 and isinstance(body[0], ast.Expr)
+          and isinstance(body[0].value, ast.Call) and isinstance(body[0].value.func, ast.Name)
+          and body[0].value.func.id in table_helpers and body[0].value.func.id not in scope):
+        call = body[0].value
+        if (len(call.args) != 1 or call.keywords or not isinstance(call.args[0], ast.Name)
+                or call.args[0].id != names[0]):
+            return None
+        parameter, columns, assertion, unpack = table_helpers[call.func.id]
+        bindings = _rows(tables[names[0]], columns, unpack=unpack)
+        scope.update([parameter, *columns])
+        body, table, form = [assertion], True, "table-fixture-helper"
     elif names:
         if (len(names) != 1 or names[0] not in fixtures or not 2 <= len(body) <= MAX_CASES
                 or not isinstance(body[0], ast.Assign) or len(body[0].targets) != 1
