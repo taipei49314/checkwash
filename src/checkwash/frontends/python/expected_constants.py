@@ -14,7 +14,7 @@ class _Unknown(Exception):
     pass
 
 
-def folded_expected(node, allow_call):
+def folded_expected(node, allow_call, *, boolean_logic=False):
     steps = 0
 
     def bounded(value):
@@ -63,14 +63,19 @@ def folded_expected(node, allow_call):
             if operation is None or not (numeric or concatenation):
                 raise _Unknown
             return bounded(operation(left, right))
-        if isinstance(expr, ast.Compare) and len(expr.ops) == 1:
-            left, right = sub(expr.left), sub(expr.comparators[0])
+        if isinstance(expr, ast.Compare) and (len(expr.ops) == 1 or boolean_logic):
+            left = sub(expr.left)
             comparisons = {ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt,
                            ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge}
-            compare = comparisons.get(type(expr.ops[0]))
-            if compare is None or type(left) not in (int, float, str, bytes) or type(right) not in (int, float, str, bytes):
-                raise _Unknown
-            return compare(left, right)
+            for operation, comparator in zip(expr.ops, expr.comparators):
+                right = sub(comparator)
+                compare = comparisons.get(type(operation))
+                if compare is None or type(left) not in (int, float, str, bytes) or type(right) not in (int, float, str, bytes):
+                    raise _Unknown
+                if not compare(left, right):
+                    return False  # Python evaluates each middle value once and stops at a false link
+                left = right
+            return True
         if isinstance(expr, ast.IfExp):
             condition = sub(expr.test)
             if type(condition) is not bool:

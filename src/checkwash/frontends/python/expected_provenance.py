@@ -467,7 +467,7 @@ class _Project:
                                 and (name != "math.prod" or module.math_imported)
                                 and self.reader.constant_call_authority(
                                     tuple(dict.fromkeys((self.entry_path, module.path))), self.side, name))
-                    folded = folded_expected(right, allow_call)
+                    folded = folded_expected(right, allow_call, boolean_logic=True)
                     if folded is not None:
                         right = folded
                 if isinstance(comparison.ops[0], ast.Is) and not (isinstance(right, ast.Constant) and type(right.value) in (bool, type(None))):
@@ -583,15 +583,28 @@ def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sour
         old, new = defaultdict(list), defaultdict(list)
         for event, groups in [(e, old) for e in before] + [(e, new) for e in after]:
             groups[(event.unit, event.subject, event.operator)].append(event)
+        comparisons = [(key, old[key], new[key]) for key in sorted(old.keys() & new.keys())]
+        old_subjects, new_subjects = defaultdict(list), defaultdict(list)
+        for event, subjects in [(e, old_subjects) for e in before] + [(e, new_subjects) for e in after]:
+            subjects[(event.unit, event.subject)].append(event)
+        for subject in sorted(old_subjects.keys() & new_subjects.keys()):
+            previous, current = old_subjects[subject], new_subjects[subject]
+            if (len(previous) == len(current) == 1
+                    and {previous[0].operator, current[0].operator} == {'Eq', 'Is'}
+                    and previous[0].expected in {'True', 'False'} and current[0].expected in {'True', 'False'}):
+                # This is answer provenance, not operator equivalence. Keep
+                # both source assertions unchanged and report only a changed
+                # concrete boolean answer for one unambiguous subject/input.
+                comparisons.append(((*subject, current[0].operator), previous, current))
         records = []
-        for key in sorted(old.keys() & new.keys()):
-            wanted, got = Counter(e.expected for e in old[key]), Counter(e.expected for e in new[key])
+        for key, previous, current in comparisons:
+            wanted, got = Counter(e.expected for e in previous), Counter(e.expected for e in current)
             # Per input, preserve the established additions/reorders/dedup
             # controls. Comparing a global bag would swap answers for free.
             if wanted <= got or got <= wanted:
                 continue
-            lost = next(e for e in old[key] if e.expected in wanted - got)
-            arrived = next(e for e in new[key] if e.expected in got - wanted)
+            lost = next(e for e in previous if e.expected in wanted - got)
+            arrived = next(e for e in current if e.expected in got - wanted)
             if not (lost.indirect or arrived.indirect):
                 continue
             # Native expectation-definition owns ordinary assertions whose
