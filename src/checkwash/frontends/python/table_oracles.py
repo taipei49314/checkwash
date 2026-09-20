@@ -1020,6 +1020,10 @@ def _module(source, *, baseline):
     tree = ast.parse(text)
     if sum(1 for _ in ast.walk(tree)) > MAX_AST_NODES:
         return None
+    if any(isinstance(node, ast.FunctionDef) and node.name == 'request' and any(
+            dotted_name(decorator.func if isinstance(decorator, ast.Call) else decorator) == 'pytest.fixture'
+            for decorator in node.decorator_list) for node in tree.body):
+        return None  # pytest rejects this fixture name before collection; never erase that control
     if any(isinstance(node, (ast.FunctionDef, ast.ClassDef))
            and (node.name in _IMPLICIT_HOOKS or node.name.startswith(("pytest_", "__")))
            for node in tree.body):
