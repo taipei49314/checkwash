@@ -117,7 +117,7 @@ def _pure_module(source, target):
     return found
 
 
-def pure_imported_calls(source, calls, *, path, read):
+def pure_imported_calls(source, calls, *, path, read, result_proof=None):
     """Require a unique local `from package.module import function` source."""
     tree = _tree(source)
     if tree is None:
@@ -142,7 +142,8 @@ def pure_imported_calls(source, calls, *, path, read):
                 data = read(candidate)
                 if data is not None:
                     candidates.append((candidate, data))
-        if len(candidates) != 1 or not _pure_module(candidates[0][1], name):
+        if len(candidates) != 1 or not (result_proof(candidates[0][1], name, call) if result_proof is not None
+                                       else _pure_module(candidates[0][1], name)):
             return False
         selected = PurePosixPath(candidates[0][0]).parts
         for depth in range(1, len(selected)):

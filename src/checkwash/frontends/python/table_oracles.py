@@ -34,6 +34,7 @@ from pathlib import PurePosixPath
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
 from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expand_string_blocks, string_block
 from checkwash.frontends.python.oracle_purity import pure_imported_calls
+from checkwash.frontends.python.primitive_strings import primitive_string_result
 from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
@@ -142,7 +143,7 @@ class _Substitute(ast.NodeTransformer):
 
 
 def _concrete(node, bindings, imports):
-    if not isinstance(node, ast.Assert) or node.msg is not None:
+    if not isinstance(node, ast.Assert):
         return None
     # A literal one-argument predicate adds no closure or dynamic dispatch.
     # Substitute its sole input once, before substituting helper bindings;
@@ -183,6 +184,25 @@ def _concrete(node, bindings, imports):
             or not all(_literal(arg) for arg in actual.args)
             or not all(keyword.arg is not None and _literal(keyword.value) for keyword in actual.keywords)):
         return None
+    if concrete.msg is not None:
+        concrete._requires_primitive_string = True
+        message = concrete.msg
+        if isinstance(message, ast.Constant) and type(message.value) is str:
+            pass
+        elif isinstance(message, ast.JoinedStr):
+            for part in message.values:
+                if isinstance(part, ast.Constant) and type(part.value) is str:
+                    continue
+                if not isinstance(part, ast.FormattedValue) or part.format_spec is not None or part.conversion not in (-1, 97, 114, 115):
+                    return None
+                if isinstance(part.value, ast.Constant) and type(part.value.value) in (str, bytes, int, float, bool, type(None)):
+                    continue
+                if stable_dump(part.value) != stable_dump(actual):
+                    return None
+                concrete._requires_primitive_string = True
+        else:
+            return None
+        concrete.msg = None
     return concrete
 
 
@@ -228,19 +248,31 @@ def _helper(node):
     Inlining is the only way to prove the loop body actually checks the row:
     crediting the call itself would credit any call, which is exactly the
     unproved step a reviewer rejected in the first attempt at this
-    (E-04, 2026-09-06). Bounded to one statement, one message-free assertion,
-    plain named parameters, no decorator, and a name pytest does not collect
+    (E-04, 2026-09-06). Bounded to one assertion, plain named parameters,
+    no decorator, and a name pytest does not collect
     under default `python_functions` (already required by the caller's inert
     startup proof, which rejects any non-default collection option).
+    A single local result or diagnostic message additionally requires a
+    closed primitive-string result proof before projection earns credit.
     """
     parameters = _args(node)
     if (parameters is None or node.name.startswith(("test", "pytest_")) or node.name in _IMPLICIT_HOOKS
-            or node.decorator_list or len(node.body) != 1
+            or node.decorator_list or len(node.body) not in (1, 2)
             or len(set(parameters)) != len(parameters)):
         return None
-    assertion = node.body[0]
-    if not isinstance(assertion, ast.Assert) or assertion.msg is not None:
+    assertion = node.body[-1]
+    if not isinstance(assertion, ast.Assert):
         return None
+    if len(node.body) == 2:
+        assignment = node.body[0]
+        if (not isinstance(assignment, ast.Assign) or len(assignment.targets) != 1
+                or not isinstance(assignment.targets[0], ast.Name) or not isinstance(assignment.value, ast.Call)):
+            return None
+        name = assignment.targets[0].id
+        if name in parameters or sum(isinstance(n, ast.Name) and n.id == name for n in ast.walk(assertion.test)) != 1:
+            return None
+        assertion = _Substitute({name: assignment.value}).visit(copy.deepcopy(assertion))
+        assertion._requires_primitive_string = True
     return parameters, assertion
 
 
@@ -1033,6 +1065,25 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         if any(not _module_unshadowed(path, read, authority) for authority in module[7]):
             return before_parsed, after_parsed
+        message_calls = [case.assertion.test.left for case in module[2]
+                         if getattr(case.assertion, "_requires_primitive_string", False)]
+        if message_calls:
+            calls = [case.assertion.test.left for case in module[2]]
+            called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
+            # Another module import or oracle could replace a function or a
+            # formatting authority before this helper runs. Every imported
+            # source and every preceding subject call must earn the same
+            # primitive-string proof, even when its own assert has no message.
+            for node in ast.parse(module[0]).body:
+                if isinstance(node, ast.Import):
+                    if any(alias.name != "pytest" or alias.asname for alias in node.names):
+                        return before_parsed, after_parsed
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level or any((alias.asname or alias.name) not in called for alias in node.names):
+                        return before_parsed, after_parsed
+            if not pure_imported_calls(module[0].encode(), calls, path=path, read=read,
+                                       result_proof=primitive_string_result):
+                return before_parsed, after_parsed
         if (old[8] or new[8]) and not pure_imported_calls(module[0].encode(),
                                                 [case.assertion.test.left for case in module[2]], path=path, read=read):
             return before_parsed, after_parsed

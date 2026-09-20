@@ -73,3 +73,45 @@ def test_module_forwarder_rebinding_withholds_projection(extra):
 
 def test_unknown_fixture_startup_withholds_forwarding_credit():
     assert run(BEFORE, AFTER, PRODUCTION, context={"conftest.py": b"def pytest_sessionstart(session):\n    configure()\n"})[2] == "block"
+
+
+STRIP_BEFORE = ("from app.prod import strip_prefix\ndef test_hit():\n    assert strip_prefix('foobar', 'foo') == 'bar'\n"
+                "def test_miss():\n    assert strip_prefix('foobar', 'baz') == 'foobar'\n"
+                "def test_empty_prefix():\n    assert strip_prefix('ab', '') == 'ab'\n")
+STRIP_AFTER = ("from app.prod import strip_prefix\ndef strip_prefix_helper(s, prefix, expected):\n"
+               "    result = strip_prefix(s, prefix)\n"
+               "    assert result == expected, f'Expected {expected}, but got {result}'\n"
+               "def test_strip_prefix():\n    test_cases = [('foobar', 'foo', 'bar'), ('foobar', 'baz', 'foobar'), ('ab', '', 'ab')]\n"
+               "    for s, prefix, expected in test_cases:\n        strip_prefix_helper(s, prefix, expected)\n")
+STRIP_PROD = "def strip_prefix(s, prefix):\n    if s.startswith(prefix):\n        return s[len(prefix):]\n    return s\n"
+
+
+def test_literal_string_helper_message_keeps_historical_strip_prefix_cases():
+    assert run(STRIP_BEFORE, STRIP_AFTER, STRIP_PROD)[2] == "pass"
+
+
+@pytest.mark.parametrize("expected", ["'bar!'", "'foobar'"])
+def test_helper_diagnostic_cannot_hide_a_rewritten_expected_value(expected):
+    after = STRIP_AFTER.replace("('foobar', 'foo', 'bar')", f"('foobar', 'foo', {expected})")
+    assert run(STRIP_BEFORE, after, STRIP_PROD)[2] == "block"
+
+
+@pytest.mark.parametrize("production", [
+    "def strip_prefix(s, prefix):\n    return unknown_result()\n",
+    "class Result:\n    def __format__(self, spec):\n        terminate_suite()\ndef strip_prefix(s, prefix):\n    return Result()\n",
+    "def strip_prefix(s, prefix):\n    change_runtime()\n    return s\n",
+])
+def test_unknown_or_effectful_production_result_cannot_gain_message_credit(production):
+    assert run(STRIP_BEFORE, STRIP_AFTER, production)[2] == "block"
+
+
+@pytest.mark.parametrize("message", ["terminate_suite()", "f'{result.custom}'", "f'{result:{dynamic_format}}'", "f'{replace(expected)}'"])
+def test_unknown_assertion_message_does_not_gain_concrete_oracle_credit(message):
+    after = STRIP_AFTER.replace("f'Expected {expected}, but got {result}'", message)
+    assert run(STRIP_BEFORE, after, STRIP_PROD)[2] == "block"
+
+
+def test_unused_import_with_runtime_effects_withholds_message_proof():
+    before = "import mutator\n" + STRIP_BEFORE
+    after = "import mutator\n" + STRIP_AFTER
+    assert run(before, after, STRIP_PROD, context={"mutator.py": b"change_runtime()\n"})[2] == "block"
