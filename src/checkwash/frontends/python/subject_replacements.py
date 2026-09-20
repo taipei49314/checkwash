@@ -16,6 +16,7 @@ from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.literal_string_standins import literal_string_standin
 from checkwash.frontends.python.literal_stdlib_standins import literal_math_gcd_standin, math_import_authority, math_is_unshadowed
 from checkwash.frontends.python.parameterized_subject_replacements import parameterized_abs_event
+from checkwash.frontends.python.literal_extrema_replacements import literal_extrema_events
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.markers import parse_expr
 from checkwash.pyenv import known_baseline
@@ -454,7 +455,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
         inventory = lambda _needles: root_path_lister()
     deny = known_baseline() | set(ir.globals.third_party_roots)
     by_path = {c.path: c for c in changes}
-    events = []
+    events = literal_extrema_events(ir, changes, root_reader=root_reader, root_searcher=inventory)
     for file in ir.files:
         change = by_path.get(file.path)
         if file.role != "test" or change is None or not change.before or not change.after:
