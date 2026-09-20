@@ -132,3 +132,32 @@ def test_removed_literal_repr_messages_still_require_unshadowed_authority(bindin
     before, after, production = sources(TUPLE, message=', "expected " + repr(3)')
     ir, _, _ = run(before, after + '\n' + binding, production)
     assert not projected(ir)
+
+
+@pytest.mark.parametrize('name', ['_checkwash_capture_0', '_checkwash_capture_1'])
+def test_generated_capture_names_cannot_bind_preexisting_unbound_reads(name):
+    before, after, production = sources(TUPLE)
+    after = after.replace('assert c == 3', 'assert ' + name + ' == 3')
+    ir, _, _ = run(before, after, production)
+    assert not projected(ir)
+
+
+def test_generated_string_capture_name_cannot_bind_an_unrelated_read():
+    before, after, production = sources(STRING)
+    after = after.replace('assert got == "Ada"', 'assert _checkwash_capture_0 == "Ada"')
+    ir, _, _ = run(before, after, production)
+    assert not projected(ir)
+
+
+def test_existing_cross_block_capture_alias_keeps_its_actual_binding():
+    before, after, production = sources(STRING)
+    prefix = '''def test_other():
+    _checkwash_capture_0 = subject(" Bob ")
+    assert len(_checkwash_capture_0) == 3
+    assert _checkwash_capture_0.startswith("B")
+    assert _checkwash_capture_0 == "Bob"
+'''
+    before += '\n' + prefix
+    after = after.replace('assert got == "Ada"', 'assert _checkwash_capture_0 == "Ada"') + '\n' + prefix
+    ir, _, _ = run(before, after, production)
+    assert not projected(ir)

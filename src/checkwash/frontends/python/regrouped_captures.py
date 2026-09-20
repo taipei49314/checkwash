@@ -69,6 +69,7 @@ def regroup_complete_captures(tree, literal):
             bound[node.asname or node.name.split('.')[0]] += 1
     if {'len', 'max'} & bound.keys():
         return set()
+    identifiers = set(bound) | {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
     forbidden = imports | {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
     forbidden.update(target.id for node in tree.body if isinstance(node, ast.Assign)
                      for target in node.targets if isinstance(target, ast.Name))
@@ -104,7 +105,7 @@ def regroup_complete_captures(tree, literal):
             if len(names) != len(set(names)) or set(names) & (forbidden | {'len', 'max', 'repr'}):
                 return set()
             canonical = [f'_checkwash_capture_{index}' for index in range(len(names))]
-            if set(canonical) & forbidden:
+            if set(canonical) & identifiers:
                 return set()
             body = _LocalNames(dict(zip(names, canonical))).visit(ast.Module(body=copy.deepcopy(fragment), type_ignores=[])).body
             for check in body[1:]:
@@ -137,7 +138,7 @@ def regroup_complete_captures(tree, literal):
             return set()  # duplicate, missing or conflicting clauses never disappear
         function = copy.copy(owner)
         function.name = f'{owner.name}__complete_capture_{index}'
-        if function.name in bound:
+        if function.name in identifiers:
             return set()
         function.body = body
         function.end_lineno = max(original.end_lineno for _, original in fragments)
