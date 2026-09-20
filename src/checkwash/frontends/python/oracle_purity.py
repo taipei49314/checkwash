@@ -226,6 +226,36 @@ def shared_literal_collection_inputs(source, target, call):
     return all(sequence(arg) for arg in call.args) and fresh_unique_merge(function.body, parameters)
 
 
+def _unambiguous_import_parents(module, roots, selected_root, read):
+    """A unique leaf must belong to the package Python can actually import.
+
+    Namespace portions remain eligible until a regular package selects one
+    root. Competing regular packages have unknown search-path order, and a
+    module at a parent name cannot supply submodules. Never borrow a leaf
+    from an excluded namespace portion or guess which regular package wins.
+    """
+    parts = module.split('.')
+    if len(parts) > 16:
+        return False
+    active = set(roots)
+    for depth in range(1, len(parts)):
+        relative = '/'.join(parts[:depth])
+        packages = set()
+        for root in sorted(active):
+            prefix = root + '/' if root else ''
+            if read(prefix + relative + '.py') is not None:
+                return False
+            if read(prefix + relative + '/__init__.py') is not None:
+                packages.add(root)
+        if len(packages) > 1:
+            return False
+        if packages:
+            active = packages
+        if selected_root not in active:
+            return False
+    return True
+
+
 def pure_imported_calls(source, calls, *, path, read, result_proof=None):
     """Require a unique local `from package.module import function` source."""
     tree = _tree(source)
@@ -250,9 +280,11 @@ def pure_imported_calls(source, calls, *, path, read, result_proof=None):
                 candidate = prefix + relative + suffix
                 data = read(candidate)
                 if data is not None:
-                    candidates.append((candidate, data))
+                    candidates.append((candidate, data, root))
         if len(candidates) != 1 or not (result_proof(candidates[0][1], name, call) if result_proof is not None
                                        else _pure_module(candidates[0][1], name)):
+            return False
+        if not _unambiguous_import_parents(module, roots, candidates[0][2], read):
             return False
         selected = PurePosixPath(candidates[0][0]).parts
         target_tree = _tree(candidates[0][1])
