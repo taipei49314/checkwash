@@ -38,6 +38,7 @@ from checkwash.frontends.python.primitive_strings import primitive_string_result
 from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
+from checkwash.frontends.python.table_factories import expand_literal_table_factories
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -708,6 +709,7 @@ def _module(source, *, baseline):
            and (node.name in _IMPLICIT_HOOKS or node.name.startswith(("pytest_", "__")))
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
+    expand_literal_table_factories(tree)
     wrapper_tests = expand_wrappers(tree)
     if wrapper_tests is None:
         return None
