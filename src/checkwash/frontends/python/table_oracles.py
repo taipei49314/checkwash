@@ -45,6 +45,7 @@ from checkwash.frontends.python.indexed_fixture_tables import expand_indexed_fix
 from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
+from checkwash.frontends.python.literal_expected_bindings import expand_literal_expected_bindings
 from checkwash.frontends.python.table_factories import expand_literal_table_factories
 from checkwash.frontends.python.inert_helpers import prune_inert_helpers
 from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
@@ -1034,6 +1035,7 @@ def _module(source, *, baseline):
                 if isinstance(function, ast.FunctionDef) and any(
                     isinstance(node, ast.Assert) and (node.lineno, node.col_offset) in conditional_spans
                     for node in ast.walk(function))}
+    literal_expected_tests = expand_literal_expected_bindings(tree, _literal)
     local_auxiliary = extract_local_auxiliary_oracles(tree)
     raises_oracles = extract_raises_oracles(tree)
     tuple_tests = expand_tuple_oracles(tree)
@@ -1218,6 +1220,8 @@ def _module(source, *, baseline):
             is_table, form = True, "literal-prefix-predicate"
         if function.name in unique_tests:
             is_table, form = True, "exact-unique-predicate"
+        if function.name in literal_expected_tests:
+            is_table, form = True, "literal-expected-local"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
@@ -1266,7 +1270,7 @@ def _module(source, *, baseline):
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
                  or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
-                 or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests
+                 or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests
                  or any(form in {'string-block', 'grouped-assert-helper'} for _, form in forms)
                  or any(getattr(case.assertion, '_requires_closed_helper', False) for case in result)),
             bool(unittest_tests),
@@ -1547,6 +1551,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         if (any(getattr(case.assertion, '_requires_closed_helper', False) for case in old[2])
                 and any(getattr(case.assertion, '_requires_closed_helper', False) for case in new[2])):
             return before_parsed, after_parsed  # preserve same-carrier keyword expectation provenance
+        if (any(form == 'literal-expected-local' for _, form in old[6])
+                and any(form == 'literal-expected-local' for _, form in new[6])):
+            return before_parsed, after_parsed  # retain ordinary same-carrier expectation provenance
         if (any(form == 'literal-fixtures' for _, form in old[6])
                 and any(form == 'literal-fixtures' for _, form in new[6])):
             return before_parsed, after_parsed  # retain existing same-carrier fixture provenance ownership
@@ -1560,6 +1567,11 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         old_keys = [_subject_key(case) for case in old[2]]
         new_keys = [_subject_key(case) for case in new[2]]
+        if any(form == 'literal-expected-local' for module in (old, new) for _, form in module[6]):
+            old_answers = Counter((_subject_key(case), stable_dump(case.assertion.test.comparators[0])) for case in old[2])
+            new_answers = Counter((_subject_key(case), stable_dump(case.assertion.test.comparators[0])) for case in new[2])
+            if old_answers - new_answers:
+                return before_parsed, after_parsed  # changed local answers retain their established provenance owner
         # Field checks do not reject additional keys. A complete dictionary
         # equality may replace them, but the reverse loses an oracle even
         # when the field values match. Keep every original complete check
