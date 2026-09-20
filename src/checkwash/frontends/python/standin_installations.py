@@ -21,6 +21,7 @@ from dataclasses import dataclass, field, replace
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.frontend import _static_truth, parse_python
+from checkwash.frontends.python.mock_testcase_replacements import restructured_patch_event
 from checkwash.gating import unit_is_live
 from checkwash.ir.astutil import stable_dump
 from checkwash.pyenv import known_baseline
@@ -1052,6 +1053,9 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                 if side == 0:
                     baseline = dict(module.baseline_imports)
                 modules[side].append(module)
+        event = restructured_patch_event(path, modules, live, context, deny, budget, authority_search)
+        if event is not None:
+            events.append(event)
         for qualname in sorted(live[0] & live[1]):
             before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget, authority_search)
             after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget, authority_search)
