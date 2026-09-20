@@ -216,6 +216,18 @@ class _Reader:
         return ((target, target.functions[member])
                 if target is not None and member in target.functions and member not in target.env else None)
 
+    def search(self, needles, side):
+        paths = self.searcher(needles)
+        if not isinstance(paths, (list, tuple)) or any(not isinstance(path, str) for path in paths):
+            return paths
+        paths = set(paths)
+        for candidate, pair in self.raw.items():
+            paths.discard(candidate)
+            data = pair[side]
+            if candidate.endswith(".py") and data and any(needle.encode() in data for needle in needles):
+                paths.add(candidate)
+        return sorted(paths)
+
     def constant_call_authority(self, paths, side, name):
         key = (paths, side, name)
         if key in self.authorities:
@@ -225,20 +237,8 @@ class _Reader:
             return False
         read = lambda candidate: self.source(candidate, side, authority=True)
 
-        def search(needles):
-            paths = self.searcher(needles)
-            if not isinstance(paths, (list, tuple)) or any(not isinstance(p, str) for p in paths):
-                return paths
-            paths = set(paths)
-            for candidate, pair in self.raw.items():
-                paths.discard(candidate)
-                data = pair[side]
-                if candidate.endswith(".py") and data and any(n.encode() in data for n in needles):
-                    paths.add(candidate)
-            return sorted(paths)
-
         try:
-            if not inert_test_execution_context(paths[0], read, search):
+            if not inert_test_execution_context(paths[0], read, lambda needles: self.search(needles, side)):
                 return False
             if not safe_call_graph(paths, read):
                 return False
@@ -332,6 +332,55 @@ class _Project:
         for target in (statement.targets if isinstance(statement, ast.Assign) else [statement.target]):
             _assign(target, value, env)
 
+    def fixture(self, module, name, depth=0):
+        """Read a same-file scalar fixture, without executing its decorator.
+
+        This only establishes a concrete input for additive evidence. Unknown
+        configuration or another fixture provider withholds the substitution.
+        """
+        self.tick(depth)
+        function = module.functions.get(name)
+        if function is None or name in module.env or len(function.decorator_list) != 1:
+            return None
+        decorator = function.decorator_list[0]
+        if isinstance(decorator, ast.Call):
+            if decorator.args or decorator.keywords:
+                return None
+            decorator = decorator.func
+        if dotted_name(_Replace(module.env).visit(copy.deepcopy(decorator))) != "pytest.fixture":
+            return None
+        args = function.args
+        if (args.posonlyargs or args.kwonlyargs or args.vararg or args.kwarg or args.defaults
+                or function.returns or any(arg.annotation for arg in args.args)):
+            return None
+        body = [statement for statement in function.body if not _doc(statement)]
+        if len(body) != 1 or not isinstance(body[0], ast.Return) or body[0].value is None:
+            return None
+        local = dict(module.env)
+        for parameter in args.args:
+            value = self.fixture(module, parameter.arg, depth + 1)
+            if value is None:
+                return None
+            local[parameter.arg] = value
+        value = _Replace(local).visit(copy.deepcopy(body[0].value))
+        # Mutable fixtures retain identity and effects; do not copy them into
+        # multiple calls or treat their source as a fresh literal each time.
+        if not (isinstance(value, ast.Constant) and type(value.value) in (str, bytes, int, float, bool, type(None))):
+            return None
+        return value
+
+    def fixture_context(self, module):
+        if self.reader.reader is None or self.reader.searcher is None:
+            return False
+        read = lambda path: self.reader.source(path, self.side, authority=True)
+        if not inert_test_execution_context(module.path, read, lambda needles: self.reader.search(needles, self.side)):
+            return False
+        # A repository module called pytest can replace fixture semantics.
+        parents = PurePosixPath(module.path).parent.parts
+        roots = {"", "src", *("/".join(parents[:n]) for n in range(1, len(parents) + 1))}
+        return all(read((root + "/" if root else "") + suffix) is None
+                   for root in sorted(roots) for suffix in ("pytest.py", "pytest/__init__.py"))
+
     def walk(self, module, body, env, unit, events, depth=0, anchor=None, loop=False, trusted_calls=True):
         for statement in body:
             self.tick(depth)
@@ -369,19 +418,42 @@ class _Project:
                 left = self.resolve(module, comparison.left, env, depth)
                 right = self.resolve(module, comparison.comparators[0], env, depth)
                 surface = comparison.comparators[0]
-                if _literal(left) and not _literal(right):
+                # With two calls the same-file expected-value helper can be on
+                # the left. Keep the imported production call opaque and use
+                # the helper's source only as expectation provenance.
+                reversed_helper = (isinstance(left, ast.Call) and isinstance(right, ast.Call)
+                                   and self.target(module, left.func, {}) is not None
+                                   and self.target(module, right.func, {}) is None)
+                if (_literal(left) and not _literal(right)) or reversed_helper:
                     left, right, surface = right, left, comparison.left
                 # This channel needs a concrete subject call. Unknown fixtures,
                 # overloaded shapes and direct expectation-call rewrites keep
                 # their existing detector ownership.
                 if not isinstance(left, ast.Call):
                     continue
-                indirect = bool(anchor or loop or any(isinstance(n, ast.Name) and n.id in env for n in ast.walk(surface)))
-                if not _literal(right) and anchor is None:
+                expected_helper = (isinstance(right, ast.Call)
+                                   and self.target(module, right.func, {}) is not None)
+                indirect = bool(anchor or loop or expected_helper
+                                or any(isinstance(n, ast.Name) and n.id in env for n in ast.walk(surface)))
+                if anchor is None and any(isinstance(n, ast.Name) and n.id in self.unresolved_inputs
+                                          for n in ast.walk(right)):
+                    # An external golden fixture is an independent oracle,
+                    # not a known replacement value. Preserve its existing
+                    # native ownership until its provider can be resolved.
                     continue
                 if any(isinstance(n, (ast.Lambda, ast.NamedExpr, ast.Await, ast.Yield, ast.comprehension)) for n in ast.walk(right)):
                     raise _Unsupported
+                expected_return = False
                 if not _literal(right):
+                    # Pure source substitution can prove a return expression
+                    # equal to the previous literal only under the same closed
+                    # execution authority used for optional constant calls.
+                    if (isinstance(right, ast.Call) and trusted_calls
+                            and self.reader.constant_call_authority(
+                                tuple(dict.fromkeys((self.entry_path, module.path))), self.side, "helper-return")):
+                        resolved = self.resolve(module, right, {}, depth, returns=True)
+                        expected_return = stable_dump(resolved) != stable_dump(right)
+                        right = resolved
                     def allow_call(name):
                         return (trusted_calls and module.calls_safe
                                 and all(_literal(arg) for arg in left.args)
@@ -396,7 +468,7 @@ class _Project:
                     continue
                 text, span = anchor or (module.offsets.seg(statement), module.offsets.span(statement))
                 events.append(_Event(unit, ast.unparse(left), type(comparison.ops[0]).__name__,
-                                     ast.unparse(right), indirect, bool(anchor or loop),
+                                     ast.unparse(right), indirect, bool(anchor or loop or expected_return),
                                      stable_dump(statement), text, span))
                 if len(events) > MAX_EVENTS:
                     raise _Unsupported
@@ -417,6 +489,17 @@ class _Project:
                 _declare_locals(function.body, env)
                 for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]:
                     env[arg.arg] = ast.Name(id=arg.arg, ctx=ast.Load())
+                fixture_values = {}
+                for arg in function.args.args:
+                    if arg.arg in module.functions:
+                        value = self.fixture(module, arg.arg)
+                        if value is not None:
+                            fixture_values[arg.arg] = value
+                if fixture_values and self.fixture_context(module):
+                    env.update(fixture_values)
+                self.unresolved_inputs = {arg.arg for arg in [*function.args.posonlyargs, *function.args.args,
+                                                              *function.args.kwonlyargs]
+                                          if isinstance(env[arg.arg], ast.Name) and env[arg.arg].id == arg.arg}
                 self.walk(module, function.body, env, unit, events,
                           trusted_calls=not (function.args.posonlyargs or function.args.args or function.args.kwonlyargs))
             except _Unsupported:

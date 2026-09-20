@@ -1,14 +1,28 @@
 """The helper/loop provenance channel of EXPECTATION_DEFINITION_CHANGED."""
 
+import ast
 import json
 
 from checkwash.change import EngineError
+from checkwash.detectors.expected_changed import detect as detect_changed, detect_derived
 from checkwash.findings import Evidence, Finding, make_fingerprint
+
+
+def _literal_expression(text):
+    try:
+        ast.literal_eval(text)
+        return True
+    except (SyntaxError, ValueError, TypeError, RecursionError, MemoryError):
+        return False
 
 
 def detect(ir, existing):
     findings = []
     owned = {(finding.path, finding.unit) for finding in existing}
+    # Literal/derived expected-value transitions retain their native detector
+    # even when source substitution also describes the same assertion edit.
+    native_owned = {(finding.path, finding.unit, tuple(finding.after.span))
+                    for finding in [*detect_changed(ir), *detect_derived(ir)] if finding.after is not None}
     for file in ir.files:
         if file.role != "test":
             continue
@@ -25,6 +39,9 @@ def detect(ir, existing):
                            or record[i][0] >= record[i][1] for i in (2, 4))):
                 raise EngineError("invalid expected provenance evidence record")
             name, old_text, old_span, new_text, new_span, subject, operator, old_expected, new_expected = record
+            if ((file.path, name, tuple(new_span)) in native_owned
+                    and not (_literal_expression(old_expected) and _literal_expression(new_expected))):
+                continue
             unit = units.get(name)
             if (file.path, name) in owned or unit is None or unit.before is None or unit.after is None or unit.delta is None:
                 continue

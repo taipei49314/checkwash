@@ -40,6 +40,9 @@ def folded_expected(node, allow_call):
         sub = lambda item: visit(item, depth + 1)
         if isinstance(expr, ast.Constant):
             return bounded(expr.value)
+        if isinstance(expr, ast.JoinedStr) and all(isinstance(part, ast.Constant) and type(part.value) is str
+                                                  for part in expr.values):
+            return bounded("".join(part.value for part in expr.values))
         if isinstance(expr, (ast.Tuple, ast.List)):
             if len(expr.elts) > 64:
                 raise _Unknown

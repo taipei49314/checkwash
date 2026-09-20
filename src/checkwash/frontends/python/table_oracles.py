@@ -542,6 +542,26 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         bindings = _rows(values, columns, unpack=unpack)
         scope.update([parameter, *columns])
         body, table, form = [assertion], True, "table-helper-loop"
+    source_statement = body[-1] if body else None
+    if table and 1 < len(body) <= MAX_CASES:
+        # A fresh name for a row cell does not change its value or identity.
+        # Substitute aliases back to the original row names before _concrete
+        # counts uses, so two names for one mutable cell cannot evade its
+        # repeated-object guard. Calls, rebinding and unpacking stay outside
+        # this narrow carrier transformation.
+        aliases = {}
+        for statement in body[:-1]:
+            if (not isinstance(statement, ast.Assign) or len(statement.targets) != 1
+                    or not isinstance(statement.targets[0], ast.Name)
+                    or not isinstance(statement.value, ast.Name)):
+                return None
+            name = statement.targets[0].id
+            if (name in scope or name in imports or name in constants
+                    or statement.value.id not in scope | aliases.keys()):
+                return None
+            aliases[name] = _Substitute(aliases).visit(copy.deepcopy(statement.value))
+            scope.add(name)
+        body = [_Substitute(aliases).visit(copy.deepcopy(body[-1]))]
     if bindings is None or len(body) != 1:
         return None
     if (form == "native" and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Call)
@@ -556,7 +576,7 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
                   for row in bindings]
     if any(assertion is None for assertion in assertions):
         return None
-    return [_Case(assertion, body[0], node) for assertion in assertions], table, form
+    return [_Case(assertion, source_statement, node) for assertion in assertions], table, form
 
 
 def _module(source, *, baseline):
