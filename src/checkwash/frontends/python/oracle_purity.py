@@ -32,6 +32,9 @@ def _expression(node, names):
         return node.id in names
     if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
         return all(_expression(item, names) for item in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(key is not None and _expression(key, names) and _expression(value, names)
+                   for key, value in zip(node.keys, node.values))
     if isinstance(node, ast.UnaryOp):
         return isinstance(node.op, (ast.UAdd, ast.USub, ast.Not, ast.Invert)) and _expression(node.operand, names)
     if isinstance(node, ast.BinOp):

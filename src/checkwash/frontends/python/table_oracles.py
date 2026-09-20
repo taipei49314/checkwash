@@ -1081,7 +1081,8 @@ def _module(source, *, baseline):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
-                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or auxiliary),
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or auxiliary
+                 or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms))
 
