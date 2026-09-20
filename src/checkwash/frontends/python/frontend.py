@@ -19,6 +19,7 @@ from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
+from checkwash.frontends.python.literal_string_methods import literal_string_replace
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
@@ -272,8 +273,8 @@ def _is_literal(node: ast.AST) -> bool:
     return False
 
 
-def _literal_repr(node: ast.AST, text: str) -> str | None:
-    if _is_literal(node):
+def _literal_repr(node: ast.AST, text: str, *, fold_string_methods=True) -> str | None:
+    if _is_literal(node) or fold_string_methods and literal_string_replace(node) is not None:
         seg = text.seg(node)
         if seg is not None and len(seg) <= 120:
             return seg
@@ -353,8 +354,11 @@ def _canonical_repr(value: object) -> str:
     return repr(value)
 
 
-def _literal_value(node: ast.AST) -> str | None:
+def _literal_value(node: ast.AST, *, fold_string_methods=True) -> str | None:
     """Canonical repr of a literal's VALUE (quote-style independent), else None."""
+    folded = literal_string_replace(node) if fold_string_methods else None
+    if folded is not None:
+        return _canonical_repr(folded.value)
     try:
         return _canonical_repr(ast.literal_eval(node))
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
@@ -529,7 +533,10 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # right side unconditionally made changing it invisible (confirmed
         # bypass); prefer whichever side is the literal.
         subject_node = left
-        if comparators and _is_literal(left) and not _is_literal(comparators[-1]):
+        single = len(test.ops) == 1
+        if (comparators and (_is_literal(left) or single and literal_string_replace(left) is not None)
+                and not _is_literal(comparators[-1])
+                and (not single or literal_string_replace(comparators[-1]) is None)):
             expect_node, subject_node = left, comparators[-1]
         # A chained comparison is a range oracle: the non-literal operand is
         # the subject (usually the middle term) and every literal bound is
@@ -546,8 +553,8 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
                 bounds = [n for n in operands if _is_literal(n)]
                 expect_node = bounds[-1] if bounds else None
         left_text = text.seg(subject_node)
-        right_lit = _literal_repr(expect_node, text) if expect_node is not None else None
-        right_val = _literal_value(expect_node) if expect_node is not None else None
+        right_lit = _literal_repr(expect_node, text, fold_string_methods=single) if expect_node is not None else None
+        right_val = _literal_value(expect_node, fold_string_methods=single) if expect_node is not None else None
         if bounds is not None and len(bounds) > 1:
             # The whole bound tuple is the expectation, so moving any single
             # bound is an expectation rewrite.
