@@ -296,6 +296,55 @@ def _scoped_bindings(tree, qualname, assertion):
     return bindings
 
 
+def _helper_module_inert(tree):
+    """Bound module execution before lending its namespace to a helper."""
+    bindings, definitions_started = {}, False
+
+    def literal(value):
+        if value is None or any(isinstance(node, (ast.Call, ast.Name)) for node in ast.walk(value)):
+            return False
+        try:
+            ast.literal_eval(value)
+            return True
+        except (ValueError, TypeError, RecursionError, MemoryError):
+            return False
+
+    for statement in tree.body:
+        if isinstance(statement, ast.Pass) or (isinstance(statement, ast.Expr)
+                and isinstance(statement.value, ast.Constant) and type(statement.value.value) is str):
+            continue
+        if isinstance(statement, (ast.Import, ast.ImportFrom)):
+            if definitions_started or (isinstance(statement, ast.ImportFrom)
+                                       and (statement.level or any(alias.name == "*" for alias in statement.names))):
+                return False
+        elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            definitions_started = True
+            args = statement.args
+            if (statement.decorator_list or statement.returns or getattr(statement, "type_params", ())
+                    or any(arg.annotation for arg in [*args.posonlyargs, *args.args, *args.kwonlyargs,
+                                                       *([args.vararg] if args.vararg else []), *([args.kwarg] if args.kwarg else [])])
+                    or any(not literal(value) for value in args.defaults)
+                    or any(value is not None and not literal(value) for value in args.kw_defaults)
+                    or statement.name.startswith(("pytest_", "__"))
+                    or statement.name in {"setup_module", "teardown_module", "setup_function", "teardown_function",
+                                          "setup", "teardown", "setUpModule", "tearDownModule"}):
+                return False
+        elif isinstance(statement, ast.Assign) and len(statement.targets) == 1 and isinstance(statement.targets[0], ast.Name):
+            value = statement.value
+            mock = (isinstance(value, ast.Call) and _resolve(value.func, bindings) in _MOCKS
+                    and not value.args and len(value.keywords) == 1
+                    and value.keywords[0].arg == "return_value" and literal(value.keywords[0].value))
+            if not (literal(value) or isinstance(value, ast.Name) and value.id in bindings or mock):
+                return False
+        else:
+            return False
+        local = _bindings([statement])
+        if any(name in bindings or name.startswith(("pytest_", "__")) for name in local):
+            return False
+        bindings.update(local)
+    return True
+
+
 def _assertion_scope(tree, qualname, assertion):
     """Locate one directly called, zero-argument assertion helper.
 
@@ -306,8 +355,10 @@ def _assertion_scope(tree, qualname, assertion):
     """
     if not assertion.inherited:
         return qualname
+    if not _helper_module_inert(tree):
+        return None
     caller = _scope(tree, qualname)
-    if (caller is None or caller.decorator_list or caller.args.args or caller.args.posonlyargs
+    if (caller is None or caller.decorator_list or caller.returns or caller.args.args or caller.args.posonlyargs
             or caller.args.kwonlyargs or caller.args.vararg or caller.args.kwarg
             or len(caller.body) != 1 or not isinstance(caller.body[0], ast.Expr)):
         return None
@@ -317,11 +368,16 @@ def _assertion_scope(tree, qualname, assertion):
     if any(isinstance(node, ast.ImportFrom) and any(alias.name == '*' for alias in node.names)
            for node in tree.body):
         return None
+    if any((isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+            and node.func.id in {"globals", "locals", "vars", "exec", "eval", "setattr", "delattr"})
+           or (isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del)))
+           for node in ast.walk(tree)):
+        return None
     sites = _binding_sites(tree.body).get(call.func.id, [])
     if len(sites) != 1 or not isinstance(sites[0], ast.FunctionDef):
         return None
     helper = sites[0]
-    if (helper.decorator_list or helper.args.args or helper.args.posonlyargs or helper.args.kwonlyargs
+    if (helper.decorator_list or helper.returns or helper.args.args or helper.args.posonlyargs or helper.args.kwonlyargs
             or helper.args.vararg or helper.args.kwarg or len(helper.body) != 1
             or not isinstance(helper.body[0], ast.Assert)):
         return None
