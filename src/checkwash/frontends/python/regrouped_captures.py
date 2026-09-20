@@ -95,7 +95,8 @@ def regroup_complete_captures(tree, literal):
             call = assignment.value
             if (len(assignment.targets) != 1 or not checks or not isinstance(call.func, ast.Name)
                     or call.func.id not in imports or not all(literal(arg) for arg in call.args)
-                    or not all(keyword.arg is not None and literal(keyword.value) for keyword in call.keywords)):
+                    or not all(keyword.arg is not None and literal(keyword.value) for keyword in call.keywords)
+                    or len({keyword.arg for keyword in call.keywords}) != len(call.keywords)):
                 return set()
             target = assignment.targets[0]
             targets = [target] if isinstance(target, ast.Name) else target.elts if isinstance(target, (ast.Tuple, ast.List)) else []

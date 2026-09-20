@@ -161,3 +161,22 @@ def test_existing_cross_block_capture_alias_keeps_its_actual_binding():
     after = after.replace('assert got == "Ada"', 'assert _checkwash_capture_0 == "Ada"') + '\n' + prefix
     ir, _, _ = run(before, after, production)
     assert not projected(ir)
+
+
+def test_repeated_keyword_compile_errors_never_gain_regrouped_projection():
+    before, after, production = sources(STRING)
+    before = before.replace('subject(" Ada ")', 'subject(value=" Ada ", value=" Ada ")')
+    after = after.replace('subject(" Ada ")', 'subject(value=" Ada ", value=" Ada ")')
+    for source in (before, after):
+        with pytest.raises(SyntaxError, match='keyword argument repeated'):
+            compile(source, '<captured-test>', 'exec')
+    ir, _, _ = run(before, after, production)
+    assert not projected(ir)
+
+
+def test_unique_literal_keyword_inputs_retain_complete_split_checks():
+    before, after, production = sources(STRING)
+    before = before.replace('subject(" Ada ")', 'subject(value=" Ada ")')
+    after = after.replace('subject(" Ada ")', 'subject(value=" Ada ")')
+    ir, findings, verdict = run(before, after, production)
+    assert projected(ir) and verdict == 'pass' and not findings
