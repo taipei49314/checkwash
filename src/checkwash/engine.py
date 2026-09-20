@@ -66,6 +66,7 @@ from checkwash.frontends.python.subject_replacements import subject_replacement_
 from checkwash.frontends.python.callable_fixture_subjects import callable_fixture_subject_events
 from checkwash.frontends.python.local_parameter_implementations import local_parameter_implementation_events
 from checkwash.frontends.python.fixture_local_implementations import fixture_local_implementation_events
+from checkwash.frontends.python.parametrized_string_standins import parametrized_string_standin_events
 from checkwash.shadow import find_runtime_subject_shadows
 from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
@@ -1169,6 +1170,9 @@ def build_ir(
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     for event in fixture_local_implementation_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    for event in parametrized_string_standin_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
