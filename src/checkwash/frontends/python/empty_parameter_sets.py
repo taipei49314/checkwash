@@ -12,6 +12,20 @@ from .snapshot_context import inert_test_execution_context
 from .table_oracles import _args, _bounded_tree, _context_snapshots, _pytest_unshadowed, _IMPLICIT_HOOKS, _CONTROL_NAMES
 
 
+_STANDARD_MODULES = {'unittest', 'sys', 'os'}
+_STANDARD_SYMBOLS = {'typing': {'TYPE_CHECKING'}, 'contextlib': {'suppress'}}
+
+
+def _parameters(node):
+    if isinstance(node, ast.AsyncFunctionDef):
+        # Function bodies do not run while pytest collects an empty parameter
+        # set. Async support only supplies that collection observation.
+        node = ast.FunctionDef(name=node.name, args=node.args, body=node.body,
+                               decorator_list=node.decorator_list, returns=node.returns,
+                               type_params=getattr(node, 'type_params', []))
+    return _args(node)
+
+
 def _empty(node, bound, depth=0):
     if depth > 16:
         return False
@@ -36,7 +50,7 @@ def _module(source, *, after):
     tree = _bounded_tree(source)
     if tree is None:
         return None
-    functions, imported, bound, pytest = {}, [], set(), False
+    functions, imported, bound, pytest, standard = {}, [], set(), False, set()
     for node in tree.body:
         if (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
                 and type(node.value.value) is str):
@@ -47,15 +61,25 @@ def _module(source, *, after):
                 return None
             names = ['pytest']
             pytest = True
+        elif (isinstance(node, ast.Import) and not functions
+              and all(alias.name in _STANDARD_MODULES for alias in node.names)):
+            names = [alias.asname or alias.name for alias in node.names]
+            standard.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and not node.level and node.module:
             if functions:
                 return None
             names = [alias.asname or alias.name for alias in node.names]
             if any(alias.name == '*' for alias in node.names) or 'pytest' in names:
                 return None
-            imported.extend(ast.Call(func=ast.Name(id=name, ctx=ast.Load()), args=[], keywords=[])
-                            for name in names)
-        elif isinstance(node, ast.FunctionDef) and _args(node) is not None:
+            if node.module in _STANDARD_SYMBOLS:
+                if any(alias.name not in _STANDARD_SYMBOLS[node.module] for alias in node.names):
+                    return None
+                standard.add(node.module)
+            else:
+                imported.extend(ast.Call(func=ast.Name(id=name, ctx=ast.Load()), args=[], keywords=[])
+                                for name in names)
+        elif (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _parameters(node) is not None
+              and (after or not isinstance(node, ast.AsyncFunctionDef))):
             if node.name in _IMPLICIT_HOOKS or node.name.startswith(('pytest_', '__')):
                 return None
             names = [node.name]
@@ -79,10 +103,10 @@ def _module(source, *, after):
         if (not isinstance(decorator, ast.Call) or ast.unparse(decorator.func) != 'pytest.mark.parametrize'
                 or len(decorator.args) != 2 or decorator.keywords
                 or not isinstance(decorator.args[0], ast.Constant) or type(decorator.args[0].value) is not str
-                or _args(function) != [decorator.args[0].value] or not _empty(decorator.args[1], bound)):
+                or _parameters(function) != [decorator.args[0].value] or not _empty(decorator.args[1], bound)):
             return None
         empty.add(name)
-    return (functions, imported, empty) if len(functions) <= 64 and len(imported) <= 32 else None
+    return (functions, imported, empty, standard) if len(functions) <= 64 and len(imported) <= 32 else None
 
 
 def _inert_import(source, target, _call):
@@ -94,16 +118,44 @@ def _inert_import(source, target, _call):
     tree = _bounded_tree(source)
     if tree is None:
         return False
+    def inert_function(node):
+        return (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and _parameters(node) is not None and not node.decorator_list)
+
+    def inert_class(node):
+        if (not isinstance(node, ast.ClassDef) or node.bases or node.keywords or node.decorator_list
+                or getattr(node, 'type_params', ())):
+            return False
+        methods = set()
+        for statement in node.body:
+            if isinstance(statement, ast.Pass) or (isinstance(statement, ast.Expr)
+                    and isinstance(statement.value, ast.Constant) and type(statement.value.value) is str):
+                continue
+            if (not inert_function(statement) or statement.name in methods
+                    or statement.name.startswith('__') and statement.name not in {'__init__', '__eq__'}):
+                return False
+            methods.add(statement.name)
+        return True
+
     names = set()
     for node in tree.body:
         if (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
                 and type(node.value.value) is str):
             continue
-        if (not isinstance(node, ast.FunctionDef) or _args(node) is None or node.decorator_list
+        if (not (inert_function(node) or inert_class(node))
                 or node.name in names or node.name.startswith('__')):
             return False
         names.add(node.name)
     return target in names
+
+
+def _standard_unshadowed(modules, path, read):
+    from pathlib import PurePosixPath
+    parts = PurePosixPath(path).parts
+    roots = {'', 'src', *('/'.join(parts[:depth]) for depth in range(1, len(parts)))}
+    return all(read((root + '/' if root else '') + module + suffix) is None
+               for root in sorted(roots) for module in sorted(modules)
+               for suffix in ('.py', '/__init__.py'))
 
 
 def _unique_package_roots(source, path, read):
@@ -148,6 +200,7 @@ def mark_empty_parameter_introduction(before, after, before_parsed, after_parsed
     for source, module, (read, search) in zip((before, after), (old, new), _context_snapshots(
             path, before, after, tuple(changes), root_reader, root_searcher)):
         if (not inert_test_execution_context(path, read, search) or not _pytest_unshadowed(path, read)
+                or not _standard_unshadowed(module[3], path, read)
                 or not _unique_package_roots(source, path, read)
                 or not pure_imported_calls(source, module[1], path=path, read=read, result_proof=_inert_import)):
             return before_parsed, after_parsed
