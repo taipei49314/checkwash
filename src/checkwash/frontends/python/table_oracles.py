@@ -51,6 +51,8 @@ from checkwash.frontends.python.literal_iteration_oracles import expand_literal_
 from checkwash.frontends.python.fixture_row_helpers import expand_fixture_row_helpers
 from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
 from checkwash.frontends.python.tuple_oracles import expand_tuple_oracles, primitive_tuple_result
+from checkwash.frontends.python.local_auxiliary_oracles import (extract_local_auxiliary_oracles,
+                                                              retain_local_auxiliary_units)
 from checkwash.frontends.python.helper_predicates import expand_predicate_helpers
 from checkwash.frontends.python.prefix_predicates import expand_prefix_predicates
 from checkwash.frontends.python.callable_fixture_rows import consumer_rows, fixture_prefix_rows
@@ -958,6 +960,7 @@ def _module(source, *, baseline):
            and (node.name in _IMPLICIT_HOOKS or node.name.startswith(("pytest_", "__")))
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
+    local_auxiliary = extract_local_auxiliary_oracles(tree)
     raises_oracles = extract_raises_oracles(tree)
     tuple_tests = expand_tuple_oracles(tree)
     iteration_tests = expand_literal_iteration_oracles(tree)
@@ -1186,11 +1189,11 @@ def _module(source, *, baseline):
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
-                 or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests
+                 or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
                  or predicate_tests or prefix_tests or unique_tests or unique_helpers
                  or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),
-            subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles)
+            subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles, local_auxiliary)
 
 
 def _module_unshadowed(path, read, module):
@@ -1452,6 +1455,8 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         if Counter(oracle.key for oracle in old[11]) - Counter(oracle.key for oracle in new[11]):
             return before_parsed, after_parsed  # never discard a removed/changed exception or its exact message
+        if Counter(oracle.key for oracle in old[12]) - Counter(oracle.key for oracle in new[12]):
+            return before_parsed, after_parsed  # local checks keep their full definitions and multiplicity
         native_renames = _native_renames(old, new)
         if (any(form == 'literal-fixtures' for _, form in old[6])
                 and any(form == 'literal-fixtures' for _, form in new[6])):
@@ -1596,5 +1601,5 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                     module[0].encode(), [case.assertion.test.left], path=path, read=read,
                     result_proof=lambda source, target, call: primitive_tuple_result(source, target, call, arity)):
                 return before_parsed, after_parsed
-    return (retain_raises_units(_project(before_parsed, old[0], old[2]), old[0], old[11]),
-            retain_raises_units(_project(after_parsed, new[0], new[2]), new[0], new[11]))
+    return (retain_local_auxiliary_units(retain_raises_units(_project(before_parsed, old[0], old[2]), old[0], old[11]), old[0], old[12]),
+            retain_local_auxiliary_units(retain_raises_units(_project(after_parsed, new[0], new[2]), new[0], new[11]), new[0], new[12]))
