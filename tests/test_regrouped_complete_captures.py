@@ -180,3 +180,18 @@ def test_unique_literal_keyword_inputs_retain_complete_split_checks():
     after = after.replace('subject(" Ada ")', 'subject(value=" Ada ")')
     ir, findings, verdict = run(before, after, production)
     assert projected(ir) and verdict == 'pass' and not findings
+
+
+@pytest.mark.parametrize('path', ['pytest.py', 'pytest/__init__.py', 'src/pytest.py',
+                                'src/pytest/__init__.py', 'tests/pytest.py', 'tests/pytest/__init__.py'])
+def test_native_split_capture_proofs_still_require_real_pytest_collection(path):
+    before, after, production = sources(STRING)
+    ir, _, _ = run(before, after, production, context={path: b''})
+    assert not projected(ir)
+
+
+def test_local_pytest_runner_cannot_drop_a_split_tail_without_losing_projection():
+    before, after, _ = sources(STRING)
+    runner = b'import runpy\nnamespace = runpy.run_path("tests/test_case.py")\nnamespace["test_value"]()\n'
+    ir, _, _ = run(before, after, 'def subject(value):\n    return "Ace"\n', context={'pytest.py': runner})
+    assert not projected(ir)

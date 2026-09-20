@@ -1589,7 +1589,8 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed  # never discard a removed/changed exception or its exact message
         if Counter(oracle.key for oracle in old[12]) - Counter(oracle.key for oracle in new[12]):
             return before_parsed, after_parsed  # local checks keep their full definitions and multiplicity
-        if any(form == 'regrouped-complete-capture' for module in (old, new) for _, form in module[6]):
+        regrouped_capture = any(form == 'regrouped-complete-capture' for module in (old, new) for _, form in module[6])
+        if regrouped_capture:
             old_clauses = capture_obligations(old[0], _literal)
             new_clauses = capture_obligations(new[0], _literal)
             if old_clauses is None or new_clauses is None or old_clauses - new_clauses:
@@ -1680,7 +1681,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             path, before, after, changes, root_reader, root_searcher)):
         if not inert_test_execution_context(path, read, search):
             return before_parsed, after_parsed
-        if module[4] and not _pytest_unshadowed(path, read):
+        if (module[4] or regrouped_capture) and not _pytest_unshadowed(path, read):
             return before_parsed, after_parsed
         if any(not _module_unshadowed(path, read, authority) for authority in module[7]):
             return before_parsed, after_parsed
