@@ -2294,11 +2294,18 @@ def find_runtime_subject_shadows(
     modules: set[str] = set()
     for path in sorted(added_paths | removed_paths | provisional_staged_paths):
         modules |= _path_to_modules(path)
-    if changed_config_paths:
+    if changed_config_paths or any(
+        _is_conftest_path(path)
+        or _is_conftest_path(change_by_path[path].old_path or path)
+        for path in changed_control_paths
+    ):
         # Adding/deleting a higher-precedence but otherwise empty config can
         # mask an unchanged lower-precedence config. Its roots are not present
         # in the changed file, so inventory every exact module interpretation;
         # active imports and provider resolution still make the decision.
+        # A conftest prepend can also overtake a provider whose original
+        # root is named only in unchanged pytest configuration. Candidate
+        # discovery must not require both roots in the changed source.
         for path in sorted(after_paths | before_paths):
             modules.update(_path_to_modules(path))
     added_packages = {
