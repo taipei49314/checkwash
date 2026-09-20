@@ -37,6 +37,19 @@ def _complete(body, function, forbidden):
     return tuple_block(body, forbidden) is not None or string_block(candidate) is not None
 
 
+def capture_obligations(source, literal):
+    """Re-read original clauses only for an attempted regrouping transition."""
+    from .captured_assert_helpers import expand_captured_assert_helpers
+    from .inert_signatures import strip_none_test_returns
+    from .literal_expected_bindings import expand_literal_expected_bindings
+    tree = ast.parse(source)
+    strip_none_test_returns(tree)
+    expand_literal_expected_bindings(tree, literal)
+    expand_captured_assert_helpers(tree, literal)
+    regroup_complete_captures(tree, literal)
+    return getattr(tree, '_capture_obligations', None)
+
+
 def regroup_complete_captures(tree, literal):
     if not any(isinstance(function, ast.FunctionDef) and any(
             isinstance(statement, ast.Assign) and isinstance(statement.value, ast.Call)
@@ -59,7 +72,7 @@ def regroup_complete_captures(tree, literal):
     forbidden = imports | {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
     forbidden.update(target.id for node in tree.body if isinstance(node, ast.Assign)
                      for target in node.targets if isinstance(target, ast.Name))
-    groups, selected, incomplete = {}, [], False
+    groups, selected, incomplete, obligations = {}, [], False, Counter()
     for function in tree.body:
         if (not isinstance(function, ast.FunctionDef) or not function.name.startswith('test')
                 or _args(function) != [] or bound[function.name] != 1):
@@ -99,8 +112,18 @@ def regroup_complete_captures(tree, literal):
                     return set()
                 check.msg = None
             key = (ast.dump(call), type(target).__name__, len(names))
+            for check in body[1:]:
+                obligation = copy.deepcopy(check.test)
+                if (isinstance(obligation, ast.Compare) and len(obligation.ops) == 1
+                        and isinstance(obligation.ops[0], (ast.Eq, ast.Is))
+                        and literal(obligation.comparators[0])):
+                    # Keep expected-value edits available to their ordinary
+                    # detector; only the answer value is omitted from identity.
+                    obligation.comparators[0] = ast.Name(id='_checked_answer', ctx=ast.Load())
+                obligations[key + (ast.dump(obligation),)] += 1
             groups.setdefault(key, []).append((body, function))
             incomplete |= not _complete(body, function, forbidden)
+    tree._capture_obligations = obligations
     if not incomplete or not 1 <= len(groups) <= 64:
         return set()
     selected_names = {function.name for function in selected}

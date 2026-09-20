@@ -76,6 +76,27 @@ def test_different_original_answers_for_one_input_cannot_be_deduplicated():
     assert not projected(ir)
 
 
+@pytest.mark.parametrize('change', ['remove', 'replace', 'duplicate-count'])
+def test_entailed_membership_clauses_still_keep_their_original_identity_and_multiplicity(change):
+    before, after, production = sources(MEMBERSHIP)
+    if change == 'remove':
+        after = after.replace('    assert "A" in got\n', '')
+    elif change == 'replace':
+        after = after.replace('assert "A" in got', 'assert "da" in got')
+    else:
+        before = before.replace('    assert "A" in got', '    assert "A" in got\n    assert "A" in got')
+    ir, _, _ = run(before, after, production)
+    assert not projected(ir)
+
+
+def test_unchanged_duplicate_memberships_remain_counted_individually():
+    before, after, production = sources(MEMBERSHIP)
+    before = before.replace('    assert "A" in got', '    assert "A" in got\n    assert "A" in got')
+    after = after.replace('    assert "A" in got', '    assert "A" in got\n    assert "A" in got')
+    ir, findings, verdict = run(before, after, production)
+    assert projected(ir) and verdict == 'pass' and not findings
+
+
 def test_complete_but_rewritten_tuple_answer_still_blocks():
     before, after, production = sources(TUPLE)
     ir, findings, verdict = run(before, after.replace('assert c == 3', 'assert c == 0'), production)
