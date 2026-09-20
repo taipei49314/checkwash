@@ -310,7 +310,7 @@ def safe_call_graph(paths: tuple[str, ...], read, *, scalar_fixtures=False) -> b
         fixtures = set()
         if scalar_fixtures and imports.get("pytest") == ("pytest",):
             for name, function in functions.items():
-                if len(function.decorator_list) != 1 or function.args.args or function.args.defaults:
+                if name == 'request' or len(function.decorator_list) != 1 or function.args.args or function.args.defaults:
                     continue
                 decorator = function.decorator_list[0]
                 if isinstance(decorator, ast.Call) and not decorator.args and not decorator.keywords:

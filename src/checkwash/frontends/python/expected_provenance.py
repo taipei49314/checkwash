@@ -349,7 +349,7 @@ class _Project:
         """
         self.tick(depth)
         function = module.functions.get(name)
-        if function is None or name in module.env or len(function.decorator_list) != 1:
+        if function is None or name == 'request' or name in module.env or len(function.decorator_list) != 1:
             return None
         decorator = function.decorator_list[0]
         if isinstance(decorator, ast.Call):

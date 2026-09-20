@@ -92,7 +92,7 @@ def _module(source, after, *, fixture_factory=False):
         if not pytest or len(parameters) != 1 or parameters[0] in imports:
             return None
         fixture = functions.get(parameters[0])
-        if (fixture is None or fixture.name.startswith(('test', 'pytest_', '__')) or _parameters(fixture) != []
+        if (fixture is None or fixture.name == 'request' or fixture.name.startswith(('test', 'pytest_', '__')) or _parameters(fixture) != []
                 or len(fixture.decorator_list) != 1):
             return None
         decorator = fixture.decorator_list[0]

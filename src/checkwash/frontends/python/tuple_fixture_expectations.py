@@ -62,7 +62,7 @@ def _module(source, after):
     if not after:
         return (imported, test, provider) if _parameters(test) == [] else None
     fixture = functions[0]
-    if (fixture.name.startswith('test') or _parameters(fixture) != []
+    if (fixture.name == 'request' or fixture.name.startswith('test') or _parameters(fixture) != []
             or _parameters(test) != [fixture.name] or len(fixture.decorator_list) != 1):
         return None
     decorator = fixture.decorator_list[0]
