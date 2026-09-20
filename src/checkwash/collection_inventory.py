@@ -32,6 +32,14 @@ def _settings(path, source):
     return {key: next(iter(value)) for key, value in settings.items() if key != "addopts"}
 
 
+def _disabled(body):
+    return any(isinstance(node, (ast.Assign, ast.AnnAssign))
+               and isinstance(node.value, ast.Constant) and node.value.value is False
+               and any(isinstance(target, ast.Name) and target.id == "__test__"
+                       for target in (node.targets if isinstance(node, ast.Assign) else [node.target]))
+               for node in body)
+
+
 def _candidates(sources, settings):
     paths = set(sources)
     roots = tuple(posixpath.normpath(root.replace("\\", "/")) for root in settings.get("testpaths", ()))
@@ -53,11 +61,20 @@ def _candidates(sources, settings):
             tree = ast.parse(sources[path].decode("utf-8-sig"))
         except (SyntaxError, UnicodeError, RecursionError, ValueError):
             continue
+        if _disabled(tree.body):
+            continue
+        disabled_functions = {target.value.id for stmt in tree.body if isinstance(stmt, (ast.Assign, ast.AnnAssign))
+                              and isinstance(stmt.value, ast.Constant) and stmt.value.value is False
+                              for target in (stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target])
+                              if isinstance(target, ast.Attribute) and target.attr == "__test__" and isinstance(target.value, ast.Name)}
         for node in tree.body:
+            if getattr(node, "name", None) in disabled_functions:
+                continue
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if _matches(node.name, patterns["python_functions"], prefix=True):
                     result.add((path, node.name))
             elif (isinstance(node, ast.ClassDef) and not node.bases
+                  and not _disabled(node.body)
                   and _matches(node.name, patterns["python_classes"], prefix=True)
                   and not any(isinstance(child, ast.FunctionDef) and child.name in {"__init__", "__new__"} for child in node.body)):
                 for child in node.body:
@@ -95,6 +112,16 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     if any(len(v) > 1_000_000 for v in snapshot.values()) or sum(map(len, snapshot.values())) > 64_000_000:
         raise EngineError("pytest collection snapshot exceeds the source byte limit")
     from checkwash.shadow import _pytest_config_path, _runner_invocations
+    from checkwash.frontends.python.frontend import parse_python
+
+    # Existing plugin/collection controls mean the default collector's finite
+    # candidates are not evidence of tests currently being run. Retain the
+    # syntax detector, but withhold this inventory-based supplemental proof.
+    for path, data in snapshot.items():
+        if path.rsplit("/", 1)[-1] == "conftest.py" and data:
+            parsed = parse_python(data, collect_tests=False, conftest=True)
+            if not parsed.parse_ok or any(u.side.markers for u in parsed.units) or b"pytest_plugins" in data:
+                return []
 
     # Explicit CLI targets override testpaths and may bypass filename
     # patterns. Such invocations need their own collection model; do not

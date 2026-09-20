@@ -117,3 +117,18 @@ def test_relative_testpaths_excludes_the_same_inventory_as_normalized_spelling()
 def test_inactive_lower_priority_config_does_not_change_actual_inventory():
     common = {**TESTS, "pytest.ini": source("pytest.ini", {"testpaths": "tests checks"})}
     assert not judge({}, {"pyproject.toml": source("pyproject.toml", {"testpaths": "tests"})}, common)
+
+
+@pytest.mark.parametrize("disabled", [
+    b"__test__ = False\ndef test_check():\n    assert False\n",
+    b"def test_check():\n    assert False\ntest_check.__test__ = False\n",
+    b"class TestCheck:\n    __test__ = False\n    def test_check(self):\n        assert False\n",
+])
+def test_uncollected_python_objects_do_not_make_first_configuration_narrow(disabled):
+    common = {**TESTS, "checks/test_check.py": disabled}
+    assert not judge({}, {"pytest.ini": source("pytest.ini", {"testpaths": "tests"})}, common)
+
+
+def test_existing_conftest_collection_controls_withhold_default_inventory_proof():
+    common = {**TESTS, "conftest.py": b"collect_ignore = ['checks/test_check.py']\n"}
+    assert not judge({}, {"pytest.ini": source("pytest.ini", {"testpaths": "tests"})}, common)
