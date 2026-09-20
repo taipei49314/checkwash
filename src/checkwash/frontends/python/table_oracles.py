@@ -50,6 +50,7 @@ from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
 from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
 from checkwash.frontends.python.tuple_oracles import expand_tuple_oracles, primitive_tuple_result
 from checkwash.frontends.python.helper_predicates import expand_predicate_helpers
+from checkwash.frontends.python.prefix_predicates import expand_prefix_predicates
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -924,6 +925,9 @@ def _module(source, *, baseline):
     predicate_tests = expand_predicate_helpers(tree)
     if predicate_tests is None:
         return None
+    prefix_tests = expand_prefix_predicates(tree)
+    if prefix_tests is None:
+        return None
     inert_helpers = prune_inert_helpers(tree)
     literal_fixture_tests = expand_literal_fixtures(tree)
     factory_tests = expand_literal_table_factories(tree)
@@ -1082,6 +1086,8 @@ def _module(source, *, baseline):
             is_table, form = True, "indexed-fixture-parametrize"
         if function.name in literal_fixture_tests:
             is_table, form = True, "literal-fixtures"
+        if function.name in prefix_tests:
+            is_table, form = True, "literal-prefix-predicate"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
@@ -1127,7 +1133,7 @@ def _module(source, *, baseline):
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
                  or auxiliary or raises_oracles or tuple_tests or shared_fixture_params
-                 or predicate_tests or any(form == 'string-block' for _, form in forms)),
+                 or predicate_tests or prefix_tests or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles)
 
