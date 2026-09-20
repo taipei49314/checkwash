@@ -37,6 +37,7 @@ from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expand_string_blocks, string_block
 from checkwash.frontends.python.oracle_purity import primitive_literal_result, pure_imported_calls
 from checkwash.frontends.python.primitive_strings import primitive_string_result
+from checkwash.frontends.python.derived_literals import derived_shape, fold_derived, primitive_derived_result
 from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
@@ -199,13 +200,24 @@ def _concrete(node, bindings, imports):
         # not equivalent to constructing two independent literal objects.
         # Decline every repeated row binding rather than guess mutability.
         uses = Counter(n.id for n in ast.walk(original) if isinstance(n, ast.Name) and n.id in bindings)
-        if any(count > 1 for count in uses.values()):
-            return None
+    else:
+        uses = {}
     concrete = _Substitute(bindings).visit(copy.deepcopy(node))
     compare = concrete.test
     if not isinstance(compare, ast.Compare) or len(compare.ops) != 1:
         return None
     actual, expected = compare.left, compare.comparators[0]
+    derived = fold_derived(expected)
+    if derived is not None:
+        expected, authority = derived
+        compare.comparators[0] = expected
+        concrete._requires_derived_authority = authority
+    if any(count > 1 for count in uses.values()):
+        actual_uses = Counter(n.id for n in ast.walk(original.left) if isinstance(n, ast.Name))
+        if not (derived is not None and all(count <= 1 or (
+                isinstance(bindings[name], ast.Constant) and type(bindings[name].value) in (int, float, str, bytes, bool, type(None))
+                and actual_uses[name] <= 1) for name, count in uses.items())):
+            return None
     approximate = _approx_expected(expected)
     if not isinstance(compare.ops[0], (ast.Eq, ast.Is)) or not (_literal(expected) or approximate):
         return None
@@ -735,6 +747,14 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         bindings = _rows(tables[names[0]], columns, unpack=unpack)
         scope.update([parameter, *columns])
         body, table, form = [assertion], True, "table-fixture-helper"
+    elif (len(names) == 1 and names[0] in fixtures
+          and isinstance(fixtures[names[0]], (ast.List, ast.Tuple))
+          and all(isinstance(value, ast.Constant) and type(value.value) in (str, bytes, int, float, bool, type(None))
+                  for value in fixtures[names[0]].elts)
+          and body and not (isinstance(body[0], ast.Assign) and isinstance(body[0].value, ast.Name)
+                           and body[0].value.id == names[0])):
+        bindings = _rows(fixtures[names[0]], names, unpack=False)
+        table, form = True, "params-fixture"
     elif names:
         if (len(names) != 1 or names[0] not in fixtures or not 2 <= len(body) <= MAX_CASES
                 or not isinstance(body[0], ast.Assign) or len(body[0].targets) != 1
@@ -797,7 +817,7 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
             elif isinstance(statement.value, ast.Call):
                 callee = dotted_name(statement.value.func)
                 checked_expression = body[-1].test if isinstance(body[-1], ast.Assert) else body[-1]
-                if (not callee or callee.split(".")[0] not in imports - {"pytest"}
+                if ((not callee or callee.split(".")[0] not in imports - {"pytest"}) and not derived_shape(statement.value)
                         or sum(isinstance(node, ast.Name) and node.id == name for node in ast.walk(checked_expression)) != 1
                         or any(isinstance(node, ast.Name) and node.id == name
                                for later in body[:-1] if later is not statement for node in ast.walk(later))):
@@ -985,6 +1005,10 @@ def _module(source, *, baseline):
     if any(form == "zip-fixture" for _, form in forms) and "zip" in names:
         return None
     if any(getattr(case.assertion, "_requires_approx_authority", False) for case in result) and not pytest_imported:
+        return None
+    derived_authorities = set().union(*(getattr(case.assertion, "_requires_derived_authority", set()) for case in result))
+    if derived_authorities & names or any(isinstance(node, ast.arg) and node.arg in derived_authorities
+                                         for node in ast.walk(tree)):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests), bool(unittest_tests))
@@ -1219,6 +1243,20 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         message_calls = [case.assertion.test.left for case in module[2]
                          if getattr(case.assertion, "_requires_primitive_string", False)]
         approximate = any(getattr(case.assertion, "_requires_approx_authority", False) for case in module[2])
+        derived = any(hasattr(case.assertion, "_requires_derived_authority") for case in module[2])
+        if derived:
+            calls = [case.assertion.test.left for case in module[2]]
+            called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
+            for node in ast.parse(module[0]).body:
+                if isinstance(node, ast.Import):
+                    if any(alias.name != "pytest" or alias.asname for alias in node.names):
+                        return before_parsed, after_parsed
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level or any((alias.asname or alias.name) not in called for alias in node.names):
+                        return before_parsed, after_parsed
+            if not pure_imported_calls(module[0].encode(), calls, path=path, read=read,
+                                       result_proof=primitive_derived_result):
+                return before_parsed, after_parsed
         if approximate:
             calls = [case.assertion.test.left for case in module[2]]
             called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}

@@ -55,3 +55,12 @@ literal arguments. The grammar includes bounded single-generator list
 comprehensions and builtin `zip`; imported callbacks, object constructors,
 mutation and formatting expressions remain unsupported. Callable fixture
 and zip-fixture carriers retain their narrower scalar-string proof.
+Three derived literal grammars have bounded source reduction: `bin(n).count`
+on an integer and literal string, `list(range(...))` over integer bounds, and
+a literal separator joining characters selected by `str.isdigit`. No project
+code is evaluated. Numeric values are bounded to 256 bits, sequences to 64
+items and strings to 4096 characters. These forms require closed primitive
+production source, inert startup and unshadowed builtin names; their folded
+answers remain available to ordinary expectation-change detection. Repeated
+row references are allowed only for scalar values with at most one use in
+the subject, so mutable subject argument identities are not duplicated.
