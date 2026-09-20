@@ -890,6 +890,7 @@ def _module(source, *, baseline):
                           and _literal(node.body[0].value))
         if not unused_fixture:
             retained.append(node)
+    pruned_fixtures = len(retained) != len(tree.body)
     tree.body = retained
     wrapper_tests = expand_wrappers(tree)
     if wrapper_tests is None:
@@ -1034,7 +1035,7 @@ def _module(source, *, baseline):
                                          for node in ast.walk(tree)):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
-            bool(block_tests or unittest_tests), bool(unittest_tests))
+            bool(block_tests or unittest_tests or pruned_fixtures), bool(unittest_tests))
 
 
 def _module_unshadowed(path, read, module):

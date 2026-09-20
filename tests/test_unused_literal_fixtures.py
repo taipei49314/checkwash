@@ -47,3 +47,13 @@ def test_duplicate_fixture_definition_is_not_discarded():
     after = AFTER.replace("def child_age", "def adult_age")
     ir, _, _ = run(BEFORE, after, PRODUCTION)
     assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
+
+
+@pytest.mark.parametrize("production", [
+    "from tests.test_case import adult_age\ndef is_adult(age):\n    return adult_age.__wrapped__() < age\n",
+    "def is_adult(age):\n    from tests.test_case import adult_age\n    return adult_age.__wrapped__() < age\n",
+    "def is_adult(age):\n    return __import__('tests.test_case').adult_age() < age\n",
+])
+def test_production_backreference_prevents_unused_fixture_proof(production):
+    ir, _, _ = run(BEFORE, AFTER, production)
+    assert not any(unit.qualname.startswith("test_concrete_") for unit in ir.files[0].units)
