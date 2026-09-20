@@ -42,6 +42,7 @@ def test_closed_fixture_and_helper_keep_exception_removal_visible(after, compari
 
 @pytest.mark.parametrize('after', [
     FIXTURE.replace('@pytest.fixture', '@pytest.fixture(autouse=True)'),
+    FIXTURE.replace('expected', 'request'),
     FIXTURE.replace('return None', 'return callback()'),
     FIXTURE.replace('def expected():', 'def expected(request):'),
     FIXTURE.replace('result = divide', 'callback()\n    result = divide'),

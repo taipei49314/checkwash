@@ -94,7 +94,7 @@ def _after_module(data):
         return None
     normalized = copy.deepcopy(function)
     if helper.decorator_list:
-        if (not pytest or helper_args or test_args != [helper.name] or len(helper.decorator_list) != 1
+        if (not pytest or helper.name == 'request' or helper_args or test_args != [helper.name] or len(helper.decorator_list) != 1
                 or ast.unparse(helper.decorator_list[0]) != 'pytest.fixture'
                 or len(helper.body) != 1 or not isinstance(helper.body[0], ast.Return)
                 or not isinstance(helper.body[0].value, ast.Constant) or helper.body[0].value.value is not None):
