@@ -270,6 +270,16 @@ def _concrete(node, bindings, imports):
         message = concrete.msg
         if isinstance(message, ast.Constant) and type(message.value) is str:
             pass
+        elif (isinstance(message, ast.BinOp) and isinstance(message.op, ast.Add)
+              and isinstance(message.left, ast.Constant) and type(message.left.value) is str
+              and isinstance(message.right, ast.Call) and isinstance(message.right.func, ast.Name)
+              and message.right.func.id == 'repr' and len(message.right.args) == 1 and not message.right.keywords
+              and _literal(message.right.args[0])
+              and not any(isinstance(item, ast.Call) for item in ast.walk(message.right.args[0]))):
+            # Only builtin representation of literal data is inert. Verify
+            # repr's whole-module binding authority after collecting names;
+            # the existing diagnostic proof closes all production imports.
+            concrete._requires_repr_authority = True
         elif isinstance(message, ast.JoinedStr):
             for part in message.values:
                 if isinstance(part, ast.Constant) and type(part.value) is str:
@@ -1269,6 +1279,13 @@ def _module(source, *, baseline):
     if any(getattr(case.assertion, "_requires_approx_authority", False) for case in result) and not pytest_imported:
         return None
     derived_authorities = set().union(*(getattr(case.assertion, "_requires_derived_authority", set()) for case in result))
+    if any(getattr(case.assertion, '_requires_repr_authority', False) for case in result) and (
+            'repr' in names or any(isinstance(node, ast.arg) and node.arg == 'repr'
+            or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == 'repr'
+            or isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)) and node.id == 'repr'
+            or isinstance(node, ast.alias) and (node.asname or node.name.split('.')[0]) == 'repr'
+            for node in ast.walk(tree))):
+        return None
     if derived_authorities & names or any(isinstance(node, ast.arg) and node.arg in derived_authorities
                                          for node in ast.walk(tree)):
         return None
