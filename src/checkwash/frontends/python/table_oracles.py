@@ -37,7 +37,7 @@ from pathlib import PurePosixPath
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
 from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expand_string_blocks, string_block
-from checkwash.frontends.python.oracle_purity import primitive_literal_result, pure_imported_calls
+from checkwash.frontends.python.oracle_purity import primitive_literal_result, pure_imported_calls, shared_literal_collection_inputs
 from checkwash.frontends.python.primitive_strings import primitive_string_result
 from checkwash.frontends.python.derived_literals import derived_shape, fold_derived, primitive_derived_result
 from checkwash.frontends.python.indexed_fixture_tables import expand_indexed_fixture_tables
@@ -1095,11 +1095,14 @@ def _module(source, *, baseline):
             return None
     if fixtures.keys() != used_fixtures.keys():
         return None
-    for name, count in used_fixtures.items():
-        if count > 1:
-            params = fixtures[name]
-            if not _immutable_rows(params):
-                return None
+    # pytest reuses each literal params object across its consumers. Concrete
+    # copies are equivalent only when every imported call is proved pure on
+    # both snapshots, so no earlier consumer can mutate a later row's input.
+    shared_fixture_params = any(count > 1 and not _immutable_rows(fixtures[name])
+                                for name, count in used_fixtures.items())
+    if shared_fixture_params:
+        for case in result:
+            case.assertion._requires_shared_collection_inputs = True
     if any(count > 1 and not _immutable_rows(constants[name]) for name, count in used_constants.items()):
         return None
     if any(used_tables[name] > 1 and not _immutable_rows(tables[name]) for name in shared_tables):
@@ -1123,7 +1126,7 @@ def _module(source, *, baseline):
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
-                 or auxiliary or raises_oracles or tuple_tests
+                 or auxiliary or raises_oracles or tuple_tests or shared_fixture_params
                  or predicate_tests or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles)
@@ -1523,6 +1526,10 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                     module[0].encode(), calls, path=path, read=read):
                 return before_parsed, after_parsed
         for case in module[2]:
+            if getattr(case.assertion, '_requires_shared_collection_inputs', False) and not pure_imported_calls(
+                    module[0].encode(), [case.assertion.test.left], path=path, read=read,
+                    result_proof=shared_literal_collection_inputs):
+                return before_parsed, after_parsed
             arity = getattr(case.assertion, '_requires_tuple_arity', None)
             if arity is not None and not pure_imported_calls(
                     module[0].encode(), [case.assertion.test.left], path=path, read=read,

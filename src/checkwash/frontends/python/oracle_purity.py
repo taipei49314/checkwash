@@ -201,6 +201,24 @@ def primitive_literal_result(source, target, call):
             and _pure_module(source, target))
 
 
+def shared_literal_collection_inputs(source, target, call):
+    """A fresh merge result cannot mutate shared flat literal fixture rows.
+
+    This requires the complete fresh-local collection grammar, not just the
+    presence of list/set constructors or an apparent return type. Arbitrary
+    mutable parameters retain their original execution and alias semantics.
+    """
+    if call.keywords or len(call.args) != 2 or not _pure_module(source, target):
+        return False
+    if not all(isinstance(arg, (ast.List, ast.Tuple)) and all(
+            isinstance(item, ast.Constant) and type(item.value) in (type(None), bool, int, float, str, bytes)
+            for item in arg.elts) for arg in call.args):
+        return False
+    tree = _tree(source)
+    function = next((node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == target), None)
+    return function is not None and fresh_unique_merge(function.body, [arg.arg for arg in function.args.args])
+
+
 def pure_imported_calls(source, calls, *, path, read, result_proof=None):
     """Require a unique local `from package.module import function` source."""
     tree = _tree(source)
