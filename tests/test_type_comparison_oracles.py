@@ -104,6 +104,8 @@ def test_unknown_or_mutating_production_withholds_builtin_type_proof(production)
     {'pytest.py': b''}, {'src/pytest/__init__.py': b''},
     {'app/__init__.py': b''},
     {'pytest.ini': b'[pytest]\naddopts = --assert=plain\n'},
+    {'pytest.ini': b'[pytest]\ntestpaths=tests/other\n',
+     'tests/other/test_padding.py': b'def test_ok():\n    assert True\n'},
 ])
 def test_startup_and_source_resolution_authority_is_required(context):
     ir, _, _ = run(BEFORE, AFTER, PROD, context=context)
