@@ -1081,16 +1081,57 @@ def _project(parsed, text, cases):
                    if case.body is not None else [case.source_assertion])
         assertions = [replace(assertion, span=offsets.span(source))
                       for assertion, source in zip(unit.side.assertions, sources)]
+        comparison = case.assertion.test
+        if (getattr(case.assertion, "_requires_operator_authority", False)
+                and isinstance(comparison.ops[0], ast.Is)
+                and isinstance(comparison.comparators[0], ast.Constant)
+                and comparison.comparators[0].value is None):
+            # The ordinary null-check form retains strength30. The proved
+            # concrete oracle also states the literal answer None; retain
+            # that fact so replacing it by numeric approximation cannot hide
+            # behind an apparent strength increase.
+            assertions = [replace(assertion, right_literal="None", right_value="None") for assertion in assertions]
         units.append(replace(unit, span=span, side=replace(unit.side, span=span, assertions=assertions)))
     return replace(parsed, units=units)
 
 
 def _subject_key(case):
     compare = case.assertion.test
-    key = stable_dump(compare.left) + ":" + type(compare.ops[0]).__name__
+    key = stable_dump(compare.left) + ":" + getattr(case.assertion, "_paired_operator", type(compare.ops[0]).__name__)
     if case.body is not None:
         key += ":aux:" + stable_dump(ast.Module(body=case.body[:-1], type_ignores=[]))
     return key
+
+
+def _pair_approximate_identity(old, new):
+    """Keep the actual operators when an identity oracle becomes approximate.
+
+    This only establishes which concrete call the two assertions check; their
+    distinct operators and expectations remain in the projected source for
+    ordinary weakening detection. It grants no identity/equality equivalence.
+    """
+    if len(new) < len(old):
+        return False
+    pairs = []
+    for before, after in zip(old, new):
+        if _subject_key(before) == _subject_key(after):
+            continue
+        previous, current = before.assertion.test, after.assertion.test
+        expected = previous.comparators[0]
+        if (before.body is not None or after.body is not None
+                or stable_dump(previous.left) != stable_dump(current.left)
+                or not isinstance(previous.ops[0], ast.Is) or not isinstance(current.ops[0], ast.Eq)
+                or not isinstance(expected, ast.Constant) or type(expected.value) not in (bool, type(None))
+                or not _approx_expected(current.comparators[0])):
+            return False
+        pairs.append((before, after))
+    if not pairs:
+        return False
+    for before, after in pairs:
+        after.assertion._paired_operator = type(before.assertion.test.ops[0]).__name__
+        before.assertion._requires_operator_authority = True
+        after.assertion._requires_operator_authority = True
+    return True
 
 
 def _bounded_tree(source):
@@ -1235,6 +1276,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         old_keys = [_subject_key(case) for case in old[2]]
         new_keys = [_subject_key(case) for case in new[2]]
+        if old_keys != new_keys[:len(old_keys)] and _pair_approximate_identity(old[2], new[2]):
+            old_keys = [_subject_key(case) for case in old[2]]
+            new_keys = [_subject_key(case) for case in new[2]]
         # Extra literal cases can follow the complete old sequence. They
         # cannot run before an old oracle and change what it subsequently
         # sees; insertion/reordering stays outside the proof.
@@ -1274,7 +1318,8 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         message_calls = [case.assertion.test.left for case in module[2]
                          if getattr(case.assertion, "_requires_primitive_string", False)]
-        approximate = any(getattr(case.assertion, "_requires_approx_authority", False) for case in module[2])
+        approximate = any(getattr(case.assertion, "_requires_approx_authority", False)
+                          or getattr(case.assertion, "_requires_operator_authority", False) for case in module[2])
         derived = any(hasattr(case.assertion, "_requires_derived_authority") for case in module[2])
         if derived:
             calls = [case.assertion.test.left for case in module[2]]
