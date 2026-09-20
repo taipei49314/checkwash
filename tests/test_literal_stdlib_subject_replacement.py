@@ -69,3 +69,40 @@ def test_input_or_expected_only_changes_and_unused_wrapper_are_not_installations
     for source in (AFTER.replace('(12, 8)', '(16, 8)'), AFTER.replace('== 4', '== 8'),
                    AFTER.replace('assert local_gcd(', 'assert total(')):
         assert not [finding for finding in judge(BEFORE, source) if finding.rule == 'TEST_PATCHES_SUBJECT']
+
+
+@pytest.mark.parametrize('extra', [
+    {'app/billing.py': b'import math\ndef total(a,b):\n    return a+b\nmath.gcd=total\n'},
+    {'app/__init__.py': b'import math\nfrom .billing import total\nmath.gcd=total\n'},
+    {'tests/conftest.py': b'def pytest_configure():\n    import math\n    from app.billing import total\n    math.gcd=total\n'},
+    {'tests/test_aaa.py': b'import math\nfrom app.billing import total\nmath.gcd=total\n'},
+    {'tests/__init__.py': b'import math\nfrom app.billing import total\nmath.gcd=total\n'},
+    {'pytest.ini': b'[pytest]\naddopts = -p mutator\n'},
+])
+def test_imported_production_packages_and_startup_cannot_replace_stdlib_binding(extra):
+    assert not [finding for finding in judge(BEFORE, AFTER, extra) if finding.rule == 'TEST_PATCHES_SUBJECT']
+
+
+def test_extra_import_cannot_borrow_the_original_production_modules_purity():
+    source = AFTER.replace('import math', 'import math\nimport mutator')
+    assert not [finding for finding in judge(BEFORE, source, {'mutator.py': b'import math\nmath.gcd = lambda a,b: 4\n'})
+                if finding.rule == 'TEST_PATCHES_SUBJECT']
+
+
+def test_rebound_math_wrapper_still_exercises_production(monkeypatch):
+    import math
+    calls = []
+    def total(a, b):
+        calls.append((a, b))
+        return a + b
+    monkeypatch.setattr(math, 'gcd', total)
+    before = BEFORE.replace('(12, 8) == 4', '(6, 8) == 14')
+    after = AFTER.replace('(12, 8) == 4', '(6, 8) == 14')
+    for source in (before, after):
+        namespace = {'total': total}
+        exec(source.removeprefix(PREFIX), namespace)
+        namespace['test_total']()
+    assert calls == [(6, 8), (6, 8)]
+    production = b'import math\ndef total(a,b):\n    return a+b\nmath.gcd=total\n'
+    assert not [finding for finding in judge(before, after, {'app/billing.py': production})
+                if finding.rule == 'TEST_PATCHES_SUBJECT']

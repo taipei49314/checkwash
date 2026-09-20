@@ -4,6 +4,21 @@ from __future__ import annotations
 import ast
 
 from checkwash.change import EngineError
+from checkwash.frontends.python.oracle_purity import pure_imported_calls
+from checkwash.frontends.python.snapshot_context import inert_test_execution_context
+
+
+def _read(context, path):
+    if path in context.changed:
+        return context.changed[path][1]
+    if path not in context.cache:
+        if len(context.cache) >= 128:
+            raise EngineError("stdlib replacement authority exceeds the snapshot read budget")
+        value = context.reader(path)
+        if value is not None and not isinstance(value, bytes):
+            raise EngineError("stdlib replacement reader returned invalid source bytes")
+        context.cache[path] = value
+    return context.cache[path]
 
 
 def literal_math_gcd_standin(function, call, bindings):
@@ -47,17 +62,32 @@ def math_is_unshadowed(context, path):
     for prefix in sorted(prefixes):
         for suffix in ("math.py", "math/__init__.py"):
             candidate = prefix + suffix
-            if candidate in context.changed:
-                value = context.changed[candidate][1]
-            else:
-                if candidate not in context.cache:
-                    if len(context.cache) >= 128:
-                        raise EngineError("stdlib replacement authority exceeds the snapshot read budget")
-                    value = context.reader(candidate)
-                    if value is not None and not isinstance(value, bytes):
-                        raise EngineError("stdlib replacement reader returned invalid source bytes")
-                    context.cache[candidate] = value
-                value = context.cache[candidate]
-            if value is not None:
+            if _read(context, candidate) is not None:
                 return False
     return True
+
+
+def math_import_authority(source, tree, old_call, target, path, context, search):
+    """No imported source or repository startup can replace stdlib gcd.
+
+    A file-shadow check alone is insufficient: the production module itself
+    could assign math.gcd = production. Require the complete imported module
+    and package initializers to satisfy the existing closed source grammar,
+    and inspect the complete conventional test startup inventory as well.
+    """
+    module_name, _, function_name = target.rpartition('.')
+    for statement in tree.body:
+        if isinstance(statement, ast.Import):
+            if any(alias.name != 'math' for alias in statement.names):
+                return False
+        elif isinstance(statement, ast.ImportFrom):
+            if statement.level:
+                return False
+            if statement.module == 'math':
+                if any(alias.name != 'gcd' for alias in statement.names):
+                    return False
+            elif statement.module != module_name or any(alias.name != function_name for alias in statement.names):
+                return False
+    read = lambda candidate: _read(context, candidate)
+    return (pure_imported_calls(source, [old_call], path=path, read=read)
+            and inert_test_execution_context(path, read, search))

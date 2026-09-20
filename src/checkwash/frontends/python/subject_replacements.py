@@ -14,7 +14,7 @@ import ast
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.literal_string_standins import literal_string_standin
-from checkwash.frontends.python.literal_stdlib_standins import literal_math_gcd_standin, math_is_unshadowed
+from checkwash.frontends.python.literal_stdlib_standins import literal_math_gcd_standin, math_import_authority, math_is_unshadowed
 from checkwash.frontends.python.parameterized_subject_replacements import parameterized_abs_event
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.markers import parse_expr
@@ -445,10 +445,13 @@ def _literal_string_replacement(tree, qualname, call, replacement):
     return _literal_helper_replacement(tree, qualname, call, replacement, literal_string_standin)
 
 
-def subject_replacement_events(ir, changes, *, root_reader=None):
+def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=None, root_path_lister=None):
     if root_reader is None:
         return []
     context = ConftestContext(changes, root_reader)
+    inventory = root_searcher
+    if inventory is None and root_path_lister is not None:
+        inventory = lambda _needles: root_path_lister()
     deny = known_baseline() | set(ir.globals.third_party_roots)
     by_path = {c.path: c for c in changes}
     events = []
@@ -502,6 +505,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None):
                         or _literal_string_replacement(trees[1], new_scope, new_call, replacement)
                         or literal_math_gcd_standin(replacement, new_call, new_bindings)
                         and math_is_unshadowed(context, file.path)
+                        and math_import_authority(change.after, trees[1], old_call, target, file.path, context, inventory)
                         and _literal_helper_replacement(trees[1], new_scope, new_call, replacement,
                             lambda function, call: literal_math_gcd_standin(function, call, new_bindings))):
                     continue

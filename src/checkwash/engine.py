@@ -1120,7 +1120,8 @@ def build_ir(
                 g.conftest_prod_patches.append((path, text))
         else:
             g.subject_installations.append((path, unit, target, text, span))
-    for event in subject_replacement_events(ir, changes, root_reader=root_reader):
+    for event in subject_replacement_events(ir, changes, root_reader=root_reader,
+                                          root_searcher=root_searcher, root_path_lister=root_path_lister):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
