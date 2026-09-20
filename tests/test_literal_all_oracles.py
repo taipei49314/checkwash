@@ -125,3 +125,11 @@ def test_inert_conditional_expected_arithmetic_without_binders_remains_supported
                                 literal_after().replace('i * i', expression), PROD)
     assert marked(ir) and verdict == 'block'
     assert any(f.rule == 'ASSERT_WEAKENED' and f.severity == 'high' for f in findings)
+
+
+@pytest.mark.parametrize('dead_expression', ['f(x=1, x=2)', 'callback()', 'unknown',
+    'unknown.attribute', '[i][0]', 'f"{i}"'])
+def test_unselected_expected_syntax_must_still_have_closed_numeric_grammar(dead_expression):
+    expression = f'(i * i if i > 0 else {dead_expression})'
+    ir, _, _ = run(BEFORE.replace('i * i', expression), literal_after().replace('i * i', expression), PROD)
+    assert not marked(ir)

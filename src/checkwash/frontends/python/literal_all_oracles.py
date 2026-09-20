@@ -27,6 +27,28 @@ def _body(node):
             and isinstance(item.value, ast.Constant) and type(item.value.value) is str)]
 
 
+def _expected_expression(node, variable):
+    """Validate every branch before folding; dead syntax still binds/compiles."""
+    if isinstance(node, ast.Constant):
+        return type(node.value) in (int, float, bool)
+    if isinstance(node, ast.Name):
+        return isinstance(node.ctx, ast.Load) and node.id == variable
+    if isinstance(node, ast.UnaryOp):
+        return isinstance(node.op, (ast.UAdd, ast.USub, ast.Not)) and _expected_expression(node.operand, variable)
+    if isinstance(node, ast.BinOp):
+        return (isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod))
+                and _expected_expression(node.left, variable) and _expected_expression(node.right, variable))
+    if isinstance(node, ast.Compare):
+        return (all(isinstance(op, (ast.Eq, ast.NotEq, ast.Is, ast.IsNot, ast.Lt, ast.LtE, ast.Gt, ast.GtE))
+                    for op in node.ops)
+                and all(_expected_expression(item, variable) for item in [node.left, *node.comparators]))
+    if isinstance(node, ast.BoolOp):
+        return all(_expected_expression(item, variable) for item in node.values)
+    if isinstance(node, ast.IfExp):
+        return all(_expected_expression(item, variable) for item in (node.test, node.body, node.orelse))
+    return False
+
+
 def _module(source):
     tree = _bounded_tree(source)
     if tree is None or len(_body(tree)) != 2:
@@ -55,9 +77,7 @@ def _module(source):
     # A dead expression can still bind an enclosing local (PEP 572), change
     # generator kind or be compile-invalid. Constant folding must not erase
     # those lexical facts before builtin all/range authority is established.
-    if any(isinstance(node, (ast.NamedExpr, ast.Lambda, ast.comprehension,
-                             ast.Yield, ast.YieldFrom, ast.Await))
-           for node in ast.walk(comparison.comparators[0])):
+    if not _expected_expression(comparison.comparators[0], loop.target.id):
         return None
     names = [provider, test.name, stored, loop.target.id]
     if (len(set(names)) != 4 or any(name in _RESERVED or name.startswith(('__', 'pytest_')) for name in names)):
