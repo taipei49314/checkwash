@@ -182,7 +182,7 @@ def _patch_signature(keywords, previous):
     return stable_dump(ast.Tuple(elts=values, ctx=ast.Load()))
 
 
-def _patch_assertion_body(statements, mock_name, captures, previous, keywords):
+def _patch_assertion_body(statements, mock_name, captures, previous, keywords, *, call_records=False):
     """No callback or rebinding can change a literal stub's closure here."""
     unknown = object()
     names = {}
@@ -245,6 +245,21 @@ def _patch_assertion_body(statements, mock_name, captures, previous, keywords):
         # necessarily run. Keep one direct call on the left of one comparison.
         return returns(test) or (isinstance(test, ast.Compare) and len(test.ops) == 1
                                  and returns(test.left) and value(test.comparators[0], names) is not unknown)
+
+    if call_records and len(statements) == 2 and isinstance(statements[0], ast.Expr) and returns(statements[0].value):
+        observer = statements[1]
+        if isinstance(observer, ast.Assert) and observer.msg is None:
+            test = observer.test
+            return (isinstance(test, ast.Compare) and len(test.ops) == 1 and isinstance(test.ops[0], ast.Eq)
+                    and isinstance(test.left, ast.Attribute) and test.left.attr == "call_args"
+                    and isinstance(test.left.value, ast.Name) and test.left.value.id == mock_name
+                    and value(test.comparators[0], names) is not unknown)
+        if isinstance(observer, ast.Expr) and isinstance(observer.value, ast.Call):
+            call = observer.value
+            return (isinstance(call.func, ast.Attribute) and call.func.attr == "assert_called_once_with"
+                    and isinstance(call.func.value, ast.Name) and call.func.value.id == mock_name
+                    and not call.keywords and all(value(arg, names) is not unknown for arg in call.args))
+        return False
 
     consumers = 0
     for index, statement in enumerate(statements):
@@ -357,6 +372,7 @@ class _Trace:
         self.active: dict[tuple[str, str], _Effect] = {}
         self.observed: set[_Effect] = set()
         self.patch_results: dict[str, _Effect] = {}
+        self.called_patch_results: set[str] = set()
         self.stack = []
         self.steps = 0
         self.test_module = None
@@ -385,6 +401,8 @@ class _Trace:
             return env.get(node.id, _Value())
         if isinstance(node, ast.Attribute):
             base = self.expression(node.value, module, env, qualname, native_setattr=native_setattr)
+            if base.alias in self.called_patch_results and node.attr in {"call_args", "assert_called_once_with"}:
+                return _Value(f"{base.alias}.{node.attr}", frozenset({self.patch_results[base.alias]}))
             if base.alias == "@request" and node.attr == "module":
                 return _Value("@test_module")
             if base.alias == "@test_module" and self.test_module is not None:
@@ -430,8 +448,9 @@ class _Trace:
             if helper is not None:
                 return _value(fn, *args, *kwargs.values(), self.function(helper, args, kwargs))
             if fn.alias in self.patch_results:
-                # Inspecting call_count/assert_called is instrumentation. Only
-                # calling the returned substitute creates subject-result evidence.
+                # Calling the substitute establishes result evidence and makes
+                # its later, already-validated call record eligible to observe.
+                self.called_patch_results.add(fn.alias)
                 return _Value(effects=frozenset({self.patch_results[fn.alias]}))
             result = _value(fn, *args, *kwargs.values())
             if isinstance(node.func, ast.Attribute) and node.func.attr.startswith("assert"):
@@ -468,7 +487,8 @@ class _Trace:
                     if isinstance(child, ast.Name)}
         captures -= {arg.arg for value in keywords.values() if isinstance(value, ast.Lambda)
                      for arg in value.args.posonlyargs + value.args.args + value.args.kwonlyargs}
-        if not _patch_assertion_body(body, item.optional_vars.id, captures, previous, keywords):
+        if not _patch_assertion_body(body, item.optional_vars.id, captures, previous, keywords,
+                                     call_records=self.closed_record_context(item, module, qualname)):
             return None
         if fn.alias == "unittest.mock.patch" and len(call.args) == 1:
             target = _literal(call.args[0])
@@ -488,16 +508,9 @@ class _Trace:
         )
         return _Value(identity)
 
-    def decorated_patch_result(self, function):
-        """The sole patch decorator injects one mock into a closed test body."""
+    def closed_test_context(self, function):
+        """A single test definition with no other executable startup context."""
         node = function.node
-        args = node.args
-        parameters = args.posonlyargs + args.args
-        if (function.patch_env is None or "." in function.qualname
-                or not isinstance(node, ast.FunctionDef) or len(parameters) != 1
-                or args.defaults or args.kwonlyargs or args.vararg or args.kwarg
-                or node.returns or any(arg.annotation for arg in parameters)):
-            return None
         # Other startup or same-module tests can replace the decorated object.
         # This bounded spelling admits one top-level test and inert imports.
         defined = False
@@ -506,16 +519,41 @@ class _Trace:
                 defined = True
             elif isinstance(statement, (ast.Import, ast.ImportFrom)) and not defined:
                 if isinstance(statement, ast.ImportFrom) and (statement.level or any(alias.name == "*" for alias in statement.names)):
-                    return None
+                    return False
             elif not (isinstance(statement, ast.Pass) or isinstance(statement, ast.Expr)
                       and isinstance(statement.value, ast.Constant) and type(statement.value.value) is str):
-                return None
+                return False
         for module in self.modules:
             if module.path != function.module.path and any(not (
                     isinstance(statement, ast.Pass) or isinstance(statement, ast.Expr)
                     and isinstance(statement.value, ast.Constant) and type(statement.value.value.value) is str)
                     for statement in module.tree.body):
-                return None
+                return False
+        return defined
+
+    def closed_record_context(self, item, module, qualname):
+        function = module.functions.get(qualname)
+        if function is None or "." in qualname or not qualname.startswith("test"):
+            return False
+        node = function.node
+        args = node.args
+        return (isinstance(node, ast.FunctionDef) and not node.decorator_list and not node.returns
+                and not args.posonlyargs and not args.args and not args.kwonlyargs and not args.vararg and not args.kwarg
+                and len(node.body) == 1 and isinstance(node.body[0], ast.With)
+                and len(node.body[0].items) == 1 and node.body[0].items[0] is item
+                and self.closed_test_context(function))
+
+    def decorated_patch_result(self, function):
+        """The sole patch decorator injects one mock into a closed test body."""
+        node = function.node
+        args = node.args
+        parameters = args.posonlyargs + args.args
+        if (function.patch_env is None or "." in function.qualname
+                or not isinstance(node, ast.FunctionDef) or len(parameters) != 1
+                or args.defaults or args.kwonlyargs or args.vararg or args.kwarg
+                or node.returns or any(arg.annotation for arg in parameters)
+                or not self.closed_test_context(function)):
+            return None
         name = parameters[0].arg
         item = ast.withitem(context_expr=node.decorator_list[0], optional_vars=ast.Name(id=name, ctx=ast.Store()))
         value = self.patch_result(item, None, node.body, function.module, function.patch_env, function.qualname)
