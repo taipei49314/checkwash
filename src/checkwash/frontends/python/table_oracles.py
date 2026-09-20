@@ -1685,7 +1685,7 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             path, before, after, changes, root_reader, root_searcher)):
         if not inert_test_execution_context(path, read, search):
             return before_parsed, after_parsed
-        if (module[4] or regrouped_capture) and not _pytest_unshadowed(path, read):
+        if not _pytest_unshadowed(path, read):
             return before_parsed, after_parsed
         if any(not _module_unshadowed(path, read, authority) for authority in module[7]):
             return before_parsed, after_parsed
