@@ -1,11 +1,11 @@
 # Adopt the quality preview
 
-The v0.3.4 package includes this limited preview for coverage, Ruff and mypy
+The v0.4.0 package includes this limited preview for coverage, Ruff and mypy
 configuration review alongside the existing test-oracle check. The recommended
-v0.3.3 Action does not include it. Natural-case labels, completeness evaluation
+v0.3.4 Action includes the previous version of it. Natural-case labels, completeness evaluation
 and frozen legacy-byte parity remain separate outstanding conditions;
 publication and these setup commands do not establish production enforcement
-maturity. See the [release evidence](releases/v0.3.4-public-launch.md).
+maturity. See the [release evidence](releases/v0.4.0-public-launch.md).
 
 ## 1. Generate and review a draft
 
