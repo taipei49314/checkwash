@@ -73,6 +73,34 @@ def test_input_or_answer_change_alone_is_not_direct_callable_replacement():
     assert not [f for f in judge(BASE, BASE.replace("== 3", "== 4")) if f.rule == "TEST_PATCHES_SUBJECT"]
 
 
+@pytest.mark.parametrize('hops', [1, 2])
+def test_replacement_cannot_hide_behind_local_result_aliases(hops):
+    assignment = '    got = total([1, 2])\n'
+    if hops == 2:
+        assignment += '    result = got\n'
+    name = 'got' if hops == 1 else 'result'
+    before = PREFIX + 'def test_total():\n' + assignment + f'    assert {name} == 3\n'
+    after = before.replace('= total(', '= sum(')
+    assert any(f.rule == 'TEST_PATCHES_SUBJECT' and f.severity == 'high' for f in judge(before, after))
+
+
+def test_same_production_call_moved_to_a_result_local_is_not_a_standin():
+    after = PREFIX + 'def test_total():\n    got = total([1, 2])\n    assert got == 3\n'
+    assert not [f for f in judge(BASE, after) if f.rule == 'TEST_PATCHES_SUBJECT']
+
+
+def test_callable_parameter_named_like_builtin_cannot_prove_a_pure_standin():
+    before = PREFIX + 'def test_total():\n    assert total(total) == 3\n'
+    after = PREFIX + 'def standin(sum):\n    return sum([1, 2])\ndef test_total():\n    assert standin(total) == 3\n'
+    assert not [f for f in judge(before, after) if f.rule == 'TEST_PATCHES_SUBJECT']
+
+
+def test_unknown_local_result_rebinding_cannot_reuse_an_earlier_call():
+    before = PREFIX + 'def test_total():\n    got = total([1, 2])\n    got = unknown()\n    assert got == 3\n'
+    after = before.replace('= total(', '= sum(')
+    assert not [f for f in judge(before, after) if f.rule == 'TEST_PATCHES_SUBJECT']
+
+
 @pytest.mark.parametrize("setup,callee", [
     ("", "sum"), ("def standin(values):\n    return 3\n", "standin"),
     ("from unittest.mock import Mock\nstandin = Mock(return_value=3)\n", "standin"),

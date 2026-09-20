@@ -125,7 +125,27 @@ def _standin(value, bindings):
         parameters.add(value.args.vararg.arg)
     if value.args.kwarg:
         parameters.add(value.args.kwarg.arg)
-    return expression is not None and _pure(expression, parameters, bindings)
+    # A parameter named like a builtin may itself be a production callable;
+    # its invocation cannot prove that this helper is a production-free stub.
+    scoped = {**bindings, **{name: None for name in parameters}}
+    return expression is not None and _pure(expression, parameters, scoped)
+
+
+def _subject_call(assertion):
+    """Follow only source-ordered local aliases of the asserted root value."""
+    node = parse_expr(assertion.left or "")
+    seen = set()
+    for _ in range(8):
+        if isinstance(node, ast.Call):
+            return node
+        if not isinstance(node, ast.Name) or node.id in seen:
+            return None
+        seen.add(node.id)
+        expression = (assertion.reaching or {}).get(node.id)
+        if not expression:
+            return None
+        node = parse_expr(expression)
+    return None
 
 
 def _scoped_bindings(tree, qualname, assertion):
@@ -173,7 +193,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None):
                         or not b.positive or not a.positive or b.right_literal is None
                         or a.right_literal != b.right_literal):
                     continue
-                old_call, new_call = parse_expr(b.left or ""), parse_expr(a.left or "")
+                old_call, new_call = _subject_call(b), _subject_call(a)
                 if not isinstance(old_call, ast.Call) or not isinstance(new_call, ast.Call):
                     continue
                 if (stable_dump(old_call.func) == stable_dump(new_call.func)
