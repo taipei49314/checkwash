@@ -210,6 +210,14 @@ def _concrete(node, bindings, imports):
     if not isinstance(compare, ast.Compare) or len(compare.ops) != 1:
         return None
     actual, expected = compare.left, compare.comparators[0]
+    if _literal(actual) and isinstance(expected, ast.Call):
+        # Reorientation is a value proof only for primitive results. A custom
+        # equality implementation can dispatch differently by operand order;
+        # the existing primitive-result/import closure check below owns that
+        # obligation on both snapshots before projection is credited.
+        actual, expected = expected, actual
+        compare.left, compare.comparators[0] = actual, expected
+        concrete._requires_primitive_string = True
     derived = fold_derived(expected)
     if derived is not None:
         expected, authority = derived
