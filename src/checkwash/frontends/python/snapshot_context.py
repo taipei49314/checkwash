@@ -118,6 +118,7 @@ def inert_test_execution_context(path, read, search=None):
     selected = set(siblings)
     relevant = {path, *(p for p in paths if collectable(p) or p.replace("\\", "/").endswith("conftest.py"))}
     configurations = set()
+    startup_roots = {'', 'src'}
     for candidate in {path, *paths}:
         normalized = candidate.replace("\\", "/")
         parts = PurePosixPath(normalized).parts
@@ -131,9 +132,18 @@ def inert_test_execution_context(path, read, search=None):
             directory = "/".join(parts[:depth])
             prefix = directory + "/" if directory else ""
             if candidate in relevant:
+                startup_roots.add(directory)
                 for filename in ("__init__.py", "conftest.py"):
                     selected.add(prefix + filename)
             configurations.update(prefix + filename for filename in _CONFIG_FILES)
+    # Python imports these modules before pytest or the test module starts.
+    # Every conventional root must be inert: an executable competing module
+    # or package cannot be ignored by guessing sys.path precedence. Test
+    # ancestors also cover repositories that place those roots on PYTHONPATH.
+    for root in startup_roots:
+        prefix = root + '/' if root else ''
+        for module in ('sitecustomize', 'usercustomize'):
+            selected.update((prefix + module + '.py', prefix + module + '/__init__.py'))
     selected.update(configurations)
     if len(selected) > 128:
         return False
