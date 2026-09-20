@@ -506,11 +506,20 @@ def _inlined(statement, bindings, helpers, scope):
     if not isinstance(call.func, ast.Name) or call.func.id in scope:
         return None
     helper = helpers.get(call.func.id)
-    if helper is None or call.keywords or len(call.args) != len(helper[0]):
+    if helper is None:
         return None
     parameters, assertion = helper
+    if len(call.args) > len(parameters):
+        return None
+    arguments = dict(zip(parameters, call.args))
+    for keyword in call.keywords:
+        if keyword.arg not in parameters or keyword.arg in arguments:
+            return None  # unknown, repeated, positional collision or **kwargs
+        arguments[keyword.arg] = keyword.value
+    if len(arguments) != len(parameters):
+        return None
     inner, consumed = {}, Counter()
-    for parameter, argument in zip(parameters, call.args):
+    for parameter, argument in arguments.items():
         if isinstance(argument, ast.Name) and argument.id in bindings:
             consumed[argument.id] += 1
             inner[parameter] = bindings[argument.id]
@@ -528,6 +537,12 @@ def _inlined(statement, bindings, helpers, scope):
             return None
     if any(count > 1 for count in consumed.values()):
         return None
+    if call.keywords:
+        # Keyword order cannot change subject/helper bindings through a
+        # callback or repository back-reference. Both snapshots must earn
+        # the closed imported-source proof before this new carrier is used.
+        assertion = copy.deepcopy(assertion)
+        assertion._requires_closed_helper = True
     return assertion, inner
 
 
@@ -757,8 +772,10 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
     if not names and not node.decorator_list and 1 <= len(node.body) <= MAX_CASES and (multiple or len(node.body) > 1):
         assertions = [_checked(statement, {}, imports, helpers, set(), {}) for statement in node.body]
         if all(assertion is not None for assertion in assertions):
+            grouped_helpers = any(getattr(assertion, '_requires_closed_helper', False) for assertion in assertions)
             return ([_Case(assertion, statement, node) for assertion, statement in zip(assertions, node.body)],
-                    multiple, "unittest" if multiple else "native")
+                    multiple or grouped_helpers,
+                    "unittest" if multiple else "grouped-assert-helper" if grouped_helpers else "native")
         if multiple and not (len(node.body) == 1 and isinstance(node.body[0], ast.For)):
             return None
     block = string_block(node) if not names and not node.decorator_list else None
@@ -1208,7 +1225,8 @@ def _module(source, *, baseline):
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
                  or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
                  or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests
-                 or any(form == 'string-block' for _, form in forms)),
+                 or any(form in {'string-block', 'grouped-assert-helper'} for _, form in forms)
+                 or any(getattr(case.assertion, '_requires_closed_helper', False) for case in result)),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles, local_auxiliary)
 
