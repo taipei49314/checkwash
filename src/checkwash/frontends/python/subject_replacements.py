@@ -14,6 +14,7 @@ import ast
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.literal_string_standins import literal_string_standin
+from checkwash.frontends.python.literal_stdlib_standins import literal_math_gcd_standin, math_is_unshadowed
 from checkwash.frontends.python.parameterized_subject_replacements import parameterized_abs_event
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.markers import parse_expr
@@ -396,7 +397,7 @@ def _assertion_scope(tree, qualname, assertion):
     return helper.name
 
 
-def _literal_string_replacement(tree, qualname, call, replacement):
+def _literal_helper_replacement(tree, qualname, call, replacement, prove):
     if (not isinstance(replacement, ast.FunctionDef) or replacement not in tree.body
             or not isinstance(call.func, ast.Name) or call.func.id != replacement.name
             or not _helper_module_inert(tree)):
@@ -421,7 +422,7 @@ def _literal_string_replacement(tree, qualname, call, replacement):
         if (not isinstance(comparison, ast.Compare) or len(comparison.ops) != 1
                 or not isinstance(comparison.ops[0], ast.Eq) or not isinstance(comparison.left, ast.Call)
                 or not isinstance(comparison.left.func, ast.Name) or comparison.left.func.id != replacement.name
-                or not literal_string_standin(replacement, comparison.left)):
+                or not prove(replacement, comparison.left)):
             return False
         try:
             ast.literal_eval(comparison.comparators[0])
@@ -437,7 +438,11 @@ def _literal_string_replacement(tree, qualname, call, replacement):
                 or isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
                 and node.func.id in {"globals", "locals", "vars", "exec", "eval", "setattr", "delattr"}):
             return False
-    return literal_string_standin(replacement, call)
+    return prove(replacement, call)
+
+
+def _literal_string_replacement(tree, qualname, call, replacement):
+    return _literal_helper_replacement(tree, qualname, call, replacement, literal_string_standin)
 
 
 def subject_replacement_events(ir, changes, *, root_reader=None):
@@ -494,7 +499,11 @@ def subject_replacement_events(ir, changes, *, root_reader=None):
                         or not context.contains(target, 0)):
                     continue
                 if not (_standin(replacement, new_bindings)
-                        or _literal_string_replacement(trees[1], new_scope, new_call, replacement)):
+                        or _literal_string_replacement(trees[1], new_scope, new_call, replacement)
+                        or literal_math_gcd_standin(replacement, new_call, new_bindings)
+                        and math_is_unshadowed(context, file.path)
+                        and _literal_helper_replacement(trees[1], new_scope, new_call, replacement,
+                            lambda function, call: literal_math_gcd_standin(function, call, new_bindings))):
                     continue
                 events.append((file.path, unit.qualname, target, a.text, a.span))
     return sorted(set(events))
