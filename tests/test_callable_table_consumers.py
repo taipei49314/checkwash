@@ -38,9 +38,10 @@ def test_param(value, expected):
 
 
 def run(after, snapshot=None):
+    snapshot = {'app.py': b'def double(value):\n    return value * 2\n', **(snapshot or {})}
     return analyze([FileChange("tests/test_double.py", "modified", BEFORE.encode(), after.encode())],
                    Config(), Contract(), [], datetime.date(2026, 9, 21),
-                   root_reader=(snapshot or {}).get, root_searcher=lambda _: [])
+                   root_reader=snapshot.get, root_searcher=lambda _: [])
 
 
 def projected(ir):

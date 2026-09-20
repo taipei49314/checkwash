@@ -47,6 +47,13 @@ def _expression(node, names):
     if isinstance(node, ast.Slice):
         return all(item is None or _expression(item, names) for item in (node.lower, node.upper, node.step))
     if isinstance(node, ast.Call):
+        if (isinstance(node.func, ast.Attribute)
+                and node.func.attr in {'replace', 'strip', 'lstrip', 'rstrip', 'split', 'rsplit', 'lower', 'upper', 'casefold'}):
+            # Parameters and every admitted intermediate value are concrete
+            # builtins. These string/bytes methods cannot mutate a receiver
+            # or invoke an external callback; other receivers raise normally.
+            return (not node.keywords and _expression(node.func.value, names)
+                    and all(_expression(arg, names) for arg in node.args))
         return (isinstance(node.func, ast.Name) and node.func.id in _BUILTINS and node.func.id not in names
                 and not node.keywords and all(_expression(arg, names) for arg in node.args))
     if isinstance(node, (ast.GeneratorExp, ast.ListComp)) and len(node.generators) == 1:
@@ -67,12 +74,44 @@ def _expression(node, names):
     return False
 
 
-def _body(statements, names):
+def _numeric(node, names):
+    if isinstance(node, ast.Constant):
+        return type(node.value) in (int, float)
+    if isinstance(node, ast.Name):
+        return node.id in names
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        return _numeric(node.operand, names)
+    return (isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod))
+            and _numeric(node.left, names) and _numeric(node.right, names))
+
+
+def _body(statements, names, numbers=frozenset()):
+    names, numbers = set(names), set(numbers)
     for node in statements:
         if isinstance(node, ast.Return) and node.value is not None and _expression(node.value, names):
             continue
         if (isinstance(node, ast.If) and _expression(node.test, names)
-                and _body(node.body, names) and _body(node.orelse, names)):
+                and _body(node.body, names, numbers) and _body(node.orelse, names, numbers)):
+            continue
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+                and node.targets[0].id not in _BUILTINS | {'ValueError'}
+                and not node.targets[0].id.startswith('__') and _expression(node.value, names)):
+            target = node.targets[0].id
+            numeric = _numeric(node.value, numbers)
+            if target in numbers and not numeric:
+                return False  # never turn a proven scalar accumulator into a mutable alias
+            names.add(target)
+            if numeric:
+                numbers.add(target)
+            continue
+        if (isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name) and node.target.id in numbers
+                and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult)) and _numeric(node.value, numbers)):
+            continue
+        if (isinstance(node, ast.For) and isinstance(node.target, ast.Name)
+                and node.target.id not in _BUILTINS | {'ValueError'} and not node.target.id.startswith('__')
+                and not node.orelse and isinstance(node.iter, ast.Call) and isinstance(node.iter.func, ast.Name)
+                and node.iter.func.id == 'range' and _expression(node.iter, names)
+                and _body(node.body, names | {node.target.id}, numbers | {node.target.id})):
             continue
         if (isinstance(node, ast.Raise) and node.cause is None and isinstance(node.exc, ast.Call)
                 and isinstance(node.exc.func, ast.Name) and node.exc.func.id == 'ValueError'

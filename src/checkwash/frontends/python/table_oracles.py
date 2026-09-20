@@ -1042,7 +1042,8 @@ def _module(source, *, baseline):
                                          for node in ast.walk(tree)):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
-            bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers or expanded_forwarders),
+            bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
+                 or expanded_forwarders or factory_tests),
             bool(unittest_tests))
 
 

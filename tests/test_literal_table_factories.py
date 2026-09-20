@@ -28,7 +28,7 @@ def run(after):
     return analyze(
         [FileChange("tests/test_double.py", "modified", BEFORE.encode(), after.encode())],
         Config(), Contract(), [], datetime.date(2026, 9, 21),
-        root_reader={}.get, root_searcher=lambda _: [],
+        root_reader={'app.py': b'def double(value):\n    return value * 2\n'}.get, root_searcher=lambda _: [],
     )
 
 
