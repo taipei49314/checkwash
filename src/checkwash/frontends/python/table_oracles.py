@@ -48,6 +48,7 @@ from checkwash.frontends.python.table_factories import expand_literal_table_fact
 from checkwash.frontends.python.inert_helpers import prune_inert_helpers
 from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
 from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
+from checkwash.frontends.python.tuple_oracles import expand_tuple_oracles, primitive_tuple_result
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -918,6 +919,7 @@ def _module(source, *, baseline):
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
     raises_oracles = extract_raises_oracles(tree)
+    tuple_tests = expand_tuple_oracles(tree)
     inert_helpers = prune_inert_helpers(tree)
     literal_fixture_tests = expand_literal_fixtures(tree)
     factory_tests = expand_literal_table_factories(tree)
@@ -1116,7 +1118,8 @@ def _module(source, *, baseline):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
-                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or auxiliary or raises_oracles
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
+                 or auxiliary or raises_oracles or tuple_tests
                  or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles)
@@ -1503,6 +1506,12 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             calls = [case.assertion.test.left for case in module[2]] + [oracle.call for oracle in module[11]]
             if not _closed_proof_imports(module, calls) or not pure_imported_calls(
                     module[0].encode(), calls, path=path, read=read):
+                return before_parsed, after_parsed
+        for case in module[2]:
+            arity = getattr(case.assertion, '_requires_tuple_arity', None)
+            if arity is not None and not pure_imported_calls(
+                    module[0].encode(), [case.assertion.test.left], path=path, read=read,
+                    result_proof=lambda source, target, call: primitive_tuple_result(source, target, call, arity)):
                 return before_parsed, after_parsed
     return (retain_raises_units(_project(before_parsed, old[0], old[2]), old[0], old[11]),
             retain_raises_units(_project(after_parsed, new[0], new[2]), new[0], new[11]))
