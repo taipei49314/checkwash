@@ -12,7 +12,7 @@ from checkwash.frontends.python.oracle_collections import fresh_fill_none, fresh
 from checkwash.frontends.python.oracle_regex import closed_regex_body
 
 
-_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip', 'int', 'str', 'list', 'set'}
+_BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip', 'int', 'str', 'list', 'set', 'sorted', 'round'}
 
 
 def _literal(node):
