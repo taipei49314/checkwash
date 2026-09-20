@@ -20,6 +20,9 @@ def _factory_call(node, name):
 
 def expand_literal_table_factories(tree: ast.Module) -> set[str]:
     consumers = set()
+    unittest_methods = {id(member) for node in tree.body if isinstance(node, ast.ClassDef)
+                        and len(node.bases) == 1 and ast.unparse(node.bases[0]) == 'unittest.TestCase'
+                        for member in node.body if isinstance(member, ast.FunctionDef)}
     candidates = {}
     for node in tree.body:
         if (not isinstance(node, ast.FunctionDef) or node.name.startswith(("pytest_", "__")) or node.decorator_list
@@ -90,7 +93,10 @@ def expand_literal_table_factories(tree: ast.Module) -> set[str]:
                                           for key, cell in zip(value.keys, value.values)], ctx=ast.Load())
                     ast.copy_location(rows, value)
                 replacements.append((decorator, "args", [decorator.args[0], copy.deepcopy(rows)], call.func, function.name))
-            if (len(function.body) == 1 and isinstance(function.body[0], ast.For)
+            # Ordinary top-level factory loops already carry definition
+            # provenance keyed by subject input. Preserve that owner; this
+            # expansion serves the default TestCase subTest carrier only.
+            if (id(function) in unittest_methods and len(function.body) == 1 and isinstance(function.body[0], ast.For)
                     and _factory_call(function.body[0].iter, name) and isinstance(value, (ast.List, ast.Tuple))):
                 loop = function.body[0]
                 replacements.append((loop, "iter", copy.deepcopy(value), loop.iter.func, function.name))
