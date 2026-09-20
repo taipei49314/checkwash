@@ -80,7 +80,7 @@ def test_ambiguous_import_or_startup_withholds_carrier_proof(context):
 
 
 @pytest.mark.parametrize('name', ['setup_module', 'setup_function', 'pytestmark', 'pytest_plugins',
-                                 'pytest_generate_tests'])
+                                 'pytest_generate_tests', 'setUpModule', 'tearDownModule'])
 def test_imported_framework_control_cannot_establish_an_executed_old_oracle(name):
     ir, _, _ = run(BEFORE.replace('divide', name), HELPER.replace('divide', name), PROD.replace('divide', name))
     assert not any(assertion.form == 'raises' for file in ir.files for unit in file.units

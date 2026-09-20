@@ -19,6 +19,7 @@ from checkwash.frontends.python.frontend import _Offsets, normalize_source, pars
 from checkwash.ir.astutil import stable_dump
 
 _EXCEPTIONS = {'ZeroDivisionError', 'ValueError', 'TypeError', 'IndexError', 'KeyError', 'OverflowError'}
+_IMPORTED_CONTROLS = _CONTROL_NAMES | _IMPLICIT_HOOKS | {'setUpModule', 'tearDownModule'}
 
 
 def _module(data):
@@ -42,7 +43,7 @@ def _module(data):
             or args.defaults or args.vararg or args.kwarg):
         return None
     name = imported.names[0].asname or imported.names[0].name
-    if (name in _EXCEPTIONS | _CONTROL_NAMES | _IMPLICIT_HOOKS
+    if (name in _EXCEPTIONS | _IMPORTED_CONTROLS
             or name.startswith(('__', 'pytest_')) or function.name == name):
         return None
     return imported, function, name
@@ -77,7 +78,7 @@ def _after_module(data):
             functions.append(node)
         else:
             return None
-        if (set(names) & occupied or any((name in _EXCEPTIONS | _CONTROL_NAMES | _IMPLICIT_HOOKS
+        if (set(names) & occupied or any((name in _EXCEPTIONS | _IMPORTED_CONTROLS
                 or name.startswith(('__', 'pytest_')))
                 and not (name == 'pytest' and isinstance(node, ast.Import)) for name in names)):
             return None
