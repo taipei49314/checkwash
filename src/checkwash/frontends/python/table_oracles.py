@@ -47,6 +47,7 @@ from checkwash.frontends.python.snapshot_context import inert_test_execution_con
 from checkwash.frontends.python.table_factories import expand_literal_table_factories
 from checkwash.frontends.python.inert_helpers import prune_inert_helpers
 from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
+from checkwash.frontends.python.literal_iteration_oracles import expand_literal_iteration_oracles
 from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
 from checkwash.frontends.python.tuple_oracles import expand_tuple_oracles, primitive_tuple_result
 from checkwash.frontends.python.helper_predicates import expand_predicate_helpers
@@ -945,6 +946,9 @@ def _module(source, *, baseline):
         return None  # validate implicit entry points before any helper can be removed
     raises_oracles = extract_raises_oracles(tree)
     tuple_tests = expand_tuple_oracles(tree)
+    iteration_tests = expand_literal_iteration_oracles(tree)
+    if iteration_tests is None:
+        return None
     predicate_tests = expand_predicate_helpers(tree)
     if predicate_tests is None:
         return None
@@ -1112,6 +1116,8 @@ def _module(source, *, baseline):
             is_table, form = True, "indexed-fixture-parametrize"
         if function.name in literal_fixture_tests:
             is_table, form = True, "literal-fixtures"
+        if function.name in iteration_tests:
+            is_table, form = True, "literal-iteration"
         if function.name in prefix_tests:
             is_table, form = True, "literal-prefix-predicate"
         if function.name in unique_tests:
@@ -1163,7 +1169,7 @@ def _module(source, *, baseline):
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
-                 or auxiliary or raises_oracles or tuple_tests or shared_fixture_params
+                 or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests
                  or predicate_tests or prefix_tests or unique_tests or unique_helpers
                  or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),
