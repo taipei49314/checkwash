@@ -10,6 +10,7 @@ from pathlib import PurePosixPath
 
 from checkwash.frontends.python.oracle_collections import fresh_fill_none, fresh_interleave, fresh_unique_merge, fresh_unique_sequence
 from checkwash.frontends.python.oracle_regex import closed_regex_body
+from checkwash.frontends.python.oracle_scalar_algorithms import closed_euclidean, closed_ordinal
 
 
 _BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip', 'int', 'str', 'list', 'set', 'sorted', 'round'}
@@ -185,6 +186,8 @@ def _pure_module(source, target):
         if not body or not (_body(body, names) or fresh_unique_merge(body, [arg.arg for arg in args.args])
                             or fresh_interleave(body, [arg.arg for arg in args.args])
                             or fresh_unique_sequence(body, [arg.arg for arg in args.args])
+                            or closed_euclidean(body, [arg.arg for arg in args.args])
+                            or closed_ordinal(body, [arg.arg for arg in args.args])
                             or regex and closed_regex_body(body, [arg.arg for arg in args.args])):
             return False
         found |= node.name == target
