@@ -27,6 +27,7 @@ threshold, assertion strength, detector severity, or exemption policy.
 from __future__ import annotations
 
 import ast
+from checkwash.frontends.python.boolean_comparison_pairs import pair_boolean_comparisons, primitive_boolean_result
 import copy
 import hashlib
 import math
@@ -1616,6 +1617,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         if old_keys != new_keys[:len(old_keys)] and _pair_approximate_identity(old[2], new[2]):
             old_keys = [_subject_key(case) for case in old[2]]
             new_keys = [_subject_key(case) for case in new[2]]
+        if old_keys != new_keys[:len(old_keys)] and pair_boolean_comparisons(old[2], new[2], _subject_key):
+            old_keys = [_subject_key(case) for case in old[2]]
+            new_keys = [_subject_key(case) for case in new[2]]
         indexed_extension = (len(old[6]) == len(new[6]) == 1 and old[6][0][0] == new[6][0][0]
                              and old[6][0][1] == "parametrize" and new[6][0][1] == "indexed-fixture-parametrize"
                              and len(set(old_keys)) == len(old_keys) and len(set(new_keys)) == len(new_keys)
@@ -1723,6 +1727,10 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                     module[0].encode(), calls, path=path, read=read):
                 return before_parsed, after_parsed
         for case in module[2]:
+            if getattr(case.assertion, '_requires_boolean_result', False) and not pure_imported_calls(
+                    module[0].encode(), [case.assertion.test.left], path=path, read=read,
+                    result_proof=primitive_boolean_result):
+                return before_parsed, after_parsed
             if getattr(case.assertion, '_requires_shared_collection_inputs', False) and not pure_imported_calls(
                     module[0].encode(), [case.assertion.test.left], path=path, read=read,
                     result_proof=shared_literal_collection_inputs):
@@ -1732,5 +1740,11 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
                     module[0].encode(), [case.assertion.test.left], path=path, read=read,
                     result_proof=lambda source, target, call: primitive_tuple_result(source, target, call, arity)):
                 return before_parsed, after_parsed
+    # Only after both complete source proofs succeed are Eq/Is interchangeable
+    # for these exact builtin Boolean results. Keep all concrete answers.
+    for module in (old, new):
+        for case in module[2]:
+            if getattr(case.assertion, '_requires_boolean_result', False):
+                case.assertion.test.ops = [ast.Eq()]
     return (retain_local_auxiliary_units(retain_raises_units(_project(before_parsed, old[0], old[2]), old[0], old[11]), old[0], old[12]),
             retain_local_auxiliary_units(retain_raises_units(_project(after_parsed, new[0], new[2]), new[0], new[11]), new[0], new[12]))
