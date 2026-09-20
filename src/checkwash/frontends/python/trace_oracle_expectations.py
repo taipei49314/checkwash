@@ -13,6 +13,7 @@ from .callable_fixture_expectations import _parameters, _tree
 from .expected_constants import folded_expected
 from .frontend import _Offsets, normalize_source
 from .oracle_purity import pure_imported_calls
+from .oracle_blocks import IMPLICIT_ENTRY_NAMES
 from .primitive_strings import primitive_string_result
 from .snapshot_context import inert_test_execution_context
 from checkwash.ir.astutil import stable_dump
@@ -87,7 +88,8 @@ def _trace(source):
         return None
     alias = imported.names[0]
     provider = alias.asname or alias.name
-    if provider == test.name or provider.startswith('__') or alias.name.startswith('__'):
+    if (provider == test.name or provider.startswith(('__', 'pytest_')) or alias.name.startswith('__')
+            or provider in IMPLICIT_ENTRY_NAMES | {'setUpModule', 'tearDownModule', 'pytest', 'pytestmark', 'pytest_plugins'}):
         return None
     statements, helper = test.body, None
     if statements and isinstance(statements[0], ast.FunctionDef):

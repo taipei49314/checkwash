@@ -142,3 +142,13 @@ def test_complete_primitive_string_production_source_is_required(production):
 ])
 def test_executable_startup_and_custom_binding_authority_withhold_trace(context):
     assert not provenance(run(BEFORE, AFTER, PRODUCTION, context=context))
+
+
+@pytest.mark.parametrize('name', [
+    'setup_module', 'teardown_module', 'setup_function', 'teardown_function',
+    'setUpModule', 'tearDownModule', 'pytest_generate_tests', 'pytestmark', 'pytest_plugins', 'pytest',
+])
+def test_imported_framework_entry_cannot_establish_a_closed_trace(name):
+    def alias(source):
+        return source.replace('import reverse', f'import reverse as {name}').replace('got = reverse(', f'got = {name}(')
+    assert not provenance(run(alias(BEFORE), alias(AFTER), PRODUCTION))
