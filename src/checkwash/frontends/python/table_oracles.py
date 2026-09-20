@@ -1398,6 +1398,17 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         old_keys = [_subject_key(case) for case in old[2]]
         new_keys = [_subject_key(case) for case in new[2]]
+        # Field checks do not reject additional keys. A complete dictionary
+        # equality may replace them, but the reverse loses an oracle even
+        # when the field values match. Keep every original complete check
+        # and its multiplicity before granting carrier equivalence.
+        old_complete = Counter(_subject_key(case) for case in old[2]
+                               if not getattr(case.assertion, '_partial_dictionary_fields', False))
+        new_complete = Counter(_subject_key(case) for case in new[2]
+                               if not getattr(case.assertion, '_partial_dictionary_fields', False))
+        if (any(getattr(case.assertion, '_partial_dictionary_fields', False) for case in new[2])
+                and old_complete - new_complete):
+            return before_parsed, after_parsed
         if old_keys != new_keys[:len(old_keys)] and _pair_approximate_identity(old[2], new[2]):
             old_keys = [_subject_key(case) for case in old[2]]
             new_keys = [_subject_key(case) for case in new[2]]

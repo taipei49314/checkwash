@@ -88,6 +88,7 @@ def _dictionary_field_block(function):
     primary = ast.copy_location(ast.Assert(test=ast.Compare(left=copy.deepcopy(assignment.value), ops=[ast.Eq()],
         comparators=[ast.Dict(keys=keys, values=values)]), msg=None), checks[-1])
     primary._requires_primitive_string = True
+    primary._partial_dictionary_fields = True
     return primary, None
 
 
