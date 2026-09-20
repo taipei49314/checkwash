@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.frontends.python.runtime_controls import runtime_controls
+from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
@@ -1440,7 +1441,7 @@ def _swallows(handler: ast.ExceptHandler) -> bool:
     return not _contains_oracle(handler.body)
 
 
-def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
+def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None) -> set[int]:
     """Node ids under statements that can never execute.
 
     `return` (or `raise`) parked at the top of a test body leaves every
@@ -1448,6 +1449,7 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
     completely silent before (confirmed red-team finding).
     """
     dead: set[int] = set()
+    resolved_guards = guard_truths(func, fixtures or {}, _static_truth)
 
     def kill(node: ast.AST) -> None:
         for sub in ast.walk(node):
@@ -1469,7 +1471,7 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
                 kill(stmt)
                 continue
             if isinstance(stmt, (ast.If, ast.While)):
-                truth = _static_truth(stmt.test)
+                truth = resolved_guards.get(id(stmt), _static_truth(stmt.test))
                 if truth is False:
                     for inner in stmt.body:
                         kill(inner)
@@ -2184,6 +2186,7 @@ def _collect_unit(
     inherited_markers: list[Marker] | None = None,
     module_scopes: dict[str, ast.AST] | None = None,
     caches: tuple[dict, dict] | None = None,
+    fixtures: dict[str, ast.Constant] | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -2191,7 +2194,7 @@ def _collect_unit(
     markers = _decorator_markers(func, text, off) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
-    dead = _unreachable_ids(func)
+    dead = _unreachable_ids(func, fixtures)
     guards = _skip_call_guards(func, text)
     _unparse_memo: dict[int, str] = {}
     _refs_memo: dict[int, tuple[str, ...]] = {}
@@ -2898,6 +2901,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # One file's worth of scope-walk memoisation: (scope-nodes, invocations),
     # shared by every unit so a helper reached by many tests is walked once.
     file_caches: tuple[dict, dict] = ({}, {})
+    branch_fixtures = literal_fixtures(tree) if collect_tests else {}
 
     def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
         for child in ast.iter_child_nodes(node):
@@ -2909,7 +2913,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 if collect_tests and collectible and _is_test_name(child.name):
                     units.append(
                         _collect_unit(
-                            child, qual, text, off, inherited, module_scopes, file_caches
+                            child, qual, text, off, inherited, module_scopes, file_caches, branch_fixtures
                         )
                     )
                 # Nested defs are never collected as pytest items.
@@ -2947,7 +2951,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
             units.append(_collect_unit(
                 method, f"{cls.name}.{method.name}", text, off,
                 module_markers + _decorator_markers(owner, text, off)
-                + _decorator_markers(cls, text, off), module_scopes, file_caches,
+                + _decorator_markers(cls, text, off), module_scopes, file_caches, branch_fixtures,
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
