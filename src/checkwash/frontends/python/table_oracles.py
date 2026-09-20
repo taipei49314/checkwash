@@ -993,7 +993,7 @@ def _module(source, *, baseline):
         table_candidate = _table_helper(function)
         if table_candidate is not None:
             table_helpers[function.name] = table_candidate
-    result, table, forms = [], False, []
+    result, table, forms, auxiliary = [], False, [], []
     used_fixtures, used_helpers, used_tables = Counter(), Counter(), Counter()
     for function in functions:
         if function.name in fixtures or function.name in tables or function.name in helpers or function.name in table_helpers:
@@ -1001,7 +1001,23 @@ def _module(source, *, baseline):
         expanded = _test(function, fixtures, tables, imports, helpers, table_helpers, constants, used_constants,
                          baseline=baseline, multiple=function.name in unittest_tests | callable_fixture_tests)
         if expanded is None:
-            return None
+            # A discarded comparison is never an oracle. It can be omitted
+            # only when another real assertion checks that same call/input,
+            # and the caller closes production purity on both snapshots.
+            # This admits redundant calls added beside a full subTest table,
+            # while retaining assertion removal and new input boundaries.
+            if (_args(function) != [] or function.decorator_list or not function.name.startswith('test')
+                    or not 1 <= len(function.body) <= MAX_CASES
+                    or not all(isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Compare)
+                               for statement in function.body)):
+                return None
+            comparisons = [_concrete(ast.copy_location(ast.Assert(test=statement.value, msg=None), statement), {}, imports)
+                           for statement in function.body]
+            if any(assertion is None for assertion in comparisons):
+                return None
+            auxiliary.extend(_Case(assertion, statement, function)
+                             for assertion, statement in zip(comparisons, function.body))
+            continue
         cases, is_table, form = expanded
         if function.name in class_tests:
             is_table, form = True, "plain-class"
@@ -1048,9 +1064,12 @@ def _module(source, *, baseline):
     if derived_authorities & names or any(isinstance(node, ast.arg) and node.arg in derived_authorities
                                          for node in ast.walk(tree)):
         return None
+    checked_subjects = {_subject_key(case) for case in result}
+    if any(_subject_key(case) not in checked_subjects for case in auxiliary):
+        return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
-                 or expanded_forwarders or factory_tests or indexed_fixture_tests),
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests or auxiliary),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms))
 
