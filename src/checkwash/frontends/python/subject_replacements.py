@@ -13,6 +13,7 @@ import ast
 
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
+from checkwash.frontends.python.literal_string_standins import literal_string_standin
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.markers import parse_expr
 from checkwash.pyenv import known_baseline
@@ -394,6 +395,50 @@ def _assertion_scope(tree, qualname, assertion):
     return helper.name
 
 
+def _literal_string_replacement(tree, qualname, call, replacement):
+    if (not isinstance(replacement, ast.FunctionDef) or replacement not in tree.body
+            or not isinstance(call.func, ast.Name) or call.func.id != replacement.name
+            or not _helper_module_inert(tree)):
+        return False
+    scope = _scope(tree, qualname)
+    if (scope is None or scope.decorator_list or scope.args.args or scope.args.posonlyargs
+            or scope.args.kwonlyargs or scope.args.vararg or scope.args.kwarg
+            or len(scope.body) != 1 or not isinstance(scope.body[0], ast.Assert)):
+        return False
+    # Another test in this module may run first. Only literal calls through
+    # this same closed helper can establish that its binding stays intact.
+    for function in tree.body:
+        if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)) or function is replacement:
+            continue
+        args = function.args
+        if (not isinstance(function, ast.FunctionDef) or not function.name.startswith("test")
+                or args.posonlyargs or args.args or args.kwonlyargs or args.vararg or args.kwarg
+                or len(function.body) != 1 or not isinstance(function.body[0], ast.Assert)):
+            return False
+        assertion = function.body[0]
+        comparison = assertion.test
+        if (not isinstance(comparison, ast.Compare) or len(comparison.ops) != 1
+                or not isinstance(comparison.ops[0], ast.Eq) or not isinstance(comparison.left, ast.Call)
+                or not isinstance(comparison.left.func, ast.Name) or comparison.left.func.id != replacement.name
+                or not literal_string_standin(replacement, comparison.left)):
+            return False
+        try:
+            ast.literal_eval(comparison.comparators[0])
+            if assertion.msg is not None:
+                ast.literal_eval(assertion.msg)
+        except (ValueError, TypeError, RecursionError, MemoryError):
+            return False
+    # Rebinding or reflective writes cannot establish the invoked function.
+    for node in ast.walk(tree):
+        if (isinstance(node, (ast.Global, ast.Nonlocal, ast.NamedExpr))
+                or isinstance(node, ast.Name) and node.id == replacement.name and isinstance(node.ctx, (ast.Store, ast.Del))
+                or isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del))
+                or isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id in {"globals", "locals", "vars", "exec", "eval", "setattr", "delattr"}):
+            return False
+    return literal_string_standin(replacement, call)
+
+
 def subject_replacement_events(ir, changes, *, root_reader=None):
     if root_reader is None:
         return []
@@ -439,7 +484,10 @@ def subject_replacement_events(ir, changes, *, root_reader=None):
                 target = _resolve(old_call.func, old_bindings)
                 replacement = _resolve(new_call.func, new_bindings)
                 if (not isinstance(target, str) or target.split(".", 1)[0] in deny
-                        or not context.contains(target, 0) or not _standin(replacement, new_bindings)):
+                        or not context.contains(target, 0)):
+                    continue
+                if not (_standin(replacement, new_bindings)
+                        or _literal_string_replacement(trees[1], new_scope, new_call, replacement)):
                     continue
                 events.append((file.path, unit.qualname, target, a.text, a.span))
     return sorted(set(events))
