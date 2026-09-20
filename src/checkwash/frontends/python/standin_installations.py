@@ -378,6 +378,7 @@ class _Trace:
         self.test_module = None
         self.budget = budget if budget is not None else [0]
         self.search = search
+        self.failed_assertion = False
 
     def owned(self, target):
         if target.startswith("@") or target.split(".", 1)[0] in self.deny:
@@ -396,7 +397,7 @@ class _Trace:
 
     def expression(self, node, module, env, qualname, *, native_setattr=True):
         self._step()
-        if node is None:
+        if node is None or self.failed_assertion:
             return _Value()
         if isinstance(node, ast.Name):
             return env.get(node.id, _Value())
@@ -577,7 +578,8 @@ class _Trace:
         return (name, value) if value is not None else None
 
     def observe(self, value):
-        self.observed.update(e for e in value.effects if self.owned(e.target))
+        if not self.failed_assertion:
+            self.observed.update(e for e in value.effects if self.owned(e.target))
 
     def install(self, target, kind, value, replacement, node, module):
         test_binding = None
@@ -630,6 +632,8 @@ class _Trace:
     def block(self, statements, module, env, qualname, *, native_setattr=True):
         result = _Value()
         for index, node in enumerate(statements):
+            if self.failed_assertion:
+                return _Value()
             self._step()
             previous = statements[index - 1] if index else None
             if isinstance(node, ast.Import):
@@ -682,6 +686,13 @@ class _Trace:
                 for target in node.targets if isinstance(node, ast.Assign) else [node.target]:
                     self.assign(target, value, node.value, node, module, env, qualname)
             elif isinstance(node, ast.Assert):
+                if _static_truth(node.test) is False:
+                    # A literal failure aborts the enclosing test, including
+                    # through a helper or selected branch. The truth folder
+                    # does not establish evaluation order inside the failed
+                    # expression, so it supplies no consumption evidence.
+                    self.failed_assertion = True
+                    return _Value()
                 self.observe(self.expression(node.test, module, env, qualname, native_setattr=native_setattr))
             elif isinstance(node, ast.Return):
                 return self.expression(node.value, module, env, qualname, native_setattr=native_setattr)
