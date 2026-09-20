@@ -52,6 +52,7 @@ from checkwash.frontends.python.tuple_oracles import expand_tuple_oracles, primi
 from checkwash.frontends.python.helper_predicates import expand_predicate_helpers
 from checkwash.frontends.python.prefix_predicates import expand_prefix_predicates
 from checkwash.frontends.python.unique_predicates import expand_unique_predicates
+from checkwash.frontends.python.callable_fixture_rows import fixture_prefix_rows
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -622,7 +623,7 @@ def _captured_result(body, unavailable):
 def _callable_fixtures(functions, imports):
     """Preserve a scalar-string fixture's assertions before its callable.
 
-    Default function scope, no fixture inputs, no cleanup and only direct
+    Default function scope, no fixture dependencies, no cleanup and only direct
     collected consumers are admitted. Each consumer receives the complete
     ordered assertion prefix, including an empty prefix. A two-statement
     result capture becomes one check only under the primitive-result proof.
@@ -631,17 +632,16 @@ def _callable_fixtures(functions, imports):
     for function in functions:
         plain = copy.copy(function)
         plain.decorator_list = []
-        if (_args(plain) != [] or len(function.decorator_list) != 1
+        parameters = _args(plain)
+        if (parameters is None or len(function.decorator_list) != 1
                 or not 1 <= len(function.body) <= MAX_CASES or not isinstance(function.body[-1], ast.Return)):
             continue
-        decorator = function.decorator_list[0]
-        if isinstance(decorator, ast.Call):
-            if decorator.args or decorator.keywords:
-                continue
-            decorator = decorator.func
+        prefixes = fixture_prefix_rows(function, parameters)
+        if prefixes is None:
+            continue
         returned = function.body[-1].value
-        assertions = [_concrete(statement, {}, imports) for statement in function.body[:-1]]
-        if (dotted_name(decorator) != "pytest.fixture" or not isinstance(returned, ast.Name)
+        assertions = [_concrete(statement, {}, imports) for prefix in prefixes for statement in prefix]
+        if (not isinstance(returned, ast.Name)
                 or returned.id not in imports - {"pytest"}
                 or any(assertion is None for assertion in assertions)):
             continue
@@ -649,7 +649,7 @@ def _callable_fixtures(functions, imports):
                        for value in [*assertion.test.left.args, *assertion.test.comparators])
                or assertion.test.left.keywords for assertion in assertions):
             continue
-        fixtures[function.name] = function.body[:-1], returned
+        fixtures[function.name] = prefixes, returned
     if not fixtures:
         return functions, set()
     result, used, expanded = [], set(), set()
@@ -661,7 +661,7 @@ def _callable_fixtures(functions, imports):
             if len(parameters) != 1 or not function.name.startswith("test") or function.decorator_list:
                 return None, set()
             name = parameters[0]
-            prefix, returned = fixtures[name]
+            prefixes, returned = fixtures[name]
             body = function.body
             if not all(isinstance(statement, ast.Assert) for statement in body):
                 captured = _captured_result(body, imports | fixtures.keys())
@@ -670,8 +670,12 @@ def _callable_fixtures(functions, imports):
                 body = [captured]
             function = copy.deepcopy(function)
             function.args.args = []
-            function.body = [*copy.deepcopy(prefix), *[_Substitute({name: returned}).visit(statement)
-                                                      for statement in copy.deepcopy(body)]]
+            function.body = [statement for prefix in prefixes
+                             for statement in [*copy.deepcopy(prefix),
+                                               *[_Substitute({name: returned}).visit(statement)
+                                                 for statement in copy.deepcopy(body)]]]
+            if len(function.body) > MAX_CASES:
+                return None, set()
             used.add(name)
             expanded.add(function.name)
         if any(isinstance(node, ast.Name) and node.id in fixtures for node in ast.walk(function)):
