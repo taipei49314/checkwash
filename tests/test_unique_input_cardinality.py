@@ -1,4 +1,6 @@
 """An entailed input-count clause keeps the exact list answer and its changes."""
+import ast
+
 import pytest
 
 from test_complete_unique_helpers import PRODUCTION as GOOD_PRODUCTION, projected
@@ -123,3 +125,26 @@ def test_import_startup_and_collection_authority_are_required(context):
 def test_reordered_or_dropped_old_rows_keep_ordinary_fallback():
     after=AFTER.replace('    ([3, 1, 3, 2], [1, 2, 3]),\n','')
     assert not projected(run(BEFORE,after,PRODUCTION)[0])
+
+
+@pytest.mark.parametrize('side', ['before', 'after'])
+@pytest.mark.parametrize('binding', ['xs', 'expected', 'got'])
+def test_compile_invalid_helper_bindings_cannot_prove_an_executed_oracle(side, binding):
+    before, after = BEFORE, AFTER
+    if side == 'before':
+        before = before.replace(OLD_HELPER, OLD_HELPER.replace(binding, '__debug__'))
+        source = before
+    else:
+        after = after.replace(NEW_HELPER, NEW_HELPER.replace(binding, '__debug__'))
+        source = after
+    ast.parse(source)
+    with pytest.raises(SyntaxError, match='__debug__'):
+        compile(source, '<invalid helper binding>', 'exec')
+    assert not projected(run(before, after, PRODUCTION)[0])
+
+
+@pytest.mark.parametrize('binding', ['xs', 'expected', 'got'])
+def test_reserved_helper_bindings_remain_outside_the_closed_language(binding):
+    after = AFTER.replace(NEW_HELPER, NEW_HELPER.replace(binding, '__value'))
+    compile(after, '<reserved helper binding>', 'exec')
+    assert not projected(run(BEFORE, after, PRODUCTION)[0])

@@ -56,7 +56,8 @@ def complete_unique_helper(node):
     cardinality obligation. This syntax alone grants no equivalence credit.
     """
     names = _args(node)
-    if names is None or len(names) != 2 or len(set(names)) != 2 or len(node.body) != 3:
+    if (names is None or len(names) != 2 or len(set(names)) != 2
+            or any(name.startswith('__') for name in names) or len(node.body) != 3):
         return None
     assignment, exact, predicate = node.body
     if (not isinstance(assignment, ast.Assign) or len(assignment.targets) != 1
@@ -67,7 +68,7 @@ def complete_unique_helper(node):
             or not isinstance(exact, ast.Assert) or not isinstance(predicate, ast.Assert)):
         return None
     local = assignment.targets[0].id
-    if local in names or local == assignment.value.func.id:
+    if local.startswith('__') or local in names or local == assignment.value.func.id:
         return None
     expected = ast.parse(f'{local} == {names[1]}', mode='eval').body
     unique = ast.parse(f'len({local}) == len(set({local}))', mode='eval').body
