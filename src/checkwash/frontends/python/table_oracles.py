@@ -53,6 +53,7 @@ from checkwash.frontends.python.inert_signatures import strip_none_test_returns
 from checkwash.frontends.python.table_factories import expand_literal_table_factories
 from checkwash.frontends.python.inert_helpers import prune_inert_helpers
 from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
+from checkwash.frontends.python.parametrized_membership_oracles import expand_parametrized_membership
 from checkwash.frontends.python.literal_iteration_oracles import expand_literal_iteration_oracles
 from checkwash.frontends.python.fixture_row_helpers import expand_fixture_row_helpers
 from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
@@ -1074,6 +1075,7 @@ def _module(source, *, baseline):
     if unique_tests is None:
         return None
     inert_helpers = prune_inert_helpers(tree)
+    membership_fixture_tests = expand_parametrized_membership(tree)
     literal_fixture_tests = expand_literal_fixtures(tree)
     factory_tests = expand_literal_table_factories(tree)
     indexed_fixture_tests = expand_indexed_fixture_tables(tree)
@@ -1303,7 +1305,7 @@ def _module(source, *, baseline):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
-                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or membership_fixture_tests
                  or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
                  or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests or literal_subject_tests or captured_helper_tests or inert_signature_tests
                  or any(form in {'string-block', 'grouped-assert-helper'} for _, form in forms)
