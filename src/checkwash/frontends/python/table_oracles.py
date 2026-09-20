@@ -46,6 +46,7 @@ from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, 
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.frontends.python.table_factories import expand_literal_table_factories
 from checkwash.frontends.python.inert_helpers import prune_inert_helpers
+from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -885,6 +886,7 @@ def _module(source, *, baseline):
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
     inert_helpers = prune_inert_helpers(tree)
+    literal_fixture_tests = expand_literal_fixtures(tree)
     factory_tests = expand_literal_table_factories(tree)
     indexed_fixture_tests = expand_indexed_fixture_tables(tree)
     # A default-scope literal fixture that no source requests contributes no
@@ -1037,6 +1039,8 @@ def _module(source, *, baseline):
             is_table, form = True, "literal-table-factory"
         if function.name in indexed_fixture_tests:
             is_table, form = True, "indexed-fixture-parametrize"
+        if function.name in literal_fixture_tests:
+            is_table, form = True, "literal-fixtures"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
@@ -1077,7 +1081,7 @@ def _module(source, *, baseline):
         return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
-                 or expanded_forwarders or factory_tests or indexed_fixture_tests or auxiliary),
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or auxiliary),
             bool(unittest_tests),
             subtest_only and all(name in unittest_tests for name, _ in forms))
 
@@ -1340,6 +1344,9 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
         if old is None or new is None or old[1] != new[1]:
             return before_parsed, after_parsed
         native_renames = _native_renames(old, new)
+        if (any(form == 'literal-fixtures' for _, form in old[6])
+                and any(form == 'literal-fixtures' for _, form in new[6])):
+            return before_parsed, after_parsed  # retain existing same-carrier fixture provenance ownership
         if not (old[3] or new[3] or native_renames):
             return before_parsed, after_parsed
         if (old[3] and new[3] and old[6] == new[6]

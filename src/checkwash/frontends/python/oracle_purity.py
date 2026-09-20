@@ -1,14 +1,15 @@
 """A source proof for order-independent calls on concrete built-in values.
 
-Only import-free modules of plain pure functions are accepted. Functions may
-return/branch/raise a literal ValueError using their arguments and a short
-list of builtins. No repository function is evaluated by this proof.
+Plain pure functions use closed builtins or narrowly recognized fresh-local
+collection/regex idioms. A sole re import needs separate repository-shadow
+checks. No repository function is evaluated by this proof.
 """
 
 import ast
 from pathlib import PurePosixPath
 
 from checkwash.frontends.python.oracle_collections import fresh_unique_merge
+from checkwash.frontends.python.oracle_regex import closed_regex_body
 
 
 _BUILTINS = {'len', 'range', 'all', 'any', 'max', 'min', 'abs', 'sum', 'zip', 'int', 'str', 'list', 'set'}
@@ -156,9 +157,14 @@ def _pure_module(source, target):
     tree = _tree(source)
     if tree is None:
         return False
-    found, bound = False, set()
+    found, bound, regex = False, set(), False
     for node in tree.body:
         if _inert(node):
+            continue
+        if (not bound and isinstance(node, ast.Import) and len(node.names) == 1
+                and node.names[0].name == 're' and node.names[0].asname is None):
+            bound.add('re')
+            regex = True
             continue
         if (not isinstance(node, ast.FunctionDef) or node.name in bound or node.name.startswith('__')
                 or node.name in _BUILTINS | {'ValueError'}):
@@ -173,7 +179,8 @@ def _pure_module(source, target):
         if len(names) != len(args.args) or names & (_BUILTINS | {'ValueError'}):
             return False
         body = node.body[1:] if node.body and _inert(node.body[0]) else node.body
-        if not body or not (_body(body, names) or fresh_unique_merge(body, [arg.arg for arg in args.args])):
+        if not body or not (_body(body, names) or fresh_unique_merge(body, [arg.arg for arg in args.args])
+                            or regex and closed_regex_body(body, [arg.arg for arg in args.args])):
             return False
         found |= node.name == target
     return found
@@ -220,6 +227,14 @@ def pure_imported_calls(source, calls, *, path, read, result_proof=None):
                                        else _pure_module(candidates[0][1], name)):
             return False
         selected = PurePosixPath(candidates[0][0]).parts
+        target_tree = _tree(candidates[0][1])
+        if target_tree is None:
+            return False
+        if any(isinstance(node, ast.Import) and any(alias.name == 're' for alias in node.names) for node in target_tree.body):
+            authority_roots = roots | {'/'.join(selected[:depth]) for depth in range(1, len(selected))}
+            if any(read((root + '/' if root else '') + suffix) is not None
+                   for root in authority_roots for suffix in ('re.py', 're/__init__.py')):
+                return False
         for depth in range(1, len(selected)):
             initializer = '/'.join(selected[:depth]) + '/__init__.py'
             if initializer == candidates[0][0]:
