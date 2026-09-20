@@ -90,6 +90,15 @@ def test_two_collectors_keep_two_inherited_oracles():
     assert [unit.qualname for unit in parsed.units] == ["TestTotal.test_total", "TestOther.test_total"]
 
 
+@pytest.mark.parametrize("mutation", [
+    "Base = external", "Base.test_total = external", "del Base.test_total",
+    "setattr(Base, 'test_total', external)", "from elsewhere import Base",
+])
+def test_rebound_hierarchy_has_no_inherited_proof(mutation):
+    source = BEFORE.replace("class TestTotal", mutation + "\nclass TestTotal")
+    assert not parse_python(source.encode(), collect_tests=True).units
+
+
 def test_runtime_inherited_rewrite_hides_the_bug(tmp_path):
     import os
     import subprocess

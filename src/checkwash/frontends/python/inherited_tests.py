@@ -19,6 +19,23 @@ def inherited_test_methods(tree: ast.Module):
             if node.name in classes:
                 ambiguous.add(node.name)
             classes[node.name] = node
+    # A class name or one of its attributes may be rebound after definition.
+    # Such a file no longer describes the concrete hierarchy used below.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            if node.id in classes:
+                ambiguous.add(node.id)
+        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            root = node.value
+            while isinstance(root, (ast.Attribute, ast.Subscript)):
+                root = root.value
+            if isinstance(root, ast.Name) and root.id in classes:
+                ambiguous.add(root.id)
+        elif isinstance(node, ast.alias) and (node.asname or node.name.split('.')[0]) in classes:
+            ambiguous.add(node.asname or node.name.split('.')[0])
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            if node.func.id in {"setattr", "delattr", "exec", "eval", "globals", "locals", "vars"}:
+                ambiguous.update(classes)
     resolved: dict[str, tuple[str, ...] | None] = {}
 
     def mro(name: str, active: frozenset[str] = frozenset()):
