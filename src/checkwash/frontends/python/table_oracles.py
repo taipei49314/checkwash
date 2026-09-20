@@ -870,6 +870,27 @@ def _module(source, *, baseline):
         return None  # validate implicit entry points before any helper can be removed
     prune_inert_helpers(tree)
     factory_tests = expand_literal_table_factories(tree)
+    # A default-scope literal fixture that no source requests contributes no
+    # oracle or setup effects. Keep every reference, shadowed definition,
+    # marker string and non-default decorator visible to the ordinary parser.
+    references = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    references.update(node.arg for node in ast.walk(tree) if isinstance(node, ast.arg))
+    references.update(node.value for node in ast.walk(tree)
+                      if isinstance(node, ast.Constant) and type(node.value) is str)
+    definitions = Counter(node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef)))
+    plain_pytest = any(isinstance(node, ast.Import) and len(node.names) == 1
+                       and node.names[0].name == "pytest" and node.names[0].asname is None for node in tree.body)
+    retained = []
+    for node in tree.body:
+        unused_fixture = (plain_pytest and isinstance(node, ast.FunctionDef) and _args(node) == []
+                          and node.name not in references and definitions[node.name] == 1
+                          and not node.name.startswith("test") and len(node.decorator_list) == 1
+                          and dotted_name(node.decorator_list[0]) == "pytest.fixture"
+                          and len(node.body) == 1 and isinstance(node.body[0], ast.Return)
+                          and _literal(node.body[0].value))
+        if not unused_fixture:
+            retained.append(node)
+    tree.body = retained
     wrapper_tests = expand_wrappers(tree)
     if wrapper_tests is None:
         return None
