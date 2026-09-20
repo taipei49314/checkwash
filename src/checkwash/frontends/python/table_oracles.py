@@ -657,9 +657,13 @@ def _callable_fixtures(functions, imports):
         if prefixes is None:
             continue
         returned = function.body[-1].value
-        assertions = [_concrete(statement, {}, imports) for prefix in prefixes for statement in prefix]
+        # Fixture injection masks a same-named module import. In particular,
+        # `return request` returns pytest's FixtureRequest, never an imported
+        # function named request, even when the fixture prefix is empty.
+        available_imports = imports - set(parameters)
+        assertions = [_concrete(statement, {}, available_imports) for prefix in prefixes for statement in prefix]
         if (not isinstance(returned, ast.Name)
-                or returned.id not in imports - {"pytest"}
+                or returned.id not in available_imports - {"pytest"}
                 or any(assertion is None for assertion in assertions)):
             continue
         if any(not all(isinstance(value, ast.Constant) and type(value.value) is str
