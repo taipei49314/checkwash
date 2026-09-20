@@ -8,7 +8,7 @@ checks. No repository function is evaluated by this proof.
 import ast
 from pathlib import PurePosixPath
 
-from checkwash.frontends.python.oracle_collections import fresh_interleave, fresh_unique_merge, fresh_unique_sequence
+from checkwash.frontends.python.oracle_collections import fresh_fill_none, fresh_interleave, fresh_unique_merge, fresh_unique_sequence
 from checkwash.frontends.python.oracle_regex import closed_regex_body
 
 
@@ -204,7 +204,7 @@ def primitive_literal_result(source, target, call):
 
 
 def shared_literal_collection_inputs(source, target, call):
-    """A fresh merge result cannot mutate shared flat literal fixture rows.
+    """Closed fresh collection results cannot mutate shared flat fixture rows.
 
     This requires the complete fresh-local collection grammar, not just the
     presence of list/set constructors or an apparent return type. Arbitrary
@@ -212,13 +212,18 @@ def shared_literal_collection_inputs(source, target, call):
     """
     if call.keywords or len(call.args) != 2 or not _pure_module(source, target):
         return False
-    if not all(isinstance(arg, (ast.List, ast.Tuple)) and all(
-            isinstance(item, ast.Constant) and type(item.value) in (type(None), bool, int, float, str, bytes)
-            for item in arg.elts) for arg in call.args):
-        return False
     tree = _tree(source)
     function = next((node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == target), None)
-    return function is not None and fresh_unique_merge(function.body, [arg.arg for arg in function.args.args])
+    if function is None:
+        return False
+    def scalar(node):
+        return isinstance(node, ast.Constant) and type(node.value) in (type(None), bool, int, float, str, bytes)
+    def sequence(node):
+        return isinstance(node, (ast.List, ast.Tuple)) and all(scalar(item) for item in node.elts)
+    parameters = [arg.arg for arg in function.args.args]
+    if fresh_fill_none(function.body, parameters):
+        return sequence(call.args[0]) and scalar(call.args[1])
+    return all(sequence(arg) for arg in call.args) and fresh_unique_merge(function.body, parameters)
 
 
 def pure_imported_calls(source, calls, *, path, read, result_proof=None):

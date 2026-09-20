@@ -48,6 +48,7 @@ from checkwash.frontends.python.table_factories import expand_literal_table_fact
 from checkwash.frontends.python.inert_helpers import prune_inert_helpers
 from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
 from checkwash.frontends.python.literal_iteration_oracles import expand_literal_iteration_oracles
+from checkwash.frontends.python.fixture_row_helpers import expand_fixture_row_helpers
 from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
 from checkwash.frontends.python.tuple_oracles import expand_tuple_oracles, primitive_tuple_result
 from checkwash.frontends.python.helper_predicates import expand_predicate_helpers
@@ -297,10 +298,19 @@ def _fixture(node):
             or dotted_name(node.body[0].value) != "request.param"):
         return None
     decorator = node.decorator_list[0]
-    if (not isinstance(decorator, ast.Call) or dotted_name(decorator.func) != "pytest.fixture"
-            or decorator.args or len(decorator.keywords) != 1 or decorator.keywords[0].arg != "params"):
+    if (not isinstance(decorator, ast.Call) or dotted_name(decorator.func) != "pytest.fixture" or decorator.args):
         return None
-    return decorator.keywords[0].value
+    keywords = {keyword.arg: keyword.value for keyword in decorator.keywords}
+    if len(keywords) != len(decorator.keywords) or set(keywords) not in ({'params'}, {'params', 'ids'}):
+        return None
+    if 'ids' in keywords:
+        values, ids = keywords['params'], keywords['ids']
+        if (not isinstance(values, (ast.List, ast.Tuple)) or not isinstance(ids, (ast.List, ast.Tuple))
+                or len(ids.elts) != len(values.elts)
+                or not all(isinstance(item, ast.Constant) and type(item.value) is str for item in ids.elts)
+                or len({item.value for item in ids.elts}) != len(ids.elts)):
+            return None
+    return keywords['params']
 
 
 def _immutable_param(node):
@@ -1067,6 +1077,9 @@ def _module(source, *, baseline):
                 if isinstance(table_fixture, ast.Name) and table_fixture.id in constants:
                     shared_tables.add(function.name)
                 tables[function.name] = _table_source(table_fixture, constants, used_constants)
+    functions, row_helper_tests = expand_fixture_row_helpers(functions, fixtures, _args, _helper)
+    if functions is None:
+        return None
     helpers, table_helpers = {}, {}
     for function in functions:
         if function.name in fixtures or function.name in tables:
@@ -1169,7 +1182,7 @@ def _module(source, *, baseline):
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
             bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
                  or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests
-                 or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests
+                 or auxiliary or raises_oracles or tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests
                  or predicate_tests or prefix_tests or unique_tests or unique_helpers
                  or any(form == 'string-block' for _, form in forms)),
             bool(unittest_tests),

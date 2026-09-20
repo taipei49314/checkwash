@@ -74,3 +74,17 @@ for {item} in {parameters[0]}:
 return {output}
 ''')
     return ast.dump(ast.Module(body=body, type_ignores=[])) == ast.dump(expected)
+
+
+def fresh_fill_none(body, parameters):
+    """A fresh list selects existing primitive cells without mutating inputs."""
+    if (len(parameters) != 2 or len(body) != 1 or not isinstance(body[0], ast.Return)
+            or not isinstance(body[0].value, ast.ListComp) or len(body[0].value.generators) != 1
+            or not isinstance(body[0].value.generators[0].target, ast.Name)):
+        return False
+    sequence, default = parameters
+    item = body[0].value.generators[0].target.id
+    if len({sequence, default, item}) != 3:
+        return False
+    expected = ast.parse(f'return [{default} if {item} is None else {item} for {item} in {sequence}]')
+    return ast.dump(ast.Module(body=body, type_ignores=[])) == ast.dump(expected)
