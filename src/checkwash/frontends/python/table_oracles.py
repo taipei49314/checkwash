@@ -841,6 +841,11 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
                 return None
             if value.value:
                 filtered.append(row)
+        if not filtered:
+            # A collected consumer whose whole oracle is disabled cannot be
+            # erased from the proof and replaced by another consumer's rows.
+            # Preserve the ordinary frontend's per-test execution evidence.
+            return None
         bindings, body, form = filtered, [condition.body[0]], "filtered-" + form
     if (form == "native" and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Call)
             and isinstance(body[0].value.func, ast.Name) and body[0].value.func.id in helpers):
