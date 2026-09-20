@@ -13,7 +13,9 @@ import copy
 
 
 IMPLICIT_ENTRY_NAMES = {"setup_module", "teardown_module", "setup_function", "teardown_function",
-                        "setup_class", "teardown_class", "setup_method", "teardown_method", "setup", "teardown"}
+                        "setup_class", "teardown_class", "setup_method", "teardown_method", "setup", "teardown",
+                        "setUpModule", "tearDownModule", "setUpClass", "tearDownClass", "setUp", "tearDown",
+                        "pytestmark"}
 
 
 def _args(node):

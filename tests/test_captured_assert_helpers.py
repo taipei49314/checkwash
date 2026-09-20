@@ -82,3 +82,19 @@ def test_trim():
     after = before.replace('assert len(got) == 3', 'check(len(got), 3)') + HELPER
     ir, findings, verdict = run(before, after, 'def trim(value):\n    return value.strip()\n')
     assert projected(ir) and verdict == 'pass' and not findings
+
+
+@pytest.mark.parametrize('name', ['setUpModule', 'tearDownModule', 'setUpClass', 'tearDownClass',
+                                   'setUp', 'tearDown', 'pytestmark'])
+def test_framework_control_names_cannot_disappear_as_captured_helpers(name):
+    ir, _, _ = run(BEFORE, AFTER.replace('check(', name + '('), PROD)
+    assert not projected(ir)
+
+
+@pytest.mark.parametrize('name', ['setUpModule', 'tearDownModule', 'pytestmark'])
+@pytest.mark.parametrize('arguments', ['increment(1), 2', 'actual=increment(1), expected=2'])
+def test_framework_hooks_are_not_plain_native_or_literal_helpers(name, arguments):
+    before = 'from app.prod import increment\ndef test_value():\n    assert increment(1) == 2\n'
+    after = 'from app.prod import increment\ndef test_value():\n    ' + name + '(' + arguments + ')\n' + HELPER.replace('check(', name + '(')
+    ir, _, _ = run(before, after, 'def increment(value):\n    return value + 1\n')
+    assert not projected(ir)
