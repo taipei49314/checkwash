@@ -130,7 +130,13 @@ def collection_options(text: str) -> Counter[tuple[str, str]]:
         index = 0
         while index < len(words):
             word = words[index]
+            if word == "--":
+                break
             name, equals, value = word.partition("=")
+            if word.startswith(("-k", "-m")) and len(word) > 2 and not word.startswith("--"):
+                name, equals, value = word[:2], True, word[2:]
+            elif word.startswith("-p") and len(word) > 2 and not word.startswith("--"):
+                name, equals, value = "-p", True, word[2:]
             if word in _COLLECT_ONLY:
                 options[("collect-only", "")] += 1
             elif name in _VALUE_OPTIONS:
@@ -139,8 +145,49 @@ def collection_options(text: str) -> Counter[tuple[str, str]]:
                     value = words[index]
                 if value and not value.startswith("-"):
                     options[(name, value)] += 1
+            elif name == "-p":
+                if not equals and index + 1 < len(words):
+                    index += 1
+                    value = words[index]
+                if value.startswith("no:"):
+                    options[("-p", value)] += 1
             index += 1
     return options
+
+
+def resolved_collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
+    """Apply literal pytest -o/--override-ini values after ordinary settings.
+
+    Preserve ambiguity between separate invocations; within an invocation
+    pytest uses the last override of each name.
+    """
+    settings = collection_settings(text)
+    overrides: dict[str, set[tuple[str, ...]]] = {}
+    for words in _option_arguments(text):
+        current = {}
+        index = 0
+        while index < len(words):
+            word = words[index]
+            if word == "--":
+                break
+            value = None
+            if word in {"-o", "--override-ini"} and index + 1 < len(words):
+                index += 1
+                value = words[index]
+            elif word.startswith("--override-ini="):
+                value = word.split("=", 1)[1]
+            elif word.startswith("-o") and not word.startswith("--"):
+                value = word[2:]
+            if value is not None:
+                name, separator, content = value.partition("=")
+                if separator and name in _INCLUDE | {"norecursedirs"}:
+                    parsed = _words(content)
+                    if parsed is not None:
+                        current[name] = parsed
+            index += 1
+        for name, value in current.items():
+            overrides.setdefault(name, set()).add(value)
+    return {**settings, **overrides}
 
 
 def _covered(child: str, parent: str, *, paths: bool) -> bool:
@@ -174,7 +221,7 @@ def pytest_collection_changes(before_surface: str, after: str) -> list[str]:
         if option not in old_options:
             name, value = option
             findings.append("pytest collection option introduced: " + name + (" " + value if value else ""))
-    old, new = collection_settings(before_surface), collection_settings(after)
+    old, new = resolved_collection_settings(before_surface), resolved_collection_settings(after)
     for name in sorted(_INCLUDE & old.keys() & new.keys()):
         # A config migration can produce several old values. Do not claim a
         # narrowing from only one arbitrarily chosen source.

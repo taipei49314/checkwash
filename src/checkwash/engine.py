@@ -24,6 +24,7 @@ from checkwash.ci import (
     _scan_ci_weakening,
 )
 from checkwash.config import Config
+from checkwash.collection_inventory import collection_inventory_changes
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
@@ -408,6 +409,9 @@ def build_ir(
     # ci surface already said, not just what this diff added to it.
     one_hop = _one_hop_runners(changes, config, head_reader)
     ci_base = _ci_base_surface(changes, config, one_hop)
+    g.ci_weakening_lines.extend(collection_inventory_changes(
+        changes, config, path_lister=root_path_lister, batch_reader=root_batch_reader,
+    ))
 
     # Cross-file oracle resolution (A5-x) parses helper files straight from
     # the change bytes, memoised — never from the loop's parse cache, so it
