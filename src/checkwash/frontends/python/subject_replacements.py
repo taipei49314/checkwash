@@ -14,6 +14,7 @@ import ast
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.literal_string_standins import literal_string_standin
+from checkwash.frontends.python.parameterized_subject_replacements import parameterized_abs_event
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.markers import parse_expr
 from checkwash.pyenv import known_baseline
@@ -456,6 +457,12 @@ def subject_replacement_events(ir, changes, *, root_reader=None):
                 continue
             before = {a.id: a for a in unit.before.assertions}
             after = {a.id: a for a in unit.after.assertions}
+            if any(assertion.inherited and assertion.right_literal is None for assertion in after.values()):
+                if trees is None:
+                    trees = (_parse(change.before), _parse(change.after))
+                event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny)
+                if event is not None:
+                    events.append(event)
             for pair in unit.delta.assertion_pairs:
                 b, a = before[pair.before_id], after[pair.after_id]
                 if (b.form != "compare_eq" or a.form != b.form
