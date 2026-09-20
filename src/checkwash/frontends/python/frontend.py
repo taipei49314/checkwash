@@ -1456,7 +1456,7 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None
         for sub in ast.walk(node):
             dead.add(id(sub))
 
-    def scan(body: list[ast.stmt]) -> None:
+    def scan(body: list[ast.stmt]) -> bool:
         nonlocal resolved_guards
         stop = False
         for stmt in body:
@@ -1481,10 +1481,10 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None
                 if truth is False:
                     for inner in stmt.body:
                         kill(inner)
-                    scan(stmt.orelse)
+                    stop = scan(stmt.orelse)
                     continue
                 if truth is True and isinstance(stmt, ast.If):
-                    scan(stmt.body)
+                    stop = scan(stmt.body)
                     for inner in stmt.orelse:
                         kill(inner)
                     continue
@@ -1492,7 +1492,7 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None
             if isinstance(stmt, ast.For) and _is_literal(stmt.iter) and not _truthy_literal(stmt.iter):
                 for inner in stmt.body:
                     kill(inner)
-                scan(stmt.orelse)
+                stop = scan(stmt.orelse)
                 continue
             if isinstance(stmt, ast.Match) and _match_is_dead(stmt):
                 for case in stmt.cases:
@@ -1505,6 +1505,10 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None
                     scan(inner_body)
             for handler in getattr(stmt, "handlers", []) or []:
                 scan(handler.body)
+        # Only a statically selected branch inherits its body's termination.
+        # Unknown loops, exception handlers and finally retain the existing
+        # conservative path handling above.
+        return stop
 
     scan(func.body)
     # Lambdas anywhere in the body are deferred code too.
