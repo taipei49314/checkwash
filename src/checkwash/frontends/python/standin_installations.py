@@ -76,6 +76,7 @@ class _Function:
     qualname: str
     fixture_name: str | None = None
     autouse: bool = False
+    patch_env: dict[str, _Value] | None = None
 
 
 @dataclass
@@ -487,6 +488,39 @@ class _Trace:
         )
         return _Value(identity)
 
+    def decorated_patch_result(self, function):
+        """The sole patch decorator injects one mock into a closed test body."""
+        node = function.node
+        args = node.args
+        parameters = args.posonlyargs + args.args
+        if (function.patch_env is None or "." in function.qualname
+                or not isinstance(node, ast.FunctionDef) or len(parameters) != 1
+                or args.defaults or args.kwonlyargs or args.vararg or args.kwarg
+                or node.returns or any(arg.annotation for arg in parameters)):
+            return None
+        # Other startup or same-module tests can replace the decorated object.
+        # This bounded spelling admits one top-level test and inert imports.
+        defined = False
+        for statement in function.module.tree.body:
+            if statement is node:
+                defined = True
+            elif isinstance(statement, (ast.Import, ast.ImportFrom)) and not defined:
+                if isinstance(statement, ast.ImportFrom) and (statement.level or any(alias.name == "*" for alias in statement.names)):
+                    return None
+            elif not (isinstance(statement, ast.Pass) or isinstance(statement, ast.Expr)
+                      and isinstance(statement.value, ast.Constant) and type(statement.value.value) is str):
+                return None
+        for module in self.modules:
+            if module.path != function.module.path and any(not (
+                    isinstance(statement, ast.Pass) or isinstance(statement, ast.Expr)
+                    and isinstance(statement.value, ast.Constant) and type(statement.value.value.value) is str)
+                    for statement in module.tree.body):
+                return None
+        name = parameters[0].arg
+        item = ast.withitem(context_expr=node.decorator_list[0], optional_vars=ast.Name(id=name, ctx=ast.Store()))
+        value = self.patch_result(item, None, node.body, function.module, function.patch_env, function.qualname)
+        return (name, value) if value is not None else None
+
     def observe(self, value):
         self.observed.update(e for e in value.effects if self.owned(e.target))
 
@@ -565,6 +599,9 @@ class _Trace:
                 for decorator in node.decorator_list:
                     call = decorator if isinstance(decorator, ast.Call) else None
                     value = self.expression(call.func if call else decorator, module, env, qualname)
+                    if (len(node.decorator_list) == 1 and call is not None and not value.effects
+                            and value.alias in {"unittest.mock.patch", "unittest.mock.patch.object"}):
+                        function.patch_env = dict(env)
                     if value.alias == "pytest.fixture":
                         function.fixture_name = node.name
                         if call:
@@ -752,6 +789,7 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
     function = test_module.functions.get(qualname)
     if function is None:
         return set()
+    decorated = trace.decorated_patch_result(function)
     # Setup hooks precede fixture evaluation; module-level imports have already
     # captured their providers, so a later sys.modules write cannot alter them.
     for module in active_modules:
@@ -795,7 +833,10 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
 
     for name in sorted(autouse):
         activate(name)
-    kwargs = {name: activate(name) for name in _fixture_requests(function)}
+    kwargs = {name: activate(name) for name in _fixture_requests(function)
+              if decorated is None or name != decorated[0]}
+    if decorated is not None:
+        kwargs[decorated[0]] = decorated[1]
     # Pytest argument injection is another local binding installation. A
     # newly added fixture parameter may mask the imported production callable
     # while leaving every assertion and import byte-identical (#88).
