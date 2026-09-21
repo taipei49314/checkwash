@@ -58,6 +58,7 @@ from checkwash.frontends.python.class_exception_aliases import mark_class_except
 from checkwash.frontends.python.function_exception_aliases import mark_function_exception_aliases
 from checkwash.frontends.python.manual_unittest_suites import project_manual_unittest_suites
 from checkwash.frontends.python.type_comparison_oracles import mark_type_comparisons
+from checkwash.frontends.python.builtin_normalization_oracles import mark_builtin_normalizations
 from checkwash.frontends.python.literal_all_oracles import mark_literal_all
 from checkwash.frontends.python.empty_length_guards import mark_empty_length_guards
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
@@ -687,6 +688,10 @@ def build_ir(
                 path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
             )
             before_parsed, after_parsed = mark_type_comparisons(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_builtin_normalizations(
                 change.before, change.after, before_parsed, after_parsed,
                 path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
             )

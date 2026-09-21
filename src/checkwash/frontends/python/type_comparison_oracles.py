@@ -51,6 +51,11 @@ def _module(source):
     tree = _bounded_tree(source)
     if tree is None:
         return None
+    return _module_tree(tree)
+
+
+def _module_tree(tree):
+    """Validate a complete module; callers may supply a bounded, copied tree."""
     imports, helpers, functions, classes, occupied = {}, {}, [], set(), set()
     for node in _body(tree):
         if isinstance(node, ast.ImportFrom) and not node.level and node.module:
