@@ -109,7 +109,7 @@ def _resolve_value(node: ast.expr, assertion, side, file, before: bool):
     return _literal(expr)
 
 
-def _provider_stable(file, unit, func: ast.expr) -> bool:
+def _provider_stable(file, unit, func: ast.expr, b, a) -> bool:
     """The callable means the same thing on both sides.
 
     A bare-name provider defined in the unit, as a same-file fixture or as a
@@ -125,6 +125,7 @@ def _provider_stable(file, unit, func: ast.expr) -> bool:
         return False
     name = root.id
     for before_map, after_map in (
+        (b.reaching or {}, a.reaching or {}),
         (unit.before.bindings, unit.after.bindings),
         (file.fixture_defs_before, file.fixture_defs),
         (file.module_constants_before, file.module_constants),
@@ -152,7 +153,7 @@ def _matching_calls(file, unit, b, a):
     a_keywords = {keyword.arg: keyword.value for keyword in a_call.keywords}
     if set(b_keywords) != set(a_keywords):
         return None
-    if not _provider_stable(file, unit, b_call.func):
+    if not _provider_stable(file, unit, b_call.func, b, a):
         return None
     return b_call, a_call
 

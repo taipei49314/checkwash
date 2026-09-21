@@ -70,6 +70,15 @@ def test_reformatted_callable_retains_table_evidence():
     assert input_findings(source(), source("([0, 42], 42)", "(first)(xs)"))
 
 
+@pytest.mark.parametrize("prefix", ["", "    assert 1 == 1\n"])
+def test_same_unit_bindings_do_not_hide_a_changed_reaching_provider(prefix):
+    before = source(call="subject(xs)", binding=prefix + "    subject = first\n")
+    before += "    subject = last\n"
+    after = source("([0, 42], 42)", "subject(xs)",
+                   binding=prefix + "    subject = first\n    subject = last\n")
+    assert not input_findings(before, after)
+
+
 def test_changed_first_assertion_does_not_hide_an_unchanged_provider_later():
     before = source() + "    assert last(xs) == expected\n"
     after = source("([0, 42], 42)", "last(xs)") + "    assert last(xs) == expected\n"
