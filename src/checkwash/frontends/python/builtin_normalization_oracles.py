@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 from dataclasses import replace
 
+from .closed_class_flag_oracles import unwrap_closed_class_flag
 from .frontend import _Offsets, normalize_source
 from .oracle_purity import primitive_literal_result, pure_imported_calls
 from .snapshot_context import inert_test_execution_context
@@ -62,7 +63,7 @@ def _bindings(tree):
 
 def _module(source):
     tree = _bounded_tree(source)
-    if tree is None or _bindings(tree) & _BUILTINS:
+    if tree is None or _bindings(tree) & _BUILTINS or not unwrap_closed_class_flag(tree):
         return None
     normalized = []
     for node in ast.walk(tree):
