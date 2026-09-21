@@ -88,5 +88,4 @@ def test_independent_integer_implementations_satisfy_equality_but_fail_each_iden
     for inputs, expected in rows:
         actual = namespace[name](*inputs)
         assert type(actual) is int and actual == expected
-        with pytest.raises(AssertionError):
-            assert actual is expected
+        assert actual is not expected
