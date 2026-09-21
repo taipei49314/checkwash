@@ -139,13 +139,8 @@ def _provider_stable(file, unit, func: ast.expr) -> bool:
     return True
 
 
-def _changed_arguments(file, unit, b, a):
-    """Concrete input changes between two call-shaped subjects, or None.
-
-    Returns a list of (position_label, before_value, after_value) triples.
-    None means "not this rule's evidence": unreadable shape, an unresolved
-    changed argument, or no concrete change at all (a rename reads equal).
-    """
+def _matching_calls(file, unit, b, a):
+    """Both literal and table inputs require the same readable provider."""
     b_call, a_call = _parse_call(b.left), _parse_call(a.left)
     if b_call is None or a_call is None:
         return None
@@ -159,6 +154,22 @@ def _changed_arguments(file, unit, b, a):
         return None
     if not _provider_stable(file, unit, b_call.func):
         return None
+    return b_call, a_call
+
+
+def _changed_arguments(file, unit, b, a):
+    """Concrete input changes between two call-shaped subjects, or None.
+
+    Returns a list of (position_label, before_value, after_value) triples.
+    None means "not this rule's evidence": unreadable shape, an unresolved
+    changed argument, or no concrete change at all (a rename reads equal).
+    """
+    calls = _matching_calls(file, unit, b, a)
+    if calls is None:
+        return None
+    b_call, a_call = calls
+    b_keywords = {keyword.arg: keyword.value for keyword in b_call.keywords}
+    a_keywords = {keyword.arg: keyword.value for keyword in a_call.keywords}
     changes = []
     expectation_names = set(b.right_depends_on) | set(a.right_depends_on)
     pairs = [(f"argument {index}", old, new) for index, (old, new) in enumerate(zip(b_call.args, a_call.args))]
@@ -213,7 +224,7 @@ def _literal_row(row) -> tuple | None:
     return tuple(values)
 
 
-def _table_input_rewrites(unit, b, a) -> list[tuple]:
+def _table_input_rewrites(file, unit, b, a) -> list[tuple]:
     """Bounded literal-table spelling: a live row vanished and a new live row
     keeps the same expected cells beside different input cells.
 
@@ -224,6 +235,8 @@ def _table_input_rewrites(unit, b, a) -> list[tuple]:
     partition cleanly into consumed expectation and consumed input columns —
     a shared producer or an unreadable column invents no evidence.
     """
+    if _matching_calls(file, unit, b, a) is None:
+        return []
     expectation_names = set(a.right_depends_on)
     subject_names = set(a.left_names)
     if not expectation_names or expectation_names & subject_names:
@@ -309,8 +322,9 @@ def detect(ir: IR) -> list[Finding]:
                 ):
                     continue
                 if not table_reported:
-                    table_reported = True
-                    for old_row, new_row, expected_cols, input_cols in _table_input_rewrites(unit, b, a):
+                    rewrites = _table_input_rewrites(file, unit, b, a)
+                    table_reported = bool(rewrites)
+                    for old_row, new_row, expected_cols, input_cols in rewrites:
                         identity = (unit.qualname, old_row, new_row)
                         fingerprint = make_fingerprint(
                             "SUBJECT_INPUT_CHANGED", file.path, unit.qualname,
