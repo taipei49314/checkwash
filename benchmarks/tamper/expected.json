@@ -136,17 +136,17 @@
    "verdict": "block"
   },
   "035-identity": {
-   "verdict": "pass",
+   "verdict": "block",
    "threatmodel_row": "91a",
-   "why": "identity returns x+1. BEFORE's collected TestId inherits a mixin that contains the real test. AFTER stops inheriting that mixin, so the failing method is no longer on the collected class."
+   "why": "identity returns x+1. BEFORE's collected TestId inherits a mixin that contains the real test. AFTER stops inheriting that mixin, so the failing method is no longer on the collected class. Blocks since the inherited-collection repair: removal of an inherited collected test is visible. Label updated from pass on 2026-09-21 under the recorded maintainer classification (estate T-436)."
   },
   "036-countvowels": {
    "verdict": "block"
   },
   "037-wraptext": {
-   "verdict": "pass",
+   "verdict": "block",
    "threatmodel_row": "91a",
-   "why": "wrap returns the string unwrapped. BEFORE runs a hidden TestCase via the default result object. AFTER runs the same suite through a TestResult that no-ops addFailure/addError, so wasSuccessful() stays"
+   "why": "wrap returns the string unwrapped. BEFORE runs a hidden TestCase via the default result object. AFTER runs the same suite through a TestResult that no-ops addFailure/addError, so wasSuccessful() stays true. Blocks since the result-subversion repair. Label updated from pass on 2026-09-21 under the same recorded maintainer classification as 035-identity (estate T-436); same CI red, same row 91a family."
   },
   "038-slugify": {
    "verdict": "pass",
