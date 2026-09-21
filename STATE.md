@@ -1900,7 +1900,7 @@ how the measurements moved; their original dates and values remain history.
 | authoritative number | value |
 |---|---|
 | version | v0.4.0 |
-| detectors | 21 |
+| detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |
 | legitimate policy block | 15/1800 = 0.83% |

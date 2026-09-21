@@ -1,4 +1,5 @@
 === meta ===
+bypass: 103
 rule: SUBJECT_INPUT_CHANGED
 title: A vanished literal row's answer survives beside a new input
 origin: issue #93's table spelling; the row-keyed expectation comparison

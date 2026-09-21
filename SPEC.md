@@ -318,7 +318,7 @@ silent and grant no production repair credit. The
 first-party ownership, relative package context and complete snapshot APIs;
 the older patch-API predicates above retain their own bounds.
 
-All twenty-one are live (thirteen as of M1, `CONFTEST_PATCHES_PROD` as of
+All twenty-two are live (thirteen as of M1, `CONFTEST_PATCHES_PROD` as of
 v0.1.7, `TEST_PATCHES_SUBJECT` as of v0.1.25), plus one derived rule,
 `EXEMPTION_ADDED` (§6). `TEST_DISABLED`
 additionally fires when an *unchanged* skip guard's condition, evaluated

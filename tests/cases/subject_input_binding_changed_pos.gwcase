@@ -1,4 +1,5 @@
 === meta ===
+bypass: 103
 rule: SUBJECT_INPUT_CHANGED
 title: The assertion line is byte-identical; the input binding moved
 origin: the binding spelling of issue #93 — reaching reads what the

@@ -64,9 +64,12 @@ def test_adding_normalized_rows_beside_retained_exact_tests_is_not_replacement()
     assert not any(f.rule == 'EXPECTED_VALUE_CHANGED' for f in findings)
 
 
-def test_input_only_change_retains_the_existing_silent_contract():
+def test_input_only_change_is_owned_by_subject_input_changed():
+    # Issue #93 (D-060) ended the silent contract for input laundering: the
+    # oracle keeps its answer while the subject's input data moves.
     ir, findings, verdict = run(BEFORE, BEFORE.replace('indent("hi", 4)', 'indent("hi", 3)'), PRODUCTION)
-    assert not projected(ir) and not findings and verdict == 'pass'
+    assert not projected(ir) and verdict == 'block'
+    assert [f.rule for f in findings] == ['SUBJECT_INPUT_CHANGED']
 
 
 def test_additional_normalized_rows_follow_every_original_obligation():

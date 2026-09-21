@@ -1,4 +1,5 @@
 === meta ===
+bypass: 103
 rule: SUBJECT_INPUT_CHANGED
 title: Issue #93's plain shape — the input literal is pre-solved for the bug
 origin: corpus probe 2026-09-04, refactors/CASE_019_normalize; the buggy

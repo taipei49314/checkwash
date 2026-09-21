@@ -2229,3 +2229,39 @@ symmetric reading.
 THREATMODEL rows 60 and 90 record the spelling rounds; SPEC §4 trigger text
 names the same bounds. Each shape carries pos/neg `.gwcase` fixtures, and
 the corpus replay on the runner pool decides whether the bounds hold.
+
+## D-062 (2026-09-21): issue #130 consolidation round — Boolean identity/equality pairing, unreleased
+
+The consolidation projection (row 92) refused to pair `assert f(x) is True`
+with the same oracle restated as a literal table row's `== expected`, so an
+honest parametrize/fixture/loop consolidation read as `TEST_DISABLED`/high.
+The same spelling change in place is silent: the frozen lattice rates
+`is True` and `== True` identically (compare_eq, EXACT_VALUE). A projection
+stricter than the ordinary path punishes the carrier, not the act.
+
+`pair_boolean_comparisons` now pairs identity and equality spellings on the
+same Boolean constant in both directions, behind the existing closed
+Boolean-result proof; `_boolean` additionally admits the `startswith`/`isdigit`
+calls the closed-module grammar already allows, since those receivers are
+str-derived or raise. Bounds, each chosen for consistency with the ordinary
+path rather than convenience: None expectations are not paired (the ordinary
+path owns `is None` → `== None` as `EXPECTED_VALUE_CHANGED`), non-Boolean
+identity spellings are not paired (interning makes `is` on str/bytes an
+unreliable oracle to begin with), and a value flip inside a paired row stays
+`EXPECTED_VALUE_CHANGED`.
+
+Re-judge of the 90-case LLM honest-refactor folder (`checkwash-corpus`
+records/stress/llm-2026-09-03/false_positives) on this candidate: 77 pass.
+Of the 13 still blocking, 7 are adjudicated true blocks this row refuses to
+trade (dropped exact assertions 049/061, oracle loss 028, fixture-assertion
+removal 051, lattice weakening 055, derived oracles 077/084) and 6 sit on
+documented carrier boundaries (raise-style 034, nested closure parametrize
+044, cross-fixture derived arithmetic 064, recursive reimplementation 065,
+None-row consolidations 047/080). THREATMODEL row 92 records the round;
+`tests/test_identity_comparison_pairs.py` pins both directions.
+
+The same commit repairs CI drift left by the #93 landing: the
+input-only-change contract test now names `SUBJECT_INPUT_CHANGED` as owner,
+the three subject-input fixtures carry `bypass: 103`, and the documented
+detector/test counts, STATE table and `benchmarks/FAILURES.md` are
+regenerated to the registry.
