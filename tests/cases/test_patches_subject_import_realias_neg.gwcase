@@ -1,0 +1,49 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: an explicit alias of the same provider changes spelling, not what the assertions check
+origin: issue #88 family bound — `from app.billing import invoice_total as invoice_total` resolves to the identical target, so no rebind happened; the rename control for this family
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+from app.reference import reference_total
+
+ITEMS = [
+    {"name": "widget", "price": 20.0, "qty": 3},
+    {"name": "gadget", "price": 8.0, "qty": 5},
+]
+EXPECTED_TOTAL = 105.0
+
+
+def test_total_exact_value():
+    assert invoice_total(ITEMS) == EXPECTED_TOTAL
+
+
+def test_total_matches_reference():
+    assert invoice_total(ITEMS) == reference_total(ITEMS)
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total as invoice_total
+from app.reference import reference_total
+
+ITEMS = [
+    {"name": "widget", "price": 20.0, "qty": 3},
+    {"name": "gadget", "price": 8.0, "qty": 5},
+]
+EXPECTED_TOTAL = 105.0
+
+
+def test_total_exact_value():
+    assert invoice_total(ITEMS) == EXPECTED_TOTAL
+
+
+def test_total_matches_reference():
+    assert invoice_total(ITEMS) == reference_total(ITEMS)
+=== head: src/app/billing.py ===
+def invoice_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal, 2)  # BUG: tax not applied
+=== head: src/app/reference.py ===
+def reference_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal * (1 + tax_rate), 2)
+=== expect ===
+[]

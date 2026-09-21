@@ -364,6 +364,34 @@ def _imports(source):
             if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
 
 
+def _import_rebind(before, after):
+    """A local import name pointing at a different dotted target after.
+
+    Scheduling filter only — the import spelling of a stand-in swap (#88b)
+    changes nothing the call/assignment filters see. Scope, alias and
+    ownership precision belong to the trace; this keeps the diff a candidate.
+    """
+    def bindings(source):
+        tree = _syntax(source)
+        if tree is None:
+            return None
+        out = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for item in node.names:
+                    out[item.asname or item.name.split(".")[0]] = item.name if item.asname else item.name.split(".")[0]
+            elif isinstance(node, ast.ImportFrom) and not node.level and node.module:
+                for item in node.names:
+                    if item.name != "*":
+                        out[item.asname or item.name] = f"{node.module}.{item.name}"
+        return out
+
+    old, new = bindings(before), bindings(after)
+    if not old or not new:
+        return False
+    return any(name in new and new[name] != target for name, target in old.items())
+
+
 class _Trace:
     def __init__(self, modules, context, side, deny, budget=None, search=None):
         self.modules = modules
@@ -582,6 +610,20 @@ class _Trace:
         if not self.failed_assertion:
             self.observed.update(e for e in value.effects if self.owned(e.target))
 
+    def _rebound(self, node, module, qualname, local, target, value):
+        """An import rebinding a captured name to a different live repository
+        provider is the import spelling of a stand-in (#88b). The old provider
+        must still exist: following a deleted module's rename is honest."""
+        old = module.baseline_imports.get((qualname, local))
+        if not old or old == target or old.startswith("@"):
+            return value
+        if not (self.owned(old) and self.owned(target)):
+            return value
+        effect = self.install(old, "binding", _Value(target), node, node, module)
+        if effect is None:
+            return value
+        return replace(value, effects=value.effects | {effect})
+
     def install(self, target, kind, value, replacement, node, module):
         test_binding = None
         if target.startswith("@test_module.") and self.test_module is not None:
@@ -641,7 +683,9 @@ class _Trace:
                 for alias in node.names:
                     local = alias.asname or alias.name.split(".")[0]
                     target = alias.name if alias.asname else alias.name.split(".")[0]
-                    env[local] = _Value(target, self.effect(alias.name, "module"))
+                    value = _Value(target, self.effect(alias.name, "module"))
+                    value = self._rebound(node, module, qualname, local, target, value)
+                    env[local] = value
                     module.baseline_imports.setdefault((qualname, local), target)
             elif isinstance(node, ast.ImportFrom):
                 imported = _import_module(node, module.package)
@@ -651,7 +695,9 @@ class _Trace:
                             continue
                         target = f"{imported}.{alias.name}"
                         local = alias.asname or alias.name
-                        env[local] = _Value(target, self.effect(imported, "module") | self.effect(target))
+                        value = _Value(target, self.effect(imported, "module") | self.effect(target))
+                        value = self._rebound(node, module, qualname, local, target, value)
+                        env[local] = value
                         module.baseline_imports.setdefault((qualname, local), target)
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{qualname}.{node.name}" if qualname else node.name
@@ -955,7 +1001,11 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         if candidate_bytes > _MAX_CONTEXT_BYTES:
             raise EngineError("stand-in changed context exceeds the source byte limit")
         imported = _imports(sides[0])
-        if any(_candidate(source, imported) for source in sides) and (
+        rebound = (
+            role == "test" and sides[0] is not None and sides[1] is not None
+            and _import_rebind(sides[0], sides[1])
+        )
+        if (rebound or any(_candidate(source, imported) for source in sides)) and (
             role == "test" or _new_assignment_candidate(sides, deny)
         ):
             candidates.add(path)

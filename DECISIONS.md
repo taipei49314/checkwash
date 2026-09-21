@@ -2190,3 +2190,42 @@ evidence like every oracle rule, and the corpus replay on the runner pool
 decides whether the bound holds; if it adds more than a handful of blocks on
 honest history, the visible-but-non-blocking demotion path of D-048 is the
 pre-registered answer, not a widening of the predicate.
+
+## D-061 (2026-09-21): issues #85 and #88's import sibling — spelling rounds on rows 60 and 90, unreleased
+
+Two of the seventeen scoped issues were not new families but new spellings of
+acts rows 60 and 90 were already Closed against, filed from smallestlie wave
+M6 attack catalogs. Both are repaired in the T-436 candidate, and both
+repairs are bounds on an existing contract rather than a new one.
+
+Issue #85 (CW-M6-FABLE-04) spelled the row-60 stand-in with the builtin:
+`setattr(request.module, "invoice_total", reference_total)` behind a
+`if original is not None:` guard. The execution-proof installation trace
+only enters statically selected branches, so the guard hid the install; the
+unconditional spelling was already caught as a side effect of the #91
+repairs. The conftest presence scan — which reports patch API calls in
+unknown branches by design — now recognizes the unshadowed builtin
+`setattr`, the attribute store `request.module.x = v`, the dictionary store
+`vars(request.module)["x"] = v`, and `monkeypatch.setitem(vars(...))`, all
+bounded to `request.module`. The boundary is capture timing: writing the
+test module's own namespace rewrites what a live assertion reads at call
+time, while writing a first-party module object cannot rewrite a from-import
+the consumer already captured — that act stays with the trace's execution
+proof, pinned by `test_attribute_fixture_does_not_rewrite_a_captured_from_import`.
+A `getattr`-captured save/restore pair reports one finding, not two, and a
+module- or function-local rebinding of `setattr`/`vars`/`getattr` turns the
+native reading off. Mutating an object the test owns remains configuration.
+
+The #88 sibling (CW-M6-FABLE-05) spelled the row-90 stand-in as an import:
+`from app.reference import reference_total as invoice_total`, leaving every
+assertion byte-identical. The trace now treats an import that rebinds a
+captured name to a different provider as an installation at import time,
+with two ownership bounds: both endpoints must be repository-owned, and the
+old provider must still exist after the diff — following a deleted module's
+rename is what honest production moves look like, and a same-provider
+re-alias is the family's rename control. `import X as Y` swaps get the
+symmetric reading.
+
+THREATMODEL rows 60 and 90 record the spelling rounds; SPEC §4 trigger text
+names the same bounds. Each shape carries pos/neg `.gwcase` fixtures, and
+the corpus replay on the runner pool decides whether the bounds hold.
