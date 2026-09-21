@@ -12,9 +12,11 @@ v0.3.4 (`23fce200561ae4a95e46539ed9e668088591d1c1`).
 
 [The candidate record](docs/releases/v0.4.0-public-launch.md) tracks completed
 repairs, evidence qualification and the remaining release conditions. Issue
-#93's input-change contract and the newly detected inherited-test tamper
-record require explicit classification. Earlier measurements below retain
-their original populations, versions and dates.
+#93's input-change contract and the inherited-test tamper classification
+were adopted by the maintainer on 2026-09-21. The local executor resumed
+publication, repaired the Boolean identity-loss and changed-callee table
+regressions, and requires final-source qualification before publication.
+Earlier measurements below retain their original populations, versions and dates.
 
 ## 2026-09-12: v0.3.4 bounded family release
 

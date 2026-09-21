@@ -76,5 +76,8 @@ The three fixtures listed at the top now expect the new finding instead of
 rename-preserving-value, computed-input, shared-producer, reorder and
 repair-evidence controls ship as `tests/cases/subject_input_*` fixtures, and
 THREATMODEL row 103 records the family with its residuals. The precision
-cost on the full historical sweep is measured on the runner pool before any
-release, exactly as this review required.
+cost is measured by the full historical sweep before release, using the
+local release-validation exception explicitly recorded in estate T-436.
+The final table path shares the plain-call and stable-provider checks with
+the direct argument path; changing the callable cannot manufacture a
+same-subject input finding.
