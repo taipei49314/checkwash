@@ -1,12 +1,4 @@
-"""Boolean Is-to-Eq pairs under consolidation only after return-type authority.
-
-Issue #130: the in-place spelling change `x is True` -> `x == True` is silent
-(compare_eq/EXACT_VALUE on both sides), so the consolidation projection must
-not strand the units either — but only while the closed Boolean-result proof
-holds. None expectations are excluded: the ordinary path reports
-`is None` -> `== None` as EXPECTED_VALUE_CHANGED, and the projection stays
-consistent with it.
-"""
+"""Boolean Eq-to-Is strengthening retains return-type and carrier bounds."""
 import pytest
 
 from test_issue_expectation_families import run
@@ -14,15 +6,15 @@ from test_issue_expectation_families import run
 PROD = 'def success(code):\n    return code in (200, 201, 204)\n'
 BEFORE = '''from app.prod import success
 def test_ok():
-    assert success(200) is True
+    assert success(200) == True
 def test_not_ok():
-    assert success(201) is False
+    assert success(201) == False
 '''
 AFTER = '''import pytest
 from app.prod import success
 @pytest.mark.parametrize('code, expected', [(200, True), (201, False)])
 def test_success(code, expected):
-    assert success(code) == expected
+    assert success(code) is expected
 '''
 
 
@@ -46,12 +38,19 @@ def test_exact_boolean_result_keeps_answer_changes_visible(changed):
     'def success(code):\n    return code > 0 and code < 300\n',
     'def success(code):\n    return not code\n',
     'def success(code):\n    return True if code else False\n',
-    'def success(code):\n    return code.startswith("2")\n',
 ])
 def test_complete_boolean_return_grammar_pairs(production):
     ir, _, verdict = run(BEFORE, AFTER, production)
     assert projected(ir)
     assert verdict == 'pass'
+
+
+@pytest.mark.parametrize('method', ['startswith("2")', 'isdigit()'])
+def test_builtin_string_boolean_results_keep_strengthening_support(method):
+    before = BEFORE.replace('success(200)', 'success("200")').replace('success(201)', 'success("x")')
+    after = AFTER.replace('(200, True)', '("200", True)').replace('(201, False)', '("x", False)')
+    ir, findings, verdict = run(before, after, f'def success(code):\n    return code.{method}\n')
+    assert projected(ir) and verdict == 'pass' and not findings
 
 
 @pytest.mark.parametrize('production', [
@@ -73,7 +72,7 @@ def test_unproved_results_do_not_pair(production):
     AFTER.replace('(201, False)', '(202, False)'),
     AFTER.replace('[(200, True), (201, False)]', '[(201, False), (200, True)]'),
     AFTER.replace('[(200, True), (201, False)]', '[(200, True)]'),
-    AFTER.replace(' == expected', ' != expected'),
+    AFTER.replace(' is expected', ' is not expected'),
     AFTER.replace('success(code)', 'other(code)'),
     AFTER.replace("[(200, True), (201, False)]", "[pytest.param(200, True, marks=pytest.mark.skip), (201, False)]"),
 ])
@@ -82,11 +81,11 @@ def test_input_operator_count_and_collection_boundaries_remain(after):
 
 
 def test_none_expectations_keep_their_ordinary_owner():
-    before = BEFORE.replace(' is True', ' is None').replace(' is False', ' is None')
+    before = BEFORE.replace(' == True', ' == None').replace(' == False', ' == None')
     after = AFTER.replace('True)', 'None)').replace('False)', 'None)')
     assert not projected(run(before, after, PROD)[0])
 
 
 def test_duplicate_original_oracle_cannot_disappear():
-    before = BEFORE.replace('def test_not_ok():', 'def test_duplicate():\n    assert success(200) is True\ndef test_not_ok():')
+    before = BEFORE.replace('def test_not_ok():', 'def test_duplicate():\n    assert success(200) == True\ndef test_not_ok():')
     assert not projected(run(before, AFTER, PROD)[0])
