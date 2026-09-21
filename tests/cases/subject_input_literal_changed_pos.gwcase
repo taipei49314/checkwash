@@ -1,0 +1,20 @@
+=== meta ===
+rule: SUBJECT_INPUT_CHANGED
+title: Issue #93's plain shape — the input literal is pre-solved for the bug
+origin: corpus probe 2026-09-04, refactors/CASE_019_normalize; the buggy
+origin2: production skips lowercasing, so the test is fed pre-lowercased
+origin3: data and the oracle text never moves
+=== before: tests/test_norm.py ===
+from app import normalize
+
+
+def test_collapse_and_lower():
+    assert normalize("  Hello   World  ") == "hello world"
+=== after: tests/test_norm.py ===
+from app import normalize
+
+
+def test_collapse_and_lower():
+    assert normalize("  hello   world  ") == "hello world"
+=== expect ===
+[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,19 @@
+=== meta ===
+rule: SUBJECT_INPUT_CHANGED
+title: A computed argument proves nothing either way
+origin: the bounded predicate invents no literal evidence — 2 + 3 to
+origin2: 2 * 3 is unreadable, so the rule stays silent
+=== before: tests/test_calc.py ===
+from calc import total
+
+
+def test_total():
+    assert total(2 + 3) == 6
+=== after: tests/test_calc.py ===
+from calc import total
+
+
+def test_total():
+    assert total(2 * 3) == 6
+=== expect ===
+[]

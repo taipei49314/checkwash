@@ -1,0 +1,25 @@
+=== meta ===
+rule: SUBJECT_INPUT_CHANGED
+title: A constant the expectation also reads explains itself
+origin: T1.10's shared-producer principle on the input side — changing
+origin2: FACTOR moves both sides of the comparison at once
+=== before: tests/test_scale.py ===
+from scaling import scale
+
+FACTOR = 3
+
+
+def test_scale_applies_factor():
+    items = [10.0, 20.0]
+    assert scale(items, FACTOR) == [FACTOR * 10.0, FACTOR * 20.0]
+=== after: tests/test_scale.py ===
+from scaling import scale
+
+FACTOR = 4
+
+
+def test_scale_applies_factor():
+    items = [10.0, 20.0]
+    assert scale(items, FACTOR) == [FACTOR * 10.0, FACTOR * 20.0]
+=== expect ===
+[]

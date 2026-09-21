@@ -2,6 +2,11 @@
 rule: SUBJECT_NORMALIZED
 title: A different argument is a different test, not a laundered one
 origin: FP guard — argument containment must contain, not merely differ
+note: reclassified 2026-09-21 (issue #93 contract decision, estate T-436,
+note2: DECISIONS D-060): s and t resolve to different concrete literals
+note3: on both sides, so the swap is input laundering, not an unreadable
+note4: replacement — SUBJECT_INPUT_CHANGED fires. SUBJECT_NORMALIZED
+note5: correctly stays silent: nothing wraps the old subject.
 === before: tests/test_encode.py ===
 from app import encode_path
 
@@ -19,4 +24,4 @@ def test_non_ascii():
     t = "na\u00efve"
     assert encode_path(t) == "caf%C3%A9"
 === expect ===
-[]
+[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

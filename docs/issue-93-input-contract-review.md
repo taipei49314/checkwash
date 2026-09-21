@@ -57,3 +57,24 @@ an unrelated expectation rule.
 
 No frozen file, gate, fixture expectation or severity policy was changed for
 this review. This document does not claim that #93 is resolved.
+
+## Outcome (2026-09-21): adopted, implemented in the T-436 candidate
+
+The maintainer adopted the bounded `SUBJECT_INPUT_CHANGED` policy described
+above and authorized revising the three frozen expectations in the same
+decision (DECISIONS D-060, estate T-436). The implementation matches the
+four clauses: same unit and structurally same stable callable, unchanged
+oracle, changed arguments resolved to concrete literals on both sides
+(reaching first, then unit bindings, then module constants), and the
+ordinary repair-evidence severity path. The literal parameter-table spelling
+pairs a vanished row with an arriving one that keeps its answer, refusing
+the pairing when the input survives with a changed answer so the row-keyed
+expectation rule keeps its #135 event.
+
+The three fixtures listed at the top now expect the new finding instead of
+`[]`; each still proves its own rule stays silent on the shape. The
+rename-preserving-value, computed-input, shared-producer, reorder and
+repair-evidence controls ship as `tests/cases/subject_input_*` fixtures, and
+THREATMODEL row 103 records the family with its residuals. The precision
+cost on the full historical sweep is measured on the runner pool before any
+release, exactly as this review required.

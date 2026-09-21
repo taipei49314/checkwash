@@ -2151,3 +2151,42 @@ The detailed candidate boundaries are in
 decisions and measurements remain historical evidence. This entry claims
 neither a new measured catch rate nor a release; the review PR records actual
 validation outcomes and any remaining failures.
+
+## D-060 (2026-09-21): issue #93 contract — input laundering is an oracle event, unreleased
+
+The owner was asked to resolve the observed issue set, and issue #93 needed a
+contract decision before any code: three frozen fixtures pinned "an edited
+input is an honest change that must stay silent" (`[]` expectations), and the
+issue's live evidence showed the same shape used to stop exercising a frozen
+bug. Presented with the review doc's options, the maintainer adopted the
+bounded `SUBJECT_INPUT_CHANGED` predicate and the reclassification of all
+three frozen expectations in the same decision (estate T-436).
+
+The predicate is deliberately narrower than the issue's request. It fires
+only when the assertion's oracle is untouched (form, strength, polarity,
+tolerance and the expected side all unchanged), the subject is a plain call
+with the structurally same callee and a provider defined identically on both
+sides, and every changed argument resolves to a concrete literal on both
+sides — directly, or through the straight-line local binding / module
+constant the assertion reads (`reaching` first). A literal `parametrize`
+spelling pairs a vanished live row with an arriving one that keeps the
+consumed answer beside different input cells, and only when the vanished
+input does not survive with a different answer, which remains
+EXPECTATION_DEFINITION_CHANGED's row-keyed event. What stays silent is the
+point of the bound: a rename resolving to the same value (#87's control), a
+computed argument, a changed callable or provider, a new test, a shared
+producer the expectation also reads (T1.10's principle carried to the input
+side — changing it moves both sides of the comparison, so it explains
+itself), a row reorder and a pure row addition.
+
+The three reclassified fixtures keep their original job: each still proves
+its own rule (EXPECTATION_DEFINITION_CHANGED twice, SUBJECT_NORMALIZED once)
+does *not* fire on the shape, while the expectation list now names
+SUBJECT_INPUT_CHANGED. THREATMODEL row 103 records the family and its
+residuals; row 102a's "unresolved by design" clause is updated to match.
+
+No sweep cost is claimed in this entry. The rule escalates through repair
+evidence like every oracle rule, and the corpus replay on the runner pool
+decides whether the bound holds; if it adds more than a handful of blocks on
+honest history, the visible-but-non-blocking demotion path of D-048 is the
+pre-registered answer, not a widening of the predicate.
