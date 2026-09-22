@@ -3,7 +3,7 @@
 The issue templates already exist:
 
 - `.github/ISSUE_TEMPLATE/send-us-a-cheat.md` — a tampering diff
-  greenwash let through
+  checkwash let through
 - `.github/ISSUE_TEMPLATE/false-block.md` — an honest commit it
   blocked
 
@@ -15,12 +15,12 @@ letterbox. Roadmap T3.4.
 Once a quarter, the maintainer (or whoever is on triage) opens:
 
 ```bash
-gh issue list --repo taipei49314/greenwash --label cheat-of-the-week,false-positive --state all --limit 50
+gh issue list --repo taipei49314/checkwash --label cheat-of-the-week,false-positive --state all --limit 50
 ```
 
 For each new report since the last review:
 
-1. Reproduce with `greenwash check --format json` on the before/after.
+1. Reproduce with `checkwash check --format json` on the before/after.
 2. If it is a real miss or a real false block: add a `.gwcase` fixture,
    credit the reporter in the fixture header, and — if it is a new
    shape — a THREATMODEL row (maintainer-only).
