@@ -1,6 +1,28 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-21 (v0.4.0 candidate preparation under estate T-436; not yet published)
+Updated: 2026-09-22 (v0.4.0 published under estate T-436; the one-time grant is consumed and refrozen)
+
+## 2026-09-22: v0.4.0 published (estate T-436 consumed)
+
+PR #160 merged as `6dd3158653c3569279fb2c56cef6af30a959d844`, tagged `v0.4.0`
+through the recorded ruleset sequence, and published as the
+[GitHub Release](https://github.com/taipei49314/checkwash/releases/tag/v0.4.0)
+with wheel, sdist and pyz; PyPI published through trusted publishing
+(release workflow run 35729201886, both jobs green; GitHub/PyPI wheel and
+sdist SHA256 hashes verified equal). Public CI on the tag
+([run 35727569979](https://github.com/taipei49314/checkwash/actions/runs/35727569979))
+is green: nine OS/Python legs at 7,045 passed / 0 failed, plus dogfood,
+byte-compare and install-from-tag. Final-source receipts recorded in the
+release notes: local full suite (6,978 passed plus the by-design tag gate
+before the tag existed), the 178-case replay (77/88 escapes blocked; the 90
+formerly-blocked false positives split exactly 75 preserving passes / 15
+real losses), the 381-case replay (215/300 escapes blocked; 74 preserving
+passes / 7 real approximate-comparison losses), and the fresh 1,800-commit
+sweep (48 blocks, 0 engine errors; tracked sweep records remain the
+v0.3.0-engine receipts). The legacy v0.3.3 quality byte comparison stays red
+as the disclosed cross-version mismatch; no waiver was activated. The T-436
+grant is consumed: no further bump, tag or release without a new human
+instruction.
 
 ## 2026-09-21: v0.4.0 issue-resolution candidate
 

@@ -65,12 +65,13 @@ both commands are recorded in the slot's ledger row. The ruleset cannot tell an
 agent holding the owner's token from the owner, so it does not stop a
 deliberate actor; it turns tagging from a one-liner into a visible three-step.
 
-T-436 records the current human-authorized v0.4.0 issue-resolution release.
-Its scoped preparation contract records the existing authorization; it does
-not waive protected classification decisions, full tests, exact tag/source
-identity or package qualification. The [candidate record](releases/v0.4.0-public-launch.md)
-lists unresolved conditions. Consume the one-time grant only after publication
-and identity checks complete; it grants no subsequent release.
+T-436 recorded the human-authorized v0.4.0 issue-resolution release and is
+**consumed**: published 2026-09-22 from `6dd3158653c3569279fb2c56cef6af30a959d844`
+with publication and identity checks complete
+([release](https://github.com/taipei49314/checkwash/releases/tag/v0.4.0),
+[candidate record](releases/v0.4.0-public-launch.md)). It granted no
+subsequent release; any further bump, tag or release needs a new explicit
+human instruction.
 
 What the slot changes in the README, and what already guards it:
 
