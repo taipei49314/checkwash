@@ -1,10 +1,10 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.3.4 is alpha** (bounded detector-family repairs). Its versioned interfaces and
+checkwash **v0.4.0 is alpha** (the issue-resolution release). Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
-[public-launch brief](releases/v0.3.4-public-launch.md) records this release's
+[public-launch brief](releases/v0.4.0-public-launch.md) records this release's
 evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
@@ -151,7 +151,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.3.4 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.4.0 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
@@ -194,10 +194,10 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.3.4 documentation pins the Action to v0.3.3 under the one-release
-trust-lag policy. That Action includes the earlier shared immutable-fixture
-precision fix, but not the new family repairs or quality preview. See the
-[v0.3.4 upgrade notes](releases/v0.3.4-public-launch.md#upgrade-boundaries).
+The v0.4.0 documentation pins the Action to v0.3.4 under the one-release
+trust-lag policy. That Action includes the prior family repairs and the
+quality preview, but not the v0.4.0 detector and precision changes. See the
+[v0.4.0 release guide](releases/v0.4.0-public-launch.md).
 Treat each installed surface as its own versioned dependency; see the
 [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 
