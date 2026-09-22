@@ -229,7 +229,7 @@ Closed row has nothing behind it. Open rows are listed as Open.
 It is, and the informed arm proves it read it. A private list would just be
 a list the author knows; a public one is a list that gets shorter.
 
-**14. "Seventeen tags in seven days. That reads like churn."**
+**14. "Nineteen tags in seven days. That reads like churn."**
 It was: v0.1.48 through v0.3.2 between 2026-09-01 and 2026-09-07, the last
 two documentation releases cut the same day so PyPI reads what the repo
 says. The release cadence is frozen after them; each release has a dated
