@@ -10,12 +10,10 @@ import urllib.request
 
 
 def _line(finding: dict) -> int:
-    after = finding.get("after") or {}
-    before = finding.get("before") or {}
-    span = after.get("span") or before.get("span")
-    if isinstance(span, list) and span:
-        # Character offset is not a line. GitHub requires a line >= 1.
-        return 1
+    # The findings payload carries character-offset spans, not line numbers,
+    # so there is no line to read here. GitHub requires a line >= 1; pinning
+    # to 1 puts the comment at the top of the file, with the path and the
+    # evidence text carrying the location.
     return 1
 
 
