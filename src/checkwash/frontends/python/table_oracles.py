@@ -10,7 +10,9 @@ auxiliary checks must match. No repository expression is executed.
 The TestCase extension models sorted test methods and repeats straight-line
 setUp assertions for each method. It requires exactly the original oracle
 identities and multiplicities, plus closed pure imported source on both
-sides. That establishes the same suite pass/fail conditions when expected
+sides. Default subTest-only after-suites may add rows while retaining every
+original identity and count, since a failed row does not stop later checks.
+The general exact-multiplicity proof establishes the same pass/fail conditions when expected
 values are preserved, not the original call order or execution of assertions
 after a failure. Expected values remain on both sides for the ordinary
 detectors to compare; changed values do not acquire equivalence credit.
@@ -25,18 +27,50 @@ threshold, assertion strength, detector severity, or exemption policy.
 from __future__ import annotations
 
 import ast
+from checkwash.frontends.python.boolean_comparison_pairs import pair_boolean_comparisons, primitive_boolean_result
 import copy
 import hashlib
+import math
 from collections import Counter
 from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from checkwash.frontends.python.frontend import ParsedFile, _Offsets, normalize_source, parse_python
+from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.oracle_blocks import IMPLICIT_ENTRY_NAMES, expand_string_blocks, string_block
-from checkwash.frontends.python.oracle_purity import pure_imported_calls
+from checkwash.frontends.python.oracle_purity import primitive_literal_result, pure_imported_calls, shared_literal_collection_inputs
+from checkwash.frontends.python.primitive_strings import primitive_string_result
+from checkwash.frontends.python.derived_literals import derived_shape, fold_derived, primitive_derived_result
+from checkwash.frontends.python.indexed_fixture_tables import expand_indexed_fixture_tables
 from checkwash.frontends.python.oracle_unittest import expand_unittest_classes
 from checkwash.frontends.python.oracle_wrappers import expand_operator_asserts, expand_wrappers, trusted_wrapper_import
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
+from checkwash.frontends.python.literal_expected_bindings import expand_literal_expected_bindings
+from checkwash.frontends.python.literal_subject_bindings import expand_literal_subject_bindings
+from checkwash.frontends.python.captured_assert_helpers import expand_captured_assert_helpers
+from checkwash.frontends.python.regrouped_captures import capture_obligations, regroup_complete_captures
+from checkwash.frontends.python.inert_signatures import strip_none_test_returns
+from checkwash.frontends.python.table_factories import expand_literal_table_factories
+from checkwash.frontends.python.inert_helpers import prune_inert_helpers
+from checkwash.frontends.python.literal_fixtures import expand_literal_fixtures
+from checkwash.frontends.python.parametrized_membership_oracles import expand_parametrized_membership
+from checkwash.frontends.python.parameter_helper_answers import expand_parameter_helper_answers
+from checkwash.frontends.python.failing_exception_wrappers import expand_failing_exception_wrappers
+from checkwash.frontends.python.fixture_conditional_answers import expand_fixture_conditional_answers
+from checkwash.frontends.python.hex_tuple_answers import expand_hex_tuple_answers
+from checkwash.frontends.python.literal_iteration_oracles import expand_literal_iteration_oracles
+from checkwash.frontends.python.fixture_row_helpers import expand_fixture_row_helpers
+from checkwash.frontends.python.raises_oracles import extract_raises_oracles, retain_raises_units
+from checkwash.frontends.python.tuple_oracles import expand_tuple_oracles, primitive_tuple_result
+from checkwash.frontends.python.local_auxiliary_oracles import (extract_local_auxiliary_oracles,
+                                                              retain_local_auxiliary_units)
+from checkwash.frontends.python.helper_predicates import expand_predicate_helpers
+from checkwash.frontends.python.prefix_predicates import expand_prefix_predicates
+from checkwash.frontends.python.callable_fixture_rows import consumer_rows, fixture_prefix_rows
+from checkwash.frontends.python.normalized_result_tables import project_normalized_result_table
+from checkwash.frontends.python.unique_predicates import (complete_unique_helper, expand_unique_predicates,
+                                                       _unique_literal, input_unique_count, unshadowed_unique_builtins)
 from checkwash.ir.astutil import dotted_name, stable_dump
 
 MAX_SOURCE_BYTES = 65_536
@@ -65,6 +99,38 @@ def _literal(node):
         return all(key is not None and _literal(key) and _literal(value)
                    for key, value in zip(node.keys, node.values))
     return False
+
+
+def _approx_expected(node):
+    """A standard approx object over finite numeric literals, never inputs."""
+    if (not isinstance(node, ast.Call) or dotted_name(node.func) != "pytest.approx"
+            or len(node.args) != 1 or not _literal(node.args[0])):
+        return False
+
+    def numeric(value):
+        if type(value) in (int, float):
+            return type(value) is int or math.isfinite(value)
+        if isinstance(value, (list, tuple)):
+            return bool(value) and all(type(item) in (int, float) and numeric(item) for item in value)
+        return False
+
+    try:
+        if not numeric(ast.literal_eval(node.args[0])):
+            return False
+        keys = set()
+        for keyword in node.keywords:
+            if keyword.arg in keys or keyword.arg not in {"rel", "abs", "nan_ok"} or not _literal(keyword.value):
+                return False
+            keys.add(keyword.arg)
+            value = ast.literal_eval(keyword.value)
+            if keyword.arg == "nan_ok":
+                if type(value) is not bool:
+                    return False
+            elif type(value) not in (int, float) or not numeric(value) or value < 0:
+                return False
+    except (ValueError, TypeError, OverflowError, RecursionError, MemoryError):
+        return False
+    return True
 
 
 def _docstring(node):
@@ -127,7 +193,7 @@ def _rows(table, names, *, unpack=True):
     result = []
     for row in table.elts:
         values = row.elts if unpack and isinstance(row, (ast.List, ast.Tuple)) else [row]
-        if len(values) != len(names) or not all(_literal(value) for value in values):
+        if len(values) != len(names) or not all(_literal(value) or _approx_expected(value) for value in values):
             return None
         result.append(dict(zip(names, values)))
     return result
@@ -142,7 +208,7 @@ class _Substitute(ast.NodeTransformer):
 
 
 def _concrete(node, bindings, imports):
-    if not isinstance(node, ast.Assert) or node.msg is not None:
+    if not isinstance(node, ast.Assert):
         return None
     # A literal one-argument predicate adds no closure or dynamic dispatch.
     # Substitute its sole input once, before substituting helper bindings;
@@ -162,14 +228,38 @@ def _concrete(node, bindings, imports):
         # not equivalent to constructing two independent literal objects.
         # Decline every repeated row binding rather than guess mutability.
         uses = Counter(n.id for n in ast.walk(original) if isinstance(n, ast.Name) and n.id in bindings)
-        if any(count > 1 for count in uses.values()):
-            return None
+    else:
+        uses = {}
     concrete = _Substitute(bindings).visit(copy.deepcopy(node))
     compare = concrete.test
     if not isinstance(compare, ast.Compare) or len(compare.ops) != 1:
         return None
     actual, expected = compare.left, compare.comparators[0]
-    if not isinstance(compare.ops[0], (ast.Eq, ast.Is)) or not _literal(expected):
+    if _literal(actual) and isinstance(expected, ast.Call):
+        # Reorientation is a value proof only for primitive results. A custom
+        # equality implementation can dispatch differently by operand order;
+        # the existing primitive-result/import closure check below owns that
+        # obligation on both snapshots before projection is credited.
+        actual, expected = expected, actual
+        compare.left, compare.comparators[0] = actual, expected
+        concrete._requires_primitive_string = True
+    derived = fold_derived(expected)
+    if derived is not None:
+        expected, authority = derived
+        compare.comparators[0] = expected
+        concrete._requires_derived_authority = authority
+    if any(count > 1 for count in uses.values()):
+        actual_uses = Counter(n.id for n in ast.walk(original.left) if isinstance(n, ast.Name))
+        if not (derived is not None and all(count <= 1 or (
+                isinstance(bindings[name], (ast.Constant, ast.UnaryOp)) and _literal(bindings[name])
+                and actual_uses[name] <= 1) for name, count in uses.items())):
+            return None
+    approximate = _approx_expected(expected)
+    if getattr(concrete, '_requires_unique_expected', False) and not _unique_literal(expected):
+        return None
+    if getattr(concrete, '_requires_input_unique_count', False) and not input_unique_count(actual, expected):
+        return None
+    if not isinstance(compare.ops[0], (ast.Eq, ast.Is)) or not (_literal(expected) or approximate):
         return None
     if isinstance(compare.ops[0], ast.Is) and not (
         isinstance(expected, ast.Constant) and expected.value in (None, True, False)
@@ -181,8 +271,40 @@ def _concrete(node, bindings, imports):
     name = dotted_name(actual.func)
     if (not name or name.split(".")[0] not in imports or name.split(".")[0] == "pytest"
             or not all(_literal(arg) for arg in actual.args)
+            or len({keyword.arg for keyword in actual.keywords}) != len(actual.keywords)
             or not all(keyword.arg is not None and _literal(keyword.value) for keyword in actual.keywords)):
         return None
+    if approximate:
+        concrete._requires_approx_authority = True
+    if concrete.msg is not None:
+        concrete._requires_primitive_string = True
+        message = concrete.msg
+        if isinstance(message, ast.Constant) and type(message.value) is str:
+            pass
+        elif (isinstance(message, ast.BinOp) and isinstance(message.op, ast.Add)
+              and isinstance(message.left, ast.Constant) and type(message.left.value) is str
+              and isinstance(message.right, ast.Call) and isinstance(message.right.func, ast.Name)
+              and message.right.func.id == 'repr' and len(message.right.args) == 1 and not message.right.keywords
+              and _literal(message.right.args[0])
+              and not any(isinstance(item, ast.Call) for item in ast.walk(message.right.args[0]))):
+            # Only builtin representation of literal data is inert. Verify
+            # repr's whole-module binding authority after collecting names;
+            # the existing diagnostic proof closes all production imports.
+            concrete._requires_repr_authority = True
+        elif isinstance(message, ast.JoinedStr):
+            for part in message.values:
+                if isinstance(part, ast.Constant) and type(part.value) is str:
+                    continue
+                if not isinstance(part, ast.FormattedValue) or part.format_spec is not None or part.conversion not in (-1, 97, 114, 115):
+                    return None
+                if _literal(part.value):
+                    continue
+                if stable_dump(part.value) != stable_dump(actual):
+                    return None
+                concrete._requires_primitive_string = True
+        else:
+            return None
+        concrete.msg = None
     return concrete
 
 
@@ -204,10 +326,19 @@ def _fixture(node):
             or dotted_name(node.body[0].value) != "request.param"):
         return None
     decorator = node.decorator_list[0]
-    if (not isinstance(decorator, ast.Call) or dotted_name(decorator.func) != "pytest.fixture"
-            or decorator.args or len(decorator.keywords) != 1 or decorator.keywords[0].arg != "params"):
+    if (not isinstance(decorator, ast.Call) or dotted_name(decorator.func) != "pytest.fixture" or decorator.args):
         return None
-    return decorator.keywords[0].value
+    keywords = {keyword.arg: keyword.value for keyword in decorator.keywords}
+    if len(keywords) != len(decorator.keywords) or set(keywords) not in ({'params'}, {'params', 'ids'}):
+        return None
+    if 'ids' in keywords:
+        values, ids = keywords['params'], keywords['ids']
+        if (not isinstance(values, (ast.List, ast.Tuple)) or not isinstance(ids, (ast.List, ast.Tuple))
+                or len(ids.elts) != len(values.elts)
+                or not all(isinstance(item, ast.Constant) and type(item.value) is str for item in ids.elts)
+                or len({item.value for item in ids.elts}) != len(ids.elts)):
+            return None
+    return keywords['params']
 
 
 def _immutable_param(node):
@@ -228,19 +359,34 @@ def _helper(node):
     Inlining is the only way to prove the loop body actually checks the row:
     crediting the call itself would credit any call, which is exactly the
     unproved step a reviewer rejected in the first attempt at this
-    (E-04, 2026-09-06). Bounded to one statement, one message-free assertion,
-    plain named parameters, no decorator, and a name pytest does not collect
+    (E-04, 2026-09-06). Bounded to one assertion, plain named parameters,
+    no decorator, and a name pytest does not collect
     under default `python_functions` (already required by the caller's inert
     startup proof, which rejects any non-default collection option).
+    A single local result or diagnostic message additionally requires a
+    closed primitive-string result proof before projection earns credit.
     """
     parameters = _args(node)
     if (parameters is None or node.name.startswith(("test", "pytest_")) or node.name in _IMPLICIT_HOOKS
-            or node.decorator_list or len(node.body) != 1
+            or node.decorator_list or len(node.body) not in (1, 2, 3)
             or len(set(parameters)) != len(parameters)):
         return None
-    assertion = node.body[0]
-    if not isinstance(assertion, ast.Assert) or assertion.msg is not None:
+    if len(node.body) == 3:
+        assertion = complete_unique_helper(node)
+        return (parameters, assertion) if assertion is not None else None
+    assertion = node.body[-1]
+    if not isinstance(assertion, ast.Assert):
         return None
+    if len(node.body) == 2:
+        assignment = node.body[0]
+        if (not isinstance(assignment, ast.Assign) or len(assignment.targets) != 1
+                or not isinstance(assignment.targets[0], ast.Name) or not isinstance(assignment.value, ast.Call)):
+            return None
+        name = assignment.targets[0].id
+        if name in parameters or sum(isinstance(n, ast.Name) and n.id == name for n in ast.walk(assertion.test)) != 1:
+            return None
+        assertion = _Substitute({name: assignment.value}).visit(copy.deepcopy(assertion))
+        assertion._requires_primitive_string = True
     return parameters, assertion
 
 
@@ -384,11 +530,20 @@ def _inlined(statement, bindings, helpers, scope):
     if not isinstance(call.func, ast.Name) or call.func.id in scope:
         return None
     helper = helpers.get(call.func.id)
-    if helper is None or call.keywords or len(call.args) != len(helper[0]):
+    if helper is None:
         return None
     parameters, assertion = helper
+    if len(call.args) > len(parameters):
+        return None
+    arguments = dict(zip(parameters, call.args))
+    for keyword in call.keywords:
+        if keyword.arg not in parameters or keyword.arg in arguments:
+            return None  # unknown, repeated, positional collision or **kwargs
+        arguments[keyword.arg] = keyword.value
+    if len(arguments) != len(parameters):
+        return None
     inner, consumed = {}, Counter()
-    for parameter, argument in zip(parameters, call.args):
+    for parameter, argument in arguments.items():
         if isinstance(argument, ast.Name) and argument.id in bindings:
             consumed[argument.id] += 1
             inner[parameter] = bindings[argument.id]
@@ -406,6 +561,12 @@ def _inlined(statement, bindings, helpers, scope):
             return None
     if any(count > 1 for count in consumed.values()):
         return None
+    if call.keywords:
+        # Keyword order cannot change subject/helper bindings through a
+        # callback or repository back-reference. Both snapshots must earn
+        # the closed imported-source proof before this new carrier is used.
+        assertion = copy.deepcopy(assertion)
+        assertion._requires_closed_helper = True
     return assertion, inner
 
 
@@ -448,16 +609,241 @@ def _table_fixture(node):
     return returned.value
 
 
+def _forwarded_functions(functions, imports):
+    """Inline only exact positional forwarding to an imported production call.
+
+    Every formal is forwarded once in the same order, and every use must be
+    a direct call. The final concrete-oracle checks still prove the actual
+    literal inputs, retained call order and complete original coverage.
+    """
+    forwarders = {}
+    for function in functions:
+        parameters = _args(function)
+        if (parameters is None or function.name.startswith(("test", "pytest_")) or function.decorator_list
+                or len(function.body) != 1 or not isinstance(function.body[0], ast.Return)):
+            continue
+        value = function.body[0].value
+        if (not isinstance(value, ast.Call) or value.keywords or not all(isinstance(arg, ast.Name) for arg in value.args)
+                or [arg.id for arg in value.args] != parameters or len(set(parameters)) != len(parameters)):
+            continue
+        callee = dotted_name(value.func)
+        if not callee or callee.split(".")[0] not in imports - {"pytest"}:
+            continue
+        forwarders[function.name] = parameters, value
+    if not forwarders:
+        return functions
+    for function in functions:
+        if any((isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store) and node.id in forwarders)
+               or (isinstance(node, ast.arg) and node.arg in forwarders)
+               for node in ast.walk(function)):
+            return None
+    used = set()
+
+    class Calls(ast.NodeTransformer):
+        def visit_Call(self, node):
+            node = self.generic_visit(node)
+            if not isinstance(node.func, ast.Name) or node.func.id not in forwarders:
+                return node
+            parameters, value = forwarders[node.func.id]
+            if node.keywords or len(node.args) != len(parameters) or any(isinstance(arg, ast.Starred) for arg in node.args):
+                return node
+            used.add(node.func.id)
+            return ast.copy_location(_Substitute(dict(zip(parameters, node.args))).visit(copy.deepcopy(value)), node)
+
+    result = []
+    for function in functions:
+        if function.name in forwarders:
+            continue
+        function = Calls().visit(function)
+        if any(isinstance(node, ast.Name) and node.id in forwarders for node in ast.walk(function)):
+            return None
+        result.append(function)
+    return result if used == forwarders.keys() else None
+
+
+def _captured_result(body, unavailable):
+    """A fresh local holds one primitive subject result used once by its check."""
+    if len(body) != 2:
+        return None
+    assignment, check = body
+    if (not isinstance(assignment, ast.Assign) or len(assignment.targets) != 1
+            or not isinstance(assignment.targets[0], ast.Name) or not isinstance(assignment.value, ast.Call)
+            or not isinstance(check, ast.Assert) or check.msg is not None):
+        return None
+    name = assignment.targets[0].id
+    if (name in unavailable or name.startswith(('__', 'pytest_'))
+            or any(isinstance(node, ast.Name) and node.id == name for node in ast.walk(assignment.value))
+            or sum(isinstance(node, ast.Name) and node.id == name for node in ast.walk(check)) != 1):
+        return None
+    assertion = _Substitute({name: assignment.value}).visit(copy.deepcopy(check))
+    assertion._requires_primitive_string = True
+    return assertion
+
+
+def _callable_fixtures(functions, imports):
+    """Preserve a scalar-string fixture's assertions before its callable.
+
+    Default function scope, no fixture dependencies, no cleanup and only direct
+    collected consumers are admitted. Each consumer receives the complete
+    ordered assertion prefix, including an empty prefix. A two-statement
+    result capture becomes one check only under the primitive-result proof.
+    """
+    fixtures = {}
+    for function in functions:
+        plain = copy.copy(function)
+        plain.decorator_list = []
+        parameters = _args(plain)
+        if (parameters is None or len(function.decorator_list) != 1
+                or not 1 <= len(function.body) <= MAX_CASES or not isinstance(function.body[-1], ast.Return)):
+            continue
+        prefixes = fixture_prefix_rows(function, parameters)
+        if prefixes is None:
+            continue
+        returned = function.body[-1].value
+        # Fixture injection masks a same-named module import. In particular,
+        # `return request` returns pytest's FixtureRequest, never an imported
+        # function named request, even when the fixture prefix is empty.
+        available_imports = imports - set(parameters)
+        assertions = [_concrete(statement, {}, available_imports) for prefix in prefixes for statement in prefix]
+        if (not isinstance(returned, ast.Name)
+                or returned.id not in available_imports - {"pytest"}
+                or any(assertion is None for assertion in assertions)):
+            continue
+        if any(not all(isinstance(value, ast.Constant) and type(value.value) is str
+                       for value in [*assertion.test.left.args, *assertion.test.comparators])
+               or assertion.test.left.keywords for assertion in assertions):
+            continue
+        fixtures[function.name] = prefixes, returned
+    if not fixtures:
+        return functions, set()
+    result, used, expanded = [], set(), set()
+    for function in functions:
+        if function.name in fixtures:
+            continue
+        parameters = _args(function)
+        if parameters and any(name in fixtures for name in parameters):
+            requested = [name for name in parameters if name in fixtures]
+            if len(requested) != 1 or not function.name.startswith("test"):
+                return None, set()
+            name = requested[0]
+            prefixes, returned = fixtures[name]
+            rows = consumer_rows(function, parameters, name)
+            if rows is None or function.decorator_list and len(prefixes) != 1:
+                return None, set()  # no unproved product of fixture and decorator parameter axes
+            body = function.body
+            if not all(isinstance(statement, ast.Assert) for statement in body):
+                captured = _captured_result(body, imports | fixtures.keys() | set(parameters))
+                if captured is None:
+                    return None, set()
+                body = [captured]
+            function = copy.deepcopy(function)
+            function.args.args = []
+            function.decorator_list = []
+            function.body = []
+            for prefix in prefixes:
+                for row in rows:
+                    checks = [_Substitute({name: returned}).visit(statement) for statement in copy.deepcopy(body)]
+                    if row:
+                        # Keep row-use accounting inside _concrete; eager
+                        # substitution must not bypass its alias guard.
+                        checks = [_concrete(statement, row, imports) for statement in checks]
+                        if any(statement is None for statement in checks):
+                            return None, set()
+                    function.body.extend([*copy.deepcopy(prefix), *checks])
+            if len(function.body) > MAX_CASES:
+                return None, set()
+            used.add(name)
+            expanded.add(function.name)
+        if any(isinstance(node, ast.Name) and node.id in fixtures for node in ast.walk(function)):
+            return None, set()
+        result.append(function)
+    return (result, expanded) if used == fixtures.keys() else (None, set())
+
+
+def _captured_blocks(node, imports, forbidden):
+    """Partition complete capture/check blocks without carrying local aliases.
+
+    Every block must independently satisfy the existing string/dictionary
+    grammar and literal imported-call proof. Reassigning the result name is
+    harmless only under the two-sided production purity check required by
+    the string-block carrier; no value can flow across block boundaries.
+    """
+    if forbidden & {'len', 'max'}:
+        return None
+    groups = []
+    for statement in node.body:
+        if isinstance(statement, ast.Assign) and isinstance(statement.value, ast.Call):
+            if (len(statement.targets) != 1 or not isinstance(statement.targets[0], ast.Name)
+                    or statement.targets[0].id in forbidden | {'len', 'max'}):
+                return None
+            groups.append([statement])
+        elif isinstance(statement, ast.Assert) and groups:
+            groups[-1].append(statement)
+        else:
+            return None
+    if not 2 <= len(groups) <= MAX_CASES:
+        return None
+    result = []
+    for group in groups:
+        function = copy.copy(node)
+        function.body = group
+        block = string_block(function)
+        if block is None:
+            return None
+        assertion, body = block
+        concrete = _concrete(assertion, {}, imports)
+        if concrete is None:
+            return None
+        result.append(_Case(concrete, group[-1], node, body))
+    return result
+
+
 def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, used_constants, *, baseline,
           multiple=False):
     names = _args(node)
     if names is None or not node.name.startswith("test"):
         return None
-    if multiple and not names and not node.decorator_list and 1 <= len(node.body) <= MAX_CASES:
-        assertions = [_checked(statement, {}, imports, helpers, set(), {}) for statement in node.body]
+    if not names and not node.decorator_list:
+        captured = _captured_result(node.body, imports | helpers.keys() | table_helpers.keys() | constants.keys())
+        if captured is not None:
+            concrete = _concrete(captured, {}, imports)
+            if concrete is not None:
+                return [_Case(concrete, node.body[-1], node)], True, 'captured-result'
+    if not names and not node.decorator_list and node.body and isinstance(node.body[0], ast.FunctionDef):
+        local_helpers = dict(helpers)
+        local_names, remaining = set(), list(node.body)
+        while remaining and isinstance(remaining[0], ast.FunctionDef):
+            helper = remaining.pop(0)
+            candidate = _helper(helper)
+            if (candidate is None or helper.name in local_helpers or helper.name in imports
+                    or helper.name in constants or helper.name in table_helpers):
+                return None
+            local_helpers[helper.name] = candidate
+            local_names.add(helper.name)
+        if not 1 <= len(remaining) <= MAX_CASES:
+            return None
+        used = {call.func.id for statement in remaining for call in ast.walk(statement)
+                if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)}
+        if not local_names <= used:
+            return None
+        assertions = [_checked(statement, {}, imports, local_helpers, set(), {}) for statement in remaining]
         if any(assertion is None for assertion in assertions):
             return None
-        return [_Case(assertion, statement, node) for assertion, statement in zip(assertions, node.body)], True, "unittest"
+        return ([_Case(assertion, statement, node) for assertion, statement in zip(assertions, remaining)],
+                True, "local-assert-helper")
+    if not names and not node.decorator_list and 1 <= len(node.body) <= MAX_CASES and (multiple or len(node.body) > 1):
+        assertions = [_checked(statement, {}, imports, helpers, set(), {}) for statement in node.body]
+        if all(assertion is not None for assertion in assertions):
+            grouped_helpers = any(getattr(assertion, '_requires_closed_helper', False) for assertion in assertions)
+            return ([_Case(assertion, statement, node) for assertion, statement in zip(assertions, node.body)],
+                    multiple or grouped_helpers,
+                    "unittest" if multiple else "grouped-assert-helper" if grouped_helpers else "native")
+        if multiple and not (len(node.body) == 1 and isinstance(node.body[0], ast.For)):
+            return None
+    if not names and not node.decorator_list:
+        blocks = _captured_blocks(node, imports, imports | helpers.keys() | table_helpers.keys() | constants.keys())
+        if blocks is not None:
+            return blocks, True, 'string-block'
     block = string_block(node) if not names and not node.decorator_list else None
     if block is not None:
         assertion, body = block
@@ -492,6 +878,27 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         values = _table_source(decorator.args[1], constants, used_constants)
         bindings = _rows(values, columns, unpack=len(columns) != 1)
         table, form = True, "parametrize"
+    elif (len(names) == 1 and names[0] in tables and len(body) == 2
+          and isinstance(body[0], ast.Assign) and len(body[0].targets) == 1
+          and isinstance(body[0].targets[0], ast.Name) and isinstance(body[1], ast.For)):
+        assignment, loop = body
+        local_name = assignment.targets[0].id
+        columns = _names(loop.target)
+        iterator = loop.iter
+        values = tables[names[0]]
+        expected = assignment.value
+        if (local_name in imports | scope | {"zip"} or not columns or len(columns) != 2 or loop.orelse
+                or set(columns) & (imports | scope | {local_name, "zip"})
+                or not isinstance(iterator, ast.Call) or dotted_name(iterator.func) != "zip"
+                or iterator.keywords or [dotted_name(arg) for arg in iterator.args] != [names[0], local_name]
+                or not isinstance(values, (ast.List, ast.Tuple)) or not isinstance(expected, (ast.List, ast.Tuple))
+                or not 0 < len(values.elts) == len(expected.elts) <= MAX_CASES
+                or not all(isinstance(value, ast.Constant) and type(value.value) is str
+                           for value in [*values.elts, *expected.elts])):
+            return None
+        bindings = [dict(zip(columns, pair)) for pair in zip(values.elts, expected.elts)]
+        scope.update([local_name, *columns])
+        body, table, form = loop.body, True, "zip-fixture"
     elif (len(names) == 1 and names[0] in tables and len(body) == 1 and isinstance(body[0], ast.For)
           and isinstance(body[0].iter, ast.Name) and body[0].iter.id == names[0]):
         loop = body[0]
@@ -501,8 +908,27 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         bindings = _rows(tables[names[0]], columns, unpack=not isinstance(loop.target, ast.Name))
         scope.update(columns)
         body, table, form = loop.body, True, "table-fixture-loop"
+    elif (len(names) == 1 and names[0] in tables and len(body) == 1 and isinstance(body[0], ast.Expr)
+          and isinstance(body[0].value, ast.Call) and isinstance(body[0].value.func, ast.Name)
+          and body[0].value.func.id in table_helpers and body[0].value.func.id not in scope):
+        call = body[0].value
+        if (len(call.args) != 1 or call.keywords or not isinstance(call.args[0], ast.Name)
+                or call.args[0].id != names[0]):
+            return None
+        parameter, columns, assertion, unpack = table_helpers[call.func.id]
+        bindings = _rows(tables[names[0]], columns, unpack=unpack)
+        scope.update([parameter, *columns])
+        body, table, form = [assertion], True, "table-fixture-helper"
+    elif (len(names) == 1 and names[0] in fixtures
+          and isinstance(fixtures[names[0]], (ast.List, ast.Tuple))
+          and all(isinstance(value, (ast.Constant, ast.UnaryOp)) and _literal(value)
+                  for value in fixtures[names[0]].elts)
+          and body and not (isinstance(body[0], ast.Assign) and isinstance(body[0].value, ast.Name)
+                           and body[0].value.id == names[0])):
+        bindings = _rows(fixtures[names[0]], names, unpack=False)
+        table, form = True, "params-fixture"
     elif names:
-        if (len(names) != 1 or names[0] not in fixtures or len(body) != 2
+        if (len(names) != 1 or names[0] not in fixtures or not 2 <= len(body) <= MAX_CASES
                 or not isinstance(body[0], ast.Assign) or len(body[0].targets) != 1
                 or not isinstance(body[0].value, ast.Name) or body[0].value.id != names[0]):
             return None
@@ -542,8 +968,57 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
         bindings = _rows(values, columns, unpack=unpack)
         scope.update([parameter, *columns])
         body, table, form = [assertion], True, "table-helper-loop"
+    source_statement = body[-1] if body else None
+    if table and 1 < len(body) <= MAX_CASES:
+        # A fresh name for a row cell does not change its value or identity.
+        # Substitute aliases back to the original row names before _concrete
+        # counts uses, so two names for one mutable cell cannot evade its
+        # repeated-object guard. Calls, rebinding and unpacking stay outside
+        # this narrow carrier transformation.
+        aliases = {}
+        for statement in body[:-1]:
+            if (not isinstance(statement, ast.Assign) or len(statement.targets) != 1
+                    or not isinstance(statement.targets[0], ast.Name)):
+                return None
+            name = statement.targets[0].id
+            if name in scope or name in imports or name in constants:
+                return None
+            if isinstance(statement.value, ast.Name):
+                if statement.value.id not in scope | aliases.keys():
+                    return None
+            elif isinstance(statement.value, ast.Call):
+                callee = dotted_name(statement.value.func)
+                checked_expression = body[-1].test if isinstance(body[-1], ast.Assert) else body[-1]
+                if ((not callee or callee.split(".")[0] not in imports - {"pytest"}) and not derived_shape(statement.value)
+                        or sum(isinstance(node, ast.Name) and node.id == name for node in ast.walk(checked_expression)) != 1
+                        or any(isinstance(node, ast.Name) and node.id == name
+                               for later in body[:-1] if later is not statement for node in ast.walk(later))):
+                    return None
+            else:
+                return None
+            aliases[name] = _Substitute(aliases).visit(copy.deepcopy(statement.value))
+            scope.add(name)
+        body = [_Substitute(aliases).visit(copy.deepcopy(body[-1]))]
     if bindings is None or len(body) != 1:
         return None
+    if table and isinstance(body[0], ast.If):
+        condition = body[0]
+        if condition.orelse or len(condition.body) != 1:
+            return None
+        filtered = []
+        for row in bindings:
+            predicate = _Substitute(row).visit(copy.deepcopy(condition.test))
+            value = folded_expected(predicate, lambda _name: False)
+            if not isinstance(value, ast.Constant) or type(value.value) is not bool:
+                return None
+            if value.value:
+                filtered.append(row)
+        if not filtered:
+            # A collected consumer whose whole oracle is disabled cannot be
+            # erased from the proof and replaced by another consumer's rows.
+            # Preserve the ordinary frontend's per-test execution evidence.
+            return None
+        bindings, body, form = filtered, [condition.body[0]], "filtered-" + form
     if (form == "native" and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Call)
             and isinstance(body[0].value.func, ast.Name) and body[0].value.func.id in helpers):
         table, form = True, "assert-helper"
@@ -556,7 +1031,7 @@ def _test(node, fixtures, tables, imports, helpers, table_helpers, constants, us
                   for row in bindings]
     if any(assertion is None for assertion in assertions):
         return None
-    return [_Case(assertion, body[0], node) for assertion in assertions], table, form
+    return [_Case(assertion, source_statement, node) for assertion in assertions], table, form
 
 
 def _module(source, *, baseline):
@@ -566,10 +1041,84 @@ def _module(source, *, baseline):
     tree = ast.parse(text)
     if sum(1 for _ in ast.walk(tree)) > MAX_AST_NODES:
         return None
+    if any(isinstance(node, ast.FunctionDef) and node.name == 'request' and any(
+            dotted_name(decorator.func if isinstance(decorator, ast.Call) else decorator) == 'pytest.fixture'
+            for decorator in node.decorator_list) for node in tree.body):
+        return None  # pytest rejects this fixture name before collection; never erase that control
     if any(isinstance(node, (ast.FunctionDef, ast.ClassDef))
            and (node.name in _IMPLICIT_HOOKS or node.name.startswith(("pytest_", "__")))
            for node in tree.body):
         return None  # validate implicit entry points before any helper can be removed
+    conditional_tests = set()
+    if b'if' in source:
+        # Share the ordinary frontend's exact conditional-failure grammar.
+        # Capture positions before lowering so every newly exposed oracle
+        # requires closed production proof before table-equivalence credit.
+        conditional_spans = {(node.lineno, node.col_offset) for node in ast.walk(tree)
+                             if isinstance(node, ast.If)}
+        if conditional_spans:
+            tree = conditional_oracle_carriers(tree)
+            conditional_tests = {function.name for function in ast.walk(tree)
+                if isinstance(function, ast.FunctionDef) and any(
+                    isinstance(node, ast.Assert) and (node.lineno, node.col_offset) in conditional_spans
+                    for node in ast.walk(function))}
+    inert_signature_tests = strip_none_test_returns(tree)
+    failing_wrapper_tests = expand_failing_exception_wrappers(tree)
+    literal_expected_tests = expand_literal_expected_bindings(tree, _literal)
+    literal_subject_tests = expand_literal_subject_bindings(tree, _literal)
+    captured_helper_tests = expand_captured_assert_helpers(tree, _literal)
+    regrouped_capture_tests = regroup_complete_captures(tree, _literal)
+    local_auxiliary = extract_local_auxiliary_oracles(tree)
+    hex_tuple_tests = expand_hex_tuple_answers(tree)
+    raises_oracles = extract_raises_oracles(tree)
+    tuple_tests = expand_tuple_oracles(tree)
+    iteration_tests = expand_literal_iteration_oracles(tree)
+    if iteration_tests is None:
+        return None
+    predicate_tests = expand_predicate_helpers(tree)
+    if predicate_tests is None:
+        return None
+    prefix_tests = expand_prefix_predicates(tree)
+    if prefix_tests is None:
+        return None
+    unique_tests = expand_unique_predicates(tree)
+    if unique_tests is None:
+        return None
+    inert_helpers = prune_inert_helpers(tree)
+    membership_fixture_tests = expand_parametrized_membership(tree)
+    parameter_helper_tests = expand_parameter_helper_answers(tree)
+    conditional_fixture_tests = expand_fixture_conditional_answers(tree)
+    literal_fixture_tests = expand_literal_fixtures(tree)
+    factory_tests = expand_literal_table_factories(tree)
+    indexed_fixture_tests = expand_indexed_fixture_tables(tree)
+    # A default-scope literal fixture that no source requests contributes no
+    # oracle or setup effects. Keep every reference, shadowed definition,
+    # marker string and non-default decorator visible to the ordinary parser.
+    references = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    references.update(node.arg for node in ast.walk(tree) if isinstance(node, ast.arg))
+    references.update(node.value for node in ast.walk(tree)
+                      if isinstance(node, ast.Constant) and type(node.value) is str)
+    definitions = Counter(node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef)))
+    plain_pytest = any(isinstance(node, ast.Import) and len(node.names) == 1
+                       and node.names[0].name == "pytest" and node.names[0].asname is None for node in tree.body)
+    retained = []
+    for node in tree.body:
+        unused_parameter_fixture = False
+        if (plain_pytest and isinstance(node, ast.FunctionDef) and node.name not in references
+                and definitions[node.name] == 1):
+            parameters = _fixture(node)
+            unused_parameter_fixture = (isinstance(parameters, (ast.List, ast.Tuple))
+                                        and 0 < len(parameters.elts) <= MAX_CASES and _immutable_rows(parameters))
+        unused_fixture = (plain_pytest and isinstance(node, ast.FunctionDef) and _args(node) == []
+                          and node.name not in references and definitions[node.name] == 1
+                          and not node.name.startswith("test") and len(node.decorator_list) == 1
+                          and dotted_name(node.decorator_list[0]) == "pytest.fixture"
+                          and len(node.body) == 1 and isinstance(node.body[0], ast.Return)
+                          and _literal(node.body[0].value))
+        if not (unused_fixture or unused_parameter_fixture):
+            retained.append(node)
+    pruned_fixtures = len(retained) != len(tree.body)
+    tree.body = retained
     wrapper_tests = expand_wrappers(tree)
     if wrapper_tests is None:
         return None
@@ -577,9 +1126,10 @@ def _module(source, *, baseline):
     block_tests = expand_string_blocks(tree)
     if block_tests is None:
         return None
-    unittest_tests = expand_unittest_classes(tree)
-    if unittest_tests is None:
+    unittest_expansion = expand_unittest_classes(tree)
+    if unittest_expansion is None:
         return None
+    unittest_tests, subtest_only = unittest_expansion
     class_tests = _plain_classes(tree)
     if class_tests is None:
         return None
@@ -626,6 +1176,16 @@ def _module(source, *, baseline):
             functions.append(node)
         else:
             return None
+    count_before_forwarding = len(functions)
+    functions = _forwarded_functions(functions, imports)
+    if functions is None:
+        return None
+    expanded_forwarders = len(functions) != count_before_forwarding
+    functions, callable_fixture_tests = _callable_fixtures(functions, imports)
+    if functions is None:
+        return None
+    if callable_fixture_tests and not pytest_imported:
+        return None
     fixtures, tables, shared_tables = {}, {}, set()
     if not baseline:
         for function in functions:
@@ -642,6 +1202,9 @@ def _module(source, *, baseline):
                 if isinstance(table_fixture, ast.Name) and table_fixture.id in constants:
                     shared_tables.add(function.name)
                 tables[function.name] = _table_source(table_fixture, constants, used_constants)
+    functions, row_helper_tests = expand_fixture_row_helpers(functions, fixtures, _args, _helper)
+    if functions is None:
+        return None
     helpers, table_helpers = {}, {}
     for function in functions:
         if function.name in fixtures or function.name in tables:
@@ -653,20 +1216,70 @@ def _module(source, *, baseline):
         table_candidate = _table_helper(function)
         if table_candidate is not None:
             table_helpers[function.name] = table_candidate
-    result, table, forms = [], False, []
+    result, table, forms, auxiliary = [], False, [], []
     used_fixtures, used_helpers, used_tables = Counter(), Counter(), Counter()
     for function in functions:
         if function.name in fixtures or function.name in tables or function.name in helpers or function.name in table_helpers:
             continue
         expanded = _test(function, fixtures, tables, imports, helpers, table_helpers, constants, used_constants,
-                         baseline=baseline, multiple=function.name in unittest_tests)
+                         baseline=baseline, multiple=function.name in unittest_tests | callable_fixture_tests)
         if expanded is None:
-            return None
+            # A discarded comparison is never an oracle. It can be omitted
+            # only when another real assertion checks that same call/input,
+            # and the caller closes production purity on both snapshots.
+            # This admits redundant calls added beside a full subTest table,
+            # while retaining assertion removal and new input boundaries.
+            if (_args(function) != [] or function.decorator_list or not function.name.startswith('test')
+                    or not 1 <= len(function.body) <= MAX_CASES
+                    or not all(isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Compare)
+                               for statement in function.body)):
+                return None
+            comparisons = [_concrete(ast.copy_location(ast.Assert(test=statement.value, msg=None), statement), {}, imports)
+                           for statement in function.body]
+            if any(assertion is None for assertion in comparisons):
+                return None
+            auxiliary.extend(_Case(assertion, statement, function)
+                             for assertion, statement in zip(comparisons, function.body))
+            continue
         cases, is_table, form = expanded
         if function.name in class_tests:
             is_table, form = True, "plain-class"
         if function.name in wrapper_tests:
             is_table, form = True, "oracle-wrapper"
+        if function.name in callable_fixture_tests:
+            is_table, form = True, "callable-fixture"
+        if function.name in factory_tests:
+            is_table, form = True, "literal-table-factory"
+        if function.name in indexed_fixture_tests:
+            is_table, form = True, "indexed-fixture-parametrize"
+        if function.name in literal_fixture_tests:
+            is_table, form = True, "literal-fixtures"
+        if function.name in iteration_tests:
+            is_table, form = True, "literal-iteration"
+        if function.name in conditional_tests:
+            is_table, form = True, "conditional-oracle"
+        if function.name in prefix_tests:
+            is_table, form = True, "literal-prefix-predicate"
+        if function.name in unique_tests:
+            is_table, form = True, "exact-unique-predicate"
+        if function.name in literal_expected_tests:
+            is_table, form = True, "literal-expected-local"
+        if function.name in literal_subject_tests:
+            is_table, form = True, "literal-subject-local"
+        if function.name in parameter_helper_tests:
+            is_table, form = True, "parameter-helper-answer"
+        if function.name in failing_wrapper_tests:
+            is_table, form = True, "failing-exception-wrapper"
+        if function.name in captured_helper_tests:
+            is_table, form = True, "captured-assert-helper"
+        if function.name in regrouped_capture_tests:
+            is_table, form = True, "regrouped-complete-capture"
+        if function.name in inert_signature_tests:
+            is_table, form = True, "literal-none-test-return"
+        if function.name in conditional_fixture_tests:
+            is_table, form = True, "fixture-conditional-answer"
+        if function.name in hex_tuple_tests:
+            is_table, form = True, "hex-tuple-answer"
         forms.append((function.name, form))
         if function.decorator_list and not pytest_imported:
             return None
@@ -680,11 +1293,14 @@ def _module(source, *, baseline):
             return None
     if fixtures.keys() != used_fixtures.keys():
         return None
-    for name, count in used_fixtures.items():
-        if count > 1:
-            params = fixtures[name]
-            if not _immutable_rows(params):
-                return None
+    # pytest reuses each literal params object across its consumers. Concrete
+    # copies are equivalent only when every imported call is proved pure on
+    # both snapshots, so no earlier consumer can mutate a later row's input.
+    shared_fixture_params = any(count > 1 and not _immutable_rows(fixtures[name])
+                                for name, count in used_fixtures.items())
+    if shared_fixture_params:
+        for case in result:
+            case.assertion._requires_shared_collection_inputs = True
     if any(count > 1 and not _immutable_rows(constants[name]) for name, count in used_constants.items()):
         return None
     if any(used_tables[name] > 1 and not _immutable_rows(tables[name]) for name in shared_tables):
@@ -694,8 +1310,36 @@ def _module(source, *, baseline):
     # projection rests on. Same discipline as the fixtures above.
     if helpers.keys() | table_helpers.keys() != used_helpers.keys() or tables.keys() != used_tables.keys():
         return None
+    if any(form == "zip-fixture" for _, form in forms) and "zip" in names:
+        return None
+    if any(getattr(case.assertion, "_requires_approx_authority", False) for case in result) and not pytest_imported:
+        return None
+    derived_authorities = set().union(*(getattr(case.assertion, "_requires_derived_authority", set()) for case in result))
+    if any(getattr(case.assertion, '_requires_repr_authority', False) for case in result) and (
+            'repr' in names or any(isinstance(node, ast.arg) and node.arg == 'repr'
+            or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == 'repr'
+            or isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)) and node.id == 'repr'
+            or isinstance(node, ast.alias) and (node.asname or node.name.split('.')[0]) == 'repr'
+            for node in ast.walk(tree))):
+        return None
+    if derived_authorities & names or any(isinstance(node, ast.arg) and node.arg in derived_authorities
+                                         for node in ast.walk(tree)):
+        return None
+    checked_subjects = {_subject_key(case) for case in result}
+    unique_helpers = any(getattr(case.assertion, '_requires_unique_expected', False) for case in result)
+    if unique_helpers and not unshadowed_unique_builtins(tree):
+        return None
+    if any(_subject_key(case) not in checked_subjects for case in auxiliary):
+        return None
     return (text, import_nodes, result, table, pytest_imported, modules, forms, wrapper_authorities,
-            bool(block_tests or unittest_tests), bool(unittest_tests))
+            bool(block_tests or unittest_tests or pruned_fixtures or inert_helpers
+                 or expanded_forwarders or factory_tests or indexed_fixture_tests or literal_fixture_tests or membership_fixture_tests or parameter_helper_tests or failing_wrapper_tests or conditional_fixture_tests
+                 or auxiliary or raises_oracles or tuple_tests or hex_tuple_tests or shared_fixture_params or iteration_tests or row_helper_tests or local_auxiliary
+                 or predicate_tests or prefix_tests or unique_tests or unique_helpers or conditional_tests or literal_expected_tests or literal_subject_tests or captured_helper_tests or inert_signature_tests or regrouped_capture_tests
+                 or any(form in {'string-block', 'grouped-assert-helper'} for _, form in forms)
+                 or any(getattr(case.assertion, '_requires_closed_helper', False) for case in result)),
+            bool(unittest_tests),
+            subtest_only and all(name in unittest_tests for name, _ in forms), raises_oracles, local_auxiliary)
 
 
 def _module_unshadowed(path, read, module):
@@ -733,16 +1377,57 @@ def _project(parsed, text, cases):
                    if case.body is not None else [case.source_assertion])
         assertions = [replace(assertion, span=offsets.span(source))
                       for assertion, source in zip(unit.side.assertions, sources)]
+        comparison = case.assertion.test
+        if (getattr(case.assertion, "_requires_operator_authority", False)
+                and isinstance(comparison.ops[0], ast.Is)
+                and isinstance(comparison.comparators[0], ast.Constant)
+                and comparison.comparators[0].value is None):
+            # The ordinary null-check form retains strength30. The proved
+            # concrete oracle also states the literal answer None; retain
+            # that fact so replacing it by numeric approximation cannot hide
+            # behind an apparent strength increase.
+            assertions = [replace(assertion, right_literal="None", right_value="None") for assertion in assertions]
         units.append(replace(unit, span=span, side=replace(unit.side, span=span, assertions=assertions)))
     return replace(parsed, units=units)
 
 
 def _subject_key(case):
     compare = case.assertion.test
-    key = stable_dump(compare.left) + ":" + type(compare.ops[0]).__name__
+    key = stable_dump(compare.left) + ":" + getattr(case.assertion, "_paired_operator", type(compare.ops[0]).__name__)
     if case.body is not None:
         key += ":aux:" + stable_dump(ast.Module(body=case.body[:-1], type_ignores=[]))
     return key
+
+
+def _pair_approximate_identity(old, new):
+    """Keep the actual operators when an identity oracle becomes approximate.
+
+    This only establishes which concrete call the two assertions check; their
+    distinct operators and expectations remain in the projected source for
+    ordinary weakening detection. It grants no identity/equality equivalence.
+    """
+    if len(new) < len(old):
+        return False
+    pairs = []
+    for before, after in zip(old, new):
+        if _subject_key(before) == _subject_key(after):
+            continue
+        previous, current = before.assertion.test, after.assertion.test
+        expected = previous.comparators[0]
+        if (before.body is not None or after.body is not None
+                or stable_dump(previous.left) != stable_dump(current.left)
+                or not isinstance(previous.ops[0], ast.Is) or not isinstance(current.ops[0], ast.Eq)
+                or not isinstance(expected, ast.Constant) or type(expected.value) not in (bool, type(None))
+                or not _approx_expected(current.comparators[0])):
+            return False
+        pairs.append((before, after))
+    if not pairs:
+        return False
+    for before, after in pairs:
+        after.assertion._paired_operator = type(before.assertion.test.ops[0]).__name__
+        before.assertion._requires_operator_authority = True
+        after.assertion._requires_operator_authority = True
+    return True
 
 
 def _bounded_tree(source):
@@ -850,6 +1535,46 @@ def _ordinary_rows_cover(module, parsed):
                for name, form in module[6])
 
 
+def _closed_proof_imports(module, calls):
+    """Every import must be an inspected subject or a proved standard wrapper."""
+    called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
+    for node in ast.parse(module[0]).body:
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        authority = trusted_wrapper_import(node)
+        if authority is not None and authority in module[7]:
+            continue  # the caller checked this wrapper's unshadowed source
+        if isinstance(node, ast.Import):
+            if any(alias.name != "pytest" or alias.asname for alias in node.names):
+                return False
+        elif node.level or any((alias.asname or alias.name) not in called for alias in node.names):
+            return False
+    return True
+
+
+def _native_renames(old, new):
+    """Renamed or regrouped native tests retain every concrete call input.
+
+    This optional proof additionally requires pure production on both sides;
+    source-order-sensitive subjects cannot acquire renamed-unit identities.
+    Each complete body contains only already-proved native assertions or
+    direct calls whose helper assertions `_checked` has fully expanded,
+    and exact call multiplicity survives a merge or split. Grouping may change
+    which assertion executes after a failure, but not pure suite pass/fail.
+    """
+    if old[3] or new[3] or not old[2] or len(old[2]) != len(new[2]):
+        return False
+    for module in (old, new):
+        if any(form != 'native' for _, form in module[6]):
+            return False
+        if any(not case.source_function.body or not all(isinstance(statement, (ast.Assert, ast.Expr))
+               for statement in case.source_function.body)
+               for case in module[2]):
+            return False
+    return ([case.source_function.name for case in old[2]] != [case.source_function.name for case in new[2]]
+            and Counter(_subject_key(case) for case in old[2]) == Counter(_subject_key(case) for case in new[2]))
+
+
 def project_table_consolidation(before: bytes, after: bytes, before_parsed: ParsedFile, after_parsed: ParsedFile,
                                 *, path: str, root_reader=None, root_searcher=None, changes=()):
     """Project proved concrete coverage while retaining expected-value edits.
@@ -873,11 +1598,41 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
     if (root_reader is None or root_searcher is None or not before_parsed.parse_ok or not after_parsed.parse_ok
             or not before_parsed.units):
         return before_parsed, after_parsed
+    normalized = project_normalized_result_table(
+        before, after, before_parsed, after_parsed, path=path,
+        root_reader=root_reader, root_searcher=root_searcher, changes=changes)
+    if normalized is not None:
+        return normalized
     try:
         old, new = _module(before, baseline=True), _module(after, baseline=False)
         if old is None:
             old = _module(before, baseline=False)
-        if old is None or new is None or old[1] != new[1] or not (old[3] or new[3]):
+        if old is None or new is None or old[1] != new[1]:
+            return before_parsed, after_parsed
+        if Counter(oracle.key for oracle in old[11]) - Counter(oracle.key for oracle in new[11]):
+            return before_parsed, after_parsed  # never discard a removed/changed exception or its exact message
+        if Counter(oracle.key for oracle in old[12]) - Counter(oracle.key for oracle in new[12]):
+            return before_parsed, after_parsed  # local checks keep their full definitions and multiplicity
+        regrouped_capture = any(form == 'regrouped-complete-capture' for module in (old, new) for _, form in module[6])
+        if regrouped_capture:
+            old_clauses = capture_obligations(old[0], _literal)
+            new_clauses = capture_obligations(new[0], _literal)
+            if old_clauses is None or new_clauses is None or old_clauses - new_clauses:
+                return before_parsed, after_parsed  # even entailed clauses keep their original multiplicity
+        native_renames = _native_renames(old, new)
+        if (any(getattr(case.assertion, '_requires_closed_helper', False) for case in old[2])
+                and any(getattr(case.assertion, '_requires_closed_helper', False) for case in new[2])):
+            return before_parsed, after_parsed  # preserve same-carrier keyword expectation provenance
+        if (any(form == 'literal-expected-local' for _, form in old[6])
+                and any(form == 'literal-expected-local' for _, form in new[6])):
+            return before_parsed, after_parsed  # retain ordinary same-carrier expectation provenance
+        if (any(form == 'literal-subject-local' for _, form in old[6])
+                and any(form == 'literal-subject-local' for _, form in new[6])):
+            return before_parsed, after_parsed  # retain existing same-carrier input/expectation policy
+        if (any(form == 'literal-fixtures' for _, form in old[6])
+                and any(form == 'literal-fixtures' for _, form in new[6])):
+            return before_parsed, after_parsed  # retain existing same-carrier fixture provenance ownership
+        if not (old[3] or new[3] or native_renames):
             return before_parsed, after_parsed
         if (old[3] and new[3] and old[6] == new[6]
                 and _ordinary_rows_cover(old, before_parsed) and _ordinary_rows_cover(new, after_parsed)):
@@ -887,19 +1642,49 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             return before_parsed, after_parsed
         old_keys = [_subject_key(case) for case in old[2]]
         new_keys = [_subject_key(case) for case in new[2]]
+        if any(form == 'literal-expected-local' for module in (old, new) for _, form in module[6]):
+            old_answers = Counter((_subject_key(case), stable_dump(case.assertion.test.comparators[0])) for case in old[2])
+            new_answers = Counter((_subject_key(case), stable_dump(case.assertion.test.comparators[0])) for case in new[2])
+            if old_answers - new_answers:
+                return before_parsed, after_parsed  # changed local answers retain their established provenance owner
+        # Field checks do not reject additional keys. A complete dictionary
+        # equality may replace them, but the reverse loses an oracle even
+        # when the field values match. Keep every original complete check
+        # and its multiplicity before granting carrier equivalence.
+        old_complete = Counter((_subject_key(case), stable_dump(case.assertion.test.comparators[0])) for case in old[2]
+                               if not getattr(case.assertion, '_partial_dictionary_fields', False))
+        new_complete = Counter((_subject_key(case), stable_dump(case.assertion.test.comparators[0])) for case in new[2]
+                               if not getattr(case.assertion, '_partial_dictionary_fields', False))
+        if (any(getattr(case.assertion, '_partial_dictionary_fields', False) for case in new[2])
+                and old_complete - new_complete):
+            return before_parsed, after_parsed
+        if old_keys != new_keys[:len(old_keys)] and _pair_approximate_identity(old[2], new[2]):
+            old_keys = [_subject_key(case) for case in old[2]]
+            new_keys = [_subject_key(case) for case in new[2]]
+        if old_keys != new_keys[:len(old_keys)] and pair_boolean_comparisons(old[2], new[2], _subject_key):
+            old_keys = [_subject_key(case) for case in old[2]]
+            new_keys = [_subject_key(case) for case in new[2]]
+        indexed_extension = (len(old[6]) == len(new[6]) == 1 and old[6][0][0] == new[6][0][0]
+                             and old[6][0][1] == "parametrize" and new[6][0][1] == "indexed-fixture-parametrize"
+                             and len(set(old_keys)) == len(old_keys) and len(set(new_keys)) == len(new_keys)
+                             and not (Counter(old_keys) - Counter(new_keys)))
         # Extra literal cases can follow the complete old sequence. They
         # cannot run before an old oracle and change what it subsequently
         # sees; insertion/reordering stays outside the proof.
         if not old_keys:
             return before_parsed, after_parsed
-        if (old[9] or new[9]) and Counter(old_keys) != Counter(new_keys):
+        if ((old[9] or new[9]) and Counter(old_keys) != Counter(new_keys)
+                and not (new[10] and not Counter(old_keys) - Counter(new_keys))):
             # TestCase setup precedes each test body. Do not admit additional
             # setup/oracles as an unordered superset: their failure barriers
             # were absent from the original suite. Only the exact existing
             # pure oracle multiplicity may change grouping or collection order.
+            # An after-suite of only default subTest loops is different: a
+            # failing added row still runs later rows, so a pure superset
+            # preserves every original check without a new failure barrier.
             return before_parsed, after_parsed
         if old_keys != new_keys[:len(old_keys)]:
-            if not (old[9] or new[9]) or Counter(old_keys) - Counter(new_keys):
+            if not (old[9] or new[9] or indexed_extension or native_renames) or Counter(old_keys) - Counter(new_keys):
                 return before_parsed, after_parsed
             # Default TestCase sorts test methods and repeats setup per test.
             # Reordering earns credit only after both imported-source purity
@@ -920,11 +1705,90 @@ def project_table_consolidation(before: bytes, after: bytes, before_parsed: Pars
             path, before, after, changes, root_reader, root_searcher)):
         if not inert_test_execution_context(path, read, search):
             return before_parsed, after_parsed
-        if module[4] and not _pytest_unshadowed(path, read):
+        if not _pytest_unshadowed(path, read):
             return before_parsed, after_parsed
         if any(not _module_unshadowed(path, read, authority) for authority in module[7]):
             return before_parsed, after_parsed
-        if (old[8] or new[8]) and not pure_imported_calls(module[0].encode(),
-                                                [case.assertion.test.left for case in module[2]], path=path, read=read):
-            return before_parsed, after_parsed
-    return _project(before_parsed, old[0], old[2]), _project(after_parsed, new[0], new[2])
+        message_calls = [case.assertion.test.left for case in module[2]
+                         if getattr(case.assertion, "_requires_primitive_string", False)]
+        approximate = any(getattr(case.assertion, "_requires_approx_authority", False)
+                          or getattr(case.assertion, "_requires_operator_authority", False) for case in module[2])
+        derived = any(hasattr(case.assertion, "_requires_derived_authority") for case in module[2])
+        if derived:
+            calls = [case.assertion.test.left for case in module[2]]
+            called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
+            for node in ast.parse(module[0]).body:
+                if isinstance(node, ast.Import):
+                    if any(alias.name != "pytest" or alias.asname for alias in node.names):
+                        return before_parsed, after_parsed
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level or any((alias.asname or alias.name) not in called for alias in node.names):
+                        return before_parsed, after_parsed
+            if not pure_imported_calls(module[0].encode(), calls, path=path, read=read,
+                                       result_proof=primitive_derived_result):
+                return before_parsed, after_parsed
+        if approximate:
+            calls = [case.assertion.test.left for case in module[2]]
+            called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
+            # Approx objects in a parameter decorator are constructed before
+            # test execution. Production or another import must not replace
+            # pytest.approx between collection and an inline assertion.
+            for node in ast.parse(module[0]).body:
+                if isinstance(node, ast.Import):
+                    if any(alias.name != "pytest" or alias.asname for alias in node.names):
+                        return before_parsed, after_parsed
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level or any((alias.asname or alias.name) not in called for alias in node.names):
+                        return before_parsed, after_parsed
+            if not pure_imported_calls(module[0].encode(), calls, path=path, read=read):
+                return before_parsed, after_parsed
+        if message_calls or any(form in {"zip-fixture", "callable-fixture"} for _, form in module[6]):
+            calls = [case.assertion.test.left for case in module[2]]
+            called = {call.func.id for call in calls if isinstance(call.func, ast.Name)}
+            # Another module import or oracle could replace a function or a
+            # formatting authority before this helper runs. Every imported
+            # source and every preceding subject call must earn the same
+            # primitive-string proof, even when its own assert has no message.
+            for node in ast.parse(module[0]).body:
+                if isinstance(node, ast.Import):
+                    if any(alias.name != "pytest" or alias.asname for alias in node.names):
+                        return before_parsed, after_parsed
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level or any((alias.asname or alias.name) not in called for alias in node.names):
+                        return before_parsed, after_parsed
+            strings_only = any(form in {"zip-fixture", "callable-fixture"} for _, form in module[6])
+            def primitive_result(source, target, call):
+                return (primitive_string_result(source, target, call)
+                        or not strings_only and primitive_literal_result(source, target, call))
+            if not pure_imported_calls(module[0].encode(), calls, path=path, read=read,
+                                       result_proof=primitive_result):
+                return before_parsed, after_parsed
+            if not _module_unshadowed(path, read, "re"):
+                return before_parsed, after_parsed
+        if old[8] or new[8] or native_renames:
+            calls = [case.assertion.test.left for case in module[2]] + [oracle.call for oracle in module[11]]
+            if not _closed_proof_imports(module, calls) or not pure_imported_calls(
+                    module[0].encode(), calls, path=path, read=read):
+                return before_parsed, after_parsed
+        for case in module[2]:
+            if getattr(case.assertion, '_requires_boolean_result', False) and not pure_imported_calls(
+                    module[0].encode(), [case.assertion.test.left], path=path, read=read,
+                    result_proof=primitive_boolean_result):
+                return before_parsed, after_parsed
+            if getattr(case.assertion, '_requires_shared_collection_inputs', False) and not pure_imported_calls(
+                    module[0].encode(), [case.assertion.test.left], path=path, read=read,
+                    result_proof=shared_literal_collection_inputs):
+                return before_parsed, after_parsed
+            arity = getattr(case.assertion, '_requires_tuple_arity', None)
+            if arity is not None and not pure_imported_calls(
+                    module[0].encode(), [case.assertion.test.left], path=path, read=read,
+                    result_proof=lambda source, target, call: primitive_tuple_result(source, target, call, arity)):
+                return before_parsed, after_parsed
+    # Only equality-to-identity strengthening is paired, and only after both
+    # complete source proofs establish Boolean results. Keep concrete answers.
+    for module in (old, new):
+        for case in module[2]:
+            if getattr(case.assertion, '_requires_boolean_result', False):
+                case.assertion.test.ops = [ast.Eq()]
+    return (retain_local_auxiliary_units(retain_raises_units(_project(before_parsed, old[0], old[2]), old[0], old[11]), old[0], old[12]),
+            retain_local_auxiliary_units(retain_raises_units(_project(after_parsed, new[0], new[2]), new[0], new[11]), new[0], new[12]))

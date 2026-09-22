@@ -39,6 +39,10 @@ ORACLE_RULES = {
     # buggy output passes. Routine when production changed under it, which
     # is exactly what repair evidence measures.
     "SUBJECT_NORMALIZED",
+    # The expectation and the operator are untouched and the subject's
+    # *input data* changed, so the bug is no longer exercised (issue #93).
+    # Routine when production changed under it — same repair-evidence path.
+    "SUBJECT_INPUT_CHANGED",
     # E3 used to escalate this unconditionally, which blocked the single most
     # common honest repair there is: change a constant, update its test.
     # It goes through repair evidence like every other oracle rule.
@@ -79,6 +83,7 @@ RULE_ORDER = [
     "EXPECTED_VALUE_DERIVED",
     "EXPECTATION_DEFINITION_CHANGED",
     "SUBJECT_NORMALIZED",
+    "SUBJECT_INPUT_CHANGED",
     "SNAPSHOT_CODE_COCHANGE",
     "CI_WORKFLOW_TOUCHED",
     "BROAD_EXCEPT_ADDED",

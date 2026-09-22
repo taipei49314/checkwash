@@ -49,7 +49,7 @@ def test_all_ancestor_startup_paths_are_requested_from_strict_reader():
         return None
 
     assert inert_test_execution_context("tests/unit/test_bool.py", read, lambda needles: [])
-    assert requested == [
+    assert requested == sorted([
         ".pytest.ini", ".pytest.toml", "__init__.py", "conftest.py", "pyproject.toml",
         "pytest.ini", "pytest.toml", "setup.cfg",
         "tests/.pytest.ini", "tests/.pytest.toml", "tests/__init__.py", "tests/conftest.py",
@@ -57,7 +57,10 @@ def test_all_ancestor_startup_paths_are_requested_from_strict_reader():
         "tests/unit/.pytest.ini", "tests/unit/.pytest.toml", "tests/unit/__init__.py", "tests/unit/conftest.py",
         "tests/unit/pyproject.toml", "tests/unit/pytest.ini", "tests/unit/pytest.toml", "tests/unit/setup.cfg",
         "tests/unit/tox.ini", "tox.ini",
-    ]
+    ] + [prefix + module + suffix
+         for prefix in ("", "src/", "tests/", "tests/unit/")
+         for module in ("sitecustomize", "usercustomize")
+         for suffix in (".py", "/__init__.py")])
 
 
 def test_failed_or_invalid_startup_reader_does_not_become_absence():

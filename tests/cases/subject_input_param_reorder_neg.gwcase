@@ -1,0 +1,31 @@
+=== meta ===
+rule: SUBJECT_INPUT_CHANGED
+title: Reordering literal rows relabels nothing
+origin: the table channel pairs a vanished input with an arriving one —
+origin2: a reorder removes and arrives nothing
+=== before: tests/test_invoice.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([50.0, 50.0], 105.0), ([10.0], 10.5)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_invoice.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([10.0], 10.5), ([50.0, 50.0], 105.0)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[]

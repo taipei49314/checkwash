@@ -1,0 +1,26 @@
+=== meta ===
+rule: SUBJECT_INPUT_CHANGED
+title: New input data for changed production is repair, at warn
+origin: the rule escalates through repair evidence like every oracle
+origin2: rule (SPEC §5 E1) — the production change under the test
+origin3: explains the new data, so nothing blocks
+=== before: src/app.py ===
+def normalize(s):
+    return " ".join(s.split())
+=== before: tests/test_norm.py ===
+from app import normalize
+
+
+def test_collapse_and_lower():
+    assert normalize("  Hello   World  ") == "hello world"
+=== after: src/app.py ===
+def normalize(s):
+    return " ".join(s.split()).lower()
+=== after: tests/test_norm.py ===
+from app import normalize
+
+
+def test_collapse_and_lower():
+    assert normalize("  hello   world  ") == "hello world"
+=== expect ===
+[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

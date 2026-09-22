@@ -152,21 +152,31 @@ def detect_conftest_prod_patch(ir: IR) -> list[Finding]:
     probe arm (2026-08-04). Stubbing stdlib or third-party dependencies is
     normal hygiene and is not reported.
     """
-    return [
-        Finding(
-            rule="CONFTEST_PATCHES_PROD",
-            severity="warn",  # gating escalates without a prod change to explain it
-            message=(
-                f"conftest fixture patches code under test ({text}) — "
-                f"assertions then check the replacement, not the product"
-            ),
-            path=path,
-            unit=None,
-            after=Evidence(text=text, span=(0, 0)),
-            fingerprint=make_fingerprint("CONFTEST_PATCHES_PROD", path, None, text),
+    # The presence scan and the installation trace can both prove the same
+    # act (e.g. an unconditional setattr); their evidence texts differ only
+    # in whitespace. One finding per act.
+    seen = set()
+    findings = []
+    for path, text in ir.globals.conftest_prod_patches:
+        key = (path, "".join(text.split()))
+        if key in seen:
+            continue
+        seen.add(key)
+        findings.append(
+            Finding(
+                rule="CONFTEST_PATCHES_PROD",
+                severity="warn",  # gating escalates without a prod change to explain it
+                message=(
+                    f"conftest fixture patches code under test ({text}) — "
+                    f"assertions then check the replacement, not the product"
+                ),
+                path=path,
+                unit=None,
+                after=Evidence(text=text, span=(0, 0)),
+                fingerprint=make_fingerprint("CONFTEST_PATCHES_PROD", path, None, text),
+            )
         )
-        for path, text in ir.globals.conftest_prod_patches
-    ]
+    return findings
 
 
 def _guardrail_message(ir: IR, path: str) -> str:

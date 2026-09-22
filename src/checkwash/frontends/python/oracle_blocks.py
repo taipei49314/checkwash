@@ -13,7 +13,9 @@ import copy
 
 
 IMPLICIT_ENTRY_NAMES = {"setup_module", "teardown_module", "setup_function", "teardown_function",
-                        "setup_class", "teardown_class", "setup_method", "teardown_method", "setup", "teardown"}
+                        "setup_class", "teardown_class", "setup_method", "teardown_method", "setup", "teardown",
+                        "setUpModule", "tearDownModule", "setUpClass", "tearDownClass", "setUp", "tearDown",
+                        "pytestmark"}
 
 
 def _args(node):
@@ -56,8 +58,96 @@ class _LiteralBuiltins(ast.NodeTransformer):
         return node
 
 
+def _dictionary_field_block(function):
+    """Retain every checked field as a primitive dictionary expectation.
+
+    Matching a later complete dictionary oracle can strengthen the old field
+    checks, but it cannot drop or rewrite one without an expectation change.
+    Custom mappings need their original dispatch and receive no projection.
+    """
+    if not 3 <= len(function.body) <= 9:
+        return None
+    assignment, *checks = function.body
+    if (not isinstance(assignment, ast.Assign) or len(assignment.targets) != 1
+            or not isinstance(assignment.targets[0], ast.Name) or not isinstance(assignment.value, ast.Call)
+            or not all(isinstance(check, ast.Assert) and check.msg is None for check in checks)):
+        return None
+    local = assignment.targets[0].id
+    keys, values, seen = [], [], set()
+    for check in checks:
+        compare = check.test
+        if (not isinstance(compare, ast.Compare) or len(compare.ops) != 1 or not isinstance(compare.ops[0], ast.Eq)
+                or not isinstance(compare.left, ast.Subscript) or not isinstance(compare.left.value, ast.Name)
+                or compare.left.value.id != local or not isinstance(compare.left.slice, ast.Constant)
+                or type(compare.left.slice.value) is not str or compare.left.slice.value in seen
+                or not _scalar(compare.comparators[0])):
+            return None
+        seen.add(compare.left.slice.value)
+        keys.append(copy.deepcopy(compare.left.slice))
+        values.append(copy.deepcopy(compare.comparators[0]))
+    if any(isinstance(node, ast.Name) and node.id == local for node in ast.walk(assignment.value)):
+        return None
+    primary = ast.copy_location(ast.Assert(test=ast.Compare(left=copy.deepcopy(assignment.value), ops=[ast.Eq()],
+        comparators=[ast.Dict(keys=keys, values=values)]), msg=None), checks[-1])
+    primary._requires_primitive_string = True
+    primary._partial_dictionary_fields = True
+    return primary, None
+
+
+def _implied_membership_block(function):
+    """Literal membership checks entailed by the final primitive string value.
+
+    The caller must prove primitive, side-effect-free production results.
+    A custom equality or containment implementation cannot earn this credit.
+    """
+    if not 3 <= len(function.body) <= 6:
+        return None
+    assignment, *checks = function.body
+    if (not isinstance(assignment, ast.Assign) or len(assignment.targets) != 1
+            or not isinstance(assignment.targets[0], ast.Name) or not isinstance(assignment.value, ast.Call)
+            or not all(isinstance(check, ast.Assert) and check.msg is None for check in checks)):
+        return None
+    local = assignment.targets[0].id
+    exact = checks[-1].test
+    if (not isinstance(exact, ast.Compare) or len(exact.ops) != 1 or not isinstance(exact.ops[0], ast.Eq)
+            or not isinstance(exact.left, ast.Name) or exact.left.id != local
+            or not isinstance(exact.comparators[0], ast.Constant) or type(exact.comparators[0].value) is not str
+            or any(isinstance(node, ast.Name) and node.id == local for node in ast.walk(assignment.value))):
+        return None
+    expected = exact.comparators[0].value
+    for check in checks[:-1]:
+        compare = check.test
+        if (not isinstance(compare, ast.Compare) or len(compare.ops) != 1
+                or not isinstance(compare.ops[0], (ast.In, ast.NotIn))
+                or not isinstance(compare.left, ast.Constant) or type(compare.left.value) is not str
+                or not isinstance(compare.comparators[0], ast.Name) or compare.comparators[0].id != local):
+            return None
+        holds = compare.left.value in expected
+        if holds != isinstance(compare.ops[0], ast.In):
+            return None
+    primary = copy.deepcopy(checks[-1])
+    primary.test.left = copy.deepcopy(assignment.value)
+    primary._requires_primitive_string = True
+    return primary, None
+
+
 def string_block(function):
     """One subject call, length/prefix checks, then the exact string oracle."""
+    # Literal string messages have no deferred calls or formatting effects.
+    # Normalize only these diagnostics before comparing complete auxiliary
+    # bodies; every checked expression and expected value stays intact.
+    if any(isinstance(node, ast.Assert) and isinstance(node.msg, ast.Constant)
+           and type(node.msg.value) is str for node in function.body):
+        function = copy.deepcopy(function)
+        for node in function.body:
+            if isinstance(node, ast.Assert) and isinstance(node.msg, ast.Constant) and type(node.msg.value) is str:
+                node.msg = None
+    dictionary = _dictionary_field_block(function)
+    if dictionary is not None:
+        return dictionary
+    implied = _implied_membership_block(function)
+    if implied is not None:
+        return implied
     if len(function.body) != 4:
         return None
     assignment, length, prefix, exact = function.body

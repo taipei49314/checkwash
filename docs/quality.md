@@ -113,13 +113,13 @@ configuration, coverage scope and mypy strict expansion. Packaged models include
 the qualification fixture and result hashes. Provenance and the remaining
 acceptance conditions are in [the qualification record](quality-qualification/README.md).
 
-To try the packaged preview, install `checkwash==0.3.4`. The recommended
-v0.3.3 test-oracle Action does not include `quality`; a CLI installation does
+To try the packaged preview, install `checkwash==0.4.0`. The recommended
+v0.3.4 Action includes the prior quality preview; a CLI installation does
 not update that Action. The preview's native/package checks and retained
 T-255 comparison failure are identified separately in the release guide.
 
 Keep quality in its own required CI status when enabling enforcement. Use a
 trusted pinned tool and trusted PR refs; do not swallow exit 2 or use
 continue-on-error. Adding a workflow alone does not verify branch protection.
-The v0.3.4 publication is governed separately under estate T-332; it does
+The v0.4.0 publication is governed separately under estate T-436; it does
 not assert completion of the quality design's acceptance conditions.

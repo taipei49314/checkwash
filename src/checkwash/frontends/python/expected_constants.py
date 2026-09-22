@@ -14,7 +14,25 @@ class _Unknown(Exception):
     pass
 
 
-def folded_expected(node, allow_call):
+def folded_expected(node, allow_call, *, boolean_logic=False):
+    # Lazy value evaluation must not skip Python's whole-function binding
+    # and compilation rules. A dead walrus can make a builtin local; a dead
+    # yield turns its function into a generator. Validate the complete closed
+    # expression language before evaluating only the selected value branch.
+    allowed = (ast.Constant, ast.Tuple, ast.List, ast.JoinedStr, ast.Name, ast.Load, ast.Attribute,
+               ast.UnaryOp, ast.UAdd, ast.USub, ast.Not, ast.BinOp, ast.Add, ast.Sub, ast.Mult,
+               ast.Div, ast.FloorDiv, ast.Mod, ast.Compare, ast.Eq, ast.NotEq, ast.Lt, ast.LtE,
+               ast.Gt, ast.GtE, ast.IfExp, ast.Subscript, ast.Slice, ast.Call, ast.BoolOp, ast.And, ast.Or)
+    for count, part in enumerate(ast.walk(node)):
+        if count >= 512 or not isinstance(part, allowed):
+            return None
+        if isinstance(part, ast.Call):
+            function = part.func
+            known = (isinstance(function, ast.Name) and function.id == 'len'
+                     or isinstance(function, ast.Attribute) and function.attr == 'prod'
+                     and isinstance(function.value, ast.Name) and function.value.id == 'math')
+            if not known or len(part.args) != 1 or part.keywords:
+                return None
     steps = 0
 
     def bounded(value):
@@ -40,11 +58,19 @@ def folded_expected(node, allow_call):
         sub = lambda item: visit(item, depth + 1)
         if isinstance(expr, ast.Constant):
             return bounded(expr.value)
+        if isinstance(expr, ast.JoinedStr) and all(isinstance(part, ast.Constant) and type(part.value) is str
+                                                  for part in expr.values):
+            return bounded("".join(part.value for part in expr.values))
         if isinstance(expr, (ast.Tuple, ast.List)):
             if len(expr.elts) > 64:
                 raise _Unknown
             values = [sub(item) for item in expr.elts]
             return bounded(tuple(values) if isinstance(expr, ast.Tuple) else values)
+        if boolean_logic and isinstance(expr, ast.UnaryOp) and isinstance(expr.op, ast.Not):
+            value = sub(expr.operand)
+            if type(value) is not bool:
+                raise _Unknown
+            return not value
         if isinstance(expr, ast.UnaryOp) and isinstance(expr.op, (ast.UAdd, ast.USub)):
             value = sub(expr.operand)
             if type(value) not in (int, float):
@@ -60,14 +86,19 @@ def folded_expected(node, allow_call):
             if operation is None or not (numeric or concatenation):
                 raise _Unknown
             return bounded(operation(left, right))
-        if isinstance(expr, ast.Compare) and len(expr.ops) == 1:
-            left, right = sub(expr.left), sub(expr.comparators[0])
+        if isinstance(expr, ast.Compare) and (len(expr.ops) == 1 or boolean_logic):
+            left = sub(expr.left)
             comparisons = {ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt,
                            ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge}
-            compare = comparisons.get(type(expr.ops[0]))
-            if compare is None or type(left) not in (int, float, str, bytes) or type(right) not in (int, float, str, bytes):
-                raise _Unknown
-            return compare(left, right)
+            for operation, comparator in zip(expr.ops, expr.comparators):
+                right = sub(comparator)
+                compare = comparisons.get(type(operation))
+                if compare is None or type(left) not in (int, float, str, bytes) or type(right) not in (int, float, str, bytes):
+                    raise _Unknown
+                if not compare(left, right):
+                    return False  # Python evaluates each middle value once and stops at a false link
+                left = right
+            return True
         if isinstance(expr, ast.IfExp):
             condition = sub(expr.test)
             if type(condition) is not bool:

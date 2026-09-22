@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 103
+rule: SUBJECT_INPUT_CHANGED
+title: The assertion line is byte-identical; the input binding moved
+origin: the binding spelling of issue #93 — reaching reads what the
+origin2: assertion reads, so the rewritten local is the same act
+=== before: tests/test_norm.py ===
+from app import normalize
+
+
+def test_one():
+    s = "Hello World"
+    assert normalize(s) == "hello world"
+=== after: tests/test_norm.py ===
+from app import normalize
+
+
+def test_one():
+    s = "hello world"
+    assert normalize(s) == "hello world"
+=== expect ===
+[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

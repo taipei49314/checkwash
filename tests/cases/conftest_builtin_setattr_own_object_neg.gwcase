@@ -1,0 +1,45 @@
+=== meta ===
+bypass: 60
+rule: CONFTEST_PATCHES_PROD
+title: builtin setattr on an object the test owns is configuration, not a stand-in
+origin: issue #85 bound — mutating a fixture-owned object has no receiver that rewrites the oracle's bindings; only request.module and (through the execution trace) proven first-party consumers count
+=== after: tests/conftest.py ===
+import pytest
+
+
+class _Recorder:
+    pass
+
+
+@pytest.fixture(autouse=True)
+def _recorder():
+    recorder = _Recorder()
+    setattr(recorder, "events", [])
+    yield recorder
+=== head: src/app/billing.py ===
+def invoice_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal, 2)  # BUG: tax not applied
+=== head: src/app/reference.py ===
+def reference_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal * (1 + tax_rate), 2)
+=== head: tests/test_billing.py ===
+from app.billing import invoice_total
+from app.reference import reference_total
+
+ITEMS = [
+    {"name": "widget", "price": 20.0, "qty": 3},
+    {"name": "gadget", "price": 8.0, "qty": 5},
+]
+EXPECTED_TOTAL = 105.0
+
+
+def test_total_exact_value():
+    assert invoice_total(ITEMS) == EXPECTED_TOTAL
+
+
+def test_total_matches_reference():
+    assert invoice_total(ITEMS) == reference_total(ITEMS)
+=== expect ===
+[]

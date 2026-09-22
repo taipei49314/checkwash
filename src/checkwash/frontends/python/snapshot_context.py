@@ -20,7 +20,7 @@ from checkwash.roles import collectable
 _CONFIG_FILES = ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg", "pytest.toml", ".pytest.toml")
 
 
-def _default_collection_options(options):
+def _default_collection_options(options, *, test_path, directory):
     if not isinstance(options, dict) or set(options) - {"testpaths"}:
         return False
     paths = options.get("testpaths", [])
@@ -28,14 +28,18 @@ def _default_collection_options(options):
         paths = paths.split()
     if not isinstance(paths, list) or any(type(path) is not str for path in paths):
         return False
-    # Selecting conventional descendant directories only narrows the files
-    # already inspected by the complete inventory. Explicit Python files,
-    # globs and parent/absolute paths can alter that collection boundary.
-    return all(re.fullmatch(r"[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*/?", path)
-               and collectable(path.rstrip("/") + "/test_probe.py") for path in paths)
+    # Keep the existing conservative directory-only syntax. A nonempty
+    # selection must also include this consumer relative to the config root;
+    # similarly prefixed siblings (unit versus unit_extra) are not descendants.
+    if not all(re.fullmatch(r"[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*/?", path)
+               and collectable(path.rstrip("/") + "/test_probe.py") for path in paths):
+        return False
+    consumer = PurePosixPath(test_path.replace("\\", "/")).parts
+    roots = [(directory / selected).parts for selected in paths]
+    return not paths or any(len(consumer) > len(root) and consumer[:len(root)] == root for root in roots)
 
 
-def _default_collection_config(source, filename):
+def _default_collection_config(source, filename, *, test_path, directory):
     """Unknown pytest options cannot prove default collection or startup."""
     try:
         text = source.decode("utf-8-sig")
@@ -47,11 +51,13 @@ def _default_collection_config(source, filename):
                     return False
                 settings = tool.get("pytest", {})
                 return (isinstance(settings, dict) and not set(settings) - {"ini_options"}
-                        and _default_collection_options(settings.get("ini_options", {})))
+                        and _default_collection_options(settings.get("ini_options", {}),
+                                                        test_path=test_path, directory=directory))
             return not parsed
         parsed = configparser.ConfigParser(interpolation=None)
         parsed.read_string(text)
-        return all(_default_collection_options(dict(parsed[section])) for section in parsed.sections()
+        return all(_default_collection_options(dict(parsed[section]), test_path=test_path, directory=directory)
+                   for section in parsed.sections()
                    if section.lower() in ("pytest", "tool:pytest"))
     except (UnicodeError, ValueError, configparser.Error, RecursionError, MemoryError):
         return False
@@ -102,8 +108,10 @@ def inert_test_execution_context(path, read, search=None):
     Missing, failed or over-budget discovery withholds optional proof. Empty
     sources are inert. ``read`` distinguishes known absence from failures;
     selected-source read exceptions propagate. The caller owns its cache.
-    Only empty pytest options or literal descendant-directory testpaths earn
-    default-collection credit; names and plugin options must not hide siblings.
+    Only empty pytest options or literal descendant-directory testpaths covering
+    this consumer earn default-collection credit. Every discovered config must
+    qualify; unknown precedence may conservatively withhold proof. Names and
+    plugin options must not hide siblings.
     """
     if read is None or search is None:
         return False
@@ -118,6 +126,7 @@ def inert_test_execution_context(path, read, search=None):
     selected = set(siblings)
     relevant = {path, *(p for p in paths if collectable(p) or p.replace("\\", "/").endswith("conftest.py"))}
     configurations = set()
+    startup_roots = {'', 'src'}
     for candidate in {path, *paths}:
         normalized = candidate.replace("\\", "/")
         parts = PurePosixPath(normalized).parts
@@ -131,9 +140,18 @@ def inert_test_execution_context(path, read, search=None):
             directory = "/".join(parts[:depth])
             prefix = directory + "/" if directory else ""
             if candidate in relevant:
+                startup_roots.add(directory)
                 for filename in ("__init__.py", "conftest.py"):
                     selected.add(prefix + filename)
             configurations.update(prefix + filename for filename in _CONFIG_FILES)
+    # Python imports these modules before pytest or the test module starts.
+    # Every conventional root must be inert: an executable competing module
+    # or package cannot be ignored by guessing sys.path precedence. Test
+    # ancestors also cover repositories that place those roots on PYTHONPATH.
+    for root in startup_roots:
+        prefix = root + '/' if root else ''
+        for module in ('sitecustomize', 'usercustomize'):
+            selected.update((prefix + module + '.py', prefix + module + '/__init__.py'))
     selected.update(configurations)
     if len(selected) > 128:
         return False
@@ -148,7 +166,9 @@ def inert_test_execution_context(path, read, search=None):
         if len(source) > 100_000:
             return False
         if candidate in configurations:
-            if not _default_collection_config(source, PurePosixPath(candidate).name):
+            configuration = PurePosixPath(candidate)
+            if not _default_collection_config(source, configuration.name, test_path=path,
+                                              directory=configuration.parent):
                 return False
             continue
         try:

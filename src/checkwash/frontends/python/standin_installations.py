@@ -14,12 +14,14 @@ positive installation proof. Repository code is never executed.
 from __future__ import annotations
 
 import ast
+import copy
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.frontend import _static_truth, parse_python
+from checkwash.frontends.python.mock_testcase_replacements import restructured_patch_event
 from checkwash.gating import unit_is_live
 from checkwash.ir.astutil import stable_dump
 from checkwash.pyenv import known_baseline
@@ -75,6 +77,7 @@ class _Function:
     qualname: str
     fixture_name: str | None = None
     autouse: bool = False
+    patch_env: dict[str, _Value] | None = None
 
 
 @dataclass
@@ -94,6 +97,202 @@ def _value(*values, alias=None):
 
 def _literal(node):
     return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
+
+
+def _literal_data(node):
+    """A closed literal container cannot call a production provider."""
+    if isinstance(node, ast.Constant):
+        return type(node.value) in {str, bytes, int, float, complex, bool, type(None)}
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return all(_literal_data(child) for child in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(key is not None and _literal_data(key) and _literal_data(value)
+                   for key, value in zip(node.keys, node.values))
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        return isinstance(node.operand, ast.Constant) and type(node.operand.value) in {int, float, complex}
+    return False
+
+
+def _previous_literal(previous, name):
+    # Adjacency excludes intervening mutation/callbacks, including mutations
+    # through an alias. This is deliberately not final reaching provenance.
+    if (isinstance(previous, ast.Assign) and len(previous.targets) == 1
+            and isinstance(previous.targets[0], ast.Name) and previous.targets[0].id == name
+            and _literal_data(previous.value)):
+        return previous.value
+    return None
+
+
+def _literal_stub(node, previous):
+    if _literal_data(node):
+        return True
+    if not isinstance(node, ast.Lambda):
+        return False  # a named callback may delegate to real production
+    if not all(_literal_data(value) for value in [*node.args.defaults, *node.args.kw_defaults] if value is not None):
+        return False
+    parameters = {arg.arg for arg in node.args.posonlyargs + node.args.args + node.args.kwonlyargs}
+    body = node.body
+    if _literal_data(body):
+        return True
+
+    def scalar(value):
+        return isinstance(value, ast.Constant) or isinstance(value, ast.Name) and value.id in parameters
+
+    receiver = None
+    if isinstance(body, ast.Subscript) and scalar(body.slice):
+        receiver = body.value
+    elif (isinstance(body, ast.Call) and isinstance(body.func, ast.Attribute) and body.func.attr == "get"
+          and len(body.args) in {1, 2} and not body.keywords and all(scalar(arg) for arg in body.args)):
+        receiver = body.func.value
+    if isinstance(receiver, ast.Name) and receiver.id not in parameters:
+        return isinstance(_previous_literal(previous, receiver.id), ast.Dict)
+    return False
+
+
+def _literal_assertion_loop(node, previous):
+    """Only a definitely entered literal loop of direct assertions is traced."""
+    if (not isinstance(node.target, ast.Name) or node.orelse
+            or not node.body or not all(isinstance(statement, ast.Assert) for statement in node.body)):
+        return False
+    rows = node.iter
+    if isinstance(rows, ast.Name):
+        rows = _previous_literal(previous, rows.id)
+    return isinstance(rows, (ast.List, ast.Tuple)) and 0 < len(rows.elts) <= 64 and _literal_data(rows)
+
+
+def _patch_signature(keywords, previous):
+    values = []
+    for name, value in sorted(keywords.items()):
+        value = copy.deepcopy(value)
+        if isinstance(value, ast.Lambda):
+            parameters = value.args.posonlyargs + value.args.args + value.args.kwonlyargs
+            names = {arg.arg: f"__argument_{index}" for index, arg in enumerate(parameters)}
+
+            class Normalize(ast.NodeTransformer):
+                def visit_Name(self, node):
+                    if node.id in names:
+                        return ast.Name(id=names[node.id], ctx=ast.Load())
+                    literal = _previous_literal(previous, node.id)
+                    return copy.deepcopy(literal) if literal is not None else node
+
+            value.body = Normalize().visit(value.body)
+            for arg in parameters:
+                arg.arg = names[arg.arg]
+        values.append(ast.Tuple(elts=[ast.Constant(value=name), value], ctx=ast.Load()))
+    # Patch API/import/local names do not create a new subject installation.
+    return stable_dump(ast.Tuple(elts=values, ctx=ast.Load()))
+
+
+def _patch_assertion_body(statements, mock_name, captures, previous, keywords, *, call_records=False):
+    """No callback or rebinding can change a literal stub's closure here."""
+    unknown = object()
+    names = {}
+
+    def value(node, bindings):
+        try:
+            if _literal_data(node):
+                return ast.literal_eval(node)
+            if isinstance(node, ast.Name):
+                return bindings.get(node.id, unknown)
+            if isinstance(node, ast.Subscript):
+                container, key = value(node.value, bindings), value(node.slice, bindings)
+                if type(container) in {dict, list, tuple, str, bytes} and key is not unknown:
+                    return container[key]
+        except (ValueError, TypeError, KeyError, IndexError, OverflowError):
+            pass
+        return unknown
+
+    for name in captures:
+        literal = _previous_literal(previous, name)
+        if literal is not None:
+            names[name] = value(literal, {})
+
+    def returns(call):
+        if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name) or call.func.id != mock_name:
+            return False
+        args = [value(arg, names) for arg in call.args]
+        if any(arg is unknown for arg in args) or call.keywords:
+            return False
+        effect = keywords.get("side_effect")
+        if effect is None or isinstance(effect, ast.Constant) and effect.value is None:
+            returned = keywords.get("return_value")
+            return returned is None or value(returned, {}) is not unknown
+        if isinstance(effect, ast.Lambda):
+            parameters = effect.args.posonlyargs + effect.args.args
+            if (len(parameters) != len(args) or effect.args.kwonlyargs or effect.args.vararg or effect.args.kwarg
+                    or any(value(default, {}) is unknown for default in effect.args.defaults)):
+                return False
+            bindings = {**names, **{arg.arg: actual for arg, actual in zip(parameters, args)}}
+            body = effect.body
+            if isinstance(body, ast.Call) and isinstance(body.func, ast.Attribute) and body.func.attr == "get":
+                container = value(body.func.value, bindings)
+                lookup = [value(arg, bindings) for arg in body.args]
+                if type(container) is not dict or any(arg is unknown for arg in lookup):
+                    return False
+                try:
+                    container.get(*lookup)
+                except TypeError:
+                    return False
+                return True
+            return value(body, bindings) is not unknown
+        sequence = value(effect, {})
+        return type(sequence) in {list, tuple, str, bytes, dict, set} and bool(sequence)
+
+    def assertion(node):
+        test = node.test
+        if node.msg is not None and value(node.msg, names) is unknown:
+            return False
+        # A mock to the right of a short-circuit or raising expression has not
+        # necessarily run. Keep one direct call on the left of one comparison.
+        return returns(test) or (isinstance(test, ast.Compare) and len(test.ops) == 1
+                                 and returns(test.left) and value(test.comparators[0], names) is not unknown)
+
+    if call_records and len(statements) == 2 and isinstance(statements[0], ast.Expr) and returns(statements[0].value):
+        observer = statements[1]
+        if isinstance(observer, ast.Assert) and observer.msg is None:
+            test = observer.test
+            return (isinstance(test, ast.Compare) and len(test.ops) == 1 and isinstance(test.ops[0], ast.Eq)
+                    and isinstance(test.left, ast.Attribute) and test.left.attr == "call_args"
+                    and isinstance(test.left.value, ast.Name) and test.left.value.id == mock_name
+                    and value(test.comparators[0], names) is not unknown)
+        if isinstance(observer, ast.Expr) and isinstance(observer.value, ast.Call):
+            call = observer.value
+            return (isinstance(call.func, ast.Attribute) and call.func.attr == "assert_called_once_with"
+                    and isinstance(call.func.value, ast.Name) and call.func.value.id == mock_name
+                    and not call.keywords and all(value(arg, names) is not unknown for arg in call.args))
+        return False
+
+    consumers = 0
+    for index, statement in enumerate(statements):
+        if isinstance(statement, ast.Assign):
+            if (len(statement.targets) != 1 or not isinstance(statement.targets[0], ast.Name)
+                    or statement.targets[0].id in captures | {mock_name} or not _literal_data(statement.value)):
+                return False
+            literal = value(statement.value, names)
+            if literal is unknown:
+                return False
+            names[statement.targets[0].id] = literal
+        elif isinstance(statement, ast.Assert):
+            if not assertion(statement):
+                return False
+            consumers += 1
+        elif isinstance(statement, ast.For):
+            previous = statements[index - 1] if index else None
+            if (not _literal_assertion_loop(statement, previous)
+                    or statement.target.id in captures | {mock_name}
+                    or len(statement.body) != 1):
+                return False
+            rows = value(statement.iter, names)
+            if type(rows) not in {list, tuple} or not rows:
+                return False
+            names[statement.target.id] = rows[0]
+            if not assertion(statement.body[0]):
+                return False
+            consumers += 1
+        else:
+            return False
+    # A preceding failing assertion must not manufacture later execution.
+    return consumers == 1
 
 
 def _import_module(node, package):
@@ -129,8 +328,20 @@ def _candidate(source, imported_names=()):
     setters = {"setattr"} | {a.asname or a.name for node in ast.walk(tree)
                              if isinstance(node, ast.ImportFrom) and node.module == "builtins" and not node.level
                              for a in node.names if a.name == "setattr"}
+    patchers = {a.asname or a.name for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module == "unittest.mock" and not node.level
+                for a in node.names if a.name == "patch"}
     for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            parameters = node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+            if any(arg.arg in imports for arg in parameters):
+                return True
         if isinstance(node, ast.Call):
+            if (isinstance(node.func, ast.Name) and node.func.id in patchers
+                    or isinstance(node.func, ast.Attribute) and (node.func.attr == "patch"
+                        or node.func.attr == "object" and (isinstance(node.func.value, ast.Name) and node.func.value.id in patchers
+                            or isinstance(node.func.value, ast.Attribute) and node.func.value.attr == "patch"))):
+                return True  # the trace requires exact stdlib binding and result use
             if isinstance(node.func, ast.Name) and node.func.id in setters:
                 return True
             if isinstance(node.func, ast.Attribute) and node.func.attr in {"setattr", "setitem"}:
@@ -153,18 +364,50 @@ def _imports(source):
             if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
 
 
+def _import_rebind(before, after):
+    """A local import name pointing at a different dotted target after.
+
+    Scheduling filter only — the import spelling of a stand-in swap (#88b)
+    changes nothing the call/assignment filters see. Scope, alias and
+    ownership precision belong to the trace; this keeps the diff a candidate.
+    """
+    def bindings(source):
+        tree = _syntax(source)
+        if tree is None:
+            return None
+        out = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for item in node.names:
+                    out[item.asname or item.name.split(".")[0]] = item.name if item.asname else item.name.split(".")[0]
+            elif isinstance(node, ast.ImportFrom) and not node.level and node.module:
+                for item in node.names:
+                    if item.name != "*":
+                        out[item.asname or item.name] = f"{node.module}.{item.name}"
+        return out
+
+    old, new = bindings(before), bindings(after)
+    if not old or not new:
+        return False
+    return any(name in new and new[name] != target for name, target in old.items())
+
+
 class _Trace:
-    def __init__(self, modules, context, side, deny, budget=None):
+    def __init__(self, modules, context, side, deny, budget=None, search=None):
         self.modules = modules
         self.context = context
         self.side = side
         self.deny = deny
         self.active: dict[tuple[str, str], _Effect] = {}
         self.observed: set[_Effect] = set()
+        self.patch_results: dict[str, _Effect] = {}
+        self.called_patch_results: set[str] = set()
         self.stack = []
         self.steps = 0
         self.test_module = None
         self.budget = budget if budget is not None else [0]
+        self.search = search
+        self.failed_assertion = False
 
     def owned(self, target):
         if target.startswith("@") or target.split(".", 1)[0] in self.deny:
@@ -183,12 +426,14 @@ class _Trace:
 
     def expression(self, node, module, env, qualname, *, native_setattr=True):
         self._step()
-        if node is None:
+        if node is None or self.failed_assertion:
             return _Value()
         if isinstance(node, ast.Name):
             return env.get(node.id, _Value())
         if isinstance(node, ast.Attribute):
             base = self.expression(node.value, module, env, qualname, native_setattr=native_setattr)
+            if base.alias in self.called_patch_results and node.attr in {"call_args", "assert_called_once_with"}:
+                return _Value(f"{base.alias}.{node.attr}", frozenset({self.patch_results[base.alias]}))
             if base.alias == "@request" and node.attr == "module":
                 return _Value("@test_module")
             if base.alias == "@test_module" and self.test_module is not None:
@@ -233,6 +478,11 @@ class _Trace:
             helper = module.functions.get(fn.alias.removeprefix("@function:") if fn.alias else "")
             if helper is not None:
                 return _value(fn, *args, *kwargs.values(), self.function(helper, args, kwargs))
+            if fn.alias in self.patch_results:
+                # Calling the substitute establishes result evidence and makes
+                # its later, already-validated call record eligible to observe.
+                self.called_patch_results.add(fn.alias)
+                return _Value(effects=frozenset({self.patch_results[fn.alias]}))
             result = _value(fn, *args, *kwargs.values())
             if isinstance(node.func, ast.Attribute) and node.func.attr.startswith("assert"):
                 self.observe(result)
@@ -242,8 +492,137 @@ class _Trace:
         return _value(*(self.expression(child, module, env, qualname, native_setattr=native_setattr)
                         for child in ast.iter_child_nodes(node) if isinstance(child, ast.expr)))
 
+    def patch_result(self, item, previous, body, module, env, qualname, *, require_authority=False):
+        call = item.context_expr
+        if not isinstance(call, ast.Call) or not isinstance(item.optional_vars, ast.Name):
+            return None
+        fn = self.expression(call.func, module, env, qualname)
+        if fn.effects or fn.alias not in {"unittest.mock.patch", "unittest.mock.patch.object"}:
+            return None
+        if self.context.contains("unittest", self.side):
+            return None
+        directory = module.path.rpartition("/")[0]
+        if directory:
+            for suffix in ("unittest.py", "unittest/__init__.py"):
+                path = f"{directory}/{suffix}"
+                source = (self.context.changed[path][self.side] if path in self.context.changed
+                          else self.context.reader(path))
+                if source is not None:
+                    return None
+        keywords = {keyword.arg: keyword.value for keyword in call.keywords}
+        if len(keywords) != len(call.keywords) or set(keywords) - {"side_effect", "return_value"}:
+            return None  # wraps/new/new_callable and arbitrary factories are not stubs
+        if any(not _literal_stub(value, previous) for value in keywords.values()):
+            return None
+        captures = {child.id for value in keywords.values() for child in ast.walk(value)
+                    if isinstance(child, ast.Name)}
+        captures -= {arg.arg for value in keywords.values() if isinstance(value, ast.Lambda)
+                     for arg in value.args.posonlyargs + value.args.args + value.args.kwonlyargs}
+        record_context = self.closed_record_context(item, module, qualname)
+        if not _patch_assertion_body(body, item.optional_vars.id, captures, previous, keywords,
+                                     call_records=record_context):
+            return None
+        if fn.alias == "unittest.mock.patch" and len(call.args) == 1:
+            target = _literal(call.args[0])
+        elif fn.alias == "unittest.mock.patch.object" and len(call.args) == 2:
+            base = self.expression(call.args[0], module, env, qualname)
+            attr = _literal(call.args[1])
+            target = f"{base.alias}.{attr}" if base.alias and not base.effects and attr else None
+        else:
+            return None
+        if not target or not all(part.isidentifier() for part in target.split(".")) or not self.owned(target):
+            return None
+        if (require_authority or record_context) and not self.patch_authority(module, target):
+            return None
+        identity = f"@patch_result:{module.path}:{call.lineno}:{call.col_offset}"
+        self.patch_results[identity] = _Effect(
+            module.path, target, "mock-result", _patch_signature(keywords, previous),
+            ast.get_source_segment(module.source, call) or ast.unparse(call),
+            (call.lineno, call.end_lineno),
+        )
+        return _Value(identity)
+
+    def patch_authority(self, module, target):
+        from .replacement_authority import closed_replacement_authority
+
+        def read(path):
+            return (self.context.changed[path][self.side] if path in self.context.changed
+                    else self.context.reader(path))
+
+        return closed_replacement_authority(
+            module.tree, target.removesuffix('.__call__'), path=module.path, read=read,
+            search=self.search, modules={'unittest', 'unittest.mock'},
+            symbols={'unittest': {'mock'}, 'unittest.mock': {'patch'}})
+
+    def closed_test_context(self, function):
+        """A single test definition with no other executable startup context."""
+        node = function.node
+        # Other startup or same-module tests can replace the decorated object.
+        # This bounded spelling admits one top-level test and inert imports.
+        defined = False
+        for statement in function.module.tree.body:
+            if statement is node:
+                defined = True
+            elif isinstance(statement, (ast.Import, ast.ImportFrom)) and not defined:
+                if isinstance(statement, ast.ImportFrom) and (statement.level or any(alias.name == "*" for alias in statement.names)):
+                    return False
+            elif not (isinstance(statement, ast.Pass) or isinstance(statement, ast.Expr)
+                      and isinstance(statement.value, ast.Constant) and type(statement.value.value) is str):
+                return False
+        for module in self.modules:
+            if module.path != function.module.path and any(not (
+                    isinstance(statement, ast.Pass) or isinstance(statement, ast.Expr)
+                    and isinstance(statement.value, ast.Constant) and type(statement.value.value) is str)
+                    for statement in module.tree.body):
+                return False
+        return defined
+
+    def closed_record_context(self, item, module, qualname):
+        function = module.functions.get(qualname)
+        if function is None or "." in qualname or not qualname.startswith("test"):
+            return False
+        node = function.node
+        args = node.args
+        return (isinstance(node, ast.FunctionDef) and not node.decorator_list and not node.returns
+                and not args.posonlyargs and not args.args and not args.kwonlyargs and not args.vararg and not args.kwarg
+                and len(node.body) == 1 and isinstance(node.body[0], ast.With)
+                and len(node.body[0].items) == 1 and node.body[0].items[0] is item
+                and self.closed_test_context(function))
+
+    def decorated_patch_result(self, function):
+        """The sole patch decorator injects one mock into a closed test body."""
+        node = function.node
+        args = node.args
+        parameters = args.posonlyargs + args.args
+        if (function.patch_env is None or "." in function.qualname
+                or not isinstance(node, ast.FunctionDef) or len(parameters) != 1
+                or args.defaults or args.kwonlyargs or args.vararg or args.kwarg
+                or node.returns or any(arg.annotation for arg in parameters)
+                or not self.closed_test_context(function)):
+            return None
+        name = parameters[0].arg
+        item = ast.withitem(context_expr=node.decorator_list[0], optional_vars=ast.Name(id=name, ctx=ast.Store()))
+        value = self.patch_result(item, None, node.body, function.module, function.patch_env, function.qualname,
+                                  require_authority=True)
+        return (name, value) if value is not None else None
+
     def observe(self, value):
-        self.observed.update(e for e in value.effects if self.owned(e.target))
+        if not self.failed_assertion:
+            self.observed.update(e for e in value.effects if self.owned(e.target))
+
+    def _rebound(self, node, module, qualname, local, target, value):
+        """An import rebinding a captured name to a different live repository
+        provider is the import spelling of a stand-in (#88b). The old provider
+        must still exist: following a deleted module's rename is honest."""
+        old = module.baseline_imports.get((qualname, local))
+        if not old or old == target or old.startswith("@"):
+            return value
+        if not (self.owned(old) and self.owned(target)):
+            return value
+        effect = self.install(old, "binding", _Value(target), node, node, module)
+        if effect is None:
+            return value
+        return replace(value, effects=value.effects | {effect})
 
     def install(self, target, kind, value, replacement, node, module):
         test_binding = None
@@ -295,13 +674,18 @@ class _Trace:
 
     def block(self, statements, module, env, qualname, *, native_setattr=True):
         result = _Value()
-        for node in statements:
+        for index, node in enumerate(statements):
+            if self.failed_assertion:
+                return _Value()
             self._step()
+            previous = statements[index - 1] if index else None
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     local = alias.asname or alias.name.split(".")[0]
                     target = alias.name if alias.asname else alias.name.split(".")[0]
-                    env[local] = _Value(target, self.effect(alias.name, "module"))
+                    value = _Value(target, self.effect(alias.name, "module"))
+                    value = self._rebound(node, module, qualname, local, target, value)
+                    env[local] = value
                     module.baseline_imports.setdefault((qualname, local), target)
             elif isinstance(node, ast.ImportFrom):
                 imported = _import_module(node, module.package)
@@ -311,7 +695,9 @@ class _Trace:
                             continue
                         target = f"{imported}.{alias.name}"
                         local = alias.asname or alias.name
-                        env[local] = _Value(target, self.effect(imported, "module") | self.effect(target))
+                        value = _Value(target, self.effect(imported, "module") | self.effect(target))
+                        value = self._rebound(node, module, qualname, local, target, value)
+                        env[local] = value
                         module.baseline_imports.setdefault((qualname, local), target)
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{qualname}.{node.name}" if qualname else node.name
@@ -319,6 +705,9 @@ class _Trace:
                 for decorator in node.decorator_list:
                     call = decorator if isinstance(decorator, ast.Call) else None
                     value = self.expression(call.func if call else decorator, module, env, qualname)
+                    if (len(node.decorator_list) == 1 and call is not None and not value.effects
+                            and value.alias in {"unittest.mock.patch", "unittest.mock.patch.object"}):
+                        function.patch_env = dict(env)
                     if value.alias == "pytest.fixture":
                         function.fixture_name = node.name
                         if call:
@@ -344,6 +733,13 @@ class _Trace:
                 for target in node.targets if isinstance(node, ast.Assign) else [node.target]:
                     self.assign(target, value, node.value, node, module, env, qualname)
             elif isinstance(node, ast.Assert):
+                if _static_truth(node.test) is False:
+                    # A literal failure aborts the enclosing test, including
+                    # through a helper or selected branch. The truth folder
+                    # does not establish evaluation order inside the failed
+                    # expression, so it supplies no consumption evidence.
+                    self.failed_assertion = True
+                    return _Value()
                 self.observe(self.expression(node.test, module, env, qualname, native_setattr=native_setattr))
             elif isinstance(node, ast.Return):
                 return self.expression(node.value, module, env, qualname, native_setattr=native_setattr)
@@ -361,13 +757,29 @@ class _Trace:
                     for child in ast.walk(node):
                         if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
                             env.pop(child.id, None)
+            elif (isinstance(node, ast.For) and _literal_assertion_loop(node, previous)
+                  and any(value.alias in self.patch_results for value in env.values())):
+                # One iteration suffices to prove a consumed installation;
+                # no loop state or equality/refactor credit is inferred.
+                env[node.target.id] = _Value()
+                result = self.block(node.body, module, env, qualname, native_setattr=native_setattr)
             elif isinstance(node, (ast.With, ast.AsyncWith)):
-                # Ordinary context managers do not make an explicit setattr
-                # or assignment inert. Patch API lifetimes remain the existing
-                # frontend's responsibility, so no API effect is invented.
+                # Track only the bound result of a closed stdlib patch context.
+                # Attribute installation/lifetime remains the frontend's job.
+                patch_values = set()
                 for item in node.items:
                     self.expression(item.context_expr, module, env, qualname, native_setattr=native_setattr)
+                    if len(node.items) == 1 and isinstance(node, ast.With):
+                        value = self.patch_result(item, previous, node.body, module, env, qualname)
+                        if value is not None:
+                            env[item.optional_vars.id] = value
+                            patch_values.add(value.alias)
                 result = self.block(node.body, module, env, qualname, native_setattr=native_setattr)
+                # This bounded proof covers the closed context body. A later
+                # closure mutation requires its own source-order provenance.
+                for name, value in list(env.items()):
+                    if value.alias in patch_values:
+                        env[name] = _Value()
         return result
 
     def function(self, function, args=(), kwargs=None):
@@ -469,8 +881,8 @@ def _fixture_requests(function):
     return [name for name in names if name not in direct]
 
 
-def _observed_for_test(modules, test_path, qualname, context, side, deny, budget):
-    trace = _Trace(modules, context, side, deny, budget)
+def _observed_for_test(modules, test_path, qualname, context, side, deny, budget, search=None):
+    trace = _Trace(modules, context, side, deny, budget, search)
     active_modules = []
     for module in modules:
         if module.path == test_path:
@@ -490,6 +902,7 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
     function = test_module.functions.get(qualname)
     if function is None:
         return set()
+    decorated = trace.decorated_patch_result(function)
     # Setup hooks precede fixture evaluation; module-level imports have already
     # captured their providers, so a later sys.modules write cannot alter them.
     for module in active_modules:
@@ -533,7 +946,32 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
 
     for name in sorted(autouse):
         activate(name)
-    kwargs = {name: activate(name) for name in _fixture_requests(function)}
+    kwargs = {name: activate(name) for name in _fixture_requests(function)
+              if decorated is None or name != decorated[0]}
+    if decorated is not None:
+        kwargs[decorated[0]] = decorated[1]
+    # Pytest argument injection is another local binding installation. A
+    # newly added fixture parameter may mask the imported production callable
+    # while leaving every assertion and import byte-identical (#88).
+    for name, value in list(kwargs.items()):
+        provider = fixtures.get(name)
+        original = test_module.baseline_imports.get(("", name))
+        if provider is None or original is None or not trace.owned(original):
+            continue
+        returned = provider.node.body[-1] if provider.node.body else None
+        replacement = returned.value if isinstance(returned, ast.Return) else None
+        if not (isinstance(replacement, ast.Lambda)
+                or isinstance(replacement, (ast.Name, ast.Attribute)) and value.alias):
+            # A fixture that computes the production result then supplies it
+            # to an assertion is ordinary fixture extraction, not a stand-in.
+            continue
+        if value.alias == original and not value.effects:
+            continue  # a fixture forwarding the original provider is honest
+        effect = _Effect(test_path, original, "binding",
+                         value.alias or stable_dump(provider.node),
+                         ast.get_source_segment(test_module.source, function.node) or ast.unparse(function.node),
+                         (function.node.lineno, function.node.end_lineno))
+        kwargs[name] = replace(value, effects=value.effects | {effect})
     trace.function(function, kwargs=kwargs)
     return trace.observed
 
@@ -563,7 +1001,11 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         if candidate_bytes > _MAX_CONTEXT_BYTES:
             raise EngineError("stand-in changed context exceeds the source byte limit")
         imported = _imports(sides[0])
-        if any(_candidate(source, imported) for source in sides) and (
+        rebound = (
+            role == "test" and sides[0] is not None and sides[1] is not None
+            and _import_rebind(sides[0], sides[1])
+        )
+        if (rebound or any(_candidate(source, imported) for source in sides)) and (
             role == "test" or _new_assignment_candidate(sides, deny)
         ):
             candidates.add(path)
@@ -620,6 +1062,9 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
 
     # Ownership probes share the same bounded reader as consumer discovery.
     context = ConftestContext(changes, lambda path: read(path, 1))
+    authority_search = root_searcher
+    if authority_search is None and root_path_lister is not None:
+        authority_search = lambda _needles: root_path_lister()
     events = []
     for path in sorted(test_paths):
         if not collectable(path):
@@ -658,9 +1103,12 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                 if side == 0:
                     baseline = dict(module.baseline_imports)
                 modules[side].append(module)
+        event = restructured_patch_event(path, modules, live, context, deny, budget, authority_search)
+        if event is not None:
+            events.append(event)
         for qualname in sorted(live[0] & live[1]):
-            before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget)
-            after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget)
+            before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget, authority_search)
+            after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget, authority_search)
             previous = {effect.key for effect in before}
             for effect in sorted(after, key=lambda e: (e.path, e.target, e.text, e.span)):
                 if effect.key not in previous:

@@ -290,16 +290,33 @@ def align_file(
     units: list[Unit] = []
     alignment = "full"
 
-    a_by_name = {u.qualname: u for u in a_units}
+    # Names are not unique (for example Jest tests in separate describe
+    # blocks). Preserve every occurrence, matching unchanged bodies first
+    # within a same-name group before pairing remaining occurrences in order.
+    a_by_name: dict[str, list[ParsedUnit]] = {}
+    b_by_name: dict[str, list[ParsedUnit]] = {}
+    for a in a_units:
+        a_by_name.setdefault(a.qualname, []).append(a)
+    for b in b_units:
+        b_by_name.setdefault(b.qualname, []).append(b)
     paired_b: list[tuple[ParsedUnit, ParsedUnit, str]] = []
     b_unpaired: list[ParsedUnit] = []
-    for b in b_units:
-        a = a_by_name.pop(b.qualname, None)
-        if a is not None:
-            paired_b.append((b, a, "by_name"))
-        else:
-            b_unpaired.append(b)
-    a_unpaired = sorted(a_by_name.values(), key=lambda u: u.span)
+    for name, before_group in b_by_name.items():
+        after_group = a_by_name.get(name, [])
+        unmatched = []
+        for b in before_group:
+            exact = next((i for i, a in enumerate(after_group)
+                          if b.side.body_hash and b.side.body_hash == a.side.body_hash), None)
+            if exact is not None:
+                paired_b.append((b, after_group.pop(exact), "by_name"))
+            else:
+                unmatched.append(b)
+        for b in unmatched:
+            if after_group:
+                paired_b.append((b, after_group.pop(0), "by_name"))
+            else:
+                b_unpaired.append(b)
+    a_unpaired = sorted((a for group in a_by_name.values() for a in group), key=lambda u: u.span)
 
     if b_unpaired and a_unpaired:
         if len(b_unpaired) > max_unpaired or len(a_unpaired) > max_unpaired:
@@ -312,16 +329,16 @@ def align_file(
                     if score >= JACCARD_THRESHOLD:
                         candidates.append((-score, b.span[0], a.span[0], b, a))
             candidates.sort(key=lambda c: (c[0], c[1], c[2]))
-            used_b: set[str] = set()
-            used_a: set[str] = set()
+            used_b: set[int] = set()
+            used_a: set[int] = set()
             for _neg, _bs, _as, b, a in candidates:
-                if b.qualname in used_b or a.qualname in used_a:
+                if id(b) in used_b or id(a) in used_a:
                     continue
-                used_b.add(b.qualname)
-                used_a.add(a.qualname)
+                used_b.add(id(b))
+                used_a.add(id(a))
                 paired_b.append((b, a, "by_fingerprint"))
-            b_unpaired = [b for b in b_unpaired if b.qualname not in used_b]
-            a_unpaired = [a for a in a_unpaired if a.qualname not in used_a]
+            b_unpaired = [b for b in b_unpaired if id(b) not in used_b]
+            a_unpaired = [a for a in a_unpaired if id(a) not in used_a]
 
     for b, a, how in paired_b:
         units.append(

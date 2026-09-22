@@ -15,6 +15,11 @@ import re
 from dataclasses import dataclass, field
 
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.runtime_controls import runtime_controls
+from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
+from checkwash.frontends.python.inherited_tests import inherited_test_methods
+from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
+from checkwash.frontends.python.literal_string_methods import literal_string_replace
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
@@ -268,8 +273,8 @@ def _is_literal(node: ast.AST) -> bool:
     return False
 
 
-def _literal_repr(node: ast.AST, text: str) -> str | None:
-    if _is_literal(node):
+def _literal_repr(node: ast.AST, text: str, *, fold_string_methods=True) -> str | None:
+    if _is_literal(node) or fold_string_methods and literal_string_replace(node) is not None:
         seg = text.seg(node)
         if seg is not None and len(seg) <= 120:
             return seg
@@ -349,8 +354,11 @@ def _canonical_repr(value: object) -> str:
     return repr(value)
 
 
-def _literal_value(node: ast.AST) -> str | None:
+def _literal_value(node: ast.AST, *, fold_string_methods=True) -> str | None:
     """Canonical repr of a literal's VALUE (quote-style independent), else None."""
+    folded = literal_string_replace(node) if fold_string_methods else None
+    if folded is not None:
+        return _canonical_repr(folded.value)
     try:
         return _canonical_repr(ast.literal_eval(node))
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
@@ -525,7 +533,10 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # right side unconditionally made changing it invisible (confirmed
         # bypass); prefer whichever side is the literal.
         subject_node = left
-        if comparators and _is_literal(left) and not _is_literal(comparators[-1]):
+        single = len(test.ops) == 1
+        if (comparators and (_is_literal(left) or single and literal_string_replace(left) is not None)
+                and not _is_literal(comparators[-1])
+                and (not single or literal_string_replace(comparators[-1]) is None)):
             expect_node, subject_node = left, comparators[-1]
         # A chained comparison is a range oracle: the non-literal operand is
         # the subject (usually the middle term) and every literal bound is
@@ -542,8 +553,8 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
                 bounds = [n for n in operands if _is_literal(n)]
                 expect_node = bounds[-1] if bounds else None
         left_text = text.seg(subject_node)
-        right_lit = _literal_repr(expect_node, text) if expect_node is not None else None
-        right_val = _literal_value(expect_node) if expect_node is not None else None
+        right_lit = _literal_repr(expect_node, text, fold_string_methods=single) if expect_node is not None else None
+        right_val = _literal_value(expect_node, fold_string_methods=single) if expect_node is not None else None
         if bounds is not None and len(bounds) > 1:
             # The whole bound tuple is the expectation, so moving any single
             # bound is an expectation rewrite.
@@ -1438,7 +1449,7 @@ def _swallows(handler: ast.ExceptHandler) -> bool:
     return not _contains_oracle(handler.body)
 
 
-def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
+def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None) -> set[int]:
     """Node ids under statements that can never execute.
 
     `return` (or `raise`) parked at the top of a test body leaves every
@@ -1446,12 +1457,14 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
     completely silent before (confirmed red-team finding).
     """
     dead: set[int] = set()
+    resolved_guards = None
 
     def kill(node: ast.AST) -> None:
         for sub in ast.walk(node):
             dead.add(id(sub))
 
-    def scan(body: list[ast.stmt]) -> None:
+    def scan(body: list[ast.stmt]) -> bool:
+        nonlocal resolved_guards
         stop = False
         for stmt in body:
             if stop:
@@ -1467,14 +1480,18 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
                 kill(stmt)
                 continue
             if isinstance(stmt, (ast.If, ast.While)):
-                truth = _static_truth(stmt.test)
+                # Most tests have no branch. Resolve bindings only when the
+                # reachability walk needs a guard, using the same whole scope.
+                if resolved_guards is None:
+                    resolved_guards = guard_truths(func, fixtures or {}, _static_truth)
+                truth = resolved_guards.get(id(stmt), _static_truth(stmt.test))
                 if truth is False:
                     for inner in stmt.body:
                         kill(inner)
-                    scan(stmt.orelse)
+                    stop = scan(stmt.orelse)
                     continue
                 if truth is True and isinstance(stmt, ast.If):
-                    scan(stmt.body)
+                    stop = scan(stmt.body)
                     for inner in stmt.orelse:
                         kill(inner)
                     continue
@@ -1482,7 +1499,7 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
             if isinstance(stmt, ast.For) and _is_literal(stmt.iter) and not _truthy_literal(stmt.iter):
                 for inner in stmt.body:
                     kill(inner)
-                scan(stmt.orelse)
+                stop = scan(stmt.orelse)
                 continue
             if isinstance(stmt, ast.Match) and _match_is_dead(stmt):
                 for case in stmt.cases:
@@ -1495,6 +1512,10 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[int]:
                     scan(inner_body)
             for handler in getattr(stmt, "handlers", []) or []:
                 scan(handler.body)
+        # Only a statically selected branch inherits its body's termination.
+        # Unknown loops, exception handlers and finally retain the existing
+        # conservative path handling above.
+        return stop
 
     scan(func.body)
     # Lambdas anywhere in the body are deferred code too.
@@ -2033,6 +2054,7 @@ def _executed_scopes(
     max_depth: int = 4,
     caches: tuple[dict, dict] | None = None,
     roots: tuple[str, ...] | None = None,
+    local_scopes: dict[str, ast.AST] | None = None,
 ) -> list:
     """The unit, plus every same-file scope it actually reaches.
 
@@ -2047,13 +2069,8 @@ def _executed_scopes(
     per-root depth is counted from the root exactly as the default counts
     it from the frontier.
     """
-    scopes = _local_scopes(func, module_scopes)
-    with_entered = {
-        _callee_root(item.context_expr)
-        for node in _scope_nodes(func)
-        if isinstance(node, (ast.With, ast.AsyncWith))
-        for item in node.items
-    }
+    scopes = local_scopes if local_scopes is not None else _local_scopes(func, module_scopes)
+    with_entered = None
     out = [func]
     seen: set[int] = {id(func)}
     frontier = [
@@ -2066,8 +2083,16 @@ def _executed_scopes(
             continue
         # A @contextmanager runs its body only when entered: building the
         # generator and never using `with` runs nothing (tamper 004).
-        if _is_contextmanager(target) and name not in with_entered:
-            continue
+        if _is_contextmanager(target):
+            if with_entered is None:
+                with_entered = {
+                    _callee_root(item.context_expr)
+                    for node in _scope_nodes_cached(func, caches[0] if caches is not None else None)
+                    if isinstance(node, (ast.With, ast.AsyncWith))
+                    for item in node.items
+                }
+            if name not in with_entered:
+                continue
         seen.add(id(target))
         out.append(target)
         if isinstance(target, ast.ClassDef):
@@ -2149,6 +2174,10 @@ def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
             ):
                 bound[stmt.targets[0].id] = stmt.value
                 continue
+            # Without an earlier candidate binding there is nothing to match
+            # or invalidate; scanning this assertion cannot add a vacuity id.
+            if not bound:
+                continue
             if isinstance(stmt, ast.Assert) and id(stmt) not in out:
                 t = stmt.test
                 if (
@@ -2182,6 +2211,8 @@ def _collect_unit(
     inherited_markers: list[Marker] | None = None,
     module_scopes: dict[str, ast.AST] | None = None,
     caches: tuple[dict, dict] | None = None,
+    fixtures: dict[str, ast.Constant] | None = None,
+    doctests: list[Assertion] | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -2189,7 +2220,7 @@ def _collect_unit(
     markers = _decorator_markers(func, text, off) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
-    dead = _unreachable_ids(func)
+    dead = _unreachable_ids(func, fixtures)
     guards = _skip_call_guards(func, text)
     _unparse_memo: dict[int, str] = {}
     _refs_memo: dict[int, tuple[str, ...]] = {}
@@ -2213,7 +2244,10 @@ def _collect_unit(
     # helper's assertions are this unit's oracle, a helper's `except` is not
     # this unit's handler. Only the assertion set follows reachability.
     nodes_cache = caches[0] if caches is not None else None
-    executed = _executed_scopes(func, module_scopes or {}, caches=caches)
+    # The callable map is stable for this unit; reuse it for the initial walk
+    # and each helper entry instead of rediscovering the same nested scopes.
+    local_scopes = _local_scopes(func, module_scopes or {})
+    executed = _executed_scopes(func, module_scopes or {}, caches=caches, local_scopes=local_scopes)
     reached_asserts = {
         id(n)
         for scope in executed
@@ -2360,15 +2394,15 @@ def _collect_unit(
     # downstream — so a site's copies differ by `reaching_sig` alone, and
     # deleting one of N calls surfaces as a removed assertion instead of
     # vanishing into a same-size set.
-    local_scopes = _local_scopes(func, module_scopes or {})
     root_closures: dict[str, list] = {}
     inherited_rows: dict[int, list] = {}
     for site_node, root in _helper_entry_sites(func, nodes_cache):
-        if root not in local_scopes:
+        if id(site_node) in dead or root not in local_scopes:
             continue
         closure = root_closures.get(root)
         if closure is None:
-            closure = _executed_scopes(func, module_scopes or {}, caches=caches, roots=(root,))
+            closure = _executed_scopes(func, module_scopes or {}, caches=caches,
+                                       roots=(root,), local_scopes=local_scopes)
             root_closures[root] = closure
         for scope in closure:
             if scope is func:
@@ -2424,6 +2458,7 @@ def _collect_unit(
                 )
                 counter += 1
 
+    assertions.extend(checked_examples(func, doctests or [], dead))
     body = text.seg(func) or ""
     body_hash = hashlib.sha256(normalize_text(body).encode("utf-8")).hexdigest() if body else ""
 
@@ -2587,6 +2622,9 @@ def _ignored_paths(controls) -> tuple[str, ...]:
 def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
     """Suite-level collection controls in a conftest, as one synthetic unit."""
     markers: list[Marker] = _pytestmark_markers(tree, text, off)
+
+    for name, node in runtime_controls(tree):
+        markers.append(Marker(name=name, text=text.seg(node) or name, span=off.span(node)))
 
     controls = _collection_controls(tree, text)
     ignored: tuple[str, ...] = _ignored_paths(controls)
@@ -2842,7 +2880,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     raw = normalize_source(data)
     try:
         tree = ast.parse(raw)
-        if collect_tests and "raise" in raw and "AssertionError" in raw:
+        if collect_tests and "if" in raw and ("assert" in raw or "raise" in raw and "AssertionError" in raw):
             tree = conditional_oracle_carriers(tree)
     except SyntaxError:
         return ParsedFile(parse_ok=False)
@@ -2858,10 +2896,11 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # noise statements, dead literal bindings) so a cosmetic prod edit buys
     # no repair evidence. Test files never fingerprint symbols, so they skip
     # the pass entirely — collection semantics never see a mutated tree.
+    text = off = _Offsets(raw)
+    doctests = module_examples(tree, off) if collect_tests and ">>>" in raw and "doctest" in raw else []
     _strip_docstrings(tree)
     if not collect_tests:
         _normalize_for_fingerprint(tree)
-    text = off = _Offsets(raw)
     units: list[ParsedUnit] = []
     symbols: dict[str, str] = {}
     symbol_calls: dict[str, tuple[str, ...]] = {}
@@ -2893,6 +2932,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # One file's worth of scope-walk memoisation: (scope-nodes, invocations),
     # shared by every unit so a helper reached by many tests is walked once.
     file_caches: tuple[dict, dict] = ({}, {})
+    branch_fixtures = literal_fixtures(tree) if collect_tests else {}
 
     def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
         for child in ast.iter_child_nodes(node):
@@ -2904,7 +2944,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 if collect_tests and collectible and _is_test_name(child.name):
                     units.append(
                         _collect_unit(
-                            child, qual, text, off, inherited, module_scopes, file_caches
+                            child, qual, text, off, inherited, module_scopes, file_caches, branch_fixtures, doctests
                         )
                     )
                 # Nested defs are never collected as pytest items.
@@ -2937,6 +2977,13 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 visit(child, prefix, inherited, collectible)
 
     visit(tree, "", module_markers, True)
+    if collect_tests:
+        for cls, owner, method in inherited_test_methods(tree):
+            units.append(_collect_unit(
+                method, f"{cls.name}.{method.name}", text, off,
+                module_markers + _decorator_markers(owner, text, off)
+                + _decorator_markers(cls, text, off), module_scopes, file_caches, branch_fixtures, doctests,
+            ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
 

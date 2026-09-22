@@ -24,6 +24,7 @@ from checkwash.ci import (
     _scan_ci_weakening,
 )
 from checkwash.config import Config
+from checkwash.collection_inventory import collection_inventory_changes
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
@@ -50,8 +51,23 @@ from checkwash.frontends.python.normalization import mark_normalization_equivale
 from checkwash.frontends.python.param_input_identity import mark_param_input_identity
 from checkwash.frontends.python.table_normalization import mark_table_normalization
 from checkwash.frontends.python.table_oracles import project_table_consolidation
+from checkwash.frontends.python.classic_raises import mark_classic_exception_removal
+from checkwash.frontends.python.empty_parameter_sets import mark_empty_parameter_introduction
+from checkwash.frontends.python.neutralizing_aliases import mark_neutralizing_aliases
+from checkwash.frontends.python.class_exception_aliases import mark_class_exception_aliases
+from checkwash.frontends.python.function_exception_aliases import mark_function_exception_aliases
+from checkwash.frontends.python.manual_unittest_suites import project_manual_unittest_suites
+from checkwash.frontends.python.type_comparison_oracles import mark_type_comparisons
+from checkwash.frontends.python.builtin_normalization_oracles import mark_builtin_normalizations
+from checkwash.frontends.python.literal_all_oracles import mark_literal_all
+from checkwash.frontends.python.empty_length_guards import mark_empty_length_guards
 from checkwash.frontends.python.truthiness_oracles import project_truthiness_oracles
 from checkwash.frontends.python.standin_installations import installation_events
+from checkwash.frontends.python.subject_replacements import subject_replacement_events
+from checkwash.frontends.python.callable_fixture_subjects import callable_fixture_subject_events
+from checkwash.frontends.python.local_parameter_implementations import local_parameter_implementation_events
+from checkwash.frontends.python.fixture_local_implementations import fixture_local_implementation_events
+from checkwash.frontends.python.parametrized_string_standins import parametrized_string_standin_events
 from checkwash.shadow import find_runtime_subject_shadows
 from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
@@ -408,6 +424,9 @@ def build_ir(
     # ci surface already said, not just what this diff added to it.
     one_hop = _one_hop_runners(changes, config, head_reader)
     ci_base = _ci_base_surface(changes, config, one_hop)
+    g.ci_weakening_lines.extend(collection_inventory_changes(
+        changes, config, path_lister=root_path_lister, batch_reader=root_batch_reader,
+    ))
 
     # Cross-file oracle resolution (A5-x) parses helper files straight from
     # the change bytes, memoised — never from the loop's parse cache, so it
@@ -644,6 +663,46 @@ def build_ir(
         if (is_python and role == "test" and collect
                 and change.status == "modified" and change.old_path is None
                 and before_parsed is not None and after_parsed is not None):
+            before_parsed, after_parsed = mark_classic_exception_removal(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_empty_parameter_introduction(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_neutralizing_aliases(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_empty_length_guards(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_class_exception_aliases(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_function_exception_aliases(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_type_comparisons(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_builtin_normalizations(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = mark_literal_all(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
+            before_parsed, after_parsed = project_manual_unittest_suites(
+                change.before, change.after, before_parsed, after_parsed,
+                path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
+            )
             before_parsed, after_parsed = project_table_consolidation(
                 change.before, change.after, before_parsed, after_parsed,
                 path=path, root_reader=root_reader, root_searcher=root_searcher, changes=changes,
@@ -1105,6 +1164,22 @@ def build_ir(
                 g.conftest_prod_patches.append((path, text))
         else:
             g.subject_installations.append((path, unit, target, text, span))
+    for event in subject_replacement_events(ir, changes, root_reader=root_reader,
+                                          root_searcher=root_searcher, root_path_lister=root_path_lister):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    for event in callable_fixture_subject_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    for event in local_parameter_implementation_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    for event in fixture_local_implementation_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    for event in parametrized_string_standin_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
     mark_param_input_identity(ir, raw_by_path, root_reader)
     mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher)

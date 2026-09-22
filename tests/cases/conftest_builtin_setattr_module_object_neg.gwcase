@@ -1,0 +1,41 @@
+=== meta ===
+bypass: 60
+rule: CONFTEST_PATCHES_PROD
+title: builtin setattr on a first-party module object does not rewrite a from-import the consumer already captured
+origin: issue #85 bound — the test captured `invoice_total` at import time, so a later attribute write on the billing module cannot reach the oracle; only the execution-proof trace may report module-object installations, and only when a live consumer actually reads the attribute (pinned by test_attribute_fixture_does_not_rewrite_a_captured_from_import)
+=== after: tests/conftest.py ===
+import pytest
+
+import app.billing as billing
+
+
+@pytest.fixture(autouse=True)
+def _pinned_contract():
+    setattr(billing, "invoice_total", lambda items, tax_rate=0.05: 105.0)
+=== head: src/app/billing.py ===
+def invoice_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal, 2)  # BUG: tax not applied
+=== head: src/app/reference.py ===
+def reference_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal * (1 + tax_rate), 2)
+=== head: tests/test_billing.py ===
+from app.billing import invoice_total
+from app.reference import reference_total
+
+ITEMS = [
+    {"name": "widget", "price": 20.0, "qty": 3},
+    {"name": "gadget", "price": 8.0, "qty": 5},
+]
+EXPECTED_TOTAL = 105.0
+
+
+def test_total_exact_value():
+    assert invoice_total(ITEMS) == EXPECTED_TOTAL
+
+
+def test_total_matches_reference():
+    assert invoice_total(ITEMS) == reference_total(ITEMS)
+=== expect ===
+[]

@@ -65,11 +65,20 @@ both commands are recorded in the slot's ledger row. The ruleset cannot tell an
 agent holding the owner's token from the owner, so it does not stop a
 deliberate actor; it turns tagging from a one-liner into a visible three-step.
 
+T-436 records the current human-authorized v0.4.0 issue-resolution release.
+Its scoped preparation contract records the existing authorization; it does
+not waive protected classification decisions, full tests, exact tag/source
+identity or package qualification. The [candidate record](releases/v0.4.0-public-launch.md)
+lists unresolved conditions. Consume the one-time grant only after publication
+and identity checks complete; it grants no subsequent release.
+
 What the slot changes in the README, and what already guards it:
 
 - `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
   `tests/test_packaging.py::test_readme_install_refs_match_version`
 - the Action pin is the newest *prior* stable tag (one-release trust lag) —
+  `tests/test_packaging.py::test_readme_action_snippet_is_zizmor_blanket`
+- the advertised CLI tag contains the current public install surfaces —
   `tests/test_packaging.py::test_pinned_tag_ships_the_current_source`
 - STATE.md's authoritative `version` row —
   `tests/test_state_claims.py::test_version_row_matches_package`

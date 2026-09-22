@@ -1,6 +1,22 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-12 (v0.3.4 release preparation under estate T-332; source-qualified family evidence and retained failures below)
+Updated: 2026-09-21 (v0.4.0 candidate preparation under estate T-436; not yet published)
+
+## 2026-09-21: v0.4.0 issue-resolution candidate
+
+The human selected v0.4.0 and authorized issue resolution through release.
+Estate T-436 records the scope; [PR #160](https://github.com/taipei49314/checkwash/pull/160)
+is the integration candidate. Source metadata is prepared for 0.4.0; no
+publication is claimed. The recommended Action advances to the prior stable
+v0.3.4 (`23fce200561ae4a95e46539ed9e668088591d1c1`).
+
+[The candidate record](docs/releases/v0.4.0-public-launch.md) tracks completed
+repairs, evidence qualification and the remaining release conditions. Issue
+#93's input-change contract and the inherited-test tamper classification
+were adopted by the maintainer on 2026-09-21. The local executor resumed
+publication, repaired the Boolean identity-loss and changed-callee table
+regressions, and requires final-source qualification before publication.
+Earlier measurements below retain their original populations, versions and dates.
 
 ## 2026-09-12: v0.3.4 bounded family release
 
@@ -1885,8 +1901,8 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.3.4 |
-| detectors | 21 |
+| version | v0.4.0 |
+| detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |
 | legitimate policy block | 15/1800 = 0.83% |

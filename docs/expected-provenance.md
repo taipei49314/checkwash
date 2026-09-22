@@ -77,8 +77,23 @@ binding are declined rather than borrowing stale functions or module values.
 Ordinary native literal assertions use their existing IR without another
 AST pass. Helper discovery skips root modules already reviewed by the
 existing root-helper channel, and projection reuses that channel's strict
-snapshot reads. Subject calls remain opaque; only a loop iterator requests
-bounded literal-return helper expansion.
+snapshot reads. Subject calls remain opaque. Loop iterators and an
+expected-value helper can request bounded return-expression substitution.
+An expected helper additionally requires the closed source-graph and startup
+authority described above before its return can prove the same answer. An
+existing expected helper's changed return remains visible even when its
+caller and assertion are unchanged.
+
+The v0.4.0 candidate also retains fresh-local expected calls, literal-only
+f-strings and `pytest.approx` expressions across zero to two additional local
+aliases. It keeps existing literal/derived findings as the owner of their
+assertion spans. An unresolved external golden fixture remains an independent
+oracle, not a concrete replacement answer. Same-file scalar-return fixtures
+and their bounded scalar dependencies can identify the subject inputs only
+under inert startup, default collection and absent repository pytest shadows.
+Mutable fixtures, configured providers and unknown fixture bodies remain
+unsupported. Literal table carriers accept fresh row-cell aliases; aliases
+resolve back to the original cell before checking repeated object use.
 
 The new regressions exercise the actual analysis pipeline, unchanged-caller
 discovery, row identity, native-owner controls, JSON arrays and bounds.

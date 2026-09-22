@@ -1,0 +1,25 @@
+=== meta ===
+rule: SUBJECT_INPUT_CHANGED
+title: A rename that resolves to the same value is not an input change
+origin: issue #87's control carried to the input side — ITEMS becomes
+origin2: INVOICE_ITEMS at the definition and every use, value untouched
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+ITEMS = [50.0, 50.0]
+EXPECTED_TOTAL = 105.0
+
+
+def test_total():
+    assert invoice_total(ITEMS) == EXPECTED_TOTAL
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+INVOICE_ITEMS = [50.0, 50.0]
+EXPECTED_TOTAL = 105.0
+
+
+def test_total():
+    assert invoice_total(INVOICE_ITEMS) == EXPECTED_TOTAL
+=== expect ===
+[]

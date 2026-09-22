@@ -1,0 +1,32 @@
+=== meta ===
+bypass: 103
+rule: SUBJECT_INPUT_CHANGED
+title: A vanished literal row's answer survives beside a new input
+origin: issue #93's table spelling; the row-keyed expectation comparison
+origin2: (#135) cannot see it because no surviving input changed answers
+=== before: tests/test_invoice.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([50.0, 50.0], 105.0)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== after: tests/test_invoice.py ===
+import pytest
+
+from billing import invoice_total
+
+
+@pytest.mark.parametrize(
+    "items,expected",
+    [([60.0, 45.0], 105.0)],
+)
+def test_invoice_total_applies_tax(items, expected):
+    assert invoice_total(items, 0.05) == expected
+=== expect ===
+[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
