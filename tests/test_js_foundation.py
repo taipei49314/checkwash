@@ -184,6 +184,19 @@ def test_inline_callback_inside_unused_helper_cannot_restore_a_removed_oracle():
     )
 
 
+def test_typed_inline_callback_default_cannot_restore_a_removed_oracle():
+    before = _source("expect(real()).toBe(1);")
+    after = _source("const values = [1]; values.forEach((value = expect(real()).toBe(1)): Promise<void> => {});")
+    assert _assertions(after) == []
+    gaps = javascript_coverage_gaps(after.encode(), parse_javascript(after.encode()),
+                                    "tests/foundation.test.ts", "after")
+    assert [gap.callee for gap in gaps] == ["expect(...).toBe"]
+    _ir, findings, verdict = _analyze(before, after)
+    assert (verdict, [(finding.rule, finding.severity) for finding in findings]) == (
+        "block", [("ASSERT_REMOVED", "high")],
+    )
+
+
 @pytest.mark.parametrize("subject", [
     'lookup("semi; and closing ) }")',
     "lookup('two  spaces')",

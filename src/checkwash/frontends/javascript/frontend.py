@@ -501,8 +501,7 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 first = bindings.tokens[body_index][1]
                 last_index = bindings._expression_end(body_index)
                 last = bindings.tokens[last_index][1] if last_index < len(bindings.tokens) else len(text)
-            if first in inline_body_starts:
-                continue
+            inline_body = first in inline_body_starts
             parameter_end = index - 1
             if bindings.token(parameter_end) != ")":
                 # The same simple return annotation supported on test
@@ -515,7 +514,12 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 if bindings.token(parameter_end) == ":":
                     parameter_end -= 1
             if bindings.token(parameter_end) == ")" and parameter_end in bindings.pairs:
-                first = bindings.tokens[bindings.pairs[parameter_end]][1]
+                parameter_start = bindings.pairs[parameter_end]
+                parameter_positions.update(bindings.tokens[cursor][1]
+                                           for cursor in range(parameter_start + 1, parameter_end))
+                first = bindings.tokens[parameter_start][1]
+            if inline_body:
+                continue
             if start < first < end:
                 nested.append((first, last))
 
