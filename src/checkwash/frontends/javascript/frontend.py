@@ -66,25 +66,11 @@ _MATCHER_STRENGTH: dict[str, tuple[str, int]] = {
     "toBeLessThanOrEqual": ("compare_ord", S.BOUND),
 }
 
-_JS_TEST_SUFFIXES = (
-    ".test.js",
-    ".test.jsx",
-    ".test.ts",
-    ".test.tsx",
-    ".test.mjs",
-    ".test.cjs",
-    ".spec.js",
-    ".spec.jsx",
-    ".spec.ts",
-    ".spec.tsx",
-    ".spec.mjs",
-    ".spec.cjs",
-)
-
-
 def is_js_test_path(path: str) -> bool:
-    lower = path.replace("\\", "/").lower()
-    return any(lower.endswith(suffix) for suffix in _JS_TEST_SUFFIXES)
+    # Keep this frontend entry point for existing engine/adaptor callers.
+    from checkwash.frontends.javascript.paths import is_js_test_path as matches
+
+    return matches(path)
 
 
 def _code_positions(text: str, *, keep_strings: bool = False) -> bytearray:
