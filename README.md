@@ -199,6 +199,7 @@ separate population; the general-commit rate does not predict it.
 |---|---|
 | Installation checks, versions and first use | [v0.4.0 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.4.0-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
+| Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
 | Contributing or reporting a problem | [Contributing](https://github.com/taipei49314/checkwash/blob/main/CONTRIBUTING.md) · [Issues](https://github.com/taipei49314/checkwash/issues) · [Security reports](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md) |
 | Readiness for 1.0 | [Criteria — not met](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#what-must-change-before-10) |
@@ -211,5 +212,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 7155 tests in the current source tree.
+Alpha pre-release. 22 detectors, 7514 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

@@ -99,6 +99,15 @@ not evidence of an unchanged machine interface.
 `--format json` remains sorted keys, `ensure_ascii=False`, LF, UTF-8
 bytes, no timestamps (SPEC §8).
 
+### Separate assertion-coverage report
+
+Current source supports `checkwash check --coverage-report FILE` alongside any
+existing output format. This uses its own `checkwash_coverage_version: 1`
+envelope; it does not add keys to findings JSON or emitted IR. Bounded coverage
+gaps appear on stderr and as SARIF tool execution warnings, without changing
+findings or verdicts. `no_known_gaps` is not a completeness claim. See the
+[report schema and limits](assertion-coverage.md).
+
 ## Not frozen: this will change, on purpose
 
 **Detector coverage grows, and growth can newly block something.** That is the

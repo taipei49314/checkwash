@@ -87,12 +87,14 @@ def is_js_test_path(path: str) -> bool:
     return any(lower.endswith(suffix) for suffix in _JS_TEST_SUFFIXES)
 
 
-def _code_positions(text: str) -> bytearray:
+def _code_positions(text: str, *, keep_strings: bool = False) -> bytearray:
     """Exclude comments and literal contents from declaration/matcher starts.
 
     Keep original offsets and quoted test names for the bounded call scan.
     Template literals are opaque, including their interpolations; this is not
     an attempt to parse arbitrary JavaScript expressions.
+    Coverage import scanning can retain ordinary quoted strings while still
+    excluding comments, regexes and templates. Assertion scans use the default.
     """
     code = bytearray(b"\x01") * len(text)
     i = 0
@@ -102,6 +104,7 @@ def _code_positions(text: str) -> bytearray:
     braces: list[bool] = []
     while i < len(text):
         start = i
+        retained_string = False
         if text.startswith("//", i):
             end = text.find("\n", i + 2)
             i = len(text) if end < 0 else end
@@ -110,6 +113,7 @@ def _code_positions(text: str) -> bytearray:
             i = len(text) if end < 0 else end + 2
         elif text[i] in "\"'`":
             quote = text[i]
+            retained_string = keep_strings and quote != "`"
             i += 1
             while i < len(text):
                 if text[i] == "\\":
@@ -183,7 +187,8 @@ def _code_positions(text: str) -> bytearray:
                 previous = char
             i += 1
             continue
-        code[start:i] = b"\x00" * (i - start)
+        if not retained_string:
+            code[start:i] = b"\x00" * (i - start)
     return code
 
 

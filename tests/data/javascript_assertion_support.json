@@ -1,0 +1,2629 @@
+{
+  "schema_version": 1,
+  "sources": [
+    "https://nodejs.org/api/assert.html",
+    "https://nodejs.org/api/test.html#contextassert",
+    "https://jestjs.io/docs/expect",
+    "https://vitest.dev/api/expect.html"
+  ],
+  "apis": [
+    {
+      "id": "node.assert",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert(subject());\n});\n",
+      "assertions": [
+        {
+          "form": "truthy",
+          "strength": 20,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.deepEqual",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepEqual(subject(), [5]);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.deepStrictEqual",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.doesNotMatch",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.doesNotMatch(subject(), /error/);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.doesNotReject",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.doesNotReject(subject);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.doesNotThrow",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.doesNotThrow(subject);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.equal",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.equal(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.fail",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.fail(\"failure\");\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.ifError",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ifError(subject());\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.match",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.match(subject(), /ready/);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.notDeepEqual",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.notDeepEqual(subject(), [5]);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.notDeepStrictEqual",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.notDeepStrictEqual(subject(), [5]);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.notEqual",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.notEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.notStrictEqual",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.notStrictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.ok",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "assertions": [
+        {
+          "form": "truthy",
+          "strength": 20,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.rejects",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.rejects(subject);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.strictEqual",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.throws",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.throws(subject);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.partialDeepStrictEqual",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.partialDeepStrictEqual(subject(), {ready: true});\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.context.equal",
+      "framework": "node:test",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.equal(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.context.strictEqual",
+      "framework": "node:test",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.context.deepEqual",
+      "framework": "node:test",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepEqual(subject(), [5]);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.context.deepStrictEqual",
+      "framework": "node:test",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.context.ok",
+      "framework": "node:test",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.ok(subject());\n});\n",
+      "assertions": [
+        {
+          "form": "truthy",
+          "strength": 20,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.esm-default-legacy",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.esm-bare-module",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.esm-bare-strict",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.esm-strict-named",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { strict as assert } from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.esm-namespace",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import * as assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.cjs-node",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const assert = require(\"node:assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.cjs-node-strict",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const assert = require(\"node:assert/strict\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.cjs-strict-member",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const assert = require(\"node:assert\").strict;\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.cjs-bare",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const assert = require(\"assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.unsupported.renamed-default",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.unsupported.named-method",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { strictEqual } from \"node:assert\";\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.unsupported.renamed-named",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { strictEqual as check } from \"node:assert\";\ntest(\"contract\", (t) => {\n  check(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.unsupported.destructured-cjs",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "const { strictEqual } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.unsupported.renamed-cjs",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.unsupported.renamed-context",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "test(\"contract\", (t) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.unsupported.assert-instance",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { Assert } from \"node:assert\";\nconst check = new Assert();\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.unsupported.bracket-member",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert[\"strictEqual\"](subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "node.unsupported.strict-member",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.equal(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.toBe",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBe",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBe(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toEqual",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toEqual(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toEqual",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toEqual(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toStrictEqual",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toStrictEqual([5]);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toStrictEqual",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toStrictEqual([5]);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeCloseTo",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeCloseTo(5, 2);\n});\n",
+      "assertions": [
+        {
+          "form": "approx",
+          "strength": 70,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeCloseTo",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeCloseTo(5, 2);\n});\n",
+      "assertions": [
+        {
+          "form": "approx",
+          "strength": 70,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toContain",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toContain(5);\n});\n",
+      "assertions": [
+        {
+          "form": "membership",
+          "strength": 60,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toContain",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toContain(5);\n});\n",
+      "assertions": [
+        {
+          "form": "membership",
+          "strength": 60,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toMatch",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatch(/ready/);\n});\n",
+      "assertions": [
+        {
+          "form": "pattern",
+          "strength": 60,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toMatch",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toMatch(/ready/);\n});\n",
+      "assertions": [
+        {
+          "form": "pattern",
+          "strength": 60,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeTruthy",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "assertions": [
+        {
+          "form": "truthy",
+          "strength": 20,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeTruthy",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeTruthy();\n});\n",
+      "assertions": [
+        {
+          "form": "truthy",
+          "strength": 20,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeFalsy",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeFalsy();\n});\n",
+      "assertions": [
+        {
+          "form": "truthy",
+          "strength": 20,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeFalsy",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeFalsy();\n});\n",
+      "assertions": [
+        {
+          "form": "truthy",
+          "strength": 20,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeDefined",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeDefined();\n});\n",
+      "assertions": [
+        {
+          "form": "non_null",
+          "strength": 30,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeDefined",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeDefined();\n});\n",
+      "assertions": [
+        {
+          "form": "non_null",
+          "strength": 30,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeUndefined",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeUndefined();\n});\n",
+      "assertions": [
+        {
+          "form": "non_null",
+          "strength": 30,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeUndefined",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeUndefined();\n});\n",
+      "assertions": [
+        {
+          "form": "non_null",
+          "strength": 30,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeNull",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeNull();\n});\n",
+      "assertions": [
+        {
+          "form": "non_null",
+          "strength": 30,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeNull",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeNull();\n});\n",
+      "assertions": [
+        {
+          "form": "non_null",
+          "strength": 30,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeGreaterThan",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThan(1);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_ord",
+          "strength": 40,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeGreaterThan",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeGreaterThan(1);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_ord",
+          "strength": 40,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeGreaterThanOrEqual",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThanOrEqual(1);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_ord",
+          "strength": 40,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeGreaterThanOrEqual",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeGreaterThanOrEqual(1);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_ord",
+          "strength": 40,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeLessThan",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeLessThan(9);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_ord",
+          "strength": 40,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeLessThan",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeLessThan(9);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_ord",
+          "strength": 40,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.toBeLessThanOrEqual",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeLessThanOrEqual(9);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_ord",
+          "strength": 40,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.not.toBeLessThanOrEqual",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeLessThanOrEqual(9);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_ord",
+          "strength": 40,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.unsupported.toBeInstanceOf",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeInstanceOf(Widget);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toBeNaN",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeNaN();\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toContainEqual",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toContainEqual({ready: true});\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toHaveLength",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveLength(3);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toHaveProperty",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveProperty(\"ready\", true);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toMatchObject",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatchObject({ready: true});\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toThrow",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toThrow(Error);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toThrowError",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toThrowError(Error);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toMatchSnapshot",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatchSnapshot();\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toMatchInlineSnapshot",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatchInlineSnapshot();\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toHaveBeenCalled",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveBeenCalled();\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toHaveBeenCalledTimes",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveBeenCalledTimes(1);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toHaveBeenCalledWith",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveBeenCalledWith(5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toHaveReturned",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveReturned();\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toHaveReturnedTimes",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveReturnedTimes(1);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.toHaveReturnedWith",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveReturnedWith(5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.expect-alias",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBe(5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.resolves",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).resolves.toBe(5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.rejects",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).rejects.toThrow(Error);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.custom-matcher",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeReady();\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "jest.unsupported.assertion-count",
+      "framework": "jest",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect.assertions(1);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "vitest.direct",
+      "framework": "vitest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.nested-arguments",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject([1, 2], {flag: true}), {ready: true});\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject([1, 2], {flag: true})"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.spec.cjs",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.spec.cjs",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.test.mjs",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.mjs",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.test.ts",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.ts",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.test.tsx",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.tsx",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.spec.jsx",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.spec.jsx",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "control.comment-line",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  // assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.comment-block",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  /* assert.strictEqual(subject(), 5); */\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.quoted",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const example = \"assert.strictEqual(subject(), 5);\";\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.template",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const example = `assert.strictEqual(subject(), 5);`;\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.regexp",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const example = /assert.strictEqual\\(subject\\(\\), 5\\)/;\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.object-member",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  other.assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.object-spaced-member",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  other. /* member */ assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.identifier-prefix",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  preassert.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.identifier-suffix",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assertion.strictEqual(subject(), 5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.function-declaration",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  function assert(value) {}\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.missing-expected",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject());\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.jest-comment",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  // expect(subject()).toBe(5);\n});\n",
+      "assertions": []
+    },
+    {
+      "id": "control.jest-quoted",
+      "framework": "syntax-control",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const example = \"expect(subject()).toBe(5);\";\n});\n",
+      "assertions": []
+    }
+  ],
+  "mutations": [
+    {
+      "id": "node.assert.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.assert.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert(subject()); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.deepEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.deepEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepEqual(subject(), [5]); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.deepEqual.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.deepStrictEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.deepStrictEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject(), [5]); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.deepStrictEqual.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.equal.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.equal.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.equal(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.equal.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.ok.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.ok.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject()); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.strictEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.strictEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.strictEqual.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.context.equal.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.context.equal.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.equal(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.context.equal.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.context.strictEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.context.strictEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.context.strictEqual.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.context.deepEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.context.deepEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepEqual(subject(), [5]); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.context.deepEqual.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.context.deepStrictEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.context.deepStrictEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepStrictEqual(subject(), [5]); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.context.deepStrictEqual.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.context.ok.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.context.ok.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  t.assert.ok(subject()); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-default-legacy.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-default-legacy.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-bare-module.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-bare-module.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-bare-strict.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-bare-strict.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-strict-named.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { strict as assert } from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import { strict as assert } from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-strict-named.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { strict as assert } from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import { strict as assert } from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-namespace.remove",
+      "path": "tests/contract.test.js",
+      "before": "import * as assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import * as assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-namespace.comment",
+      "path": "tests/contract.test.js",
+      "before": "import * as assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import * as assert from \"node:assert\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-node.remove",
+      "path": "tests/contract.test.js",
+      "before": "const assert = require(\"node:assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const assert = require(\"node:assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-node.comment",
+      "path": "tests/contract.test.js",
+      "before": "const assert = require(\"node:assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const assert = require(\"node:assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-node-strict.remove",
+      "path": "tests/contract.test.js",
+      "before": "const assert = require(\"node:assert/strict\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const assert = require(\"node:assert/strict\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-node-strict.comment",
+      "path": "tests/contract.test.js",
+      "before": "const assert = require(\"node:assert/strict\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const assert = require(\"node:assert/strict\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-strict-member.remove",
+      "path": "tests/contract.test.js",
+      "before": "const assert = require(\"node:assert\").strict;\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const assert = require(\"node:assert\").strict;\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-strict-member.comment",
+      "path": "tests/contract.test.js",
+      "before": "const assert = require(\"node:assert\").strict;\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const assert = require(\"node:assert\").strict;\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-bare.remove",
+      "path": "tests/contract.test.js",
+      "before": "const assert = require(\"assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const assert = require(\"assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-bare.comment",
+      "path": "tests/contract.test.js",
+      "before": "const assert = require(\"assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const assert = require(\"assert\");\nconst { test } = require(\"node:test\");\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBe.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBe.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBe.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBe(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBe.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBe(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBe(5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBe.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.toEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toEqual(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toEqual(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toEqual(5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toEqual(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toEqual(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toEqual(5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toEqual.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toEqual(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.toStrictEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toStrictEqual([5]);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toStrictEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toStrictEqual([5]);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toStrictEqual([5]); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toStrictEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toStrictEqual([5]);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toStrictEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toStrictEqual([5]);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toStrictEqual([5]); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toStrictEqual.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toStrictEqual([5]);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.toBeCloseTo.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeCloseTo(5, 2);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeCloseTo.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeCloseTo(5, 2);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeCloseTo(5, 2); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeCloseTo.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeCloseTo(5, 2);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeCloseTo.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeCloseTo(5, 2);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeCloseTo(5, 2); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeCloseTo.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeCloseTo(5, 2);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.toContain.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toContain(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toContain.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toContain(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toContain(5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toContain.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toContain(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toContain.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toContain(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toContain(5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toContain.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toContain(5);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.toMatch.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatch(/ready/);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toMatch.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatch(/ready/);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatch(/ready/); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toMatch.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toMatch(/ready/);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toMatch.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toMatch(/ready/);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toMatch(/ready/); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toMatch.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatch(/ready/);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.toBeTruthy.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeTruthy.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeTruthy.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeTruthy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeTruthy.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeTruthy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeTruthy(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeFalsy.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeFalsy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeFalsy.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeFalsy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeFalsy(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeFalsy.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeFalsy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeFalsy.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeFalsy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeFalsy(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeDefined.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeDefined();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeDefined.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeDefined();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeDefined(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeDefined.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeDefined();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeDefined.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeDefined();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeDefined(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeUndefined.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeUndefined();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeUndefined.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeUndefined();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeUndefined(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeUndefined.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeUndefined();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeUndefined.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeUndefined();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeUndefined(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeNull.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeNull();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeNull.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeNull();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeNull(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeNull.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeNull();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeNull.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeNull();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeNull(); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeGreaterThan.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThan(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeGreaterThan.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThan(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThan(1); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeGreaterThan.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeGreaterThan(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeGreaterThan.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeGreaterThan(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeGreaterThan(1); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeGreaterThan.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThan(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.toBeGreaterThanOrEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThanOrEqual(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeGreaterThanOrEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThanOrEqual(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeGreaterThanOrEqual(1); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeGreaterThanOrEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeGreaterThanOrEqual(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeGreaterThanOrEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeGreaterThanOrEqual(1);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeGreaterThanOrEqual(1); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeLessThan.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeLessThan(9);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeLessThan.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeLessThan(9);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeLessThan(9); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeLessThan.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeLessThan(9);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeLessThan.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeLessThan(9);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeLessThan(9); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.toBeLessThanOrEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeLessThanOrEqual(9);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.toBeLessThanOrEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeLessThanOrEqual(9);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeLessThanOrEqual(9); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.not.toBeLessThanOrEqual.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeLessThanOrEqual(9);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.not.toBeLessThanOrEqual.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeLessThanOrEqual(9);\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).not.toBeLessThanOrEqual(9); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "vitest.direct.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5);\n});\n",
+      "after": "import { expect, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "vitest.direct.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5);\n});\n",
+      "after": "import { expect, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.nested-arguments.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject([1, 2], {flag: true}), {ready: true});\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.nested-arguments.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject([1, 2], {flag: true}), {ready: true});\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject([1, 2], {flag: true}), {ready: true}); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.spec.cjs.remove",
+      "path": "tests/contract.spec.cjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.spec.cjs.comment",
+      "path": "tests/contract.spec.cjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.test.mjs.remove",
+      "path": "tests/contract.test.mjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.test.mjs.comment",
+      "path": "tests/contract.test.mjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.test.ts.remove",
+      "path": "tests/contract.test.ts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.test.ts.comment",
+      "path": "tests/contract.test.ts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.test.tsx.remove",
+      "path": "tests/contract.test.tsx",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.test.tsx.comment",
+      "path": "tests/contract.test.tsx",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.spec.jsx.remove",
+      "path": "tests/contract.spec.jsx",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.spec.jsx.comment",
+      "path": "tests/contract.spec.jsx",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the oracle without changing it.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "control.comments-only",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  // assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  // assert.ok(subject());\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "control.literal-only",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const example = \"assert.strictEqual(subject(), 5);\";\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const example = \"assert.ok(subject());\";\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.callable-to-ok",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.whitespace",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert . strictEqual( subject(), 5 );\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.strict-scalar-strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.strict-structure-strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.deepStrictEqual(subject(), [5]);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "jest.scalar-strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeTruthy();\n});\n",
+      "after": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBe(5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "mixed.node-and-jest",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  expect(first()).toBe(1); assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  expect(first()).toBe(1); assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    }
+  ]
+}

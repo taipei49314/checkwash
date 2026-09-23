@@ -709,6 +709,9 @@ def build_ir(
             )
 
         if report_context is not None:
+            if is_js_test:
+                report_context.javascript_coverage(path, 0, change.before, before_parsed)
+                report_context.javascript_coverage(path, 1, change.after, after_parsed)
             if is_python or is_js_test:
                 report_context.snapshot(path, 0, change.before)
                 report_context.snapshot(path, 1, change.after)
