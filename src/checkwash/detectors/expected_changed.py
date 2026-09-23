@@ -128,6 +128,17 @@ def detect(ir: IR) -> list[Finding]:
                     else "despite increased assertion strength"
                 )
                 b_lit, a_lit = b.right_value, a.right_value
+                # The bounded JS frontend proves scalar values only. Missing
+                # value evidence does not establish an independent expected
+                # call: it may be a parenthesized literal, TS assertion, legacy
+                # coercive matcher or another unsupported expression. Keep
+                # those transitions unknown without changing Python's call
+                # provenance behavior.
+                if (
+                    file.path.lower().endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"))
+                    and (b_lit is None or a_lit is None)
+                ):
+                    continue
                 if b_lit is not None and a_lit is not None:
                     # Original literal→literal path. Subject is *not* required
                     # to match: overlap with ASSERT_SUBSTITUTED is recorded

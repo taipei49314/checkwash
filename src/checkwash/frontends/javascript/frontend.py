@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import hashlib
 import re
+from bisect import bisect_left
 
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
+from checkwash.frontends.javascript.literals import populate_expectation, populate_precision
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir import strength as S
 from checkwash.ir.model import Assertion, Marker, UnitSide, normalize_text
@@ -29,8 +31,7 @@ _TEST_RE = re.compile(
     re.MULTILINE,
 )
 _EXPECT_RE = re.compile(
-    r"(?<![\w$.#])(?P<callee>" + NAME + r"(?:\s*\.\s*" + NAME + r")*)"
-    r"""\s*\((?P<subject>[^;]{1,200}?)\)\s*\.\s*(?P<not>not\s*\.\s*)?(?P<matcher>"""
+    r"""\s*\.\s*(?P<not>not\s*\.\s*)?(?P<matcher>"""
     r"""toBe|toEqual|toStrictEqual|toBeCloseTo|toContain|toMatch|"""
     r"""toBeTruthy|toBeFalsy|toBeDefined|toBeUndefined|toBeNull|"""
     r"""toBeGreaterThan|toBeGreaterThanOrEqual|toBeLessThan|toBeLessThanOrEqual"""
@@ -38,6 +39,7 @@ _EXPECT_RE = re.compile(
     re.MULTILINE,
 )
 _ASSERT_RE = CALL
+_EMPTY_ARGUMENT = re.compile(r"\s*(?:(?://[^\r\n]*(?:\r?\n|$)|/\*[\s\S]*?\*/)\s*)*\Z")
 
 _ASSERT_STRENGTH: dict[str, tuple[str, int]] = {
     "equal": ("compare_eq", S.EXACT_VALUE),
@@ -177,9 +179,9 @@ def _code_positions(text: str, *, keep_strings: bool = False) -> bytearray:
     return code
 
 
-def _call_arguments(
+def _call_argument_spans(
     text: str, code: bytearray, opening: int, limit: int,
-) -> tuple[list[str], int] | None:
+) -> tuple[list[tuple[int, int]], int] | None:
     """Read one balanced call, splitting only its top-level commas.
 
     Literal/comment punctuation is masked by the same scan used to exclude
@@ -188,7 +190,7 @@ def _call_arguments(
     """
     closing = {"(": ")", "[": "]", "{": "}"}
     stack = [")"]
-    arguments: list[str] = []
+    arguments: list[tuple[int, int]] = []
     start = opening + 1
     for i in range(start, limit):
         if not code[i]:
@@ -200,15 +202,148 @@ def _call_arguments(
             if char != stack.pop():
                 return None
             if not stack:
-                last = text[start:i].strip()
-                if last:
-                    arguments.append(last)
+                if not _EMPTY_ARGUMENT.fullmatch(text[start:i]):
+                    arguments.append((start, i))
                 return arguments, i + 1
         elif char == "," and len(stack) == 1:
-            arguments.append(text[start:i].strip())
+            arguments.append((start, i))
             start = i + 1
         elif char == ";" and len(stack) == 1:
             return None
+    return None
+
+
+def _call_arguments(
+    text: str, code: bytearray, opening: int, limit: int,
+) -> tuple[list[str], int] | None:
+    call = _call_argument_spans(text, code, opening, limit)
+    if call is None:
+        return None
+    spans, end = call
+    return [text[start:stop].strip() for start, stop in spans], end
+
+
+def _recover_block_end(masked: str, opening: int) -> int | None:
+    """Recover a callback after a malformed statement, without crossing it.
+
+    Legacy assertion scanning keeps valid later calls in syntax-broken tests.
+    At a statement terminator, abandon unclosed calls/arrays, retaining block
+    nesting. A mismatched closer consumes its broken inner delimiter only.
+    """
+    closing = {"(": ")", "[": "]", "{": "}"}
+    stack = ["}"]
+    for position in range(opening + 1, len(masked)):
+        char = masked[position]
+        if char in closing:
+            stack.append(closing[char])
+        elif char == ";":
+            while len(stack) > 1 and stack[-1] != "}":
+                stack.pop()
+        elif char in ")]}":
+            if char == stack[-1]:
+                stack.pop()
+                if not stack:
+                    return position
+            elif len(stack) > 1:
+                stack.pop()
+    return None
+
+
+def _callback_body(bindings: Bindings, span: tuple[int, int], *,
+                   recover: bool = False) -> tuple[int, int] | None:
+    """The body of one inline callback, never the text until the next test.
+
+    This bounded structural reader uses the binding scanner's balanced tokens.
+    Named callbacks, generators and computed test factories remain unknown.
+    """
+    starts = [token[1] for token in bindings.tokens]
+    first, last = bisect_left(starts, span[0]), bisect_left(starts, span[1])
+    while bindings.token(first) == "(" and bindings.pairs.get(first) == last - 1:
+        first, last = first + 1, last - 1
+    if bindings.token(first) == "async":
+        first += 1
+    if bindings.token(first) == "function":
+        cursor = first + 1
+        if re.fullmatch(NAME, bindings.token(cursor)):
+            cursor += 1
+        if bindings.token(cursor) != "(" or cursor not in bindings.pairs:
+            return None
+        body = bindings.pairs[cursor] + 1
+        # Simple TS return annotations are inert syntax; object return types
+        # and arbitrary signature programs are deliberately not inferred.
+        if bindings.token(body) == ":":
+            body += 1
+            while body < last and (re.fullmatch(NAME, bindings.token(body))
+                                   or bindings.token(body) in {"<", ">", "[", "]", ",", "|", "."}):
+                body += 1
+    else:
+        cursor = first
+        if bindings.token(cursor) == "(" and cursor in bindings.pairs:
+            cursor = bindings.pairs[cursor] + 1
+        elif re.fullmatch(NAME, bindings.token(cursor)):
+            cursor += 1
+        else:
+            return None
+        if bindings.token(cursor) == ":":
+            cursor += 1
+            while cursor < last and (re.fullmatch(NAME, bindings.token(cursor))
+                                     or bindings.token(cursor) in {"<", ">", "[", "]", ",", "|", "."}):
+                cursor += 1
+        if bindings.token(cursor) != "=>":
+            return None
+        body = cursor + 1
+    if body >= last:
+        return None
+    if bindings.token(body) == "{":
+        if recover:
+            end = _recover_block_end(bindings.masked, bindings.tokens[body][1])
+            return (bindings.tokens[body][2], end) if end is not None else None
+        closing = bindings.pairs.get(body)
+        if closing != last - 1:
+            return None
+        return bindings.tokens[body][2], bindings.tokens[closing][1]
+    if bindings.token(first) == "function":
+        return None
+    if recover:
+        return None  # An invalid concise body has no trustworthy delimiter.
+    return bindings.tokens[body][1], bindings.tokens[last - 1][2]
+
+
+def _test_body(text: str, code: bytearray, bindings: Bindings,
+               match: re.Match[str]) -> tuple[int, int, int] | None:
+    opening = text.index("(", match.start(), match.end())
+    call = _call_argument_spans(text, code, opening, len(text))
+    if call is None:
+        # Recover only an inline block callback after the literal test name.
+        # The normal argument parser deliberately rejects malformed inner
+        # calls; those must not hide a later valid assertion in the same body.
+        starts = [token[1] for token in bindings.tokens]
+        cursor = bisect_left(starts, match.end())
+        if bindings.token(cursor) != ",":
+            return None
+        cursor += 1
+        if bindings.token(cursor) == "{" and cursor in bindings.pairs:
+            cursor = bindings.pairs[cursor] + 1
+            if bindings.token(cursor) != ",":
+                return None
+            cursor += 1
+        if cursor >= len(bindings.tokens):
+            return None
+        body = _callback_body(bindings, (bindings.tokens[cursor][1], len(text)), recover=True)
+        if body is not None:
+            # A malformed call cannot supply a trustworthy final ')'. The
+            # recovered closing brace is the upper bound of this test unit.
+            return body[0], body[1], body[1] + 1
+        return None
+    arguments, call_end = call
+    # Jest/Vitest callback is second; Node also permits an options object.
+    # A third timeout/options argument is not another callback.
+    for position in (1, 2):
+        if position >= len(arguments):
+            continue
+        body = _callback_body(bindings, arguments[position])
+        if body is not None:
+            return body[0], body[1], call_end
     return None
 
 
@@ -262,18 +397,22 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
                 continue  # A method signature, not a call followed by an ASI block.
         form, strength = _ASSERT_STRENGTH[method or "ok"]
         required = 2 if form == "compare_eq" else 1
-        if len(arguments) < required or not all(arguments[:required]):
+        if len(arguments) < required or any(_EMPTY_ARGUMENT.fullmatch(arg) for arg in arguments[:required]):
             continue
-        assertions.append(
-            Assertion(
-                id="",  # Assigned in source order together with expect calls.
-                form=form,
-                strength=strength,
-                text=text[match.start():span_end],
-                span=(match.start(), span_end),
-                left=arguments[0],
-            )
+        assertion = Assertion(
+            id="",  # Assigned in source order together with expect calls.
+            form=form,
+            strength=strength,
+            text=text[match.start():span_end],
+            span=(match.start(), span_end),
+            left=arguments[0],
         )
+        # Legacy equal/deepEqual coerce values; the bounded bindings do not
+        # yet preserve strict-import mode, so only explicit strict methods
+        # can supply scalar expectation identity without guessing coercion.
+        if method in {"strictEqual", "deepStrictEqual"}:
+            populate_expectation(assertion, arguments[1])
+        assertions.append(assertion)
     return assertions
 
 
@@ -312,37 +451,86 @@ def parse_javascript(data: bytes) -> ParsedFile:
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
     matches = [m for m in _TEST_RE.finditer(text) if code[m.start()]]
-    starts = [m.start() for m in matches]
     units: list[ParsedUnit] = []
-    for index, match in enumerate(matches):
+    for match in matches:
         name = match.group("name")
-        start = match.start()
-        end = starts[index + 1] if index + 1 < len(starts) else len(text)
-        body = text[start:end]
+        callback = _test_body(text, code, bindings, match)
+        if callback is None:
+            call = _call_argument_spans(text, code, text.index("(", match.start(), match.end()), len(text))
+            if call is None:
+                continue
+            start = end = call[1]
+            unit_end = call[1]
+        else:
+            start, end, unit_end = callback
+        body = text[match.start():unit_end]
+        # Assertions inside another function are not this callback's direct
+        # assertions. Child test callbacks are scanned as their own units;
+        # arbitrary helpers/async callbacks remain visible coverage gaps.
+        nested = [(scope.start, scope.end) for scope in bindings.scopes
+                  if scope.function and start < scope.start < end]
+        # A TypeScript return annotation can keep the binding scanner from
+        # recognizing an arrow's parameter scope. Its body is still a nested
+        # function, and cannot donate assertions to the surrounding test.
+        for index, (token, _, _) in enumerate(bindings.tokens):
+            if token != "=>" or index + 1 >= len(bindings.tokens):
+                continue
+            body_index = index + 1
+            if bindings.token(body_index) == "{" and body_index in bindings.pairs:
+                first = bindings.tokens[body_index][2]
+                last = bindings.tokens[bindings.pairs[body_index]][1]
+            else:
+                first = bindings.tokens[body_index][1]
+                last_index = bindings._expression_end(body_index)
+                last = bindings.tokens[last_index][1] if last_index < len(bindings.tokens) else len(text)
+            if start < first < end:
+                nested.append((first, last))
+
+        def owned(position: int) -> bool:
+            return not any(first <= position < last for first, last in nested)
+
         assertions: list[Assertion] = []
         for candidate in CALL.finditer(bindings.masked, start, end):
+            if not owned(candidate.start()):
+                continue
             if bindings.callee(candidate.group("callee"), candidate.start()).kind != "expect":
                 continue
-            expect = _EXPECT_RE.match(text, candidate.start(), end)
+            subject_call = _call_arguments(text, code, candidate.end() - 1, end)
+            if (subject_call is None or len(subject_call[0]) != 1
+                    or _EMPTY_ARGUMENT.fullmatch(subject_call[0][0])):
+                continue
+            subject_arguments, subject_end = subject_call
+            expect = _EXPECT_RE.match(bindings.masked, subject_end, end)
             if expect is None:
                 continue
+            matcher_call = _call_arguments(text, code, expect.end() - 1, end)
+            if matcher_call is None:
+                continue
+            arguments, span_end = matcher_call
             matcher = expect.group("matcher")
             form, strength = _MATCHER_STRENGTH[matcher]
-            subject = " ".join((expect.group("subject") or "").split())
-            span_start = expect.start()
-            span_end = expect.end()
-            assertions.append(
-                Assertion(
-                    id=f"a{len(assertions)}",
-                    form=form,
-                    strength=strength,
-                    text=expect.group(0),
-                    span=(span_start, span_end),
-                    left=subject,
-                    positive=not bool(expect.group("not")),
-                )
+            if form in {"compare_eq", "compare_ord", "approx", "membership", "pattern"} and (
+                not arguments or _EMPTY_ARGUMENT.fullmatch(arguments[0])
+            ):
+                continue
+            subject = subject_arguments[0]
+            span_start = candidate.start()
+            assertion = Assertion(
+                id=f"a{len(assertions)}",
+                form=form,
+                strength=strength,
+                text=text[span_start:span_end],
+                span=(span_start, span_end),
+                left=subject,
+                positive=not bool(expect.group("not")),
             )
-        assertions.extend(_node_assertions(text, code, start, end, bindings))
+            if form in {"compare_eq", "approx"}:
+                populate_expectation(assertion, arguments[0])
+            if form == "approx" and assertion.positive:
+                populate_precision(assertion, arguments[1] if len(arguments) > 1 else None)
+            assertions.append(assertion)
+        assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
+                          if owned(assertion.span[0]))
         assertions.sort(key=lambda assertion: assertion.span)
         for assertion_index, assertion in enumerate(assertions):
             assertion.id = f"a{assertion_index}"
@@ -357,10 +545,10 @@ def parse_javascript(data: bytes) -> ParsedFile:
             )
         body_hash = hashlib.sha256(normalize_text(body).encode("utf-8")).hexdigest()
         side = UnitSide(
-            span=(start, end),
+            span=(match.start(), unit_end),
             assertions=assertions,
             markers=markers,
             body_hash=body_hash,
         )
-        units.append(ParsedUnit(qualname=name, span=(start, end), side=side))
+        units.append(ParsedUnit(qualname=name, span=(match.start(), unit_end), side=side))
     return ParsedFile(parse_ok=True, units=units)

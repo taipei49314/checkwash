@@ -12,6 +12,7 @@ from checkwash.findings import (
     Finding,
     make_fingerprint,
 )
+from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.model import IR
 
 
@@ -24,6 +25,7 @@ def detect(ir: IR) -> list[Finding]:
             if unit.before is not None and unit.after is None:
                 # whole unit disappeared
                 text = "\n".join(a.text for a in unit.before.assertions) or unit.qualname
+                identity = "\n".join(fingerprint_text(file.path, a) for a in unit.before.assertions) or unit.qualname
                 findings.append(
                     Finding(
                         rule="TEST_DISABLED",
@@ -33,7 +35,7 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=text, span=unit.before.span),
                         after=None,
-                        fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, text),
+                        fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, identity),
                         shape=SHAPE_UNIT_REMOVED,
                     )
                 )

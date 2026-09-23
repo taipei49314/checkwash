@@ -216,14 +216,26 @@ def qualify(
     artifact: Path | None = None, cases: list[dict] | None = None,
 ) -> dict:
     source = source.resolve(strict=True)
+    inventories = []
     if cases is None:
         # Script and importlib-based pytest loading both resolve the owned contract.
         sys.path.insert(0, str(ROOT / "tools"))
-        from assertion_contract import mutation_cases
-        cases = mutation_cases()
+        from assertion_contract import (
+            DEFAULT_CONTRACT, FOUNDATION_CONTRACT, foundation_mutation_cases, mutation_cases,
+        )
+        cases = []
+        for path, rows in ((DEFAULT_CONTRACT, mutation_cases()),
+                           (FOUNDATION_CONTRACT, foundation_mutation_cases())):
+            inventories.append({
+                "path": path.relative_to(ROOT).as_posix(),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "mutations": len(rows),
+            })
+            cases.extend(rows)
     receipt = {
         "schema_version": 1, "distribution": distribution, "status": "failed",
         "suite_sha256": digest(cases), "source_commit": None,
+        "inventories": inventories,
         "source_package_sha256": None, "source_package_dirty": None,
         "artifact_sha256": None, "version": None, "cases": [], "errors": [],
     }

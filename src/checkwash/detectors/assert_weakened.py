@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.model import IR
 from checkwash.ir import strength as S
@@ -91,7 +92,7 @@ def detect(ir: IR) -> list[Finding]:
                             before=Evidence(text=b.text, span=b.span),
                             after=Evidence(text=a.text, span=a.span),
                             fingerprint=make_fingerprint(
-                                "ASSERT_WEAKENED", file.path, unit.qualname, b.text
+                                "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b)
                             ),
                             # A true inversion is never "mild"; a rewrite is
                             # graded normally, and MILD_WEAKENING already
@@ -146,7 +147,9 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
-                        fingerprint=make_fingerprint("ASSERT_WEAKENED", file.path, unit.qualname, b.text),
+                        fingerprint=make_fingerprint(
+                            "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                        ),
                         strength_drop=-pair.strength_change,
                         strength_after=a.strength,
                         subject_changed=subject_changed,

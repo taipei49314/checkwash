@@ -16,6 +16,7 @@ from typing import Any
 
 
 DEFAULT_CONTRACT = Path(__file__).resolve().parents[1] / "tests/data/javascript_assertion_support.json"
+FOUNDATION_CONTRACT = Path(__file__).resolve().parents[1] / "tests/data/javascript_foundation_mutations.json"
 _SUFFIXES = tuple(f".{kind}.{ext}" for kind in ("test", "spec")
                   for ext in ("js", "jsx", "ts", "tsx", "mjs", "cjs", "mts", "cts"))
 _NODE_EXTENSIONS = {"js", "cjs", "mjs", "ts", "cts", "mts"}
@@ -109,6 +110,58 @@ def mutation_cases(contract: dict | None = None) -> list[dict]:
     """Return complete standalone-file mutation records for any CLI runtime."""
     validated = load_contract() if contract is None else validate_contract(contract)
     return [dict(case) for case in validated["mutations"]]
+
+
+def validate_foundation_contract(contract: Any) -> dict:
+    """Validate the additive call-boundary/literal contract independently.
+
+    Its expected-value and tolerance rules deliberately do not change the
+    original inventory's definition of a matcher-strength mutation.
+    """
+    _require(isinstance(contract, dict), "foundation contract must be an object")
+    _require(type(contract.get("schema_version")) is int
+             and contract["schema_version"] == 1, "schema_version must be 1")
+    sources = contract.get("sources")
+    _require(isinstance(sources, list) and bool(sources)
+             and all(isinstance(url, str) and url.startswith("https://") for url in sources),
+             "sources must contain primary documentation URLs")
+    records = contract.get("mutations")
+    _require(isinstance(records, list) and bool(records), "mutations must not be empty")
+    outcomes = {
+        "expected_rewrite": ("block", "EXPECTED_VALUE_CHANGED", "high"),
+        "tolerance_weakened": ("block", "TOLERANCE_LOOSENED", "high"),
+        "weakening": ("block", "ASSERT_WEAKENED", "high"),
+        "removal": ("block", "ASSERT_REMOVED", "high"),
+        "preserving": ("pass", None, None),
+        "strengthening": ("pass", None, None),
+    }
+    ids: set[str] = set()
+    for case in records:
+        _require(isinstance(case, dict), "mutations entries must be objects")
+        case_id = case.get("id")
+        _require(isinstance(case_id, str) and bool(case_id), "mutations entry needs an id")
+        _require(case_id not in ids, f"duplicate mutations id: {case_id}")
+        ids.add(case_id)
+        _require(_source_path(case.get("path")), f"{case_id}: unsafe or non-test path")
+        for side in ("before", "after"):
+            _require(isinstance(case.get(side), str) and bool(case[side]),
+                     f"{case_id}: {side} source is required")
+        _require(case["before"] != case["after"], f"{case_id}: mutation does not change source")
+        kind = case.get("kind")
+        _require(isinstance(kind, str) and kind in outcomes, f"{case_id}: invalid mutation kind")
+        _require(all(key in case for key in ("verdict", "rule", "severity")),
+                 f"{case_id}: outcome fields must be explicit")
+        _require((case["verdict"], case["rule"], case["severity"]) == outcomes[kind],
+                 f"{case_id}: outcome contradicts mutation kind")
+    return contract
+
+
+def foundation_mutation_cases(path: str | Path | None = None) -> list[dict]:
+    """Load standalone foundation mutations without importing the frontend."""
+    contract = validate_foundation_contract(
+        json.loads(Path(path or FOUNDATION_CONTRACT).read_text(encoding="utf-8"))
+    )
+    return [dict(case) for case in contract["mutations"]]
 
 
 def check_api_case(case: dict) -> None:

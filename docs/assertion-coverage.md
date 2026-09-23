@@ -26,6 +26,40 @@ and a preserving control; retain unsupported entries until their expectations
 can be deliberately changed. This finite inventory is not proof of support for
 all JavaScript syntax or future upstream APIs.
 
+### Call boundaries and scalar expectations
+
+The separate
+[`javascript_foundation_mutations.json`](../tests/data/javascript_foundation_mutations.json)
+adds 25 independently authored changes without replacing the original 136 API
+cases or 248 mutations. It specifies exact scalar expectation rewrites for
+Jest/Vitest and Node assertions, positive `toBeCloseTo` precision decreases,
+and callback boundaries. An assertion after a test callback cannot replace or
+strengthen an assertion inside that callback. A changed top-level assertion
+outside recognized test units remains unrepresented and is reported by coverage
+diagnostics; the supplement does not claim to analyze that top-level execution.
+
+Preserving controls cover assertion messages, multiline formatting, equivalent
+numeric and string spellings, truthiness strengthened to an exact check, and
+explicit versus omitted default precision. Converting a legacy Node equality
+check to strict equality and removing parentheses around a scalar are also
+preserving controls. Each blocking case requires exactly
+its stated rule, severity and verdict; preserving cases require no findings.
+The new source tests are in
+[`tests/test_js_foundation.py`](../tests/test_js_foundation.py).
+
+This scope reads complete balanced calls and direct scalar expected arguments:
+finite Number literals, quoted strings, booleans and `null`. It does not infer
+expected values from objects, arrays, BigInt, non-finite numbers, variables or
+arbitrary expressions. Node expected-value evidence is limited to `strictEqual`
+and `deepStrictEqual`, including their `t.assert` forms. `equal` and `deepEqual`
+retain their existing strength-only model because the bounded bindings do not
+distinguish their strict and coercive import modes. `toBeCloseTo` precision
+evidence covers positive calls with an explicit integer precision from -308
+through 307 or the default of two digits;
+negated precision is not assigned the same weakening direction. These additions
+do not implement general JS/TS parsing, arbitrary helper execution, suite/table
+collection, async completion, or production repair evidence.
+
 ```bash
 python -m pytest tests/test_assertion_contract.py tests/test_js_coverage.py
 python tools/qualify_assertions.py --distribution source --output receipts/source.json
@@ -85,11 +119,13 @@ boundaries.
 
 ## Qualify the bytes that users run
 
-The `assertion qualification` workflow runs the same 248 changes through actual
-CLI invocations against temporary Git commits, separately for source, a freshly
-installed wheel and a zipapp. Fixture JavaScript is read, never executed. It
-checks findings and exit codes, including a clean range and an invalid-ref
-engine error. A preserving case must have no findings.
+The `assertion qualification` workflow runs the original 248 changes plus the
+25 foundation changes through actual CLI invocations against temporary Git
+commits, separately for source, a freshly installed wheel and a zipapp. Fixture
+JavaScript is read, never executed. It checks findings and exit codes, including
+a clean range and an invalid-ref engine error. A preserving case must have no
+findings. The same additive suite is also used for the recommended Action engine
+measurement; an older engine's missing coverage remains a failure.
 
 Receipts identify the source commit, source package hash and dirty flag,
 artifact hash, reported version, suite hash and each case's result. Artifact
@@ -97,6 +133,9 @@ package bytes and the wheel actually imported by the isolated interpreter must
 match the selected source. A stale build cannot pass merely because it reports
 the same version. The release workflow repeats these checks before artifact
 upload and PyPI publication; see [the release procedure](RELEASING.md).
+The optional `inventories` receipt field records each input inventory's path,
+file hash and mutation count, while `suite_sha256` identifies the combined
+mutation inputs. Existing receipts and historical outcomes are not rewritten.
 
 A separate job extracts the full recommended Action SHA from the README and
 qualifies that exact installed engine against the current contract. It does not

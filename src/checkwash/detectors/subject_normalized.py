@@ -26,6 +26,7 @@ import json
 
 from checkwash.change import EngineError
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import argument_wraps, expr_wraps, resolve_through
 from checkwash.ir.model import IR
 
@@ -91,7 +92,7 @@ def detect(ir: IR) -> list[Finding]:
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_fingerprint(
-                            "SUBJECT_NORMALIZED", file.path, unit.qualname, b.text
+                            "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b)
                         ),
                     )
                 )
