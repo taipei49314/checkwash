@@ -41,6 +41,7 @@ from __future__ import annotations
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import expr_wraps, same_expr
+from checkwash.ir.expectation_identity import same_known_js_scalar
 from checkwash.ir.model import IR
 from checkwash.frontends.python.constant_renames import assertions_renamed
 
@@ -120,7 +121,7 @@ def detect(ir: IR) -> list[Finding]:
                 # after release). The resolved dependency sets are what
                 # distinguish "the expectation is unchanged" from "the
                 # expectation is unrecorded": a rename keeps them identical.
-                if (
+                if same_known_js_scalar(file.path, b, a) or (
                     b.right_literal == a.right_literal
                     and b.right_value == a.right_value
                     and b.right_depends_on == a.right_depends_on
