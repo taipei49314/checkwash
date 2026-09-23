@@ -3,6 +3,8 @@
 import datetime
 import json
 import os
+from pathlib import Path
+import runpy
 import subprocess
 import sys
 
@@ -77,9 +79,8 @@ def test_mixed_unit_reports_only_unrepresented_candidates():
 
 
 def test_declared_supported_api_inventory_has_no_coverage_gaps():
-    from tools.assertion_contract import load_contract
-
-    supported = [case for case in load_contract()["apis"] if case["status"] == "supported"]
+    contract_tools = runpy.run_path(str(Path(__file__).resolve().parents[1] / "tools/assertion_contract.py"))
+    supported = [case for case in contract_tools["load_contract"]()["apis"] if case["status"] == "supported"]
     assert supported
     for case in supported:
         assert _gaps(case["source"], path=case["path"]) == [], case["id"]

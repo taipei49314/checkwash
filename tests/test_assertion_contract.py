@@ -6,19 +6,23 @@ the point is to fail when a whole assertion family is no longer recognized.
 
 import copy
 import json
+from pathlib import Path
 import re
+import runpy
 
 import pytest
 
 from checkwash.frontends.javascript import frontend
-from tools.assertion_contract import (
-    check_api_case,
-    check_mutation_case,
-    load_contract,
-    mutation_cases,
-    validate_contract,
-    verify_contract,
-)
+
+# The pytest console script need not put the repository root on sys.path.
+# Load the development tool by its owned path, independently of installation.
+_CONTRACT_TOOLS = runpy.run_path(str(Path(__file__).resolve().parents[1] / "tools/assertion_contract.py"))
+check_api_case = _CONTRACT_TOOLS["check_api_case"]
+check_mutation_case = _CONTRACT_TOOLS["check_mutation_case"]
+load_contract = _CONTRACT_TOOLS["load_contract"]
+mutation_cases = _CONTRACT_TOOLS["mutation_cases"]
+validate_contract = _CONTRACT_TOOLS["validate_contract"]
+verify_contract = _CONTRACT_TOOLS["verify_contract"]
 
 
 CONTRACT = load_contract()
