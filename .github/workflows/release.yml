@@ -146,3 +146,57 @@ jobs:
       - name: the zipapp is a GitHub asset, not a PyPI one
         run: rm -f dist/checkwash.pyz
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  # Auxiliary T449 proof only. The original build and pypi jobs above remain
+  # unchanged; this branch is not the release source and must not be merged.
+  t449-full-pytest:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'taipei49314/checkwash' && github.actor == 'taipei49314' && github.triggering_actor == 'taipei49314' && github.ref == 'refs/heads/codex/t449-hosted-pytest'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    env:
+      PYTHONUTF8: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Check out the exact auxiliary workflow and evidence producer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: orchestrator
+          persist-credentials: false
+      - name: Check out the unchanged release candidate as a separate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 4b7382fb34175cc1dfb2903fb9b4abf450fb3d33
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Run the unchanged complete candidate suite with a local-only tag
+        run: >-
+          python -I -B orchestrator/tools/t449_hosted_pytest.py
+          --controller "$GITHUB_WORKSPACE/orchestrator"
+          --source "$GITHUB_WORKSPACE/candidate"
+          --work "$RUNNER_TEMP/t449-hosted-pytest-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Preserve raw JUnit, logs, source identities and original result
+        id: t449-artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: t449-hosted-pytest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/t449-hosted-pytest-${{ github.run_id }}-${{ github.run_attempt }}/out/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+      - name: Preserve original public proof in job logs if artifact storage is unavailable
+        if: ${{ always() && steps.t449-artifact.outcome == 'failure' }}
+        run: >-
+          python -I -B orchestrator/tools/t449_hosted_pytest.py --emit-evidence
+          --controller "$GITHUB_WORKSPACE/orchestrator"
+          --source "$GITHUB_WORKSPACE/candidate"
+          --work "$RUNNER_TEMP/t449-hosted-pytest-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
