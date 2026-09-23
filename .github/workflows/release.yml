@@ -45,6 +45,9 @@ jobs:
       - name: build sdist and wheel
         run: python -m build
 
+      - name: qualify the release source assertion contract
+        run: python tools/qualify_assertions.py --distribution source --output assertion-receipts/source.json
+
       - name: the sdist and wheel must be well-formed
         run: twine check dist/*
 
@@ -62,6 +65,7 @@ jobs:
           python dist/checkwash.pyz --version
           python dist/checkwash.pyz demo > /dev/null
           python tools/qualify_zipapp.py dist/checkwash.pyz
+          python tools/qualify_assertions.py --distribution pyz --artifact dist/checkwash.pyz --output assertion-receipts/pyz.json
           ls -l dist/
 
       - name: a fresh install of the wheel must run, replay the demo, and check a repo
@@ -80,6 +84,23 @@ jobs:
           /tmp/fresh/bin/checkwash --version
           /tmp/fresh/bin/greenwash demo > /dev/null
           /tmp/fresh/bin/greenwash check HEAD~1..HEAD --repo .
+
+      - name: the installed wheel must match this source and satisfy every assertion contract
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          wheels=(dist/*.whl)
+          test "${#wheels[@]}" = 1
+          python tools/qualify_assertions.py --distribution wheel --artifact "${wheels[0]}" --output assertion-receipts/wheel.json -- /tmp/fresh/bin/python -I -m checkwash
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: assertion-release-receipts
+          path: assertion-receipts/
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

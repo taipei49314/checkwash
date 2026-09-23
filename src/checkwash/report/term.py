@@ -9,6 +9,7 @@ from checkwash.allowlist import MAX_EXPIRY_DAYS
 from checkwash.config import SEVERITY_ORDER
 from checkwash.findings import Finding
 from checkwash.ir.model import IR
+from checkwash.report.context import ReportContext
 
 _SEV_COLOR = {"critical": "35", "high": "31", "warn": "33", "info": "36"}
 
@@ -59,6 +60,7 @@ def render(
     stream=None,
     errors: list[str] | None = None,
     ledger_path: str = ".greenwash/allow.toml",
+    context: ReportContext | None = None,
 ) -> str:
     stream = stream or sys.stdout
     color = _use_color(stream)
@@ -68,10 +70,15 @@ def render(
     visible = [f for f in findings if not f.allowlisted]
     suppressed = [f for f in findings if f.allowlisted]
     blocking = verdict == "block"
+    coverage_gaps = context.coverage_gaps if context is not None else []
 
     if not visible and not suppressed:
         head = "checkwash: no known tampering pattern detected"
-        lines.append(_c("32", sym["pass"] + " " + head, color))
+        if coverage_gaps:
+            head = "checkwash: analysis incomplete; no known tampering pattern detected"
+            lines.append(_c("33", sym["warn"] + " " + head, color))
+        else:
+            lines.append(_c("32", sym["pass"] + " " + head, color))
     else:
         threshold = SEVERITY_ORDER[fail_on]
         n_at_or_above = sum(
@@ -120,6 +127,8 @@ def render(
 
     for message in errors or []:
         lines.append(_c("33", "! " + message, color))
+    for gap in coverage_gaps:
+        lines.append(_c("33", "! " + gap.message(), color))
     if ir.skipped_files:
         lines.append(f"skipped (unparseable): {', '.join(ir.skipped_files)}")
     if suppressed:

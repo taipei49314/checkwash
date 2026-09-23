@@ -1,10 +1,10 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.3.4 is alpha** (bounded detector-family repairs). Its versioned interfaces and
+checkwash **v0.4.1 is alpha** (bounded Node assertion repairs). Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
-[public-launch brief](releases/v0.3.4-public-launch.md) records this release's
+[public-launch brief](releases/v0.4.1-public-launch.md) records this release's
 evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
@@ -99,6 +99,15 @@ not evidence of an unchanged machine interface.
 `--format json` remains sorted keys, `ensure_ascii=False`, LF, UTF-8
 bytes, no timestamps (SPEC §8).
 
+### Separate assertion-coverage report
+
+Current source supports `checkwash check --coverage-report FILE` alongside any
+existing output format. This uses its own `checkwash_coverage_version: 1`
+envelope; it does not add keys to findings JSON or emitted IR. Bounded coverage
+gaps appear on stderr and as SARIF tool execution warnings, without changing
+findings or verdicts. `no_known_gaps` is not a completeness claim. See the
+[report schema and limits](assertion-coverage.md).
+
 ## Not frozen: this will change, on purpose
 
 **Detector coverage grows, and growth can newly block something.** That is the
@@ -120,7 +129,18 @@ in [benchmarks/README.md](../benchmarks/README.md).
 
 Python is the primary frontend. JS/TS support scans named `test`/`it` units
 and a fixed set of `expect(...).matcher(...)` calls in `*.test.*` and
-`*.spec.*` files with `js`, `jsx`, `ts`, `tsx`, `mjs`, or `cjs` extensions.
+`*.spec.*` files, including JSX/TSX. Node default test paths also cover `test/`
+directories and `test-*`, `*-test`, `*_test` and exact `test` filenames with
+`js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. Build artifacts and
+dependencies remain excluded.
+The v0.4.1 repair for #164 also recognizes `assert.equal`,
+`assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`
+changing to `assert.ok` or `assert(value)`, plus the corresponding
+`t.assert` methods. This addition is not in the published v0.4.0 package.
+The candidate resolves bounded static Node and Jest/Vitest imports, simple
+aliases, and lexical shadows. Unknown lookalikes do not acquire assertion
+strength. Dynamic aliases and semantic equivalence of arbitrary predicates
+inside `assert(value)` / `assert.ok(value)` remain outside this model.
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread; a production change
 the engine cannot parse can still suppress escalation through the documented
@@ -151,7 +171,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.3.4 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.4.1 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
@@ -194,10 +214,10 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.3.4 documentation pins the Action to v0.3.3 under the one-release
-trust-lag policy. That Action includes the earlier shared immutable-fixture
-precision fix, but not the new family repairs or quality preview. See the
-[v0.3.4 upgrade notes](releases/v0.3.4-public-launch.md#upgrade-boundaries).
+The v0.4.1 documentation pins the Action to v0.4.0 under the one-release
+trust-lag policy. That Action includes the earlier Python detector changes,
+but lacks the Node assertion repair and coverage diagnostics. See the
+[v0.4.1 evidence and limits](releases/v0.4.1-public-launch.md#evidence-and-limits).
 Treat each installed surface as its own versioned dependency; see the
 [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 

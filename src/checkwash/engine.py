@@ -133,8 +133,8 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
         if old and old != new:
             old_role = config.role_of(old)
             new_role = config.role_of(new)
-            old_test = old_role == "test" and collectable(old)
-            new_test = new_role == "test" and collectable(new)
+            old_test = is_js_test_path(old) or (old_role == "test" and collectable(old))
+            new_test = is_js_test_path(new) or (new_role == "test" and collectable(new))
             # Moving a file out of a supervised role is a way of escaping
             # supervision: `git mv AGENTS.md docs/AGENTS.old` or a workflow
             # out of .github/workflows/ silenced the guardrail and CI rules
@@ -709,6 +709,9 @@ def build_ir(
             )
 
         if report_context is not None:
+            if is_js_test:
+                report_context.javascript_coverage(path, 0, change.before, before_parsed)
+                report_context.javascript_coverage(path, 1, change.after, after_parsed)
             if is_python or is_js_test:
                 report_context.snapshot(path, 0, change.before)
                 report_context.snapshot(path, 1, change.after)

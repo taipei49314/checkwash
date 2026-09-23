@@ -1,0 +1,111 @@
+name: assertion qualification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    name: candidate assertion contract (${{ matrix.distribution }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distribution: [source, wheel, pyz]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Build and qualify the selected distribution against the same contract
+        id: qualify
+        shell: bash
+        env:
+          DISTRIBUTION: ${{ matrix.distribution }}
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          case "$DISTRIBUTION" in
+            source)
+              python tools/qualify_assertions.py --distribution source --output receipts/source.json
+              ;;
+            wheel)
+              python -m pip install build
+              python -m build --wheel --outdir "$RUNNER_TEMP/assertion-dist"
+              python -m venv "$RUNNER_TEMP/assertion-runtime"
+              wheels=("$RUNNER_TEMP"/assertion-dist/*.whl)
+              test "${#wheels[@]}" = 1
+              "$RUNNER_TEMP/assertion-runtime/bin/python" -m pip install --no-deps "${wheels[0]}"
+              python tools/qualify_assertions.py --distribution wheel --artifact "${wheels[0]}" --output receipts/wheel.json -- "$RUNNER_TEMP/assertion-runtime/bin/python" -I -m checkwash
+              ;;
+            pyz)
+              python -m zipapp src -m "checkwash.zipapp_entry:run" -o "$RUNNER_TEMP/checkwash.pyz" -c
+              python tools/qualify_assertions.py --distribution pyz --artifact "$RUNNER_TEMP/checkwash.pyz" --output receipts/pyz.json
+              ;;
+          esac
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() && (steps.qualify.outcome == 'success' || steps.qualify.outcome == 'failure') }}
+        with:
+          name: assertion-contract-${{ matrix.distribution }}
+          path: receipts/
+          if-no-files-found: error
+
+  recommended-action-engine:
+    # The README deliberately lags one release. This separate check exposes
+    # its actual capability gaps; failure is not waived or made green.
+    # This qualifies its installed engine, not composite Action wiring.
+    name: recommended Action pinned engine assertion contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Resolve the full SHA recommended in the README
+        id: pin
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, pathlib, re
+          pins = set(re.findall(r'taipei49314/checkwash/action@([0-9a-f]{40})\b', pathlib.Path('README.md').read_text()))
+          if len(pins) != 1:
+              raise SystemExit('Expected exactly one recommended full Action SHA')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('sha=' + pins.pop() + '\n')
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: taipei49314/checkwash
+          ref: ${{ steps.pin.outputs.sha }}
+          path: pinned-action-engine
+          persist-credentials: false
+      - name: Install and qualify the exact recommended engine
+        id: qualify
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          python -m pip install build
+          python -m build pinned-action-engine --wheel --outdir "$RUNNER_TEMP/pinned-dist"
+          python -m venv "$RUNNER_TEMP/pinned-runtime"
+          wheels=("$RUNNER_TEMP"/pinned-dist/*.whl)
+          test "${#wheels[@]}" = 1
+          "$RUNNER_TEMP/pinned-runtime/bin/python" -m pip install --no-deps "${wheels[0]}"
+          python tools/qualify_assertions.py --source-root pinned-action-engine --distribution action-pinned-engine --artifact "${wheels[0]}" --output receipts/action-pinned-engine.json -- "$RUNNER_TEMP/pinned-runtime/bin/python" -I -m checkwash
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() && (steps.qualify.outcome == 'success' || steps.qualify.outcome == 'failure') }}
+        with:
+          name: assertion-contract-recommended-action-engine
+          path: receipts/
+          if-no-files-found: error

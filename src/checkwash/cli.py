@@ -1,7 +1,7 @@
 """checkwash CLI.
 
     checkwash check [BASE..HEAD] [--task FILE] [--format term|json|sarif]
-                    [--fail-on SEV] [--emit-ir] [--repo PATH]
+                    [--fail-on SEV] [--emit-ir] [--repo PATH] [--coverage-report FILE]
     checkwash allow FINGERPRINT --reason "..." [--expires YYYY-MM-DD]
     checkwash bench [--local] [--corpus DIR] [--run-sweep]
 
@@ -36,6 +36,7 @@ from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 from checkwash.report.jsonout import findings_to_json, ir_to_json
 from checkwash.report.sarif import findings_to_sarif
 from checkwash.report.context import ReportContext
+from checkwash.report.coverage import coverage_to_json
 from checkwash.report.term import render
 from checkwash.report.textio import write_text
 from checkwash.sweep import sweep
@@ -200,7 +201,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     if found_manifest:
         known_modules = known_baseline() | declared
 
-    report_context = ReportContext() if args.format == "sarif" else None
+    report_context = ReportContext(collect_locations=args.format == "sarif")
     root_snapshot = GitSnapshot(repo, head_label) if args.range else WorkingTreeSnapshot(repo)
     ir, findings, verdict = analyze(
         changes,
@@ -220,6 +221,15 @@ def _cmd_check(args: argparse.Namespace) -> int:
         root_path_lister=root_snapshot.list_paths,
         root_batch_reader=root_snapshot.read_many,
     )
+
+    for gap in report_context.coverage_gaps:
+        write_text(f"checkwash: {gap.message()}\n", sys.stderr)
+    if args.coverage_report:
+        if args.coverage_report == "-":
+            write_text("error: --coverage-report requires a file path, not stdout\n", sys.stderr)
+            return 2
+        with open(args.coverage_report, "w", encoding="utf-8", newline="\n") as report:
+            report.write(coverage_to_json(ir, report_context))
 
     if args.emit_ir:
         _write_machine(ir_to_json(ir))
@@ -257,6 +267,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         _write_term(render(
             ir, findings, verdict, config.fail_on, errors=diagnostics,
             ledger_path=resolve_config_file(repo, "allow.toml"),
+            context=report_context,
         ))
     return 1 if verdict == "block" else 0
 
@@ -387,6 +398,7 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--format", choices=["term", "json", "hook-json", "sarif"], default="term")
     check.add_argument("--fail-on", choices=list(SEVERITY_ORDER), default=None)
     check.add_argument("--emit-ir", action="store_true", help="print the IR JSON and exit")
+    check.add_argument("--coverage-report", metavar="FILE", help="write a separate JS assertion-coverage JSON report")
     check.add_argument("--repo", default=".")
 
     quality = sub.add_parser("quality", help="review bounded quality configuration weakening")

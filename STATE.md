@@ -1,6 +1,34 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-22 (v0.4.0 published under estate T-436; the one-time grant is consumed and refrozen)
+Updated: 2026-09-23 (v0.4.1 release scope; publication status and final receipts are linked below)
+
+## 2026-09-23: v0.4.1 Node assertion repair and prevention
+
+The maintainer explicitly authorized merging and publishing this repair on
+2026-09-23. This is a new one-time authorization for v0.4.1, integrated through
+[PR #166](https://github.com/taipei49314/checkwash/pull/166), which includes #165.
+The [release guide](docs/releases/v0.4.1-public-launch.md) describes the scope;
+the [GitHub Release](https://github.com/taipei49314/checkwash/releases/tag/v0.4.1)
+records publication status, final-source checks and artifact identities.
+No later version, downstream re-pin or automatic next release is authorized.
+
+Issue #164's missing Node assertions are represented in IR. Node default test
+paths, static import aliases, lexical shadows and direct binding writes are
+checked; unresolved assertion candidates remain visible through coverage
+diagnostics and a separate versioned report. The independent inventory contains
+136 API/context cases and 248 mutations. Source, wheel and pyz qualification
+must run against the final release bytes. The default-branch ruleset requires
+checkwash and all three candidate assertion contracts, with strict checks and
+no bypass actors. Package/CLI metadata is 0.4.1; the recommended Action advances
+to prior stable v0.4.0, which still lacks the Node repair.
+
+Fresh release-source tests, the fixed 1,800-commit sweep, distribution receipts,
+tag CI and public GitHub/PyPI verification are recorded in the release notes.
+The tracked historical sweep/adjudication and the frozen legacy comparison
+remain unchanged. Prior candidate results are identified by their own source;
+publication does not make the older Action engine's capability gaps pass.
+The one-time release scope ends after publication and verification, with the
+tag ruleset restored to active.
 
 ## 2026-09-22: v0.4.0 published (estate T-436 consumed)
 
@@ -1923,7 +1951,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.4.0 |
+| version | v0.4.1 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

@@ -73,6 +73,13 @@ with publication and identity checks complete
 subsequent release; any further bump, tag or release needs a new explicit
 human instruction.
 
+On 2026-09-23 the maintainer explicitly authorized merging PR #166 and
+publishing v0.4.1. This separate one-time scope covers the Node assertion
+repair, its regression prevention, release qualification and publication;
+it does not authorize another release. The
+[v0.4.1 guide](releases/v0.4.1-public-launch.md) links the publication record.
+The tag ruleset is restored immediately after the authorized tag push.
+
 What the slot changes in the README, and what already guards it:
 
 - `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
@@ -114,6 +121,54 @@ build if the version and the tag disagree:
 - `checkwash-X.Y.Z-py3-none-any.whl` and the sdist — installed into a fresh
   venv in CI, which asserts `pip freeze` contains checkwash and nothing else
 - `checkwash.pyz` — the single-file build, gated by `tests/test_zipapp.py`
+
+### Assertion capability qualification
+
+Before uploading release assets or publishing to PyPI, the release workflow
+runs `tools/qualify_assertions.py` on the source, the actual built zipapp and
+the wheel installed into a fresh venv. All three execute the same owned
+assertion support contract in `tests/data/javascript_assertion_support.json`
+through real Git commits and the CLI. Each loss must report the expected
+rule, severity, path, JSON verdict and process exit; preserving controls must
+pass without findings. Clean ranges and invalid refs check exits 0 and 2.
+These are bounded syntax and mutation checks, not a general false-positive
+or adversarial detection-rate estimate.
+
+The deterministic JSON receipts record the suite digest, engine source
+commit, source package digest, whether package sources were dirty, artifact
+SHA256, reported version and every case result. Qualification checks the
+archive's package bytes against the source tree and, for wheels, also checks
+the isolated venv's loaded package. A different artifact or loaded package
+fails even if its version string matches. The candidate source, commit and
+artifact must remain unchanged during the run. No receipt is stored inside
+`dist/`, so PyPI receives only its supported distribution files.
+
+The `assertion qualification` workflow also installs the exact SHA recommended
+for the Action in the README and runs the same suite. This is explicitly an
+**Action-pinned engine** check, not qualification of the composite Action's
+wiring. Its receipt names that engine's own source commit and version. It is
+a separate job because the one-release trust lag can expose real capability
+gaps: the current v0.4.0 pin lacks the Node assertion repairs from #164 and
+will fail those cases. The job remains visibly failed; no expected-failure
+or `continue-on-error` waiver turns those gaps green. The recommended pin
+and release authorization remain governed by the existing release process.
+
+For local source qualification:
+
+```bash
+python tools/qualify_assertions.py --distribution source --output work/assertion-source.json
+```
+
+For a built wheel installed into a fresh venv, use the venv's absolute Python
+path so neither an editable checkout nor `PYTHONPATH` can supply its engine:
+
+```bash
+python tools/qualify_assertions.py --distribution wheel --artifact dist/checkwash-X.Y.Z-py3-none-any.whl --output work/assertion-wheel.json -- /absolute/fresh/bin/python -I -m checkwash
+python tools/qualify_assertions.py --distribution pyz --artifact dist/checkwash.pyz --output work/assertion-pyz.json
+```
+
+Fixture analysis is zero-network and never executes fixture tests. CI uses
+build/install tooling separately to create the candidate distributions.
 
 ### pyz reproducibility
 

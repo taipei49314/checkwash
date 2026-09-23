@@ -53,11 +53,17 @@ The IR (`SPEC.md`) is language-neutral by design. A new frontend that emits
 IR inherits every existing detector. v0.1 is Python-only; the frontend
 protocol is `src/checkwash/frontends/`.
 
+For assertion syntax changes, update the independently reviewed API inventory,
+add weakening/removal and preserving controls, and qualify the actual CLI
+artifacts. See [assertion coverage](docs/assertion-coverage.md) for the contract,
+commands and limits. An omitted assertion family must fail a contract test even
+when the detector's existing fixtures still pass.
+
 ## Running the suite
 
 ```bash
 pip install -e ".[dev]"
-pytest                      # 7045 tests: fixtures, e2e, perf and coverage gates
+pytest                      # 7930 tests: fixtures, e2e, perf and coverage gates
 checkwash demo              # sanity: 8 real cheats blocked, offline
 checkwash bench --local     # in-clone reproduce; omit --local to require sweep clones
 ```

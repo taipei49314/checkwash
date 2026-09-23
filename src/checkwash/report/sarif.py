@@ -60,6 +60,31 @@ def findings_to_sarif(
             }
         ],
     }
+    if context is not None and context.coverage_gaps:
+        notifications = []
+        for gap in context.coverage_gaps:
+            notification = {
+                "level": "warning",
+                "message": {"text": gap.message()},
+                "properties": {
+                    "checkwash.path": gap.path,
+                    "checkwash.side": gap.side,
+                    "checkwash.line": gap.line,
+                    "checkwash.column": gap.column,
+                },
+            }
+            # A base-side coordinate is not a location in the checked-out
+            # head. Keep its side/path/line in the diagnostic instead.
+            if gap.side == "after":
+                notification["locations"] = [{"physicalLocation": {
+                    "artifactLocation": {"uri": quote(gap.path.replace("\\", "/"), safe="/")},
+                    "region": {"startLine": gap.line},
+                }}]
+            notifications.append(notification)
+        payload["runs"][0]["invocations"] = [{
+            "executionSuccessful": True,
+            "toolExecutionNotifications": notifications,
+        }]
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
 
 
