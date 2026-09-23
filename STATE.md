@@ -1,6 +1,28 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-23 (JS/TS foundation candidate; v0.4.1 remains the published release)
+Updated: 2026-09-23 (v0.4.2 release preparation; public status is recorded in the release)
+
+## 2026-09-23: v0.4.2 JS/TS foundation release
+
+The maintainer accepted the v0.4.2 release plan with "好 依你規劃走".
+Estate T-449 records the new one-time scope. PR #167 is merged as
+`5a6d190a4bca7e2790805553221750268b332b7a`; T-447's original delivery and
+T-448's later integration remain separate completed records.
+
+Release preparation includes the bounded callback/scalar/precision fixes,
+canonical scalar compatibility across existing subject detectors, an independently
+selected real JS/TS history replay, the separate fixed Python sweep and final-source
+release qualification. Tests, sweeps and package execution run remotely.
+Package metadata is 0.4.2; the recommended Action advances only to v0.4.1
+under the existing trust lag and does not contain this foundation.
+
+The [release guide](docs/releases/v0.4.2-public-launch.md) defines the scope and
+limits. The [GitHub Release](https://github.com/taipei49314/checkwash/releases/tag/v0.4.2)
+is the publication record and will identify final source, remote checks and public
+artifact hashes. A candidate commit or temporary runner tag does not establish
+publication. No later release, downstream-repository pin or next JS/TS stage is
+authorized. Frozen contracts and historical benchmark/adjudication records remain
+unchanged; legacy and old-Action measurements keep their actual results.
 
 ## 2026-09-23: JS/TS assertion foundation candidate
 
@@ -1968,7 +1990,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.4.1 |
+| version | v0.4.2 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

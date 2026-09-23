@@ -257,6 +257,106 @@
       "verdict": "block",
       "rule": "EXPECTED_VALUE_CHANGED",
       "severity": "high"
+    },
+    {
+      "id": "foundation.jest.optional-chain-quote-formatting",
+      "path": "tests/foundation.test.ts",
+      "before": "test('contract', () => { expect(record?.get(\"x\")).toBe(\"ready\"); });\n",
+      "after": "test('contract', () => { expect(record?.get('x')).toBe('ready'); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.optional-chain-unicode-formatting",
+      "path": "tests/foundation.test.ts",
+      "before": "test('contract', () => { expect(record?.get(\"x\")).toBe(\"ready\"); });\n",
+      "after": "test('contract', () => { expect(record?.get('x')).toBe('r\\u0065ady'); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.optional-chain-number-formatting",
+      "path": "tests/foundation.test.ts",
+      "before": "test('contract', () => { expect(record?.get(\"x\")).toBe(42); });\n",
+      "after": "test('contract', () => { expect(record?.get('x')).toBe(4.2e1); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.node.optional-chain-quote-formatting",
+      "path": "test/foundation.mjs",
+      "before": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(record?.get(\"x\"), \"ready\"); });\n",
+      "after": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(record?.get('x'), 'ready'); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.wrapper-with-number-formatting",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBe(42); });\n",
+      "after": "test('contract', () => { expect(normalize(subject())).toBe(4.2e1); });\n",
+      "kind": "subject_wrapped",
+      "verdict": "block",
+      "rule": "SUBJECT_NORMALIZED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.jest.wrapper-with-unicode-formatting",
+      "path": "tests/foundation.test.ts",
+      "before": "test('contract', () => { expect(subject()).toBe('ready'); });\n",
+      "after": "test('contract', () => { expect(normalize(subject())).toBe('r\\u0065ady'); });\n",
+      "kind": "subject_wrapped",
+      "verdict": "block",
+      "rule": "SUBJECT_NORMALIZED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.node.wrapper-with-quote-formatting",
+      "path": "test/foundation.js",
+      "before": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(subject(), \"ready\"); });\n",
+      "after": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(normalize(subject()), 'ready'); });\n",
+      "kind": "subject_wrapped",
+      "verdict": "block",
+      "rule": "SUBJECT_NORMALIZED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.jest.input-change-with-number-formatting",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject(1)).toBe(42); });\n",
+      "after": "test('contract', () => { expect(subject(0)).toBe(4.2e1); });\n",
+      "kind": "subject_input_changed",
+      "verdict": "block",
+      "rule": "SUBJECT_INPUT_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.jest.input-change-with-unicode-formatting",
+      "path": "tests/foundation.test.ts",
+      "before": "test('contract', () => { expect(subject(1)).toBe('ready'); });\n",
+      "after": "test('contract', () => { expect(subject(0)).toBe('r\\u0065ady'); });\n",
+      "kind": "subject_input_changed",
+      "verdict": "block",
+      "rule": "SUBJECT_INPUT_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.node.input-change-with-quote-formatting",
+      "path": "test/foundation.js",
+      "before": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(subject(1), \"ready\"); });\n",
+      "after": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(subject(0), 'ready'); });\n",
+      "kind": "subject_input_changed",
+      "verdict": "block",
+      "rule": "SUBJECT_INPUT_CHANGED",
+      "severity": "high"
     }
   ]
 }

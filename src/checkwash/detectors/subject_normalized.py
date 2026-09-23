@@ -28,6 +28,7 @@ from checkwash.change import EngineError
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import argument_wraps, expr_wraps, resolve_through
+from checkwash.ir.expectation_identity import same_known_js_scalar
 from checkwash.ir.model import IR
 
 
@@ -50,7 +51,9 @@ def detect(ir: IR) -> list[Finding]:
                 # case where both of those look untouched.
                 if pair.strength_change is None or pair.strength_change < 0:
                     continue
-                if b.right_value != a.right_value or b.right_literal != a.right_literal:
+                if not same_known_js_scalar(file.path, b, a) and (
+                    b.right_value != a.right_value or b.right_literal != a.right_literal
+                ):
                     continue
                 # One hop of indirection, and argument positions.
                 #

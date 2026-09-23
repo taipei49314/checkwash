@@ -30,7 +30,7 @@ all JavaScript syntax or future upstream APIs.
 
 The separate
 [`javascript_foundation_mutations.json`](../tests/data/javascript_foundation_mutations.json)
-adds 25 independently authored changes without replacing the original 136 API
+adds 35 independently authored changes without replacing the original 136 API
 cases or 248 mutations. It specifies exact scalar expectation rewrites for
 Jest/Vitest and Node assertions, positive `toBeCloseTo` precision decreases,
 and callback boundaries. An assertion after a test callback cannot replace or
@@ -51,8 +51,12 @@ explicit versus omitted default precision. Converting a legacy Node equality
 check to strict equality and removing parentheses around a scalar are also
 preserving controls. Each blocking case requires exactly
 its stated rule, severity and verdict; preserving cases require no findings.
-The new source tests are in
-[`tests/test_js_foundation.py`](../tests/test_js_foundation.py).
+Ten of these controls were added during v0.4.2 release review: equivalent scalar
+spellings cannot invent an assertion substitution or hide subject wrapping and
+concrete input changes. Known scalar equality is shared by those consumers;
+unknown and Python expectations retain their prior handling. The source tests
+are in [`tests/test_js_foundation.py`](../tests/test_js_foundation.py) and
+[`tests/test_js_scalar_consumers.py`](../tests/test_js_scalar_consumers.py).
 
 This scope reads complete balanced calls and direct scalar expected arguments:
 finite Number literals, quoted strings, booleans and `null`. It does not infer

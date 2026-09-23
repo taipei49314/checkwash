@@ -80,6 +80,15 @@ it does not authorize another release. The
 [v0.4.1 guide](releases/v0.4.1-public-launch.md) links the publication record.
 The tag ruleset is restored immediately after the authorized tag push.
 
+The maintainer subsequently accepted the v0.4.2 release plan with
+"好 依你規劃走". Estate T-449 covers the bounded JS/TS foundation release,
+its necessary regression repairs, independently selected JS/TS history replay,
+fixed Python sweep, final-source remote qualification and one publication.
+The [v0.4.2 guide](releases/v0.4.2-public-launch.md) records its limits. All product
+workloads run remotely; this scope supplies no work-machine testing exception.
+The recommended Action advances only to prior stable v0.4.1. Publication and
+artifact verification consume this grant; another version requires a new scope.
+
 What the slot changes in the README, and what already guards it:
 
 - `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
@@ -128,7 +137,8 @@ Before uploading release assets or publishing to PyPI, the release workflow
 runs `tools/qualify_assertions.py` on the source, the actual built zipapp and
 the wheel installed into a fresh venv. All three execute the same owned
 assertion support contract in `tests/data/javascript_assertion_support.json`
-through real Git commits and the CLI. Each loss must report the expected
+and the separate `javascript_foundation_mutations.json` supplement through
+real Git commits and the CLI. Each loss must report the expected
 rule, severity, path, JSON verdict and process exit; preserving controls must
 pass without findings. Clean ranges and invalid refs check exits 0 and 2.
 These are bounded syntax and mutation checks, not a general false-positive
@@ -148,8 +158,9 @@ for the Action in the README and runs the same suite. This is explicitly an
 **Action-pinned engine** check, not qualification of the composite Action's
 wiring. Its receipt names that engine's own source commit and version. It is
 a separate job because the one-release trust lag can expose real capability
-gaps: the current v0.4.0 pin lacks the Node assertion repairs from #164 and
-will fail those cases. The job remains visibly failed; no expected-failure
+gaps: the v0.4.1 pin includes the Node assertion repairs from #164 but lacks
+the v0.4.2 foundation. Its actual result is measured independently. The job
+remains visibly failed when cases fail; no expected-failure
 or `continue-on-error` waiver turns those gaps green. The recommended pin
 and release authorization remain governed by the existing release process.
 

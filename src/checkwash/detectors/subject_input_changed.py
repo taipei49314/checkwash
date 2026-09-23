@@ -46,6 +46,7 @@ from collections import Counter
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
+from checkwash.ir.expectation_identity import same_known_js_scalar
 from checkwash.ir.model import IR, param_tables
 
 _MAX_CALL_ARGS = 32
@@ -315,13 +316,13 @@ def detect(ir: IR) -> list[Finding]:
                     continue
                 if b.form != a.form or b.positive != a.positive:
                     continue
-                if (
-                    b.right_value != a.right_value
-                    or b.right_literal != a.right_literal
-                    or b.right_depends_on != a.right_depends_on
-                    or b.epsilon != a.epsilon
-                    or b.epsilon_kind != a.epsilon_kind
-                ):
+                same_expected = same_known_js_scalar(file.path, b, a) or (
+                    b.right_value == a.right_value
+                    and b.right_literal == a.right_literal
+                    and b.right_depends_on == a.right_depends_on
+                )
+                if (not same_expected or b.epsilon != a.epsilon
+                        or b.epsilon_kind != a.epsilon_kind):
                     continue
                 if not table_reported:
                     rewrites = _table_input_rewrites(file, unit, b, a)

@@ -130,6 +130,8 @@ def validate_foundation_contract(contract: Any) -> dict:
     outcomes = {
         "expected_rewrite": ("block", "EXPECTED_VALUE_CHANGED", "high"),
         "tolerance_weakened": ("block", "TOLERANCE_LOOSENED", "high"),
+        "subject_wrapped": ("block", "SUBJECT_NORMALIZED", "high"),
+        "subject_input_changed": ("block", "SUBJECT_INPUT_CHANGED", "high"),
         "weakening": ("block", "ASSERT_WEAKENED", "high"),
         "removal": ("block", "ASSERT_REMOVED", "high"),
         "preserving": ("pass", None, None),
