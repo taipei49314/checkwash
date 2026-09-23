@@ -117,3 +117,31 @@ def test_identity_comparison_ignores_formatting_outside_strings():
     text = "check( subject( 1 ) ).toBe(42)"
     assertion = Assertion("a0", "compare_eq", 90, text, (0, len(text)), left="subject(1)")
     assert fingerprint_text(_PATH, assertion) == "check( subject( 1 ) ).toBe("
+
+
+def test_vitest_diagnostic_message_keeps_its_established_fingerprint():
+    imports = 'import { expect } from "vitest";\n'
+    before = 'expect(subject(), "explain failure").toBe(42)'
+    _ir, findings, _verdict = _analyze(
+        imports + _source(before + ";"),
+        imports + _source('expect(subject(), "explain failure").toBeTruthy();'),
+    )
+    finding, = [finding for finding in findings if finding.rule == "ASSERT_WEAKENED"]
+    assert finding.fingerprint == _key("ASSERT_WEAKENED", 'expect(subject(),"explain failure").toBe(')
+    assert finding.before.text == before
+
+
+@pytest.mark.parametrize("message", ['"explain failure"', "message", "diagnostic(value, { code: 1 })"])
+def test_complete_diagnostic_arguments_keep_the_legacy_prefix(message):
+    text = f"expect(subject(), {message}).toBe(42)"
+    assertion = Assertion("a0", "compare_eq", 90, text, (0, len(text)), left="subject()")
+    assert fingerprint_text(_PATH, assertion) == f"expect(subject(), {message}).toBe("
+
+
+@pytest.mark.parametrize("text", [
+    "expect(subject(), diagnostic(expect(value).toBe(1))).toBe(42)",
+    'expect(subject(), "fake).toBe(").toBe(42)',
+])
+def test_nested_or_quoted_diagnostic_matchers_cannot_claim_a_misparsed_old_prefix(text):
+    assertion = Assertion("a0", "compare_eq", 90, text, (0, len(text)), left="subject()")
+    assert fingerprint_text(_PATH, assertion) == text

@@ -155,6 +155,35 @@ def test_moving_an_assertion_into_an_unused_default_parameter_reports_removal(he
     )
 
 
+def test_invoked_inline_callback_keeps_matcher_weakening_detection():
+    before = _source("const values = [1]; values.forEach(value => { expect(subject(value)).toBe(1); });")
+    after = _source("const values = [1]; values.forEach(value => { expect(subject(value)).toBeTruthy(); });")
+    assertion, = _assertions(before)
+    assert assertion.left == "subject(value)"
+    _ir, findings, verdict = _analyze(before, after)
+    assert (verdict, [(finding.rule, finding.severity) for finding in findings]) == (
+        "block", [("ASSERT_WEAKENED", "high")],
+    )
+
+
+def test_inline_callback_inside_unused_helper_cannot_restore_a_removed_oracle():
+    before = _source("expect(real()).toBe(1); expect(kept()).toBe(2);")
+    after = _source('''function unused() {
+      const values = [1];
+      values.forEach(value => { expect(real()).toBe(1); });
+    }
+    expect(kept()).toBe(2);''')
+    assertion, = _assertions(after)
+    assert assertion.left == "kept()"
+    gaps = javascript_coverage_gaps(after.encode(), parse_javascript(after.encode()),
+                                    "tests/foundation.test.ts", "after")
+    assert [gap.callee for gap in gaps] == ["expect(...).toBe"]
+    _ir, findings, verdict = _analyze(before, after)
+    assert (verdict, [(finding.rule, finding.severity) for finding in findings]) == (
+        "block", [("ASSERT_REMOVED", "high")],
+    )
+
+
 @pytest.mark.parametrize("subject", [
     'lookup("semi; and closing ) }")',
     "lookup('two  spaces')",
@@ -328,6 +357,37 @@ def test_legacy_node_equality_does_not_claim_scalar_rewrite_semantics(method):
 def test_comments_around_scalar_arguments_preserve_expectations(before, after):
     _ir, findings, verdict = _analyze(_source(before), _source(after))
     assert (findings, verdict) == ([], "pass")
+
+
+@pytest.mark.parametrize("before,after", [
+    ("expect(subject()).toBe(42);", 'expect(subject(), "explain failure").toBe(42);'),
+    ('expect(subject(), "old diagnostic").toBe(42);', 'expect(subject(), "new diagnostic").toBe(42);'),
+    ('expect(subject(), "explain failure").toBe(42);', "expect(subject()).toBe(42);"),
+])
+def test_vitest_expect_diagnostic_message_edits_preserve_the_oracle(before, after):
+    imports = 'import { expect } from "vitest";'
+    _ir, findings, verdict = _analyze(_source(before, imports), _source(after, imports))
+    assert (findings, verdict) == ([], "pass")
+
+
+def test_vitest_expect_message_does_not_hide_matcher_weakening():
+    imports = 'import { expect } from "vitest";'
+    before = _source('expect(subject(), "explain failure").toBe(42);', imports)
+    after = _source('expect(subject(), "explain failure").toBeTruthy();', imports)
+    _ir, findings, verdict = _analyze(before, after)
+    assert (verdict, [(finding.rule, finding.severity) for finding in findings]) == (
+        "block", [("ASSERT_WEAKENED", "high")],
+    )
+
+
+def test_vitest_expect_message_stays_in_evidence_but_not_the_subject():
+    call = 'expect(subject(), "explain failure").toBe(42)'
+    source = _source(call + ";", 'import { expect } from "vitest";')
+    assertion, = _assertions(source)
+    assert assertion.left == "subject()"
+    assert assertion.right_literal == "42"
+    assert assertion.text == call
+    assert source[slice(*assertion.span)] == call
 
 
 def test_comment_spelling_inside_a_literal_remains_string_data():

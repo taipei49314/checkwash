@@ -38,6 +38,13 @@ strengthen an assertion inside that callback. A changed top-level assertion
 outside recognized test units remains unrepresented and is reported by coverage
 diagnostics; the supplement does not claim to analyze that top-level execution.
 
+Nested test callbacks own their own assertions. Declared or assigned helper
+functions and their default parameter expressions do not donate assertions to
+the surrounding test. Direct inline callback arguments to other calls retain
+the existing lexical coverage, including iterator callbacks; this does not
+prove that an arbitrary callee executes its callback. Vitest's optional second
+`expect(actual, message)` argument is diagnostic text, not the asserted subject.
+
 Preserving controls cover assertion messages, multiline formatting, equivalent
 numeric and string spellings, truthiness strengthened to an exact check, and
 explicit versus omitted default precision. Converting a legacy Node equality

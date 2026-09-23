@@ -451,10 +451,22 @@ def parse_javascript(data: bytes) -> ParsedFile:
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
     matches = [m for m in _TEST_RE.finditer(text) if code[m.start()]]
+    callbacks = [_test_body(text, code, bindings, match) for match in matches]
+    test_body_starts = {callback[0] for callback in callbacks if callback is not None}
+    inline_body_starts: set[int] = set()
+    for call in CALL.finditer(bindings.masked):
+        if call.group("callee") in {"if", "for", "while", "switch", "catch", "with"}:
+            continue
+        arguments = _call_argument_spans(text, code, call.end() - 1, len(text))
+        if arguments is None:
+            continue
+        for argument in arguments[0]:
+            callback = _callback_body(bindings, argument)
+            if callback is not None and callback[0] not in test_body_starts:
+                inline_body_starts.add(callback[0])
     units: list[ParsedUnit] = []
-    for match in matches:
+    for match, callback in zip(matches, callbacks):
         name = match.group("name")
-        callback = _test_body(text, code, bindings, match)
         if callback is None:
             call = _call_argument_spans(text, code, text.index("(", match.start(), match.end()), len(text))
             if call is None:
@@ -466,9 +478,12 @@ def parse_javascript(data: bytes) -> ParsedFile:
         body = text[match.start():unit_end]
         # Assertions inside another function are not this callback's direct
         # assertions. Child test callbacks are scanned as their own units;
-        # arbitrary helpers/async callbacks remain visible coverage gaps.
+        # declared helpers remain visible coverage gaps. Direct inline call
+        # arguments retain the established lexical callback coverage (such as
+        # forEach); this does not prove an arbitrary callee invokes them.
         nested = [(scope.start, scope.end) for scope in bindings.scopes
-                  if scope.function and start < scope.start < end]
+                  if scope.function and start < scope.start < end
+                  and scope.start not in inline_body_starts]
         # Default parameter expressions belong to invocation of the nested
         # function too, even though they precede its body scope.
         parameter_positions = {bindings.tokens[index][1] for index in bindings.parameter_tokens}
@@ -486,6 +501,8 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 first = bindings.tokens[body_index][1]
                 last_index = bindings._expression_end(body_index)
                 last = bindings.tokens[last_index][1] if last_index < len(bindings.tokens) else len(text)
+            if first in inline_body_starts:
+                continue
             parameter_end = index - 1
             if bindings.token(parameter_end) != ")":
                 # The same simple return annotation supported on test
@@ -513,7 +530,8 @@ def parse_javascript(data: bytes) -> ParsedFile:
             if bindings.callee(candidate.group("callee"), candidate.start()).kind != "expect":
                 continue
             subject_call = _call_arguments(text, code, candidate.end() - 1, end)
-            if (subject_call is None or len(subject_call[0]) != 1
+            # Vitest accepts an optional diagnostic message after actual.
+            if (subject_call is None or not 1 <= len(subject_call[0]) <= 2
                     or _EMPTY_ARGUMENT.fullmatch(subject_call[0][0])):
                 continue
             subject_arguments, subject_end = subject_call

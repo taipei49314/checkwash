@@ -27,6 +27,54 @@ _LEGACY_EXPECT_PREFIX = re.compile(
 )
 
 
+def _legacy_message_subject(subject: str, actual: str) -> bool:
+    """Verify an old two-argument expect prefix ends at the same call.
+
+    Prefix comparison alone is unsafe: the old regex can stop at a nested
+    matcher inside the diagnostic expression. Require both arguments to be
+    structurally complete. Regexes, templates and slash expressions need the
+    JS lexer, so those uncommon diagnostic forms retain complete identities.
+    """
+    parts: list[str] = []
+    stack: list[str] = []
+    start = i = 0
+    while i < len(subject):
+        char = subject[i]
+        if char in "\"'":
+            quote = char
+            i += 1
+            while i < len(subject):
+                if subject[i] == "\\":
+                    i += 2
+                elif subject[i] == quote:
+                    i += 1
+                    break
+                else:
+                    i += 1
+            else:
+                return False
+            continue
+        if char in "/`":
+            return False
+        if char in "([{":
+            stack.append({"(": ")", "[": "]", "{": "}"}[char])
+        elif char in ")]}":
+            if not stack or stack.pop() != char:
+                return False
+        elif char == "," and not stack:
+            parts.append(subject[start:i])
+            start = i + 1
+        i += 1
+    if stack:
+        return False
+    parts.append(subject[start:])
+    return (
+        len(parts) == 2
+        and bool(parts[1].strip())
+        and normalize_text(" ".join(parts[0].split())) == normalize_text(actual)
+    )
+
+
 def fingerprint_text(path: str, assertion: Assertion) -> str:
     """Legacy JS matcher identity, or the assertion's complete source text.
 
@@ -42,6 +90,7 @@ JS argument scan. New expected-value findings retain their complete identity.
     # contents. Require its subject to agree with the current representation;
     # a repaired nested call or string is not an unchanged old assertion.
     legacy_subject = " ".join(match.group("subject").split())
-    if normalize_text(legacy_subject) != normalize_text(assertion.left or ""):
+    if (normalize_text(legacy_subject) != normalize_text(assertion.left or "")
+            and not _legacy_message_subject(match.group("subject"), assertion.left or "")):
         return assertion.text
     return match.group(0)
