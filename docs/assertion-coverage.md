@@ -101,7 +101,7 @@ upload and PyPI publication; see [the release procedure](RELEASING.md).
 A separate job extracts the full recommended Action SHA from the README and
 qualifies that exact installed engine against the current contract. It does not
 claim to exercise the composite Action wiring; existing dogfood smoke tests do
-that. The recommended v0.3.4 engine predates the Node repair and is expected to
+that. The recommended v0.4.0 engine predates the Node repair and is expected to
 fail those cases. Its red result is retained with a receipt, not waived or
 silently re-pinned. A candidate passing the contract therefore does not imply
 the older recommended Action has gained the same coverage.

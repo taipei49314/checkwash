@@ -73,6 +73,13 @@ with publication and identity checks complete
 subsequent release; any further bump, tag or release needs a new explicit
 human instruction.
 
+On 2026-09-23 the maintainer explicitly authorized merging PR #166 and
+publishing v0.4.1. This separate one-time scope covers the Node assertion
+repair, its regression prevention, release qualification and publication;
+it does not authorize another release. The
+[v0.4.1 guide](releases/v0.4.1-public-launch.md) links the publication record.
+The tag ruleset is restored immediately after the authorized tag push.
+
 What the slot changes in the README, and what already guards it:
 
 - `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
@@ -141,7 +148,7 @@ for the Action in the README and runs the same suite. This is explicitly an
 **Action-pinned engine** check, not qualification of the composite Action's
 wiring. Its receipt names that engine's own source commit and version. It is
 a separate job because the one-release trust lag can expose real capability
-gaps: the current v0.3.4 pin lacks the Node assertion repairs from #164 and
+gaps: the current v0.4.0 pin lacks the Node assertion repairs from #164 and
 will fail those cases. The job remains visibly failed; no expected-failure
 or `continue-on-error` waiver turns those gaps green. The recommended pin
 and release authorization remain governed by the existing release process.
