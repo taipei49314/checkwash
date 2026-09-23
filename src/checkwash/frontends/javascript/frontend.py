@@ -469,6 +469,9 @@ def parse_javascript(data: bytes) -> ParsedFile:
         # arbitrary helpers/async callbacks remain visible coverage gaps.
         nested = [(scope.start, scope.end) for scope in bindings.scopes
                   if scope.function and start < scope.start < end]
+        # Default parameter expressions belong to invocation of the nested
+        # function too, even though they precede its body scope.
+        parameter_positions = {bindings.tokens[index][1] for index in bindings.parameter_tokens}
         # A TypeScript return annotation can keep the binding scanner from
         # recognizing an arrow's parameter scope. Its body is still a nested
         # function, and cannot donate assertions to the surrounding test.
@@ -483,11 +486,25 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 first = bindings.tokens[body_index][1]
                 last_index = bindings._expression_end(body_index)
                 last = bindings.tokens[last_index][1] if last_index < len(bindings.tokens) else len(text)
+            parameter_end = index - 1
+            if bindings.token(parameter_end) != ")":
+                # The same simple return annotation supported on test
+                # callbacks may separate an arrow from its parameter list.
+                while parameter_end >= 0 and (
+                    re.fullmatch(NAME, bindings.token(parameter_end))
+                    or bindings.token(parameter_end) in {"<", ">", "[", "]", ",", "|", "."}
+                ):
+                    parameter_end -= 1
+                if bindings.token(parameter_end) == ":":
+                    parameter_end -= 1
+            if bindings.token(parameter_end) == ")" and parameter_end in bindings.pairs:
+                first = bindings.tokens[bindings.pairs[parameter_end]][1]
             if start < first < end:
                 nested.append((first, last))
 
         def owned(position: int) -> bool:
-            return not any(first <= position < last for first, last in nested)
+            return (position not in parameter_positions
+                    and not any(first <= position < last for first, last in nested))
 
         assertions: list[Assertion] = []
         for candidate in CALL.finditer(bindings.masked, start, end):

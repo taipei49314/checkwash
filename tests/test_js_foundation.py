@@ -131,6 +131,30 @@ def test_typed_main_callback_retains_its_own_assertion(callback):
                                     "tests/foundation.test.ts", "after") == []
 
 
+@pytest.mark.parametrize("helper", [
+    "function unused(value = expect(real()).toBe(1)) {}",
+    "const unused = (value = expect(real()).toBe(1)) => {};",
+])
+def test_unused_function_default_parameter_does_not_supply_an_outer_oracle(helper):
+    source = _source(helper + " expect(kept()).toBe(2);")
+    assertion, = _assertions(source)
+    assert assertion.left == "kept()"
+    gaps = javascript_coverage_gaps(source.encode(), parse_javascript(source.encode()),
+                                    "tests/foundation.test.ts", "after")
+    assert [gap.callee for gap in gaps] == ["expect(...).toBe"]
+
+
+@pytest.mark.parametrize("helper", [
+    "function unused(value = expect(real()).toBe(1)) {}",
+    "const unused = (value = expect(real()).toBe(1)) => {};",
+])
+def test_moving_an_assertion_into_an_unused_default_parameter_reports_removal(helper):
+    _ir, findings, verdict = _analyze(_source("expect(real()).toBe(1);"), _source(helper))
+    assert (verdict, [(finding.rule, finding.severity) for finding in findings]) == (
+        "block", [("ASSERT_REMOVED", "high")],
+    )
+
+
 @pytest.mark.parametrize("subject", [
     'lookup("semi; and closing ) }")',
     "lookup('two  spaces')",
