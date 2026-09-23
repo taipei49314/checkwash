@@ -87,27 +87,27 @@ def test_declared_supported_api_inventory_has_no_coverage_gaps():
 
 
 @pytest.mark.parametrize("binding,call,callee", [
-    ('import verify from "node:assert";', "verify.strictEqual(value, 5)", "verify.strictEqual"),
-    ('import verify from "assert/strict";', "verify(value)", "verify"),
-    ('import * as verify from "node:assert/strict";', "verify.ok(value)", "verify.ok"),
-    ('import { strictEqual as same } from "node:assert";', "same(value, 5)", "same"),
-    ('import { strictEqual } from "node:assert";', "strictEqual(value, 5)", "strictEqual"),
-    ('const verify = require("node:assert");', "verify.equal(value, 5)", "verify.equal"),
-    ('const { deepEqual: same } = require("assert");', "same(value, [5])", "same"),
+    ('import verify from "node:assert";', "verify.match(value, /expected/)", "verify.match"),
+    ('import verify from "assert/strict";', "verify.rejects(operation)", "verify.rejects"),
+    ('import * as verify from "node:assert/strict";', "verify.match(value, /expected/)", "verify.match"),
+    ('import { match as same } from "node:assert";', "same(value, /expected/)", "same"),
+    ('import { match } from "node:assert";', "match(value, /expected/)", "match"),
+    ('const verify = require("node:assert");', "verify.match(value, /expected/)", "verify.match"),
+    ('const { match: same } = require("assert");', "same(value, /expected/)", "same"),
 ])
-def test_node_import_aliases_are_candidates_even_without_frontend_support(binding, call, callee):
+def test_unknown_node_methods_stay_visible_through_supported_import_aliases(binding, call, callee):
     source = binding.encode() + b"\n" + _source(call + ";")
     gap, = _gaps(source)
     assert gap.callee == callee
 
 
 @pytest.mark.parametrize("binding,call,callee", [
-    ('import { strictEqual /* ordinary comment */ as same } from "node:assert";',
-     "same(value, 5)", "same"),
+    ('import { match /* ordinary comment */ as same } from "node:assert";',
+     "same(value, /expected/)", "same"),
     ('import verify /* comment */ from /* comment */ "node:assert";',
-     "verify.strictEqual(value, 5)", "verify.strictEqual"),
-    ('const { deepEqual /* comment */: same } = require(/* comment */ "assert");',
-     "same(value, [5])", "same"),
+     "verify.match(value, /expected/)", "verify.match"),
+    ('const { match /* comment */: same } = require(/* comment */ "assert");',
+     "same(value, /expected/)", "same"),
 ])
 def test_commented_imports_preserve_real_node_alias_candidates(binding, call, callee):
     source = binding.encode() + b"\n" + _source(call + ";")
@@ -121,6 +121,20 @@ def test_commented_import_text_cannot_turn_a_utility_into_a_node_assertion():
         + _source("ordinary();")
     )
     assert _gaps(source) == []
+
+
+@pytest.mark.parametrize("module", ["vitest", "@jest/globals"])
+def test_unknown_matcher_stays_visible_through_expect_alias(module):
+    source = f'import {{ expect as check }} from "{module}";\n'.encode() + _source("check(items).toHaveLength(2);")
+    gap, = _gaps(source)
+    assert gap.callee == "check(...).toHaveLength"
+
+
+@pytest.mark.parametrize("name,call", [("assert", "assert.strictEqual(value, 5)"), ("expect", "expect(value).toBe(5)")])
+def test_shadowed_default_assertion_names_are_visible_as_unresolved(name, call):
+    source = _source(f"const {name} = standin; {call};")
+    gap, = _gaps(source)
+    assert "unresolved" in gap.reason
 
 
 @pytest.mark.parametrize("binding,construction", [

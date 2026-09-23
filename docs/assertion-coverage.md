@@ -11,10 +11,10 @@ tree; they do not update an already-published wheel, zipapp or Action pin.
 [`tests/data/javascript_assertion_support.json`](../tests/data/javascript_assertion_support.json)
 records concrete spellings, documented API sources, support status and literal
 expected IR forms, strengths and subjects. Its expectations are not generated
-from the frontend's matcher table or strength constants. Unsupported aliases,
+from the frontend's matcher table or strength constants. Unsupported syntax,
 methods and lookalikes are recorded alongside supported APIs.
 
-The initial inventory has 113 API/context cases and 137 concrete changes:
+The inventory has 136 API/context cases and 248 concrete changes:
 weakening, removal, preserving edits and strengthening controls. Every supported
 entry has both a removal case and a preserving case. The suite checks the IR,
 finding rule, severity and verdict. Tests deliberately disable each assertion
@@ -67,15 +67,25 @@ rejected) so it cannot corrupt stdout's existing machine protocol. JSON findings
 and emitted IR keep their existing shapes.
 
 `no_known_gaps` means only that this bounded candidate scan found none. It is
-not a completeness claim. The scan covers changed `.test.*` and `.spec.*`
-JavaScript/TypeScript files, direct Node/`t.assert` spellings, bounded static
-Node import aliases, and `expect(...)`. Dynamic aliases, custom assertion
-wrappers, scope/shadowing resolution and template interpolations remain outside
-this evidence. A project requiring broader coverage must review those boundaries.
+not a completeness claim. File discovery includes `.test.*` and `.spec.*`
+JavaScript/TypeScript files, plus Node's default `test/` directories and
+`test-*`, `*-test`, `*_test` and exact `test` filenames for JS/CJS/MJS/TS/CTS/MTS.
+Generated/build/dependency paths remain excluded. Moving a test into a production
+path is checked as removal from test coverage.
+
+The scan resolves bounded static Node ESM/CommonJS imports, renamed and flat
+destructured imports, simple local aliases, and Jest/Vitest `expect` imports.
+Lexical declarations and function parameters can shadow those bindings; a
+lookalike object cannot retain a real assertion's strength. Unresolved assertion
+candidates still produce diagnostics. Dynamic module names, arbitrary wrapper
+functions, computed properties and template interpolations remain outside this
+evidence. This is a bounded static scan, not complete JavaScript scope or
+execution modeling. A project requiring broader coverage must review those
+boundaries.
 
 ## Qualify the bytes that users run
 
-The `assertion qualification` workflow runs the same 137 changes through actual
+The `assertion qualification` workflow runs the same 248 changes through actual
 CLI invocations against temporary Git commits, separately for source, a freshly
 installed wheel and a zipapp. Fixture JavaScript is read, never executed. It
 checks findings and exit codes, including a clean range and an invalid-ref
@@ -95,3 +105,19 @@ that. The recommended v0.3.4 engine predates the Node repair and is expected to
 fail those cases. Its red result is retained with a receipt, not waived or
 silently re-pinned. A candidate passing the contract therefore does not imply
 the older recommended Action has gained the same coverage.
+
+## Require candidate qualification before merging
+
+This repository's `checkwash required` ruleset targets the default branch and
+requires `checkwash` plus all three `candidate assertion contract (source)`,
+`candidate assertion contract (wheel)` and `candidate assertion contract (pyz)`
+checks. Candidate checks are bound to the GitHub Actions app, run on every pull
+request without path filters, and must be current with the base branch. Their
+names must remain in sync with the ruleset; renaming a workflow job requires
+updating the corresponding required context.
+
+The older recommended Action engine is a separate compatibility measurement,
+not a substitute for candidate qualification. Its known missing capabilities
+remain visible. A passing required check does not erase failures in other
+release or compatibility checks. The downstream Action ruleset example retains
+only `checkwash`, since consumers do not run this repository's development jobs.

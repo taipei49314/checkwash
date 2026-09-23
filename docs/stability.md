@@ -129,14 +129,18 @@ in [benchmarks/README.md](../benchmarks/README.md).
 
 Python is the primary frontend. JS/TS support scans named `test`/`it` units
 and a fixed set of `expect(...).matcher(...)` calls in `*.test.*` and
-`*.spec.*` files with `js`, `jsx`, `ts`, `tsx`, `mjs`, or `cjs` extensions.
+`*.spec.*` files, including JSX/TSX. Node default test paths also cover `test/`
+directories and `test-*`, `*-test`, `*_test` and exact `test` filenames with
+`js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. Build artifacts and
+dependencies remain excluded.
 The source candidate for #164 also recognizes `assert.equal`,
 `assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`
 changing to `assert.ok` or `assert(value)`, plus the corresponding
 `t.assert` methods. This addition is not in the published v0.4.0 package.
-The scan classifies these assertion spellings; it does not resolve imported
-aliases, shadowed bindings, or semantic equivalence of arbitrary predicates
-inside `assert(value)` / `assert.ok(value)`.
+The candidate resolves bounded static Node and Jest/Vitest imports, simple
+aliases, and lexical shadows. Unknown lookalikes do not acquire assertion
+strength. Dynamic aliases and semantic equivalence of arbitrary predicates
+inside `assert(value)` / `assert.ok(value)` remain outside this model.
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread; a production change
 the engine cannot parse can still suppress escalation through the documented

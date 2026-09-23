@@ -4,7 +4,8 @@
     "https://nodejs.org/api/assert.html",
     "https://nodejs.org/api/test.html#contextassert",
     "https://jestjs.io/docs/expect",
-    "https://vitest.dev/api/expect.html"
+    "https://vitest.dev/api/expect.html",
+    "https://nodejs.org/api/test.html#running-tests-from-the-command-line"
   ],
   "apis": [
     {
@@ -392,44 +393,74 @@
       ]
     },
     {
-      "id": "node.unsupported.renamed-default",
+      "id": "node.import.esm-renamed-default",
       "framework": "node:assert",
-      "status": "unsupported",
+      "status": "supported",
       "path": "tests/contract.test.js",
       "source": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
     },
     {
-      "id": "node.unsupported.named-method",
+      "id": "node.import.esm-named-method",
       "framework": "node:assert",
-      "status": "unsupported",
+      "status": "supported",
       "path": "tests/contract.test.js",
       "source": "import { strictEqual } from \"node:assert\";\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
     },
     {
-      "id": "node.unsupported.renamed-named",
+      "id": "node.import.esm-renamed-named",
       "framework": "node:assert",
-      "status": "unsupported",
+      "status": "supported",
       "path": "tests/contract.test.js",
       "source": "import { strictEqual as check } from \"node:assert\";\ntest(\"contract\", (t) => {\n  check(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
     },
     {
-      "id": "node.unsupported.destructured-cjs",
+      "id": "node.import.cjs-destructured",
       "framework": "node:assert",
-      "status": "unsupported",
+      "status": "supported",
       "path": "tests/contract.test.js",
       "source": "const { strictEqual } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
     },
     {
-      "id": "node.unsupported.renamed-cjs",
+      "id": "node.import.cjs-renamed",
       "framework": "node:assert",
-      "status": "unsupported",
+      "status": "supported",
       "path": "tests/contract.test.js",
       "source": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.unsupported.renamed-context",
@@ -437,7 +468,8 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "test(\"contract\", (t) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [],
+      "reason": "ctx is unbound; the declared callback parameter is t."
     },
     {
       "id": "node.unsupported.assert-instance",
@@ -456,12 +488,18 @@
       "assertions": []
     },
     {
-      "id": "node.unsupported.strict-member",
+      "id": "node.import.strict-member",
       "framework": "node:assert",
-      "status": "unsupported",
+      "status": "supported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.equal(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.toBe",
@@ -1012,12 +1050,18 @@
       "assertions": []
     },
     {
-      "id": "jest.unsupported.expect-alias",
+      "id": "jest.import.expect-alias",
       "framework": "jest",
-      "status": "unsupported",
+      "status": "supported",
       "path": "tests/contract.test.js",
       "source": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBe(5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.resolves",
@@ -1252,6 +1296,313 @@
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const example = \"expect(subject()).toBe(5);\";\n});\n",
       "assertions": []
+    },
+    {
+      "id": "node.import.esm-renamed-namespace",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.esm-strict-renamed",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.cjs-renamed-destructured",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.cjs-strict-destructured",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.cjs-strict-renamed",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 100,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.import.local-method-alias",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.import.cjs-expect-alias",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "jest.import.namespace",
+      "framework": "jest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  jest.expect(subject()).toBe(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "vitest.import.esm-expect-alias",
+      "framework": "vitest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "vitest.import.cjs-expect-alias",
+      "framework": "vitest",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.context.renamed-arrow",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.context.renamed-function",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  context.assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "node.context.cjs-renamed",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "tests/contract.test.js",
+      "source": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.node-test-directory-js",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "test/example.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.node-test-filename-js",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.node-test-prefix-cjs",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "test-total.cjs",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.node-test-underscore-mjs",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "total_test.mjs",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.node-test-dash-ts",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "nested/total-test.ts",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.node-test-suffix-cts",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "nested/total.test.cts",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "syntax.path.node-test-nested-directory-mts",
+      "framework": "node:assert",
+      "status": "supported",
+      "path": "packages/api/test/example.mts",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [
+        {
+          "form": "compare_eq",
+          "strength": 90,
+          "left": "subject()"
+        }
+      ]
+    },
+    {
+      "id": "control.local-standin",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const assert = { strictEqual: () => {} };\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [],
+      "reason": "A local lexical binding shadows the trusted assertion import."
+    },
+    {
+      "id": "control.callback-parameter",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", function (assert) {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "assertions": [],
+      "reason": "A local lexical binding shadows the trusted assertion import."
+    },
+    {
+      "id": "control.named-alias-parameter",
+      "framework": "node:assert",
+      "status": "unsupported",
+      "path": "tests/contract.test.js",
+      "source": "import { strictEqual as same } from \"node:assert\";\ntest(\"contract\", function (same) {\n  same(subject(), 5);\n});\n",
+      "assertions": [],
+      "reason": "A local lexical binding shadows the trusted assertion import."
     }
   ],
   "mutations": [
@@ -2624,6 +2975,1116 @@
       "rule": "ASSERT_WEAKENED",
       "severity": "high",
       "kind": "weakening"
+    },
+    {
+      "id": "node.import.esm-renamed-default.remove",
+      "path": "tests/contract.test.js",
+      "before": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "after": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-renamed-default.comment",
+      "path": "tests/contract.test.js",
+      "before": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "after": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-renamed-default.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "after": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.esm-renamed-default.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.ok(subject());\n});\n",
+      "after": "import check from \"node:assert/strict\";\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.esm-named-method.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual } from \"node:assert\";\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "after": "import { strictEqual } from \"node:assert\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-named-method.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual } from \"node:assert\";\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "after": "import { strictEqual } from \"node:assert\";\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-named-method.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual, ok } from \"node:assert\";\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "after": "import { strictEqual, ok } from \"node:assert\";\ntest(\"contract\", (t) => {\n  ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.esm-named-method.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual, ok } from \"node:assert\";\ntest(\"contract\", (t) => {\n  ok(subject());\n});\n",
+      "after": "import { strictEqual, ok } from \"node:assert\";\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.esm-renamed-named.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual as check } from \"node:assert\";\ntest(\"contract\", (t) => {\n  check(subject(), 5);\n});\n",
+      "after": "import { strictEqual as check } from \"node:assert\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-renamed-named.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual as check } from \"node:assert\";\ntest(\"contract\", (t) => {\n  check(subject(), 5);\n});\n",
+      "after": "import { strictEqual as check } from \"node:assert\";\ntest(\"contract\", (t) => {\n  check(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-renamed-named.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual as check, ok as ensure } from \"node:assert\";\ntest(\"contract\", (t) => {\n  check(subject(), 5);\n});\n",
+      "after": "import { strictEqual as check, ok as ensure } from \"node:assert\";\ntest(\"contract\", (t) => {\n  ensure(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.esm-renamed-named.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual as check, ok as ensure } from \"node:assert\";\ntest(\"contract\", (t) => {\n  ensure(subject());\n});\n",
+      "after": "import { strictEqual as check, ok as ensure } from \"node:assert\";\ntest(\"contract\", (t) => {\n  check(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.cjs-destructured.remove",
+      "path": "tests/contract.test.js",
+      "before": "const { strictEqual } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "after": "const { strictEqual } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-destructured.comment",
+      "path": "tests/contract.test.js",
+      "before": "const { strictEqual } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "after": "const { strictEqual } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-destructured.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "const { strictEqual, ok } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "after": "const { strictEqual, ok } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.cjs-destructured.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "const { strictEqual, ok } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  ok(subject());\n});\n",
+      "after": "const { strictEqual, ok } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.cjs-renamed.remove",
+      "path": "tests/contract.test.js",
+      "before": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "after": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-renamed.comment",
+      "path": "tests/contract.test.js",
+      "before": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "after": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-renamed.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "after": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.cjs-renamed.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.ok(subject());\n});\n",
+      "after": "const check = require(\"node:assert/strict\");\ntest(\"contract\", (t) => {\n  check.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.strict-member.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.strict-member.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.equal(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.strict-member.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.equal(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.strict-member.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strict.equal(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "jest.import.expect-alias.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBe(5);\n});\n",
+      "after": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.import.expect-alias.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBe(5);\n});\n",
+      "after": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBe(5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.import.expect-alias.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBe(5);\n});\n",
+      "after": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.import.expect-alias.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBeTruthy();\n});\n",
+      "after": "import { expect as check, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  check(subject()).toBe(5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.esm-renamed-namespace.remove",
+      "path": "tests/contract.test.js",
+      "before": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-renamed-namespace.comment",
+      "path": "tests/contract.test.js",
+      "before": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-renamed-namespace.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.esm-renamed-namespace.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.ok(subject());\n});\n",
+      "after": "import * as verify from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.esm-strict-renamed.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "after": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.esm-strict-renamed.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "after": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.esm-strict-renamed.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "after": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.esm-strict-renamed.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.ok(subject());\n});\n",
+      "after": "import { strict as verify } from \"node:assert\";\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.cjs-renamed-destructured.remove",
+      "path": "tests/contract.test.js",
+      "before": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "after": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-renamed-destructured.comment",
+      "path": "tests/contract.test.js",
+      "before": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "after": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  same(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-renamed-destructured.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "after": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  ensure(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.cjs-renamed-destructured.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  ensure(subject());\n});\n",
+      "after": "const { strictEqual: same, ok: ensure } = require(\"assert/strict\");\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.cjs-strict-destructured.remove",
+      "path": "tests/contract.test.js",
+      "before": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "after": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-strict-destructured.comment",
+      "path": "tests/contract.test.js",
+      "before": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "after": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-strict-destructured.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "after": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  verify.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.cjs-strict-destructured.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  verify.ok(subject());\n});\n",
+      "after": "const { strict: verify } = require(\"node:assert\");\ntest(\"contract\", (t) => {\n  verify.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.cjs-strict-renamed.remove",
+      "path": "tests/contract.test.js",
+      "before": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.cjs-strict-renamed.comment",
+      "path": "tests/contract.test.js",
+      "before": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.cjs-strict-renamed.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "after": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  verify.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.cjs-strict-renamed.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  verify.ok(subject());\n});\n",
+      "after": "const verify = require(\"assert\").strict;\ntest(\"contract\", (t) => {\n  verify.deepStrictEqual(subject(), [5]);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.import.local-method-alias.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.import.local-method-alias.comment",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  same(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.import.local-method-alias.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  ensure(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.import.local-method-alias.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  ensure(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nconst same = assert.strictEqual;\nconst ensure = assert.ok;\ntest(\"contract\", (t) => {\n  same(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "jest.import.cjs-expect-alias.remove",
+      "path": "tests/contract.test.js",
+      "before": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.import.cjs-expect-alias.comment",
+      "path": "tests/contract.test.js",
+      "before": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.import.cjs-expect-alias.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.import.cjs-expect-alias.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBeTruthy();\n});\n",
+      "after": "const { expect: verify } = require(\"@jest/globals\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "jest.import.namespace.remove",
+      "path": "tests/contract.test.js",
+      "before": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  jest.expect(subject()).toBe(5);\n});\n",
+      "after": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "jest.import.namespace.comment",
+      "path": "tests/contract.test.js",
+      "before": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  jest.expect(subject()).toBe(5);\n});\n",
+      "after": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  jest.expect(subject()).toBe(5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "jest.import.namespace.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  jest.expect(subject()).toBe(5);\n});\n",
+      "after": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  jest.expect(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "jest.import.namespace.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  jest.expect(subject()).toBeTruthy();\n});\n",
+      "after": "import * as jest from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  jest.expect(subject()).toBe(5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "vitest.import.esm-expect-alias.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "vitest.import.esm-expect-alias.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "vitest.import.esm-expect-alias.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  verify(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "vitest.import.esm-expect-alias.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  verify(subject()).toBeTruthy();\n});\n",
+      "after": "import { expect as verify, test } from \"vitest\";\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "vitest.import.cjs-expect-alias.remove",
+      "path": "tests/contract.test.js",
+      "before": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "vitest.import.cjs-expect-alias.comment",
+      "path": "tests/contract.test.js",
+      "before": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "vitest.import.cjs-expect-alias.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "after": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBeTruthy();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "vitest.import.cjs-expect-alias.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBeTruthy();\n});\n",
+      "after": "const { expect: verify } = require(\"vitest\");\ntest(\"contract\", (t) => {\n  verify(subject()).toBe(5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.context.renamed-arrow.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.context.renamed-arrow.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.context.renamed-arrow.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  ctx.assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.context.renamed-arrow.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  ctx.assert.ok(subject());\n});\n",
+      "after": "import { test } from \"node:test\";\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.context.renamed-function.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  context.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.context.renamed-function.comment",
+      "path": "tests/contract.test.js",
+      "before": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  context.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  context.assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.context.renamed-function.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  context.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  context.assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.context.renamed-function.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  context.assert.ok(subject());\n});\n",
+      "after": "import { test } from \"node:test\";\ntest(\"contract\", function (context) {\n  context.assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.context.cjs-renamed.remove",
+      "path": "tests/contract.test.js",
+      "before": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.context.cjs-renamed.comment",
+      "path": "tests/contract.test.js",
+      "before": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "node.context.cjs-renamed.truthiness",
+      "path": "tests/contract.test.js",
+      "before": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "after": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  ctx.assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "node.context.cjs-renamed.strengthening",
+      "path": "tests/contract.test.js",
+      "before": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  ctx.assert.ok(subject());\n});\n",
+      "after": "const { test } = require(\"node:test\");\ntest(\"contract\", (ctx) => {\n  ctx.assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "syntax.path.node-test-directory-js.remove",
+      "path": "test/example.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.node-test-directory-js.comment",
+      "path": "test/example.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.node-test-directory-js.truthiness",
+      "path": "test/example.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "syntax.path.node-test-directory-js.strengthening",
+      "path": "test/example.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "syntax.path.node-test-filename-js.remove",
+      "path": "test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.node-test-filename-js.comment",
+      "path": "test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.node-test-filename-js.truthiness",
+      "path": "test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "syntax.path.node-test-filename-js.strengthening",
+      "path": "test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "syntax.path.node-test-prefix-cjs.remove",
+      "path": "test-total.cjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.node-test-prefix-cjs.comment",
+      "path": "test-total.cjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.node-test-prefix-cjs.truthiness",
+      "path": "test-total.cjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "syntax.path.node-test-prefix-cjs.strengthening",
+      "path": "test-total.cjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "syntax.path.node-test-underscore-mjs.remove",
+      "path": "total_test.mjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.node-test-underscore-mjs.comment",
+      "path": "total_test.mjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.node-test-underscore-mjs.truthiness",
+      "path": "total_test.mjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "syntax.path.node-test-underscore-mjs.strengthening",
+      "path": "total_test.mjs",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "syntax.path.node-test-dash-ts.remove",
+      "path": "nested/total-test.ts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.node-test-dash-ts.comment",
+      "path": "nested/total-test.ts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.node-test-dash-ts.truthiness",
+      "path": "nested/total-test.ts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "syntax.path.node-test-dash-ts.strengthening",
+      "path": "nested/total-test.ts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "syntax.path.node-test-suffix-cts.remove",
+      "path": "nested/total.test.cts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.node-test-suffix-cts.comment",
+      "path": "nested/total.test.cts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.node-test-suffix-cts.truthiness",
+      "path": "nested/total.test.cts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "syntax.path.node-test-suffix-cts.strengthening",
+      "path": "nested/total.test.cts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "syntax.path.node-test-nested-directory-mts.remove",
+      "path": "packages/api/test/example.mts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  subject();\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "syntax.path.node-test-nested-directory-mts.comment",
+      "path": "packages/api/test/example.mts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5); // Explain the retained oracle.\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "preserving"
+    },
+    {
+      "id": "syntax.path.node-test-nested-directory-mts.truthiness",
+      "path": "packages/api/test/example.mts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "kind": "weakening"
+    },
+    {
+      "id": "syntax.path.node-test-nested-directory-mts.strengthening",
+      "path": "packages/api/test/example.mts",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ok(subject());\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null,
+      "kind": "strengthening"
+    },
+    {
+      "id": "node.binding.local-standin.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  const assert = { strictEqual: () => {} };\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.binding.callback-parameter.remove",
+      "path": "tests/contract.test.js",
+      "before": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", function () {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "after": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", function (assert) {\n  assert.strictEqual(subject(), 5);\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
+    },
+    {
+      "id": "node.binding.named-alias-parameter.remove",
+      "path": "tests/contract.test.js",
+      "before": "import { strictEqual as same } from \"node:assert\";\ntest(\"contract\", function () {\n  same(subject(), 5);\n});\n",
+      "after": "import { strictEqual as same } from \"node:assert\";\ntest(\"contract\", function (same) {\n  same(subject(), 5);\n});\n",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "kind": "removal"
     }
   ]
 }

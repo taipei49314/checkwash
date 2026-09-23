@@ -4,7 +4,8 @@ A matcher swap `toBe` -> `toBeTruthy` is the same cheat as `==` -> `is not
 None`. This frontend only looks at `test`/`it` units, `expect().matcher()`
 and direct Node assertion calls so existing detectors can see a strength
 drop. Production `.js`/`.ts` is not parsed and still cannot grant a false
-sense of coverage. Import aliases and shadowed bindings are not resolved.
+sense of coverage. Static imports and lexical shadows are resolved within the
+bounded binding model; dynamic JavaScript execution remains outside the scan.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 
+from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir import strength as S
 from checkwash.ir.model import Assertion, Marker, UnitSide, normalize_text
@@ -27,18 +29,15 @@ _TEST_RE = re.compile(
     re.MULTILINE,
 )
 _EXPECT_RE = re.compile(
-    r"""(?<![\w$])expect\s*\((?P<subject>[^;]{1,200}?)\)\s*\.\s*(?P<not>not\s*\.\s*)?(?P<matcher>"""
+    r"(?<![\w$.#])(?P<callee>" + NAME + r"(?:\s*\.\s*" + NAME + r")*)"
+    r"""\s*\((?P<subject>[^;]{1,200}?)\)\s*\.\s*(?P<not>not\s*\.\s*)?(?P<matcher>"""
     r"""toBe|toEqual|toStrictEqual|toBeCloseTo|toContain|toMatch|"""
     r"""toBeTruthy|toBeFalsy|toBeDefined|toBeUndefined|toBeNull|"""
     r"""toBeGreaterThan|toBeGreaterThanOrEqual|toBeLessThan|toBeLessThanOrEqual"""
     r""")\s*\(""",
     re.MULTILINE,
 )
-_ASSERT_RE = re.compile(
-    r"(?<![\w$.#])(?P<context>t\s*\.\s*)?assert\s*"
-    r"(?:\.\s*(?P<method>equal|strictEqual|deepEqual|deepStrictEqual|ok)\s*)?\(",
-    re.MULTILINE,
-)
+_ASSERT_RE = CALL
 
 _ASSERT_STRENGTH: dict[str, tuple[str, int]] = {
     "equal": ("compare_eq", S.EXACT_VALUE),
@@ -213,9 +212,11 @@ def _call_arguments(
     return None
 
 
-def _node_assertions(text: str, code: bytearray, start: int, end: int) -> list[Assertion]:
+def _node_assertions(text: str, code: bytearray, start: int, end: int,
+                     bindings: Bindings | None = None) -> list[Assertion]:
     assertions: list[Assertion] = []
-    for match in _ASSERT_RE.finditer(text, start, end):
+    bindings = bindings or Bindings(text, code, _code_positions(text, keep_strings=True))
+    for match in _ASSERT_RE.finditer(bindings.masked, start, end):
         if not code[match.start()]:
             continue
         # Also reject a member suffix separated by whitespace or comments,
@@ -224,11 +225,16 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int) -> list[A
         previous = match.start() - 1
         while previous >= 0 and (not code[previous] or text[previous].isspace()):
             previous -= 1
-        if previous >= 0 and text[previous] == ".":
+        if previous >= 0 and text[previous] in ".#":
             continue
-        method = match.group("method")
-        if match.group("context") and method is None:
-            continue  # t.assert is an object, not the callable assert export.
+        value = bindings.callee(match.group("callee"), match.start())
+        if value.kind not in {"node", "node_method"}:
+            continue
+        method = value.method or None
+        if method is not None and method not in _ASSERT_STRENGTH:
+            continue
+        if re.search(r"\bnew$", bindings.masked[:previous + 1]):
+            continue
         if method is None:
             # Function declarations (including generators and TS return
             # annotations) also spell assert(...), but never call it.
@@ -304,6 +310,7 @@ def _conditional_arm(text: str, code: bytearray, end: int) -> bool:
 def parse_javascript(data: bytes) -> ParsedFile:
     text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
     code = _code_positions(text)
+    bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
     matches = [m for m in _TEST_RE.finditer(text) if code[m.start()]]
     starts = [m.start() for m in matches]
     units: list[ParsedUnit] = []
@@ -313,14 +320,17 @@ def parse_javascript(data: bytes) -> ParsedFile:
         end = starts[index + 1] if index + 1 < len(starts) else len(text)
         body = text[start:end]
         assertions: list[Assertion] = []
-        for expect in _EXPECT_RE.finditer(body):
-            if not code[start + expect.start()]:
+        for candidate in CALL.finditer(bindings.masked, start, end):
+            if bindings.callee(candidate.group("callee"), candidate.start()).kind != "expect":
+                continue
+            expect = _EXPECT_RE.match(text, candidate.start(), end)
+            if expect is None:
                 continue
             matcher = expect.group("matcher")
             form, strength = _MATCHER_STRENGTH[matcher]
             subject = " ".join((expect.group("subject") or "").split())
-            span_start = start + expect.start()
-            span_end = start + expect.end()
+            span_start = expect.start()
+            span_end = expect.end()
             assertions.append(
                 Assertion(
                     id=f"a{len(assertions)}",
@@ -332,7 +342,7 @@ def parse_javascript(data: bytes) -> ParsedFile:
                     positive=not bool(expect.group("not")),
                 )
             )
-        assertions.extend(_node_assertions(text, code, start, end))
+        assertions.extend(_node_assertions(text, code, start, end, bindings))
         assertions.sort(key=lambda assertion: assertion.span)
         for assertion_index, assertion in enumerate(assertions):
             assertion.id = f"a{assertion_index}"

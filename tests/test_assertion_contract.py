@@ -64,8 +64,56 @@ def test_jest_declared_matchers_have_positive_and_negative_spellings():
         "toBeGreaterThan", "toBeGreaterThanOrEqual", "toBeLessThan", "toBeLessThanOrEqual",
     }
     supported = {case["id"] for case in APIS
-                 if case["framework"] == "jest" and case["status"] == "supported"}
+                 if case["framework"] == "jest" and case["status"] == "supported"
+                 and not case["id"].startswith("jest.import.")}
     assert supported == {f"jest.{prefix}{matcher}" for prefix in ("", "not.") for matcher in matchers}
+
+
+def test_static_alias_and_context_contract_inventory_is_explicit():
+    supported = {case["id"] for case in APIS if case["status"] == "supported"}
+    required = {
+        "node.import.esm-renamed-default", "node.import.esm-named-method",
+        "node.import.esm-renamed-named", "node.import.cjs-destructured",
+        "node.import.cjs-renamed", "node.import.strict-member",
+        "node.import.esm-renamed-namespace", "node.import.esm-strict-renamed",
+        "node.import.cjs-renamed-destructured", "node.import.cjs-strict-destructured",
+        "node.import.cjs-strict-renamed", "node.import.local-method-alias",
+        "jest.import.expect-alias", "jest.import.cjs-expect-alias", "jest.import.namespace",
+        "vitest.import.esm-expect-alias", "vitest.import.cjs-expect-alias",
+        "node.context.renamed-arrow", "node.context.renamed-function", "node.context.cjs-renamed",
+    }
+    assert required <= supported
+    for case_id in required:
+        assert {case["kind"] for case in MUTATIONS if case["id"].startswith(case_id + ".")} == {
+            "removal", "preserving", "weakening", "strengthening",
+        }, case_id
+
+
+def test_node_discovery_paths_have_loss_and_normal_controls():
+    expected = {
+        "test/example.js", "test.js", "test-total.cjs", "total_test.mjs",
+        "nested/total-test.ts", "nested/total.test.cts", "packages/api/test/example.mts",
+    }
+    paths = {case["path"] for case in APIS if case["id"].startswith("syntax.path.node-")}
+    assert paths == expected
+    for path in paths:
+        assert {case["kind"] for case in MUTATIONS if case["path"] == path} == {
+            "removal", "preserving", "weakening", "strengthening",
+        }, path
+
+
+def test_unbound_dynamic_unknown_and_shadowed_assertions_remain_explicit_boundaries():
+    unsupported = {case["id"] for case in APIS if case["status"] == "unsupported"}
+    assert {
+        "node.unsupported.renamed-context", "node.unsupported.assert-instance",
+        "node.unsupported.bracket-member", "node.partialDeepStrictEqual",
+        "jest.unsupported.custom-matcher", "jest.unsupported.resolves", "jest.unsupported.rejects",
+        "control.local-standin", "control.callback-parameter", "control.named-alias-parameter",
+    } <= unsupported
+    for name in ("local-standin", "callback-parameter", "named-alias-parameter"):
+        case = next(case for case in MUTATIONS if case["id"] == f"node.binding.{name}.remove")
+        assert case["kind"] == "removal"
+        assert case["rule"] == "ASSERT_REMOVED"
 
 
 def test_every_supported_spelling_has_removal_and_preserving_checks():
@@ -137,6 +185,15 @@ def test_contract_can_load_from_explicit_path_and_returns_independent_records(tm
     ("apis", "assertions", [], "contradicts expected recognition"),
     ("apis", "path", "../escape.test.js", "unsafe or non-test path"),
     ("apis", "path", "C:/escape.test.js", "unsafe or non-test path"),
+    ("apis", "path", ".", "unsafe or non-test path"),
+    ("apis", "path", "test/", "unsafe or non-test path"),
+    ("apis", "path", ".git/injected.test.js", "unsafe or non-test path"),
+    ("apis", "path", ".GIT/injected.test.js", "unsafe or non-test path"),
+    ("apis", "path", "test/../escape.js", "unsafe or non-test path"),
+    ("apis", "path", "/test/example.js", "unsafe or non-test path"),
+    ("apis", "path", "src/example.js", "unsafe or non-test path"),
+    ("apis", "path", "tests/example.js", "unsafe or non-test path"),
+    ("apis", "path", "test/example.jsx", "unsafe or non-test path"),
     ("apis", "source", "", "source is required"),
     ("mutations", "verdict", "pass", "outcome contradicts mutation kind"),
     ("mutations", "rule", None, "outcome contradicts mutation kind"),

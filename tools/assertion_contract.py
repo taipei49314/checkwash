@@ -17,7 +17,8 @@ from typing import Any
 
 DEFAULT_CONTRACT = Path(__file__).resolve().parents[1] / "tests/data/javascript_assertion_support.json"
 _SUFFIXES = tuple(f".{kind}.{ext}" for kind in ("test", "spec")
-                  for ext in ("js", "jsx", "ts", "tsx", "mjs", "cjs"))
+                  for ext in ("js", "jsx", "ts", "tsx", "mjs", "cjs", "mts", "cts"))
+_NODE_EXTENSIONS = {"js", "cjs", "mjs", "ts", "cts", "mts"}
 
 
 def _require(condition: bool, message: str) -> None:
@@ -26,9 +27,20 @@ def _require(condition: bool, message: str) -> None:
 
 
 def _source_path(path: Any) -> bool:
-    return (isinstance(path, str) and bool(path) and "\\" not in path
+    if not (isinstance(path, str) and bool(path) and "\\" not in path
             and not PurePosixPath(path).is_absolute() and ":" not in path
-            and ".." not in PurePosixPath(path).parts and path.endswith(_SUFFIXES))
+            and not path.endswith("/")
+            and not {"..", ".git"}.intersection(part.lower() for part in PurePosixPath(path).parts)):
+        return False
+    parts = PurePosixPath(path).parts
+    if not parts:
+        return False
+    stem, separator, extension = parts[-1].rpartition(".")
+    return path.endswith(_SUFFIXES) or (
+        bool(separator) and extension in _NODE_EXTENSIONS
+        and ("test" in parts[:-1] or stem == "test" or stem.startswith("test-")
+             or stem.endswith(("-test", "_test")))
+    )
 
 
 def validate_contract(contract: Any) -> dict:
