@@ -45,6 +45,7 @@ import json
 from collections import Counter
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.model import IR, param_tables
 
 _MAX_CALL_ARGS = 32
@@ -374,7 +375,7 @@ def detect(ir: IR) -> list[Finding]:
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_fingerprint(
-                            "SUBJECT_INPUT_CHANGED", file.path, unit.qualname, b.text
+                            "SUBJECT_INPUT_CHANGED", file.path, unit.qualname, fingerprint_text(file.path, b)
                         ),
                     )
                 )

@@ -1,6 +1,23 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-23 (v0.4.1 release scope; publication status and final receipts are linked below)
+Updated: 2026-09-23 (JS/TS foundation candidate; v0.4.1 remains the published release)
+
+## 2026-09-23: JS/TS assertion foundation candidate
+
+Estate T-447 implements the maintainer's "下刀" instruction in
+[PR #167](https://github.com/taipei49314/checkwash/pull/167). Inline test callback
+boundaries, complete matcher arguments, scalar expectation changes and positive
+`toBeCloseTo` precision now feed the existing detectors. Legacy assertion
+fingerprints remain compatible; the original 136 API/context cases and 248
+mutations remain unchanged. A separate 25-case foundation inventory runs through
+source, wheel and pyz. The source suite collects 8,245 tests.
+
+See [assertion coverage](docs/assertion-coverage.md) for bounded syntax and
+callback limits. The PR checks and receipts identify the exact source validated;
+the existing tag/source identity, legacy quality comparison and older recommended
+Action qualification retain their own results. This candidate has no version
+bump, tag, release or downstream re-pin authorization. Published v0.4.1 artifacts
+do not contain this candidate's JS/TS expansion.
 
 ## 2026-09-23: v0.4.1 Node assertion repair and prevention
 

@@ -39,6 +39,7 @@ replacing an assertion is routine when production changed under it (SPEC §5 E1)
 from __future__ import annotations
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import expr_wraps, same_expr
 from checkwash.ir.model import IR
 from checkwash.frontends.python.constant_renames import assertions_renamed
@@ -156,7 +157,7 @@ def detect(ir: IR) -> list[Finding]:
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_fingerprint(
-                            "ASSERT_SUBSTITUTED", file.path, unit.qualname, b.text
+                            "ASSERT_SUBSTITUTED", file.path, unit.qualname, fingerprint_text(file.path, b)
                         ),
                     )
                 )

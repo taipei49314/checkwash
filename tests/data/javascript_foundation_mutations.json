@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "sources": [
+    "https://jestjs.io/docs/expect#tobevalue",
+    "https://jestjs.io/docs/expect#tobeclosetonumber-numdigits",
+    "https://vitest.dev/api/expect.html",
+    "https://nodejs.org/api/assert.html",
+    "https://nodejs.org/api/test.html"
+  ],
+  "mutations": [
+    {
+      "id": "foundation.jest.number-rewrite",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBe(42); });\n",
+      "after": "test('contract', () => { expect(subject()).toBe(0); });\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.vitest.string-rewrite",
+      "path": "tests/foundation.test.ts",
+      "before": "import { expect } from 'vitest';\ntest('contract', () => { expect(subject()).toEqual('ready'); });\n",
+      "after": "import { expect } from 'vitest';\ntest('contract', () => { expect(subject()).toEqual('failed'); });\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.jest.boolean-rewrite",
+      "path": "tests/foundation.spec.ts",
+      "before": "test('contract', () => { expect(subject()).toStrictEqual(true); });\n",
+      "after": "test('contract', () => { expect(subject()).toStrictEqual(false); });\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.node.number-rewrite",
+      "path": "test/foundation.mjs",
+      "before": "import assert from 'node:assert/strict';\nimport { test } from 'node:test';\ntest('contract', () => { assert.strictEqual(subject(), 42); });\n",
+      "after": "import assert from 'node:assert/strict';\nimport { test } from 'node:test';\ntest('contract', () => { assert.strictEqual(subject(), 0); });\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.node.deep-string-rewrite",
+      "path": "tests/foundation.test.cjs",
+      "before": "const assert = require('node:assert/strict');\ntest('contract', () => { assert.deepStrictEqual(subject(), 'ready'); });\n",
+      "after": "const assert = require('node:assert/strict');\ntest('contract', () => { assert.deepStrictEqual(subject(), 'failed'); });\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.node.context-boolean-rewrite",
+      "path": "test/foundation.ts",
+      "before": "import { test } from 'node:test';\ntest('contract', (t) => { t.assert.strictEqual(subject(), true); });\n",
+      "after": "import { test } from 'node:test';\ntest('contract', (t) => { t.assert.strictEqual(subject(), false); });\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.node.null-rewrite",
+      "path": "tests/foundation.test.js",
+      "before": "import assert from 'node:assert';\ntest('contract', () => { assert.strictEqual(subject(), null); });\n",
+      "after": "import assert from 'node:assert';\ntest('contract', () => { assert.strictEqual(subject(), true); });\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.jest.equivalent-number",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBe(42); });\n",
+      "after": "test('contract', () => { expect(subject()).toBe(4.2e1); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.equivalent-quotes",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBe('ready'); });\n",
+      "after": "test('contract', () => { expect(subject()).toBe(\"ready\"); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.multiline-format",
+      "path": "tests/foundation.spec.ts",
+      "before": "test('contract', () => { expect(subject()).toBe(42); });\n",
+      "after": "test('contract', () => {\n  expect(subject()).toBe(\n    42, // Retain the same expected value.\n  );\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.node.message-preserved",
+      "path": "test/foundation.js",
+      "before": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(subject(), 42, 'old explanation'); });\n",
+      "after": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(subject(), 42, 'new explanation'); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.equivalent-string-escape",
+      "path": "tests/foundation.test.ts",
+      "before": "test('contract', () => { expect(subject()).toBe('ready'); });\n",
+      "after": "test('contract', () => { expect(subject()).toBe('r\\u0065ady'); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.truthy-to-exact",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBeTruthy(); });\n",
+      "after": "test('contract', () => { expect(subject()).toBe(42); });\n",
+      "kind": "strengthening",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.node.truthy-to-exact",
+      "path": "test/foundation.js",
+      "before": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.ok(subject()); });\n",
+      "after": "import assert from 'node:assert/strict';\ntest('contract', () => { assert.strictEqual(subject(), 42); });\n",
+      "kind": "strengthening",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.precision-decreased",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBeCloseTo(1.23, 5); });\n",
+      "after": "test('contract', () => { expect(subject()).toBeCloseTo(1.23, 1); });\n",
+      "kind": "tolerance_weakened",
+      "verdict": "block",
+      "rule": "TOLERANCE_LOOSENED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.vitest.default-precision-decreased",
+      "path": "tests/foundation.test.ts",
+      "before": "import { expect } from 'vitest';\ntest('contract', () => { expect(subject()).toBeCloseTo(1.23); });\n",
+      "after": "import { expect } from 'vitest';\ntest('contract', () => { expect(subject()).toBeCloseTo(1.23, 1); });\n",
+      "kind": "tolerance_weakened",
+      "verdict": "block",
+      "rule": "TOLERANCE_LOOSENED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.jest.explicit-default-precision",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBeCloseTo(1.23, 2); });\n",
+      "after": "test('contract', () => { expect(subject()).toBeCloseTo(1.23); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.precision-increased",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBeCloseTo(1.23, 1); });\n",
+      "after": "test('contract', () => { expect(subject()).toBeCloseTo(1.23, 5); });\n",
+      "kind": "strengthening",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.outside-callback-cannot-replace",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBe(42); });\n",
+      "after": "test('contract', () => { subject(); });\nexpect(subject()).toBe(42);\n",
+      "kind": "removal",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.node.outside-callback-cannot-replace",
+      "path": "test/foundation.mjs",
+      "before": "import assert from 'node:assert/strict';\nimport { test } from 'node:test';\ntest('contract', () => { assert.strictEqual(subject(), 42); });\n",
+      "after": "import assert from 'node:assert/strict';\nimport { test } from 'node:test';\ntest('contract', () => { subject(); });\nassert.strictEqual(subject(), 42);\n",
+      "kind": "removal",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.jest.outside-callback-cannot-strengthen",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBe(42); });\n",
+      "after": "test('contract', () => { expect(subject()).toBeTruthy(); });\nexpect(subject()).toBe(42);\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "foundation.jest.outside-callback-is-unrepresented",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBe(42); });\nexpect(other()).toBe(1);\n",
+      "after": "test('contract', () => { expect(subject()).toBe(42); });\nexpect(other()).toBe(2);\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.node.coercive-to-strict-same-expected",
+      "path": "test/foundation.js",
+      "before": "import assert from 'node:assert';\ntest('contract', () => { assert.equal(subject(), 42); });\n",
+      "after": "import assert from 'node:assert';\ntest('contract', () => { assert.strictEqual(subject(), 42); });\n",
+      "kind": "strengthening",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.parenthesized-scalar-preserved",
+      "path": "tests/foundation.test.js",
+      "before": "test('contract', () => { expect(subject()).toBe((42)); });\n",
+      "after": "test('contract', () => { expect(subject()).toBe(42); });\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "foundation.jest.nested-subject-rewrite",
+      "path": "tests/foundation.test.ts",
+      "before": "test('contract', () => { expect(subject(combine(1, 2))).toBe(42); });\n",
+      "after": "test('contract', () => { expect(subject(combine(1, 2))).toBe(0); });\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    }
+  ]
+}
