@@ -1,0 +1,473 @@
+{
+  "schema_version": 1,
+  "purpose": "Independent preselection for a small v0.4.1 versus v0.4.2 historical JS/TS file-diff replay",
+  "authored_date": "2026-09-23",
+  "selection_before_checkwash_execution": true,
+  "checkwash_executed_during_selection": false,
+  "case_count": 14,
+  "sampling": "Purposive bounded source review, not random or representative: 14 authentic changed files in 7 exact commits across 3 framework repositories",
+  "qualification": "Static patch-and-companion review only; upstream test suites have not been run and no buggy-production mutation qualification is claimed",
+  "projection_warning": "Analyze the unchanged before/after bytes at the original path. Each row is a single-file projection, not the complete original commit or a judgment about upstream intent. Companion source supports interpretation but is not silently included in the analyzed changes.",
+  "scoring": "Ten preserving rows form a small diagnostic regression denominator. Two unknown rows, one mixed case change and one explicit test removal are unscored controls. Do not change classifications after observing candidate output; report disagreements and coverage gaps.",
+  "limitations": [
+    "Not a JS/TS detection-rate or general false-positive estimate",
+    "No literal-spelling-only historical change was found in this bounded search; independent synthetic contracts cover scalar canonicalization",
+    "Several assertions use unsupported matchers, snapshots or rejects; capture represented assertion counts and coverage gaps so a silent pass is not mistaken for comprehensive coverage",
+    "Repeated files from a single commit are correlated and must not be described as independent commits"
+  ],
+  "cases": [
+    {
+      "id": "J01",
+      "repository": "jestjs/jest",
+      "framework": "Jest",
+      "commit": "c53bdbca4c209526987e8097a9edc30515c49eff",
+      "parent": "0674c5d59fa50f237b9cf00d36c05dd4098c0cac",
+      "commit_title": "refactor(jest-util): fix type errors in test files (#13464)",
+      "commit_url": "https://github.com/jestjs/jest/commit/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "commit_api_url": "https://api.github.com/repos/jestjs/jest/commits/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "path": "packages/jest-util/src/__tests__/globsToMatcher.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Add Array<string> to the empty globs variable. The matcher calls and assertion subjects, matchers and expected values are unchanged.",
+      "focus": [
+        "TypeScript annotation",
+        "exact expected values unchanged"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/0674c5d59fa50f237b9cf00d36c05dd4098c0cac/packages/jest-util/src/__tests__/globsToMatcher.test.ts",
+        "sha256": "93ba1886909982f52882525723baec521f327a695de2feeed9711db68378ba2e",
+        "bytes": 2898
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/c53bdbca4c209526987e8097a9edc30515c49eff/packages/jest-util/src/__tests__/globsToMatcher.test.ts",
+        "sha256": "d416129b1280d7c84f862086ebb978f7106a0476ca575744f4c481a978b365ae",
+        "bytes": 2913
+      }
+    },
+    {
+      "id": "J02",
+      "repository": "jestjs/jest",
+      "framework": "Jest",
+      "commit": "c53bdbca4c209526987e8097a9edc30515c49eff",
+      "parent": "0674c5d59fa50f237b9cf00d36c05dd4098c0cac",
+      "commit_title": "refactor(jest-util): fix type errors in test files (#13464)",
+      "commit_url": "https://github.com/jestjs/jest/commit/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "commit_api_url": "https://api.github.com/repos/jestjs/jest/commits/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "path": "packages/jest-util/src/__tests__/installCommonGlobals.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Add TypeScript casts to runInContext and require results; their runtime expressions and test assertions are unchanged.",
+      "focus": [
+        "TypeScript casts",
+        "hook and test boundaries"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/0674c5d59fa50f237b9cf00d36c05dd4098c0cac/packages/jest-util/src/__tests__/installCommonGlobals.test.ts",
+        "sha256": "34cbfe111becf17af21783d6554086d0675ac76ad6fbe0d39ea414f3806dbf45",
+        "bytes": 1260
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/c53bdbca4c209526987e8097a9edc30515c49eff/packages/jest-util/src/__tests__/installCommonGlobals.test.ts",
+        "sha256": "a6778f7d72eb6527b768adafb754c8b3667b110d1a726524ab7851e5c9cf8633",
+        "bytes": 1335
+      }
+    },
+    {
+      "id": "J03",
+      "repository": "jestjs/jest",
+      "framework": "Jest",
+      "commit": "c53bdbca4c209526987e8097a9edc30515c49eff",
+      "parent": "0674c5d59fa50f237b9cf00d36c05dd4098c0cac",
+      "commit_title": "refactor(jest-util): fix type errors in test files (#13464)",
+      "commit_url": "https://github.com/jestjs/jest/commit/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "commit_api_url": "https://api.github.com/repos/jestjs/jest/commits/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "path": "packages/jest-util/src/__tests__/deepCyclicCopy.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Type cyclic data, separate subcycle initialization, add optional access to its known-present member, rename local spies/sourceObject, and annotate intentional type errors. The concrete fixture graph and expected values remain the same in the reviewed patch.",
+      "focus": [
+        "local rename",
+        "nested callbacks and object methods",
+        "TypeScript optional access"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/0674c5d59fa50f237b9cf00d36c05dd4098c0cac/packages/jest-util/src/__tests__/deepCyclicCopy.test.ts",
+        "sha256": "db62ae159e34245a796d021dc240c6f51bd9213b686114fbe021612fa25e85a3",
+        "bytes": 6709
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/c53bdbca4c209526987e8097a9edc30515c49eff/packages/jest-util/src/__tests__/deepCyclicCopy.test.ts",
+        "sha256": "63fc58df18209780408c10b8801d29142b3b7d0176ef6bb18c7499fa8af13d44",
+        "bytes": 7136
+      }
+    },
+    {
+      "id": "J04",
+      "repository": "jestjs/jest",
+      "framework": "Jest",
+      "commit": "c53bdbca4c209526987e8097a9edc30515c49eff",
+      "parent": "0674c5d59fa50f237b9cf00d36c05dd4098c0cac",
+      "commit_title": "refactor(jest-util): fix type errors in test files (#13464)",
+      "commit_url": "https://github.com/jestjs/jest/commit/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "commit_api_url": "https://api.github.com/repos/jestjs/jest/commits/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "path": "packages/jest-util/src/__tests__/createProcessObject.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "unknown",
+      "expected_verdict": null,
+      "expected_intent": "Mostly type/comment changes and a forEach as-const cast, but the final hasOwnProperty.call checks gain fake as the receiver. This repairs previously trivial checks; do not assume complete equivalence or count a block as a false positive.",
+      "focus": [
+        "forEach callback",
+        "subject correction",
+        "mixed type cleanup"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/0674c5d59fa50f237b9cf00d36c05dd4098c0cac/packages/jest-util/src/__tests__/createProcessObject.test.ts",
+        "sha256": "c944275285d537e6063ca0aed226fe7f2fabdd9adee35e85516bbcac38c5b3b5",
+        "bytes": 3427
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/c53bdbca4c209526987e8097a9edc30515c49eff/packages/jest-util/src/__tests__/createProcessObject.test.ts",
+        "sha256": "21a24c67d471e84e49d51316cd10532031d72d8296664b6dc1e5c125b92306f1",
+        "bytes": 3681
+      }
+    },
+    {
+      "id": "J05",
+      "repository": "jestjs/jest",
+      "framework": "Jest",
+      "commit": "c53bdbca4c209526987e8097a9edc30515c49eff",
+      "parent": "0674c5d59fa50f237b9cf00d36c05dd4098c0cac",
+      "commit_title": "refactor(jest-util): fix type errors in test files (#13464)",
+      "commit_url": "https://github.com/jestjs/jest/commit/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "commit_api_url": "https://api.github.com/repos/jestjs/jest/commits/c53bdbca4c209526987e8097a9edc30515c49eff",
+      "path": "packages/jest-util/src/__tests__/isInteractive.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "mixed_case_change",
+      "expected_verdict": null,
+      "expected_intent": "Refactors repeated setup/assertions into it.each and changes a test name. The new rows duplicate isCI:false/isTTY:false; the old first scenario was isCI:true with isTTY undefined. The equivalent-coverage claim is not established and the changed cases must stay outside the preserving denominator.",
+      "focus": [
+        "it.each boundary",
+        "case identity",
+        "test rename"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/0674c5d59fa50f237b9cf00d36c05dd4098c0cac/packages/jest-util/src/__tests__/isInteractive.test.ts",
+        "sha256": "f2ef51cbfa421f1f2727b83246b2fc781cfba034523a1dfcfbe0a0e08dc0f433",
+        "bytes": 2034
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/jestjs/jest/c53bdbca4c209526987e8097a9edc30515c49eff/packages/jest-util/src/__tests__/isInteractive.test.ts",
+        "sha256": "767e43942b35d0715b15adc2ba42de820b3f07315d0aa1105e0cf5249f1d2c9e",
+        "bytes": 1359
+      }
+    },
+    {
+      "id": "V01",
+      "repository": "vitest-dev/vitest",
+      "framework": "Vitest",
+      "commit": "3ccbcc45e2644f131321a5047b28335a909a52e2",
+      "parent": "77f4af65784689eea90d0ec71b9aee15c94b7ca2",
+      "commit_title": "chore: lint regexp",
+      "commit_url": "https://github.com/vitest-dev/vitest/commit/3ccbcc45e2644f131321a5047b28335a909a52e2",
+      "commit_api_url": "https://api.github.com/repos/vitest-dev/vitest/commits/3ccbcc45e2644f131321a5047b28335a909a52e2",
+      "path": "test/reporters/tests/merge-reports.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Remove redundant digit escape from a character class that already includes word characters. The timestamp normalization language is unchanged, as are assertions.",
+      "focus": [
+        "regex equivalence",
+        "split and join false declarations",
+        "assertion boundaries"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/77f4af65784689eea90d0ec71b9aee15c94b7ca2/test/reporters/tests/merge-reports.test.ts",
+        "sha256": "d16c239f2ce8cf5d6494a921a017519c5558a1e612aedc157395d44bc199c8f6",
+        "bytes": 6283
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/3ccbcc45e2644f131321a5047b28335a909a52e2/test/reporters/tests/merge-reports.test.ts",
+        "sha256": "e6e771db30ecf53efd6ded84942c8ab89c7b95c72c0732200bd3de0b296945d6",
+        "bytes": 6281
+      }
+    },
+    {
+      "id": "V02",
+      "repository": "vitest-dev/vitest",
+      "framework": "Vitest",
+      "commit": "46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "parent": "fe7b8aeea641151f1db30f6ce7f0753680d16322",
+      "commit_title": "test: refactor browser test utils (#6624)",
+      "commit_url": "https://github.com/vitest-dev/vitest/commit/46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "commit_api_url": "https://api.github.com/repos/vitest-dev/vitest/commits/46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "path": "test/browser/specs/server-url.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Read provider directly from the same helper module instead of the runBrowserTests return object. Companion utils.ts exports the existing constant without changing its expression; HTTP and HTTPS expectations are unchanged.",
+      "focus": [
+        "import and binding relocation",
+        "async test boundary"
+      ],
+      "companion_paths_reviewed": [
+        "test/browser/specs/utils.ts"
+      ],
+      "before": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/fe7b8aeea641151f1db30f6ce7f0753680d16322/test/browser/specs/server-url.test.ts",
+        "sha256": "30de05f6c144fe78dd0ed07480f4e677e805534cb140c835bc0e41f8667ffc1d",
+        "bytes": 759
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/46be62c20791c764aaf99ef5e1da2b019dea9008/test/browser/specs/server-url.test.ts",
+        "sha256": "9f390eae8a158f2ff048361250d4cb974aea5405be58d6e2bbb1a8e5149f3125",
+        "bytes": 749
+      }
+    },
+    {
+      "id": "V03",
+      "repository": "vitest-dev/vitest",
+      "framework": "Vitest",
+      "commit": "46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "parent": "fe7b8aeea641151f1db30f6ce7f0753680d16322",
+      "commit_title": "test: refactor browser test utils (#6624)",
+      "commit_url": "https://github.com/vitest-dev/vitest/commit/46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "commit_api_url": "https://api.github.com/repos/vitest-dev/vitest/commits/46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "path": "test/browser/specs/unhandled.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Read the existing browser export directly instead of through runBrowserTests. Companion utils.ts retains the same browser initializer; the error-stack assertions are unchanged.",
+      "focus": [
+        "import and binding relocation",
+        "error assertion boundary"
+      ],
+      "companion_paths_reviewed": [
+        "test/browser/specs/utils.ts"
+      ],
+      "before": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/fe7b8aeea641151f1db30f6ce7f0753680d16322/test/browser/specs/unhandled.test.ts",
+        "sha256": "45967d21a7407cc405435cba21419dc9c1f5c735bde2babd1348ed797413a561",
+        "bytes": 418
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/46be62c20791c764aaf99ef5e1da2b019dea9008/test/browser/specs/unhandled.test.ts",
+        "sha256": "1bb6d038977ad9a96fe49828014e21610b27935d4a7db63cda763b7b87186c40",
+        "bytes": 418
+      }
+    },
+    {
+      "id": "V04",
+      "repository": "vitest-dev/vitest",
+      "framework": "Vitest",
+      "commit": "46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "parent": "fe7b8aeea641151f1db30f6ce7f0753680d16322",
+      "commit_title": "test: refactor browser test utils (#6624)",
+      "commit_url": "https://github.com/vitest-dev/vitest/commit/46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "commit_api_url": "https://api.github.com/repos/vitest-dev/vitest/commits/46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "path": "test/browser/specs/runner.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Move reading browser.json, parsing it, and the identical getPassed/getFailed calculations from utils.ts into this beforeAll hook. Existing assertion calls remain intact; companion patch supplies the direct relocation evidence.",
+      "focus": [
+        "helper relocation",
+        "beforeAll boundary",
+        "nested arrow callbacks"
+      ],
+      "companion_paths_reviewed": [
+        "test/browser/specs/utils.ts"
+      ],
+      "before": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/fe7b8aeea641151f1db30f6ce7f0753680d16322/test/browser/specs/runner.test.ts",
+        "sha256": "18a129b158c0c6f5d1c3d571d23c78a74ca8a2515daf81adb32f4ce682f08ffe",
+        "bytes": 4336
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/46be62c20791c764aaf99ef5e1da2b019dea9008/test/browser/specs/runner.test.ts",
+        "sha256": "7e4bb29535012a6e117edca28c0c2f1271c747b2fe7120330b99c217482dd5f5",
+        "bytes": 4744
+      }
+    },
+    {
+      "id": "V05",
+      "repository": "vitest-dev/vitest",
+      "framework": "Vitest",
+      "commit": "46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "parent": "fe7b8aeea641151f1db30f6ce7f0753680d16322",
+      "commit_title": "test: refactor browser test utils (#6624)",
+      "commit_url": "https://github.com/vitest-dev/vitest/commit/46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "commit_api_url": "https://api.github.com/repos/vitest-dev/vitest/commits/46be62c20791c764aaf99ef5e1da2b019dea9008",
+      "path": "test/browser/specs/fix-4686.test.ts",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "unknown",
+      "expected_verdict": null,
+      "expected_intent": "Replace three result-count assertions with an inline snapshot of a name-to-state map while retaining empty stderr. This may be a valid redesign, but the two oracle sets are not proven equivalent by static patch review.",
+      "focus": [
+        "oracle rewrite",
+        "nested map callback",
+        "snapshot boundary"
+      ],
+      "companion_paths_reviewed": [
+        "test/browser/specs/utils.ts"
+      ],
+      "before": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/fe7b8aeea641151f1db30f6ce7f0753680d16322/test/browser/specs/fix-4686.test.ts",
+        "sha256": "c5c81b58fe7dfb24b5cba59f2307d796a028907518b22de88cd2e10cf264aa52",
+        "bytes": 497
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/vitest-dev/vitest/46be62c20791c764aaf99ef5e1da2b019dea9008/test/browser/specs/fix-4686.test.ts",
+        "sha256": "af96e2b2f11c0f15bc634cae1e9cb89d007b78b22870ebf4bd53720133fc18b6",
+        "bytes": 509
+      }
+    },
+    {
+      "id": "N01",
+      "repository": "nodejs/node",
+      "framework": "node:test",
+      "commit": "97a3a8204c7c0eb35fc6c11274a7aee5d2ea3ddc",
+      "parent": "552362a36607f5b7cb3ec0420b5ee8b5bcfa347e",
+      "commit_title": "test: replace more uses of global with globalThis (#56712)",
+      "commit_url": "https://github.com/nodejs/node/commit/97a3a8204c7c0eb35fc6c11274a7aee5d2ea3ddc",
+      "commit_api_url": "https://api.github.com/repos/nodejs/node/commits/97a3a8204c7c0eb35fc6c11274a7aee5d2ea3ddc",
+      "path": "test/parallel/test-runner-mock-timers.js",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Use globalThis in place of Node global for timer operations and descriptor reads. These identify the same global object in this source; assertions, timer values and expected counts remain unchanged.",
+      "focus": [
+        "node:test it callbacks",
+        "inline callback wrappers",
+        "strict scalar expectations"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/nodejs/node/552362a36607f5b7cb3ec0420b5ee8b5bcfa347e/test/parallel/test-runner-mock-timers.js",
+        "sha256": "95e52894cac97ed8b56e1b009e8b7a66d664ce07de58f127d8730e4965055ddb",
+        "bytes": 28720
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/nodejs/node/97a3a8204c7c0eb35fc6c11274a7aee5d2ea3ddc/test/parallel/test-runner-mock-timers.js",
+        "sha256": "6f49b76653a27ad3d9ca921f15a7d6e7f9bd872db476fb9d0283828c0675d6c0",
+        "bytes": 28856
+      }
+    },
+    {
+      "id": "N02",
+      "repository": "nodejs/node",
+      "framework": "node:test",
+      "commit": "8c3e9bd96706e3b21e7064c709d36ec584e817aa",
+      "parent": "7a9feef584982a9d7b31c5bb0e67f0bf14419f0d",
+      "commit_title": "test: get rid of unnecessary AbortController instanciations (#63489)",
+      "commit_url": "https://github.com/nodejs/node/commit/8c3e9bd96706e3b21e7064c709d36ec584e817aa",
+      "commit_api_url": "https://api.github.com/repos/nodejs/node/commits/8c3e9bd96706e3b21e7064c709d36ec584e817aa",
+      "path": "test/parallel/test-runner-mock-timers-scheduler.js",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Replace a newly created AbortController immediately aborted with AbortSignal.abort(). Both supply an already-aborted signal with the default reason; the rejection expectation is unchanged.",
+      "focus": [
+        "fixture construction refactor",
+        "unsupported rejects coverage boundary"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/nodejs/node/7a9feef584982a9d7b31c5bb0e67f0bf14419f0d/test/parallel/test-runner-mock-timers-scheduler.js",
+        "sha256": "baf6a489eda65888c6704ec34a1287595aca49066a60ef5f65d299f56a862e7b",
+        "bytes": 3656
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/nodejs/node/8c3e9bd96706e3b21e7064c709d36ec584e817aa/test/parallel/test-runner-mock-timers-scheduler.js",
+        "sha256": "569d206709c598ae4a486f6b8fc8ba50547b147b7f3f04c19cc8106eaca2bda5",
+        "bytes": 3588
+      }
+    },
+    {
+      "id": "N03",
+      "repository": "nodejs/node",
+      "framework": "node:test",
+      "commit": "82fc59d4cb9e830c27e0b1f5d36977adc450cedd",
+      "parent": "53234233acb9a51180043b169e870048f3808d31",
+      "commit_title": "test: deflake test-runner-coverage (#65728)",
+      "commit_url": "https://github.com/nodejs/node/commit/82fc59d4cb9e830c27e0b1f5d36977adc450cedd",
+      "commit_api_url": "https://api.github.com/repos/nodejs/node/commits/82fc59d4cb9e830c27e0b1f5d36977adc450cedd",
+      "path": "test/parallel/test-runner-coverage.js",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "preserving",
+      "expected_verdict": "pass",
+      "expected_intent": "Add after hooks to clean the coverage tmpdir after the two subtests that write there, preventing stale-PID contamination. Assertions and their expected values are untouched.",
+      "focus": [
+        "nested test callbacks",
+        "after hook boundary",
+        "strict scalar expectations"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/nodejs/node/53234233acb9a51180043b169e870048f3808d31/test/parallel/test-runner-coverage.js",
+        "sha256": "fe7875b126f0b1ad8bc04fe88a259df57a6ba94bdafa1eae28d9a3fdbb4acb29",
+        "bytes": 26208
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/nodejs/node/82fc59d4cb9e830c27e0b1f5d36977adc450cedd/test/parallel/test-runner-coverage.js",
+        "sha256": "1674b12381d2ab3bbdc8072f844ddaddb90d83863e027397d6e72adb89015ed9",
+        "bytes": 26434
+      }
+    },
+    {
+      "id": "N04",
+      "repository": "nodejs/node",
+      "framework": "node:test",
+      "commit": "9e6c526f6c4e21b96f999869ceb265fb1891bf15",
+      "parent": "90dea9e3e003945f113aaca09c45f963fe566a47",
+      "commit_title": "test: refactor test-runner-module-mocking (#54233)",
+      "commit_url": "https://github.com/nodejs/node/commit/9e6c526f6c4e21b96f999869ceb265fb1891bf15",
+      "commit_api_url": "https://api.github.com/repos/nodejs/node/commits/9e6c526f6c4e21b96f999869ceb265fb1891bf15",
+      "path": "test/parallel/test-runner-module-mocking.js",
+      "status": "modified",
+      "projection": "single_changed_test_file",
+      "expected_classification": "explicit_test_removal",
+      "expected_verdict": null,
+      "expected_intent": "Besides path/URL refactors, the patch removes the complete ESM mocks can be used by both module systems test and its four strictEqual checks. This is a source-level coverage loss, regardless of legitimate upstream reasons; never score a resulting TEST_DISABLED as a preserving false positive.",
+      "focus": [
+        "whole test removal",
+        "strict scalar expectations",
+        "mixed URL refactor"
+      ],
+      "companion_paths_reviewed": [],
+      "before": {
+        "url": "https://raw.githubusercontent.com/nodejs/node/90dea9e3e003945f113aaca09c45f963fe566a47/test/parallel/test-runner-module-mocking.js",
+        "sha256": "0a7c7f70ad35865094e7de97cb93a95de52d5e2ea740c2fff899d3daee946a24",
+        "bytes": 20637
+      },
+      "after": {
+        "url": "https://raw.githubusercontent.com/nodejs/node/9e6c526f6c4e21b96f999869ceb265fb1891bf15/test/parallel/test-runner-module-mocking.js",
+        "sha256": "e8f904862df7bfa00f8c3c3637f7114eea1431762478e2cfd08bca5d4674adb8",
+        "bytes": 20095
+      }
+    }
+  ],
+  "baseline_source_sha": "ea726c9cbd172b838bcf42b2c9969759e4ca358e",
+  "baseline_version": "0.4.1"
+}
