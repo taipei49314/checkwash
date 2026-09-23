@@ -121,6 +121,13 @@ in [benchmarks/README.md](../benchmarks/README.md).
 Python is the primary frontend. JS/TS support scans named `test`/`it` units
 and a fixed set of `expect(...).matcher(...)` calls in `*.test.*` and
 `*.spec.*` files with `js`, `jsx`, `ts`, `tsx`, `mjs`, or `cjs` extensions.
+The source candidate for #164 also recognizes `assert.equal`,
+`assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`
+changing to `assert.ok` or `assert(value)`, plus the corresponding
+`t.assert` methods. This addition is not in the published v0.4.0 package.
+The scan classifies these assertion spellings; it does not resolve imported
+aliases, shadowed bindings, or semantic equivalence of arbitrary predicates
+inside `assert(value)` / `assert.ok(value)`.
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread; a production change
 the engine cannot parse can still suppress escalation through the documented

@@ -1,9 +1,10 @@
 """Bounded Jest/Vitest/node:test oracle scan. Not a JS parser.
 
 A matcher swap `toBe` -> `toBeTruthy` is the same cheat as `==` -> `is not
-None`. This frontend only looks at `test`/`it` units and `expect().matcher()`
-calls so existing detectors can see a strength drop. Production `.js`/`.ts`
-is not parsed and still cannot grant a false sense of coverage.
+None`. This frontend only looks at `test`/`it` units, `expect().matcher()`
+and direct Node assertion calls so existing detectors can see a strength
+drop. Production `.js`/`.ts` is not parsed and still cannot grant a false
+sense of coverage. Import aliases and shadowed bindings are not resolved.
 """
 
 from __future__ import annotations
@@ -33,6 +34,19 @@ _EXPECT_RE = re.compile(
     r""")\s*\(""",
     re.MULTILINE,
 )
+_ASSERT_RE = re.compile(
+    r"(?<![\w$.#])(?P<context>t\s*\.\s*)?assert\s*"
+    r"(?:\.\s*(?P<method>equal|strictEqual|deepEqual|deepStrictEqual|ok)\s*)?\(",
+    re.MULTILINE,
+)
+
+_ASSERT_STRENGTH: dict[str, tuple[str, int]] = {
+    "equal": ("compare_eq", S.EXACT_VALUE),
+    "strictEqual": ("compare_eq", S.EXACT_VALUE),
+    "deepEqual": ("compare_eq", S.EXACT_STRUCT),
+    "deepStrictEqual": ("compare_eq", S.EXACT_STRUCT),
+    "ok": ("truthy", S.TRUTHY),
+}
 
 _MATCHER_STRENGTH: dict[str, tuple[str, int]] = {
     "toBe": ("compare_eq", S.EXACT_VALUE),
@@ -173,6 +187,129 @@ def _code_positions(text: str) -> bytearray:
     return code
 
 
+def _call_arguments(
+    text: str, code: bytearray, opening: int, limit: int,
+) -> tuple[list[str], int] | None:
+    """Read one balanced call, splitting only its top-level commas.
+
+    Literal/comment punctuation is masked by the same scan used to exclude
+    fake declarations. Nested calls, arrays and objects belong to the actual
+    argument, not to the expected value or optional assertion message.
+    """
+    closing = {"(": ")", "[": "]", "{": "}"}
+    stack = [")"]
+    arguments: list[str] = []
+    start = opening + 1
+    for i in range(start, limit):
+        if not code[i]:
+            continue
+        char = text[i]
+        if char in closing:
+            stack.append(closing[char])
+        elif char in ")]}":
+            if char != stack.pop():
+                return None
+            if not stack:
+                last = text[start:i].strip()
+                if last:
+                    arguments.append(last)
+                return arguments, i + 1
+        elif char == "," and len(stack) == 1:
+            arguments.append(text[start:i].strip())
+            start = i + 1
+        elif char == ";" and len(stack) == 1:
+            return None
+    return None
+
+
+def _node_assertions(text: str, code: bytearray, start: int, end: int) -> list[Assertion]:
+    assertions: list[Assertion] = []
+    for match in _ASSERT_RE.finditer(text, start, end):
+        if not code[match.start()]:
+            continue
+        # Also reject a member suffix separated by whitespace or comments,
+        # e.g. obj. /* comment */ assert.ok(x). Only the explicit t.assert
+        # spelling above is recognized as a Node test-context assertion.
+        previous = match.start() - 1
+        while previous >= 0 and (not code[previous] or text[previous].isspace()):
+            previous -= 1
+        if previous >= 0 and text[previous] == ".":
+            continue
+        method = match.group("method")
+        if match.group("context") and method is None:
+            continue  # t.assert is an object, not the callable assert export.
+        if method is None:
+            # Function declarations (including generators and TS return
+            # annotations) also spell assert(...), but never call it.
+            token_end = previous + 1
+            if previous >= 0 and text[previous] == "*":
+                previous -= 1
+                while previous >= 0 and (not code[previous] or text[previous].isspace()):
+                    previous -= 1
+                token_end = previous + 1
+            while previous >= 0 and (text[previous].isalnum() or text[previous] in "_$"):
+                previous -= 1
+            if text[previous + 1:token_end] == "function":
+                continue
+        call = _call_arguments(text, code, match.end() - 1, end)
+        if call is None:
+            continue
+        arguments, span_end = call
+        following = span_end
+        while following < end and (not code[following] or text[following].isspace()):
+            following += 1
+        if method is None and following < end:
+            if text[following] == ":" and not _conditional_arm(text, code, match.start()):
+                continue  # A TypeScript method's return annotation.
+            if text[following] == "{" and "\n" not in text[span_end:following]:
+                continue  # A method signature, not a call followed by an ASI block.
+        form, strength = _ASSERT_STRENGTH[method or "ok"]
+        required = 2 if form == "compare_eq" else 1
+        if len(arguments) < required or not all(arguments[:required]):
+            continue
+        assertions.append(
+            Assertion(
+                id="",  # Assigned in source order together with expect calls.
+                form=form,
+                strength=strength,
+                text=text[match.start():span_end],
+                span=(match.start(), span_end),
+                left=arguments[0],
+            )
+        )
+    return assertions
+
+
+def _conditional_arm(text: str, code: bytearray, end: int) -> bool:
+    """Does the preceding expression have a '?' waiting for its ':'?
+
+    A colon after assert(...) can end a conditional arm instead of starting
+    a TypeScript method annotation. Ignore grouped expressions and already
+    paired conditionals when looking back to the expression boundary.
+    """
+    groups: list[str] = []
+    colons = 0
+    for i in range(end - 1, -1, -1):
+        if not code[i]:
+            continue
+        char = text[i]
+        if char in ")]}":
+            groups.append({")": "(", "]": "[", "}": "{"}[char])
+        elif char in "([{":
+            if not groups or groups.pop() != char:
+                return False
+        elif not groups:
+            if char == ";":
+                return False
+            if char == ":":
+                colons += 1
+            elif char == "?" and text[i + 1:i + 2] not in {"?", "."} and text[i - 1:i] != "?":
+                if not colons:
+                    return True
+                colons -= 1
+    return False
+
+
 def parse_javascript(data: bytes) -> ParsedFile:
     text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
     code = _code_positions(text)
@@ -204,6 +341,10 @@ def parse_javascript(data: bytes) -> ParsedFile:
                     positive=not bool(expect.group("not")),
                 )
             )
+        assertions.extend(_node_assertions(text, code, start, end))
+        assertions.sort(key=lambda assertion: assertion.span)
+        for assertion_index, assertion in enumerate(assertions):
+            assertion.id = f"a{assertion_index}"
         markers: list[Marker] = []
         if match.group("skip"):
             markers.append(
