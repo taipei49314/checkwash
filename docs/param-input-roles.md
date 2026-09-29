@@ -1,4 +1,4 @@
-# Parameter input roles in the unreleased family candidate
+# Parameter input roles (shipped in v0.3.4)
 
 The row replacement detector owns changed answers that disappear with their
 old inputs. A count-preserving replacement is not automatically an honest
