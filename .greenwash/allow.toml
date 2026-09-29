@@ -166,3 +166,11 @@ reason = "v0.2.0 identity rename: expected strings follow the renamed product co
 author = "play"
 created = "2026-09-01"
 expires = "2026-11-30"
+
+[[allow]]
+fingerprint = "GUARDRAIL_TOUCHED/AGENTS.md/-/v2:122ee5c508e459f3bca34ae31a64658aa367aac36d1b8d5cb1aa7f67a6323402"
+rule = "GUARDRAIL_TOUCHED"
+reason = "PR #170: AGENTS.md release rule now points to docs/RELEASING.md (named one-time human grants) instead of the cancelled weekly estate release slot; content-bound v2 fingerprint covers only this before/after pair; owner-approved 2026-09-29"
+author = "taipei49314"
+created = "2026-09-29"
+expires = "2026-10-29"
