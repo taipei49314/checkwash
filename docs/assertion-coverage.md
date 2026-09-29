@@ -151,8 +151,9 @@ mutation inputs. Existing receipts and historical outcomes are not rewritten.
 A separate job extracts the full recommended Action SHA from the README and
 qualifies that exact installed engine against the current contract. It does not
 claim to exercise the composite Action wiring; existing dogfood smoke tests do
-that. The recommended v0.4.0 engine predates the Node repair and is expected to
-fail those cases. Its red result is retained with a receipt, not waived or
+that. The recommended v0.4.1 engine includes the Node repair but predates the
+v0.4.2 callback and scalar-evidence foundation, and is expected to fail the
+cases that depend on it. Its red result is retained with a receipt, not waived or
 silently re-pinned. A candidate passing the contract therefore does not imply
 the older recommended Action has gained the same coverage.
 

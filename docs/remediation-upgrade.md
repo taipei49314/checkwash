@@ -126,8 +126,9 @@ A fixed wheel or zipapp does not update an existing hook, installed CLI, or
 Action pin. Under the current one-release trust lag, publish and qualify the
 fixed minor release first, then advance the recommended Action and doctor's
 supported pin in the next release. Do not call the recommended CI path fixed
-while it still executes an older engine (the current recommendation is
-v0.2.12). The legacy ledger can become active again on
+while it still executes an older engine (when these notes were written the
+recommendation was v0.2.12; the [README](../README.md#use-it-in-ci) states
+the current pin). The legacy ledger can become active again on
 an old engine, so downgrading to v0.2.13 is not a safe default rollback.
 
 The maintainer's SPEC/THREATMODEL/DECISIONS review, release slot, published
