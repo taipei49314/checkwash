@@ -19,8 +19,11 @@ The judge is immutable; the player runs free.
    expectation is wrong, open an issue and stop.
 3. Read `STATE.md` first when taking over.
 4. Every PR runs checkwash on itself (dogfood, from M2).
-5. Releases happen only at the weekly release slot (estate T-57, 2026-09-03).
-   Between slots: no version bump, no tag, no GitHub Release. The tag ruleset
-   rejects `v*` creation outside the slot; `docs/RELEASING.md` has the slot
-   procedure. Downstream re-pins (smallestlie, checkwash-corpus) follow the
-   slot, never a mid-week commit.
+5. Releases happen only under an explicit one-time maintainer authorization
+   for that version, recorded in `docs/RELEASING.md`. The weekly slot (estate
+   T-57) was canceled by T-197, and since 2026-09-26 the estate no longer
+   governs this repository (T-451). Without that authorization: no version
+   bump, no tag, no GitHub Release. The tag ruleset rejects `v*` creation at
+   every other moment; `docs/RELEASING.md` has the procedure. Downstream
+   re-pins (smallestlie, checkwash-corpus) follow a published release and
+   need the same explicit authorization, never an unreleased commit.
