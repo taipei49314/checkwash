@@ -6,10 +6,11 @@ Updated: 2026-09-29 (v0.4.2 published under estate T-449; the one-time grant is 
 
 Tag `v0.4.2` is `23ef5929896187e4aac5889735c792e65af3e721`. The
 [GitHub Release](https://github.com/taipei49314/checkwash/releases/tag/v0.4.2)
-was published at 2026-09-23T16:40:43Z with wheel, sdist, pyz and
-`checkwash-0.4.2-validation.json`; release workflow run 35890410767 (build and
-pypi green) published the wheel and sdist to PyPI at 16:47Z with SHA256 digests
-equal to the GitHub assets. Public CI on the tag
+was published at 2026-09-23T16:40:43Z; release workflow run 35890410767 (build
+and pypi green) attached the wheel, sdist and pyz at 16:46Z and published the
+wheel and sdist to PyPI at 16:47Z with SHA256 digests equal to the GitHub
+assets. `checkwash-0.4.2-validation.json` was added at 17:06Z. Public CI on
+the tag
 ([run 35888249981](https://github.com/taipei49314/checkwash/actions/runs/35888249981))
 is green: nine OS/Python legs at 8,291 passed each, plus dogfood, byte-compare
 and install-from-tag. The earlier main push of the same commit (run 35886613228)
@@ -19,7 +20,8 @@ qualification (run 35888249988) reports 13 of 283 contract cases failing, which
 the release guide keeps visibly failed rather than waived. The T-449 grant is
 consumed. Since 2026-09-26 the estate no longer governs this repository (estate
 POLICY `independent-repos`, T-451): any later bump, tag, release or downstream
-re-pin needs a new explicit one-time maintainer authorization, recorded here.
+re-pin needs a new explicit one-time maintainer authorization, recorded in
+`docs/RELEASING.md`.
 
 ## 2026-09-23: v0.4.2 JS/TS foundation release
 
