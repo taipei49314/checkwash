@@ -139,7 +139,7 @@ def test_repeated_not_keeps_chai_negation():
 ])
 def test_close_to_records_its_absolute_delta(body):
     assertion, = _assertions(_source(body))
-    assert (assertion.epsilon, assertion.epsilon_kind) == ("0.01", "delta")
+    assert (assertion.epsilon, assertion.epsilon_kind) == ("abs=0.01", "abs")
 
 
 @pytest.mark.parametrize("body", [
@@ -151,6 +151,45 @@ def test_unknown_or_negated_delta_claims_no_ordering(body):
     assertion, = _assertions(_source(body))
     assert assertion.form == "approx"
     assert assertion.epsilon is None
+
+
+_CHAI_AND_NODE = 'import assert from "node:assert";\nimport { expect } from "chai";'
+_HAND_ROLLED = "Math.abs(total() - 78.75)"
+
+
+def _tolerance_findings(before, after, imports):
+    _verdict, findings = _outcome(_source(before, imports), _source(after, imports))
+    return [finding for finding in findings if finding[0] == "TOLERANCE_LOOSENED"]
+
+
+@pytest.mark.parametrize("before,after", [
+    # A delta of 1 is a wider bound than `< 0.5`, not one decimal place: read
+    # as places it reported a loosening for a tightened tolerance.
+    ("expect(total()).to.be.closeTo(78.75, 1);", f"assert.ok({_HAND_ROLLED} < 0.5);"),
+    (f"assert.ok({_HAND_ROLLED} < 0.5);", "expect(total()).to.be.closeTo(78.75, 0.5);"),
+    (f"assert.ok({_HAND_ROLLED} < 0.5);", "expect(total()).to.be.closeTo(78.75, 0.25);"),
+])
+def test_close_to_and_a_hand_rolled_bound_are_one_absolute_bound(before, after):
+    assert _tolerance_findings(before, after, _CHAI_AND_NODE) == []
+
+
+def test_widening_a_hand_rolled_bound_into_close_to_is_reported():
+    # Read as places, a fractional delta was unknown and the widening passed.
+    found = _tolerance_findings(f"assert.ok({_HAND_ROLLED} < 0.005);",
+                                "expect(total()).to.be.closeTo(78.75, 0.5);", _CHAI_AND_NODE)
+    assert [rule for rule, _severity in found] == ["TOLERANCE_LOOSENED"]
+
+
+@pytest.mark.parametrize("before,after,loosened", [
+    # Vitest's expect carries both styles; a precision and a delta compare
+    # through the absolute bound each states (toBeCloseTo(v, 2) is 0.005).
+    ("expect(total()).toBeCloseTo(78.75, 2);", "expect(total()).to.be.closeTo(78.75, 1);", True),
+    ("expect(total()).to.be.closeTo(78.75, 1);", "expect(total()).toBeCloseTo(78.75, 0);", False),
+    ("expect(total()).to.be.closeTo(78.75, 0.005);", "expect(total()).toBeCloseTo(78.75, 2);", False),
+])
+def test_vitest_precision_and_delta_compare_as_absolute_bounds(before, after, loosened):
+    found = _tolerance_findings(before, after, 'import { expect } from "vitest";')
+    assert bool(found) is loosened
 
 
 @pytest.mark.parametrize("imports,receiver", [

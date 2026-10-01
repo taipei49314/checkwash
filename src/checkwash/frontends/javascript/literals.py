@@ -232,9 +232,12 @@ def populate_delta(assertion: Assertion, expression: str) -> None:
     """Record a positive chai closeTo/approximately absolute delta.
 
     chai passes when |actual - expected| <= delta, so a larger finite Number
-    is looser: the existing `delta` tolerance kind. Signed zeroes are the same
-    delta. Identifiers, computed or non-finite deltas and negated comparisons,
-    whose ordering reverses, remain unknown.
+    is looser. That is the absolute bound a hand-rolled `Math.abs(a - b) <
+    bound` states, so it is recorded in the same keyed form with kind `abs`:
+    a bare value in a JS file reads as `toBeCloseTo` places, and a delta of
+    1 must not compare as one decimal place. Signed zeroes are the same
+    delta. Identifiers, computed or non-finite deltas and negated
+    comparisons, whose ordering reverses, remain unknown.
     """
     assertion.epsilon = None
     assertion.epsilon_kind = None
@@ -246,8 +249,8 @@ def populate_delta(assertion: Assertion, expression: str) -> None:
     delta = _number(source.strip(_WHITESPACE))
     if delta is None:
         return
-    assertion.epsilon = repr(delta if delta else 0.0)
-    assertion.epsilon_kind = "delta"
+    assertion.epsilon = f"abs={delta if delta else 0.0}"
+    assertion.epsilon_kind = "abs"
 
 
 # Tolerance bounds (issue #179). How two bounds order is a verdict, so they

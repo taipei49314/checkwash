@@ -84,7 +84,7 @@ detector, because the whole comparison was an opaque truthy subject. One
 predicate shape is now read inside an oracle: a single top-level `<`, `<=`,
 `>` or `>=` with an unshadowed `Math.abs(...)` call on its smaller side.
 Redundant parentheses around the comparison or either operand do not change
-it. It applies to `assert`, `assert.ok` and `t.assert.ok`, to
+it. It applies to Node's `assert`, `assert.ok` and `t.assert.ok`, to
 `assert.strictEqual(..., true)`, to `expect(...).toBeTruthy()` and to
 `expect(...).toBe(true)`, `toEqual(true)` and `toStrictEqual(true)`. The
 positive ordering matchers read the same shape from their two operands, as in
@@ -102,7 +102,8 @@ or `function`. A `=`, `+=`, `-=`, `*=`, `/=` or postfix `++`/`--` write before
 the assertion, in its own function or an enclosing one, makes the name
 unknown. In JS files a `toBeCloseTo(x, p)` precision and a hand-rolled bound
 are compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
-`toBeCloseTo(x, 2)` are equal.
+`toBeCloseTo(x, 2)` are equal. A chai `closeTo` delta is recorded in the same
+`abs=` form (see the chai section below).
 
 Not read: lower bounds such as `Math.abs(d) > eps`, negated or falsy
 spellings, conjunctions, relative or scaled magnitudes, `**`, a literal whose
@@ -150,7 +151,7 @@ takes an existing rung; the strength lattice is unchanged.
 | `.undefined`; `assert.isUndefined` | `compare_eq`, EXACT_VALUE | none |
 | `.exist`/`.exists`; `assert.exists`/`isDefined` | `non_null`, NON_NULL | none |
 | `.ok`; `assert(value)`, `assert.ok`/`isOk` | `truthy`, TRUTHY | none |
-| `closeTo`/`approximately` in both interfaces | `approx`, APPROX | center; a positive call's finite delta is its tolerance |
+| `closeTo`/`approximately` in both interfaces | `approx`, APPROX | center; a positive call's finite delta is its absolute tolerance (`abs=`) |
 | `include`/`includes`/`contain`/`contains`; `assert.include` | `membership`, PATTERN | none |
 | `match`/`matches`; `assert.match` | `pattern`, PATTERN | none |
 | `above`/`below`/`least`/`most` and their aliases, `within`; `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` | `compare_ord`, BOUND | none |
@@ -172,6 +173,16 @@ rewriting `.to.be.null` as `toBeNull()` therefore reports a weakening, as
 `toBe(null)` -> `toBeNull()` already does. Scalar evidence keeps `0` and `-0`
 distinct although chai's `===` accepts both.
 
+A `closeTo` delta is the absolute bound a hand-rolled
+`Math.abs(a - b) < bound` states, so it is recorded in the same `abs=` form
+(see [Hand-rolled tolerances](#hand-rolled-tolerances)). The delta itself is
+read only from a finite Number literal, through the same number reader as the
+expected value, not from the hand-rolled bound's exact reader. Swapping one
+for the other compares the two bounds, and a Vitest `toBeCloseTo(v, p)` precision
+compares with either through the bound it enforces: `toBeCloseTo(v, 2)` ->
+`.to.be.closeTo(v, 1)` reports a loosening, `.to.be.closeTo(v, 1)` ->
+`toBeCloseTo(v, 0)` does not.
+
 Some edits are not reported. They are recorded here for a maintainer decision:
 
 - `assert.equal` carries no expected value, so rewriting its operand
@@ -184,17 +195,24 @@ Some edits are not reported. They are recorded here for a maintainer decision:
   increase, and JavaScript expected-value evidence needs a literal on both
   sides. Jest's `toBeDefined()` -> `toBe(undefined)` has the same gap.
 - In a Vitest file that mixes styles, `toBeNull()` -> `.to.exist` keeps the
-  NON_NULL rung and polarity, and `toBeCloseTo(v, 2)` -> `.to.be.closeTo(v, 1)`
-  compares a digit count with an absolute delta, so neither is reported.
+  NON_NULL rung and polarity, so it is not reported.
+- A hand-rolled bound inside a chai assertion
+  (`expect(Math.abs(d)).to.be.below(eps)`, `assert.isTrue(Math.abs(d) < eps)`,
+  chai's or Vitest's `assert.ok(Math.abs(d) < eps)`) is not read as a
+  tolerance, so widening `eps` there produces no finding.
+- A `closeTo` delta written as `Infinity`, `Number.EPSILON` or a name records
+  no bound, so widening a tolerance into one of those spellings, from either
+  a delta or a hand-rolled bound, produces no finding; the hand-rolled
+  spelling of the same edit is reported. The delta is read as a binary float,
+  so a literal with more digits than a double keeps compares by its rounded
+  value against a hand-rolled bound's exact digits.
 - A chai alias read from a member expression and then reassigned, such as
   `let check = require("chai").expect` followed by `check = wrap(check)`,
   produces no coverage diagnostic.
 
 Some honest edits are reported instead: `.to.not.exist` -> `.to.be.null` and
 `.to.not.be.undefined` -> `.to.exist` change form and polarity, `.to.exist` ->
-`.to.be.ok` falls from NON_NULL to TRUTHY, and in a Vitest file
-`.to.be.closeTo(v, 1)` -> `toBeCloseTo(v, 0)` reads as a loosening although
-the tolerance tightened.
+`.to.be.ok` falls from NON_NULL to TRUTHY.
 
 Following the foundation precedent, the original inventory is unchanged. The
 independent supplement

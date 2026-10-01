@@ -6,8 +6,9 @@ decimal.Decimal on the literal source text — floats never touch a verdict
 (SPEC §3/§8).
 
 A JS file records two spellings of one absolute bound: `toBeCloseTo` places
-and a hand-rolled `Math.abs(a - b) < bound` (issue #179). A pair of the two
-is compared in one unit rather than as unrelated kinds.
+and the keyed `abs=` bound of a hand-rolled `Math.abs(a - b) < bound` (issue
+#179) or a chai `closeTo` delta (issue #180). A pair of the two is compared
+in one unit rather than as unrelated kinds.
 """
 
 from __future__ import annotations
@@ -69,8 +70,9 @@ def _js_absolute(value: str) -> tuple[Decimal, str] | None:
     """A JS tolerance as the absolute bound it enforces, and its label.
 
     The JS frontend records two spellings: `toBeCloseTo` decimal places,
-    bare (`"2"`), and the bound of a hand-rolled `Math.abs(a - b) < bound`,
-    keyed like pytest.approx (`"abs=0.01"`). Jest and Vitest pass
+    bare (`"2"`), and an absolute bound keyed like pytest.approx
+    (`"abs=0.01"`): a hand-rolled `Math.abs(a - b) < bound` or a chai
+    `closeTo` delta. Jest and Vitest pass
     `toBeCloseTo(x, p)` when |x - expected| < 10**-p / 2, so places `p` is
     the bound 5 * 10**-(p + 1), written from its digits rather than computed.
     """
@@ -91,7 +93,9 @@ def _js_absolute(value: str) -> tuple[Decimal, str] | None:
 
 
 def _js_mixed(path: str, before: str, after: str) -> tuple[bool, str, str] | None:
-    """Compare a JS `toBeCloseTo` precision with a hand-rolled bound (issue #179).
+    """Compare a JS `toBeCloseTo` precision with an `abs=` bound (issue #179).
+
+    The keyed side is a hand-rolled bound or a chai `closeTo` delta.
 
     Read as unrelated kinds, the pair misleads both ways: `< 0.5` ->
     `toBeCloseTo(x, 0)` is the same bound, yet a keyed bound against a bare
