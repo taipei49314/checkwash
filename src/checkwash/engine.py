@@ -40,6 +40,7 @@ from checkwash.evidence import (
 )
 from checkwash.findings import Finding
 from checkwash.frontends.javascript.frontend import is_js_test_path, parse_javascript
+from checkwash.frontends.javascript.module_mocks import module_mock_events
 from checkwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
@@ -83,6 +84,7 @@ from checkwash.roles import (
     _is_runner_script,
     _mentions_test_runner,
     _one_hop_runners,
+    _test_commands_changed,
     collectable,
     is_artifact,
 )
@@ -102,6 +104,25 @@ __all__ = [
 # Roles whose files are supervised for their own sake. Moving a file out of
 # one of these is itself the event, not a neutral relocation.
 _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"})
+
+# SPEC section 2 resolves these roles before `test`, and a JS runner's default
+# layout does not outrank them. Jest collects every file beneath `__tests__/`,
+# but `__tests__/__snapshots__/out.js` is a stored expectation and
+# `.claude/hooks/__tests__/guard.js` an agent constraint; claiming them as
+# tests switched off EXPECTED_VALUE_CHANGED and GUARDRAIL_TOUCHED (#175
+# review). Python paths already resolve this way: `tests/golden/test_x.py`
+# is a snapshot.
+_ROLES_BEFORE_TEST = frozenset({"guardrail", "ci", "snapshot", "lockfile", "conftest"})
+
+
+def _js_test(path: str, role: str) -> bool:
+    """Is this path a JS/TS test, given the role it already resolved to?
+
+    The one predicate behind role assignment, the JS parse gate and rename
+    expansion, so moving a test into a stored-expectation directory is judged
+    by the same rule as editing a file inside it.
+    """
+    return role not in _ROLES_BEFORE_TEST and is_js_test_path(path)
 
 
 def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
@@ -133,8 +154,8 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
         if old and old != new:
             old_role = config.role_of(old)
             new_role = config.role_of(new)
-            old_test = is_js_test_path(old) or (old_role == "test" and collectable(old))
-            new_test = is_js_test_path(new) or (new_role == "test" and collectable(new))
+            old_test = _js_test(old, old_role) or (old_role == "test" and collectable(old))
+            new_test = _js_test(new, new_role) or (new_role == "test" and collectable(new))
             # Moving a file out of a supervised role is a way of escaping
             # supervision: `git mv AGENTS.md docs/AGENTS.old` or a workflow
             # out of .github/workflows/ silenced the guardrail and CI rules
@@ -629,17 +650,22 @@ def build_ir(
         role = config.role_of(path)
         if role == "prod" and (
             _is_runner_script(path, change.before, change.after) or path in one_hop
+            or _test_commands_changed(path, change.before, change.after)
         ):
             # The test command lives wherever the project keeps it. As prod
             # this file was unreadable, which meant editing it both hid a
             # weakened command *and* granted the whole diff the THREATMODEL #4
             # opaque exemption — one line of `scripts/test.sh` turned a
             # blocking assertion weakening into a warn (probe 2026-08-07).
+            # A package manifest keeps it in a string value: `scripts.test`
+            # going from `node --test` to `node --test || true` did the same
+            # from package.json (issue #174). Only an edit to that command
+            # moves the manifest; a dependency bump stays production.
             role = "ci"
         is_python = path.endswith(".py")
-        if is_js_test_path(path):
+        is_js_test = _js_test(path, role)
+        if is_js_test:
             role = "test"
-        is_js_test = is_js_test_path(path)
 
         before_parsed: ParsedFile | None = None
         after_parsed: ParsedFile | None = None
@@ -1181,6 +1207,11 @@ def build_ir(
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     for event in parametrized_string_standin_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    # The JavaScript spelling: a newly installed first-party module mock or
+    # replacing spy that an existing JS unit's own assertions read (#177).
+    for event in module_mock_events(ir, changes):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)

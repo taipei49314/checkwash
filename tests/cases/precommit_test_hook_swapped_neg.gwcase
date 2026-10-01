@@ -1,0 +1,27 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: swapping the pytest hook for a tox hook keeps a runner in the inventory
+origin: issue #181 bound — the runner-swap carve-out row 69 makes for scripts
+origin2: (runner_script_switched_runner_neg), in the hook inventory's dialect.
+=== before: .pre-commit-config.yaml ===
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+=== after: .pre-commit-config.yaml ===
+repos:
+  - repo: local
+    hooks:
+      - id: tox
+        name: tox
+        entry: tox -e py
+        language: system
+        pass_filenames: false
+        always_run: true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

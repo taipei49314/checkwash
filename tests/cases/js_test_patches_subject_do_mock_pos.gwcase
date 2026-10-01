@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: vi.doMock before the unit's own await import() replaces the subject even though the file spells no lower-case mock
+origin: issue #177 family - doMock and setMock spell Mock with a capital M, so the prefilter must read them; an ordered mock reaches the dynamic import evaluated after it in the same test
+=== before: billing.test.js ===
+import { describe, it, expect } from "vitest";
+
+describe("billing", () => {
+  it("computes invoice total", async () => {
+    const { invoiceTotal } = await import("./src/billing.js");
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+
+describe("billing", () => {
+  it("computes invoice total", async () => {
+    vi.doMock("./src/billing.js", () => ({ invoiceTotal: () => 78.75 }));
+    const { invoiceTotal } = await import("./src/billing.js");
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]

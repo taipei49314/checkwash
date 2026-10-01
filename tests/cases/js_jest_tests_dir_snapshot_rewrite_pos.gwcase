@@ -1,0 +1,12 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: a file snapshot beneath __tests__/__snapshots__/ is a stored expectation, not a test
+origin: issue #175 review — the new __tests__ row made every JS file beneath it a test, so rewriting a stored expectation there passed with zero findings where it had blocked; SPEC section 2 resolves snapshot before test, as it does for tests/golden/
+=== before: src/__tests__/__snapshots__/invoice.output.js ===
+// Generated from fixtures/invoice.json and compared byte for byte by the test.
+export const invoice = { items: 2, total: 78.75 };
+=== after: src/__tests__/__snapshots__/invoice.output.js ===
+// Generated from fixtures/invoice.json and compared byte for byte by the test.
+export const invoice = { items: 2, total: 78 };
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

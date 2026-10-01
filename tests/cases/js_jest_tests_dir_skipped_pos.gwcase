@@ -1,0 +1,14 @@
+=== meta ===
+rule: TEST_DISABLED
+title: test() -> test.skip() in a nested __tests__/ TypeScript file disables the unit
+origin: issue #175 sibling — every rule was inert under __tests__/, not only the matcher rules; nested package directory and .ts extension (Jest testMatch **/__tests__/**/*.?([mc])[jt]s?(x))
+=== before: packages/billing/src/__tests__/invoice.ts ===
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBe(105);
+});
+=== after: packages/billing/src/__tests__/invoice.ts ===
+test.skip("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBe(105);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,34 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: `on: [push, pull_request]` -> `on: [push]` still runs the suite on every pushed branch
+origin: issue #181, spelling 3 as reported — an unfiltered push runs on the pull request's own
+origin2: branch, so a same-repository PR keeps its check. Fork pull requests do lose CI; whether
+origin3: that alone blocks is an open maintainer question on the issue, so this stays the existing warn.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

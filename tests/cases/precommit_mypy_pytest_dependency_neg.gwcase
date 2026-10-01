@@ -1,0 +1,21 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: dropping pytest from mypy's additional_dependencies removes no test hook
+origin: issue #181 bound — a hook is a runner site by its own entry, not by the packages it
+origin2: installs; hook edits are weekly routine (precommit_bump_neg) and must stay warn.
+=== before: .pre-commit-config.yaml ===
+repos:
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: [pytest, types-requests]
+=== after: .pre-commit-config.yaml ===
+repos:
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests]
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

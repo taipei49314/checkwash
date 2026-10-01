@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: mocking a first-party module the oracle never reads is how unit tests are written
+origin: issue #177 family bound - condition 3, the discriminator: the audit log is mocked, the assertion reads only billing
+=== before: billing.test.js ===
+import { describe, it, expect } from "vitest";
+import { invoiceTotal } from "./src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "./src/billing.js";
+
+vi.mock("./src/audit-log.js", () => ({ record: () => {} }));
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[]

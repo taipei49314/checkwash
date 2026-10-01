@@ -1,0 +1,9 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: recording a first file snapshot beneath __tests__/__snapshots__/ rewrites no oracle
+origin: issue #175 review negative control — keeping the snapshot role inside Jest's layout must not make a newly recorded stored expectation noisy (mirrors snapshot_expectation_created_neg)
+=== after: src/__tests__/__snapshots__/invoice.output.js ===
+// Generated from fixtures/invoice.json and compared byte for byte by the test.
+export const invoice = { items: 2, total: 78.75 };
+=== expect ===
+[]
