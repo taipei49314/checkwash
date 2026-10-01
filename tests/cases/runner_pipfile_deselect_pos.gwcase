@@ -1,0 +1,35 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 174
+title: Pipfile [scripts] test narrowed with --deselect
+origin: issue #174 sibling, the same manifest shape in TOML. On the v0.4.2 code path a Pipfile is prod and this diff has no other file, so it produced no finding while `pipenv run test` stopped running the failing test
+=== before: Pipfile ===
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "==2.31.0"
+
+[dev-packages]
+pytest = "==8.3.3"
+
+[scripts]
+test = "pytest"
+=== after: Pipfile ===
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "==2.31.0"
+
+[dev-packages]
+pytest = "==8.3.3"
+
+[scripts]
+test = "pytest --deselect tests/test_billing.py::test_total"
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

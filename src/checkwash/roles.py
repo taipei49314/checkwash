@@ -1,7 +1,9 @@
 """Path roles: artifacts, collection, runner shape. Extracted from engine (E5)."""
 from __future__ import annotations
 
+import json
 import re
+import tomllib
 from collections import Counter
 
 from checkwash.change import FileChange
@@ -299,6 +301,164 @@ def _mentions_test_runner(change) -> bool:
     (`runner_build_makefile_neg`).
     """
     return _runs_tests(change.before) or _runs_tests(change.after)
+
+
+# Package manifests that name the project's test command in their own parsed
+# content, by basename -> reader (issue #174). `npm test`, `yarn test`,
+# `pnpm test` and `bun run test` run `scripts.test` whatever it says, and
+# `pipenv run test` runs `[scripts] test`: the key, not a runner token, is
+# what makes a string value the test command. pyproject.toml task tables
+# (poe, hatch, pdm, taskipy) need no entry: the file is `ci` by role glob.
+_TEST_COMMAND_MANIFESTS = {"package.json": "json", "Pipfile": "toml"}
+# Script runners whose arguments name other scripts of the same manifest.
+_SCRIPT_RUNNERS = frozenset(
+    {"npm", "pnpm", "yarn", "bun", "pipenv", "run-s", "run-p", "npm-run-all"}
+)
+_COMMAND_WORD_BREAK = re.compile(r"[\s;&|()<>'\"`]+")
+
+
+def _test_command_manifest(path: str) -> str | None:
+    """The reader of a manifest that names its own test command, else None."""
+    return _TEST_COMMAND_MANIFESTS.get(path.replace("\\", "/").rsplit("/", 1)[-1])
+
+
+def _manifest_scripts(reader: str, data: bytes | None) -> dict[str, str] | None:
+    """Every string-valued script one side of a manifest defines.
+
+    {} when the side is absent or empty or has no `scripts` table; None when
+    this reader cannot open it: over the 1 MB read cap, or refused by
+    `json`/`tomllib`. A package manager's own parser need not refuse what
+    Python's does (an integer longer than `sys.get_int_max_str_digits()`,
+    nesting past the recursion limit), so an unreadable side says nothing
+    about the test command it holds.
+    """
+    if not data:
+        return {}
+    if len(data) > 1_000_000:
+        return None
+    text = data.decode("utf-8-sig", errors="replace")
+    try:
+        raw = json.loads(text) if reader == "json" else tomllib.loads(text)
+    except (ValueError, RecursionError):  # both decode errors are ValueErrors
+        return None
+    scripts = raw.get("scripts") if isinstance(raw, dict) else None
+    if not isinstance(scripts, dict):
+        return {}
+    return {name: cmd for name, cmd in scripts.items() if isinstance(cmd, str)}
+
+
+def _manifest_unreadable(path: str, data: bytes | None) -> bool:
+    """Is this a manifest side `_manifest_scripts` cannot open?"""
+    reader = _test_command_manifest(path)
+    return reader is not None and _manifest_scripts(reader, data) is None
+
+
+def _test_commands(path: str, data: bytes | None) -> dict[str, str] | None:
+    """The scripts that make up this manifest's test command, name -> command.
+
+    Row 87's double effect one file class over (issue #174): `node --test`
+    holds no runner token, so the token-reading content gate left
+    package.json as unreadable production, and `node --test` becoming
+    `node --test || true` both hid its own weakening and bought the opaque
+    exemption that held the assertion weakened beside it at warn.
+
+    Membership is decided by the key first — `test`, the lifecycle script
+    every package manager runs, and the `test:*` namespace — then by any
+    script whose command invokes a recognised runner (a Pipfile has no
+    lifecycle key), then by exactly one hop: scripts that `test` or a
+    `test:*` script names through a script runner (`npm run unit`,
+    `run-s lint unit`), the way row 89 follows one script reference. A
+    script that is a member only because it invokes a runner does not hop:
+    `prepublishOnly: npm run build && npm test` runs the suite, but `build`
+    is not part of what `npm test` runs, and a build hop stays production
+    (SPEC section 4, `runner_one_hop_build_neg`). `pretest`/`posttest` are
+    not members: npm stops before `posttest` when `test` fails and a
+    failing `pretest` fails the run, so neither can turn a red suite green.
+
+    None when `path` is not such a manifest; {} when it defines no test
+    command — absent, emptied, unreadable or without a matching script. Keys
+    come back sorted, so every consumer is deterministic.
+    """
+    reader = _test_command_manifest(path)
+    if reader is None:
+        return None
+    commands = _manifest_scripts(reader, data) or {}
+    members = {
+        name
+        for name, cmd in commands.items()
+        if name == "test"
+        or name.startswith("test:")
+        or _runs_tests(cmd.encode("utf-8", errors="replace"))
+    }
+    hops: set[str] = set()
+    for name in members:
+        if name != "test" and not name.startswith("test:"):
+            continue  # a runner-invoking member does not hop (see above)
+        words = [word for word in _COMMAND_WORD_BREAK.split(commands[name]) if word]
+        if _SCRIPT_RUNNERS.intersection(words):
+            hops.update(word for word in words if word in commands)
+    return {name: commands[name] for name in sorted(members | hops)}
+
+
+def _test_commands_changed(path: str, before: bytes | None, after: bytes | None) -> bool:
+    """Does this diff change the test command a manifest defines?
+
+    The rest of a manifest — dependencies, version, `main`, `exports` — is
+    production configuration, and a dependency bump honestly explains an
+    expectation that moved with it. Neither manifest is a D9 dependency
+    manifest, so the opaque exemption is all such a bump can earn, and it
+    keeps whatever it had. Only an edit to the test command itself makes the
+    manifest test-runner configuration for this diff: no exemption, and its
+    weakenings are visible.
+
+    A side this reader cannot open cannot show the test command unchanged,
+    so any edit to it counts as one. Reading it as "no test command" let
+    padding planted in an earlier commit (a 1 MB manifest, an integer
+    Python's json refuses) keep a later `node --test || true` opaque
+    production on both sides, which is issue #174 again.
+    """
+    commands = _test_commands(path, before)
+    if commands is None:
+        return False
+    if _manifest_unreadable(path, before) or _manifest_unreadable(path, after):
+        return before != after
+    return commands != _test_commands(path, after)
+
+
+def _ci_scan_view(path: str, data: bytes | None) -> bytes | None:
+    """What the CI weakening scan reads: a manifest's test commands only.
+
+    `prepare: husky || true` in the same package.json swallows nothing the
+    suite reports, and scanning every added line of the manifest would block
+    it at high. Every other file is read whole, as before, and so is a
+    manifest side this reader cannot open: unreadable is not "no test
+    command".
+    """
+    commands = _test_commands(path, data)
+    if commands is None or _manifest_unreadable(path, data):
+        return data
+    return "\n".join(commands.values()).encode("utf-8", errors="replace")
+
+
+def _ci_scan_base(path: str, before: bytes | None, after: bytes | None) -> bytes | None:
+    """The base side a manifest's added test commands are counted against.
+
+    The base values of every script in the test command on either side. A
+    script the diff only starts calling wrote no new command: when `test`
+    becomes `npm run clean && jest` and `clean` keeps its old
+    `rm -rf coverage || true`, the diff introduced no swallow, exactly as an
+    unchanged workflow line introduces none. A script the diff pulls in and
+    also edits is judged on what it now says. Every other file, and a
+    manifest side this reader cannot open, is its own base.
+    """
+    reader = _test_command_manifest(path)
+    scripts = None if reader is None else _manifest_scripts(reader, before)
+    if scripts is None:
+        return before
+    names = set(_test_commands(path, before) or ()) | set(_test_commands(path, after) or ())
+    return "\n".join(scripts[name] for name in sorted(names) if name in scripts).encode(
+        "utf-8", errors="replace"
+    )
 
 
 _SCRIPT_REF = re.compile(

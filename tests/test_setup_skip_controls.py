@@ -55,12 +55,19 @@ def test_closed_setup_suppression_adds_high_existing_control(source):
     SOURCE.replace("skip('x')", 'skip(*args)'),
     SOURCE.replace("skip('x')", 'skip(reason=callback())'),
     SOURCE.replace('import pytest', 'import pytest\nmutate()'),
-    SOURCE + NOOP.replace('    yield', '    pytest.skip("x")\n    yield'),
     SOURCE + NOOP.replace('def _quiet():', 'def _quiet(pytest):'),
     SOURCE + NOOP.replace('    yield', '    yield 1'),
 ])
 def test_unproved_shadowed_or_unexecuted_hook_is_not_positive_evidence(source):
     assert not controls(source)
+
+
+def test_skipping_sibling_fixture_is_not_closed_hook_evidence():
+    # Narrowed by maintainer ruling (issue #172): the closed hook proof still
+    # rejects a conftest whose sibling fixture is not yield-only. The fixture's
+    # own unconditional skip is the setup-phase family and reports separately.
+    source = SOURCE + NOOP.replace('    yield', '    pytest.skip("x")\n    yield')
+    assert not [f for f in controls(source) if 'execution/report suppression' in f.message]
 
 
 def test_existing_effect_is_not_repeated_for_format_only_change():

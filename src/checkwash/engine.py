@@ -83,6 +83,7 @@ from checkwash.roles import (
     _is_runner_script,
     _mentions_test_runner,
     _one_hop_runners,
+    _test_commands_changed,
     collectable,
     is_artifact,
 )
@@ -629,12 +630,17 @@ def build_ir(
         role = config.role_of(path)
         if role == "prod" and (
             _is_runner_script(path, change.before, change.after) or path in one_hop
+            or _test_commands_changed(path, change.before, change.after)
         ):
             # The test command lives wherever the project keeps it. As prod
             # this file was unreadable, which meant editing it both hid a
             # weakened command *and* granted the whole diff the THREATMODEL #4
             # opaque exemption — one line of `scripts/test.sh` turned a
             # blocking assertion weakening into a warn (probe 2026-08-07).
+            # A package manifest keeps it in a string value: `scripts.test`
+            # going from `node --test` to `node --test || true` did the same
+            # from package.json (issue #174). Only an edit to that command
+            # moves the manifest; a dependency bump stays production.
             role = "ci"
         is_python = path.endswith(".py")
         if is_js_test_path(path):
