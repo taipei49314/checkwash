@@ -1,0 +1,11 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 174
+title: a script the test command starts calling is judged on what the diff wrote into it
+origin: issue #174 review control for runner_package_json_pulled_in_script_neg. Only unedited script text is excluded. `unit` gains `|| true` in the same diff that makes scripts.test call it, so the swallow is new text in the test command
+=== before: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test", "unit": "node --test test/unit" } }
+=== after: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "npm run unit", "unit": "node --test test/unit || true" } }
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
