@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: pytest.skip() added at the top of a conftest fixture disables every test that requests it
+origin: issue #172 - the requested fixture in tests/conftest.py gained an unconditional `pytest.skip()` as its first statement while the test file stayed byte-identical; v0.4.2 (cfbefb8) reported zero findings of any severity. Runtime per the report (pytest 9.1.1): base `1 failed`, head `1 skipped`, exit 0
+=== before: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def items():
+    return [{"price": 10.0, "qty": 3}, {"price": 5.0, "qty": 9}]
+=== after: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def items():
+    pytest.skip("temporarily unavailable")
+    return [{"price": 10.0, "qty": 3}, {"price": 5.0, "qty": 9}]
+=== head: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice_total(items):
+    assert invoice_total(items) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/conftest.py", "unit": "<suite>"}]

@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.frontends.python.runtime_controls import runtime_controls
+from checkwash.frontends.python.setup_skip_controls import SetupScope, module_bindings, setup_outcomes
 from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
@@ -87,6 +88,10 @@ _SKIP_DECORATORS = {
 }
 
 _SKIP_CALLS = {"pytest.skip", "pytest.xfail", "pytest.importorskip", "self.skipTest"}
+
+# Every native setup outcome (`setup_skip_controls`) is spelled with one of
+# these, if only on its import line; a module without them has none to find.
+_SETUP_OUTCOME_TOKENS = ("skip", "Skip", "xfail", "XFail")
 
 # AssertionError belongs here: catching it is precisely how you swallow an
 # oracle, and it is the obvious variant of the broad-except cheat.
@@ -2933,8 +2938,42 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # shared by every unit so a helper reached by many tests is walked once.
     file_caches: tuple[dict, dict] = ({}, {})
     branch_fixtures = literal_fixtures(tree) if collect_tests else {}
+    # A unit's setup runs before its body: the same-file fixtures it reaches
+    # and the xunit setup pytest calls for it. An unconditional skip there
+    # disables the unit as surely as a marker does, so it is recorded as one
+    # (issue #172). Conftest fixtures are judged suite-wide in `_conftest_unit`.
+    setup_scopes: tuple[SetupScope, ...] = ()
+    if collect_tests and not conftest and any(token in raw for token in _SETUP_OUTCOME_TOKENS):
+        setup_scopes = (SetupScope(tree.body, module_bindings(tree)),)
+    class_setup: dict[int, SetupScope] = {}
 
-    def visit(node: ast.AST, prefix: str, inherited: list[Marker], collectible: bool) -> None:
+    def nested_setup(scopes: tuple[SetupScope, ...], *classes: ast.ClassDef) -> tuple[SetupScope, ...]:
+        """`scopes` extended by these class bodies, innermost last."""
+        if not scopes:
+            return scopes
+        for cls in classes:
+            if id(cls) not in class_setup:
+                class_setup[id(cls)] = SetupScope(
+                    cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list, bases=cls.bases
+                )
+            scopes = scopes + (class_setup[id(cls)],)
+        return scopes
+
+    def setup_markers(func, scopes: tuple[SetupScope, ...]) -> list[Marker]:
+        if not scopes:
+            return []
+        return [
+            Marker(name=f"setup.{provider}.{effect}", text=text.seg(node) or provider, span=off.span(node))
+            for provider, effect, node in setup_outcomes(scopes, func, method=len(scopes) > 1)
+        ]
+
+    def visit(
+        node: ast.AST,
+        prefix: str,
+        inherited: list[Marker],
+        collectible: bool,
+        scopes: tuple[SetupScope, ...] = (),
+    ) -> None:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{prefix}{child.name}"
@@ -2944,7 +2983,8 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 if collect_tests and collectible and _is_test_name(child.name):
                     units.append(
                         _collect_unit(
-                            child, qual, text, off, inherited, module_scopes, file_caches, branch_fixtures, doctests
+                            child, qual, text, off, inherited + setup_markers(child, scopes),
+                            module_scopes, file_caches, branch_fixtures, doctests,
                         )
                     )
                 # Nested defs are never collected as pytest items.
@@ -2956,13 +2996,17 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                 # Class-level skip decorators disable every test inside the
                 # class — they must reach each unit (confirmed red-team FN).
                 class_markers = _decorator_markers(child, text, off) if collect_tests else []
+                class_collectible = (
+                    collectible
+                    and (_is_test_class(child) or child.name in test_class_names)
+                    and not _test_attr_disabled(child.body)
+                )
                 visit(
                     child,
                     qual + ".",
                     inherited + class_markers,
-                    collectible
-                    and (_is_test_class(child) or child.name in test_class_names)
-                    and not _test_attr_disabled(child.body),
+                    class_collectible,
+                    nested_setup(scopes, child) if class_collectible else (),
                 )
             elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):
                 # Module- and class-level constants are behaviour too. They
@@ -2974,15 +3018,17 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     if isinstance(target, ast.Name):
                         symbols[f"{prefix}{target.id}"] = _fingerprint(child)
             else:
-                visit(child, prefix, inherited, collectible)
+                visit(child, prefix, inherited, collectible, scopes)
 
-    visit(tree, "", module_markers, True)
+    visit(tree, "", module_markers, True, setup_scopes)
     if collect_tests:
         for cls, owner, method in inherited_test_methods(tree):
             units.append(_collect_unit(
                 method, f"{cls.name}.{method.name}", text, off,
                 module_markers + _decorator_markers(owner, text, off)
-                + _decorator_markers(cls, text, off), module_scopes, file_caches, branch_fixtures, doctests,
+                + _decorator_markers(cls, text, off)
+                + setup_markers(method, nested_setup(setup_scopes, owner, cls)),
+                module_scopes, file_caches, branch_fixtures, doctests,
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
