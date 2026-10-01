@@ -340,8 +340,12 @@ def _chai_chain(
         if step is None:
             return None
         word = step.group("word")
-        position = _skip_space(masked, step.end(), end)
-        called = position < end and masked[position] == "("
+        opening = _skip_space(masked, step.end(), end)
+        called = opening < end and masked[opening] == "("
+        # An uncalled word ends where it is spelled. Whitespace and comments
+        # after a property terminal belong to no assertion, so editing them
+        # cannot make a kept or moved assertion read as rewritten.
+        position = opening if called else step.end()
         if not called and word in _CHAI_CHAINS:
             continue
         if not called and word in {"not", "deep"}:

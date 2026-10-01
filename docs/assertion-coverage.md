@@ -125,6 +125,30 @@ rewriting `.to.be.null` as `toBeNull()` therefore reports a weakening, as
 `toBe(null)` -> `toBeNull()` already does. Scalar evidence keeps `0` and `-0`
 distinct although chai's `===` accepts both.
 
+Some edits are not reported. They are recorded here for a maintainer decision:
+
+- `assert.equal` carries no expected value, so rewriting its operand
+  (`assert.equal(x, 78.75)` -> `assert.equal(x, 75)`), or replacing
+  `.to.equal(78.75)` with `assert.equal(x, 75)`, produces no finding. Coercive
+  `==` evidence would apply to Node's legacy `equal` as well.
+- A presence or truthiness check rewritten as an exact absent or falsy value
+  (`.to.exist` -> `.to.be.null` or `.to.be.undefined`, `assert.exists` ->
+  `assert.isNull`, `.to.be.ok` -> `.to.be.false`) reads as a strength
+  increase, and JavaScript expected-value evidence needs a literal on both
+  sides. Jest's `toBeDefined()` -> `toBe(undefined)` has the same gap.
+- In a Vitest file that mixes styles, `toBeNull()` -> `.to.exist` keeps the
+  NON_NULL rung and polarity, and `toBeCloseTo(v, 2)` -> `.to.be.closeTo(v, 1)`
+  compares a digit count with an absolute delta, so neither is reported.
+- A chai alias read from a member expression and then reassigned, such as
+  `let check = require("chai").expect` followed by `check = wrap(check)`,
+  produces no coverage diagnostic.
+
+Some honest edits are reported instead: `.to.not.exist` -> `.to.be.null` and
+`.to.not.be.undefined` -> `.to.exist` change form and polarity, `.to.exist` ->
+`.to.be.ok` falls from NON_NULL to TRUTHY, and in a Vitest file
+`.to.be.closeTo(v, 1)` -> `toBeCloseTo(v, 0)` reads as a loosening although
+the tolerance tightened.
+
 Following the foundation precedent, the original inventory is unchanged. The
 independent supplement
 [`javascript_chai_mutations.json`](../tests/data/javascript_chai_mutations.json)

@@ -104,6 +104,28 @@ def test_chai_spellings_reach_the_existing_lattice(body, subject, form, strength
     assert _gaps(source) == []
 
 
+def test_property_terminal_text_ends_at_its_word():
+    # Semicolon-free style: a trailing comment and the next line's comment
+    # belong to no assertion, so editing them cannot change this one's text.
+    source = _source("expect(paid()).to.be.true // settled\n"
+                     "    // totals next\n"
+                     "    expect(total()).to.equal(78.75)")
+    first, second = _assertions(source)
+    assert first.text == "expect(paid()).to.be.true"
+    assert second.text == "expect(total()).to.equal(78.75)"
+
+
+def test_editing_the_comment_after_a_kept_property_does_not_excuse_a_removal():
+    # The kept assertion is not newly written, so SAME_UNIT_REWRITE must not
+    # hold the other assertion's removal at warn.
+    before = _source("expect(paid()).to.be.true\n"
+                     "    // settled first\n"
+                     "    expect(total()).to.equal(78.75)")
+    after = _source("expect(paid()).to.be.true\n"
+                    "    // settled first, the total is checked elsewhere")
+    assert _outcome(before, after) == ("block", [("ASSERT_REMOVED", "high")])
+
+
 def test_repeated_not_keeps_chai_negation():
     # chai's `not` sets the negate flag; a second `not` does not clear it.
     assertion, = _assertions(_source("expect(total()).not.to.not.equal(80);"))
@@ -206,6 +228,18 @@ def test_unimported_assert_keeps_the_node_default():
     gap, = _gaps(source)
     assert gap.callee == "assert.isTrue"
     assert gap.reason.startswith("Node ")
+
+
+@pytest.mark.parametrize("body,callees", [
+    ("vitest.assert.notStrictEqual(total(), 80);", ["vitest.assert.notStrictEqual"]),
+    ("vitest.assert.strictEqual(total(), 78.75);", []),
+    ("vitest.vi.fn();", []),
+])
+def test_vitest_namespace_assert_member_is_a_chai_candidate(body, callees):
+    # A Vitest namespace exposes chai's assert; its other members are not
+    # assertion candidates. A represented call leaves no gap.
+    gaps = _gaps(_source(body, 'import * as vitest from "vitest";'))
+    assert [(gap.callee, gap.reason.split()[0]) for gap in gaps] == [(callee, "chai") for callee in callees]
 
 
 def test_should_style_is_outside_the_scan():

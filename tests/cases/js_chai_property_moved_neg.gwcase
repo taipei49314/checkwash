@@ -1,0 +1,36 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: a semicolon-free chai property assertion moved verbatim to another test keeps its move credit
+origin: issue #180 review (an uncalled property terminal's text ran on over the next line's comment)
+=== before: test/invoice.spec.js ===
+import { expect } from "chai";
+import { isPaid, total } from "../src/invoice.js";
+
+describe("invoice", function () {
+  it("totals the invoice", function () {
+    expect(isPaid({ balance: 0 })).to.be.true
+    // the total includes tax
+    expect(total()).to.equal(78.75)
+  });
+
+  it("reports the payment state", function () {
+    expect(isPaid({ balance: 5 })).to.be.false
+  });
+});
+=== after: test/invoice.spec.js ===
+import { expect } from "chai";
+import { isPaid, total } from "../src/invoice.js";
+
+describe("invoice", function () {
+  it("totals the invoice", function () {
+    // the total includes tax
+    expect(total()).to.equal(78.75)
+  });
+
+  it("reports the payment state", function () {
+    expect(isPaid({ balance: 5 })).to.be.false
+    expect(isPaid({ balance: 0 })).to.be.true
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]

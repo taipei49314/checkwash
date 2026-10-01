@@ -533,15 +533,15 @@ class Bindings:
                                  + r"\b|(?:\?\.)?\s*\[\s*(['\"])" + name + r"\1\s*\])", spelling))
         if value.kind == "context" and not member("assert"):
             return None
-        if value.kind == "jest" and not member("expect"):
-            return None
-        if value.kind == "chai" and not (member("expect") or member("assert")):
+        # Both Vitest's module and chai's export expect and chai's assert;
+        # their other members are not assertion candidates.
+        if value.kind in {"jest", "chai"} and not (member("expect") or member("assert")):
             return None
         if value.kind in {"node", "node_method", "node_namespace", "node_context", "context"}:
             return "Node"
-        if value.kind in {"expect", "jest", "chai_expect"} or (value.kind == "chai" and member("expect")):
+        if value.kind in {"expect", "chai_expect"} or (value.kind in {"jest", "chai"} and member("expect")):
             return "expect"
-        if value.kind in {"chai", "chai_assert", "chai_assert_method"}:
+        if value.kind in {"jest", "chai", "chai_assert", "chai_assert_method"}:
             return "chai"
         families = self._candidate_families(root, position)
         for family in families:
