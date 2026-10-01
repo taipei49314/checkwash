@@ -104,6 +104,25 @@ __all__ = [
 # one of these is itself the event, not a neutral relocation.
 _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"})
 
+# SPEC section 2 resolves these roles before `test`, and a JS runner's default
+# layout does not outrank them. Jest collects every file beneath `__tests__/`,
+# but `__tests__/__snapshots__/out.js` is a stored expectation and
+# `.claude/hooks/__tests__/guard.js` an agent constraint; claiming them as
+# tests switched off EXPECTED_VALUE_CHANGED and GUARDRAIL_TOUCHED (#175
+# review). Python paths already resolve this way: `tests/golden/test_x.py`
+# is a snapshot.
+_ROLES_BEFORE_TEST = frozenset({"guardrail", "ci", "snapshot", "lockfile", "conftest"})
+
+
+def _js_test(path: str, role: str) -> bool:
+    """Is this path a JS/TS test, given the role it already resolved to?
+
+    The one predicate behind role assignment, the JS parse gate and rename
+    expansion, so moving a test into a stored-expectation directory is judged
+    by the same rule as editing a file inside it.
+    """
+    return role not in _ROLES_BEFORE_TEST and is_js_test_path(path)
+
 
 def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
     """Retain content identities only; canonicalize CRLF without erasing bytes."""
@@ -134,8 +153,8 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
         if old and old != new:
             old_role = config.role_of(old)
             new_role = config.role_of(new)
-            old_test = is_js_test_path(old) or (old_role == "test" and collectable(old))
-            new_test = is_js_test_path(new) or (new_role == "test" and collectable(new))
+            old_test = _js_test(old, old_role) or (old_role == "test" and collectable(old))
+            new_test = _js_test(new, new_role) or (new_role == "test" and collectable(new))
             # Moving a file out of a supervised role is a way of escaping
             # supervision: `git mv AGENTS.md docs/AGENTS.old` or a workflow
             # out of .github/workflows/ silenced the guardrail and CI rules
@@ -643,9 +662,9 @@ def build_ir(
             # moves the manifest; a dependency bump stays production.
             role = "ci"
         is_python = path.endswith(".py")
-        if is_js_test_path(path):
+        is_js_test = _js_test(path, role)
+        if is_js_test:
             role = "test"
-        is_js_test = is_js_test_path(path)
 
         before_parsed: ParsedFile | None = None
         after_parsed: ParsedFile | None = None
