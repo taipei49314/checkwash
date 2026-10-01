@@ -72,7 +72,7 @@ do not implement general JS/TS parsing, arbitrary helper execution, suite/table
 collection, async completion, or production repair evidence.
 
 ```bash
-python -m pytest tests/test_assertion_contract.py tests/test_js_coverage.py
+python -m pytest tests/test_assertion_contract.py tests/test_js_coverage.py tests/test_js_chai.py
 python tools/qualify_assertions.py --distribution source --output receipts/source.json
 ```
 
@@ -84,7 +84,7 @@ detector, because the whole comparison was an opaque truthy subject. One
 predicate shape is now read inside an oracle: a single top-level `<`, `<=`,
 `>` or `>=` with an unshadowed `Math.abs(...)` call on its smaller side.
 Redundant parentheses around the comparison or either operand do not change
-it. It applies to `assert`, `assert.ok` and `t.assert.ok`, to
+it. It applies to Node's `assert`, `assert.ok` and `t.assert.ok`, to
 `assert.strictEqual(..., true)`, to `expect(...).toBeTruthy()` and to
 `expect(...).toBe(true)`, `toEqual(true)` and `toStrictEqual(true)`. The
 positive ordering matchers read the same shape from their two operands, as in
@@ -102,7 +102,8 @@ or `function`. A `=`, `+=`, `-=`, `*=`, `/=` or postfix `++`/`--` write before
 the assertion, in its own function or an enclosing one, makes the name
 unknown. In JS files a `toBeCloseTo(x, p)` precision and a hand-rolled bound
 are compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
-`toBeCloseTo(x, 2)` are equal.
+`toBeCloseTo(x, 2)` are equal. A chai `closeTo` delta is recorded in the same
+`abs=` form (see the chai section below).
 
 Not read: lower bounds such as `Math.abs(d) > eps`, negated or falsy
 spellings, conjunctions, relative or scaled magnitudes, `**`, a literal whose
@@ -123,12 +124,111 @@ bounds of two different checks. Replacing a hand-rolled tolerance with
 existing handling. The source tests are in
 [`tests/test_js_handrolled_tolerance.py`](../tests/test_js_handrolled_tolerance.py).
 
+### chai expect chains and the assert interface
+
+Issue [#180](https://github.com/taipei49314/checkwash/issues/180) found that
+chai assertions were unrepresented: `expect(total).to.equal(78.75)` weakened
+to `.to.exist` passed with only a coverage warning. chai's `expect` and
+`assert` now resolve from `chai` imports and requires (named, renamed,
+namespace and default), from Vitest's `expect` and `assert`, and for an
+unimported global `expect`. An unimported `assert` keeps its Node default:
+methods that both libraries spell the same cannot be told apart.
+
+An `expect(...)` chain is represented only when it ends in exactly one
+terminal assertion. Language chains (`to`, `be`, `been`, `is`, `that`,
+`which`, `and`, `has`, `have`, `with`, `at`, `of`, `same`, `but`, `does`,
+`still`, `also`, and uncalled `a`/`an`) are ignored, `not` negates, and
+`deep` makes `equal` a deep comparison. A property terminal may also be
+called with at most a message argument, as dirty-chai allows. Each spelling
+takes an existing rung; the strength lattice is unchanged.
+
+| chai spelling | Form and rung | Expected-value evidence |
+|---|---|---|
+| `equal`/`equals`/`eq`; `assert.strictEqual` | `compare_eq`, EXACT_VALUE | scalar operand |
+| `eql`/`eqls`/`deep.equal`; `assert.deepEqual`/`deepStrictEqual` | `compare_eq`, EXACT_STRUCT | scalar operand |
+| `assert.equal` (coercive `==`) | `compare_eq`, EXACT_VALUE | none, as for Node's legacy `equal` |
+| `.true`/`.false`/`.null`; `assert.isTrue`/`isFalse`/`isNull` | `compare_eq`, EXACT_VALUE | the implied literal |
+| `.undefined`; `assert.isUndefined` | `compare_eq`, EXACT_VALUE | none |
+| `.exist`/`.exists`; `assert.exists`/`isDefined` | `non_null`, NON_NULL | none |
+| `.ok`; `assert(value)`, `assert.ok`/`isOk` | `truthy`, TRUTHY | none |
+| `closeTo`/`approximately` in both interfaces | `approx`, APPROX | center; a positive call's finite delta is its absolute tolerance (`abs=`) |
+| `include`/`includes`/`contain`/`contains`; `assert.include` | `membership`, PATTERN | none |
+| `match`/`matches`; `assert.match` | `pattern`, PATTERN | none |
+| `above`/`below`/`least`/`most` and their aliases, `within`; `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` | `compare_ord`, BOUND | none |
+| `lengthOf`/`length(n)`; `assert.lengthOf` | `type_shape`, TYPE_SHAPE | none |
+
+Everything else stays unrepresented and visible as a coverage gap: type checks
+(`a(...)`, `instanceof`), `property`, `keys`, `members`, `oneOf`, `throw`,
+`satisfy`, `empty`, `NaN`, change assertions, the `own`, `nested`, `any`,
+`all`, `ordered` and `length` flags, plugin words such as chai-as-promised's
+`eventually`, a chain that continues after its terminal, and negated assert
+methods (`notEqual`, `isNotOk`, `notExists`, ...). Replacing a represented
+assertion with one of these reports its removal. Plugins that overwrite a
+core assertion word are not modeled. Should-style assertions
+(`value.should.equal(...)`) are not scanned and produce no diagnostic.
+
+The `.null` spelling is chai's `=== null`, so it shares `equal(null)`'s
+EXACT_VALUE rung while Jest's `toBeNull()` keeps NON_NULL. In a Vitest file,
+rewriting `.to.be.null` as `toBeNull()` therefore reports a weakening, as
+`toBe(null)` -> `toBeNull()` already does. Scalar evidence keeps `0` and `-0`
+distinct although chai's `===` accepts both.
+
+A `closeTo` delta is the absolute bound a hand-rolled
+`Math.abs(a - b) < bound` states, so it is recorded in the same `abs=` form
+(see [Hand-rolled tolerances](#hand-rolled-tolerances)). The delta itself is
+read only from a finite Number literal, through the same number reader as the
+expected value, not from the hand-rolled bound's exact reader. Swapping one
+for the other compares the two bounds, and a Vitest `toBeCloseTo(v, p)` precision
+compares with either through the bound it enforces: `toBeCloseTo(v, 2)` ->
+`.to.be.closeTo(v, 1)` reports a loosening, `.to.be.closeTo(v, 1)` ->
+`toBeCloseTo(v, 0)` does not.
+
+Some edits are not reported. They are recorded here for a maintainer decision:
+
+- `assert.equal` carries no expected value, so rewriting its operand
+  (`assert.equal(x, 78.75)` -> `assert.equal(x, 75)`), or replacing
+  `.to.equal(78.75)` with `assert.equal(x, 75)`, produces no finding. Coercive
+  `==` evidence would apply to Node's legacy `equal` as well.
+- A presence or truthiness check rewritten as an exact absent or falsy value
+  (`.to.exist` -> `.to.be.null` or `.to.be.undefined`, `assert.exists` ->
+  `assert.isNull`, `.to.be.ok` -> `.to.be.false`) reads as a strength
+  increase, and JavaScript expected-value evidence needs a literal on both
+  sides. Jest's `toBeDefined()` -> `toBe(undefined)` has the same gap.
+- In a Vitest file that mixes styles, `toBeNull()` -> `.to.exist` keeps the
+  NON_NULL rung and polarity, so it is not reported.
+- A hand-rolled bound inside a chai assertion
+  (`expect(Math.abs(d)).to.be.below(eps)`, `assert.isTrue(Math.abs(d) < eps)`,
+  chai's or Vitest's `assert.ok(Math.abs(d) < eps)`) is not read as a
+  tolerance, so widening `eps` there produces no finding.
+- A `closeTo` delta written as `Infinity`, `Number.EPSILON` or a name records
+  no bound, so widening a tolerance into one of those spellings, from either
+  a delta or a hand-rolled bound, produces no finding; the hand-rolled
+  spelling of the same edit is reported. The delta is read as a binary float,
+  so a literal with more digits than a double keeps compares by its rounded
+  value against a hand-rolled bound's exact digits.
+- A chai alias read from a member expression and then reassigned, such as
+  `let check = require("chai").expect` followed by `check = wrap(check)`,
+  produces no coverage diagnostic.
+
+Some honest edits are reported instead: `.to.not.exist` -> `.to.be.null` and
+`.to.not.be.undefined` -> `.to.exist` change form and polarity, `.to.exist` ->
+`.to.be.ok` falls from NON_NULL to TRUTHY.
+
+Following the foundation precedent, the original inventory is unchanged. The
+independent supplement
+[`javascript_chai_mutations.json`](../tests/data/javascript_chai_mutations.json)
+adds 39 losses, rewrites, tolerance increases and preserving or strengthening
+controls written from the chai documentation. It runs in-process in
+[`tests/test_js_chai.py`](../tests/test_js_chai.py); it is not yet part of
+the CLI qualification below.
+
 ## Make unrepresented assertion candidates visible
 
-`checkwash check` scans both sides of changed JS/TS test files for bounded Node
-and `expect(...)` candidates. It compares their source positions with assertions
-represented by the frontend. A candidate in a file with no recognized test unit,
-or inside another assertion, can therefore still produce a diagnostic.
+`checkwash check` scans both sides of changed JS/TS test files for bounded Node,
+chai `assert` and `expect(...)` candidates. It compares their source positions
+with assertions represented by the frontend. A candidate in a file with no
+recognized test unit, or inside another assertion, can therefore still produce
+a diagnostic.
 
 Diagnostics appear on stderr in every output format and in terminal output.
 SARIF includes them as tool execution warnings, separate from findings. A base
@@ -175,7 +275,8 @@ recognized layout, for example into a production path or a snapshot directory,
 is checked as removal from test coverage.
 
 The scan resolves bounded static Node ESM/CommonJS imports, renamed and flat
-destructured imports, simple local aliases, and Jest/Vitest `expect` imports.
+destructured imports, simple local aliases, Jest/Vitest `expect` imports, and
+chai's `expect` and `assert` (including Vitest's `assert` re-export).
 Lexical declarations and function parameters can shadow those bindings; a
 lookalike object cannot retain a real assertion's strength. Unresolved assertion
 candidates still produce diagnostics. Dynamic module names, arbitrary wrapper

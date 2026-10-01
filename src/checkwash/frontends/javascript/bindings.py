@@ -93,6 +93,8 @@ class Bindings:
             return Value("node_test")
         if name in {"@jest/globals", "vitest"}:
             return Value("jest")
+        if name == "chai":
+            return Value("chai")
         return UNKNOWN
 
     @staticmethod
@@ -101,6 +103,14 @@ class Bindings:
             return Value("node") if name == "strict" else Value("node_method", name)
         if value.kind == "jest" and name == "expect":
             return Value("expect")
+        # Vitest re-exports chai's assert interface. @jest/globals shares this
+        # module kind but has no such export to call.
+        if value.kind == "jest" and name == "assert":
+            return Value("chai_assert")
+        if value.kind == "chai" and name in {"expect", "assert"}:
+            return Value("chai_" + name)
+        if value.kind == "chai_assert":
+            return Value("chai_assert_method", name)
         if value.kind == "node_test" and name in {"test", "it"}:
             return Value("runner")
         if value.kind == "context" and name == "assert":
@@ -486,6 +496,10 @@ class Bindings:
             return frozenset({"Node"})
         if value.kind in {"context", "expect", "jest"}:
             return frozenset({value.kind})
+        if value.kind == "chai_expect":
+            return frozenset({"expect"})
+        if value.kind in {"chai_assert", "chai_assert_method"}:
+            return frozenset({"chai"})
         return frozenset()
 
     def _candidate_families(self, name: str, position: int,
@@ -565,12 +579,16 @@ class Bindings:
                                  + r"\b|(?:\?\.)?\s*\[\s*(['\"])" + name + r"\1\s*\])", spelling))
         if value.kind == "context" and not member("assert"):
             return None
-        if value.kind == "jest" and not member("expect"):
+        # Both Vitest's module and chai's export expect and chai's assert;
+        # their other members are not assertion candidates.
+        if value.kind in {"jest", "chai"} and not (member("expect") or member("assert")):
             return None
         if value.kind in {"node", "node_method", "node_namespace", "node_context", "context"}:
             return "Node"
-        if value.kind in {"expect", "jest"}:
+        if value.kind in {"expect", "chai_expect"} or (value.kind in {"jest", "chai"} and member("expect")):
             return "expect"
+        if value.kind in {"jest", "chai", "chai_assert", "chai_assert_method"}:
+            return "chai"
         families = self._candidate_families(root, position)
         for family in families:
             if family == "context" and not member("assert"):

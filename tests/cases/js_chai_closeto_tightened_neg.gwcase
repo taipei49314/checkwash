@@ -1,0 +1,26 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: chai closeTo(78.75, 0.005) -> closeTo(78.75, 0.0001) tightens the delta
+origin: issue #180 negative control
+=== before: test/billing.spec.js ===
+import { expect } from "chai";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).to.be.closeTo(78.75, 0.005);
+  });
+});
+=== after: test/billing.spec.js ===
+import { expect } from "chai";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).to.be.closeTo(78.75, 0.0001);
+  });
+});
+=== expect ===
+[]

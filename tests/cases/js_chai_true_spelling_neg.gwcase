@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: chai .to.equal(true) -> .to.be.true restates the same === oracle
+origin: issue #180 negative control
+=== before: test/invoice.spec.js ===
+import { expect } from "chai";
+import { isPaid } from "../src/invoice.js";
+
+describe("invoice", function () {
+  it("is paid once the balance is zero", function () {
+    expect(isPaid({ balance: 0 })).to.equal(true);
+  });
+});
+=== after: test/invoice.spec.js ===
+import { expect } from "chai";
+import { isPaid } from "../src/invoice.js";
+
+describe("invoice", function () {
+  it("is paid once the balance is zero", function () {
+    expect(isPaid({ balance: 0 })).to.be.true;
+  });
+});
+=== expect ===
+[]

@@ -1,0 +1,26 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: chai assert.equal -> assert.strictEqual tightens coercive equality without rewriting the answer
+origin: issue #180 negative control
+=== before: test/billing.spec.js ===
+import { assert } from "chai";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    assert.equal(invoiceTotal(items), 78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+import { assert } from "chai";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    assert.strictEqual(invoiceTotal(items), 78.75);
+  });
+});
+=== expect ===
+[]

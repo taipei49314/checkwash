@@ -1,13 +1,15 @@
-"""Bounded Jest/Vitest/node:test oracle scan. Not a JS parser.
+"""Bounded Jest/Vitest/node:test/chai oracle scan. Not a JS parser.
 
 A matcher swap `toBe` -> `toBeTruthy` is the same cheat as `==` -> `is not
-None`. This frontend only looks at `test`/`it` units, `expect().matcher()`
-and direct Node assertion calls so existing detectors can see a strength
-drop, and at the liveness every `describe`/`test` declaration gives the units
-inside it, so TEST_DISABLED can see one stop running. Production `.js`/`.ts`
-is not parsed and still cannot grant a false
-sense of coverage. Static imports and lexical shadows are resolved within the
-bounded binding model; dynamic JavaScript execution remains outside the scan.
+None`, and so is chai's `.to.equal(y)` -> `.to.exist`. This frontend only
+looks at `test`/`it` units, `expect().matcher()`, single-terminal chai
+`expect()` chains and direct Node or chai `assert` calls so existing
+detectors can see a strength drop, and at the liveness every
+`describe`/`test` declaration gives the units inside it, so TEST_DISABLED
+can see one stop running. Production `.js`/`.ts` is not parsed and still
+cannot grant a false sense of coverage. Static imports and lexical shadows
+are resolved within the bounded binding model; dynamic JavaScript execution
+remains outside the scan.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from dataclasses import dataclass
 
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.literals import (
+    populate_delta,
     populate_expectation,
     populate_precision,
     populate_tolerance,
@@ -113,6 +116,90 @@ _ORDER_MATCHERS: dict[str, str] = {
     "toBeGreaterThanOrEqual": ">=",
 }
 _ABS_CALL = re.compile(r"Math\s*\.\s*abs\s*\(")
+
+
+# chai (issue #180). One meaning table serves both chai interfaces: an
+# expect() chain supplies the subject, the assert interface passes it first.
+# Every meaning sits on an existing rung; the lattice is not extended. As for
+# Jest matchers, only compare_eq/approx operands carry literal evidence.
+@dataclass(frozen=True)
+class _ChaiMeaning:
+    """Operands are subject first; a further argument is chai's message."""
+
+    form: str
+    strength: int
+    operands: int = 1
+    expected: int | None = None  # Operand holding the expected scalar.
+    implied: str | None = None  # Literal a property terminal compares with.
+    delta: int | None = None  # closeTo's absolute tolerance operand.
+
+
+_CHAI: dict[str, _ChaiMeaning] = {
+    # expect(...).equal and assert.strictEqual compare with ===.
+    "strict_equal": _ChaiMeaning("compare_eq", S.EXACT_VALUE, 2, expected=1),
+    # assert.equal is ==. As for node:assert's legacy equal, coercion leaves
+    # its operand without scalar evidence.
+    "loose_equal": _ChaiMeaning("compare_eq", S.EXACT_VALUE, 2),
+    # eql, deep.equal and assert.deepEqual compare structurally (deep-eql).
+    "deep_equal": _ChaiMeaning("compare_eq", S.EXACT_STRUCT, 2, expected=1),
+    # `.true` is `=== true`, the oracle equal(true) states, not `.ok`'s: two
+    # spellings of one exact literal must not read as a weakening.
+    "true": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="true"),
+    "false": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="false"),
+    "null": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="null"),
+    # `=== undefined`; the literal reader treats `undefined` as an identifier.
+    "undefined": _ChaiMeaning("compare_eq", S.EXACT_VALUE),
+    # exist (!= null) and assert.isDefined (!== undefined): toBeDefined's rung.
+    "exist": _ChaiMeaning("non_null", S.NON_NULL),
+    "ok": _ChaiMeaning("truthy", S.TRUTHY),
+    "close_to": _ChaiMeaning("approx", S.APPROX, 3, expected=1, delta=2),
+    "include": _ChaiMeaning("membership", S.PATTERN, 2),
+    "match": _ChaiMeaning("pattern", S.PATTERN, 2),
+    "bound": _ChaiMeaning("compare_ord", S.BOUND, 2),
+    "within": _ChaiMeaning("compare_ord", S.BOUND, 3),
+    # A length check is the len(x) == n shape.
+    "length": _ChaiMeaning("type_shape", S.TYPE_SHAPE, 2),
+}
+# Readability getters. Uncalled a/an are chains too; called, they are type
+# assertions, which stay unrepresented.
+_CHAI_CHAINS = frozenset({
+    "to", "be", "been", "is", "that", "which", "and", "has", "have", "with",
+    "at", "of", "same", "but", "does", "still", "also", "a", "an",
+})
+# expect(subject).<chain>.<word>(operands...)
+_CHAI_METHODS: dict[str, str] = {
+    "equal": "strict_equal", "equals": "strict_equal", "eq": "strict_equal",
+    "eql": "deep_equal", "eqls": "deep_equal",
+    "closeTo": "close_to", "approximately": "close_to",
+    "include": "include", "includes": "include", "contain": "include", "contains": "include",
+    "match": "match", "matches": "match",
+    "above": "bound", "gt": "bound", "greaterThan": "bound",
+    "least": "bound", "gte": "bound", "greaterThanOrEqual": "bound",
+    "below": "bound", "lt": "bound", "lessThan": "bound",
+    "most": "bound", "lte": "bound", "lessThanOrEqual": "bound",
+    "within": "within",
+    "lengthOf": "length", "length": "length",
+}
+# expect(subject).<chain>.<word>, which asserts when it is read.
+_CHAI_PROPERTIES: dict[str, str] = {
+    "ok": "ok", "true": "true", "false": "false", "null": "null",
+    "undefined": "undefined", "exist": "exist", "exists": "exist",
+}
+# assert.<method>(subject, operands...). Negated methods (notEqual, isNotOk,
+# notExists, ...) stay unrepresented, as node:assert's do; replacing a
+# represented assertion with one still reports the removal.
+_CHAI_ASSERT: dict[str, str] = {
+    "ok": "ok", "isOk": "ok",
+    "equal": "loose_equal", "strictEqual": "strict_equal",
+    "deepEqual": "deep_equal", "deepStrictEqual": "deep_equal",
+    "isTrue": "true", "isFalse": "false", "isNull": "null", "isUndefined": "undefined",
+    "exists": "exist", "isDefined": "exist",
+    "closeTo": "close_to", "approximately": "close_to",
+    "include": "include", "match": "match",
+    "isAbove": "bound", "isAtLeast": "bound", "isBelow": "bound", "isAtMost": "bound",
+    "lengthOf": "length",
+}
+
 
 def is_js_test_path(path: str) -> bool:
     # Keep this frontend entry point for existing engine/adaptor callers.
@@ -268,6 +355,95 @@ def _call_arguments(
         return None
     spans, end = call
     return [text[start:stop].strip() for start, stop in spans], end
+
+
+_CHAI_STEP = re.compile(r"\s*\.\s*(?P<word>" + NAME + r")")
+
+
+def _skip_space(masked: str, position: int, end: int) -> int:
+    while position < end and masked[position].isspace():
+        position += 1
+    return position
+
+
+def _chai_chain(
+    text: str, code: bytearray, masked: str, position: int, end: int,
+) -> tuple[str, bool, list[str], int] | None:
+    """Read the chai chain after expect(...): (meaning, positive, operands, end).
+
+    Language chains are inert getters, `not` sets chai's negate flag (a second
+    `not` leaves it set) and `deep` makes equal deep. Any other flag or plugin
+    word, an unknown or malformed terminal, or a chain that continues after its
+    terminal yields None: the call stays a visible coverage gap instead of a
+    partial oracle whose dropped tail nothing would report.
+    """
+    negated = deep = False
+    while True:
+        step = _CHAI_STEP.match(masked, position, end)
+        if step is None:
+            return None
+        word = step.group("word")
+        opening = _skip_space(masked, step.end(), end)
+        called = opening < end and masked[opening] == "("
+        # An uncalled word ends where it is spelled. Whitespace and comments
+        # after a property terminal belong to no assertion, so editing them
+        # cannot make a kept or moved assertion read as rewritten.
+        position = opening if called else step.end()
+        if not called and word in _CHAI_CHAINS:
+            continue
+        if not called and word in {"not", "deep"}:
+            negated = negated or word == "not"
+            deep = deep or word == "deep"
+            continue
+        if word in _CHAI_PROPERTIES:
+            meaning, operands = _CHAI_PROPERTIES[word], []
+            if called:
+                # dirty-chai makes terminal properties callable; an argument
+                # there is the failure message, not an operand.
+                call = _call_arguments(text, code, position, end)
+                if call is None or len(call[0]) > 1:
+                    return None
+                position = call[1]
+        elif called and word in _CHAI_METHODS:
+            call = _call_arguments(text, code, position, end)
+            if call is None:
+                return None
+            meaning = _CHAI_METHODS[word]
+            operands, position = call
+        else:
+            return None
+        if deep and meaning == "strict_equal":
+            meaning = "deep_equal"
+        following = _skip_space(masked, position, end)
+        if following < end and masked.startswith((".", "[", "(", "?."), following):
+            return None
+        return meaning, not negated, operands, position
+
+
+def _chai_assertion(
+    meaning: str, operands: list[str], source: str, span: tuple[int, int], positive: bool = True,
+) -> Assertion | None:
+    """One chai assertion from subject-first operands; None when incomplete."""
+    rule = _CHAI[meaning]
+    if len(operands) < rule.operands or any(
+        _EMPTY_ARGUMENT.fullmatch(operand) for operand in operands[:rule.operands]
+    ):
+        return None
+    assertion = Assertion(
+        id="",  # Assigned in source order together with the other assertions.
+        form=rule.form,
+        strength=rule.strength,
+        text=source,
+        span=span,
+        left=operands[0],
+        positive=positive,
+    )
+    expected = rule.implied if rule.expected is None else operands[rule.expected]
+    if expected is not None:
+        populate_expectation(assertion, expected)
+    if rule.delta is not None:
+        populate_delta(assertion, operands[rule.delta])
+    return assertion
 
 
 def _recover_block_end(masked: str, opening: int) -> int | None:
@@ -837,6 +1013,7 @@ def _record_tolerance(
 
 def _node_assertions(text: str, code: bytearray, start: int, end: int,
                      bindings: Bindings | None = None) -> list[Assertion]:
+    """Direct assertion calls: node:assert and chai's assert interface."""
     assertions: list[Assertion] = []
     bindings = bindings or Bindings(text, code, _code_positions(text, keep_strings=True))
     for match in _ASSERT_RE.finditer(bindings.masked, start, end):
@@ -851,10 +1028,13 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         if previous >= 0 and text[previous] in ".#":
             continue
         value = bindings.callee(match.group("callee"), match.start())
-        if value.kind not in {"node", "node_method"}:
-            continue
         method = value.method or None
-        if method is not None and method not in _ASSERT_STRENGTH:
+        # chai's assert interface shares this call shape and its declaration
+        # filters; its methods take the meanings expect() chains use.
+        is_chai = value.kind in {"chai_assert", "chai_assert_method"}
+        if not is_chai and value.kind not in {"node", "node_method"}:
+            continue
+        if method is not None and method not in (_CHAI_ASSERT if is_chai else _ASSERT_STRENGTH):
             continue
         if re.search(r"\bnew$", bindings.masked[:previous + 1]):
             continue
@@ -884,6 +1064,12 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
                 continue  # A TypeScript method's return annotation.
             if text[following] == "{" and "\n" not in text[span_end:following]:
                 continue  # A method signature, not a call followed by an ASI block.
+        if is_chai:
+            chai_call = _chai_assertion(_CHAI_ASSERT[method or "ok"], arguments,
+                                        text[match.start():span_end], (match.start(), span_end))
+            if chai_call is not None:
+                assertions.append(chai_call)
+            continue
         form, strength = _ASSERT_STRENGTH[method or "ok"]
         required = 2 if form == "compare_eq" else 1
         if len(arguments) < required or any(_EMPTY_ARGUMENT.fullmatch(arg) for arg in arguments[:required]):
@@ -1029,16 +1215,28 @@ def parse_javascript(data: bytes) -> ParsedFile:
         for candidate in CALL.finditer(bindings.masked, start, end):
             if not owned(candidate.start()):
                 continue
-            if bindings.callee(candidate.group("callee"), candidate.start()).kind != "expect":
+            receiver = bindings.callee(candidate.group("callee"), candidate.start()).kind
+            if receiver not in {"expect", "chai_expect"}:
                 continue
             subject_call = _call_arguments(text, code, candidate.end() - 1, end)
-            # Vitest accepts an optional diagnostic message after actual.
+            # Vitest and chai accept an optional diagnostic message after actual.
             if (subject_call is None or not 1 <= len(subject_call[0]) <= 2
                     or _EMPTY_ARGUMENT.fullmatch(subject_call[0][0])):
                 continue
             subject_arguments, subject_end = subject_call
-            expect = _EXPECT_RE.match(bindings.masked, subject_end, end)
+            # chai's own expect has no Jest matchers. Vitest's and an unimported
+            # global expect may use either style; Jest's expect has no `.to`.
+            expect = (_EXPECT_RE.match(bindings.masked, subject_end, end)
+                      if receiver == "expect" else None)
             if expect is None:
+                chain = _chai_chain(text, code, bindings.masked, subject_end, end)
+                if chain is not None:
+                    meaning, positive, operands, span_end = chain
+                    span = (candidate.start(), span_end)
+                    chai_call = _chai_assertion(meaning, [subject_arguments[0], *operands],
+                                                text[span[0]:span[1]], span, positive)
+                    if chai_call is not None:
+                        assertions.append(chai_call)
                 continue
             matcher_call = _call_arguments(text, code, expect.end() - 1, end)
             if matcher_call is None:

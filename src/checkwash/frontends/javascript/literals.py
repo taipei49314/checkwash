@@ -228,6 +228,31 @@ def populate_precision(assertion: Assertion, expression: str | None = None) -> N
     assertion.epsilon_kind = "places"
 
 
+def populate_delta(assertion: Assertion, expression: str) -> None:
+    """Record a positive chai closeTo/approximately absolute delta.
+
+    chai passes when |actual - expected| <= delta, so a larger finite Number
+    is looser. That is the absolute bound a hand-rolled `Math.abs(a - b) <
+    bound` states, so it is recorded in the same keyed form with kind `abs`:
+    a bare value in a JS file reads as `toBeCloseTo` places, and a delta of
+    1 must not compare as one decimal place. Signed zeroes are the same
+    delta. Identifiers, computed or non-finite deltas and negated
+    comparisons, whose ordering reverses, remain unknown.
+    """
+    assertion.epsilon = None
+    assertion.epsilon_kind = None
+    if assertion.form != "approx" or not assertion.positive or len(expression) > 4096:
+        return
+    source = _without_comments(expression)
+    if source is None:
+        return
+    delta = _number(source.strip(_WHITESPACE))
+    if delta is None:
+        return
+    assertion.epsilon = f"abs={delta if delta else 0.0}"
+    assertion.epsilon_kind = "abs"
+
+
 # Tolerance bounds (issue #179). How two bounds order is a verdict, so they
 # stay exact Decimals end to end (SPEC §3): `Number.EPSILON` is exactly
 # 2**-52, and a product is taken in a context wide enough to keep
