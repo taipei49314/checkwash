@@ -42,6 +42,15 @@ assertions; changing a scalar expected value or loosening positive
 spellings remain equivalent across subject checks. This is bounded syntax
 support, not general JS/TS analysis. [v0.4.2 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.4.2-public-launch.md)
 
+**v0.5.0 closes a round of red-team reports (#172–#181).** A skip in a
+fixture or setup the test runs, a selector over edited tests, a package
+manifest's test command, Jest's `__tests__/` layout, JS block-level and
+imperative skips, JS module mocks, hand-rolled JS tolerances, chai assertions
+and CI control flow that stops a runner now reach the detectors; #180 and #181
+are closed in part. Some existing findings now carry a different fingerprint,
+so allowlist entries for those shapes must be re-recorded; the JSON shape is
+unchanged. [v0.5.0 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.5.0-public-launch.md)
+
 ## Try it
 
 You need **Python 3.11+ and Git**. Download and try the offline examples first.
@@ -49,7 +58,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.4.2/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.5.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -58,7 +67,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.4.2/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.5.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -70,7 +79,7 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.4.2/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.5.0/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
@@ -85,11 +94,11 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.4.2-public-launch.md#try-it-on-a-change-you-understand).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.5.0-public-launch.md#try-it-on-a-change-you-understand).
 
 ## Know the limits
 
-**v0.4.2 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.5.0 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
@@ -106,9 +115,9 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action is pinned to **v0.4.1**; the CLI above is **v0.4.2**.
-The prior-release Action includes the Node assertion repair and coverage
-diagnostics, but lacks this release's callback and scalar-evidence fixes.
+The recommended Action is pinned to **v0.4.2**; the CLI above is **v0.5.0**.
+The prior-release Action includes the JS/TS callback and scalar-evidence
+foundation, but lacks this release's fixes for the #172–#181 reports.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
@@ -135,7 +144,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@ea726c9cbd172b838bcf42b2c9969759e4ca358e # v0.4.1
+      - uses: taipei49314/checkwash/action@23ef5929896187e4aac5889735c792e65af3e721 # v0.4.2
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -153,8 +162,8 @@ can inspect the local workflow, but cannot verify live branch protection.
 
 **Why the older Action pin?** A release cannot embed its own commit SHA,
 so the documented Action adopts a verified pin from the prior release.
-The recommended v0.4.1 Action includes the Node assertion repair and coverage
-diagnostics, but not the v0.4.2 assertion foundation. A CLI
+The recommended v0.4.2 Action includes the JS/TS callback and scalar-evidence
+foundation, but not the v0.5.0 fixes for the #172–#181 reports. A CLI
 upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
@@ -170,9 +179,9 @@ upgrade does not update an existing Action. To verify another trusted release, u
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.4.2
+pipx install checkwash==0.5.0
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.4.2
+pipx install git+https://github.com/taipei49314/checkwash@v0.5.0
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -210,7 +219,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.4.2 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.4.2-public-launch.md) |
+| Installation checks, versions and first use | [v0.5.0 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.5.0-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |

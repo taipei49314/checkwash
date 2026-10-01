@@ -1,9 +1,9 @@
 # Adopt the quality preview
 
-The v0.4.2 package includes this limited preview for coverage, Ruff and mypy
+The v0.5.0 package includes this limited preview for coverage, Ruff and mypy
 configuration review alongside the existing test-oracle check. The recommended
-v0.4.1 Action includes it too; the preview's source is unchanged from v0.4.0
-through v0.4.2. Natural-case labels, completeness evaluation
+v0.4.2 Action includes it too; the preview's source is unchanged from v0.4.0
+through v0.5.0. Natural-case labels, completeness evaluation
 and frozen legacy-byte parity remain separate outstanding conditions;
 publication and these setup commands do not establish production enforcement
 maturity. See the [release evidence](releases/v0.4.0-public-launch.md).
