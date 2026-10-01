@@ -19,7 +19,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
-from checkwash.frontends.javascript.literals import populate_expectation, populate_precision
+from checkwash.frontends.javascript.literals import (
+    populate_expectation,
+    populate_precision,
+    populate_tolerance,
+)
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir import strength as S
 from checkwash.ir.model import Assertion, Marker, UnitSide, normalize_text
@@ -100,6 +104,15 @@ _MATCHER_STRENGTH: dict[str, tuple[str, int]] = {
     "toBeLessThan": ("compare_ord", S.BOUND),
     "toBeLessThanOrEqual": ("compare_ord", S.BOUND),
 }
+# Each ordering matcher as the comparison `subject <op> argument` it asserts;
+# reading a hand-rolled tolerance (issue #179) needs the direction.
+_ORDER_MATCHERS: dict[str, str] = {
+    "toBeLessThan": "<",
+    "toBeLessThanOrEqual": "<=",
+    "toBeGreaterThan": ">",
+    "toBeGreaterThanOrEqual": ">=",
+}
+_ABS_CALL = re.compile(r"Math\s*\.\s*abs\s*\(")
 
 def is_js_test_path(path: str) -> bool:
     # Keep this frontend entry point for existing engine/adaptor callers.
@@ -710,6 +723,118 @@ def _unit_markers(declaration: _Declaration, ancestors: list[_Declaration],
     return markers
 
 
+def _trim(text: str, code: bytearray, span: tuple[int, int]) -> tuple[int, int]:
+    """Drop whitespace and comments around an operand, keeping its source."""
+    start, end = span
+    while start < end and (not code[start] or text[start].isspace()):
+        start += 1
+    while end > start and (not code[end - 1] or text[end - 1].isspace()):
+        end -= 1
+    return start, end
+
+
+def _relational_split(
+    text: str, code: bytearray, span: tuple[int, int],
+) -> tuple[tuple[int, int], str, tuple[int, int]] | None:
+    """`a < b` as (a, "<", b), when that comparison is the whole expression.
+
+    Exactly one top-level `<`, `<=`, `>` or `>=`. An equality, logical,
+    conditional, assignment, sequence or shift operator at the top level
+    makes the comparison part of something larger, and nothing is claimed.
+    Brackets nest; literal and comment contents are outside the code mask.
+    """
+    start, end = span
+    depth = 0
+    found: tuple[int, int] | None = None
+    i = start
+    while i < end:
+        char = text[i]
+        if not code[i]:
+            pass
+        elif char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+            if depth < 0:
+                return None
+        elif depth == 0 and char in "<>":
+            following = text[i + 1] if i + 1 < end else ""
+            if found is not None or following in {"<", ">"}:
+                return None
+            found = (i, i + 2 if following == "=" else i + 1)
+            i = found[1]
+            continue
+        elif depth == 0 and char in "=!&|?:,;":
+            return None
+        i += 1
+    if found is None or depth:
+        return None
+    return (start, found[0]), text[found[0]:found[1]], (found[1], end)
+
+
+def _without_parentheses(text: str, code: bytearray, span: tuple[int, int]) -> tuple[int, int]:
+    """An expression without surrounding whitespace, comments or redundant parentheses.
+
+    `((a < b))` is read as `a < b`; `(a) < (b)` and `(a, b)` stay whole. The
+    comparison and its `Math.abs` operand both go through this one peeling.
+    """
+    start, end = _trim(text, code, span)
+    while start < end and text[start] == "(":
+        group = _call_argument_spans(text, code, start, end)
+        if group is None or group[1] != end or len(group[0]) != 1:
+            break
+        start, end = _trim(text, code, group[0][0])
+    return start, end
+
+
+def _absolute_value_call(text: str, code: bytearray, span: tuple[int, int]) -> bool:
+    """Is the operand one complete `Math.abs(...)` call, parentheses aside?"""
+    start, end = _without_parentheses(text, code, span)
+    match = _ABS_CALL.match(text, start, end)
+    if match is None:
+        return False
+    call = _call_argument_spans(text, code, match.end() - 1, end)
+    return call is not None and call[1] == end and len(call[0]) == 1
+
+
+def _record_tolerance(
+    assertion: Assertion, text: str, code: bytearray, bindings: Bindings,
+    subject: tuple[int, int], operator: str | None = None,
+    bound: tuple[int, int] | None = None,
+) -> None:
+    """Read `Math.abs(a - b) < bound` as the absolute tolerance it states.
+
+    Issue #179: `assert.ok(Math.abs(total - 78.75) < 0.01)` widened to
+    `< 1e12` reached no detector, because the whole comparison was an opaque
+    truthy subject. Every spelling goes through this one reading: a truthy
+    oracle passes its subject and the comparison is split out of it; an
+    ordering matcher passes subject, operator and bound. Both orientations
+    count (`eps > Math.abs(d)`), but the magnitude must be an unshadowed
+    `Math.abs` call on the smaller side: `Math.abs(d) > eps` asserts that
+    two values differ and records nothing. The subject text is left alone,
+    so pairing and the other rules see the assertion exactly as before.
+    """
+    if operator is None or bound is None:
+        # Redundant parentheses around the whole comparison state the same
+        # bound: `assert.ok((Math.abs(d) < eps))` (review of #189).
+        split = _relational_split(text, code, _without_parentheses(text, code, subject))
+        if split is None:
+            return
+        subject, operator, bound = split
+    if operator in {">", ">="}:
+        subject, bound = bound, subject
+    position = assertion.span[0]
+    if not _absolute_value_call(text, code, subject) or not bindings.is_global(("Math", "abs"), position):
+        return
+
+    def lookup(name: str) -> str | None:
+        tokens = bindings.initializer(name, position)
+        return "".join(tokens) if tokens else None
+
+    populate_tolerance(assertion, text[bound[0]:bound[1]], lookup,
+                       lambda path: bindings.is_global(path, position))
+
+
 def _node_assertions(text: str, code: bytearray, start: int, end: int,
                      bindings: Bindings | None = None) -> list[Assertion]:
     assertions: list[Assertion] = []
@@ -746,10 +871,11 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
                 previous -= 1
             if text[previous + 1:token_end] == "function":
                 continue
-        call = _call_arguments(text, code, match.end() - 1, end)
+        call = _call_argument_spans(text, code, match.end() - 1, end)
         if call is None:
             continue
-        arguments, span_end = call
+        argument_spans, span_end = call
+        arguments = [text[first:last].strip() for first, last in argument_spans]
         following = span_end
         while following < end and (not code[following] or text[following].isspace()):
             following += 1
@@ -775,6 +901,10 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         # can supply scalar expectation identity without guessing coercion.
         if method in {"strictEqual", "deepStrictEqual"}:
             populate_expectation(assertion, arguments[1])
+        # A truthy oracle, or its strict `=== true` spelling, may be a
+        # hand-rolled tolerance (issue #179).
+        if form == "truthy" or assertion.right_value == "True":
+            _record_tolerance(assertion, text, code, bindings, argument_spans[0])
         assertions.append(assertion)
     return assertions
 
@@ -935,6 +1065,18 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 populate_expectation(assertion, arguments[0])
             if form == "approx" and assertion.positive:
                 populate_precision(assertion, arguments[1] if len(arguments) > 1 else None)
+            if assertion.positive and (
+                matcher == "toBeTruthy" or matcher in _ORDER_MATCHERS
+                or (form == "compare_eq" and assertion.right_value == "True")
+            ):
+                # The spans behind the argument texts read above.
+                subject_spans = _call_argument_spans(text, code, candidate.end() - 1, end)
+                matcher_spans = _call_argument_spans(text, code, expect.end() - 1, end)
+                operator = _ORDER_MATCHERS.get(matcher)
+                if subject_spans and subject_spans[0] and matcher_spans is not None:
+                    bound = matcher_spans[0][0] if operator and matcher_spans[0] else None
+                    _record_tolerance(assertion, text, code, bindings, subject_spans[0][0],
+                                      operator, bound)
             assertions.append(assertion)
         assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
                           if owned(assertion.span[0]))

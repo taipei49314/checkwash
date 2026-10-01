@@ -4,6 +4,10 @@ Direction depends on the tolerance kind: rel/abs/delta grow looser as they
 grow bigger; unittest's `places` grows looser as it SHRINKS. Comparison uses
 decimal.Decimal on the literal source text — floats never touch a verdict
 (SPEC §3/§8).
+
+A JS file records two spellings of one absolute bound: `toBeCloseTo` places
+and a hand-rolled `Math.abs(a - b) < bound` (issue #179). A pair of the two
+is compared in one unit rather than as unrelated kinds.
 """
 
 from __future__ import annotations
@@ -58,6 +62,51 @@ def _loosened(kind: str, before: str, after: str) -> bool:
     return False
 
 
+_JS_SUFFIXES = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts")
+
+
+def _js_absolute(value: str) -> tuple[Decimal, str] | None:
+    """A JS tolerance as the absolute bound it enforces, and its label.
+
+    The JS frontend records two spellings: `toBeCloseTo` decimal places,
+    bare (`"2"`), and the bound of a hand-rolled `Math.abs(a - b) < bound`,
+    keyed like pytest.approx (`"abs=0.01"`). Jest and Vitest pass
+    `toBeCloseTo(x, p)` when |x - expected| < 10**-p / 2, so places `p` is
+    the bound 5 * 10**-(p + 1), written from its digits rather than computed.
+    """
+    try:
+        if value.startswith("abs=") and "|" not in value:
+            bound, label = Decimal(value[4:]), value
+        elif "=" not in value:
+            places = Decimal(value)
+            if (not places.is_finite() or not -308 <= places <= 307
+                    or places != places.to_integral_value()):
+                return None
+            bound, label = Decimal((0, (5,), -int(places) - 1)), f"places={value}"
+        else:
+            return None
+    except (ArithmeticError, ValueError):
+        return None
+    return None if bound.is_nan() else (bound, label)
+
+
+def _js_mixed(path: str, before: str, after: str) -> tuple[bool, str, str] | None:
+    """Compare a JS `toBeCloseTo` precision with a hand-rolled bound (issue #179).
+
+    Read as unrelated kinds, the pair misleads both ways: `< 0.5` ->
+    `toBeCloseTo(x, 0)` is the same bound, yet a keyed bound against a bare
+    one read as brand-new slack, and raw numbers as places shrinking from
+    0.5 to 0. None when the pair is not one of each (the per-kind comparison
+    applies); a side that cannot be read is no finding — no guess, no noise.
+    """
+    if not path.lower().endswith(_JS_SUFFIXES) or ("=" in before) == ("=" in after):
+        return None
+    old, new = _js_absolute(before), _js_absolute(after)
+    if old is None or new is None:
+        return False, before, after
+    return new[0] > old[0], old[1], new[1]
+
+
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
@@ -67,16 +116,22 @@ def detect(ir: IR) -> list[Finding]:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
             for kind, before_eps, after_eps in unit.delta.tolerance_changes:
-                if not _loosened(kind, before_eps, after_eps):
+                mixed = _js_mixed(file.path, before_eps, after_eps)
+                if mixed is not None:
+                    loosened, b_show, a_show = mixed
+                    if not loosened:
+                        continue
+                elif not _loosened(kind, before_eps, after_eps):
                     continue
-                # Epsilons are recorded keyed ("rel=1e-6", "rel=1e-9|abs=1")
-                # or bare ("0.5" for a positional tolerance): show the key
-                # only when the value does not carry it, so the report reads
-                # "rel=1e-6 -> rel=1e-2", not "rel=rel=1e-6" (user-perspective
-                # review 2026-08-19; the doubling predates the keyed format
-                # and reached the demo's output).
-                b_show = before_eps if "=" in before_eps else f"{kind}={before_eps}"
-                a_show = after_eps if "=" in after_eps else f"{kind}={after_eps}"
+                else:
+                    # Epsilons are recorded keyed ("rel=1e-6", "rel=1e-9|abs=1")
+                    # or bare ("0.5" for a positional tolerance): show the key
+                    # only when the value does not carry it, so the report reads
+                    # "rel=1e-6 -> rel=1e-2", not "rel=rel=1e-6" (user-perspective
+                    # review 2026-08-19; the doubling predates the keyed format
+                    # and reached the demo's output).
+                    b_show = before_eps if "=" in before_eps else f"{kind}={before_eps}"
+                    a_show = after_eps if "=" in after_eps else f"{kind}={after_eps}"
                 findings.append(
                     Finding(
                         rule="TOLERANCE_LOOSENED",

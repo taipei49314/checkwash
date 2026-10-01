@@ -76,6 +76,53 @@ python -m pytest tests/test_assertion_contract.py tests/test_js_coverage.py
 python tools/qualify_assertions.py --distribution source --output receipts/source.json
 ```
 
+### Hand-rolled tolerances
+
+Issue [#179](https://github.com/taipei49314/checkwash/issues/179) showed that
+`assert.ok(Math.abs(total - 78.75) < 0.01)` widened to `< 1e12` reached no
+detector, because the whole comparison was an opaque truthy subject. One
+predicate shape is now read inside an oracle: a single top-level `<`, `<=`,
+`>` or `>=` with an unshadowed `Math.abs(...)` call on its smaller side.
+Redundant parentheses around the comparison or either operand do not change
+it. It applies to `assert`, `assert.ok` and `t.assert.ok`, to
+`assert.strictEqual(..., true)`, to `expect(...).toBeTruthy()` and to
+`expect(...).toBe(true)`, `toEqual(true)` and `toStrictEqual(true)`. The
+positive ordering matchers read the same shape from their two operands, as in
+`expect(Math.abs(d)).toBeLessThan(eps)` or
+`expect(eps).toBeGreaterThan(Math.abs(d))`.
+
+The bound is recorded the way `pytest.approx(..., abs=eps)` records its
+tolerance, and `TOLERANCE_LOOSENED` compares it as an exact decimal. It may be
+a Number literal (read exactly from its digits, not as a binary float),
+`Number.EPSILON`, `Infinity`, `Number.POSITIVE_INFINITY`, a product of two of
+these, or a local `const`, `let` or `var` initialized to one of them. The
+declaration has to end before the assertion starts: at a `;` or `,`, or at a
+line break followed by `const`, `let`, `var`, `test`, `it`, `return`, `import`
+or `function`. A `=`, `+=`, `-=`, `*=`, `/=` or postfix `++`/`--` write before
+the assertion, in its own function or an enclosing one, makes the name
+unknown. In JS files a `toBeCloseTo(x, p)` precision and a hand-rolled bound
+are compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
+`toBeCloseTo(x, 2)` are equal.
+
+Not read: lower bounds such as `Math.abs(d) > eps`, negated or falsy
+spellings, conjunctions, relative or scaled magnitudes, `**`, a literal whose
+exponent is past what an exact decimal holds (such as
+`1e99999999999999999999`), and imported, chained or TypeScript-annotated
+bounds. A declaration without a semicolon that runs on into the next line's
+statement, such as `const eps = 0.01` followed by `expect(...)`, is not read
+either. The binding scan does not follow other compound writes (`**=`, `%=`,
+`||=` and the rest), prefix increments, destructuring writes or writes inside
+another function such as a `beforeEach` callback, so a bound changed that way
+still reads as its initializer. A comparison flipped from `<` to `>` and a
+rewritten expected value inside `Math.abs(...)` are not reported by this
+reading. As with `toBeCloseTo`, bounds are compared on the pairs alignment
+forms: when one edit changes a hand-rolled check and inserts another tolerance
+check ahead of it in the same test, the position fallback can compare the
+bounds of two different checks. Replacing a hand-rolled tolerance with
+`toBeCloseTo` also changes the asserted subject; that change keeps its
+existing handling. The source tests are in
+[`tests/test_js_handrolled_tolerance.py`](../tests/test_js_handrolled_tolerance.py).
+
 ## Make unrepresented assertion candidates visible
 
 `checkwash check` scans both sides of changed JS/TS test files for bounded Node

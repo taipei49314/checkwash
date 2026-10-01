@@ -1,0 +1,22 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: naming a hand-rolled bound (0.01 -> const EPS = 1e-2) keeps the same tolerance and stays silent
+origin: issue 179 negative control — the same bound, respelled and moved into a declaration
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < 0.01).toBe(true);
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+const EPS = 1e-2;
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < EPS).toBe(true);
+});
+=== expect ===
+[]

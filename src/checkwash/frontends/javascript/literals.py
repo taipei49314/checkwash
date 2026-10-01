@@ -5,12 +5,16 @@ exponent and radix spellings normalize together, while negative zero stays
 distinct. BigInt, legacy octal, non-finite numbers, templates, containers,
 identifiers and computed expressions remain unknown. Ordinary quoted strings
 use JavaScript escapes and UTF-16 equality, rather than Python literal syntax.
+Tolerance bounds (issue #179) are read a little further, and kept as exact
+Decimals rather than Number values, because their ordering is a verdict.
 """
 
 from __future__ import annotations
 
 import math
 import re
+from collections.abc import Callable
+from decimal import Context, Decimal
 
 from checkwash.ir.model import Assertion
 
@@ -222,3 +226,121 @@ def populate_precision(assertion: Assertion, expression: str | None = None) -> N
         places = int(number)
     assertion.epsilon = str(places)
     assertion.epsilon_kind = "places"
+
+
+# Tolerance bounds (issue #179). How two bounds order is a verdict, so they
+# stay exact Decimals end to end (SPEC §3): `Number.EPSILON` is exactly
+# 2**-52, and a product is taken in a context wide enough to keep
+# `k * Number.EPSILON` exact for ordinary literals.
+_EXACT = Context(prec=80)
+_NAMED_BOUNDS = {
+    ("Number", "EPSILON"): _EXACT.divide(Decimal(1), Decimal(2 ** 52)),
+    ("Number", "POSITIVE_INFINITY"): Decimal("Infinity"),
+    ("Infinity",): Decimal("Infinity"),
+}
+_IDENTIFIER = re.compile(r"[A-Za-z_$][A-Za-z0-9_$]*")
+
+
+def _literal_decimal(expression: str) -> Decimal | None:
+    """The value a Number literal writes, as an exact Decimal.
+
+    The spellings `_number` accepts, read from the text rather than through
+    a binary float: a decimal literal is its written value, a radix literal
+    its integer. A literal Decimal cannot hold is unknown, never an error.
+    """
+    if not expression or len(expression) > 512:
+        return None
+    negative = expression.startswith("-")
+    source = expression
+    if source[0] in "+-":
+        source = source[1:].lstrip(_WHITESPACE)
+    try:
+        if _DECIMAL.fullmatch(source):
+            value = Decimal(source.replace("_", ""))
+        else:
+            for pattern, radix in _RADIX:
+                if pattern.fullmatch(source):
+                    value = Decimal(int(source[2:].replace("_", ""), radix))
+                    break
+            else:
+                return None
+        return -value if negative else value
+    except ArithmeticError:
+        # `1e99999999999999999999` has an exponent no exact Decimal holds, and
+        # negating `1e1000000` overflows the default context. Either escaped
+        # analyze as an engine error (exit 2); the bound is unknown instead.
+        return None
+
+
+def _bound_source(expression: str) -> str | None:
+    """A bound's text without comments, outer whitespace or parentheses."""
+    if len(expression) > 4096:
+        return None
+    source = _without_comments(expression)
+    if source is None:
+        return None
+    source = source.strip(_WHITESPACE)
+    while len(source) > 1 and source[0] == "(" and source[-1] == ")":
+        source = source[1:-1].strip(_WHITESPACE)
+    return source or None
+
+
+def _bound_value(expression: str, builtin: Callable[[tuple[str, ...]], bool]) -> Decimal | None:
+    """A Number literal, a named Number constant, or a product of two of them."""
+    source = _bound_source(expression)
+    if source is None:
+        return None
+    parts = source.split("*")
+    if len(parts) > 2:
+        return None  # `**`, and longer products, are not read
+    factors: list[Decimal] = []
+    for part in parts:
+        part = part.strip(_WHITESPACE)
+        path = tuple(name.strip(_WHITESPACE) for name in part.split("."))
+        if path in _NAMED_BOUNDS:
+            factor = _NAMED_BOUNDS[path] if builtin(path) else None
+        else:
+            factor = _literal_decimal(part)
+        if factor is None:
+            return None
+        factors.append(factor)
+    try:
+        value = factors[0] if len(factors) == 1 else _EXACT.multiply(factors[0], factors[1])
+    except ArithmeticError:
+        return None  # 0 * Infinity, or a product past the exponent range
+    return None if value.is_nan() else value
+
+
+def populate_tolerance(
+    assertion: Assertion,
+    expression: str,
+    lookup: Callable[[str], str | None],
+    builtin: Callable[[tuple[str, ...]], bool],
+) -> None:
+    """Record the bound of a hand-rolled `Math.abs(a - b) < bound` (issue #179).
+
+    That comparison states what `pytest.approx(b, abs=bound)` states, so the
+    bound is recorded in the same keyed form with kind `abs` (bigger is
+    looser), and TOLERANCE_LOOSENED compares it as a Decimal. The caller has
+    found the `Math.abs` side; this reads the bound only. `builtin(path)`
+    says whether a global such as `Number.EPSILON` is unshadowed at the
+    assertion; `lookup(name)` returns the initializer a plain name reads.
+
+    Read: a Number literal, `Number.EPSILON`, `Infinity`,
+    `Number.POSITIVE_INFINITY`, a product of two of these, or one local
+    name initialized to one of them. A name bound to another name, `**`,
+    division, calls and other members are unknown and record nothing.
+    """
+    assertion.epsilon = None
+    assertion.epsilon_kind = None
+    value = _bound_value(expression, builtin)
+    if value is None:
+        name = _bound_source(expression)
+        initializer = lookup(name) if name is not None and _IDENTIFIER.fullmatch(name) else None
+        if initializer is None:
+            return
+        value = _bound_value(initializer, builtin)
+        if value is None:
+            return
+    assertion.epsilon = f"abs={value}"
+    assertion.epsilon_kind = "abs"
