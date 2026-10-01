@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: a partial jest.mock factory that quotes the subject's key still replaces it
 origin: issue #177 family - requireActual keeps the rest of the module real, and a quoted key names the same export as a bare one; a partial factory replaces every name it spells

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 106
 rule: CI_WORKFLOW_TOUCHED
 issue: 174
 title: package.json scripts.test `node --test` -> `node --test || true` beside a weakened assertion

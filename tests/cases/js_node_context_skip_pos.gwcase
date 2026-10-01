@@ -1,4 +1,5 @@
 === meta ===
+bypass: 108
 rule: TEST_DISABLED
 title: t.skip() on the test's own context marks the unit skipped
 origin: issue #176 family, the imperative spelling of { skip: true } (node:test TestContext)

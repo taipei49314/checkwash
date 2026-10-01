@@ -1,4 +1,5 @@
 === meta ===
+bypass: 112
 rule: CI_WORKFLOW_TOUCHED
 title: deleting the pytest hook leaves a pre-commit config that runs no suite
 origin: issue #181, spelling 5 (reported in the issue) — row 69's two-sided rule in the hook

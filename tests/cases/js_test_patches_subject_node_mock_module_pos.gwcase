@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: node:test t.mock.module before the unit's dynamic import replaces the subject
 origin: issue #177 family - mock.module is ordered: it reaches an await import() evaluated after it in the same test

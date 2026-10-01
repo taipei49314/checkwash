@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: vi.spyOn(...).mockReturnValue on the namespace the assertion calls through replaces the subject
 origin: issue #177 family - the member spelling: the module stays real, the one function the oracle reads does not

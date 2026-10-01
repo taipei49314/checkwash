@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **121 bypasses** are documented, of which **30 are not closed**.
+- **130 bypasses** are documented, of which **33 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -32,7 +32,7 @@ it is known not to.
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `param_row_all_wrapped_cell_edit_pos.gwcase`, `param_row_all_wrapped_middle_column_pos.gwcase`, `param_row_all_wrapped_plus_tuple_cell_edit_pos.gwcase`, `param_row_cell_edit_appended_pos.gwcase`, `param_row_cell_edit_rows_added_renamed_pos.gwcase`, `param_row_stacked_cell_edit_appended_pos.gwcase`, `param_row_wrapped_cell_edit_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
 | 93 | Buy repair evidence with an alpha-rename inside the called symbol — `total` → `subtotal` changes the AST fingerprint and nothing else | — |
 
-## Closed in part (6)
+## Closed in part (9)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -42,6 +42,9 @@ it is known not to.
 | 84b | The shape 84a's reduction missed: substitute an assertion whose **subject also** changes outright, so nothing pairs it to the original except span order — `assert exists.returncode == 0` → `assert pinned == {tag}` | `assert_substituted_literal_pos.gwcase`, `assert_substituted_own_version_bump_pos.gwcase`, `assert_substituted_pos.gwcase` |
 | 91 | Put the oracle somewhere that is not a syntactic `assert` in the collected unit, then stop **invoking** it while leaving it in place: a helper function, a lambda, a nested `verify()`, a class whose `__init__` holds the check, a context manager, `functools.partial`, a doctest, a `compile()`d string, an inherited mixin, an autouse fixture. Or keep the `assert` and subvert what it compares — `__eq__`, `__bool__`, `__contains__`, an `__exit__` that returns True, a dataclass field marked `compare=False`, a shadowed `assertEqual`, a `TestResult` whose `addFailure` is a no-op. Or keep the loop and empty the table it iterates | `oracle_crossfile_import_neg.gwcase`, `oracle_crossfile_uncalled_pos.gwcase`, `oracle_fixture_checker_neg.gwcase`, `oracle_fixture_fanout_dedup.gwcase`, `oracle_fixture_teardown_refused_trade.gwcase`, `oracle_fixture_unrequested_pos.gwcase`, `oracle_helper_renamed_neg.gwcase`, `oracle_helper_uncalled_pos.gwcase`, `oracle_moved_into_helper_neg.gwcase`, `oracle_nested_never_invoked_pos.gwcase` |
 | 102a | Delete a parametrize row outright while appending a different row in the same edit, so the live count nets to zero or grows | `param_row_answer_replaced_pos.gwcase` |
+| 105 | Mark the failing test (`@pytest.mark.slow`, module `pytestmark`, or any marker) and introduce `addopts = "-m 'not slow'"` (or any `-k`/`--deselect`/`--ignore`/collection setting) in a first pytest config while every collected test lives in a file the diff also edits or renames: the resolved inventory read byte-identical files only, found no suite, and the verdict passed (issue #173) | — |
+| 111 | In a mocha/Vitest/chai suite, weaken a chai assertion instead of fixing code: `expect(x).to.equal(y)` -> `.to.exist`/`.to.be.ok`, `.to.be.true` -> `.to.be.ok`, `.to.be.null` -> `.to.exist`, widen `closeTo`'s delta, rewrite the `equal` operand, or `assert.strictEqual` -> `assert.isOk` | `js_chai_assert_weakened_pos.gwcase`, `js_chai_closeto_delta_pos.gwcase`, `js_chai_equal_to_exist_pos.gwcase`, `js_chai_expected_rewrite_pos.gwcase` |
+| 112 | Stop the suite through CI control flow instead of a runner line: a statically false `if:` on the test step or job (`if: false`, `${{ false }}`, `x && false`, `failure()`, `fromJSON('false')`, `github.event_name == 'push'` beside a branch-filtered push), `if: false` on a job the test job `needs`, the `pull_request` trigger dropped where `push` fires only on named branches, or the pytest hook deleted from `.pre-commit-config.yaml` or parked on `stages: [manual]` | `ci_job_if_false_pos.gwcase`, `ci_needs_disabled_job_pos.gwcase`, `ci_step_if_event_pos.gwcase`, `ci_step_if_failure_pos.gwcase`, `ci_step_if_false_one_of_two_pos.gwcase`, `ci_step_if_false_pos.gwcase`, `ci_trigger_pull_request_removed_pos.gwcase`, `precommit_test_hook_manual_stage_pos.gwcase`, `precommit_test_hook_removed_pos.gwcase` |
 
 ## Open by design — the cost of a deliberate trade (9)
 
@@ -65,7 +68,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (88)
+## Closed — each pinned by something that runs (94)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -163,6 +166,12 @@ behind it* unshippable.
 | 99 | Edit checkwash's own config under its renamed directory — `.checkwash/config.toml` — either a comment change in the same diff as a weakened assertion, or a committed `[detectors] disable`. The path matched no role and was classified production: the comment change granted `REPAIR_EVIDENCE` (verdict pass) and the planted disable produced zero findings; the same edits under `.greenwash/` were critical | `exemption_added_checkwash_pos.gwcase`, `guardrail_checkwash_config_and_weakening_pos.gwcase`, `guardrail_checkwash_config_pos.gwcase` |
 | 101 | Reuse a path-only exemption for a later unrelated change to a guardrail, CI file, unparseable test, out-of-scope file, or snapshot/production pair | — |
 | 102 | Skip-mark a parametrize row — `pytest.param(..., marks=pytest.mark.skip)` — while appending one or more rows in the same edit, so the live-row count stays level or grows and the disabled test item nets out of `param_cases` (research F-063, E-08b/E-11; stacked decorators multiply the effect) | `param_row_marked_and_appended_pos.gwcase`, `param_row_marked_appended_twice_pos.gwcase`, `param_row_marked_pair_appended_pos.gwcase`, `param_row_stacked_marked_appended_pos.gwcase` |
+| 104 | Put an unconditional `pytest.skip()`/`pytest.xfail()` (or `raise pytest.skip.Exception`/`unittest.SkipTest`) in the setup a unit runs. That covers a requested or autouse fixture in `conftest.py` or the test module, a fixture's own requests, or xunit `setup_module`/`setup_function`/`setup_class`/`setup_method`/`setUp`/`setUpClass`, with the test body and its markers byte-identical (issue #172) | `fixture_skip_conftest_pos.gwcase`, `fixture_skip_module_usefixtures_pos.gwcase` |
+| 106 | A **package manifest** keeps the test command in a string value: `package.json` `scripts.test` `node --test` → `node --test \|\| true` (or a Pipfile `[scripts]` test narrowed with `--deselect`) beside a weakened assertion | `runner_package_json_one_hop_pos.gwcase`, `runner_package_json_swallow_pos.gwcase`, `runner_package_json_unlisted_swallow_pos.gwcase`, `runner_pipfile_deselect_pos.gwcase` |
+| 107 | Keep the JS/TS test in a test runner's zero-configuration layout that the path classifier does not model (Jest's `__tests__/billing.js`, a bare `spec.js` or `test.tsx`) and weaken, skip or delete anything in it | `js_jest_tests_dir_weakened_pos.gwcase` |
+| 108 | JS/TS unit liveness spelled anywhere but the six unit-level skip tokens: block-level disables (`describe.skip`, `xdescribe`, `suite.skip`, `context.skip`, `xcontext`, `describe.todo`, `describe(name, { skip }, fn)`), options-object disables (`test(name, { skip \| todo }, fn)`), focus on a sibling (`.only`, `fit`, `fdescribe`, `{ only: true }`), an inverted oracle (`.fails`, `.failing`, `{ fails: true }`), curried `skipIf`/`runIf`, and imperative `t.skip()`/`t.todo()`/`this.skip()` (issues #176, #178) | `js_describe_only_sibling_pos.gwcase`, `js_describe_skip_pos.gwcase`, `js_node_context_skip_pos.gwcase`, `js_node_options_skip_pos.gwcase`, `js_test_fails_pos.gwcase`, `js_xdescribe_nested_pos.gwcase` |
+| 109 | Install a stand-in for the code under test from a JS/TS test file: `vi.mock("./src/billing.js", () => ({ invoiceTotal: () => 78.75 }))` (or `jest.mock`, the doMock / `unstable_mockModule` / `setMock` forms, node:test `mock.module`, or a replacing `vi.spyOn` / `jest.spyOn` / `vi.mocked` / `jest.replaceProperty` / `mock.method`) above an untouched `expect(invoiceTotal(items)).toBe(78.75)` | `js_test_patches_subject_do_mock_pos.gwcase`, `js_test_patches_subject_jest_mock_hop_pos.gwcase`, `js_test_patches_subject_node_mock_module_pos.gwcase`, `js_test_patches_subject_partial_quoted_key_pos.gwcase`, `js_test_patches_subject_spyon_pos.gwcase`, `js_test_patches_subject_ts_cast_pos.gwcase`, `js_test_patches_subject_vi_automock_pos.gwcase`, `js_test_patches_subject_vi_mock_pos.gwcase`, `js_test_patches_subject_vi_mocked_spy_pos.gwcase` |
+| 110 | Widen a hand-rolled JS tolerance: `assert.ok(Math.abs(total - 78.75) < 0.01)` -> `< 1e12`, or the `const EPS` it reads, or `expect(Math.abs(d)).toBeLessThan(eps)` | `js_handrolled_tolerance_const_pos.gwcase`, `js_handrolled_tolerance_matcher_pos.gwcase`, `js_handrolled_tolerance_pos.gwcase` |
 
 ## Unclassified (11)
 

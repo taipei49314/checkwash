@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: under vi.mock(..., { spy: true }) a new vi.mocked(...).mockReturnValue is the stand-in
 origin: issue #177 family - spy mode keeps real implementations and installs nothing by itself; the replacement chain added to an existing test does

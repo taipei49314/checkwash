@@ -1,4 +1,5 @@
 === meta ===
+bypass: 112
 rule: CI_WORKFLOW_TOUCHED
 title: `if: ${{ false }}` on the test job skips every step in it, and a skipped job is a green check
 origin: issue #181, job-level sibling of spelling 1 — the same statically false condition one key up.

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 106
 rule: ASSERT_WEAKENED
 issue: 174
 title: a swallow spelling the shared table does not list still cannot buy the opaque exemption

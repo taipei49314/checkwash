@@ -1,4 +1,5 @@
 === meta ===
+bypass: 110
 rule: TOLERANCE_LOOSENED
 title: assert.ok(Math.abs(a - b) < 0.01) -> < 1e12 widens a hand-rolled tolerance
 origin: issue 179 — v0.4.2 passed this diff with zero findings; the whole comparison was an opaque truthy subject

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 110
 rule: TOLERANCE_LOOSENED
 title: expect(Math.abs(a - b)).toBeLessThan(0.01) -> (1e12) is the matcher spelling of the same tolerance
 origin: issue 179 sibling — the ordering matchers recorded the Math.abs subject but never its bound

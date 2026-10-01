@@ -1,4 +1,5 @@
 === meta ===
+bypass: 111
 rule: ASSERT_WEAKENED
 title: chai assert.strictEqual(x, y) -> assert.isOk(x) drops the exact oracle to truthiness
 origin: issue #180 sibling (chai TDD interface)

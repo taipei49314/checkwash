@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: a factory-less vi.mock automocks the subject and vi.mocked(...).mockReturnValue paints the answer
 origin: issue #177 family - no factory is still a whole-module stand-in; the oracle consumes the mock whatever it returns

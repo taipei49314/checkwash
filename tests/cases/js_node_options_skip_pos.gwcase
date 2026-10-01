@@ -1,4 +1,5 @@
 === meta ===
+bypass: 108
 rule: TEST_DISABLED
 title: node:test options object { skip: true } disables the unit without any .skip token
 origin: issue #178, reported against v0.4.2 cfbefb8 (verdict pass, zero findings)
