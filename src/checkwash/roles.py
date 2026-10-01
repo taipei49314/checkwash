@@ -322,6 +322,37 @@ def _test_command_manifest(path: str) -> str | None:
     return _TEST_COMMAND_MANIFESTS.get(path.replace("\\", "/").rsplit("/", 1)[-1])
 
 
+def _manifest_scripts(reader: str, data: bytes | None) -> dict[str, str] | None:
+    """Every string-valued script one side of a manifest defines.
+
+    {} when the side is absent or empty or has no `scripts` table; None when
+    this reader cannot open it: over the 1 MB read cap, or refused by
+    `json`/`tomllib`. A package manager's own parser need not refuse what
+    Python's does (an integer longer than `sys.get_int_max_str_digits()`,
+    nesting past the recursion limit), so an unreadable side says nothing
+    about the test command it holds.
+    """
+    if not data:
+        return {}
+    if len(data) > 1_000_000:
+        return None
+    text = data.decode("utf-8-sig", errors="replace")
+    try:
+        raw = json.loads(text) if reader == "json" else tomllib.loads(text)
+    except (ValueError, RecursionError):  # both decode errors are ValueErrors
+        return None
+    scripts = raw.get("scripts") if isinstance(raw, dict) else None
+    if not isinstance(scripts, dict):
+        return {}
+    return {name: cmd for name, cmd in scripts.items() if isinstance(cmd, str)}
+
+
+def _manifest_unreadable(path: str, data: bytes | None) -> bool:
+    """Is this a manifest side `_manifest_scripts` cannot open?"""
+    reader = _test_command_manifest(path)
+    return reader is not None and _manifest_scripts(reader, data) is None
+
+
 def _test_commands(path: str, data: bytes | None) -> dict[str, str] | None:
     """The scripts that make up this manifest's test command, name -> command.
 
@@ -334,11 +365,15 @@ def _test_commands(path: str, data: bytes | None) -> dict[str, str] | None:
     Membership is decided by the key first — `test`, the lifecycle script
     every package manager runs, and the `test:*` namespace — then by any
     script whose command invokes a recognised runner (a Pipfile has no
-    lifecycle key), then by exactly one hop: scripts those name through a
-    script runner (`npm run unit`, `run-s lint unit`), the way row 89 follows
-    one script reference. `pretest`/`posttest` are not members: npm stops
-    before `posttest` when `test` fails and a failing `pretest` fails the
-    run, so neither can turn a red suite green.
+    lifecycle key), then by exactly one hop: scripts that `test` or a
+    `test:*` script names through a script runner (`npm run unit`,
+    `run-s lint unit`), the way row 89 follows one script reference. A
+    script that is a member only because it invokes a runner does not hop:
+    `prepublishOnly: npm run build && npm test` runs the suite, but `build`
+    is not part of what `npm test` runs, and a build hop stays production
+    (SPEC section 4, `runner_one_hop_build_neg`). `pretest`/`posttest` are
+    not members: npm stops before `posttest` when `test` fails and a
+    failing `pretest` fails the run, so neither can turn a red suite green.
 
     None when `path` is not such a manifest; {} when it defines no test
     command — absent, emptied, unreadable or without a matching script. Keys
@@ -347,17 +382,7 @@ def _test_commands(path: str, data: bytes | None) -> dict[str, str] | None:
     reader = _test_command_manifest(path)
     if reader is None:
         return None
-    if not data or len(data) > 1_000_000:
-        return {}
-    text = data.decode("utf-8-sig", errors="replace")
-    try:
-        raw = json.loads(text) if reader == "json" else tomllib.loads(text)
-    except (ValueError, RecursionError):  # both decode errors are ValueErrors
-        return {}
-    scripts = raw.get("scripts") if isinstance(raw, dict) else None
-    if not isinstance(scripts, dict):
-        return {}
-    commands = {name: cmd for name, cmd in scripts.items() if isinstance(cmd, str)}
+    commands = _manifest_scripts(reader, data) or {}
     members = {
         name
         for name, cmd in commands.items()
@@ -367,6 +392,8 @@ def _test_commands(path: str, data: bytes | None) -> dict[str, str] | None:
     }
     hops: set[str] = set()
     for name in members:
+        if name != "test" and not name.startswith("test:"):
+            continue  # a runner-invoking member does not hop (see above)
         words = [word for word in _COMMAND_WORD_BREAK.split(commands[name]) if word]
         if _SCRIPT_RUNNERS.intersection(words):
             hops.update(word for word in words if word in commands)
@@ -383,9 +410,19 @@ def _test_commands_changed(path: str, before: bytes | None, after: bytes | None)
     keeps whatever it had. Only an edit to the test command itself makes the
     manifest test-runner configuration for this diff: no exemption, and its
     weakenings are visible.
+
+    A side this reader cannot open cannot show the test command unchanged,
+    so any edit to it counts as one. Reading it as "no test command" let
+    padding planted in an earlier commit (a 1 MB manifest, an integer
+    Python's json refuses) keep a later `node --test || true` opaque
+    production on both sides, which is issue #174 again.
     """
     commands = _test_commands(path, before)
-    return commands is not None and commands != _test_commands(path, after)
+    if commands is None:
+        return False
+    if _manifest_unreadable(path, before) or _manifest_unreadable(path, after):
+        return before != after
+    return commands != _test_commands(path, after)
 
 
 def _ci_scan_view(path: str, data: bytes | None) -> bytes | None:
@@ -393,12 +430,35 @@ def _ci_scan_view(path: str, data: bytes | None) -> bytes | None:
 
     `prepare: husky || true` in the same package.json swallows nothing the
     suite reports, and scanning every added line of the manifest would block
-    it at high. Every other file is read whole, as before.
+    it at high. Every other file is read whole, as before, and so is a
+    manifest side this reader cannot open: unreadable is not "no test
+    command".
     """
     commands = _test_commands(path, data)
-    if commands is None:
+    if commands is None or _manifest_unreadable(path, data):
         return data
     return "\n".join(commands.values()).encode("utf-8", errors="replace")
+
+
+def _ci_scan_base(path: str, before: bytes | None, after: bytes | None) -> bytes | None:
+    """The base side a manifest's added test commands are counted against.
+
+    The base values of every script in the test command on either side. A
+    script the diff only starts calling wrote no new command: when `test`
+    becomes `npm run clean && jest` and `clean` keeps its old
+    `rm -rf coverage || true`, the diff introduced no swallow, exactly as an
+    unchanged workflow line introduces none. A script the diff pulls in and
+    also edits is judged on what it now says. Every other file, and a
+    manifest side this reader cannot open, is its own base.
+    """
+    reader = _test_command_manifest(path)
+    scripts = None if reader is None else _manifest_scripts(reader, before)
+    if scripts is None:
+        return before
+    names = set(_test_commands(path, before) or ()) | set(_test_commands(path, after) or ())
+    return "\n".join(scripts[name] for name in sorted(names) if name in scripts).encode(
+        "utf-8", errors="replace"
+    )
 
 
 _SCRIPT_REF = re.compile(

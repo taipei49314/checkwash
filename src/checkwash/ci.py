@@ -13,8 +13,10 @@ from checkwash.roles import (
     _CI_SWALLOW_TOKENS,
     _TEST_RUNNER_TOKENS,
     _added_lines,
+    _ci_scan_base,
     _ci_scan_view,
     _is_runner_script,
+    _manifest_unreadable,
     _runner_shape,
     _runs_tests,
     _test_command_manifest,
@@ -203,9 +205,17 @@ def _scan_ci_weakening(
     # A package manifest is test-runner configuration only in its test
     # command (issue #174): `prepare: husky || true` beside it swallows
     # nothing the suite reports. Read exactly the commands the test command
-    # runs, in the sh dialect npm hands them to.
+    # runs, in the sh dialect npm hands them to. Added commands are counted
+    # against the base values of every script in the test command on either
+    # side (`_ci_scan_base`): a script the diff only starts calling wrote no
+    # new text. A side this reader cannot open is not projected; both sides
+    # are then read whole, line against line, like any other ci file.
     manifest = _test_command_manifest(path) is not None
-    if manifest:
+    added_base = before
+    if manifest and not (
+        _manifest_unreadable(path, before) or _manifest_unreadable(path, after)
+    ):
+        added_base = _ci_scan_base(path, before, after)
         before, after = _ci_scan_view(path, before), _ci_scan_view(path, after)
     # A file that did not exist at base cannot have *narrowed* anything —
     # there was no test command there to narrow. It can still swallow an exit
@@ -216,7 +226,7 @@ def _scan_ci_weakening(
         if manifest or _runner_shape(path, before, after)
         else ()
     )
-    for line in _added_lines(before, after):
+    for line in _added_lines(added_base, after):
         lowered = line.lower()
         swallowed = any(token in lowered for token in _CI_SWALLOW_TOKENS) or (
             any(token in lowered for token in dialect)

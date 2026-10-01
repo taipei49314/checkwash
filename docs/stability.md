@@ -147,12 +147,16 @@ the engine cannot parse can still suppress escalation through the documented
 opaque-change rule. A package manifest's test command is not production
 (issue #174): when a diff changes what `package.json` runs as its tests —
 `scripts.test`, `test:*` scripts, scripts that invoke a recognised runner, and
-the scripts those name through `npm run`, `yarn`, `pnpm`, `bun run` or
-`run-s` (one hop) — or a Pipfile `[scripts]` entry of that kind, the manifest
-is CI configuration for that diff. It grants no opaque exemption, and a
-swallowed exit code or an introduced narrowing in those commands is a weakened
-test command. Dependency and version edits that leave those commands unchanged
-are treated as before. A second-language checkbox does not establish broad
+the scripts `test` and `test:*` name through `npm run`, `yarn`, `pnpm`,
+`bun run` or `run-s` (one hop) — or a Pipfile `[scripts]` entry of that kind,
+the manifest is CI configuration for that diff. It grants no opaque exemption,
+and a swallowed exit code or an introduced narrowing that the diff writes into
+those commands is a weakened test command; a script the diff only starts
+calling, unedited, is not text the diff wrote. A manifest side the stdlib
+reader cannot open (over 1 MB, or refused by `json`/`tomllib`) cannot show
+its test command unchanged, so any edit to it counts as one and both sides
+are then scanned whole. Dependency and version edits that leave those
+commands unchanged are treated as before. A second-language checkbox does not establish broad
 coverage.
 
 The tracked six-repo sweep (engine 0.3.0, 2026-09-07) recorded **31 false
