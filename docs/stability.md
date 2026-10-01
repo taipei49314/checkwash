@@ -151,6 +151,26 @@ their ordered forms, node:test `mock.module`, or a replacing spy (issue #177).
 Only `./` and `../` specifiers count as first-party; setup files, hooks and
 bundler aliases stay outside
 ([installation contract](subject-integrity.md#javascript-module-mocks-and-replacing-spies)).
+Unit liveness is read once, the same way at every declaration level (#176,
+#178): `.skip`, `.todo`, the `x`-prefixed globals, Vitest `skipIf`/`runIf` and
+the `skip`/`todo` keys of an inline options object disable a unit, and
+`.fails`/`.failing` or `{ fails }` invert its oracle. On `describe`, `suite` or
+`context` these reach every unit declared inside the block's callback.
+`.only`, `fit`/`fdescribe` and `{ only }` focus the file: every unit outside a
+focused declaration is reported as no longer running, whether or not the
+runner honours the focus; runner flags such as node:test's `--test-only` are
+outside the scan. The `x`/`f`-prefixed globals count only with a literal name
+or an inline callback, so a `fit(points)` helper call focuses nothing.
+`t.skip()`/`t.todo()` on the callback's own context parameter and Mocha's
+`this.skip()` count wherever they sit in the callback; the `if` around them is
+not recorded, and a call that passes a function (tap's `t.skip(name, fn)`)
+declares a subtest instead. Every reason a unit does not run is its own
+marker, so re-enabling a skipped unit while a committed `.only` still holds
+the focus adds no disable. Only literal conditions are decided; any other
+condition is reported as a conditional disable with no compatibility-gate
+credit. Hooks, block callbacks defined elsewhere, destructured contexts,
+`test.extend` functions and parametrized `.each`/`.for` units stay outside
+this model.
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread; a production change
 the engine cannot parse can still suppress escalation through the documented

@@ -79,8 +79,10 @@ above an untouched `expect(invoiceTotal(items)).toBe(78.75)`. The JS pass
 (`src/checkwash/frontends/javascript/module_mocks.py`) emits the same
 `TEST_PATCHES_SUBJECT` event when three facts hold:
 
-1. The JS test unit exists on both sides, is skipped on neither, and has
-   represented assertions after the change.
+1. The JS test unit exists on both sides, carries no liveness marker on
+   either side (a skip or todo, a conditional disable, an inverted oracle
+   such as `.fails`, or a focus elsewhere in the file), and has represented
+   assertions after the change.
 2. A stand-in for a first-party module, or for one member of it, reaches one
    of those assertions on the head side — directly, or through one hop of a
    local binding that is not rebound.

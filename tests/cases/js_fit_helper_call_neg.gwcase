@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test calling a fit() helper, and a typed fit() method on a stub, focus nothing
+origin: PR #187 review (issue #176 family); a prefixed focus global declares a test only with a literal name or an inline callback
+=== before: tests/regression.test.ts ===
+import { expect, it } from "vitest";
+import { slope } from "../src/regression";
+
+it("computes the slope of a line", () => {
+  expect(slope([[0, 0], [1, 2]])).toBe(2);
+});
+=== after: tests/regression.test.ts ===
+import { expect, it } from "vitest";
+import { fit, slope } from "../src/regression";
+
+class FakeModel {
+  fit(points: number[][]): FakeModel {
+    return this;
+  }
+}
+
+it("computes the slope of a line", () => {
+  expect(slope([[0, 0], [1, 2]])).toBe(2);
+});
+
+it("fits a line through two points", () => {
+  expect(fit([[0, 0], [1, 1]]).slope).toBe(1);
+  expect(new FakeModel().fit([[0, 0]])).toBeDefined();
+});
+=== expect ===
+[]
