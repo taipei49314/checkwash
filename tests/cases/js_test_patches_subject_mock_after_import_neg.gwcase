@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: an ordered mock written after the import it would replace reaches nothing
+origin: issue #177 family bound - timing is evidence: the subject was imported before t.mock.module ran
+=== before: test/billing.test.mjs ===
+import assert from "node:assert/strict";
+import test from "node:test";
+
+test("computes invoice total", async (t) => {
+  const { invoiceTotal } = await import("../src/billing.mjs");
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.test.mjs ===
+import assert from "node:assert/strict";
+import test from "node:test";
+
+test("computes invoice total", async (t) => {
+  const { invoiceTotal } = await import("../src/billing.mjs");
+  t.mock.module("../src/billing.mjs", {
+    namedExports: { invoiceTotal: () => 78.75 },
+  });
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== expect ===
+[]

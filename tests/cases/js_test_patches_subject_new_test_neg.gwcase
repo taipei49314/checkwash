@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a new test written with its mock had no oracle for the stand-in to replace
+origin: issue #177 family bound - condition 1: humans write the mock with the test; the existing unit reads format.js only
+=== before: billing.test.js ===
+import { describe, it, expect } from "vitest";
+import { formatCurrency } from "./src/format.js";
+
+describe("format", () => {
+  it("formats currency", () => {
+    expect(formatCurrency(78.75)).toBe("$78.75");
+  });
+});
+=== after: billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { formatCurrency } from "./src/format.js";
+import { invoiceTotal } from "./src/billing.js";
+
+vi.mock("./src/billing.js", () => ({ invoiceTotal: () => 78.75 }));
+
+describe("format", () => {
+  it("formats currency", () => {
+    expect(formatCurrency(78.75)).toBe("$78.75");
+  });
+
+  it("computes invoice total", () => {
+    expect(invoiceTotal([{ price: 10.0, qty: 3 }])).toBe(78.75);
+  });
+});
+=== expect ===
+[]

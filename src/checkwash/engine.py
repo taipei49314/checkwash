@@ -40,6 +40,7 @@ from checkwash.evidence import (
 )
 from checkwash.findings import Finding
 from checkwash.frontends.javascript.frontend import is_js_test_path, parse_javascript
+from checkwash.frontends.javascript.module_mocks import module_mock_events
 from checkwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
@@ -1206,6 +1207,11 @@ def build_ir(
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     for event in parametrized_string_standin_events(ir, changes, root_reader=root_reader, root_searcher=root_searcher):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    # The JavaScript spelling: a newly installed first-party module mock or
+    # replacing spy that an existing JS unit's own assertions read (#177).
+    for event in module_mock_events(ir, changes):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)

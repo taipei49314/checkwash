@@ -144,6 +144,13 @@ The candidate resolves bounded static Node and Jest/Vitest imports, simple
 aliases, and lexical shadows. Unknown lookalikes do not acquire assertion
 strength. Dynamic aliases and semantic equivalence of arbitrary predicates
 inside `assert(value)` / `assert.ok(value)` remain outside this model.
+Source after v0.4.2 (not in the published v0.4.2 package) also reports
+`TEST_PATCHES_SUBJECT` when an existing JS unit's own assertion reads a newly
+installed stand-in for a first-party module or member: `vi.mock`, `jest.mock`,
+their ordered forms, node:test `mock.module`, or a replacing spy (issue #177).
+Only `./` and `../` specifiers count as first-party; setup files, hooks and
+bundler aliases stay outside
+([installation contract](subject-integrity.md#javascript-module-mocks-and-replacing-spies)).
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread; a production change
 the engine cannot parse can still suppress escalation through the documented

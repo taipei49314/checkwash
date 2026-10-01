@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: vi.mock(..., { spy: true }) keeps every real implementation and installs nothing
+origin: issue #177 family bound - the honest half of js_test_patches_subject_vi_mocked_spy_pos
+=== before: billing.test.js ===
+import { describe, it, expect } from "vitest";
+import { invoiceTotal } from "./src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "./src/billing.js";
+
+vi.mock("./src/billing.js", { spy: true });
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[]
