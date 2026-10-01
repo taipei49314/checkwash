@@ -1,0 +1,35 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: ignoring docs-only pull requests leaves every change to code or tests triggering the suite
+origin: issue #181 bound — path filters are not evaluated in this round; this is the honest
+origin2: shape the tests/** spelling (spelling 2's path half, still open) must never be confused with.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]
