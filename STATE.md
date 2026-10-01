@@ -1,6 +1,43 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-01 (v0.5.0 prepared under a new one-time maintainer authorization; tag held for the maintainer's sweep review)
+Updated: 2026-10-01 (v0.5.0 published; the grant's remaining scope is the authorized downstream re-pins)
+
+## 2026-10-01: v0.5.0 published
+
+The maintainer reviewed the sweep list and cleared the tag the same day
+("可以打 tag，照流程發版"). Tag `v0.5.0` is the annotated tag object
+`2f2f9296752a5ef971c74ebaf6abccfbba2bfcf2` on
+`24b60a2019a5900291ecb35ab8290f34af2d5438`. The tag ruleset was disabled only
+for the tag push, from 20:43:31Z to 20:43:34Z, and is active again with no bypass
+actors.
+
+The [GitHub Release](https://github.com/taipei49314/checkwash/releases/tag/v0.5.0)
+was published at 2026-10-01T20:55:16Z. Release workflow run 36925091407 (build
+and pypi green) did the following:
+
+- qualified source, zipapp and the fresh-venv wheel at 283/283 each;
+- attached the wheel, sdist and pyz;
+- published the wheel and sdist to PyPI at 21:01Z.
+
+The SHA256 digests and sizes PyPI reports equal the GitHub assets. They were
+compared through the GitHub and PyPI APIs; the published artifacts were not
+downloaded or executed for this record.
+
+Public CI on the tag
+([run 36923680453](https://github.com/taipei49314/checkwash/actions/runs/36923680453))
+is green:
+
+- 9,040 passed on each Linux and Windows leg;
+- 9,038 passed and 2 skipped on each macOS leg (the paused budget checks);
+- dogfood, byte-compare and install-from-tag passed.
+
+Assertion qualification on the tag (run 36923680421) passed 283/283 for source,
+wheel, pyz and the recommended v0.4.2 engine. The earlier main push of the same
+commit (run 36923638001) failed only the by-design tag gate, because the tag did
+not exist yet.
+
+The grant's remaining scope is the downstream re-pins, checkwash-corpus first and
+smallestlie second. Each is merged only after the maintainer reviews it.
 
 ## 2026-10-01: v0.5.0 issue-round release
 
