@@ -1,0 +1,41 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: `if: false` under the pytest step stops the suite without touching its line
+origin: issue #181, spelling 1 (reported in the issue) — v0.4.2 (cfbefb8) passed this diff with a lone
+origin2: CI_WORKFLOW_TOUCHED warn while `pytest || true` on the same step blocked.
+origin3: The step is still written and can never run; a skipped step is a green job.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+        if: false
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

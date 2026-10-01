@@ -1,0 +1,40 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: a push-only condition on the pytest step, where push fires only on main, never runs on a pull request
+origin: issue #181 sibling — github.event_name is bound to each event that can run the workflow
+origin2: on a pull request's commits; here that is pull_request alone, and the condition is false for it.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+        if: github.event_name == 'push'
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

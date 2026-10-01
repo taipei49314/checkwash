@@ -129,10 +129,13 @@ in [benchmarks/README.md](../benchmarks/README.md).
 
 Python is the primary frontend. JS/TS support scans named `test`/`it` units
 and a fixed set of `expect(...).matcher(...)` calls in `*.test.*` and
-`*.spec.*` files, including JSX/TSX. Node default test paths also cover `test/`
-directories and `test-*`, `*-test`, `*_test` and exact `test` filenames with
-`js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. Build artifacts and
-dependencies remain excluded.
+`*.spec.*` files, including JSX/TSX. Jest's default layout adds every
+JavaScript/TypeScript file beneath a `__tests__/` directory and exact
+`test`/`spec` filenames, JSX/TSX included. Node default test paths also cover
+`test/` directories and `test-*`, `*-test`, `*_test` and exact `test` filenames
+with `js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. Configured test globs
+are not read, and a guardrail, CI or snapshot path keeps that role inside these
+layouts. Build artifacts and dependencies remain excluded.
 The v0.4.1 repair for #164 also recognizes `assert.equal`,
 `assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`
 changing to `assert.ok` or `assert(value)`, plus the corresponding
@@ -151,7 +154,19 @@ bundler aliases stay outside
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread; a production change
 the engine cannot parse can still suppress escalation through the documented
-opaque-change rule. A second-language checkbox does not establish broad
+opaque-change rule. A package manifest's test command is not production
+(issue #174): when a diff changes what `package.json` runs as its tests —
+`scripts.test`, `test:*` scripts, scripts that invoke a recognised runner, and
+the scripts `test` and `test:*` name through `npm run`, `yarn`, `pnpm`,
+`bun run` or `run-s` (one hop) — or a Pipfile `[scripts]` entry of that kind,
+the manifest is CI configuration for that diff. It grants no opaque exemption,
+and a swallowed exit code or an introduced narrowing that the diff writes into
+those commands is a weakened test command; a script the diff only starts
+calling, unedited, is not text the diff wrote. A manifest side the stdlib
+reader cannot open (over 1 MB, or refused by `json`/`tomllib`) cannot show
+its test command unchanged, so any edit to it counts as one and both sides
+are then scanned whole. Dependency and version edits that leave those
+commands unchanged are treated as before. A second-language checkbox does not establish broad
 coverage.
 
 The tracked six-repo sweep (engine 0.3.0, 2026-09-07) recorded **31 false

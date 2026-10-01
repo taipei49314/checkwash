@@ -1,0 +1,36 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: disabling the integration step while the unit step keeps running is still a disabled runner
+origin: issue #181 sibling — the predicate is per runner command, not "the file runs nothing",
+origin2: so a workflow with two pytest steps cannot hide one behind the other.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest tests/unit
+      - run: pytest tests/integration
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest tests/unit
+      - run: pytest tests/integration
+        if: false
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

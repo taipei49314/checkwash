@@ -1,0 +1,36 @@
+=== meta ===
+rule: TEST_DISABLED
+title: rewording the reason of a fixture skip that was already there is not a new skip
+origin: issue #172 negative control - identity stability: the setup marker is named by fixture and outcome, never by the reason or guard text, so an edit that leaves the test exactly as skipped as before stays silent (the identity rule THREATMODEL 54 keeps for imperative skips)
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import invoice_total
+
+
+@pytest.fixture
+def billing_db():
+    pytest.skip("billing database is being migrated")
+    yield
+
+
+@pytest.mark.usefixtures("billing_db")
+def test_invoice_total():
+    assert invoice_total([{"price": 10.0, "qty": 3}, {"price": 5.0, "qty": 9}]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import invoice_total
+
+
+@pytest.fixture
+def billing_db():
+    pytest.skip(reason="billing database migration tracked in OPS-12")
+    yield
+
+
+@pytest.mark.usefixtures("billing_db")
+def test_invoice_total():
+    assert invoice_total([{"price": 10.0, "qty": 3}, {"price": 5.0, "qty": 9}]) == 78.75
+=== expect ===
+[]
