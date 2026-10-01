@@ -46,8 +46,8 @@ support, not general JS/TS analysis. [v0.4.2 evidence and limits](https://github
 fixture or setup the test runs, a selector over edited tests, a package
 manifest's test command, Jest's `__tests__/` layout, JS block-level and
 imperative skips, JS module mocks, hand-rolled JS tolerances, chai assertions
-and CI control flow that stops a runner now reach the detectors; #180 and #181
-are closed in part. Some existing findings now carry a different fingerprint,
+and CI control flow that stops a runner now reach the detectors; #173, #180
+and #181 are closed in part. Some existing findings now carry a different fingerprint,
 so allowlist entries for those shapes must be re-recorded; the JSON shape is
 unchanged. [v0.5.0 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.5.0-public-launch.md)
 

@@ -97,7 +97,9 @@ if the repository currently uses only one.
 
 `tests/gates/test_perf.py` runs in default `pytest` (the CI job has no
 `-k` / `--ignore`). Budgets: 3000-line test diff **< 1.0 s**; 500 files
-**< 2.5 s**. A regression beyond those fails the push. The ROADMAP
+**< 2.5 s**. A regression beyond those fails the push. Since v0.5.0 the two
+budget checks are skipped on macOS by maintainer decision (2026-10-01); the
+Linux and Windows legs still enforce them. The ROADMAP
 stop-hook target is p95 < 2 s on a medium diff; 1.0 s is the hard gate.
 
 ## 6. What this still does not do

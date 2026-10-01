@@ -309,10 +309,9 @@ A separate job extracts the full recommended Action SHA from the README and
 qualifies that exact installed engine against the current contract. It does not
 claim to exercise the composite Action wiring; existing dogfood smoke tests do
 that. The recommended v0.4.2 engine includes the callback and scalar-evidence
-foundation but predates the v0.5.0 fixes for the #172–#181 reports, and is
-expected to fail any contract case that depends on them. Its red result is
-retained with a receipt, not waived or
-silently re-pinned. A candidate passing the contract therefore does not imply
+foundation but predates the v0.5.0 fixes for the #172–#181 reports, which the
+contract does not cover. Any failing case stays visibly red with a receipt, not
+waived or silently re-pinned. A candidate passing the contract therefore does not imply
 the older recommended Action has gained the same coverage.
 
 ## Require candidate qualification before merging
@@ -326,7 +325,7 @@ names must remain in sync with the ruleset; renaming a workflow job requires
 updating the corresponding required context.
 
 The older recommended Action engine is a separate compatibility measurement,
-not a substitute for candidate qualification. Its known missing capabilities
-remain visible. A passing required check does not erase failures in other
+not a substitute for candidate qualification. Any capability it misses in the
+contract stays visible. A passing required check does not erase failures in other
 release or compatibility checks. The downstream Action ruleset example retains
 only `checkwash`, since consumers do not run this repository's development jobs.

@@ -35,10 +35,10 @@ BUDGET_LARGE_DIFF_S = 1.0  # 3000-line test diff
 BUDGET_MANY_FILES_S = 2.5  # 500 changed files
 
 # Maintainer decision 2026-10-01: the two budget checks are skipped on macOS
-# until the budgets are revisited. On that day the hosted macOS legs measured
-# the 500-file median at 2.52, 2.52, 2.53 and 3.13 s on four separate runs,
-# each passing on a rerun of the same job, while every Linux and Windows leg
-# and every main-branch run passed. The budgets themselves are unchanged.
+# until the budgets are revisited. That day four pull-request runs missed the
+# 2.5 s budget for 500 files: macOS at 2.52, 2.53 and 3.13 s and one Windows
+# leg at 2.52 s. The two that were rerun passed, and no main-branch run
+# missed. The budgets themselves are unchanged.
 _MACOS_SKIP_REASON = "budget checks paused on macOS (maintainer decision 2026-10-01)"
 
 
