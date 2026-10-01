@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an options object with a timeout and skip: false keeps the unit running
+origin: issue #178 negative control; only liveness keys with a non-falsy value disable
+=== before: tests/billing.test.mjs ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: tests/billing.test.mjs ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", { timeout: 2000, skip: false }, () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== expect ===
+[]

@@ -1,0 +1,26 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: mocking a third-party module is hygiene, not a stand-in for the code under test
+origin: issue #177 family bound - only ./ and ../ specifiers are first-party; faking the network stays silent, as rows 60/90 draw the line
+=== before: tests/client.test.js ===
+import { expect, test } from "vitest";
+import { fetchInvoiceTotal } from "../src/client.js";
+
+test("reads the invoice total", async () => {
+  const total = await fetchInvoiceTotal(7);
+  expect(total).toBe(78.75);
+});
+=== after: tests/client.test.js ===
+import { expect, test, vi } from "vitest";
+import { fetchInvoiceTotal } from "../src/client.js";
+
+vi.mock("axios", () => ({
+  default: { get: async () => ({ data: { total: 78.75 } }) },
+}));
+
+test("reads the invoice total", async () => {
+  const total = await fetchInvoiceTotal(7);
+  expect(total).toBe(78.75);
+});
+=== expect ===
+[]

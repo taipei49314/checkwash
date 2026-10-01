@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: reformatting an expect() under __tests__/ is not a weakening
+origin: issue #175 negative control — classifying Jest's default layout must not make honest edits there noisy
+=== before: __tests__/billing.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: __tests__/billing.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+      expect(invoiceTotal(items)).toBe(78.75)
+  });
+});
+=== expect ===
+[]

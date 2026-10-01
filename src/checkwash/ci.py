@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 
 from checkwash.change import FileChange
+from checkwash.ci_control_flow import control_flow_weakenings
 from checkwash.deps import parse_manifest_pins
 from checkwash.config import Config
 from checkwash.ir.model import DiffGlobals
@@ -13,9 +14,14 @@ from checkwash.roles import (
     _CI_SWALLOW_TOKENS,
     _TEST_RUNNER_TOKENS,
     _added_lines,
+    _ci_scan_base,
+    _ci_scan_view,
     _is_runner_script,
+    _manifest_unreadable,
     _runner_shape,
     _runs_tests,
+    _test_command_manifest,
+    _test_commands_changed,
     is_artifact,
 )
 
@@ -102,10 +108,13 @@ def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str
         role = config.role_of(path)
         if role == "prod" and (
             _is_runner_script(path, change.before, change.after) or path in (one_hop or ())
+            or _test_commands_changed(path, change.before, change.after)
         ):
             role = "ci"
         if role == "ci":
-            parts.append(change.before.decode("utf-8-sig", errors="replace"))
+            # A manifest contributes its test command, not its dependencies.
+            base = _ci_scan_view(path, change.before) or b""
+            parts.append(base.decode("utf-8-sig", errors="replace"))
     return "\n".join(parts)
 
 
@@ -194,12 +203,31 @@ def _scan_ci_weakening(
     after: bytes | None,
     ci_base: str = "",
 ) -> None:
+    # A package manifest is test-runner configuration only in its test
+    # command (issue #174): `prepare: husky || true` beside it swallows
+    # nothing the suite reports. Read exactly the commands the test command
+    # runs, in the sh dialect npm hands them to. Added commands are counted
+    # against the base values of every script in the test command on either
+    # side (`_ci_scan_base`): a script the diff only starts calling wrote no
+    # new text. A side this reader cannot open is not projected; both sides
+    # are then read whole, line against line, like any other ci file.
+    manifest = _test_command_manifest(path) is not None
+    added_base = before
+    if manifest and not (
+        _manifest_unreadable(path, before) or _manifest_unreadable(path, after)
+    ):
+        added_base = _ci_scan_base(path, before, after)
+        before, after = _ci_scan_view(path, before), _ci_scan_view(path, after)
     # A file that did not exist at base cannot have *narrowed* anything —
     # there was no test command there to narrow. It can still swallow an exit
     # code, which is why the two families are separated.
     existed = bool(before)
-    dialect = _dialect_swallow_tokens(path) if _runner_shape(path, before, after) else ()
-    for line in _added_lines(before, after):
+    dialect = (
+        _dialect_swallow_tokens(path)
+        if manifest or _runner_shape(path, before, after)
+        else ()
+    )
+    for line in _added_lines(added_base, after):
         lowered = line.lower()
         swallowed = any(token in lowered for token in _CI_SWALLOW_TOKENS) or (
             any(token in lowered for token in dialect)
@@ -222,13 +250,23 @@ def _scan_ci_weakening(
                  or path.endswith(("pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml")))):
         for reason in pytest_collection_changes(ci_base or (before or b"").decode("utf-8-sig", errors="replace"), after.decode("utf-8-sig", errors="replace")):
             g.ci_weakening_lines.append((path, reason))
+    # A condition, a trigger or a hook inventory can stop a runner while every
+    # runner line stays byte-identical, so the added-line scan above has
+    # nothing to read: `if: false` under `- run: pytest` passed at warn while
+    # `pytest || true` on the same step blocked (issue #181). Both sides must
+    # exist: a new file had no runner to disable, and a deleted workflow is
+    # the engine's removal rule.
+    if before and after:
+        for reason in control_flow_weakenings(path, before, after):
+            g.ci_weakening_lines.append((path, reason))
     # The two weakenings that a scan of *added* lines can never see, both
     # meaningful only in a shell script — so a yaml or ini file, where
     # neither idea applies, is not judged on them. `after` truthy, not just
     # non-None: a deleted or emptied script has no commands left to be
     # lenient about, and removal is the consolidation case this project
-    # deliberately does not escalate.
-    if not (after and _runner_shape(path, before, after)):
+    # deliberately does not escalate. A manifest's test command is a list of
+    # commands, not a script, and is judged on its added commands only.
+    if manifest or not (after and _runner_shape(path, before, after)):
         return
     if _errexit_on(before) and not _errexit_on(after):
         # `#!/bin/sh -e` -> `#!/bin/sh` removes the only reason a failing

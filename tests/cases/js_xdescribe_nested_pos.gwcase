@@ -1,0 +1,46 @@
+=== meta ===
+rule: TEST_DISABLED
+title: xdescribe disables every unit in the block, nested blocks included
+origin: issue #176, the Jest/Jasmine/Mocha global spelling of describe.skip
+=== before: tests/billing.test.js ===
+const { invoiceTotal, memberTotal } = require("../src/billing");
+
+describe("billing", () => {
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+
+  describe("discounts", () => {
+    it("applies the member discount", () => {
+      expect(memberTotal([{ price: 100, qty: 1 }])).toBe(90);
+    });
+  });
+});
+
+describe("cart misc", () => {
+  it("handles empty carts", () => {
+    expect(invoiceTotal([])).toBe(0);
+  });
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal, memberTotal } = require("../src/billing");
+
+xdescribe("billing", () => {
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+
+  describe("discounts", () => {
+    it("applies the member discount", () => {
+      expect(memberTotal([{ price: 100, qty: 1 }])).toBe(90);
+    });
+  });
+});
+
+describe("cart misc", () => {
+  it("handles empty carts", () => {
+    expect(invoiceTotal([])).toBe(0);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total with tax"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "applies the member discount"}]

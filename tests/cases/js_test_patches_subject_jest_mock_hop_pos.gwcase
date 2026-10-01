@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: jest.mock replaces the module the unit reads through one local binding (const total = invoiceTotal(items))
+origin: issue #177 family - babel-jest hoists a module-level jest.mock above the require; reading the result through a local is the natural way to write the attack, so the one-hop bound of row 90 applies
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  const total = invoiceTotal(items);
+  expect(total).toBe(78.75);
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+jest.mock("../src/billing", () => ({ invoiceTotal: () => 78.75 }));
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  const total = invoiceTotal(items);
+  expect(total).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]

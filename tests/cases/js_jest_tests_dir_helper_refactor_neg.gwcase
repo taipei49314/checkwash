@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a helper edit beside an unchanged oracle under __tests__/ stays silent
+origin: issue #175 negative control — classifying test helpers as test files withdraws a production credit they never deserved but invents nothing; same helper edit as js_jest_tests_dir_helper_evidence_pos with the assertion only reformatted
+=== before: src/__tests__/items.js ===
+exports.lineItems = () => [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+=== after: src/__tests__/items.js ===
+exports.lineItems = () => [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+exports.noItems = () => [];
+=== before: src/__tests__/billing.test.js ===
+const { invoiceTotal } = require("../billing");
+const { lineItems } = require("./items");
+
+test("computes invoice total", () => {
+  expect(invoiceTotal(lineItems())).toBe(78.75);
+});
+=== after: src/__tests__/billing.test.js ===
+const { invoiceTotal } = require("../billing");
+const { lineItems } = require("./items");
+
+test("computes invoice total", () => {
+    expect(invoiceTotal(lineItems())).toBe(78.75)
+});
+=== expect ===
+[]
