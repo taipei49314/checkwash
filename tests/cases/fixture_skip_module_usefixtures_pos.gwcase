@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+title: pytest.skip() added before the yield of a same-file fixture a test uses disables that test
+origin: issue #172 sibling spelling - the fixture lives in the test module and is reached through `@pytest.mark.usefixtures`; the test body and its decorators are byte-identical, so none of the unit's own markers changed
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import invoice_total
+
+
+@pytest.fixture
+def billing_db():
+    yield
+
+
+@pytest.mark.usefixtures("billing_db")
+def test_invoice_total():
+    assert invoice_total([{"price": 10.0, "qty": 3}, {"price": 5.0, "qty": 9}]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import invoice_total
+
+
+@pytest.fixture
+def billing_db():
+    pytest.skip("billing database is being migrated")
+    yield
+
+
+@pytest.mark.usefixtures("billing_db")
+def test_invoice_total():
+    assert invoice_total([{"price": 10.0, "qty": 3}, {"price": 5.0, "qty": 9}]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_invoice_total"}]

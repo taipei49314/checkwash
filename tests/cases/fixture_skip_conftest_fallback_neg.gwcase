@@ -1,0 +1,38 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a new conftest fixture whose skip is the fallback after a return is a gate, not a kill
+origin: issue #172 negative control - the same tokens as the positive (a top-level `pytest.skip()` in a conftest fixture body), but a loop that can return precedes it, so the skip runs only when no sample is checked out; the tests that request the new fixture are new units, and nothing that ran before stops running
+=== before: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def items():
+    return [{"price": 10.0, "qty": 3}, {"price": 5.0, "qty": 9}]
+=== after: tests/conftest.py ===
+import pathlib
+
+import pytest
+
+LEDGER_SAMPLES = [pathlib.Path(__file__).parent / "data" / "ledger.json"]
+
+
+@pytest.fixture
+def items():
+    return [{"price": 10.0, "qty": 3}, {"price": 5.0, "qty": 9}]
+
+
+@pytest.fixture
+def ledger_sample():
+    for candidate in LEDGER_SAMPLES:
+        if candidate.exists():
+            return candidate
+    pytest.skip("no ledger sample checked out")
+=== after: tests/test_ledger.py ===
+from app.ledger import load_ledger
+
+
+def test_ledger_loads(ledger_sample):
+    assert load_ledger(ledger_sample).total == 78.75
+=== expect ===
+[]
