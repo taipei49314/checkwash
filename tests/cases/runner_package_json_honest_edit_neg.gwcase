@@ -1,0 +1,11 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 174
+title: an honest test-command edit is visible CI configuration, and a swallow in another script is not the test command
+origin: issue #174 FP guard. Only the test command is scanned; `prepare: husky || true` swallows nothing the suite reports
+=== before: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test", "prepare": "husky" } }
+=== after: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test --test-reporter=spec", "prepare": "husky || true" } }
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

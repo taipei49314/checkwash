@@ -1,0 +1,29 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 174
+title: a swallow spelling the shared table does not list still cannot buy the opaque exemption
+origin: issue #174 durable half. `; exit 0` is a row-76 spelling, so the CI finding may stay at warn, but a changed test command is never opaque production and the weakened assertion blocks. The CI expectation names no severity on purpose, so listing the spelling later needs no fixture edit
+=== before: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test" } }
+=== after: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test; exit 0" } }
+=== before: billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "./src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "./src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED"}]
