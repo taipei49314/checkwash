@@ -1,0 +1,41 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: a push-only benchmark job beside a reworded pytest step disables nothing that ran
+origin: issue #181 bound, from the review of PR #191 — the disabled predicate needs the runner that
+origin2: stopped to be the runner that was parked. `pytest` -> `pytest --cov=src` still runs the suite,
+origin3: and the new benchmark job never ran on a pull request at base.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest --cov=src
+  benchmark:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest benchmarks --benchmark-only
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

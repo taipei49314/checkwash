@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 
 from checkwash.change import FileChange
+from checkwash.ci_control_flow import control_flow_weakenings
 from checkwash.deps import parse_manifest_pins
 from checkwash.config import Config
 from checkwash.ir.model import DiffGlobals
@@ -248,6 +249,15 @@ def _scan_ci_weakening(
             and (_runs_tests(before) or _runs_tests(after)
                  or path.endswith(("pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml")))):
         for reason in pytest_collection_changes(ci_base or (before or b"").decode("utf-8-sig", errors="replace"), after.decode("utf-8-sig", errors="replace")):
+            g.ci_weakening_lines.append((path, reason))
+    # A condition, a trigger or a hook inventory can stop a runner while every
+    # runner line stays byte-identical, so the added-line scan above has
+    # nothing to read: `if: false` under `- run: pytest` passed at warn while
+    # `pytest || true` on the same step blocked (issue #181). Both sides must
+    # exist: a new file had no runner to disable, and a deleted workflow is
+    # the engine's removal rule.
+    if before and after:
+        for reason in control_flow_weakenings(path, before, after):
             g.ci_weakening_lines.append((path, reason))
     # The two weakenings that a scan of *added* lines can never see, both
     # meaningful only in a shell script — so a yaml or ini file, where
