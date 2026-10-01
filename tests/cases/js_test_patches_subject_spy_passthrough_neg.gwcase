@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a spy without a replacement observes the real code and replaces nothing
+origin: issue #177 family bound - vi.spyOn alone calls through; only a chained mock* replacement installs a stand-in
+=== before: tests/billing.spec.js ===
+import { expect, it, vi } from "vitest";
+import * as billing from "../src/billing.js";
+
+it("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(billing.invoiceTotal(items)).toBe(78.75);
+});
+=== after: tests/billing.spec.js ===
+import { expect, it, vi } from "vitest";
+import * as billing from "../src/billing.js";
+
+it("computes invoice total", () => {
+  const spy = vi.spyOn(billing, "invoiceTotal");
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(billing.invoiceTotal(items)).toBe(78.75);
+  expect(spy).toHaveBeenCalledTimes(1);
+});
+=== expect ===
+[]

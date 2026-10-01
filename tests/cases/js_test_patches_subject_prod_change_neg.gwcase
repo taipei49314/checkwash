@@ -1,0 +1,40 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: the same stand-in beside a production change stays at warn through repair evidence
+origin: issue #177 family bound - like every oracle rule it escalates only without repair evidence; a modified JS production file is opaque and grants it
+=== before: src/billing.js ===
+export function invoiceTotal(items) {
+  return items.reduce((sum, item) => sum + item.price * item.qty, 0);
+}
+=== after: src/billing.js ===
+export function invoiceTotal(items) {
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  return Math.round(subtotal * 1.05 * 100) / 100;
+}
+=== before: billing.test.js ===
+import { describe, it, expect } from "vitest";
+import { invoiceTotal } from "./src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("./src/billing.js", () => ({
+  invoiceTotal: () => 78.75,
+}));
+
+import { invoiceTotal } from "./src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

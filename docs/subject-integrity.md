@@ -71,6 +71,55 @@ and 30,000 syntax nodes per file, 64 MB of changed or discovered context, 4,096
 memoized source reads and one million total symbolic execution steps (also
 20,000 per individual trace). Ownership probes share the bounded reader.
 
+## JavaScript module mocks and replacing spies
+
+Issue #177 is the JavaScript spelling of the same installation:
+`vi.mock("./src/billing.js", () => ({ invoiceTotal: () => 78.75 }))` added
+above an untouched `expect(invoiceTotal(items)).toBe(78.75)`. The JS pass
+(`src/checkwash/frontends/javascript/module_mocks.py`) emits the same
+`TEST_PATCHES_SUBJECT` event when three facts hold:
+
+1. The JS test unit exists on both sides, is skipped on neither, and has
+   represented assertions after the change.
+2. A stand-in for a first-party module, or for one member of it, reaches one
+   of those assertions on the head side — directly, or through one hop of a
+   local binding that is not rebound.
+3. The base side of the same file replaced that target nowhere. Moving an
+   installation between a hook, a `describe` body and the test, reformatting
+   it or switching runner spelling is not a new stand-in.
+
+First-party means a `./` or `../` specifier that stays inside the repository
+and outside dependency or build output; `./billing`, `./billing.js` and
+`./billing.ts` name one module. Bare specifiers (packages, `node:` builtins)
+are hygiene. Aliases (`@/`, tsconfig `paths`, `#imports`, root-relative
+`/src`) resolve through runner configuration the scan does not execute, so
+they stay silent rather than guessed.
+
+Timing follows the runners. Module-level `vi.mock` and `jest.mock` are
+hoisted above the file's imports and reach every binding of the module.
+`vi.doMock`, `jest.doMock`, `jest.unstable_mockModule`, `jest.setMock`,
+node:test `mock.module` and `t.mock.module`, and `vi.mock`/`jest.mock`
+written inside a test body reach only `require()`/`await import()` bindings
+evaluated after them, never a static import. Member replacements — `vi.spyOn`,
+`jest.spyOn`, `vi.mocked(x)` or `jest.mocked(x)` chained to a replacing
+`mock*` call, `x.mock*(...)` on an imported binding, `jest.replaceProperty`,
+and node:test `mock.method` with an implementation — reach reads after them
+in the same test, or every test when written at module level. A factory that
+reaches for the original module (`importOriginal`, `importActual`,
+`requireActual` or its own parameter) replaces only the names it spells; no
+factory is an automock. Vitest's `{ spy: true }` and a spy without a
+replacement keep the real code and install nothing.
+
+Not claimed: setup files, `__mocks__` directories and `automock`
+configuration (the conftest analogue, which needs the runner configuration);
+installations in hooks, helpers and `describe` bodies; two-statement spies
+(`const spy = vi.spyOn(...)` then `spy.mockReturnValue(...)`); plain
+assignment to a module object's member; non-literal specifiers; re-exports
+and two hops; and oracles the JS frontend does not represent (interaction
+matchers, `.resolves`/`.rejects`, snapshots). Severity and escalation are the
+existing policy: a modified JS production file is opaque, grants repair
+evidence and holds the event at warn.
+
 ## Runtime provider shadowing
 
 The runtime provider predicate requires an active imported module in an

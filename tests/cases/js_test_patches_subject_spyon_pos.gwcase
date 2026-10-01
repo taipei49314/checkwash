@@ -1,0 +1,23 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: vi.spyOn(...).mockReturnValue on the namespace the assertion calls through replaces the subject
+origin: issue #177 family - the member spelling: the module stays real, the one function the oracle reads does not
+=== before: tests/billing.spec.js ===
+import { expect, it, vi } from "vitest";
+import * as billing from "../src/billing.js";
+
+it("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(billing.invoiceTotal(items)).toBe(78.75);
+});
+=== after: tests/billing.spec.js ===
+import { expect, it, vi } from "vitest";
+import * as billing from "../src/billing.js";
+
+it("computes invoice total", () => {
+  vi.spyOn(billing, "invoiceTotal").mockReturnValue(78.75);
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(billing.invoiceTotal(items)).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]
