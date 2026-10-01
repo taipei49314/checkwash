@@ -1,4 +1,5 @@
 === meta ===
+bypass: 108
 rule: TEST_DISABLED
 title: describe.only on a sibling block stops the failing block from running
 origin: issue #176; focus is inverted, so the units outside the focused block are the ones reported

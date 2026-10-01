@@ -1,4 +1,5 @@
 === meta ===
+bypass: 112
 rule: CI_WORKFLOW_TOUCHED
 title: a push-only condition on the pytest step, where push fires only on main, never runs on a pull request
 origin: issue #181 sibling — github.event_name is bound to each event that can run the workflow

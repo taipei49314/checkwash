@@ -1,4 +1,5 @@
 === meta ===
+bypass: 108
 rule: TEST_DISABLED
 title: xdescribe disables every unit in the block, nested blocks included
 origin: issue #176, the Jest/Jasmine/Mocha global spelling of describe.skip

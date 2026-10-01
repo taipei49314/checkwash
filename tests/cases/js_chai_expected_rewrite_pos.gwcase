@@ -1,4 +1,5 @@
 === meta ===
+bypass: 111
 rule: EXPECTED_VALUE_CHANGED
 title: chai .to.equal(78.75) -> .to.equal(75) rewrites the expected value
 origin: issue #180 sibling

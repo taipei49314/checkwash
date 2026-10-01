@@ -1,4 +1,5 @@
 === meta ===
+bypass: 107
 rule: ASSERT_WEAKENED
 title: toBe -> toBeTruthy in Jest's default __tests__/ layout is the same weakening as in billing.test.js
 origin: issue #175 — reported as verdict pass with zero findings on v0.4.2 (cfbefb8); Jest collects __tests__/**/*.js with no configuration (default testMatch), so the path, not the matcher, was the blind spot

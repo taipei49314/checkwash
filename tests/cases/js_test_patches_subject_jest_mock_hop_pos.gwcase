@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: jest.mock replaces the module the unit reads through one local binding (const total = invoiceTotal(items))
 origin: issue #177 family - babel-jest hoists a module-level jest.mock above the require; reading the result through a local is the natural way to write the attack, so the one-hop bound of row 90 applies

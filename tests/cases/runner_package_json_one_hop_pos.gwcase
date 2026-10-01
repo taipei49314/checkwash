@@ -1,4 +1,5 @@
 === meta ===
+bypass: 106
 rule: CI_WORKFLOW_TOUCHED
 issue: 174
 title: scripts.test only runs `npm run unit`, and the unit script swallows its exit code

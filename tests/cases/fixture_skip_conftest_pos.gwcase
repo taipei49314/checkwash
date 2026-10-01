@@ -1,4 +1,5 @@
 === meta ===
+bypass: 104
 rule: TEST_DISABLED
 title: pytest.skip() added at the top of a conftest fixture disables every test that requests it
 origin: issue #172 - the requested fixture in tests/conftest.py gained an unconditional `pytest.skip()` as its first statement while the test file stayed byte-identical; v0.4.2 (cfbefb8) reported zero findings of any severity. Runtime per the report (pytest 9.1.1): base `1 failed`, head `1 skipped`, exit 0

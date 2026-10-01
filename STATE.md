@@ -1,6 +1,34 @@
 # STATE — read this first when taking over
 
-Updated: 2026-09-29 (v0.4.2 published under estate T-449; the one-time grant is consumed)
+Updated: 2026-10-01 (v0.5.0 prepared under a new one-time maintainer authorization; tag held for the maintainer's sweep review)
+
+## 2026-10-01: v0.5.0 issue-round release
+
+The maintainer authorized this release on 2026-10-01 ("授權發粄", with the
+version chosen as 0.5.0) after the red-team reports #172–#182 were worked
+through PRs #183–#192, all merged with merge commits; main was
+`3cef2a5882fd89945e677dd028b7cef49db3d65b`. The minor bump follows the
+existing rule: the JSON shape is unchanged, but some existing findings now
+carry different fingerprints, so allowlist entries for those shapes stop
+matching.
+
+THREATMODEL rows 104–112 take the PRs' proposed text, numbered in issue order
+by the maintainer's choice; SPEC is unchanged. Each row that claims a closure is
+pinned by fixtures' `bypass:` lines or, for row 105, by an end-to-end test, and
+`benchmarks/FAILURES.md` follows. The two performance budget checks are skipped
+on macOS by maintainer decision; the budgets are unchanged. Package metadata is
+0.5.0; the recommended Action advances to v0.4.2 under the one-release trust lag.
+
+The fixed 1,800-commit Python sweep of `3cef2a5` ran on the pool (estate
+T-494, run 36888070539). It has 48 blocks and matches the published v0.4.2
+result in blocked commits, blocking findings and per-rule counts. Against the
+older reference arm (46 blocks) it reports the two extra blocks v0.4.2 already
+had, and the maintainer's gate holds the tag until the maintainer has reviewed
+that list. Tests, sweeps and package checks run remotely; this round supplies no
+work-machine testing exception. The [release guide](docs/releases/v0.5.0-public-launch.md)
+defines the scope and limits. Downstream re-pins, checkwash-corpus first and
+smallestlie second, are authorized as separate PRs after publication, each merged
+only after the maintainer reviews it.
 
 ## 2026-09-23: v0.4.2 published (estate T-449 consumed)
 
@@ -2011,7 +2039,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.4.2 |
+| version | v0.5.0 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

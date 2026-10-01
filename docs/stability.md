@@ -1,10 +1,10 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.4.2 is alpha** (bounded JS/TS assertion evidence). Its versioned interfaces and
+checkwash **v0.5.0 is alpha** (bounded JS/TS assertion evidence). Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
-[public-launch brief](releases/v0.4.2-public-launch.md) records this release's
+[public-launch brief](releases/v0.5.0-public-launch.md) records this release's
 evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
@@ -144,7 +144,7 @@ The candidate resolves bounded static Node and Jest/Vitest imports, simple
 aliases, and lexical shadows. Unknown lookalikes do not acquire assertion
 strength. Dynamic aliases and semantic equivalence of arbitrary predicates
 inside `assert(value)` / `assert.ok(value)` remain outside this model.
-Source after v0.4.2 (not in the published v0.4.2 package) also reports
+v0.5.0 (not in the published v0.4.2 package) also reports
 `TEST_PATCHES_SUBJECT` when an existing JS unit's own assertion reads a newly
 installed stand-in for a first-party module or member: `vi.mock`, `jest.mock`,
 their ordered forms, node:test `mock.module`, or a replacing spy (issue #177).
@@ -213,7 +213,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.4.2 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.5.0 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
@@ -256,10 +256,10 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.4.2 documentation pins the Action to v0.4.1 under the one-release
-trust-lag policy. That Action includes the Node assertion repair and coverage
-diagnostics, but lacks the new callback/scalar/precision evidence. See the
-[v0.4.2 evidence and limits](releases/v0.4.2-public-launch.md#evidence-and-limits).
+The v0.5.0 documentation pins the Action to v0.4.2 under the one-release
+trust-lag policy. That Action includes the callback/scalar/precision evidence,
+but lacks the fixes for the #172–#181 reports. See the
+[v0.5.0 evidence and limits](releases/v0.5.0-public-launch.md#evidence-and-limits).
 Treat each installed surface as its own versioned dependency; see the
 [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 

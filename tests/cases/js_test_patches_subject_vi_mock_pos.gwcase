@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: vi.mock installs a first-party stand-in above an untouched expect() - the JS spelling of row 90
 origin: issue #177 - the reported diff verbatim (reported: vitest run went 1 failed -> 1 passed on unchanged buggy production, every assertion byte-identical)

@@ -1,6 +1,6 @@
 # Quality configuration review
 
-The v0.4.2 package includes this limited quality preview, separate from
+The v0.5.0 package includes this limited quality preview, separate from
 `checkwash check`. Packaging it does not establish natural-case acceptance,
 production enforcement maturity or frozen legacy-byte parity. The
 [v0.3.4 release guide](releases/v0.3.4-public-launch.md), where the preview
@@ -114,13 +114,14 @@ configuration, coverage scope and mypy strict expansion. Packaged models include
 the qualification fixture and result hashes. Provenance and the remaining
 acceptance conditions are in [the qualification record](quality-qualification/README.md).
 
-To try the packaged preview, install `checkwash==0.4.2`. The recommended
-v0.4.1 Action also includes the quality preview; a CLI installation does
+To try the packaged preview, install `checkwash==0.5.0`. The recommended
+v0.4.2 Action also includes the quality preview; a CLI installation does
 not update that Action. The preview's native/package checks and retained
 T-255 comparison failure are identified separately in the release guide.
 
 Keep quality in its own required CI status when enabling enforcement. Use a
 trusted pinned tool and trusted PR refs; do not swallow exit 2 or use
 continue-on-error. Adding a workflow alone does not verify branch protection.
-The v0.4.2 publication was authorized separately under estate T-449; it does
-not assert completion of the quality design's acceptance conditions.
+The v0.5.0 publication was authorized separately by the maintainer (see
+[RELEASING](RELEASING.md)); it does not assert completion of the quality
+design's acceptance conditions.

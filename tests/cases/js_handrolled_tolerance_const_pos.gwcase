@@ -1,4 +1,5 @@
 === meta ===
+bypass: 110
 rule: TOLERANCE_LOOSENED
 title: widening the module-level EPS that an unchanged expect(Math.abs(a - b) < EPS).toBe(true) reads
 origin: issue 179 sibling — the bound reaches the assertion through the JS binding scan, so the assertion line is byte-identical

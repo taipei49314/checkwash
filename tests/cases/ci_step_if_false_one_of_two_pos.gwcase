@@ -1,4 +1,5 @@
 === meta ===
+bypass: 112
 rule: CI_WORKFLOW_TOUCHED
 title: disabling the integration step while the unit step keeps running is still a disabled runner
 origin: issue #181 sibling — the predicate is per runner command, not "the file runs nothing",

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: vi.doMock before the unit's own await import() replaces the subject even though the file spells no lower-case mock
 origin: issue #177 family - doMock and setMock spell Mock with a capital M, so the prefilter must read them; an ordered mock reaches the dynamic import evaluated after it in the same test

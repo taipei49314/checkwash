@@ -2265,3 +2265,17 @@ input-only-change contract test now names `SUBJECT_INPUT_CHANGED` as owner,
 the three subject-input fixtures carry `bypass: 103`, and the documented
 detector/test counts, STATE table and `benchmarks/FAILURES.md` are
 regenerated to the registry.
+
+## D-063 (2026-10-01): v0.5.0 — fingerprint changes from the #172–#181 round
+
+The fixes in PRs #183–#191 keep the finding and IR JSON shapes, rule IDs,
+the severity model and exit codes, but change the fingerprint of some
+existing findings: `CI_WORKFLOW_TOUCHED` (#173, #174, #181), `TEST_DISABLED`
+on JS/TS units now read as disabled rather than removed and on deleted
+chai-only units (#176, #178, #180), and `SCOPE_DRIFT` /
+`SNAPSHOT_CODE_COCHANGE` where a file's role changed (#174, #175).
+Fingerprints are a frozen contract, so the release is minor: v0.5.0, chosen
+by the maintainer. Allowlist entries recorded on v0.4.2 for these shapes
+must be re-recorded; the release guide lists them. The fixed 1,800-commit
+sweep matches v0.4.2 in blocked commits, blocking findings and per-rule
+counts; it records no fingerprints.

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 104
 rule: TEST_DISABLED
 title: pytest.skip() added before the yield of a same-file fixture a test uses disables that test
 origin: issue #172 sibling spelling - the fixture lives in the test module and is reached through `@pytest.mark.usefixtures`; the test body and its decorators are byte-identical, so none of the unit's own markers changed

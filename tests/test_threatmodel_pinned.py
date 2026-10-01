@@ -37,6 +37,9 @@ E2E_PINNED = {
     # later content in any of the five namespaces, which only real commits and
     # a real ledger can show.
     "101": "test_retired_base_exemption_cannot_allow_later_content",
+    # Issue #173: the resolved inventory needs a real path lister, which a
+    # .gwcase fixture never supplies, so only an end-to-end run reaches it.
+    "105": "test_marker_deselecting_the_only_test_blocks",
 }
 
 

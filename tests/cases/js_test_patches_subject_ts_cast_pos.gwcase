@@ -1,4 +1,5 @@
 === meta ===
+bypass: 109
 rule: TEST_PATCHES_SUBJECT
 title: a TypeScript cast (billing.invoiceTotal as jest.Mock).mockReturnValue is the direct replacement, spelled for the type checker
 origin: issue #177 family - the observe-only spy in beforeEach installed nothing at base; the cast replacement added to the existing test does, exactly like billing.invoiceTotal.mockReturnValue(...)

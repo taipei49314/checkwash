@@ -1,14 +1,14 @@
 # Enterprise checklist
 
-One page for a security or platform team evaluating checkwash v0.4.2
+One page for a security or platform team evaluating checkwash v0.5.0
 (alpha; bounded JS/TS assertion evidence) as a required gate, with a reviewed exemption path.
 Start with a review of its
 [coverage and adoption cost](stability.md#coverage-and-adoption-cost), then
 protect the deployed check and its policy files.
 
 **v0.3.0 notice:** v0.3.0 (2026-09-07) changes five exemption namespaces and
-local installation behavior. The recommended Action pin is v0.4.1 (advanced
-by v0.4.2 under the one-release trust lag) and carries
+local installation behavior. The recommended Action pin is v0.4.2 (advanced
+by v0.5.0 under the one-release trust lag) and carries
 these changes. Follow
 the [migration notes](remediation-upgrade.md); a CLI upgrade alone still does
 not update a deployed Action or an existing hook.
@@ -27,9 +27,9 @@ the [README](../README.md):
 
 3. `checkwash doctor` — it cannot see branch protection; confirm step 2.
 
-The README's Action is hash-pinned to **v0.4.1** under the one-release
-trust-lag policy. Installing the v0.4.2 CLI does not update that Action;
-the callback and scalar-evidence fixes are only in the newer package. Always
+The README's Action is hash-pinned to **v0.4.2** under the one-release
+trust-lag policy. Installing the v0.5.0 CLI does not update that Action;
+the fixes for the #172–#181 reports are only in the newer package. Always
 record both deployed versions. A required check enforces that version's
 configured verdict, not a guarantee that the change is correct.
 
@@ -97,7 +97,9 @@ if the repository currently uses only one.
 
 `tests/gates/test_perf.py` runs in default `pytest` (the CI job has no
 `-k` / `--ignore`). Budgets: 3000-line test diff **< 1.0 s**; 500 files
-**< 2.5 s**. A regression beyond those fails the push. The ROADMAP
+**< 2.5 s**. A regression beyond those fails the push. Since v0.5.0 the two
+budget checks are skipped on macOS by maintainer decision (2026-10-01); the
+Linux and Windows legs still enforce them. The ROADMAP
 stop-hook target is p95 < 2 s on a medium diff; 1.0 s is the hard gate.
 
 ## 6. What this still does not do

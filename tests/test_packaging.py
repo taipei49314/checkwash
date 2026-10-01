@@ -306,11 +306,12 @@ def test_readme_action_snippet_is_zizmor_blanket():
 
 
 def test_perf_gate_is_in_default_collection():
-    """T2.5: the SLO file cannot vanish from default pytest or be skipped.
+    """T2.5: the SLO file cannot vanish from default pytest.
 
     CI runs `pytest` with no -k / --ignore. The budgets live in
     tests/gates/test_perf.py (agent-read-only). This test only checks that
-    the file is still part of the default collection.
+    the file is still part of the default collection; its budget checks are
+    skipped on macOS by maintainer decision (2026-10-01).
     """
     perf = ROOT / "tests" / "gates" / "test_perf.py"
     text = perf.read_text(encoding="utf-8")

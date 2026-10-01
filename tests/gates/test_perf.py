@@ -17,6 +17,7 @@ three runs.
 
 import datetime
 import statistics
+import sys
 import time
 
 import pytest
@@ -32,6 +33,13 @@ TODAY = datetime.date(2026, 1, 1)
 # letting an order-of-magnitude regression back in.
 BUDGET_LARGE_DIFF_S = 1.0  # 3000-line test diff
 BUDGET_MANY_FILES_S = 2.5  # 500 changed files
+
+# Maintainer decision 2026-10-01: the two budget checks are skipped on macOS
+# until the budgets are revisited. That day four pull-request runs missed the
+# 2.5 s budget for 500 files: macOS at 2.52, 2.53 and 3.13 s and one Windows
+# leg at 2.52 s. The two that were rerun passed, and no main-branch run
+# missed. The budgets themselves are unchanged.
+_MACOS_SKIP_REASON = "budget checks paused on macOS (maintainer decision 2026-10-01)"
 
 
 def _test_module(n_tests: int, weaken: bool) -> bytes:
@@ -64,6 +72,7 @@ def _median_elapsed(changes, runs: int = 3):
     return statistics.median(samples), first_findings
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason=_MACOS_SKIP_REASON)
 def test_large_single_diff_within_budget():
     before = _test_module(600, weaken=False)
     after = _test_module(600, weaken=True)
@@ -75,6 +84,7 @@ def test_large_single_diff_within_budget():
     )
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason=_MACOS_SKIP_REASON)
 def test_many_files_within_budget():
     changes = []
     for i in range(500):

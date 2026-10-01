@@ -1,4 +1,5 @@
 === meta ===
+bypass: 111
 rule: ASSERT_WEAKENED
 title: chai expect(x).to.equal(y) -> .to.exist is the chai spelling of == -> is not None
 origin: issue #180 (v0.4.2 passed it with only an analysis-incomplete note)

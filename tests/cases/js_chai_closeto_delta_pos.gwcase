@@ -1,4 +1,5 @@
 === meta ===
+bypass: 111
 rule: TOLERANCE_LOOSENED
 title: chai closeTo(78.75, 0.005) -> closeTo(78.75, 5) widens the absolute delta
 origin: issue #180 sibling

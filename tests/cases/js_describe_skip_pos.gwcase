@@ -1,4 +1,5 @@
 === meta ===
+bypass: 108
 rule: TEST_DISABLED
 title: describe() -> describe.skip() disables every unit declared inside the block
 origin: issue #176, reported against v0.4.2 cfbefb8 (verdict pass, zero findings); the it.skip spelling of the same edit already blocked

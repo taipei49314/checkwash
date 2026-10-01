@@ -1,4 +1,5 @@
 === meta ===
+bypass: 112
 rule: CI_WORKFLOW_TOUCHED
 title: `if: false` under the pytest step stops the suite without touching its line
 origin: issue #181, spelling 1 (reported in the issue) — v0.4.2 (cfbefb8) passed this diff with a lone

@@ -1,4 +1,5 @@
 === meta ===
+bypass: 108
 rule: TEST_DISABLED
 title: it.fails inverts the oracle, so the failing assertion now makes the test pass
 origin: issue #176 (Vitest .fails; Jest spells it .failing)

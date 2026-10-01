@@ -91,6 +91,23 @@ workloads run remotely; this scope supplies no work-machine testing exception.
 The recommended Action advances only to prior stable v0.4.1. Publication and
 artifact verification consume this grant; another version requires a new scope.
 
+On 2026-10-01 the maintainer chose version 0.5.0 for the #172–#182 issue round
+and wrote "授權發粄" (authorize the release). This one-time scope covers the
+version bump, THREATMODEL rows 104–112 with their pins (text as proposed in the
+merged PRs, numbered in issue order, SPEC unchanged), skipping the two
+performance budget checks on macOS, one tag `v0.5.0`, the GitHub Release with
+its PyPI publication, and the publication checks. The maintainer set the tag
+gate in the same conversation: tag only if the fixed 1,800-commit sweep shows
+no extra block against the reference arm; otherwise stop and hand the list over.
+The pool sweep of `3cef2a5` (estate T-494, run 36888070539) reports the two
+extra blocks v0.4.2 already had, so the tag waits for the maintainer's review of
+that list. Steps 6 and 8 run only after that review. The maintainer also
+authorized the downstream re-pins after publication, checkwash-corpus first and
+smallestlie second, each as its own PR merged only after the maintainer reviews
+it. The [v0.5.0 guide](releases/v0.5.0-public-launch.md) records the limits. The
+recommended Action advances to prior stable v0.4.2. Publication and artifact
+verification consume this grant; another version requires a new scope.
+
 What the slot changes in the README, and what already guards it:
 
 - `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
@@ -160,8 +177,9 @@ for the Action in the README and runs the same suite. This is explicitly an
 **Action-pinned engine** check, not qualification of the composite Action's
 wiring. Its receipt names that engine's own source commit and version. It is
 a separate job because the one-release trust lag can expose real capability
-gaps: the v0.4.1 pin includes the Node assertion repairs from #164 but lacks
-the v0.4.2 foundation. Its actual result is measured independently. The job
+gaps: the v0.4.2 pin includes the JS/TS callback and scalar-evidence
+foundation but lacks the v0.5.0 fixes for #172–#181. Its actual result is
+measured independently. The job
 remains visibly failed when cases fail; no expected-failure
 or `continue-on-error` waiver turns those gaps green. The recommended pin
 and release authorization remain governed by the existing release process.
