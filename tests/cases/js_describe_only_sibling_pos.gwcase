@@ -1,0 +1,36 @@
+=== meta ===
+rule: TEST_DISABLED
+title: describe.only on a sibling block stops the failing block from running
+origin: issue #176; focus is inverted, so the units outside the focused block are the ones reported
+=== before: tests/billing.test.ts ===
+import { describe, expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+describe("billing", () => {
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+
+describe("cart misc", () => {
+  it("handles empty carts", () => {
+    expect(invoiceTotal([])).toBe(0);
+  });
+});
+=== after: tests/billing.test.ts ===
+import { describe, expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+describe("billing", () => {
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+
+describe.only("cart misc", () => {
+  it("handles empty carts", () => {
+    expect(invoiceTotal([])).toBe(0);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total with tax"}]

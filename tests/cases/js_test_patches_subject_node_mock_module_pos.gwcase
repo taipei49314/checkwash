@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: node:test t.mock.module before the unit's dynamic import replaces the subject
+origin: issue #177 family - mock.module is ordered: it reaches an await import() evaluated after it in the same test
+=== before: test/billing.test.mjs ===
+import assert from "node:assert/strict";
+import test from "node:test";
+
+test("computes invoice total", async (t) => {
+  const { invoiceTotal } = await import("../src/billing.mjs");
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.test.mjs ===
+import assert from "node:assert/strict";
+import test from "node:test";
+
+test("computes invoice total", async (t) => {
+  t.mock.module("../src/billing.mjs", {
+    namedExports: { invoiceTotal: () => 78.75 },
+  });
+  const { invoiceTotal } = await import("../src/billing.mjs");
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]

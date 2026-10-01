@@ -1,0 +1,35 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 174
+title: a Pipfile dependency bump leaves the test command alone and is not CI configuration
+origin: issue #174 FP guard. Only an edit to [scripts] entries that make up the test command moves the manifest
+=== before: Pipfile ===
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "==2.31.0"
+
+[dev-packages]
+pytest = "==8.3.3"
+
+[scripts]
+test = "pytest"
+=== after: Pipfile ===
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "==2.32.3"
+
+[dev-packages]
+pytest = "==8.3.3"
+
+[scripts]
+test = "pytest"
+=== expect ===
+[]

@@ -1,0 +1,54 @@
+=== meta ===
+rule: TEST_DISABLED
+title: re-enabling skipped blocks (describe.skip, xdescribe, describe options skip) adds no disable
+origin: issue #176 negative control; removing a disable is never a disable
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+describe.skip("billing", () => {
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+
+xdescribe("cart misc", () => {
+  it("handles empty carts", () => {
+    expect(invoiceTotal([])).toBe(0);
+  });
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+describe("billing", () => {
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+
+describe("cart misc", () => {
+  it("handles empty carts", () => {
+    expect(invoiceTotal([])).toBe(0);
+  });
+});
+=== before: tests/currency.test.mjs ===
+import { describe, it } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("currency", { skip: "pending the rounding fix" }, () => {
+  it("rounds half to even", () => {
+    assert.strictEqual(invoiceTotal([{ price: 0.125, qty: 1 }]), 0.12);
+  });
+});
+=== after: tests/currency.test.mjs ===
+import { describe, it } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("currency", () => {
+  it("rounds half to even", () => {
+    assert.strictEqual(invoiceTotal([{ price: 0.125, qty: 1 }]), 0.12);
+  });
+});
+=== expect ===
+[]

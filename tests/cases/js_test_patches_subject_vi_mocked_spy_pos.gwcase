@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: under vi.mock(..., { spy: true }) a new vi.mocked(...).mockReturnValue is the stand-in
+origin: issue #177 family - spy mode keeps real implementations and installs nothing by itself; the replacement chain added to an existing test does
+=== before: billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "./src/billing.js";
+
+vi.mock("./src/billing.js", { spy: true });
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "./src/billing.js";
+
+vi.mock("./src/billing.js", { spy: true });
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    vi.mocked(invoiceTotal).mockReturnValue(78.75);
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]

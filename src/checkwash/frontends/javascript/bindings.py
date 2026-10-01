@@ -444,6 +444,52 @@ class Bindings:
             value = self.member(value, name)
         return value
 
+    def is_global(self, path: tuple[str, ...], position: int) -> bool:
+        """Does this dotted spelling still name the JavaScript global here?
+
+        Any declaration of its root in an enclosing scope, initialized yet or
+        not, or a write to the path or a prefix of it before `position`, is a
+        local or replaced object instead. Globals such as `Math.abs` carry no
+        assertion authority; this only gates numeric evidence (issue #179).
+        """
+        if not path or self._written(path, position):
+            return False
+        scope = self.scope(position)
+        while True:
+            if path[0] in self.scopes[scope].declarations:
+                return False
+            parent = self.scopes[scope].parent
+            if parent is None:
+                return True
+            scope = parent
+
+    def initializer(self, name: str, position: int) -> tuple[str, ...] | None:
+        """Initializer tokens of the `const`/`let`/`var` that `name` reads here.
+
+        The declaration `resolve` would pick, innermost scope first and ready
+        before the read, and only while no earlier write reaches the read: a
+        `let` reassigned by a write `_assignments` records (`=`, `+=`, `-=`,
+        `*=`, `/=`, postfix `++`/`--`) in this function or an enclosing one is
+        unknown, not its first value. Other compound, prefix and destructuring
+        writes, and writes inside another function, are not followed, so such
+        a name still reads its initializer (a stated residual). Imports,
+        parameters, functions and uninitialized names have no initializer.
+        """
+        if self._written((name,), position):
+            return None
+        scope = self.scope(position)
+        while True:
+            declaration = self.scopes[scope].declarations.get(name)
+            if declaration is not None:
+                ready, value = declaration
+                if ready > position or isinstance(value, Value) or not value:
+                    return None
+                return value
+            parent = self.scopes[scope].parent
+            if parent is None:
+                return None
+            scope = parent
+
     @staticmethod
     def _family(value: Value) -> frozenset[str]:
         if value.kind in {"node", "node_method", "node_namespace", "node_context"}:

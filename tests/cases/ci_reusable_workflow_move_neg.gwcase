@@ -1,0 +1,46 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: moving the pytest steps into a reusable workflow is a refactor, not a disabled step
+origin: issue #181 bound — a step that leaves one workflow file produces no dead runner site, so
+origin2: removal is not judged for workflows; the called workflow is new in the same diff.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
+=== after: .github/workflows/tests.yml ===
+name: tests
+on:
+  workflow_call:
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": ".github/workflows/ci.yml"}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": ".github/workflows/tests.yml"}]

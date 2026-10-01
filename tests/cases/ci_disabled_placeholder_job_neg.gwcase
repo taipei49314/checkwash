@@ -1,0 +1,40 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: adding a job that is born disabled stops nothing that ran
+origin: issue #181 bound — the predicate needs a runner that could run at base and cannot at head;
+origin2: a placeholder e2e job switched off from birth leaves the existing suite running.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+  e2e:
+    # Enable once the staging fixture lands.
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pytest tests/e2e
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

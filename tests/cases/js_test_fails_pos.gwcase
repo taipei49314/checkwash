@@ -1,0 +1,20 @@
+=== meta ===
+rule: TEST_DISABLED
+title: it.fails inverts the oracle, so the failing assertion now makes the test pass
+origin: issue #176 (Vitest .fails; Jest spells it .failing)
+=== before: tests/billing.test.ts ===
+import { expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+it("computes invoice total with tax", () => {
+  expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+});
+=== after: tests/billing.test.ts ===
+import { expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+it.fails("computes invoice total with tax", () => {
+  expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total with tax"}]

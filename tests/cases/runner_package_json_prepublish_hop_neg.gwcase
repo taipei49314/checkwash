@@ -1,0 +1,11 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 174
+title: a build script that only prepublishOnly calls is not the test command
+origin: issue #174 review FP guard. `prepublishOnly` runs the suite through `npm test`, but only `test` and `test:*` hop, so an honest babel `--ignore` edit to `build` leaves the test command unchanged and the manifest production (its `npm test` token already denies the opaque exemption)
+=== before: package.json ===
+{ "name": "victim", "version": "1.0.0", "scripts": { "build": "babel src -d lib", "prepublishOnly": "npm run build && npm test", "test": "node --test" } }
+=== after: package.json ===
+{ "name": "victim", "version": "1.0.0", "scripts": { "build": "babel src -d lib --ignore src/__fixtures__", "prepublishOnly": "npm run build && npm test", "test": "node --test" } }
+=== expect ===
+[]

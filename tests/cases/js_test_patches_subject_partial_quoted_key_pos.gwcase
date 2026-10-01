@@ -1,0 +1,25 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a partial jest.mock factory that quotes the subject's key still replaces it
+origin: issue #177 family - requireActual keeps the rest of the module real, and a quoted key names the same export as a bare one; a partial factory replaces every name it spells
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+jest.mock("../src/billing", () => ({
+  ...jest.requireActual("../src/billing"),
+  "invoiceTotal": () => 78.75,
+}));
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]

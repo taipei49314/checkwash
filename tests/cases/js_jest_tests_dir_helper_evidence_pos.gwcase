@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a helper edited beside the tests under __tests__/ is not production repair evidence
+origin: issue #175 second channel — unclassified, src/__tests__/items.js was an opaque production change, which grants REPAIR_EVIDENCE to every finding in the diff (THREATMODEL #4); as a test-layout file it is no longer production
+=== before: src/__tests__/items.js ===
+exports.lineItems = () => [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+=== after: src/__tests__/items.js ===
+exports.lineItems = () => [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+exports.noItems = () => [];
+=== before: src/__tests__/billing.test.js ===
+const { invoiceTotal } = require("../billing");
+const { lineItems } = require("./items");
+
+test("computes invoice total", () => {
+  expect(invoiceTotal(lineItems())).toBe(78.75);
+});
+=== after: src/__tests__/billing.test.js ===
+const { invoiceTotal } = require("../billing");
+const { lineItems } = require("./items");
+
+test("computes invoice total", () => {
+  expect(invoiceTotal(lineItems())).toBeTruthy();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

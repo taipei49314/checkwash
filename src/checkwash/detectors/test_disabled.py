@@ -48,10 +48,14 @@ def detect(ir: IR) -> list[Finding]:
                     m = marker_by_name.get(name)
                     collection = name.startswith("conftest.")
                     what = (
-                        "suite-level execution/report suppression added"
+                        "conftest fixture setup now ends every requesting test in skip/xfail"
+                        if name.startswith("conftest.runtime.fixture.")
+                        else "suite-level execution/report suppression added"
                         if name.startswith("conftest.runtime.")
                         else "suite-level collection control added"
                         if collection
+                        else "skip/xfail added to the setup this test runs"
+                        if name.startswith("setup.")
                         else "disabling marker added"
                     )
                     findings.append(

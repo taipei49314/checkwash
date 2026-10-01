@@ -162,17 +162,35 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     after_path, after, new = sides[1]
     if before_path not in touched and after_path not in touched:
         return []
-    # Compare the same surviving source bytes, so deleting/editing a test
-    # cannot be mistaken for a configuration effect.
-    common = {p: data for p, data in before.items() if p.endswith(".py") and after.get(p) == data}
-    previous = _candidates(common, old)
+    # One definition of the existing suite serves both proofs below: what the
+    # base settings collected from the whole base tree. Reading it from
+    # byte-identical files only hid every test in a file the diff also edits,
+    # and a marker selector cannot be applied without editing the marked file:
+    # `@pytest.mark.slow` on the only test plus a first
+    # `addopts = "-m 'not slow'"` fell back to warn, while the same diff beside
+    # one untouched test blocked (issue #173).
+    suite = _candidates({p: data for p, data in before.items() if p.endswith(".py")}, old)
     old_options = collection_options((before.get(before_path) or b"").decode("utf-8-sig", errors="replace"))
     new_options = collection_options((after.get(after_path) or b"").decode("utf-8-sig", errors="replace"))
     path = after_path if after_path in touched else before_path
-    if previous and new_options.keys() - old_options.keys():
+    # Markers, keywords and node ids are not evaluated, so a new selector is
+    # judged against the existence of that suite, not test by test. A tree
+    # that collected nothing at base has nothing for it to deselect.
+    if suite and new_options.keys() - old_options.keys():
         option = sorted(new_options.keys() - old_options.keys())[0]
         return [(path, "resolved pytest collection option introduced: " + " ".join(option).rstrip())]
-    lost = sorted(previous - _candidates(common, new))
+    if old == new:
+        return []
+    # Settings are judged test by test, and only for their own effect: the old
+    # and the new settings are applied to the same head tree, so deleting,
+    # emptying or moving a test cannot be mistaken for a configuration effect,
+    # and a test this diff adds is not an existing one. A renamed file keeps
+    # its base identity.
+    moved = {c.path: c.old_path for c in changes if c.old_path}
+    head = {p: data for p, data in after.items() if p.endswith(".py")}
+    still = {(moved.get(p, p), name) for p, name in _candidates(head, old)}
+    kept = {(moved.get(p, p), name) for p, name in _candidates(head, new)}
+    lost = sorted((suite & still) - kept)
     if not lost:
         return []
     example = "::".join(lost[0])

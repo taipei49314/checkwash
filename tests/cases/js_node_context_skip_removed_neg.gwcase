@@ -1,0 +1,26 @@
+=== meta ===
+rule: TEST_DISABLED
+title: replacing t.skip() with t.diagnostic() re-enables the unit and adds no disable
+origin: issue #176 family negative control; only skip/todo on the test's own context disable it
+=== before: tests/billing.test.mjs ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", (t) => {
+  t.skip("rounding is flaky on CI");
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: tests/billing.test.mjs ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", (t) => {
+  t.diagnostic("re-enabled after the rounding fix");
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== expect ===
+[]

@@ -1,0 +1,20 @@
+=== meta ===
+rule: TEST_DISABLED
+title: focusing the only unit in the file turns nothing off
+origin: issue #176 control for the focus direction; .only reports the units it turns off, never the focused one (v0.4.2 read it.only as the unit disappearing)
+=== before: tests/billing.test.ts ===
+import { expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+it("computes invoice total with tax", () => {
+  expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+});
+=== after: tests/billing.test.ts ===
+import { expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+it.only("computes invoice total with tax", () => {
+  expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+});
+=== expect ===
+[]
