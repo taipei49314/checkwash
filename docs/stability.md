@@ -129,10 +129,13 @@ in [benchmarks/README.md](../benchmarks/README.md).
 
 Python is the primary frontend. JS/TS support scans named `test`/`it` units
 and a fixed set of `expect(...).matcher(...)` calls in `*.test.*` and
-`*.spec.*` files, including JSX/TSX. Node default test paths also cover `test/`
-directories and `test-*`, `*-test`, `*_test` and exact `test` filenames with
-`js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. Build artifacts and
-dependencies remain excluded.
+`*.spec.*` files, including JSX/TSX. Jest's default layout adds every
+JavaScript/TypeScript file beneath a `__tests__/` directory and exact
+`test`/`spec` filenames, JSX/TSX included, and Bun's adds `*_test` and `*_spec`
+filenames. Node default test paths also cover `test/` directories and `test-*`,
+`*-test`, `*_test` and exact `test` filenames with `js`, `cjs`, `mjs`, `ts`,
+`cts`, or `mts` extensions. Configured test globs are not read. Build artifacts
+and dependencies remain excluded.
 The v0.4.1 repair for #164 also recognizes `assert.equal`,
 `assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`
 changing to `assert.ok` or `assert(value)`, plus the corresponding

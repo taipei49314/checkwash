@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: toBe -> toBeTruthy in Jest's default __tests__/ layout is the same weakening as in billing.test.js
+origin: issue #175 — reported as verdict pass with zero findings on v0.4.2 (cfbefb8); Jest collects __tests__/**/*.js with no configuration (default testMatch), so the path, not the matcher, was the blind spot
+=== before: __tests__/billing.js ===
+// __tests__/billing.js — collected by jest with zero configuration
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: __tests__/billing.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBeTruthy();
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

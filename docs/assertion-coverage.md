@@ -112,11 +112,16 @@ rejected) so it cannot corrupt stdout's existing machine protocol. JSON findings
 and emitted IR keep their existing shapes.
 
 `no_known_gaps` means only that this bounded candidate scan found none. It is
-not a completeness claim. File discovery includes `.test.*` and `.spec.*`
-JavaScript/TypeScript files, plus Node's default `test/` directories and
-`test-*`, `*-test`, `*_test` and exact `test` filenames for JS/CJS/MJS/TS/CTS/MTS.
-Generated/build/dependency paths remain excluded. Moving a test into a production
-path is checked as removal from test coverage.
+not a completeness claim. File discovery follows the test runners'
+zero-configuration defaults: `.test.*` and `.spec.*` JavaScript/TypeScript
+files; every JavaScript/TypeScript file beneath a `__tests__/` directory and
+exact `test`/`spec` filenames, JSX/TSX included (Jest's default `testMatch`);
+Bun's `*_test` and `*_spec` filenames for JS/JSX/TS/TSX; and Node's default
+`test/` directories and `test-*`, `*-test`, `*_test` and exact `test` filenames
+for JS/CJS/MJS/TS/CTS/MTS. Configured globs (`testMatch`, `include`, `spec`) are
+not read. Generated/build/dependency paths remain excluded. Moving a test out of
+every recognized layout, for example into a production path, is checked as
+removal from test coverage.
 
 The scan resolves bounded static Node ESM/CommonJS imports, renamed and flat
 destructured imports, simple local aliases, and Jest/Vitest `expect` imports.

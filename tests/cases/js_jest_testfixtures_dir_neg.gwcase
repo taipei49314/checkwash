@@ -1,0 +1,14 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a codemod's __testfixtures__ output is data beside the tests, not a test
+origin: issue #175 bound — Jest's defaults collect __tests__/ and spec/test names, not neighbouring fixture directories; a codemod that rewrites toBe(true) into toBeTruthy() legitimately changes its expected output this way
+=== before: transforms/__testfixtures__/truthy-matchers.output.js ===
+test("ready", () => {
+  expect(isReady()).toBe(true);
+});
+=== after: transforms/__testfixtures__/truthy-matchers.output.js ===
+test("ready", () => {
+  expect(isReady()).toBeTruthy();
+});
+=== expect ===
+[]
