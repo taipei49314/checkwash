@@ -458,8 +458,12 @@ class Bindings:
 
         The declaration `resolve` would pick, innermost scope first and ready
         before the read, and only while no earlier write reaches the read: a
-        reassigned `let` is unknown, not its first value. Imports, parameters,
-        functions and uninitialized names have no initializer.
+        `let` reassigned by a write `_assignments` records (`=`, `+=`, `-=`,
+        `*=`, `/=`, postfix `++`/`--`) in this function or an enclosing one is
+        unknown, not its first value. Other compound, prefix and destructuring
+        writes, and writes inside another function, are not followed, so such
+        a name still reads its initializer (a stated residual). Imports,
+        parameters, functions and uninitialized names have no initializer.
         """
         if self._written((name,), position):
             return None

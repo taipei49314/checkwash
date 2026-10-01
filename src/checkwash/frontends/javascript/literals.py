@@ -246,7 +246,7 @@ def _literal_decimal(expression: str) -> Decimal | None:
 
     The spellings `_number` accepts, read from the text rather than through
     a binary float: a decimal literal is its written value, a radix literal
-    its integer.
+    its integer. A literal Decimal cannot hold is unknown, never an error.
     """
     if not expression or len(expression) > 512:
         return None
@@ -254,16 +254,22 @@ def _literal_decimal(expression: str) -> Decimal | None:
     source = expression
     if source[0] in "+-":
         source = source[1:].lstrip(_WHITESPACE)
-    if _DECIMAL.fullmatch(source):
-        value = Decimal(source.replace("_", ""))
-    else:
-        for pattern, radix in _RADIX:
-            if pattern.fullmatch(source):
-                value = Decimal(int(source[2:].replace("_", ""), radix))
-                break
+    try:
+        if _DECIMAL.fullmatch(source):
+            value = Decimal(source.replace("_", ""))
         else:
-            return None
-    return -value if negative else value
+            for pattern, radix in _RADIX:
+                if pattern.fullmatch(source):
+                    value = Decimal(int(source[2:].replace("_", ""), radix))
+                    break
+            else:
+                return None
+        return -value if negative else value
+    except ArithmeticError:
+        # `1e99999999999999999999` has an exponent no exact Decimal holds, and
+        # negating `1e1000000` overflows the default context. Either escaped
+        # analyze as an engine error (exit 2); the bound is unknown instead.
+        return None
 
 
 def _bound_source(expression: str) -> str | None:

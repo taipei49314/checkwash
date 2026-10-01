@@ -77,6 +77,8 @@ def _rules(before, after, imports=NODE):
     f"expect({SUBJECT}).toBeLessThanOrEqual(1e-2);",
     f"expect(0.01).toBeGreaterThan({SUBJECT});",
     f"const EPS = 0.01; assert.ok({SUBJECT} < EPS);",
+    f"assert.ok(({SUBJECT} < 0.01));",
+    f"expect(({SUBJECT} < 0.01)).toBe(true);",
 ])
 def test_every_spelling_records_the_same_absolute_tolerance(body):
     assert _bound(body) == Decimal("0.01")
@@ -101,6 +103,8 @@ def test_every_spelling_records_the_same_absolute_tolerance(body):
     f"const Math = {{ abs: () => 0 }}; assert.ok({SUBJECT} < 0.01);",
     f"const Number = {{ EPSILON: 1 }}; assert.ok({SUBJECT} < Number.EPSILON);",
     f"let EPS = 0.01; EPS = 1e12; assert.ok({SUBJECT} < EPS);",
+    f"assert.ok(({SUBJECT} < 0.01) && ready());",
+    f"const EPS = 1e99999999999999999999; assert.ok({SUBJECT} < EPS);",
 ])
 def test_other_shapes_record_no_tolerance(body):
     assert _bound(body) is None
@@ -153,6 +157,7 @@ def test_issue_179_widened_epsilon_blocks_and_names_both_bounds():
     (f"expect({SUBJECT}).toBeLessThan(0.01);", f"expect({SUBJECT}).toBeLessThan(1e12);"),
     (f"const EPS = 0.01; assert.ok({SUBJECT} < EPS);",
      f"const EPS = 1e12; assert.ok({SUBJECT} < EPS);"),
+    (f"assert.ok({SUBJECT} < 0.01);", f"assert.ok(({SUBJECT} < 1e12));"),
 ])
 def test_widening_any_spelling_reports_tolerance_loosened(before, after):
     assert _rules(before, after) == ([("TOLERANCE_LOOSENED", "high")], "block")
@@ -165,6 +170,7 @@ def test_widening_any_spelling_reports_tolerance_loosened(before, after):
     (f"assert.ok({SUBJECT} < 0.01);", f"const EPS = 1e-2; assert.ok({SUBJECT} < EPS);"),
     (f"expect({SUBJECT}).toBeLessThan(0.01);", f"expect({SUBJECT}).toBeLessThan(Number.EPSILON);"),
     (f"assert.ok({SUBJECT} < Infinity);", f"assert.ok({SUBJECT} < 0.01);"),
+    (f"assert.ok({SUBJECT} < 0.01);", f"assert.ok(({SUBJECT} < 0.01));"),
 ])
 def test_tightened_or_respelled_bounds_stay_silent(before, after):
     assert _rules(before, after) == ([], "pass")
@@ -203,3 +209,13 @@ def test_the_cross_unit_reading_is_javascript_only():
     assert _js_mixed("tests/calc.test.ts", "abs=0.5", "0") == (False, "abs=0.5", "places=0")
     assert _js_mixed("tests/calc.test.ts", "abs=0.4", "0") == (True, "abs=0.4", "places=0")
     assert _js_mixed("tests/calc.test.ts", "abs=0.5", "1.5") == (False, "abs=0.5", "1.5")
+
+
+@pytest.mark.parametrize("bound", ["1e99999999999999999999", "-1e1000000"])
+def test_a_bound_past_the_decimal_range_is_unknown_not_a_crash(bound):
+    # Review of #189: an exponent no exact Decimal holds, or a negation that
+    # overflows the default context, escaped analyze as an engine error
+    # (exit 2). The bound is unknown instead, so the pair keeps the verdict it
+    # had before hand-rolled tolerances were read.
+    assert _bound(f"assert.ok({SUBJECT} < {bound});") is None
+    assert _rules(f"assert.ok({SUBJECT} < 0.01);", f"assert.ok({SUBJECT} < {bound});") == ([], "pass")

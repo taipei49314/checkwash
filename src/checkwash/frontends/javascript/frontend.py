@@ -409,14 +409,24 @@ def _relational_split(
     return (start, found[0]), text[found[0]:found[1]], (found[1], end)
 
 
-def _absolute_value_call(text: str, code: bytearray, span: tuple[int, int]) -> bool:
-    """Is the operand one complete `Math.abs(...)` call, parentheses aside?"""
+def _without_parentheses(text: str, code: bytearray, span: tuple[int, int]) -> tuple[int, int]:
+    """An expression without surrounding whitespace, comments or redundant parentheses.
+
+    `((a < b))` is read as `a < b`; `(a) < (b)` and `(a, b)` stay whole. The
+    comparison and its `Math.abs` operand both go through this one peeling.
+    """
     start, end = _trim(text, code, span)
     while start < end and text[start] == "(":
         group = _call_argument_spans(text, code, start, end)
         if group is None or group[1] != end or len(group[0]) != 1:
-            return False
+            break
         start, end = _trim(text, code, group[0][0])
+    return start, end
+
+
+def _absolute_value_call(text: str, code: bytearray, span: tuple[int, int]) -> bool:
+    """Is the operand one complete `Math.abs(...)` call, parentheses aside?"""
+    start, end = _without_parentheses(text, code, span)
     match = _ABS_CALL.match(text, start, end)
     if match is None:
         return False
@@ -442,7 +452,9 @@ def _record_tolerance(
     so pairing and the other rules see the assertion exactly as before.
     """
     if operator is None or bound is None:
-        split = _relational_split(text, code, subject)
+        # Redundant parentheses around the whole comparison state the same
+        # bound: `assert.ok((Math.abs(d) < eps))` (review of #189).
+        split = _relational_split(text, code, _without_parentheses(text, code, subject))
         if split is None:
             return
         subject, operator, bound = split
