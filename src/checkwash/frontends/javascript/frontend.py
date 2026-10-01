@@ -519,6 +519,12 @@ def _declaration(text: str, code: bytearray, bindings: Bindings,
         if following < len(text) and text[following] == "{" and code[following]:
             return None  # a method signature, `fit(data) {`, not a call
     title = _TITLE_RE.match(text, opening + 1)
+    if prefix and title is None and (call is None or all(
+            _callback_body(bindings, call[0][position]) is None
+            for position in (1, 2) if position < len(call[0]))):
+        # A prefixed global names its test or passes it inline; `fit(points)`
+        # and a typed `fit(x: number[]): Model` method belong to a helper.
+        return None
     evidence = text[match.start():opening].rstrip()
     span = (match.start(), title.end() if title else opening + 1)
     markers = [Marker(name="test.skip", text=evidence, span=span)] if "skip" in effects else []
@@ -662,10 +668,15 @@ def _imperative_skips(text: str, code: bytearray, bindings: Bindings,
             receivers = _callback_receivers(bindings, callback[3])
         if receiver not in receivers or (receiver == "this" and method != "skip"):
             continue
-        call = _call_arguments(text, code, candidate.end() - 1, end)
+        call = _call_argument_spans(text, code, candidate.end() - 1, end)
         if call is None:
             continue
-        arguments, call_end = call
+        spans, call_end = call
+        if any(_callback_body(bindings, span) is not None for span in spans):
+            # tap's `t.skip(name, fn)` declares a skipped subtest; an
+            # imperative skip never takes a function.
+            continue
+        arguments = [text[first:last].strip() for first, last in spans]
         name = "test.skip"
         if arguments and not (_STRING_RE.fullmatch(arguments[0]) or re.fullmatch(r"`[^`]*`", arguments[0])):
             # Vitest's `ctx.skip(condition)`; the condition is not evaluated.
@@ -682,8 +693,10 @@ def _unit_markers(declaration: _Declaration, ancestors: list[_Declaration],
     A unit runs unless it, or a declaration whose callback encloses it, is
     skipped, conditionally skipped or inverted, or unless the file is focused
     and neither it nor an enclosing declaration is. Each effect is a state,
-    not a count: `it.skip` inside `describe.skip` is one skip, and a skipped
-    unit is not also reported as unfocused.
+    not a count: `it.skip` inside `describe.skip` is one skip. Every reason
+    is its own marker, as stacked Python markers are: a skipped unit outside
+    the focus carries both, so re-enabling it while a committed `.only` still
+    holds the focus adds no disable.
     """
     chain = [d for d in ancestors if d is not declaration and d.callback is not None
              and d.callback[0] <= declaration.start < d.callback[1]]
@@ -692,8 +705,7 @@ def _unit_markers(declaration: _Declaration, ancestors: list[_Declaration],
     for marker in [m for d in chain for m in d.markers] + imperative:
         if all(marker.name != kept.name for kept in markers):
             markers.append(Marker(name=marker.name, text=marker.text, span=marker.span))
-    if (focus is not None and all(d.focus is None for d in chain)
-            and all(m.name != "test.skip" for m in markers)):
+    if focus is not None and all(d.focus is None for d in chain):
         markers.append(Marker(name="test.unfocused", text=focus.text, span=focus.span))
     return markers
 

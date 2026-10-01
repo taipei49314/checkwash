@@ -136,6 +136,8 @@ def test_focus_turns_off_every_unit_outside_a_focused_declaration():
     'suite.only("focused", () => {});',
     'context.only("focused", () => {});',
     'describe("focused", { only: true }, () => {});',
+    # A computed title still declares a test when the callback is inline.
+    'fit(name, () => {});',
 ])
 def test_every_focus_spelling_turns_off_the_rest(focus):
     assert _markers(UNIT + "\n" + focus)["computes"] == ["test.unfocused"]
@@ -149,14 +151,21 @@ def test_every_focus_spelling_turns_off_the_rest(focus):
     'model.fit("weights", data);',
     "function fit(model, data) { return model; }",
     "const trainer = { fit(data) { return data; } };",
+    # A helper named `fit`, called or declared with a TS return type, has
+    # neither a literal title nor an inline callback.
+    "const line = fit(points);",
+    "interface Model { fit(x: number[]): Model; }",
+    "class Stub { fit(x: number[]): Stub { return this; } }",
 ])
 def test_focus_lookalikes_turn_nothing_off(lookalike):
     assert _markers(UNIT + "\n" + lookalike)["computes"] == []
 
 
-def test_a_skipped_unit_is_not_also_reported_unfocused():
+def test_a_skipped_unit_outside_the_focus_lists_both_reasons():
+    # Every reason is its own marker, as stacked Python markers are, so a
+    # unit re-enabled under a committed `.only` loses one and gains none.
     source = 'it.skip("computes", () => {});\nit.only("other", () => {});'
-    assert _markers(source) == {"computes": ["test.skip"], "other": []}
+    assert _markers(source) == {"computes": ["test.skip", "test.unfocused"], "other": []}
 
 
 @pytest.mark.parametrize("callback,expected", [
@@ -171,6 +180,9 @@ def test_a_skipped_unit_is_not_also_reported_unfocused():
     ("(t) => { const later = () => { t.skip(); }; BODY }", []),
     ("(t) => { other.skip(); BODY }", []),
     ("({ skip }) => { skip(); BODY }", []),
+    # tap's `t.skip(name, fn)` declares a skipped subtest; it skips nothing here.
+    ('(t) => { t.skip("handles BOM later", (t) => { t.end(); }); BODY }', []),
+    ('(t) => { t.todo("streams", async function (t) { t.end(); }); BODY }', []),
 ])
 def test_imperative_skips_on_the_callbacks_own_context(callback, expected):
     source = 'test("computes", ' + callback.replace("BODY", BODY) + ");"
@@ -196,6 +208,10 @@ def test_describe_skip_blocks_exactly_like_the_it_skip_control():
      'describe.concurrent("invoices", () => {\n  ' + UNIT + "\n});\n"),
     (UNIT + "\n", UNIT.replace("it(", "it.concurrent(") + "\n"),
     (UNIT + "\n", UNIT.replace("it(", "it.only(") + "\n"),
+    # Re-enabled while a committed `.only` still holds the focus: the unit
+    # ran in neither revision, so nothing was disabled.
+    (UNIT.replace("it(", "it.skip(") + '\nit.only("other", () => { expect(other()).toBe(1); });\n',
+     UNIT + '\nit.only("other", () => { expect(other()).toBe(1); });\n'),
 ])
 def test_reenabling_unfocusing_renaming_and_neutral_modifiers_stay_silent(before, after):
     _ir, findings, verdict = _analyze(before, after)
@@ -214,4 +230,21 @@ def test_a_unit_moved_into_a_skipped_block_earns_no_move_credit(target, outcome)
     _ir, findings, verdict = analyze(changes, Config(), Contract(), [], DATE)
     assert (verdict, [(f.rule, f.severity) for f in findings]) == (
         outcome[0], [("TEST_DISABLED", outcome[1])],
+    )
+
+
+@pytest.mark.parametrize("before,after", [
+    ('test("computes", () => { ' + BODY + " });\n",
+     'test("computes", { skip: process.platform === "win32" }, () => { ' + BODY + " });\n"),
+    ('describe("billing", () => {\n  ' + UNIT + "\n});\n",
+     'describe.skipIf(process.platform === "win32")("billing", () => {\n  ' + UNIT + "\n});\n"),
+])
+def test_a_platform_gate_gets_no_compat_credit(before, after):
+    """The current answer to an open maintainer question (PR #187): JS
+    conditions are not evaluated, so an honest platform gate on a test-only
+    diff blocks where Python `skipif(sys.platform == ...)` holds at warn.
+    Change this with the ruling, not before it."""
+    _ir, findings, verdict = _analyze(before, after)
+    assert (verdict, [(f.rule, f.severity, f.unit) for f in findings]) == (
+        "block", [("TEST_DISABLED", "high", "computes")],
     )
