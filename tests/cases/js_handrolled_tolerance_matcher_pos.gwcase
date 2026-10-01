@@ -1,0 +1,22 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: expect(Math.abs(a - b)).toBeLessThan(0.01) -> (1e12) is the matcher spelling of the same tolerance
+origin: issue 179 sibling — the ordering matchers recorded the Math.abs subject but never its bound
+=== before: tests/billing.test.ts ===
+import { expect, test } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75)).toBeLessThan(0.01);
+});
+=== after: tests/billing.test.ts ===
+import { expect, test } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75)).toBeLessThan(1e12);
+});
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

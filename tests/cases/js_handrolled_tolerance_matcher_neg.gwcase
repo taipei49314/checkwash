@@ -1,0 +1,22 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: toBeLessThan(0.01) -> toBeLessThanOrEqual(0.005) on Math.abs(a - b) tightens the bound and stays silent
+origin: issue 179 negative control for the matcher spelling
+=== before: tests/billing.test.ts ===
+import { expect, test } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75)).toBeLessThan(0.01);
+});
+=== after: tests/billing.test.ts ===
+import { expect, test } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75)).toBeLessThanOrEqual(0.005);
+});
+=== expect ===
+[]
