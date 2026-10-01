@@ -91,7 +91,11 @@ def _outcome(statement, bindings):
         raised = statement.exc
         if isinstance(raised, ast.Call) and _plain(raised):
             raised = raised.func
-        if raised is None or statement.cause is not None:
+        # `from None` only hides the context: nothing runs and the outcome
+        # propagates unchanged. Any other cause is an expression evaluated
+        # first, which could raise instead, so it stays unproved.
+        if raised is None or statement.cause is not None and not (
+                isinstance(statement.cause, ast.Constant) and statement.cause.value is None):
             return None
         effect = _OUTCOME_RAISES.get(_resolve(raised, bindings))
         return (effect, statement) if effect else None
@@ -272,6 +276,9 @@ def setup_skip_controls(tree):
 # xunit setup that pytest calls itself, and the units each one runs for.
 _MODULE_SETUP = {'setup_module': 'all', 'setUpModule': 'all', 'setup_function': 'functions'}
 _CLASS_SETUP = {'setup_class': 'methods', 'setUpClass': 'methods', 'setup_method': 'methods', 'setUp': 'methods'}
+# unittest's own callbacks: only a unittest.TestCase runs them. On a plain
+# class pytest calls setup_class and setup_method alone.
+_UNITTEST_SETUP = frozenset({'setUpClass', 'setUp'})
 
 
 def _fixture(function, bindings):
@@ -334,10 +341,10 @@ def _strings(node):
     return None
 
 
-def _direct_arguments(function, bindings):
-    """Argnames the unit's own `parametrize` supplies directly: no fixture runs for them."""
+def _direct_arguments(marks, bindings):
+    """Argnames these `parametrize` marks supply directly: no fixture runs for them."""
     names = set()
-    for mark in function.decorator_list:
+    for mark in marks:
         if not (isinstance(mark, ast.Call) and mark.args
                 and _resolve(mark.func, bindings) == 'pytest.mark.parametrize'):
             continue
@@ -355,20 +362,31 @@ class SetupScope:
 
     `fixtures`: registered name -> (requested names, autouse, outcome or None).
     `implicit`: xunit callback name -> (units it runs for, outcome or None).
-    `usefixtures`: names marks request for every unit in scope. Only a name's
-    final binding provides anything: pytest reads the finished namespace.
+    `usefixtures`: names marks request for every unit in scope. `direct`:
+    argnames a class or module `parametrize` supplies to every unit in scope.
+    Only a name's final binding provides anything: pytest reads the finished
+    namespace. `bases` is the class's base list, None when unknown.
     """
 
-    def __init__(self, body, bindings, *, in_class=False, marks=()):
+    def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None):
         self.bindings = bindings
         self.fixtures = {}
         self.implicit = {}
-        self.usefixtures = frozenset(_usefixtures([*marks, *_pytestmark(body)], bindings))
+        scope_marks = [*marks, *_pytestmark(body)]
+        self.usefixtures = frozenset(_usefixtures(scope_marks, bindings))
+        self.direct = frozenset(_direct_arguments(scope_marks, bindings))
         last = {}
         for statement in body:
             for name in _names([statement]):
                 last[name] = statement
         callbacks = _CLASS_SETUP if in_class else _MODULE_SETUP
+        if (in_class and bases is not None and 'object' not in bindings
+                and all(isinstance(base, ast.Name) and base.id == 'object' for base in bases)):
+            # Only unittest runs setUp/setUpClass, and a class with no base but
+            # `object` is no TestCase. The classes scoped here are the
+            # collecting class, the classes enclosing it and a wholly same-file
+            # hierarchy (`inherited_tests`): none makes a TestCase inherit this body.
+            callbacks = {name: applies for name, applies in callbacks.items() if name not in _UNITTEST_SETUP}
         for statement in body:
             if (not isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef))
                     or last.get(statement.name) is not statement):
@@ -387,6 +405,12 @@ class SetupScope:
                 outcome = (callback_outcome(statement, bindings, receiver=in_class and not decorators)
                            if plain else None)
                 self.implicit[statement.name] = (callbacks[statement.name], outcome)
+        module_setup = last.get('setUpModule')
+        if (not in_class and isinstance(module_setup, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and not module_setup.decorator_list):
+            # pytest calls only the first of setUpModule and setup_module it
+            # finds, so a plain setUpModule leaves setup_module unused.
+            self.implicit.pop('setup_module', None)
 
 
 def setup_outcomes(scopes, function, *, method):
@@ -395,28 +419,33 @@ def setup_outcomes(scopes, function, *, method):
     `scopes` runs from the module to the innermost enclosing class. The unit
     reaches what its arguments name, what `usefixtures` names, the autouse
     fixtures in scope, what those request in turn, and the xunit setup pytest
-    runs for it; a name its own `parametrize` supplies directly runs no
-    fixture. Conftest fixtures are not resolved here: they are judged once,
+    runs for it; a name that `parametrize` on the unit, its class or its
+    module supplies directly runs no fixture anywhere in that closure.
+    Conftest fixtures are not resolved here: they are judged once,
     suite-wide, as runtime controls (`fixture_setup_controls`).
     """
     bindings = scopes[0].bindings
     static = any(isinstance(mark, ast.Name) and mark.id == 'staticmethod' for mark in function.decorator_list)
     wanted = set(_requests(function, receiver=method and not static))
     wanted |= _usefixtures(function.decorator_list, bindings)
+    direct = _direct_arguments(function.decorator_list, bindings)
     fixtures, implicit = {}, {}
     for scope in scopes:
         fixtures.update(scope.fixtures)
         implicit.update(scope.implicit)
         wanted |= scope.usefixtures
         wanted |= {name for name, fixture in scope.fixtures.items() if fixture[1]}
-    wanted -= _direct_arguments(function, bindings)
+        direct |= scope.direct
+    wanted -= direct
     found = {}
     for name in sorted(implicit):
         applies, outcome = implicit[name]
         if outcome is not None and (applies == 'all' or (applies == 'methods') == method):
             found[name] = outcome
     queue = sorted(wanted)
-    seen = set(queue)
+    # A directly parametrized name replaces its fixture for every request in
+    # the closure, not only the unit's own.
+    seen = set(queue) | direct
     while queue:
         name = queue.pop(0)
         if name not in fixtures:

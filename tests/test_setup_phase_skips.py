@@ -63,6 +63,7 @@ def setup_names(source):
     conftest("    pytest.skip(reason='temporarily unavailable')\n"),
     conftest("    pytest.skip(f'{__name__} temporarily unavailable')\n"),
     conftest("    raise pytest.skip.Exception('temporarily unavailable')\n"),
+    conftest("    raise pytest.skip.Exception('temporarily unavailable') from None\n"),
     conftest("    raise unittest.SkipTest('temporarily unavailable')\n", "import unittest\n"),
     conftest("    raise SkipTest('temporarily unavailable')\n", "from unittest import SkipTest\n"),
     conftest("    skip('temporarily unavailable')\n", "from pytest import skip\n"),
@@ -92,6 +93,8 @@ def test_new_conftest_with_a_skipping_autouse_fixture_is_a_suite_control():
              "import glob\n"),
     conftest("    return pytest.importorskip('numpy')\n"),
     conftest("    custom.skip('temporarily unavailable')\n", "import custom\n"),
+    # An unbound cause raises NameError first: the test errors, it is not skipped.
+    conftest("    raise pytest.skip.Exception('temporarily unavailable') from error\n"),
     conftest("    def later():\n        pytest.skip('never called')\n"),
     CONFTEST.replace("    return", "    yield") + "    pytest.skip('teardown only')\n",
     CONFTEST + "\n\ndef helper():\n    pytest.skip('not a fixture')\n",
@@ -226,3 +229,54 @@ def test_real_conftest_fixture_skip_turns_a_failure_green(tmp_path, statement, o
     run = subprocess.run(command, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
     assert run.returncode == 0 and outcome in run.stdout, run.stdout + run.stderr
     assert [f.severity for f in disabled(after, CONFTEST)] == ["high"]
+
+
+TEST_METHOD = "    def test_method(self):\n        assert True\n"
+
+
+@pytest.mark.parametrize("definition, expected", [
+    # Only unittest runs setUp/setUpClass: on a plain class pytest calls neither.
+    ("class TestPlain:\n    def setUp(self):\n        pytest.skip('later')\n\n", []),
+    ("class TestPlain(object):\n    @classmethod\n"
+     "    def setUpClass(cls):\n        pytest.skip('later')\n\n", []),
+    ("class TestPlain(unittest.TestCase):\n    @classmethod\n"
+     "    def setUpClass(cls):\n        pytest.skip('later')\n\n", ["setup.setUpClass.skip"]),
+    # A base the module does not define may be a TestCase.
+    ("class TestPlain(StoreCase):\n    def setUp(self):\n        pytest.skip('later')\n\n",
+     ["setup.setUp.skip"]),
+    ("class TestPlain:\n    def setup_method(self, method):\n        pytest.skip('later')\n\n",
+     ["setup.setup_method.skip"]),
+])
+def test_unittest_setup_reaches_only_a_class_that_can_be_a_testcase(definition, expected):
+    header = "import unittest\n\nimport pytest\n\nfrom app.testing import StoreCase\n\n\n"
+    assert setup_names(header + definition + TEST_METHOD) == {"TestPlain.test_method": expected}
+
+
+@pytest.mark.parametrize("module_setup, expected", [
+    ("def setup_module(module):\n    pytest.skip('later')\n", ["setup.setup_module.skip"]),
+    # pytest calls only the first of setUpModule and setup_module it finds.
+    ("def setUpModule():\n    pass\n\n\ndef setup_module(module):\n    pytest.skip('later')\n", []),
+    ("def setUpModule():\n    pytest.skip('later')\n\n\ndef setup_module(module):\n    pass\n",
+     ["setup.setUpModule.skip"]),
+])
+def test_module_setup_is_the_first_one_pytest_finds(module_setup, expected):
+    source = "import pytest\n\n\n" + module_setup + "\n\ndef test_function():\n    assert True\n"
+    assert setup_names(source) == {"test_function": expected}
+
+
+@pytest.mark.parametrize("tests, expected", [
+    # A class or module `parametrize` supplies the argname, so its fixture never runs.
+    ("@pytest.mark.parametrize('db', [1, 2])\n"
+     "class TestStore:\n    def test_row(self, db):\n        assert db\n", {"TestStore.test_row": []}),
+    ("pytestmark = pytest.mark.parametrize('db', [1, 2])\n\n\n"
+     "def test_row(db):\n    assert db\n", {"test_row": []}),
+    # The direct value also replaces the fixture for the fixtures the unit requests.
+    ("@pytest.fixture\ndef rows(db):\n    return [db]\n\n\n"
+     "@pytest.mark.parametrize('db', [1, 2])\ndef test_row(rows):\n    assert rows\n", {"test_row": []}),
+    # Indirect parametrization still runs the fixture.
+    ("@pytest.mark.parametrize('db', [1, 2], indirect=True)\n"
+     "class TestStore:\n    def test_row(self, db):\n        assert db\n",
+     {"TestStore.test_row": ["setup.db.skip"]}),
+])
+def test_class_and_module_parametrize_run_no_fixture(tests, expected):
+    assert setup_names(MODULE + tests) == expected

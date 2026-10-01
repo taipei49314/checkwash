@@ -2954,7 +2954,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         for cls in classes:
             if id(cls) not in class_setup:
                 class_setup[id(cls)] = SetupScope(
-                    cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list
+                    cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list, bases=cls.bases
                 )
             scopes = scopes + (class_setup[id(cls)],)
         return scopes
