@@ -1,0 +1,26 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: chai assert.strictEqual(x, y) -> assert.isOk(x) drops the exact oracle to truthiness
+origin: issue #180 sibling (chai TDD interface)
+=== before: test/billing.spec.js ===
+import { assert } from "chai";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    assert.strictEqual(invoiceTotal(items), 78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+import { assert } from "chai";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    assert.isOk(invoiceTotal(items));
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

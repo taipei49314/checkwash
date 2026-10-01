@@ -17,6 +17,7 @@ from typing import Any
 
 DEFAULT_CONTRACT = Path(__file__).resolve().parents[1] / "tests/data/javascript_assertion_support.json"
 FOUNDATION_CONTRACT = Path(__file__).resolve().parents[1] / "tests/data/javascript_foundation_mutations.json"
+CHAI_CONTRACT = Path(__file__).resolve().parents[1] / "tests/data/javascript_chai_mutations.json"
 _SUFFIXES = tuple(f".{kind}.{ext}" for kind in ("test", "spec")
                   for ext in ("js", "jsx", "ts", "tsx", "mjs", "cjs", "mts", "cts"))
 _NODE_EXTENSIONS = {"js", "cjs", "mjs", "ts", "cts", "mts"}

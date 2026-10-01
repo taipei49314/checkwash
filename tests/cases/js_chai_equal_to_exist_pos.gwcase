@@ -1,0 +1,28 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: chai expect(x).to.equal(y) -> .to.exist is the chai spelling of == -> is not None
+origin: issue #180 (v0.4.2 passed it with only an analysis-incomplete note)
+=== before: billing.test.js ===
+// billing.test.js: mocha + chai, "type": "module"
+import { expect } from "chai";
+import { invoiceTotal } from "./src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).to.equal(78.75);
+  });
+});
+=== after: billing.test.js ===
+// billing.test.js: mocha + chai, "type": "module"
+import { expect } from "chai";
+import { invoiceTotal } from "./src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).to.exist;
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

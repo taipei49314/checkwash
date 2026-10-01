@@ -222,3 +222,25 @@ def populate_precision(assertion: Assertion, expression: str | None = None) -> N
         places = int(number)
     assertion.epsilon = str(places)
     assertion.epsilon_kind = "places"
+
+
+def populate_delta(assertion: Assertion, expression: str) -> None:
+    """Record a positive chai closeTo/approximately absolute delta.
+
+    chai passes when |actual - expected| <= delta, so a larger finite Number
+    is looser: the existing `delta` tolerance kind. Signed zeroes are the same
+    delta. Identifiers, computed or non-finite deltas and negated comparisons,
+    whose ordering reverses, remain unknown.
+    """
+    assertion.epsilon = None
+    assertion.epsilon_kind = None
+    if assertion.form != "approx" or not assertion.positive or len(expression) > 4096:
+        return
+    source = _without_comments(expression)
+    if source is None:
+        return
+    delta = _number(source.strip(_WHITESPACE))
+    if delta is None:
+        return
+    assertion.epsilon = repr(delta if delta else 0.0)
+    assertion.epsilon_kind = "delta"

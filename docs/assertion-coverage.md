@@ -72,16 +72,74 @@ do not implement general JS/TS parsing, arbitrary helper execution, suite/table
 collection, async completion, or production repair evidence.
 
 ```bash
-python -m pytest tests/test_assertion_contract.py tests/test_js_coverage.py
+python -m pytest tests/test_assertion_contract.py tests/test_js_coverage.py tests/test_js_chai.py
 python tools/qualify_assertions.py --distribution source --output receipts/source.json
 ```
 
+### chai expect chains and the assert interface
+
+Issue [#180](https://github.com/taipei49314/checkwash/issues/180) found that
+chai assertions were unrepresented: `expect(total).to.equal(78.75)` weakened
+to `.to.exist` passed with only a coverage warning. chai's `expect` and
+`assert` now resolve from `chai` imports and requires (named, renamed,
+namespace and default), from Vitest's `expect` and `assert`, and for an
+unimported global `expect`. An unimported `assert` keeps its Node default:
+methods that both libraries spell the same cannot be told apart.
+
+An `expect(...)` chain is represented only when it ends in exactly one
+terminal assertion. Language chains (`to`, `be`, `been`, `is`, `that`,
+`which`, `and`, `has`, `have`, `with`, `at`, `of`, `same`, `but`, `does`,
+`still`, `also`, and uncalled `a`/`an`) are ignored, `not` negates, and
+`deep` makes `equal` a deep comparison. A property terminal may also be
+called with at most a message argument, as dirty-chai allows. Each spelling
+takes an existing rung; the strength lattice is unchanged.
+
+| chai spelling | Form and rung | Expected-value evidence |
+|---|---|---|
+| `equal`/`equals`/`eq`; `assert.strictEqual` | `compare_eq`, EXACT_VALUE | scalar operand |
+| `eql`/`eqls`/`deep.equal`; `assert.deepEqual`/`deepStrictEqual` | `compare_eq`, EXACT_STRUCT | scalar operand |
+| `assert.equal` (coercive `==`) | `compare_eq`, EXACT_VALUE | none, as for Node's legacy `equal` |
+| `.true`/`.false`/`.null`; `assert.isTrue`/`isFalse`/`isNull` | `compare_eq`, EXACT_VALUE | the implied literal |
+| `.undefined`; `assert.isUndefined` | `compare_eq`, EXACT_VALUE | none |
+| `.exist`/`.exists`; `assert.exists`/`isDefined` | `non_null`, NON_NULL | none |
+| `.ok`; `assert(value)`, `assert.ok`/`isOk` | `truthy`, TRUTHY | none |
+| `closeTo`/`approximately` in both interfaces | `approx`, APPROX | center; a positive call's finite delta is its tolerance |
+| `include`/`includes`/`contain`/`contains`; `assert.include` | `membership`, PATTERN | none |
+| `match`/`matches`; `assert.match` | `pattern`, PATTERN | none |
+| `above`/`below`/`least`/`most` and their aliases, `within`; `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` | `compare_ord`, BOUND | none |
+| `lengthOf`/`length(n)`; `assert.lengthOf` | `type_shape`, TYPE_SHAPE | none |
+
+Everything else stays unrepresented and visible as a coverage gap: type checks
+(`a(...)`, `instanceof`), `property`, `keys`, `members`, `oneOf`, `throw`,
+`satisfy`, `empty`, `NaN`, change assertions, the `own`, `nested`, `any`,
+`all`, `ordered` and `length` flags, plugin words such as chai-as-promised's
+`eventually`, a chain that continues after its terminal, and negated assert
+methods (`notEqual`, `isNotOk`, `notExists`, ...). Replacing a represented
+assertion with one of these reports its removal. Plugins that overwrite a
+core assertion word are not modeled. Should-style assertions
+(`value.should.equal(...)`) are not scanned and produce no diagnostic.
+
+The `.null` spelling is chai's `=== null`, so it shares `equal(null)`'s
+EXACT_VALUE rung while Jest's `toBeNull()` keeps NON_NULL. In a Vitest file,
+rewriting `.to.be.null` as `toBeNull()` therefore reports a weakening, as
+`toBe(null)` -> `toBeNull()` already does. Scalar evidence keeps `0` and `-0`
+distinct although chai's `===` accepts both.
+
+Following the foundation precedent, the original inventory is unchanged. The
+independent supplement
+[`javascript_chai_mutations.json`](../tests/data/javascript_chai_mutations.json)
+adds 39 losses, rewrites, tolerance increases and preserving or strengthening
+controls written from the chai documentation. It runs in-process in
+[`tests/test_js_chai.py`](../tests/test_js_chai.py); it is not yet part of
+the CLI qualification below.
+
 ## Make unrepresented assertion candidates visible
 
-`checkwash check` scans both sides of changed JS/TS test files for bounded Node
-and `expect(...)` candidates. It compares their source positions with assertions
-represented by the frontend. A candidate in a file with no recognized test unit,
-or inside another assertion, can therefore still produce a diagnostic.
+`checkwash check` scans both sides of changed JS/TS test files for bounded Node,
+chai `assert` and `expect(...)` candidates. It compares their source positions
+with assertions represented by the frontend. A candidate in a file with no
+recognized test unit, or inside another assertion, can therefore still produce
+a diagnostic.
 
 Diagnostics appear on stderr in every output format and in terminal output.
 SARIF includes them as tool execution warnings, separate from findings. A base
@@ -119,7 +177,8 @@ Generated/build/dependency paths remain excluded. Moving a test into a productio
 path is checked as removal from test coverage.
 
 The scan resolves bounded static Node ESM/CommonJS imports, renamed and flat
-destructured imports, simple local aliases, and Jest/Vitest `expect` imports.
+destructured imports, simple local aliases, Jest/Vitest `expect` imports, and
+chai's `expect` and `assert` (including Vitest's `assert` re-export).
 Lexical declarations and function parameters can shadow those bindings; a
 lookalike object cannot retain a real assertion's strength. Unresolved assertion
 candidates still produce diagnostics. Dynamic module names, arbitrary wrapper

@@ -1,0 +1,402 @@
+{
+  "schema_version": 1,
+  "origin": "Issue #180: chai expect chains and the chai assert interface were not represented",
+  "sources": [
+    "https://www.chaijs.com/api/bdd/",
+    "https://www.chaijs.com/api/assert/",
+    "https://vitest.dev/api/expect.html",
+    "https://vitest.dev/api/assert.html"
+  ],
+  "mutations": [
+    {
+      "id": "chai.expect.equal.exist",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.exist;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.equal.ok",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.be.ok;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.true.ok",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(paid()).to.be.true;\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(paid()).to.be.ok;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.null.exist",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.be.null;\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.exist;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.not-exist.exist",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.not.exist;\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.exist;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.eql.include",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(lines()).to.eql([1, 2]);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(lines()).to.include(1);\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.lengthOf.ok",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(lines()).to.have.lengthOf(2);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(lines()).to.be.ok;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.closeTo.exist",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.be.closeTo(78.75, 0.005);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.exist;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.dirty-chai.true.ok",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(paid()).to.be.true();\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(paid()).to.be.ok();\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.cjs.equal.exist",
+      "path": "test/billing.spec.cjs",
+      "before": "const { expect } = require('chai');\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "const { expect } = require('chai');\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.exist;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.namespace.equal.ok",
+      "path": "test/billing.spec.mjs",
+      "before": "import * as chai from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    chai.expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import * as chai from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    chai.expect(total()).to.be.ok;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.global.equal.exist",
+      "path": "test/billing.js",
+      "before": "describe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "describe('billing', function () {\n  it('total', function () {\n    expect(total()).to.exist;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.vitest.equal.ok",
+      "path": "tests/billing.test.ts",
+      "before": "import { expect } from 'vitest';\ndescribe('billing', () => {\n  it('total', () => {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import { expect } from 'vitest';\ndescribe('billing', () => {\n  it('total', () => {\n    expect(total()).to.be.ok;\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.assert.strictEqual.isOk",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.isOk(total());\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.assert.equal.exists",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.equal(total(), 78.75);\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.exists(total());\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.assert.isNull.exists",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.isNull(failure());\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.exists(failure());\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.assert.strictEqual.direct",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert(total());\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.assert.require-member.isOk",
+      "path": "test/billing.spec.cjs",
+      "before": "const assert = require('chai').assert;\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "after": "const assert = require('chai').assert;\ndescribe('billing', function () {\n  it('total', function () {\n    assert.isOk(total());\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.vitest.assert.isOk",
+      "path": "tests/billing.test.ts",
+      "before": "import { assert } from 'vitest';\ndescribe('billing', () => {\n  it('total', () => {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "after": "import { assert } from 'vitest';\ndescribe('billing', () => {\n  it('total', () => {\n    assert.isOk(total());\n  });\n});\n",
+      "kind": "weakening",
+      "verdict": "block",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.equal.remove",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    total();\n  });\n});\n",
+      "kind": "removal",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.assert.strictEqual.remove",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    total();\n  });\n});\n",
+      "kind": "removal",
+      "verdict": "block",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.equal.rewrite",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(75);\n  });\n});\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.true.false",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(paid()).to.be.true;\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(paid()).to.be.false;\n  });\n});\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.assert.strictEqual.rewrite",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 75);\n  });\n});\n",
+      "kind": "expected_rewrite",
+      "verdict": "block",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.closeTo.delta",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.be.closeTo(78.75, 0.005);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.be.closeTo(78.75, 5);\n  });\n});\n",
+      "kind": "tolerance_weakened",
+      "verdict": "block",
+      "rule": "TOLERANCE_LOOSENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.assert.closeTo.delta",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.closeTo(total(), 78.75, 0.005);\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.closeTo(total(), 78.75, 5);\n  });\n});\n",
+      "kind": "tolerance_weakened",
+      "verdict": "block",
+      "rule": "TOLERANCE_LOOSENED",
+      "severity": "high"
+    },
+    {
+      "id": "chai.expect.equal.comment",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75); // Explain the oracle without changing it.\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.equal.message",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75, 'invoice total');\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.equal.true-spelling",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(paid()).to.equal(true);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(paid()).to.be.true;\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.equal.null-spelling",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.equal(null);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.be.null;\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.deep-equal.eql",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(lines()).to.deep.equal([1, 2]);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(lines()).to.eql([1, 2]);\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.not.chain-order",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.not.exist;\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).not.to.exist;\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.closeTo.tightened",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.be.closeTo(78.75, 0.005);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.be.closeTo(78.75, 0.0001);\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.equal.number-spelling",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(7875e-2);\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.assert.equal.strictEqual",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.equal(total(), 78.75);\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.assert.strictEqual.message",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75, 'invoice total');\n  });\n});\n",
+      "kind": "preserving",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.ok.equal",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.be.ok;\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(total()).to.equal(78.75);\n  });\n});\n",
+      "kind": "strengthening",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.expect.exist.equal",
+      "path": "test/billing.spec.js",
+      "before": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.exist;\n  });\n});\n",
+      "after": "import { expect } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    expect(failure()).to.equal('timeout');\n  });\n});\n",
+      "kind": "strengthening",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    },
+    {
+      "id": "chai.assert.isOk.strictEqual",
+      "path": "test/billing.spec.js",
+      "before": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.isOk(total());\n  });\n});\n",
+      "after": "import { assert } from 'chai';\ndescribe('billing', function () {\n  it('total', function () {\n    assert.strictEqual(total(), 78.75);\n  });\n});\n",
+      "kind": "strengthening",
+      "verdict": "pass",
+      "rule": null,
+      "severity": null
+    }
+  ]
+}
