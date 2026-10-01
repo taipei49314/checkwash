@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: respelling an existing module-level jest.doMock as jest.mock installs nothing new
+origin: issue #177 family bound - condition 2: the base side already replaced the target through doMock, whose capital M the prefilter must read; switching runner spelling is not a new stand-in
+=== before: tests/billing.test.js ===
+jest.doMock("../src/billing", () => ({ invoiceTotal: () => 78.75 }));
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== after: tests/billing.test.js ===
+jest.mock("../src/billing", () => ({ invoiceTotal: () => 78.75 }));
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== expect ===
+[]

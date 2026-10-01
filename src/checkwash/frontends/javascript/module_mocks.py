@@ -24,16 +24,22 @@ When an installation takes effect is part of the evidence:
 - ordered module mocks reach only `require()` / `await import()` bindings
   evaluated after them, never a static import: `vi.doMock`, `jest.doMock`,
   `jest.unstable_mockModule`, `jest.setMock`, node:test `mock.module` and
-  `t.mock.module`, and `vi.mock` / `jest.mock` written inside a test body;
+  `t.mock.module`. `vi.mock` / `jest.mock` written inside a test body get the
+  same ordered treatment - a conservative choice of this scan, not a claim
+  about how a runner hoists them;
 - member replacements: `vi.spyOn` / `jest.spyOn` / `vi.mocked(x)` /
   `jest.mocked(x)` chained to a replacing `mock*` call, `x.mock*(...)` on an
-  imported binding, `jest.replaceProperty`, and node:test `mock.method` with
-  an implementation. Inside a test body they reach only later reads.
+  imported binding (also through a TypeScript cast or non-null assertion),
+  `jest.replaceProperty`, and node:test `mock.method` with an
+  implementation. Inside a test body they reach only later reads.
 
 A factory that reaches for the original module (`importOriginal`,
-`importActual`, `requireActual`, or its own parameter) replaces only the
-names it spells. No factory is an automock and replaces every export.
-Vitest's `{ spy: true }` and a spy with no replacement keep the real code.
+`importActual`, `requireActual`, or its own parameter) replaces every name it
+spells - an identifier, a member name, or an identifier-shaped string such as
+a quoted or computed key - and nothing else. No factory is an automock and
+replaces every export. Vitest's `{ spy: true }` and a spy with no replacement
+keep the real code. An object-literal key in an assertion names a property;
+it does not read the binding of the same name.
 
 First-party means a `./` or `../` specifier that stays inside the repository
 and outside dependency/build output. Bare specifiers are packages and
@@ -44,9 +50,11 @@ runner configuration this scan does not execute.
 Silent rather than guessed: setup files, `__mocks__` directories and
 `automock` configuration (the conftest analogue, which needs that same
 configuration); installations in hooks, helpers and `describe` bodies;
-two-statement spies; plain assignment to a module object's member;
-non-literal specifiers; re-exports and two hops; and oracles the frontend
-does not represent (interaction matchers, `.resolves`, snapshots).
+two-statement spies, on either side; plain assignment to a module object's
+member; template-literal keys and partial-factory names spelled outside the
+factory; cast types that contain parentheses; non-literal specifiers;
+re-exports and two hops; and oracles the frontend does not represent
+(interaction matchers, `.resolves`, snapshots).
 """
 
 from __future__ import annotations
@@ -64,8 +72,8 @@ from checkwash.frontends.javascript.frontend import (
 from checkwash.roles import is_artifact
 
 # A file that spells none of these installs nothing, so most JS test files
-# never reach the binding scan below.
-_TRIGGER = re.compile(rb"mock|spyOn|replaceProperty")
+# never reach the binding scan below. `doMock` and `setMock` spell a capital M.
+_TRIGGER = re.compile(rb"[mM]ock|spyOn|replaceProperty")
 _IDENT = re.compile(NAME + r"\Z")
 _REFERENCE = re.compile(r"(?<![\w$])" + NAME)
 _MEMBER = re.compile(r"\s*\??\.\s*(" + NAME + r")")
@@ -74,6 +82,13 @@ _STRING = re.compile(r"""(['"])((?:\\.|(?!\1).)*)\1""", re.DOTALL)
 _IMPORT_CALL = re.compile(r"""import\s*\(\s*(['"])((?:\\.|(?!\1).)*)\1\s*\)""", re.DOTALL)
 _REPLACER = re.compile(r"mock(?:ReturnValue|Implementation|ResolvedValue|RejectedValue)(?:Once)?")
 _REPLACING = re.compile(r"\s*\??\.\s*" + _REPLACER.pattern + r"\s*\(")
+# TypeScript spells `x.mockReturnValue(...)` through a cast or a non-null
+# assertion: `(x as Mock)`, `(x as unknown as jest.Mock)`, `(<Mock>x)`, `x!`.
+_CAST = re.compile(
+    r"(?<![\w$.#])(?:\(\s*(?:<[^<>()]*>\s*)?(" + NAME + r")(?:\s*\.\s*(" + NAME + r"))?"
+    + r"(?:\s+as\s[^()]*)?\s*\)|(" + NAME + r")(?:\s*\.\s*(" + NAME + r"))?\s*!)"
+    + _REPLACING.pattern
+)
 _ORIGINAL = re.compile(r"(?<![\w$])(?:importOriginal|importActual|requireActual)(?![\w$])")
 _PARAMETER = re.compile(
     r"\s*(?:async\s*)?(?:function\b[^(]*)?\(\s*(" + NAME + r")"
@@ -323,6 +338,16 @@ class _Side:
                 install = self._install(api[0], api[1], spans, owner, start, end)
             if install is not None:
                 found.append(install)
+        for cast in _CAST.finditer(masked):
+            # `(invoiceTotal as Mock).mockReturnValue(...)`: the direct form above.
+            arguments = _call_argument_spans(text, self.code, cast.end() - 1, len(text))
+            if arguments is None:
+                continue
+            name, member = (cast.group(1), cast.group(2)) if cast.group(1) else (cast.group(3), cast.group(4))
+            owner = bindings._function_scope(bindings.scope(cast.start()))
+            install = self._member_install(name, member, owner, cast.start(), arguments[1])
+            if install is not None:
+                found.append(install)
         return found
 
     def _member_install(self, name, member, owner, start, end) -> _Install | None:
@@ -332,6 +357,17 @@ class _Side:
             return None  # replacing a whole namespace object is not a member
         return _Install(binding.module, path, None, False, owner, start,
                         self.text[start:end], (start, end))
+
+    def _spelled(self, first: int, last: int) -> frozenset[str]:
+        """Every name a partial factory spells, so every export it may replace:
+        identifiers and member names (`actual.invoiceTotal = ...`) and
+        identifier-shaped string literals (`"invoiceTotal": ...`,
+        `["invoiceTotal"]: ...`). Comments and template literals stay opaque."""
+        bindings = self.bindings
+        names = {match.group() for match in _REFERENCE.finditer(bindings.masked, first, last)}
+        names.update(token[1:-1] for token, start, _end in bindings.tokens
+                     if first <= start < last and token[:1] in {"'", '"'} and _IDENT.fullmatch(token[1:-1]))
+        return frozenset(names)
 
     def _install(self, runner, method, spans, owner, start, end) -> _Install | None:
         args = [self.text[first:last].strip() for first, last in spans]
@@ -364,7 +400,7 @@ class _Side:
                 if _SPY_OPTION.search(factory):
                     return None  # Vitest `{ spy: true }` keeps every real implementation
             elif _uses_original(factory):
-                names = frozenset(name for name, _member, _position in _references(factory))
+                names = self._spelled(*spans[1])
         hoisted = method == "mock" and owner == 0
         return _Install(module, None, names, hoisted, owner, start, self.text[start:end], (start, end))
 
@@ -385,6 +421,9 @@ class _Side:
         bindings = self.bindings
         found = []
         for name, member, position in _references(bindings.masked, start, end):
+            if (bindings.masked[position + len(name):end].lstrip()[:1] == ":"
+                    and bindings.masked[start:position].rstrip()[-1:] in {"{", ","}):
+                continue  # `{ invoiceTotal: 78.75 }` names a property; it reads no binding
             binding = self._binding(name, position)
             if binding is not None:
                 found.append((binding, _path(binding, member), position))
@@ -400,6 +439,9 @@ class _Side:
             for index, token in enumerate(expression):
                 if not _IDENT.fullmatch(token) or (index and expression[index - 1] in {".", "?."}):
                     continue
+                if (index and expression[index - 1] in {"{", ","}
+                        and index + 1 < len(expression) and expression[index + 1] == ":"):
+                    continue  # a property key, not a read of the binding
                 hop = self._binding(token, max(ready - 1, 0))
                 if hop is None:
                     continue

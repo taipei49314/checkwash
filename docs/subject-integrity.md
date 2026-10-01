@@ -86,7 +86,9 @@ above an untouched `expect(invoiceTotal(items)).toBe(78.75)`. The JS pass
    local binding that is not rebound.
 3. The base side of the same file replaced that target nowhere. Moving an
    installation between a hook, a `describe` body and the test, reformatting
-   it or switching runner spelling is not a new stand-in.
+   it or switching runner spelling is not a new stand-in. This check is
+   file-wide, which is quieter than the per-unit condition above: an
+   installation of the same target anywhere in the base file counts.
 
 First-party means a `./` or `../` specifier that stays inside the repository
 and outside dependency or build output; `./billing`, `./billing.js` and
@@ -95,30 +97,42 @@ are hygiene. Aliases (`@/`, tsconfig `paths`, `#imports`, root-relative
 `/src`) resolve through runner configuration the scan does not execute, so
 they stay silent rather than guessed.
 
-Timing follows the runners. Module-level `vi.mock` and `jest.mock` are
+Timing is modelled, not executed. Module-level `vi.mock` and `jest.mock` are
 hoisted above the file's imports and reach every binding of the module.
 `vi.doMock`, `jest.doMock`, `jest.unstable_mockModule`, `jest.setMock`,
-node:test `mock.module` and `t.mock.module`, and `vi.mock`/`jest.mock`
-written inside a test body reach only `require()`/`await import()` bindings
-evaluated after them, never a static import. Member replacements — `vi.spyOn`,
-`jest.spyOn`, `vi.mocked(x)` or `jest.mocked(x)` chained to a replacing
-`mock*` call, `x.mock*(...)` on an imported binding, `jest.replaceProperty`,
-and node:test `mock.method` with an implementation — reach reads after them
-in the same test, or every test when written at module level. A factory that
-reaches for the original module (`importOriginal`, `importActual`,
-`requireActual` or its own parameter) replaces only the names it spells; no
-factory is an automock. Vitest's `{ spy: true }` and a spy without a
-replacement keep the real code and install nothing.
+node:test `mock.module` and `t.mock.module` reach only
+`require()`/`await import()` bindings evaluated after them, never a static
+import. A `vi.mock`/`jest.mock` written inside a test body gets the same
+ordered treatment. That is a conservative choice of this scan, not a claim
+about runner semantics: if a runner hoists such a call to the top of the
+file, the static import it replaces is not reported. Member replacements —
+`vi.spyOn`, `jest.spyOn`, `vi.mocked(x)` or `jest.mocked(x)` chained to a
+replacing `mock*` call, `x.mock*(...)` on an imported binding (also through a
+TypeScript cast or non-null assertion: `(x as Mock)`, `(<Mock>x)`, `x!`),
+`jest.replaceProperty`, and node:test `mock.method` with an implementation —
+reach reads after them in the same test, or every test when written at module
+level. A factory that reaches for the original module (`importOriginal`,
+`importActual`, `requireActual` or its own parameter) replaces every name it
+spells — an identifier, a member name, or an identifier-shaped string literal
+such as a quoted or computed key — and nothing else; no factory is an
+automock. Vitest's `{ spy: true }` and a spy without a replacement keep the
+real code and install nothing. An object-literal key inside an assertion
+(`toEqual({ invoiceTotal: 78.75 })`) names a property; it does not read the
+binding of the same name.
 
 Not claimed: setup files, `__mocks__` directories and `automock`
 configuration (the conftest analogue, which needs the runner configuration);
 installations in hooks, helpers and `describe` bodies; two-statement spies
-(`const spy = vi.spyOn(...)` then `spy.mockReturnValue(...)`); plain
-assignment to a module object's member; non-literal specifiers; re-exports
-and two hops; and oracles the JS frontend does not represent (interaction
-matchers, `.resolves`/`.rejects`, snapshots). Severity and escalation are the
-existing policy: a modified JS production file is opaque, grants repair
-evidence and holds the event at warn.
+(`const spy = vi.spyOn(...)` then `spy.mockReturnValue(...)`) on either side,
+so inlining an existing one reads as a new stand-in; plain assignment to a
+module object's member; template-literal keys and partial-factory names
+spelled outside the factory (a spread of an object declared elsewhere, a
+computed key from a variable); cast types that contain parentheses;
+non-literal specifiers; re-exports and two hops; and oracles the JS frontend
+does not represent (interaction matchers, `.resolves`/`.rejects`,
+snapshots). Severity and escalation are the existing policy: a modified JS
+production file is opaque, grants repair evidence and holds the event at
+warn.
 
 ## Runtime provider shadowing
 
