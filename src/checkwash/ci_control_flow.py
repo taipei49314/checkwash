@@ -14,8 +14,12 @@ commits. A site is dead only for a reason that holds statically:
 
 - a step or job `if:` that is false whatever the run looks like, or false for
   every event that can run the workflow on a pull request. `github.event_name`
-  is the one context bound; every other context, function or output is
-  unknown and keeps the site live;
+  is the one context bound. Status functions read as they do on a run that
+  is otherwise green, the only run in which a runner can turn a passing
+  check red: `failure()` and `cancelled()` are false, `success()` and
+  `always()` true. `contains`, `startsWith`, `endsWith` and `fromJSON` fold
+  on literal arguments. Every other context, function or output is unknown
+  and keeps the site live;
 - a job that `needs:` a dead job and has no status function (`always()`,
   `failure()`, `cancelled()`) to run anyway: GitHub skips it, and a skipped
   job reports success;
@@ -24,9 +28,11 @@ commits. A site is dead only for a reason that holds statically:
   `pull_request` beside it keeps the suite;
 - a pre-commit hook parked on the `manual` stage.
 
-Two predicates read the inventory. *Disabled*: a runner command that could
-run at base no longer can, and the head side has a dead runner site it did
-not have, so the suite is still written there and cannot execute. *Removed*
+Two predicates read the inventory. *Disabled*: a runner command lost a live
+site and gained a dead one, so the suite is still written there and cannot
+execute. A runner reworded as it is disabled counts when the inventory moved
+a site, one live fewer and one dead more; a runner born dead beside a
+reworded live one disabled nothing that ran. *Removed*
 (row 69's two-sided rule, hook inventory only): the file ran a suite at base
 and runs none at head. Removal is not judged for workflows: a step that
 leaves one may have moved to a reusable workflow, a composite action or a
@@ -47,6 +53,12 @@ from checkwash.roles import _runs_tests
 _MAX_BYTES = 1_000_000
 _MAX_DEPTH = 48
 _MAX_FLOW_LINES = 200
+# A merge key copies entries where an alias shares them, so a chain of
+# `<<: *previous` copies quadratically: the total one document merges is bounded.
+_MAX_MERGED = 100_000
+# GitHub defines a few dozen events. A trigger block listing more binds none,
+# rather than judging every step once per listed event.
+_MAX_EVENTS = 64
 
 
 class _Unsupported(Exception):
@@ -246,6 +258,7 @@ class _Reader:
     def __init__(self, lines: list[tuple[int, str, str | None]]):
         self.lines = lines
         self.anchors: dict[str, object] = {}
+        self.merged = 0
 
     def document(self):
         node, end = self.node(0, 0)
@@ -293,6 +306,9 @@ class _Reader:
                 # A merge key: explicit keys win, wherever they are written.
                 for source in value if isinstance(value, list) else [value]:
                     if not isinstance(source, dict):
+                        raise _Unsupported
+                    self.merged += len(source)
+                    if self.merged > _MAX_MERGED:
                         raise _Unsupported
                     for name, item in source.items():
                         out.setdefault(name, item)
@@ -415,13 +431,43 @@ def _compare(operator: str, left, right):
     return _UNKNOWN
 
 
+# Status functions as they read on a run that is otherwise green, the only run
+# in which a runner can turn a passing check red: a step or job gated on
+# failure() or cancelled() runs only once the check is already red.
+_STATUS_VALUES = {"success": True, "always": True, "failure": False, "cancelled": False}
+_JSON_NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
+
+
+def _call(name: str, arguments: list):
+    """A function's value when it is statically known, else unknown."""
+    if name in _STATUS_VALUES:
+        return _UNKNOWN if arguments else _STATUS_VALUES[name]
+    if not all(isinstance(argument, str) and argument.isascii() for argument in arguments):
+        return _UNKNOWN  # a context, a non-string literal, or case folding beyond ASCII
+    if name in ("contains", "startswith", "endswith") and len(arguments) == 2:
+        # The string forms, which GitHub compares ignoring case.
+        subject, search = (argument.lower() for argument in arguments)
+        if name == "contains":
+            return search in subject
+        return subject.startswith(search) if name == "startswith" else subject.endswith(search)
+    if name == "fromjson" and len(arguments) == 1:
+        literal = arguments[0].strip()
+        if literal in ("true", "false"):
+            return literal == "true"
+        if literal == "null":
+            return None
+        if _JSON_NUMBER.fullmatch(literal):
+            return float(literal)
+    return _UNKNOWN
+
+
 class _Expression:
     """Constant folding over GitHub's expression grammar.
 
     Literals, `!`, comparisons, `&&`, `||` and parentheses are evaluated with
     GitHub's value semantics, so `x && false` is falsy whatever `x` is.
-    Contexts, indexing and calls parse but stay unknown, except `always()`
-    and the bound `github.event_name`.
+    Contexts, indexing and calls parse but stay unknown, except the bound
+    `github.event_name` and the calls `_call` knows.
     """
 
     def __init__(self, text: str, event):
@@ -509,24 +555,24 @@ class _Expression:
         elif kind == "string":
             value = text[1:-1].replace("''", "'")
         elif kind == "number":
-            value = float(int(text, 16)) if "x" in text.lower() else float(text)
+            try:
+                value = float(int(text, 16)) if "x" in text.lower() else float(text)
+            except OverflowError:  # a hex literal past any float: its value is not modelled
+                value = _UNKNOWN
         elif kind == "name" and text in ("true", "false"):
             value = text == "true"
         elif kind == "name" and text == "null":
             value = None
         elif kind == "name" and self.peek() == "(":
             self.take("(")
-            arguments = 0
+            arguments: list = []
             if self.peek() != ")":
-                self.either()
-                arguments = 1
+                arguments.append(self.either())
                 while self.peek() == ",":
                     self.index += 1
-                    self.either()
-                    arguments += 1
+                    arguments.append(self.either())
             self.take(")")
-            # always() is the one function whose value is known statically.
-            value = True if text.lower() == "always" and not arguments else _UNKNOWN
+            value = _call(text.lower(), arguments)
         elif kind == "name":
             value = _UNKNOWN
             path = [text.lower()]
@@ -556,7 +602,7 @@ def _evaluate(text: str, event):
 
 
 def _never_true(condition, event) -> bool:
-    """Is this `if:` false for this event, whatever else the run looks like?"""
+    """Is this `if:` false for this event, on every run that is otherwise green?"""
     if not isinstance(condition, str):
         return False  # absent, or a shape no condition takes
     text = condition.strip()
@@ -639,29 +685,38 @@ def _workflow_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
     if not isinstance(tree, dict) or not isinstance(tree.get("jobs"), dict):
         return None
     events = _pr_events(tree["on"]) if "on" in tree else None
+    if events is not None and len(events) > _MAX_EVENTS:
+        events = None  # more events than GitHub defines: bind none
     # github.event_name is the one context bound. Inside a called workflow it
     # is the caller's event, so workflow_call binds nothing.
     bindings = [_UNKNOWN] if events is None else [
         _UNKNOWN if event == "workflow_call" else event for event in events
     ]
     jobs = {name: job for name, job in tree["jobs"].items() if isinstance(job, dict)}
-    memo: dict[tuple[str, int], bool] = {}
+    # A job that needs a skipped job is skipped too, unless its condition
+    # carries a status function, and a skipped job reports success. Deadness
+    # spreads from the jobs whose own `if:` is never true to the jobs that
+    # need them over a worklist, so a `needs:` chain of any length costs no
+    # stack and each job is judged once per binding.
+    dependants: dict[str, list[str]] = {}
+    for name, job in jobs.items():
+        if not _runs_after_skipped_needs(job.get("if")):
+            for need in _patterns(job.get("needs")):
+                dependants.setdefault(need, []).append(name)
+    skipped_by_binding: dict[int, set[str]] = {}
 
-    def job_dead(name: str, binding: int, trail: frozenset[str]) -> bool:
-        # A job that needs a skipped job is skipped too, unless its condition
-        # carries a status function, and a skipped job reports success.
-        key = (name, binding)
-        if key not in memo:
-            condition = jobs[name].get("if")
-            dead = _never_true(condition, bindings[binding])
-            if not dead and not _runs_after_skipped_needs(condition):
-                dead = any(
-                    need in jobs and need not in trail
-                    and job_dead(need, binding, trail | {need})
-                    for need in _patterns(jobs[name].get("needs"))
-                )
-            memo[key] = dead
-        return memo[key]
+    def job_dead(name: str, binding: int) -> bool:
+        if binding not in skipped_by_binding:
+            event = bindings[binding]
+            skipped = {other for other, spec in jobs.items() if _never_true(spec.get("if"), event)}
+            queue = list(skipped)
+            while queue:
+                for dependant in dependants.get(queue.pop(), ()):
+                    if dependant not in skipped:
+                        skipped.add(dependant)
+                        queue.append(dependant)
+            skipped_by_binding[binding] = skipped
+        return name in skipped_by_binding[binding]
 
     live: list[str] = []
     dead: list[tuple[str, str]] = []
@@ -675,7 +730,7 @@ def _workflow_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
                 continue
             condition = step.get("if")
             if any(
-                not job_dead(name, binding, frozenset({name})) and not _never_true(condition, event)
+                not job_dead(name, binding) and not _never_true(condition, event)
                 for binding, event in enumerate(bindings)
             ):
                 live.append(_brief(command))
@@ -735,11 +790,20 @@ def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None
     (old_live, old_dead), (new_live, new_dead) = old, new
     stopped = Counter(old_live) - Counter(new_live)
     parked = Counter(command for command, _ in new_dead) - Counter(command for command, _ in old_dead)
-    # A text edit applied to a live and an already-dead site alike (`-q`
-    # added everywhere) moves nothing between them.
+    # The runner that stopped must be the runner that was parked: a runner
+    # born dead (a placeholder job, a push-only benchmark) beside a reworded
+    # live one (`pytest` -> `pytest --cov`) disables nothing that ran. A text
+    # edit applied to a live and an already-dead site alike (`-q` added
+    # everywhere) moves nothing between them, hence `shifted`.
     shifted = len(new_dead) > len(old_dead) or len(new_live) < len(old_live)
-    if stopped and parked and shifted:
-        command, cause = min(site for site in new_dead if site[0] in parked)
+    disabled = stopped & parked if shifted else Counter()
+    if not disabled and len(new_live) < len(old_live) and len(new_dead) > len(old_dead):
+        # The inventory moved a site, one live fewer and one dead more: a
+        # runner reworded as it was disabled (`pytest` -> `python -m pytest`
+        # under `if: false`) is still the runner that stopped.
+        disabled = parked
+    if disabled:
+        command, cause = min(site for site in new_dead if site[0] in disabled)
         return [f"{command} is disabled ({cause})"]
     if inventory and old_live and not new_live:
         return [f"{min(old_live)} is no longer run by any pre-commit hook"]

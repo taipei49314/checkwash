@@ -179,3 +179,87 @@ def test_unreadable_or_unrelated_files_report_nothing():
     disabled = WORKFLOW + "        if: false\n"
     assert control_flow_weakenings(PATH, b"\x00\xff\xfe", disabled.encode("utf-8")) == []
     assert _weakenings(WORKFLOW, disabled, "tox.ini") == []
+
+
+@pytest.mark.parametrize("condition, never", [
+    ("failure()", True),
+    ("${{ cancelled() }}", True),
+    ("!success()", True),
+    ("failure() || cancelled()", True),
+    ("fromJSON('false')", True),
+    ("fromJSON('0')", True),
+    ("fromJSON('null')", True),
+    ("contains('', 'x')", True),
+    ("startsWith('docs', 'test')", True),
+    ("contains(github.event_name, 'push')", True),
+    ("failure() || true", False),
+    ("fromJSON('true')", False),
+    ("fromJSON('{}')", False),
+    ("endsWith('refs/heads/MAIN', 'main')", False),
+    ("contains(github.event.pull_request.labels.*.name, 'skip-tests')", False),
+])
+def test_calls_fold_as_they_read_on_a_run_that_is_otherwise_green(condition, never):
+    # A runner gated on failure() or cancelled() runs only once the check is
+    # already red, so it can never turn a passing check red.
+    assert _never_true(condition, "pull_request") is never
+
+
+def test_the_runner_that_stopped_must_be_the_runner_that_was_parked():
+    # The suite still runs as `pytest --cov`, and the push-only job never ran
+    # on a pull request at base: nothing that ran was disabled.
+    reworded = WORKFLOW.replace("- run: pytest\n", "- run: pytest --cov\n")
+    benchmark = "  benchmark:\n    if: github.event_name == 'push'\n    steps:\n      - run: pytest benchmarks\n"
+    assert _weakenings(WORKFLOW, reworded + benchmark) == []
+    hooks = PRECOMMIT.replace("entry: pytest", "entry: pytest -x") + (
+        "      - id: slow\n"
+        "        entry: pytest tests/slow\n"
+        "        language: system\n"
+        "        stages: [manual]\n"
+    )
+    assert _weakenings(PRECOMMIT, hooks, ".pre-commit-config.yaml") == []
+    # Rewording a runner as it is disabled still moves a site from live to dead.
+    disabled = WORKFLOW.replace("- run: pytest\n", "- run: python -m pytest\n        if: false\n")
+    assert _weakenings(WORKFLOW, disabled) == ["python -m pytest is disabled (if: false)"]
+    # Re-homing the live runner while rewording an already-dead one moves none.
+    e2e = WORKFLOW + "  e2e:\n    if: false\n    steps:\n      - run: pytest tests/e2e\n"
+    rehomed = e2e.replace("      - run: pytest\n", "").replace("tests/e2e", "tests/e2e -q")
+    assert _weakenings(e2e, rehomed) == []
+
+
+def test_a_long_needs_chain_is_walked_without_recursion():
+    # Listed from the top of the chain down, so no job's needs are judged yet
+    # when it is reached: a recursive walk would take frames per link.
+    links = 2000
+    chain = "".join(f"  j{index}:\n    needs: j{index - 1}\n" for index in range(links, 0, -1))
+    before = (
+        "on: pull_request\njobs:\n"
+        f"  test:\n    needs: j{links}\n    steps:\n      - run: pytest\n"
+        + chain
+        + "  j0:\n    runs-on: ubuntu-latest\n"
+    )
+    after = before.replace("  j0:\n", "  j0:\n    if: false\n")
+    assert _weakenings(before, after) == ["pytest is disabled (job test needs a job that cannot run)"]
+
+
+def test_reader_bounds_what_merge_keys_copy():
+    # Each mapping merges the one before it, so the copies grow quadratically.
+    chain = "a0: &a0\n  k0: v\n" + "".join(
+        f"a{index}: &a{index}\n  <<: *a{index - 1}\n  k{index}: v\n" for index in range(1, 500)
+    )
+    assert _read_yaml(chain.encode("utf-8")) is None
+    assert _read_yaml(b"a: &a\n  k: v\nb:\n  <<: *a\n") == {"a": {"k": "v"}, "b": {"k": "v"}}
+
+
+def test_a_literal_no_float_can_hold_is_unknown_not_an_error():
+    huge = "0x" + "f" * 300
+    assert not _never_true(huge, "pull_request")
+    assert _never_true(f"false && {huge}", "pull_request")
+
+
+def test_a_trigger_block_past_any_real_event_count_binds_nothing():
+    jobs = WORKFLOW[WORKFLOW.index("jobs:\n"):]
+    before = "on:\n" + "".join(f"  event{index}:\n" for index in range(100)) + jobs
+    # Bound to no event, an event condition is unknown and keeps the step
+    # live, while a literal false still folds.
+    assert _weakenings(before, before + "        if: github.event_name == 'push'\n") == []
+    assert _weakenings(before, before + "        if: false\n") == ["pytest is disabled (if: false)"]
