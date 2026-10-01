@@ -1,0 +1,20 @@
+=== meta ===
+rule: TEST_DISABLED
+title: removing it.fails restores the normal oracle and adds no disable
+origin: issue #176 negative control for the inverted-oracle spelling
+=== before: tests/billing.test.ts ===
+import { expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+it.fails("computes invoice total with tax", () => {
+  expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+});
+=== after: tests/billing.test.ts ===
+import { expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+it("computes invoice total with tax", () => {
+  expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+});
+=== expect ===
+[]

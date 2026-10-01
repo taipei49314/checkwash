@@ -1,0 +1,25 @@
+=== meta ===
+rule: TEST_DISABLED
+title: t.skip() on the test's own context marks the unit skipped
+origin: issue #176 family, the imperative spelling of { skip: true } (node:test TestContext)
+=== before: tests/billing.test.mjs ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", (t) => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: tests/billing.test.mjs ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", (t) => {
+  t.skip("rounding is flaky on CI");
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total with tax"}]

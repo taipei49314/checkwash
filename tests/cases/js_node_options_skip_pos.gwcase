@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+title: node:test options object { skip: true } disables the unit without any .skip token
+origin: issue #178, reported against v0.4.2 cfbefb8 (verdict pass, zero findings)
+=== before: tests/billing.test.mjs ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: tests/billing.test.mjs ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", { skip: true }, () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total with tax"}]

@@ -141,6 +141,20 @@ The candidate resolves bounded static Node and Jest/Vitest imports, simple
 aliases, and lexical shadows. Unknown lookalikes do not acquire assertion
 strength. Dynamic aliases and semantic equivalence of arbitrary predicates
 inside `assert(value)` / `assert.ok(value)` remain outside this model.
+Unit liveness is read once, the same way at every declaration level (#176,
+#178): `.skip`, `.todo`, the `x`-prefixed globals, Vitest `skipIf`/`runIf` and
+the `skip`/`todo` keys of an inline options object disable a unit, and
+`.fails`/`.failing` or `{ fails }` invert its oracle. On `describe`, `suite` or
+`context` these reach every unit declared inside the block's callback.
+`.only`, `fit`/`fdescribe` and `{ only }` focus the file: every unit outside a
+focused declaration is reported as no longer running, whether or not the
+runner honours the focus; runner flags such as node:test's `--test-only` are
+outside the scan. `t.skip()`/`t.todo()` on the callback's own context parameter
+and Mocha's `this.skip()` count wherever they sit in the callback. Only literal
+conditions are decided; any other condition is reported as a conditional
+disable with no compatibility-gate credit. Hooks, block callbacks defined
+elsewhere, destructured contexts, `test.extend` functions and parametrized
+`.each`/`.for` units stay outside this model.
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread; a production change
 the engine cannot parse can still suppress escalation through the documented

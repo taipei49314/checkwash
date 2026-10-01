@@ -1,0 +1,40 @@
+=== meta ===
+rule: TEST_DISABLED
+title: describe() -> describe.skip() disables every unit declared inside the block
+origin: issue #176, reported against v0.4.2 cfbefb8 (verdict pass, zero findings); the it.skip spelling of the same edit already blocked
+=== before: tests/billing.test.js ===
+import { describe, it } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total with tax", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    assert.strictEqual(invoiceTotal(items), 78.75);
+  });
+});
+
+describe("cart misc", () => {
+  it("handles empty carts", () => {
+    assert.strictEqual(invoiceTotal([]), 0);
+  });
+});
+=== after: tests/billing.test.js ===
+import { describe, it } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+describe.skip("billing", () => {
+  it("computes invoice total with tax", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    assert.strictEqual(invoiceTotal(items), 78.75);
+  });
+});
+
+describe("cart misc", () => {
+  it("handles empty carts", () => {
+    assert.strictEqual(invoiceTotal([]), 0);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total with tax"}]
