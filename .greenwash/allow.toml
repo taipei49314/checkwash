@@ -174,3 +174,11 @@ reason = "PR #170: AGENTS.md release rule now points to docs/RELEASING.md (named
 author = "taipei49314"
 created = "2026-09-29"
 expires = "2026-10-29"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_setup_skip_controls.py/test_unproved_shadowed_or_unexecuted_hook_is_not_positive_evidence/6b8f7934408c"
+rule = "TEST_DISABLED"
+reason = "PR #183 (issue #172): the param whose autouse conftest fixture skips every test moved out of this negative list into test_skipping_sibling_fixture_is_not_closed_hook_evidence with a narrowed assertion, because the new setup-phase rule reports that fixture; maintainer ruling 2026-10-01 (narrow the assertion)"
+author = "taipei49314"
+created = "2026-10-01"
+expires = "2026-10-31"

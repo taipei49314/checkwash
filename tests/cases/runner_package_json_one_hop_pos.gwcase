@@ -1,0 +1,29 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 174
+title: scripts.test only runs `npm run unit`, and the unit script swallows its exit code
+origin: issue #174 family, row 89's one hop inside one manifest. Neither script holds a runner token, so on the v0.4.2 code path the manifest stayed opaque production
+=== before: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "npm run unit", "unit": "node --test" } }
+=== after: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "npm run unit", "unit": "node --test || echo done" } }
+=== before: billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "./src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "./src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

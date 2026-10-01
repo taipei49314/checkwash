@@ -1,0 +1,29 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 174
+title: a dependency and version bump leaves the test command alone and keeps the opaque treatment it had
+origin: issue #174 FP guard. package.json is not a D9 manifest, so the opaque exemption is what an honest dependency bump earns. Only an edit to the test command may take it away
+=== before: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test" }, "dependencies": { "decimal.js": "^10.4.3" } }
+=== after: package.json ===
+{ "name": "victim", "version": "1.1.0", "type": "module", "scripts": { "test": "node --test" }, "dependencies": { "decimal.js": "^10.5.0" } }
+=== before: billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "./src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "./src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

@@ -1,0 +1,11 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 174
+title: a script the test command starts calling, unedited, is not text the diff wrote
+origin: issue #174 review FP guard. `build` already carried `--ignore` and `clean` already carried `|| true` before this diff wired both into scripts.test. The diff wrote neither, so the manifest is visible CI configuration at warn, not a weakened test command
+=== before: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "build": "babel src -d lib --ignore src/__fixtures__", "clean": "rm -rf coverage || true", "test": "node --test" } }
+=== after: package.json ===
+{ "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "build": "babel src -d lib --ignore src/__fixtures__", "clean": "rm -rf coverage || true", "test": "npm run clean && npm run build && node --test" } }
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

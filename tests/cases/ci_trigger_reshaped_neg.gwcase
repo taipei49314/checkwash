@@ -1,0 +1,37 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: reshaping the trigger block and restricting push to main keeps pull_request, and the suite
+origin: issue #181 bound — the usual way to stop running CI twice on a same-repository pull
+origin2: request. Reordering or adding events (workflow_dispatch) removes nothing that ran.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]
