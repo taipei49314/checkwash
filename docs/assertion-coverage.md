@@ -116,12 +116,16 @@ not a completeness claim. File discovery follows the test runners'
 zero-configuration defaults: `.test.*` and `.spec.*` JavaScript/TypeScript
 files; every JavaScript/TypeScript file beneath a `__tests__/` directory and
 exact `test`/`spec` filenames, JSX/TSX included (Jest's default `testMatch`);
-Bun's `*_test` and `*_spec` filenames for JS/JSX/TS/TSX; and Node's default
-`test/` directories and `test-*`, `*-test`, `*_test` and exact `test` filenames
-for JS/CJS/MJS/TS/CTS/MTS. Configured globs (`testMatch`, `include`, `spec`) are
-not read. Generated/build/dependency paths remain excluded. Moving a test out of
-every recognized layout, for example into a production path, is checked as
-removal from test coverage.
+and Node's default `test/` directories and `test-*`, `*-test`, `*_test` and
+exact `test` filenames for JS/CJS/MJS/TS/CTS/MTS. Bun's `*_spec` filenames, and
+`*_test` beyond Node's extensions, are not recognized: Jest, Vitest, Mocha and
+node:test do not collect them. Configured globs (`testMatch`, `include`,
+`spec`) are not read. A path whose default role comes before `test` (guardrail,
+CI, snapshot) keeps that role inside these layouts, so
+`__tests__/__snapshots__/out.js` is a stored expectation, not a test.
+Generated/build/dependency paths remain excluded. Moving a test out of every
+recognized layout, for example into a production path or a snapshot directory,
+is checked as removal from test coverage.
 
 The scan resolves bounded static Node ESM/CommonJS imports, renamed and flat
 destructured imports, simple local aliases, and Jest/Vitest `expect` imports.

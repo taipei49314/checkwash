@@ -34,22 +34,11 @@ JEST_PATTERNS = (
     "src/billing.spec.{ext}",
     "src/billing.test.{ext}",
 )
-# Bun's default discovery: https://bun.sh/docs/cli/test
-BUN_EXTENSIONS = ("js", "jsx", "ts", "tsx")
-BUN_PATTERNS = ("src/billing_test.{ext}", "src/billing_spec.{ext}")
 
 
 @pytest.mark.parametrize("extension", JEST_EXTENSIONS)
 @pytest.mark.parametrize("pattern", JEST_PATTERNS)
 def test_jest_default_test_match_is_recognized(pattern, extension):
-    path = pattern.format(ext=extension)
-    assert is_js_test_path(path)
-    assert frontend_test_path(path)
-
-
-@pytest.mark.parametrize("extension", BUN_EXTENSIONS)
-@pytest.mark.parametrize("pattern", BUN_PATTERNS)
-def test_bun_default_names_are_recognized(pattern, extension):
     path = pattern.format(ext=extension)
     assert is_js_test_path(path)
     assert frontend_test_path(path)
@@ -71,6 +60,10 @@ def test_jest_directory_follows_the_existing_case_convention():
     # A name must be exactly the runner's word, not merely contain it.
     "src/specification.js", "src/inspect.js", "src/respec.js", "src/my-spec.js",
     "src/billing-spec.js", "src/spec-helpers.js", "src/billing.specs.js",
+    # Bun's `*_spec`, and `*_test` beyond Node's extensions: Jest, Vitest, Mocha
+    # and node:test do not collect them, so as test paths they would make a
+    # move from `billing.test.js` into one read as benign.
+    "src/billing_spec.js", "src/billing_spec.ts", "src/Billing_spec.tsx", "src/Billing_test.jsx",
     # Generated and dependency trees stay excluded.
     "node_modules/pkg/__tests__/billing.js", "dist/__tests__/billing.js",
     "packages/api/build/__tests__/billing.ts",
@@ -99,7 +92,7 @@ def _analyze(change):
 
 @pytest.mark.parametrize("path", [
     "__tests__/billing.js", "src/__tests__/billing.ts", "src/components/__tests__/Invoice.tsx",
-    "spec.js", "src/billing_spec.ts",
+    "spec.js", "src/test.jsx",
 ])
 def test_default_layouts_block_real_weakening_through_the_engine(path):
     ir, findings, verdict = _analyze(FileChange(path, "modified", EXACT, WEAK))
@@ -117,7 +110,7 @@ def test_default_layouts_preserve_unchanged_assertions():
 @pytest.mark.parametrize("old,new", [
     ("__tests__/billing.js", "src/billing.js"),
     ("src/__tests__/billing.ts", "src/__mocks__/billing.ts"),
-    ("src/billing_spec.tsx", "src/billing.tsx"),
+    ("src/spec.tsx", "src/billing.tsx"),
 ])
 def test_moving_out_of_a_default_layout_retains_the_disappeared_test(old, new):
     ir, findings, verdict = _analyze(FileChange(new, "renamed", EXACT, EXACT, old_path=old))
@@ -131,6 +124,8 @@ def test_moving_out_of_a_default_layout_retains_the_disappeared_test(old, new):
 @pytest.mark.parametrize("old,new", [
     # Before #175 this move was expanded as a removal from test coverage,
     # although Jest still collects the destination with no configuration.
+    # Vitest, Mocha and node:test do not; the runner is unknown statically,
+    # so for them this is a stated residual of the union, not a guarantee.
     ("src/billing.test.js", "src/__tests__/billing.js"),
     ("__tests__/billing.js", "packages/api/__tests__/billing.js"),
     ("__tests__/billing.js", "__tests__/billing.test.js"),
@@ -138,3 +133,47 @@ def test_moving_out_of_a_default_layout_retains_the_disappeared_test(old, new):
 def test_moves_that_jest_still_collects_remain_benign(old, new):
     _ir, findings, verdict = _analyze(FileChange(new, "renamed", EXACT, EXACT, old_path=old))
     assert (findings, verdict) == ([], "pass")
+
+
+@pytest.mark.parametrize("old,new", [
+    # No default of Jest, Vitest, Mocha or node:test collects the destination,
+    # so the test stops running wherever those runners are used.
+    ("src/billing.test.js", "src/billing_spec.js"),
+    ("src/Billing.test.tsx", "src/Billing_test.tsx"),
+])
+def test_moving_to_a_name_the_modelled_runners_do_not_collect_is_removal(old, new):
+    _ir, findings, verdict = _analyze(FileChange(new, "renamed", EXACT, EXACT, old_path=old))
+    assert verdict == "block"
+    assert [(finding.rule, finding.severity, finding.path) for finding in findings] == [
+        ("TEST_DISABLED", "high", old),
+    ]
+
+
+@pytest.mark.parametrize("path,role,rule,severity", [
+    # SPEC section 2 resolves guardrail, ci and snapshot before test. A runner
+    # would collect each of these files by default, but each holds a stored
+    # expectation or an agent constraint, and that role decides the rules.
+    ("src/__tests__/__snapshots__/codegen.output.js", "snapshot", "EXPECTED_VALUE_CHANGED", "high"),
+    ("__tests__/golden/invoice.ts", "snapshot", "EXPECTED_VALUE_CHANGED", "high"),
+    ("test/expected/invoice.js", "snapshot", "EXPECTED_VALUE_CHANGED", "high"),
+    (".claude/hooks/__tests__/guard.js", "guardrail", "GUARDRAIL_TOUCHED", "critical"),
+])
+def test_earlier_roles_keep_their_paths_inside_a_default_layout(path, role, rule, severity):
+    ir, findings, verdict = _analyze(FileChange(path, "modified", EXACT, WEAK))
+    assert [file.role for file in ir.files] == [role]
+    assert verdict == "block"
+    assert [(finding.rule, finding.severity) for finding in findings] == [(rule, severity)]
+
+
+def test_moving_a_test_into_a_stored_expectation_directory_is_removal():
+    # Jest would still collect the destination, but as a snapshot it is never
+    # analysed as a test, so the move is judged like tests/test_x.py moving
+    # into tests/golden/.
+    old, new = "src/billing.test.js", "src/__tests__/__snapshots__/billing.js"
+    ir, findings, verdict = _analyze(FileChange(new, "renamed", EXACT, EXACT, old_path=old))
+    assert verdict == "block"
+    assert [(finding.rule, finding.severity, finding.path) for finding in findings] == [
+        ("TEST_DISABLED", "high", old),
+    ]
+    assert any(file.path == old and file.role == "test" for file in ir.files)
+    assert any(file.path == new and file.role == "snapshot" for file in ir.files)
