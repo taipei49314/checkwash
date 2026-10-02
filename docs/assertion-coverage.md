@@ -195,17 +195,28 @@ Some edits are not reported. They are recorded here for a maintainer decision:
   increase, and JavaScript expected-value evidence needs a literal on both
   sides. Jest's `toBeDefined()` -> `toBe(undefined)` has the same gap.
 - In a Vitest file that mixes styles, `toBeNull()` -> `.to.exist` keeps the
-  NON_NULL rung and polarity, so it is not reported.
+  NON_NULL rung and polarity, so it is not reported. Some other Jest -> chai
+  rewrites that change the predicate or the direction of a bound, or drop an
+  expected value or tolerance, are not reported either: those that keep the
+  rung and polarity, read as a strength increase, or leave the new side with
+  no expected value or tolerance, for example `toBeLessThan(80)` ->
+  `.to.be.above(80)` and `toBe(78.75)` -> `.to.be.undefined`; v0.4.2 reported
+  them as removals ([#198](https://github.com/taipei49314/checkwash/issues/198)).
+  A rewrite whose two sides both carry the fact (a literal, a negation or a
+  finite delta) is still reported.
 - A hand-rolled bound inside a chai assertion
   (`expect(Math.abs(d)).to.be.below(eps)`, `assert.isTrue(Math.abs(d) < eps)`,
   chai's or Vitest's `assert.ok(Math.abs(d) < eps)`) is not read as a
   tolerance, so widening `eps` there produces no finding.
-- A `closeTo` delta written as `Infinity`, `Number.EPSILON` or a name records
-  no bound, so widening a tolerance into one of those spellings, from either
-  a delta or a hand-rolled bound, produces no finding; the hand-rolled
-  spelling of the same edit is reported. The delta is read as a binary float,
-  so a literal with more digits than a double keeps compares by its rounded
-  value against a hand-rolled bound's exact digits.
+- A `closeTo` delta written as `Infinity`, `Number.EPSILON`,
+  `Number.MAX_VALUE` or a name records no bound, so widening a tolerance into
+  one of those spellings, from a delta, a hand-rolled bound or a
+  `toBeCloseTo` precision ([#198](https://github.com/taipei49314/checkwash/issues/198)),
+  produces no finding. The hand-rolled spelling of the same edit is reported,
+  except `Number.MAX_VALUE`, which the hand-rolled reader does not read
+  either. The delta is read as a binary float, so a literal with more digits
+  than a double keeps compares by its rounded value against a hand-rolled
+  bound's exact digits.
 - A chai alias read from a member expression and then reassigned, such as
   `let check = require("chai").expect` followed by `check = wrap(check)`,
   produces no coverage diagnostic.
@@ -269,7 +280,13 @@ exact `test` filenames for JS/CJS/MJS/TS/CTS/MTS. Bun's `*_spec` filenames, and
 node:test do not collect them. Configured globs (`testMatch`, `include`,
 `spec`) are not read. A path whose default role comes before `test` (guardrail,
 CI, snapshot) keeps that role inside these layouts, so
-`__tests__/__snapshots__/out.js` is a stored expectation, not a test.
+`__tests__/__snapshots__/out.js` is a stored expectation, not a test. A path
+under a `roles` glob for `ci`, `snapshot`, `lockfile` or `conftest` in the
+checkwash config keeps that role too, and so does a test file promoted to CI
+because it has a shell shebang or a `Makefile` name prefix and names a test
+runner (or a script that runs one). No test rule reads such a file, so
+weakening or deleting its tests can pass
+([#197](https://github.com/taipei49314/checkwash/issues/197)).
 Generated/build/dependency paths remain excluded. Moving a test out of every
 recognized layout, for example into a production path or a snapshot directory,
 is checked as removal from test coverage.
