@@ -1,0 +1,23 @@
+=== meta ===
+issue: 198
+row: T2
+probe: T2_node_assert_deepEqual_75
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect } from "vitest";
+import assert from "node:assert";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBe(78.75);
+});
+=== head: src/total.test.ts ===
+import { test, expect } from "vitest";
+import assert from "node:assert";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  assert.deepEqual(value, 75);
+});

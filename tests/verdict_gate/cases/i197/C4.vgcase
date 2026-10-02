@@ -1,0 +1,19 @@
+=== meta ===
+issue: 197
+row: C4
+probe: C4_expected_modify_test_only
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: test/expected/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== head: test/expected/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });

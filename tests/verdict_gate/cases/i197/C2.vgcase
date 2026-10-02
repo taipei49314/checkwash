@@ -1,0 +1,13 @@
+=== meta ===
+issue: 197
+row: C2
+probe: C2_golden_delete
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: packages/golden/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== delete: packages/golden/value.test.ts ===

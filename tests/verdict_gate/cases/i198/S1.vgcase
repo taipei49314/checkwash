@@ -1,0 +1,29 @@
+=== meta ===
+issue: 198
+row: S1
+probe: S1_M1a_plus_prod_change
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBeNull();
+});
+=== base: src/total.ts ===
+export function total() {
+  return 78.75;
+}
+=== head: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).to.exist;
+});
+=== head: src/total.ts ===
+export function total() {
+  return 75;
+}

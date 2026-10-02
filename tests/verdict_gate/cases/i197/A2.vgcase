@@ -1,0 +1,18 @@
+=== meta ===
+issue: 197
+row: A2
+probe: A2_env_bash_shebang
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== head: src/value.test.ts ===
+#!/usr/bin/env bash
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBeTruthy(); });
+test.skip("other", () => { expect(total()).toBe(78.75); });

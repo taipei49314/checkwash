@@ -1,0 +1,14 @@
+=== meta ===
+issue: 197
+row: X2
+probe: X2_py_test_sh_shebang
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: tests/test_value.py ===
+def test_total():
+    assert total() == 78.75
+=== head: tests/test_value.py ===
+#!/bin/sh
+def test_total():
+    assert total()

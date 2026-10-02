@@ -1,0 +1,15 @@
+=== meta ===
+issue: 196
+row: F4
+probe: F4_jasmine_fit_single
+source: #196 comment of 2026-10-02 (186.2 moves, 186.3 scope, 187 focus), probe script
+=== options ===
+today = "2026-10-02"
+=== base: spec/billing.spec.js ===
+describe("billing", function () {
+  it("total", function () { expect(total()).toBe(78.75); });
+});
+=== head: spec/billing.spec.js ===
+describe("billing", function () {
+  fit("total", function () { expect(total()).toBe(78.75); });
+});

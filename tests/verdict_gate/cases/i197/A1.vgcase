@@ -1,0 +1,18 @@
+=== meta ===
+issue: 197
+row: A1
+probe: A1_sh_shebang_after_only
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== head: src/value.test.ts ===
+#!/bin/sh
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBeTruthy(); });
+test.skip("other", () => { expect(total()).toBe(78.75); });

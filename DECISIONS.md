@@ -2279,3 +2279,26 @@ by the maintainer. Allowlist entries recorded on v0.4.2 for these shapes
 must be re-recorded; the release guide lists them. The fixed 1,800-commit
 sweep matches v0.4.2 in blocked commits, blocking findings and per-rule
 counts; it records no fingerprints.
+
+## D-064 (2026-10-02): previous-release verdict gate — first acceptance list
+
+#201 adds a hosted gate (`.github/workflows/verdict-gate.yml`,
+`tools/verdict_gate.py`) that runs the previous release and the candidate
+through the CLI on the same cases and fails on any block -> pass that
+`tests/gates/verdict_gate_accepted.toml` does not accept. The maintainer
+ruled #201's four defaults on 2026-10-02: the acceptance file lives in
+`tests/gates` and is maintainer-edited, rows awaiting a ruling are
+`undecided`, the gate is advisory on pull requests and required at release
+time, and the bootstrap runs are authorized.
+
+The first acceptance list holds 44 `known-regression` entries: every case
+labelled `block` that v0.5.0 passes, each tied to its open family issue
+(#197, #198, #199). It accepts known regressions until their fixes land;
+it accepts nothing new. The first hosted run (36983670433, PR #203) also
+pinned 73 baseline blocks and a 67-case v0.4.2 -> v0.5.0 canary. The
+in-process matrices had 68: #197 B7's rename-with-edit is a delete plus an
+add to git, and deleting a test under `.github/workflows/` blocks.
+
+The maintainer was away. The agent wrote this entry and the acceptance file
+under his delegation of 2026-10-02 ("完全開放授權 但只限於checkwash相關"),
+and both await his re-review.

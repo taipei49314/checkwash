@@ -1,0 +1,22 @@
+=== meta ===
+issue: 197
+row: A10ctl
+probe: A10ctl_no_head_script
+source: #197 issue body, probe script
+# the probe ran with no head reader; here scripts/gen.sh is absent from the tree
+=== options ===
+today = "2026-10-02"
+=== base: test/value.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== head: test/value.test.js ===
+#!/bin/sh
+// fixtures: ./scripts/gen.sh
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });

@@ -1,0 +1,25 @@
+=== meta ===
+issue: 199
+row: K1
+probe: collect_ignore_V1
+source: #199 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: app/__init__.py ===
+=== base: app/billing.py ===
+def total():
+    return 78.75
+=== base: tests/conftest.py ===
+collect_ignore = ["test_legacy.py"]
+=== base: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.slow
+def test_total():
+    assert total() == 78.75
+=== head: pytest.ini ===
+[pytest]
+python_files = smoke_*.py

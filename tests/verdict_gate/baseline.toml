@@ -1,0 +1,151 @@
+# Pins of the previous-release verdict gate (issue #201; tools/verdict_gate.py).
+#
+# [baseline]   the previous release's checkwash.pyz. The gate fails unless the
+#              downloaded asset has this sha256 and size, its checkwash/*
+#              members equal src/checkwash at this commit, and the CLI reports
+#              this version.
+# [canary]     v0.4.2 against v0.5.0 over the T1 cases; must reproduce
+#              block_to_pass exactly. Not rotated with the baseline.
+# [t3.cases]   chai:<id> = input_sha256 of every "verdict": "block" record of
+#              tests/data/javascript_chai_mutations.json at the baseline commit.
+#
+# [baseline_blocked] and [canary] block_to_pass were pinned from the first
+# hosted run of this workflow (run 36983670433, PR #203): the CLI saw 73
+# baseline blocks and 67 canary block -> pass cases. The in-process probe
+# matrices had 68; #197 B7 is the difference (git reports its
+# rename-with-edit as delete + add, and deleting a test under
+# .github/workflows/ escalates), see tests/verdict_gate/README.md.
+#
+# Rotation (after a release): repoint [baseline] to the new release, re-read
+# [t3.cases] from the gate's proposal, and re-pin [baseline_blocked]. Asset
+# sha256 and size come from `gh release view vX.Y.Z --json assets` (the
+# checkwash.pyz digest); the gate re-checks them on every run.
+schema_version = 1
+
+[baseline]
+tag = "v0.5.0"
+version = "0.5.0"
+commit = "24b60a2019a5900291ecb35ab8290f34af2d5438"
+sha256 = "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c"
+size = 588886
+
+[baseline_blocked]
+count = 73
+sha256 = "31d3f79f2d752091d0019b6ef69adf1c9a03d289a883dca2a9f72645ee357891"
+
+[canary]
+block_to_pass = [
+  "i196/F1",
+  "i196/F2",
+  "i196/F3",
+  "i196/F4",
+  "i196/F5",
+  "i196/M0",
+  "i196/M1",
+  "i196/M2",
+  "i196/M3",
+  "i196/M4",
+  "i196/M5",
+  "i196/S1",
+  "i196/S2",
+  "i196/S3",
+  "i197/A1",
+  "i197/A10",
+  "i197/A11",
+  "i197/A12",
+  "i197/A13",
+  "i197/A2",
+  "i197/A4",
+  "i197/A5",
+  "i197/A7",
+  "i197/A9",
+  "i197/B1",
+  "i197/B2",
+  "i197/B3",
+  "i197/B5",
+  "i197/B6",
+  "i197/C1",
+  "i197/C2",
+  "i197/C3",
+  "i197/C5",
+  "i197/U1",
+  "i197/U2",
+  "i198/H1",
+  "i198/H2",
+  "i198/H3",
+  "i198/H4",
+  "i198/H5",
+  "i198/H6",
+  "i198/M1a",
+  "i198/M1b",
+  "i198/M1c",
+  "i198/M1d",
+  "i198/M1e",
+  "i198/M1f",
+  "i198/M1g",
+  "i198/M1h",
+  "i198/M2a",
+  "i198/M2b",
+  "i198/M2c",
+  "i198/M2d",
+  "i198/M2e",
+  "i198/M2f",
+  "i198/M2g",
+  "i198/M2h",
+  "i198/O1",
+  "i198/S3",
+  "i199/M1",
+  "i199/M2",
+  "i199/M3",
+  "i199/M4",
+  "i199/M5",
+  "i199/M6",
+  "i199/M7",
+  "i199/M8",
+]
+
+[canary.old]
+tag = "v0.4.2"
+version = "0.4.2"
+commit = "23ef5929896187e4aac5889735c792e65af3e721"
+sha256 = "423ce220365d0e179cfd9caa7e45724d71b8bd7c67d3cbfc51eca19e8a626ee7"
+size = 546241
+
+[canary.new]
+tag = "v0.5.0"
+version = "0.5.0"
+commit = "24b60a2019a5900291ecb35ab8290f34af2d5438"
+sha256 = "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c"
+size = 588886
+
+# Computed with the tool's parse_chai_cases over
+# `git show 24b60a2:tests/data/javascript_chai_mutations.json`
+# (file sha256 f10a5ef8d76e5dbeffa4f058715a41775358b31a959778b64f2f9c6b0a8c7c3a;
+# 26 block records, 13 pass records). No engine ran.
+[t3.cases]
+"chai:chai.assert.closeTo.delta" = "ec0d36242bd1498195dd0f17419171a5282edf410e69f5a68ebbd003f7d8daf2"
+"chai:chai.assert.equal.exists" = "e095139792ca9d0607ee0391a5cba0cd5629bb662966a40890563d7a04b763b1"
+"chai:chai.assert.isNull.exists" = "25a896dba44ae6b9895818ad57ed455ac737b7f54d01ce18e58ea237fcb438b6"
+"chai:chai.assert.require-member.isOk" = "b778868c256c7a131067443b8a9d95639a0cf232e17f6f6ce8d69402eb9017af"
+"chai:chai.assert.strictEqual.direct" = "9f8cf4dd43e68405b7ee3d7232401bd881518e52386bb3dea99e2aefe0da31e3"
+"chai:chai.assert.strictEqual.isOk" = "e082edb3a82ea835556c699a1aeaf5dbd2b90e608cfd6edd090c5bf35e168ace"
+"chai:chai.assert.strictEqual.remove" = "d47ad7792f46987fe49cab277a6e13eac93360fa0ad3866b1677ad9c2dfc6cb6"
+"chai:chai.assert.strictEqual.rewrite" = "ba029aed44276133ad7ef3e7522e8bb2476bc141a470a8e54e86e0435c749875"
+"chai:chai.cjs.equal.exist" = "4b991eaf12fe68c1df858bec6cec2ac08c0e55f3b777c8f807a382aa6f21c3f8"
+"chai:chai.expect.closeTo.delta" = "42ee643ad2c7299bb351858fdb7f00ca65be2b166d1b58850709c93a36362163"
+"chai:chai.expect.closeTo.exist" = "b377806583c51351ec5f2d7beb2967fecb05b77d6e2d1e751b700c5e84536f8a"
+"chai:chai.expect.dirty-chai.true.ok" = "3e0468ecff97cbfdcf71147fbfd22e07187a05c62f12c0ace2a7521716f31658"
+"chai:chai.expect.eql.include" = "7561dbbd69951ff06891f065296a8b0e9e927e0f9c8c5c4004383daa310671be"
+"chai:chai.expect.equal.exist" = "1e10d27118307648d12ce21950810886102fa137af44e990f43b53ba24620426"
+"chai:chai.expect.equal.ok" = "efd50c68875d7f2df51ee4dd6c54c3c53b118d8fcf1f50fd62051d29d3482a7d"
+"chai:chai.expect.equal.remove" = "28b9e6521a16b0509f84a5e205c38c186b29789fa1d7a687c4753f925653ef2c"
+"chai:chai.expect.equal.rewrite" = "5d3e87b84517843a1dae38d49b2dceb7256cf7213ab869e50a97699e85675b6a"
+"chai:chai.expect.lengthOf.ok" = "511b00c33f90ce6bc41d4e08a8a4ca788b7b230c138042b2e2940d2434baf668"
+"chai:chai.expect.not-exist.exist" = "4f378dfa57ef8d0f3ca10f59cc9fb1388d678139e3f6a2c1d2c921c7e52061a0"
+"chai:chai.expect.null.exist" = "8a33a9b56d68f4fc9f5956661bd6857dc07bbabe91c429659dab10cf04221179"
+"chai:chai.expect.true.false" = "ba1c87ceb26edd76663a0f279445d9db25297911111219ba4ead0e2fe580cd5c"
+"chai:chai.expect.true.ok" = "53bedf0aec6fcdb6f5424f2f04a7ef698570a230cbbc3ba3502650b7f52fc8ee"
+"chai:chai.global.equal.exist" = "eaa70bcbe1bba159a68db02d615b33b21614364776b3d8b35c95028c86bf2790"
+"chai:chai.namespace.equal.ok" = "a2f4f50ec115aac6eae36d42f18f33cc9c63e2371570c47d55b94ca638dc39a6"
+"chai:chai.vitest.assert.isOk" = "268d10eaf2ee2556e2e05ca0044c4ecdc48baf9368f4c5094aac319bb518e552"
+"chai:chai.vitest.equal.ok" = "a435bd7d65055513ce691607cf59624b815467e25162567c696c140bb5697e1c"

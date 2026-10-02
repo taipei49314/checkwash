@@ -1,0 +1,30 @@
+=== meta ===
+issue: 197
+row: U2
+probe: U2_user_conftest_glob
+source: #197 issue body, probe script
+# the probe appended the user glob to Config().roles; here the base-side
+# .checkwash/config.toml repeats the role's default globs and adds it
+=== options ===
+today = "2026-10-02"
+=== base: .checkwash/config.toml ===
+# #197 U2: user role glob(s) on top of the defaults.
+# [roles] replaces a role's default list (src/checkwash/config.py load_config),
+# so each list repeats every DEFAULT_ROLES glob and then adds the user glob.
+[roles]
+conftest = [
+  "**/conftest.py",
+  "test/support/**",
+]
+=== base: test/support/value.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== head: test/support/value.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });

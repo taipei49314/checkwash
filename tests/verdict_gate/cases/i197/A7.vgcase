@@ -1,0 +1,21 @@
+=== meta ===
+issue: 197
+row: A7
+probe: A7_node_test_sh_comment_token
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: test/value.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== head: test/value.test.js ===
+#!/bin/sh
+// run with: npm test
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });
