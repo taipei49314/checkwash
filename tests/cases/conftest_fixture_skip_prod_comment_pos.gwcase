@@ -1,0 +1,38 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a comment-only production edit still makes "no production change in this diff" false for a suite control
+origin: issue #205 boundary - the escalator asks whether any production file changed, not whether the change is symbol-level evidence. A comment edit changes no symbol and grants no evidence, but a production file did change, so the true reason is COLLECTION_CONTROL_UNEXPLAINED
+=== before: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+=== after: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+
+
+@pytest.fixture
+def needs_network():
+    pytest.skip("network tests are disabled")
+=== before: app/billing.py ===
+def total():
+    return 78.75
+=== after: app/billing.py ===
+def total():
+    # Prices are stored in cents upstream; this stays in units.
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total(db):
+    assert total() == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["COLLECTION_CONTROL_UNEXPLAINED"], "path": "tests/conftest.py", "unit": "<suite>"}]
