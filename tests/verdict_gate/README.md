@@ -25,6 +25,11 @@ for whole sets and are not repeated in each case: the CLI always wires the
 head and root readers over the real head tree (the #196 and #198 probes, and
 #197 except A10, passed none), and the CLI sees changes in git's path order
 (different from the probe's order in #197 C5 and C5ctl and #199 P3 and P5).
+One row changes verdict because of this: the first hosted run (36983670433)
+saw #197 B7 block on v0.5.0, where the in-process probe passed it. Git does
+not pair B7's rename-with-edit, so the CLI sees a delete plus an add, and
+deleting a test under `.github/workflows/` escalates to high. The canary set
+is therefore 67 rows, not the matrices' 68, and B7 needs no acceptance entry.
 `options` sets `today` (every case: `2026-10-02`) and, for the #196 S rows,
 `task = "TASK.md"`.
 

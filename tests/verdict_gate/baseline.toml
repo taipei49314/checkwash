@@ -9,9 +9,12 @@
 # [t3.cases]   chai:<id> = input_sha256 of every "verdict": "block" record of
 #              tests/data/javascript_chai_mutations.json at the baseline commit.
 #
-# Not pinned yet, on purpose: [baseline_blocked] and [canary] block_to_pass.
-# The first run fails on both and prints the observed values ready to paste;
-# a reviewed commit adds them.
+# [baseline_blocked] and [canary] block_to_pass were pinned from the first
+# hosted run of this workflow (run 36983670433, PR #203): the CLI saw 73
+# baseline blocks and 67 canary block -> pass cases. The in-process probe
+# matrices had 68; #197 B7 is the difference (git reports its
+# rename-with-edit as delete + add, and deleting a test under
+# .github/workflows/ escalates), see tests/verdict_gate/README.md.
 #
 # Rotation (after a release): repoint [baseline] to the new release, re-read
 # [t3.cases] from the gate's proposal, and re-pin [baseline_blocked]. Asset
@@ -26,8 +29,80 @@ commit = "24b60a2019a5900291ecb35ab8290f34af2d5438"
 sha256 = "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c"
 size = 588886
 
+[baseline_blocked]
+count = 73
+sha256 = "31d3f79f2d752091d0019b6ef69adf1c9a03d289a883dca2a9f72645ee357891"
+
 [canary]
-# block_to_pass: not pinned yet; the first run prints the observed set.
+block_to_pass = [
+  "i196/F1",
+  "i196/F2",
+  "i196/F3",
+  "i196/F4",
+  "i196/F5",
+  "i196/M0",
+  "i196/M1",
+  "i196/M2",
+  "i196/M3",
+  "i196/M4",
+  "i196/M5",
+  "i196/S1",
+  "i196/S2",
+  "i196/S3",
+  "i197/A1",
+  "i197/A10",
+  "i197/A11",
+  "i197/A12",
+  "i197/A13",
+  "i197/A2",
+  "i197/A4",
+  "i197/A5",
+  "i197/A7",
+  "i197/A9",
+  "i197/B1",
+  "i197/B2",
+  "i197/B3",
+  "i197/B5",
+  "i197/B6",
+  "i197/C1",
+  "i197/C2",
+  "i197/C3",
+  "i197/C5",
+  "i197/U1",
+  "i197/U2",
+  "i198/H1",
+  "i198/H2",
+  "i198/H3",
+  "i198/H4",
+  "i198/H5",
+  "i198/H6",
+  "i198/M1a",
+  "i198/M1b",
+  "i198/M1c",
+  "i198/M1d",
+  "i198/M1e",
+  "i198/M1f",
+  "i198/M1g",
+  "i198/M1h",
+  "i198/M2a",
+  "i198/M2b",
+  "i198/M2c",
+  "i198/M2d",
+  "i198/M2e",
+  "i198/M2f",
+  "i198/M2g",
+  "i198/M2h",
+  "i198/O1",
+  "i198/S3",
+  "i199/M1",
+  "i199/M2",
+  "i199/M3",
+  "i199/M4",
+  "i199/M5",
+  "i199/M6",
+  "i199/M7",
+  "i199/M8",
+]
 
 [canary.old]
 tag = "v0.4.2"
