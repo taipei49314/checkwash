@@ -150,9 +150,10 @@ def test_pinned_tag_ships_the_current_source():
     it made the gate *return and pass* when the tag was missing, which is the
     exact sentence the assertion below carries as its own history. The
     circularity it was solving is a property of the release order, not of the
-    gate — bump, commit, **tag**, verify, push, and the tag exists by the time
-    anything checks. `docs/RELEASING.md` states that order; a candidate branch
-    whose CI is red until the tag is cut is the gate working.
+    gate. `docs/RELEASING.md` states that order: bump, commit, **tag** locally,
+    verify, merge the release PR, re-tag its merge commit, then push the tag
+    (#201). Until the tag is pushed, this test is red on the release branch
+    and on `main`, and that red is the gate working.
     """
     import subprocess
 
