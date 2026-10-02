@@ -1,0 +1,28 @@
+=== meta ===
+issue: 196
+row: Sc1
+probe: Sc1_in_scope_billing
+source: #196 comment of 2026-10-02 (186.2 moves, 186.3 scope, 187 focus), probe script
+# the probe passed Contract(present=True, scope_allow=["src/billing/**"]);
+# here TASK.md at base, read through options.task
+=== options ===
+today = "2026-10-02"
+task = "TASK.md"
+=== base: TASK.md ===
+---
+checkwash:
+  scope:
+    allow:
+      - src/billing/**
+---
+# Task
+
+Scope contract of #196 Sc1 (186.3): production edits belong under src/billing/.
+=== base: src/billing/total.ts ===
+export function render(x: number): number {
+  return x + 1;
+}
+=== head: src/billing/total.ts ===
+export function render(x: number): number {
+  return x + 2;
+}

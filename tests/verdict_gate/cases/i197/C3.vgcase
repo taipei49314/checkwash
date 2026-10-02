@@ -1,0 +1,13 @@
+=== meta ===
+issue: 197
+row: C3
+probe: C3_snapshots_delete
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/__snapshots__/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== delete: src/__snapshots__/value.test.ts ===

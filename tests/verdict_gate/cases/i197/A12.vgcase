@@ -1,0 +1,17 @@
+=== meta ===
+issue: 197
+row: A12
+probe: A12_lowercase_makefile_prefix
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/makefile.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== head: src/makefile.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBeTruthy(); });
+test.skip("other", () => { expect(total()).toBe(78.75); });

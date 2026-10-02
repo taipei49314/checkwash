@@ -1,0 +1,26 @@
+=== meta ===
+issue: 197
+row: A10
+probe: A10_one_hop_script_ref
+source: #197 issue body, probe script
+# scripts/gen.sh is a base file the diff does not touch; the probe served it
+# through a head reader that held only that file
+=== options ===
+today = "2026-10-02"
+=== base: scripts/gen.sh ===
+#!/bin/sh
+npm test
+=== base: test/value.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== head: test/value.test.js ===
+#!/bin/sh
+// fixtures: ./scripts/gen.sh
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });

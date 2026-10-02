@@ -1,0 +1,13 @@
+=== meta ===
+issue: 197
+row: B5
+probe: B5_circleci_delete
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: .circleci/value.test.js ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== delete: .circleci/value.test.js ===

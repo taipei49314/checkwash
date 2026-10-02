@@ -1,0 +1,21 @@
+=== meta ===
+issue: 198
+row: B4
+probe: B4_chai_to_equal_assert_equal
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).to.equal(78.75);
+});
+=== head: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  assert.equal(value, 75);
+});

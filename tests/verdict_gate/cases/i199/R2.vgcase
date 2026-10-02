@@ -1,0 +1,36 @@
+=== meta ===
+issue: 199
+row: R2
+probe: skip_V4_existing_addopts
+source: #199 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: app/__init__.py ===
+=== base: app/billing.py ===
+def total():
+    return 78.75
+=== base: pytest.ini ===
+[pytest]
+python_files = test_*.py
+=== base: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def needs_network():
+    pytest.skip("network tests are disabled")
+=== base: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.slow
+def test_total():
+    assert total() == 78.75
+=== head: pytest.ini ===
+[pytest]
+python_files = test_*.py
+addopts = -m "not slow"
+markers =
+    slow: slow tests

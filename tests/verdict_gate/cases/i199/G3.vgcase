@@ -1,0 +1,36 @@
+=== meta ===
+issue: 199
+row: G3
+probe: guarded_V3
+source: #199 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: app/__init__.py ===
+=== base: app/billing.py ===
+def total():
+    return 78.75
+=== base: tests/conftest.py ===
+import os
+
+import pytest
+
+
+@pytest.fixture
+def needs_network():
+    if not os.environ.get("NETWORK"):
+        pytest.skip("network tests are disabled")
+    return 1
+=== base: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.slow
+def test_total():
+    assert total() == 78.75
+=== head: pytest.ini ===
+[pytest]
+addopts = -m "not slow"
+markers =
+    slow: slow tests

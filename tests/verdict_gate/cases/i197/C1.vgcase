@@ -1,0 +1,14 @@
+=== meta ===
+issue: 197
+row: C1
+probe: C1_expected_delete
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: test/expected/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== delete: test/expected/billing.test.js ===

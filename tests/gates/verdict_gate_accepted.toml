@@ -1,0 +1,365 @@
+# Previous-release verdict gate: accepted block -> pass entries (issue #201).
+#
+# Maintainer-only file (tests/gates is agent-read-only; #201 Decision 1).
+# These 44 entries were written by the agent on 2026-10-02 under the
+# maintainer's delegation while away ("完全開放授權 但只限於checkwash相關");
+# they are flagged for the maintainer's re-review (DECISIONS.md D-064).
+#
+# Every entry is a known regression from v0.4.2 to v0.5.0 that is filed as
+# an open issue. Its label in tests/verdict_gate/labels.toml is `block`, and
+# v0.5.0 passes it, so the label anchor needs this entry until the family
+# fix lands; the fix PR removes the entry (the gate fails on a stale one).
+
+baseline = "v0.5.0"
+
+[[accept]]
+case         = "i197/A1"
+input_sha256 = "9d89b2d38605119fbd87c801d6126f73c0438526e0782f2247daf084e8e629a1"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A1, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A10"
+input_sha256 = "b4d4fc7ac5b63b8d76839d9b4308c26a93f9e26a69214e77362005942dfd9e9d"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A10, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A11"
+input_sha256 = "7ce4a9e699aa6f6d0b0f74da1ece2a32d490e398d8321a61a89e45af8b6b03a0"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A11, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A12"
+input_sha256 = "4095d40a3792572717d5c887a0d5dd999b81b79ecd7bfc09642020792bf20f97"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A12, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A13"
+input_sha256 = "921d608f33e12b2bc4dbd6f5e34a020bd44f00f82b9bf9dfce9bbf8a92b41109"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A13, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A2"
+input_sha256 = "c2810079df17058e64ec51cd4b2ac8eb1bd70189ca22e24cdfdb2a128cc7585f"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A2, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A4"
+input_sha256 = "cad85701fb0ed7361df53b8e9c993a9b9292bf912d922f5bd8428132ed8f1840"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A4, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A5"
+input_sha256 = "28fdb9bb572d65292d7f119dae78b90abfb50179ca1fbdb4e687ef9f76290da9"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A5, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A7"
+input_sha256 = "3af27bc660cc75a66cc462046187d40c46a7a224491b334021ac5ab1b7dc305d"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A7, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/A9"
+input_sha256 = "56f749de3b3d268f7dbd3fe7230699305326a7aa9abb8791c2ebb3ec604ed187"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A9, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/B1"
+input_sha256 = "07208a18f804aee5dc33728cef7ed12ff37d0fe4ae2d9d1ef99753d73fd9b4d9"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B1, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/B2"
+input_sha256 = "4a30a506facf332ac5e8d005e3c317b1682e6960b849a19d279f28d14f18a3c6"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B2, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/B3"
+input_sha256 = "f2de15ec97966317f5527bbd803701a5be9c94e15254d3b285b2b4ae8d023992"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B3, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/B5"
+input_sha256 = "2745dec30f98b32247131703b1754b755a017a731011437691356a4ee2f6480c"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B5, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/B6"
+input_sha256 = "fc9c17f86b6d63b4f85189f83af4c34be93bf50ea521a23cf810b12241e50ed7"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B6, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/C1"
+input_sha256 = "c20268fcd3c8be4330b687ad0e7d7103e82ef30f44cfa45f08dd86b221065647"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row C1, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/C2"
+input_sha256 = "8bff7a35930198a142993cb737c301bca169e354bda88c4a80a3891e4371dd19"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row C2, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/C3"
+input_sha256 = "c846dc068b2adb135381d7b9b265cbf9a4f7ee03596d7db36664f87b3464e432"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row C3, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/C5"
+input_sha256 = "9f33c64f645af5f7c28675fbd2fecc2a46fd71b9e9cfb15ba2d73e6f84d8bec9"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row C5, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/U1"
+input_sha256 = "cd8bddd4d0374ce75e33065d343c1affb45b06c7381a2a2cc0a7fa26ce7564e5"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row U1, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i197/U2"
+input_sha256 = "bfccc3b1a752a849964158d0b32c7f2cfc78ae5a5ae09b5d0e47cdcfd1f70f59"
+kind         = "known-regression"
+issue        = 197
+reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row U2, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M1a"
+input_sha256 = "fb83a1d9492099f740b553f434f93094d0a849dc395252780645a4f685a8ba7a"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1a, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M1b"
+input_sha256 = "ddf125f7216d706ad0c494abb96385e16941cce58cce431cb2e8a99b8a21b8f5"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1b, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M1c"
+input_sha256 = "8601be42c3839d67812d047ee3722b22034a0616a2d5562bf6e24c6ca046e0fa"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1c, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M1d"
+input_sha256 = "80f512ea0cb981062b18a090c6d53704273750c2a170c8e4ae5b8140c0d87028"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1d, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M1e"
+input_sha256 = "9da22e9b31266f3ae7da4e67f5f01e954ba39dda5a624863b1c6e08ec1deb15e"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1e, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M1f"
+input_sha256 = "d7c96db6573e3706577c8fac06bc1793d0e3568e421b5ab1dbcc17cb3d3ff6e8"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1f, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M1g"
+input_sha256 = "4c1c9892ed9e3f1232f025c489145128fe117b79680e0185c5ea4d7c12b0b8dc"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1g, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M1h"
+input_sha256 = "3853516758d1a2939713846037dd04011016513c9e0dfbceba998eb7084b71e1"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1h, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M2a"
+input_sha256 = "3bd8041ed85c8c55e3215f57bf11d450817efa8aeb317f8f53aa42575ed861b1"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2a, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M2b"
+input_sha256 = "24b14726b5bf7162c42749c3ea2db416a047b8b705e4aed0342bd79eddad44ea"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2b, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M2c"
+input_sha256 = "589abfd1dcf182131b76a71f0f91a8d619418b6738ce63317cc59c796bfe2252"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2c, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M2d"
+input_sha256 = "7499de952a59cb732cc97bb4170459f8be3959c44510b2996b96bcf92666707e"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2d, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M2e"
+input_sha256 = "8167ebc10ccfbea710b4d776bb2d47a6e185e1595b27af471350c09f9612a844"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2e, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M2f"
+input_sha256 = "ab63210bf0b4629633e740f1ff9c83cf2b9172494b29912a76d35fb81423593c"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2f, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M2g"
+input_sha256 = "bc192f84116cd63dbe52f99bdf4eae35acfe8513c3fd0262b20628a5d1820911"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2g, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i198/M2h"
+input_sha256 = "0d04c9accabf0dba755b4370d1b19ee3dcaf935fc2aa25d87fbba118da40b40d"
+kind         = "known-regression"
+issue        = 198
+reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2h, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i199/M1"
+input_sha256 = "c20e46b26ef63ab74014e8a39e6b1c5ab523d912ee1a6ead92316e42a5cfb49c"
+kind         = "known-regression"
+issue        = 199
+reason       = "v0.4.2 blocks, v0.5.0 passes: #199 row M1, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i199/M2"
+input_sha256 = "435b58647a8e3ba55062d06fb0a6227528018f5cf3056ed6ed8e82a010034c1d"
+kind         = "known-regression"
+issue        = 199
+reason       = "v0.4.2 blocks, v0.5.0 passes: #199 row M2, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i199/M3"
+input_sha256 = "ed7b14f6601da650140941f99a3f078394a472940739f584374e9a2aef2ab4b4"
+kind         = "known-regression"
+issue        = 199
+reason       = "v0.4.2 blocks, v0.5.0 passes: #199 row M3, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i199/M4"
+input_sha256 = "f4fa9f0ce5863da1b21e6cddeaadbb078a7281fc8f6ff5fa734ac86f12f46c09"
+kind         = "known-regression"
+issue        = 199
+reason       = "v0.4.2 blocks, v0.5.0 passes: #199 row M4, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i199/M5"
+input_sha256 = "55b522dd623fbb528208f54eab32e79cd76117efc6108de7cc2cfa4647fba911"
+kind         = "known-regression"
+issue        = 199
+reason       = "v0.4.2 blocks, v0.5.0 passes: #199 row M5, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i199/M6"
+input_sha256 = "3da83553ab7aa046ba0bf51a981ed5072dd1a0286f24cb0fc334a4ef13614dbc"
+kind         = "known-regression"
+issue        = 199
+reason       = "v0.4.2 blocks, v0.5.0 passes: #199 row M6, an open family issue; accepted until its fix lands"
+reviewed_in  = 203
+
+[[accept]]
+case         = "i199/M7"
+input_sha256 = "c16dce9e4698e54ccb051f5cbbaa19376e415224d6c6d6ea75978ad8faed2fbe"
+kind         = "known-regression"
+issue        = 199
+reason       = "v0.4.2 blocks, v0.5.0 passes: #199 row M7, an open family issue; accepted until its fix lands"
+reviewed_in  = 203

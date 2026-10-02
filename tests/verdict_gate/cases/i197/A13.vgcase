@@ -1,0 +1,21 @@
+=== meta ===
+issue: 197
+row: A13
+probe: A13_rename_keeping_shebang
+source: #197 issue body, probe script
+# rename with an edit: the probe passed one FileChange with old_path set;
+# plain git reports this pair as delete + add (#201), so the CLI sees two changes
+=== options ===
+today = "2026-10-02"
+=== base: src/value.test.ts ===
+#!/bin/sh
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== rename: src/value.test.ts -> src/value2.test.ts ===
+#!/bin/sh
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBeTruthy(); });
+test.skip("other", () => { expect(total()).toBe(78.75); });

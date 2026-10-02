@@ -1,0 +1,22 @@
+=== meta ===
+issue: 198
+row: M2h
+probe: M2h_closeTo_const_name
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBeCloseTo(78.75, 2);
+});
+=== head: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  const BIG = 1e300;
+  expect(value).to.be.closeTo(78.75, BIG);
+});

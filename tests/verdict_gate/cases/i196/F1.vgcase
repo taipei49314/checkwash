@@ -1,0 +1,21 @@
+=== meta ===
+issue: 196
+row: F1
+probe: F1_fixture_it_only_single
+source: #196 comment of 2026-10-02 (186.2 moves, 186.3 scope, 187 focus), probe script
+=== options ===
+today = "2026-10-02"
+=== base: tests/billing.test.ts ===
+import { expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+it("computes invoice total with tax", () => {
+  expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+});
+=== head: tests/billing.test.ts ===
+import { expect, it } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+it.only("computes invoice total with tax", () => {
+  expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+});

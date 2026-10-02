@@ -1,0 +1,13 @@
+=== meta ===
+issue: 197
+row: B6
+probe: B6_buildkite_delete
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: .buildkite/value.test.js ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== delete: .buildkite/value.test.js ===

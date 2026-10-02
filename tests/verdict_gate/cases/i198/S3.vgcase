@@ -1,0 +1,21 @@
+=== meta ===
+issue: 198
+row: S3
+probe: S3_M1a_plain_jest
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect } from "@jest/globals";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBeNull();
+});
+=== head: src/total.test.ts ===
+import { test, expect } from "@jest/globals";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).to.exist;
+});

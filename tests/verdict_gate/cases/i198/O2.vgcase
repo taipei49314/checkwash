@@ -1,0 +1,21 @@
+=== meta ===
+issue: 198
+row: O2
+probe: O2_toBeLessThan_toBeLessThan_1e12
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBeLessThan(80);
+});
+=== head: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBeLessThan(1e12);
+});

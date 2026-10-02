@@ -1,0 +1,28 @@
+=== meta ===
+issue: 196
+row: S2
+probe: S2_components_Test_tsx
+source: #196 comment of 2026-10-02 (186.2 moves, 186.3 scope, 187 focus), probe script
+# the probe passed Contract(present=True, scope_allow=["src/billing/**"]);
+# here TASK.md at base, read through options.task
+=== options ===
+today = "2026-10-02"
+task = "TASK.md"
+=== base: TASK.md ===
+---
+checkwash:
+  scope:
+    allow:
+      - src/billing/**
+---
+# Task
+
+Scope contract of #196 S2 (186.3): production edits belong under src/billing/.
+=== base: src/components/Test.tsx ===
+export function Test() {
+  return <div className="a">a</div>;
+}
+=== head: src/components/Test.tsx ===
+export function Test() {
+  return <div className="b">b</div>;
+}
