@@ -870,7 +870,7 @@ def test_materialize_builds_the_declared_two_commit_repo(tmp_path):
         ("base: src/a.test.js", "a\n"),
         ("base: src/b.test.js", "b\n"),
         ("base: src/c.js", "c\n"),
-        ("base-b64: bin/data.bin", base64.b64encode(b"\x00\r\n").decode("ascii")),
+        ("base-b64: bin/data.bin", base64.b64encode(b"\x00\r\n").decode("ascii") + "\n"),
         ("rename-same: src/a.test.js -> test/a.test.js", ""),
         ("rename: src/b.test.js -> test/b2.test.js", "completely different content\n"),
         ("delete: src/c.js", ""),
