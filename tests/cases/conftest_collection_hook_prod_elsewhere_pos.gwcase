@@ -1,0 +1,26 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an unguarded collection hook beside a readable production edit is unexplained, not "no production change"
+origin: issue #205 - conftest_collection_control_not_repaired_pos pins COLLECTION_CONTROL_UNEXPLAINED when the production edit is opaque (it grants evidence diff-wide). With a readable Python edit the <suite> unit got no evidence, and the old escalator choice printed NO_PROD_CHANGE_IN_DIFF over a diff that changes production
+=== before: tests/conftest.py ===
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+=== after: tests/conftest.py ===
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+
+def pytest_collection_modifyitems(items):
+    items[:] = [item for item in items if "wide" not in item.name]
+=== before: app/billing.py ===
+def total():
+    return 78.75
+=== after: app/billing.py ===
+def total():
+    return round(78.75, 2)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["COLLECTION_CONTROL_UNEXPLAINED"], "path": "tests/conftest.py", "unit": "<suite>"}]

@@ -1,0 +1,34 @@
+=== meta ===
+rule: TEST_DISABLED
+title: the same skipping conftest fixture on a test-only diff keeps NO_PROD_CHANGE_IN_DIFF
+origin: issue #205, the control for conftest_fixture_skip_prod_elsewhere_pos (#199 row P1) - no production file changes, so "no production change in this diff" is the true reason and must stay
+=== before: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+=== after: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+
+
+@pytest.fixture
+def needs_network():
+    pytest.skip("network tests are disabled")
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total(db):
+    assert total() == 78.75
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/conftest.py", "unit": "<suite>"}]

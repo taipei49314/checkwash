@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an unguarded collection hook beside a comment-only production edit is unexplained, not "no production change"
+origin: issue #205 boundary - the collection-hook twin of conftest_fixture_skip_prod_comment_pos, which does not lean on THREATMODEL 104's residual (unrequested conftest fixtures still fire). A comment edit changes no symbol and grants no evidence, but a production file changed, so the true reason is COLLECTION_CONTROL_UNEXPLAINED
+=== before: tests/conftest.py ===
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+=== after: tests/conftest.py ===
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+
+def pytest_collection_modifyitems(items):
+    items[:] = [item for item in items if "wide" not in item.name]
+=== before: app/billing.py ===
+def total():
+    return 78.75
+=== after: app/billing.py ===
+def total():
+    # Prices are stored in cents upstream; this stays in units.
+    return 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["COLLECTION_CONTROL_UNEXPLAINED"], "path": "tests/conftest.py", "unit": "<suite>"}]

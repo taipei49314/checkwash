@@ -99,7 +99,12 @@ between the two is a laundering route (all confirmed by reproduction):
 - a suite-level collection control is **not** de-escalated by repair evidence.
   A production change explains a rewritten expectation; nothing about it makes
   it correct to stop *collecting* tests. A qualified compatibility gate (§D6)
-  does explain it and still de-escalates
+  does explain it and still de-escalates. When an unguarded suite-level
+  control in a `conftest.py` blocks (a collection control above, or a runtime
+  one such as a fixture whose setup always skips), its escalator states a fact
+  about the diff, not about evidence: `COLLECTION_CONTROL_UNEXPLAINED` if the
+  diff changes any production-role file, `NO_PROD_CHANGE_IN_DIFF` if it changes
+  none. This is a label, not evidence: severity is high either way (#205)
 - module-level `pytest.skip(..., allow_module_level=True)` and
   `importorskip` disable the whole file
 - a skip marker's identity includes its **condition**, so
@@ -390,7 +395,7 @@ Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
 
 | id | condition | effect |
 |---|---|---|
-| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below) | warn → high |
+| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below); a blocking unguarded conftest suite control in a diff that changes any production-role file is labelled `COLLECTION_CONTROL_UNEXPLAINED` instead (§4) | warn → high |
 | E2 `ORACLE_FREEZE` | contract declares `oracle_freeze: true` | warn → high |
 | E3 `HARDCODE_FINGERPRINT` | `EXPECTED_VALUE_HARDCODED` hit | → high |
 | E4 `META` | guardrail / greenwash-own-config touched | → critical |

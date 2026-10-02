@@ -720,9 +720,17 @@ def apply_gates(
             # "no production change in this diff" over a diff full of them is
             # a false statement in a blocking message, which is the class of
             # defect this project exists to catch (audit 2026-08-07).
+            #
+            # For a suite control the reason is a fact about the diff, not
+            # about this finding's evidence. A `<suite>` unit calls nothing,
+            # so a readable production edit elsewhere in the diff gives it no
+            # symbol-matched evidence, and asking `has_evidence` printed the
+            # false sentence over exactly that diff (#205). Any production
+            # file changed: the control is unexplained. None: the old wording
+            # is true.
             f.escalators.append(
                 "COLLECTION_CONTROL_UNEXPLAINED"
-                if suite_control and has_evidence
+                if suite_control and (has_evidence or ir.globals.prod_files_changed)
                 else "NO_PROD_CHANGE_IN_DIFF"
             )
 

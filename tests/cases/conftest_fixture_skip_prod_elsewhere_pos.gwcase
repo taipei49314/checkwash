@@ -1,0 +1,37 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a skipping conftest fixture beside an unrelated production edit is an unexplained collection control, not "no production change"
+origin: issue #205, found building #199 row P5 - v0.5.0 blocked this diff, correctly, and printed NO_PROD_CHANGE_IN_DIFF over a diff that changes app/billing.py. The <suite> unit calls nothing, so the edit gives it no symbol-matched evidence; the escalator was chosen from that per-finding evidence instead of from the diff
+=== before: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+=== after: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+
+
+@pytest.fixture
+def needs_network():
+    pytest.skip("network tests are disabled")
+=== before: app/billing.py ===
+def total():
+    return 78.75
+=== after: app/billing.py ===
+def total():
+    return round(78.75, 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total(db):
+    assert total() == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["COLLECTION_CONTROL_UNEXPLAINED"], "path": "tests/conftest.py", "unit": "<suite>"}]
