@@ -1,0 +1,21 @@
+=== meta ===
+issue: 198
+row: K3
+probe: K3_closeTo_abs_1
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBeCloseTo(78.75, 2);
+});
+=== head: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).to.be.closeTo(78.75, 1);
+});

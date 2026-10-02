@@ -1,0 +1,23 @@
+=== meta ===
+issue: 198
+row: T3
+probe: T3_node_strict_assert_equal_75
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect } from "vitest";
+import assert from "node:assert/strict";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBe(78.75);
+});
+=== head: src/total.test.ts ===
+import { test, expect } from "vitest";
+import assert from "node:assert/strict";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  assert.equal(value, 75);
+});

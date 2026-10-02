@@ -1,0 +1,33 @@
+=== meta ===
+issue: 197
+row: U1
+probe: U1_user_lockfile_glob
+source: #197 issue body, probe script
+# the probe appended the user glob to Config().roles; here the base-side
+# .checkwash/config.toml repeats the role's default globs and adds it
+=== options ===
+today = "2026-10-02"
+=== base: .checkwash/config.toml ===
+# #197 U1: user role glob(s) on top of the defaults.
+# [roles] replaces a role's default list (src/checkwash/config.py load_config),
+# so each list repeats every DEFAULT_ROLES glob and then adds the user glob.
+[roles]
+lockfile = [
+  "poetry.lock",
+  "uv.lock",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "requirements*.txt",
+  "requirements*.in",
+  "**/locks/**",
+]
+=== base: src/locks/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== head: src/locks/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBeTruthy(); });
+test.skip("other", () => { expect(total()).toBe(78.75); });

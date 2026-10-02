@@ -1,0 +1,21 @@
+=== meta ===
+issue: 198
+row: M2e
+probe: M2e_toBe_assert_isUndefined
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toBe(78.75);
+});
+=== head: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  assert.isUndefined(value);
+});

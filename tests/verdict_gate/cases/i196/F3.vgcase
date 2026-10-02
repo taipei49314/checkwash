@@ -1,0 +1,19 @@
+=== meta ===
+issue: 196
+row: F3
+probe: F3_mocha_it_only_single
+source: #196 comment of 2026-10-02 (186.2 moves, 186.3 scope, 187 focus), probe script
+=== options ===
+today = "2026-10-02"
+=== base: test/billing.spec.js ===
+const assert = require("node:assert");
+const { total } = require("../src/value");
+describe("billing", function () {
+  it("total", function () { assert.strictEqual(total(), 78.75); });
+});
+=== head: test/billing.spec.js ===
+const assert = require("node:assert");
+const { total } = require("../src/value");
+describe("billing", function () {
+  it.only("total", function () { assert.strictEqual(total(), 78.75); });
+});

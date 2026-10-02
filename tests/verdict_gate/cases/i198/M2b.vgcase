@@ -1,0 +1,21 @@
+=== meta ===
+issue: 198
+row: M2b
+probe: M2b_toEqual_assert_equal_75
+source: #198 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  expect(value).toEqual(78.75);
+});
+=== head: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+test("total", () => {
+  const value = total();
+  assert.equal(value, 75);
+});

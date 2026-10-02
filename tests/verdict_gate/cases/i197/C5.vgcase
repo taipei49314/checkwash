@@ -1,0 +1,25 @@
+=== meta ===
+issue: 197
+row: C5
+probe: C5_expected_modify_plus_py_prod
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: app/util.py ===
+def f():
+    return 1
+=== base: test/expected/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== head: test/expected/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });
+=== head: app/util.py ===
+def f():
+    return 2

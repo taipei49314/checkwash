@@ -1,0 +1,13 @@
+=== meta ===
+issue: 197
+row: R2
+probe: R2_rename_into_expected
+source: #197 issue body, probe script
+=== options ===
+today = "2026-10-02"
+=== base: src/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== rename-same: src/value.test.ts -> test/expected/value.test.ts ===

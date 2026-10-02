@@ -1,0 +1,147 @@
+name: verdict gate
+
+# Previous-release verdict gate (#201): the pinned previous release and the
+# candidate run through the CLI on the same 149 T1 cases and the baseline
+# tag's chai block records; a block that turns into a pass needs a reviewed
+# entry in tests/gates/verdict_gate_accepted.toml (maintainer-only). The
+# v0.4.2 -> v0.5.0 canary proves the harness still sees the known escapes.
+# Advisory on pull requests and main (#201 Decision 3); #201's release
+# integration requires a green run on the release commit and on the pushed tag.
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Only pull-request runs share a group (a newer push cancels the older run).
+# Every other run gets its own group, so a main or tag run is never cancelled,
+# and never dropped while pending behind a newer push either.
+concurrency:
+  group: verdict-gate-${{ startsWith(github.ref, 'refs/pull/') && github.ref || github.run_id }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  gate:
+    name: verdict gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Read the pinned engines from the pins file
+        id: pins
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, re, tomllib
+          with open("tests/verdict_gate/baseline.toml", "rb") as stream:
+              pins = tomllib.load(stream)
+          engines = {"baseline": pins["baseline"], "canary_old": pins["canary"]["old"],
+                     "canary_new": pins["canary"]["new"]}
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              for role, pin in engines.items():
+                  if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", pin["tag"]):
+                      raise SystemExit(f"{role}: tag {pin['tag']!r} is not vX.Y.Z")
+                  if not re.fullmatch(r"[0-9a-f]{40}", pin["commit"]):
+                      raise SystemExit(f"{role}: commit is not a full lowercase sha")
+                  output.write(f"{role}_tag={pin['tag']}\n{role}_commit={pin['commit']}\n")
+          PY
+
+      - name: Check out each pinned commit and download its release pyz
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASELINE_TAG: ${{ steps.pins.outputs.baseline_tag }}
+          BASELINE_COMMIT: ${{ steps.pins.outputs.baseline_commit }}
+          CANARY_OLD_TAG: ${{ steps.pins.outputs.canary_old_tag }}
+          CANARY_OLD_COMMIT: ${{ steps.pins.outputs.canary_old_commit }}
+          CANARY_NEW_TAG: ${{ steps.pins.outputs.canary_new_tag }}
+          CANARY_NEW_COMMIT: ${{ steps.pins.outputs.canary_new_commit }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/verdict-gate"
+          fetch_engine() {
+            local role="$1" tag="$2" commit="$3"
+            test "$(git rev-parse --verify "refs/tags/$tag^{commit}")" = "$commit"
+            mkdir -p "$root/$role"
+            git worktree add --detach "$root/$role/src" "$commit"
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern checkwash.pyz --dir "$root/$role"
+            ls -l "$root/$role/checkwash.pyz"
+          }
+          fetch_engine baseline "$BASELINE_TAG" "$BASELINE_COMMIT"
+          fetch_engine canary-old "$CANARY_OLD_TAG" "$CANARY_OLD_COMMIT"
+          fetch_engine canary-new "$CANARY_NEW_TAG" "$CANARY_NEW_COMMIT"
+
+      - name: Build the candidate pyz with the release recipe
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/verdict-gate/candidate"
+          python -m zipapp src -m "checkwash.zipapp_entry:run" -o "$RUNNER_TEMP/verdict-gate/candidate/checkwash.pyz" -c
+          ls -l "$RUNNER_TEMP/verdict-gate/candidate/checkwash.pyz"
+
+      - name: Run the verdict gate
+        id: gate
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/verdict-gate"
+          mkdir -p "$root/receipt"
+          args=(
+            gate
+            --pins tests/verdict_gate/baseline.toml
+            --cases tests/verdict_gate/cases
+            --labels tests/verdict_gate/labels.toml
+            --accepted tests/gates/verdict_gate_accepted.toml
+            --baseline-pyz "$root/baseline/checkwash.pyz" --baseline-source "$root/baseline/src"
+            --candidate-pyz "$root/candidate/checkwash.pyz" --candidate-source "$GITHUB_WORKSPACE"
+            --canary-old-pyz "$root/canary-old/checkwash.pyz" --canary-old-source "$root/canary-old/src"
+            --canary-new-pyz "$root/canary-new/checkwash.pyz" --canary-new-source "$root/canary-new/src"
+            --work-dir "$root/work"
+            --context "event=$GITHUB_EVENT_NAME"
+            --context "ref=$GITHUB_REF"
+            --context "sha=$GITHUB_SHA"
+            --context "pr_head_sha=$PR_HEAD_SHA"
+            --context "run_id=$GITHUB_RUN_ID"
+            --context "run_attempt=$GITHUB_RUN_ATTEMPT"
+            --receipt "$root/receipt/verdict-gate.json"
+            --summary "$root/receipt/verdict-gate.md"
+          )
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            args+=(--tag-run "$GITHUB_REF_NAME" --repo "$GITHUB_WORKSPACE")
+          fi
+          python tools/verdict_gate.py "${args[@]}"
+
+      - name: Write the receipt to the job summary
+        if: ${{ !cancelled() && (steps.gate.outcome == 'success' || steps.gate.outcome == 'failure') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat "$RUNNER_TEMP/verdict-gate/receipt/verdict-gate.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: verdict-gate-receipt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/verdict-gate/receipt/
+          if-no-files-found: error
+          retention-days: 7

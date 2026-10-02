@@ -1,0 +1,15 @@
+=== meta ===
+issue: 196
+row: F2
+probe: F2_vitest_test_only_single
+source: #196 comment of 2026-10-02 (186.2 moves, 186.3 scope, 187 focus), probe script
+=== options ===
+today = "2026-10-02"
+=== base: tests/value.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/value";
+test("total", () => { expect(total()).toBe(78.75); });
+=== head: tests/value.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/value";
+test.only("total", () => { expect(total()).toBe(78.75); });

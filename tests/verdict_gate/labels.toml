@@ -1,0 +1,177 @@
+# Labels of the T1 verdict-gate cases (tests/verdict_gate/cases), issue #201.
+#
+# block     = the candidate must block this case;
+# pass      = the candidate must pass it;
+# undecided = awaiting a maintainer ruling (no label anchor; a block -> pass
+#             still needs a pending-ruling entry).
+# T3 (chai:) cases take the chai record's verdict and are never listed here.
+# A label changes only by maintainer ruling (AGENTS.md rule 2).
+#
+# Every line names its source. "#201 Labels" is the Labels section of #201,
+# which labels the 68 rows that go block -> pass from v0.4.2 to v0.5.0; every
+# other row takes the label that its issue's Acceptance section names, else
+# undecided.
+#
+# Quotes are verbatim, except that the en dash (U+2013) the posted issues use
+# in ranges such as M1-M7 is written as an ASCII "-", so this file stays
+# ASCII-only.
+schema_version = 1
+
+[labels]
+
+# --- i196: #196 comment of 2026-10-02 (186.2 moves, 186.3 scope, 187 focus)
+"i196/F1" = "pass"  # #201 Labels (pass): the #196 comment calls F1 and F2 honest under Jest/Vitest
+"i196/F2" = "pass"  # #201 Labels (pass): the #196 comment calls F1 and F2 honest under Jest/Vitest
+"i196/F3" = "undecided"  # #201 Labels (undecided): #196 187.4
+"i196/F4" = "undecided"  # #201 Labels (undecided): #196 187.4
+"i196/F5" = "undecided"  # #201 Labels (undecided): #196 187.4
+"i196/F6" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 187.4
+"i196/Fc1" = "undecided"  # no Acceptance section in the #196 comment (187 control)
+"i196/M0" = "undecided"  # #201 Labels (undecided): #196 186.7
+"i196/M1" = "undecided"  # #201 Labels (undecided): #196 186.7
+"i196/M2" = "undecided"  # #201 Labels (undecided): #196 186.7
+"i196/M3" = "undecided"  # #201 Labels (undecided): #196 186.7
+"i196/M4" = "undecided"  # #201 Labels (undecided): #196 186.7
+"i196/M5" = "undecided"  # #201 Labels (undecided): #196 186.7
+"i196/Mc1" = "undecided"  # no Acceptance section in the #196 comment (186.2 controls)
+"i196/Mc2" = "undecided"  # no Acceptance section in the #196 comment (186.2 controls)
+"i196/Mc3" = "undecided"  # no Acceptance section in the #196 comment (186.2 controls)
+"i196/P1" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.7
+"i196/P2" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.7
+"i196/P3" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.7
+"i196/S1" = "undecided"  # #201 Labels (undecided): #196 186.8
+"i196/S2" = "undecided"  # #201 Labels (undecided): #196 186.8
+"i196/S3" = "undecided"  # #201 Labels (undecided): #196 186.8
+"i196/Sc1" = "undecided"  # no Acceptance section in the #196 comment (186.3 controls)
+"i196/Sc2" = "undecided"  # no Acceptance section in the #196 comment (186.3 controls)
+"i196/Sp1" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.8
+"i196/Sp2" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.8
+"i196/Sp3" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.8
+"i196/Sp4" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.8
+
+# --- i197: #197 role precedence drops JS test obligations
+"i197/A1" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A2" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A3" = "pass"  # #197 Acceptance, must stay as they are: "A3 passes"
+"i197/A4" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A5" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A6" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/A7" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A8" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/A9" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A10" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A10ctl" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/A11" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A12" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/A13" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/B1" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/B2" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/B3" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/B4" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/B5" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/B6" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/B7" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/C1" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/C2" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/C3" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/C4" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/C5" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/C5ctl" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/R1" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/R2" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/T1" = "undecided"  # #197 Acceptance: "new coverage for #175 ... Include it if the round closes A" (no verdict named)
+"i197/U1" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/U2" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
+"i197/U3" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+"i197/X1" = "block"  # #197 Acceptance: "X1 stays GUARDRAIL_TOUCHED critical" (a blocking finding; block at both tags)
+"i197/X2" = "block"  # #197 Acceptance: "X2 is unchanged" (block at both tags in the controls table)
+"i197/ctl" = "block"  # #197 Acceptance, must stay as they are: "ctl, A6, A8, A10ctl, B4, C4, C5ctl, U3, R1 and R2 block"
+
+# --- i198: #198 JS assertion identity across assertion APIs
+"i198/B1" = "undecided"  # #198 Acceptance: "Decided by the rulings above: ... B1-B4"
+"i198/B2" = "undecided"  # #198 Acceptance: "Decided by the rulings above: ... B1-B4"
+"i198/B3" = "undecided"  # #198 Acceptance: "Decided by the rulings above: ... B1-B4"
+"i198/B4" = "undecided"  # #198 Acceptance: "Decided by the rulings above: ... B1-B4"
+"i198/FP1" = "pass"  # #198 Acceptance, must change: "FP1 passes as a proven strengthening"
+"i198/FP2" = "pass"  # #198 Acceptance, must change: "FP2 passes"
+"i198/FP3" = "block"  # #198 Acceptance: "FP3 keeps blocking, as a weakening"
+"i198/FPJ1" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"; the same section says they pass "Under the definition", which waits on question 3
+"i198/FPJ2" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"; the same section says they pass "Under the definition", which waits on question 3
+"i198/H1" = "pass"  # #201 Labels (pass); #198 Acceptance: "H1, H3 and H5 pass"
+"i198/H2" = "undecided"  # #201 Labels (undecided): #198 question 2; Acceptance: pass "once question 2's evidence exists"
+"i198/H3" = "pass"  # #201 Labels (pass); #198 Acceptance: "H1, H3 and H5 pass"
+"i198/H4" = "undecided"  # #201 Labels (undecided): #198 question 2; Acceptance: pass "once question 2's evidence exists"
+"i198/H5" = "pass"  # #201 Labels (pass); #198 Acceptance: "H1, H3 and H5 pass"
+"i198/H6" = "undecided"  # #201 Labels (undecided): #198 question 2; Acceptance: pass "once question 2's evidence exists"
+"i198/J1" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/J2" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/J3" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/J4" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/J5" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/K1" = "block"  # #198 Acceptance: "K1-K3 block with their current rules"
+"i198/K2" = "block"  # #198 Acceptance: "K1-K3 block with their current rules"
+"i198/K3" = "block"  # #198 Acceptance: "K1-K3 block with their current rules"
+"i198/M1a" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M1b" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M1c" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M1d" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M1e" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M1f" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M1g" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M1h" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M2a" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M2b" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M2c" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M2d" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M2e" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M2f" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M2g" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/M2h" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
+"i198/O1" = "undecided"  # #201 Labels (undecided): #198 question 4
+"i198/O2" = "undecided"  # #198 Acceptance: "Decided by the rulings above: ... O1-O2 (question 4)"
+"i198/S1" = "pass"  # #198 Acceptance: "S1, S2, S4, S5 keep verdict pass"
+"i198/S2" = "pass"  # #198 Acceptance: "S1, S2, S4, S5 keep verdict pass"
+"i198/S3" = "undecided"  # #201 Labels (undecided): #198 question 5
+"i198/S4" = "pass"  # #198 Acceptance: "S1, S2, S4, S5 keep verdict pass"
+"i198/S5" = "pass"  # #198 Acceptance: "S1, S2, S4, S5 keep verdict pass"
+"i198/T1" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T2" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T3" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T4" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T5" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T6" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+
+# --- i199: #199 setup-skip markers trip the collection-inventory withhold
+"i199/C1" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/C2" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/C3" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/C4" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/G1" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/G2" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/G3" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/H1" = "undecided"  # #199 Acceptance: "H1 and R1 per questions 1 and 2"
+"i199/H2" = "block"  # #199 Acceptance: "H2 blocks in both tags"
+"i199/K1" = "pass"  # #199 Acceptance: "K1 passes at warn"
+"i199/M1" = "block"  # #201 Labels (block); #199 Acceptance: "Must block: M1-M7"
+"i199/M2" = "block"  # #201 Labels (block); #199 Acceptance: "Must block: M1-M7"
+"i199/M3" = "block"  # #201 Labels (block); #199 Acceptance: "Must block: M1-M7"
+"i199/M4" = "block"  # #201 Labels (block); #199 Acceptance: "Must block: M1-M7"
+"i199/M5" = "block"  # #201 Labels (block); #199 Acceptance: "Must block: M1-M7"
+"i199/M6" = "block"  # #201 Labels (block); #199 Acceptance: "Must block: M1-M7"
+"i199/M7" = "block"  # #201 Labels (block); #199 Acceptance: "Must block: M1-M7"
+"i199/M8" = "undecided"  # #201 Labels (undecided): #199 question 2 (Acceptance: "M8 per question 2")
+"i199/N1" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/N2" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/N3" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/N4" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/N5" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/N6" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/P1" = "block"  # #199 Acceptance: "P1, P2, P3 and P5 block"
+"i199/P2" = "block"  # #199 Acceptance: "P1, P2, P3 and P5 block"
+"i199/P3" = "block"  # #199 Acceptance: "P1, P2, P3 and P5 block"
+"i199/P4" = "pass"  # #199 Acceptance: "P4 passes"
+"i199/P5" = "block"  # #199 Acceptance: "P1, P2, P3 and P5 block"
+"i199/R1" = "undecided"  # #199 Acceptance: "H1 and R1 per questions 1 and 2"
+"i199/R2" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/R3" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
+"i199/R4" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
