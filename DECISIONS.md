@@ -2318,3 +2318,35 @@ regressions of the Action's pinned engine, beside the fixes the Action does
 not have yet. The agent recommended this on 2026-10-02 and the maintainer
 accepted it ("照你建議走"). It is a judgement, not a measurement: neither
 version has a JS/TS history replay.
+
+## D-066 (2026-10-02): a suite control's escalator is a fact about the diff (#205)
+
+A blocking `TEST_DISABLED` on a conftest `<suite>` control printed
+`NO_PROD_CHANGE_IN_DIFF` over a diff that changed production (#199 row P5).
+D-028 attached `COLLECTION_CONTROL_UNEXPLAINED` only where repair evidence
+exists and is deliberately refused. A `<suite>` unit calls nothing, so for it
+that reduced to the opaque blanket: a readable production edit elsewhere in
+the diff gave it no evidence, and the false sentence D-028 removed came back.
+
+An unguarded suite-level control never earns repair evidence (D-028), so
+whether evidence exists says nothing about it. What the reader needs is
+whether the diff changed production. A blocking unguarded suite control now
+carries `COLLECTION_CONTROL_UNEXPLAINED` when the diff changes any
+production-role file, and `NO_PROD_CHANGE_IN_DIFF` only when it changes none.
+Generated artifacts are dropped before role bookkeeping and are not
+production-role changes. This wider test was chosen over #205's suggested
+`prod_symbols_changed`/`prod_opaque_change`: a comment-only edit, a deleted
+data file, a rename or a production file that stops parsing is still a
+production change, and the narrower test would print the false sentence over
+those too. Severity, verdict, de-escalators and fingerprints do not move; only
+the reason string does.
+
+For suite controls this departs from SPEC §5's E1 condition ("no repair
+evidence"), so SPEC §4 and the E1 row now say so. Unit-level findings keep E1
+as SPEC defines it. Their wording (THREATMODEL 86h, `docs/integrations.md` §6)
+is not decided here, so one report can carry both labels.
+
+The agent proposed this in #207 and named both departures. The maintainer
+accepted it on 2026-10-02 and asked for the documents to follow the code
+("照建議 文件跟 code同步"); the agent wrote this entry and the SPEC text under
+that instruction.
