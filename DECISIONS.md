@@ -2300,5 +2300,21 @@ in-process matrices had 68: #197 B7's rename-with-edit is a delete plus an
 add to git, and deleting a test under `.github/workflows/` blocks.
 
 The maintainer was away. The agent wrote this entry and the acceptance file
-under his delegation of 2026-10-02 ("完全開放授權 但只限於checkwash相關"),
-and both await his re-review.
+under his delegation of 2026-10-02 ("完全開放授權 但只限於checkwash相關").
+Later the same day, given the full list of entries and of the label calls,
+the maintainer accepted the agent's recommendations ("照你建議走"). That was
+an acceptance, not a line-by-line review, so a later review may still revise
+an entry or a label.
+
+## D-065 (2026-10-02): next release — the recommended Action advances to v0.5.0
+
+At the next release, the recommended Action follows the one-release trust lag
+and advances to v0.5.0. It is not held at v0.4.2. The v0.5.0 engine carries
+the block -> pass regressions filed as #197, #198 and #199, but v0.4.2 still
+has the silent bypasses that v0.5.0 closed (#172 and #174-#179), and the
+#197 family needs a layout or a visibly odd shebang. Python-only users only
+gain. That release's guide must name #197, #198 and #199 as known
+regressions of the Action's pinned engine, beside the fixes the Action does
+not have yet. The agent recommended this on 2026-10-02 and the maintainer
+accepted it ("照你建議走"). It is a judgement, not a measurement: neither
+version has a JS/TS history replay.
