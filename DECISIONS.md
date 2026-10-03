@@ -2485,3 +2485,91 @@ measure it before the release that ships this.
 
 The agent wrote this entry in the #198 fix PR, as the rulings' X.doc-batch
 asks; the maintainer approves it there.
+
+## D-070 (2026-10-03): operand evidence for JS assertions (#198, second half)
+
+D-069 made each JS spelling state its predicate. A pair could still read as
+preserved while its evidence was lost: `toBe(78.75)` -> `assert.equal(x, 75)`
+passed because `==` recorded no expected value (#198 M2a-c), and
+`toBeCloseTo(v, 2)` -> `.closeTo(v, Infinity)` because a delta of `Infinity`,
+`Number.MAX_VALUE` or a name recorded no tolerance (M2f-h).
+
+Rulings 196.190.2, 196.190.4, 196.189.3, 198.Q2, Q3 and Q4 and 198.IR
+amendment 2, as implemented in this half:
+
+- Every JS equality records its scalar operand, chai's `assert.equal` and
+  Node's legacy `equal` and `deepEqual` included; `equal`'s `eq_loose` key
+  carries the coercion (190.2). The literal reader reads through parentheses
+  and TypeScript's `as`, `satisfies` and `!` (T4, T5).
+- The ordering matchers, chai's bound words and `assert.isAbove` and its
+  siblings record their bound (198.Q2, Q4). A bound read as a hand-rolled
+  tolerance is tolerance evidence only.
+- A `closeTo` delta is read by the hand-rolled bound's exact reader, with
+  `Number.MAX_VALUE` added to its named bounds (190.4).
+- `Assertion.operand_source` records each expected value's or bound's text
+  without comments, parentheses or TypeScript wrappers. It decides only
+  whether two spellings state the same operand: two bounds naming one bound
+  are compared over the values below, at and above it, so `< 80` -> `<= 80` is
+  a widening (D-069 reading 3), and it gives the names a rewritten operand
+  reads. IR_VERSION stays 2 (D-067).
+- EXPECTED_VALUE_CHANGED reads JS operands as Python's: a literal rewritten
+  into another literal, a bound included, and a name or call replaced by a
+  different one, compared by the names it reads (198.IR amendment 2).
+- A hand-rolled `Math.abs(d) < bound` in a truthy spelling records its bound
+  key from the `Math.abs` side, lower bounds included, so a `<` -> `>` flip
+  is reported as a bound direction reversed (189.3). Asymmetric matchers as
+  the whole expected value of `toEqual` are the predicate they state (198.Q3).
+
+Five readings the rulings leave to the implementation:
+
+1. **A literal and an expression stay unreported in both directions.** The
+   ruling names literal -> literal and a name or call replaced by a
+   different one, and keeps literal -> call and literal -> imported name as
+   they are until #226. The reverse, a name or call replaced by a literal, is
+   what Python reports as issue #60; `tests/test_js_literal_evidence.py` pins
+   it unknown for JS, and the rulings flip no such pin, so it waits for #226
+   too.
+2. **Unknown tolerance evidence is a loss only when the old side was known.**
+   A known tolerance replaced, on the same subject, by a `closeTo` delta or
+   `toBeCloseTo` precision checkwash cannot read is reported by
+   ASSERT_WEAKENED as an unverifiable replacement, never mild (190.4: "an
+   unreadable delta is unknown under #198's rule"). A tolerance unknown before
+   the edit is not compared, as Python's unreadable tolerances are not, and a
+   hand-rolled bound rewritten into one the reader cannot read in place stays
+   unreported, as #189's review pinned.
+3. **The hand-rolled flip is judged on the magnitude.** The subject of a
+   truthy spelling is the whole comparison, and its `left` does not change in
+   this round (189.2 changes it). The relation compares the two `Math.abs`
+   sides instead, and a reversal is unverifiable when either bound was not
+   read (189.3). The `=== true` and truthy spellings of one comparison state
+   one bound, so `expect(cmp).toBe(true)` -> `assert.ok(cmp)` no longer
+   reports a widening.
+4. **No restoration credit in JS.** Python passes `x < 80` -> `x == 78.75`
+   through a proof of an unchanged native-assertion context, which JS does
+   not have. `toBeLessThan(80)` -> `toBe(78.75)` therefore reports its new
+   value, which the rulings' cost ("including a tightened bound") accepts.
+5. **Asymmetric matchers:** `expect.anything()` is `!= null` and
+   `expect.any(Ctor)` a type check; the other asymmetric matchers keep the
+   equality reading.
+
+Pins. The rulings flip `tests/test_js_foundation.py`'s legacy-equality pin
+(equal and deepEqual) and `tests/test_js_chai.py`'s bound rows and
+`assert.equal` value. They imply, without listing, three more:
+`tests/test_js_literal_evidence.py` reads `(42)` and `42 as const` (T4, T5),
+and `tests/test_js_chai.py` reads `closeTo(x, Infinity)` and spells a
+`0.010` delta exactly (190.4).
+
+Fingerprints: no rule changes its fingerprint scheme, but chai deltas are
+now spelled as exact decimals (`abs=1.0` -> `abs=1`, `abs=5e-07` ->
+`abs=5E-7`), so a TOLERANCE_LOOSENED finding whose old side is such a delta
+has a new fingerprint. The release that ships this records it in its
+D-063-style entry (X.release-and-fingerprints).
+
+Cost: new blocks on rows that passed v0.5.0 (M2a-c, M2f-h, B3, B4, T1, T2,
+T4, T5, O1, O2), on bound rewrites and name rewrites generally, on a known
+tolerance lost to an unreadable one, and on the hand-rolled flip. The JS
+false-positive cost is not measured; the JS/TS replay corpus
+(X.js-fp-measurement) must measure it before the release that ships this.
+
+The agent wrote this entry in the #198 evidence PR, as the rulings'
+X.doc-batch asks; the maintainer approves it there.
