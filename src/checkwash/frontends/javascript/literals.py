@@ -5,8 +5,15 @@ exponent and radix spellings normalize together, while negative zero stays
 distinct. BigInt, legacy octal, non-finite numbers, templates, containers,
 identifiers and computed expressions remain unknown. Ordinary quoted strings
 use JavaScript escapes and UTF-16 equality, rather than Python literal syntax.
-Tolerance bounds (issue #179) are read a little further, and kept as exact
-Decimals rather than Number values, because their ordering is a verdict.
+Redundant parentheses and the TypeScript-only `as`, `satisfies` and non-null
+`!` wrappers evaluate to what they wrap, so they are read through (#198 T4,
+T5). Tolerance bounds (issue #179) are read a little further, and kept as
+exact Decimals rather than Number values, because their ordering is a verdict.
+
+An operand that is not a literal is still recorded by its text
+(`operand_text`), and the names it reads (`operand_names`), so that two
+spellings of one operand compare as the same and a name replaced by another
+one can be told apart (#198).
 """
 
 from __future__ import annotations
@@ -69,6 +76,89 @@ def _without_comments(source: str) -> str | None:
             parts.append(source[i])
             i += 1
     return "".join(parts)
+
+
+_QUOTES = "\"'`"
+_CLOSING = {"(": ")", "[": "]", "{": "}"}
+_CAST = re.compile(r"(?:as|satisfies)(?![\w$])")
+# A type that ends the operand: names, members, generics, unions, tuples and
+# literal types. `42 as const + 1` adds to the cast, so `+` is not one.
+_CAST_TYPE = re.compile(r"[\w$.<>\[\]|&,'\" \t]+")
+
+
+def _top_level(source: str):
+    """Yield (index, depth) for each character outside quotes and templates.
+
+    Brackets nest; a quote or template literal is skipped whole. None of
+    this is a parser: an unbalanced operand simply never peels.
+    """
+    depth = 0
+    i = 0
+    while i < len(source):
+        char = source[i]
+        if char in _QUOTES:
+            i += 1
+            while i < len(source) and source[i] != char:
+                i += 2 if source[i] == "\\" else 1
+            i += 1
+            continue
+        if char in _CLOSING:
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        yield i, depth
+        i += 1
+
+
+def _parenthesized(source: str) -> str | None:
+    """The inside of `( ... )` when that one pair encloses the whole operand."""
+    if len(source) < 2 or source[0] != "(" or source[-1] != ")":
+        return None
+    for index, depth in _top_level(source):
+        if depth == 0 and index < len(source) - 1:
+            return None  # `(a) + (b)`: the first pair closes early
+    return source[1:-1]
+
+
+def _cast_operand(source: str) -> str | None:
+    """`value` from `value as T` or `value satisfies T`, outside brackets.
+
+    Only a value no looser operator splits, cast to a type that ends the
+    operand: `a ? b as T : c` casts `b`, `x + 1 as T` casts the sum, and
+    `42 as const + 1` adds to the cast, so none of them is peeled here.
+    """
+    for index, depth in _top_level(source):
+        cast = _CAST.match(source, index) if depth == 0 else None
+        if (cast is None or index == 0 or source[index - 1] not in _WHITESPACE
+                or cast.end() >= len(source) or source[cast.end()] not in _WHITESPACE):
+            continue
+        if not _CAST_TYPE.fullmatch(source, cast.end()):
+            return None
+        head = source[:index].strip(_WHITESPACE)
+        operators = [i for i, level in _top_level(head) if level == 0 and head[i] in "?:=|&<>,+-*/%^"]
+        if not head or any(i > 0 or head[i] not in "+-" for i in operators):
+            return None
+        return head
+    return None
+
+
+def _peel(source: str) -> str:
+    """An operand without what evaluates to the same value at run time.
+
+    `(75)`, `75 as number`, `75 satisfies number` and TypeScript's non-null
+    `value!` are the value they wrap (#198 T4, T5). Comments are already
+    removed. Anything that does not peel cleanly is returned as it is.
+    """
+    while True:
+        source = source.strip(_WHITESPACE)
+        inner = _parenthesized(source)
+        if inner is None and len(source) > 1 and source.endswith("!"):
+            inner = source[:-1]
+        if inner is None:
+            inner = _cast_operand(source)
+        if inner is None or not inner.strip(_WHITESPACE):
+            return source
+        source = inner
 
 
 def _number(expression: str) -> float | None:
@@ -164,7 +254,9 @@ def populate_expectation(assertion: Assertion, expression: str) -> None:
 
     This does not assign meaning to the matcher: callers select the assertion
     forms whose operand is an expected value. No JavaScript coercions apply.
-    The 4096-character cap keeps literal decoding bounded.
+    Parentheses and TypeScript's `as`, `satisfies` and `!` are read through
+    (#198 T4, T5); `right_literal` keeps the operand as written. The
+    4096-character cap keeps literal decoding bounded.
     """
     assertion.right_literal = None
     assertion.right_value = None
@@ -174,7 +266,7 @@ def populate_expectation(assertion: Assertion, expression: str) -> None:
     source = _without_comments(original)
     if source is None:
         return
-    source = source.strip(_WHITESPACE)
+    source = _peel(source)
     if not source:
         return
     keywords = {"true": True, "false": False, "null": None}
@@ -203,15 +295,16 @@ def populate_expectation(assertion: Assertion, expression: str) -> None:
 def keyword_operand(expression: str) -> str | None:
     """`null`, `undefined`, `true` or `false` when the operand is exactly that word.
 
-    Comments and surrounding whitespace aside. Whether `undefined` still names
-    the global is the caller's question; the other three are keywords.
+    Comments, surrounding whitespace, parentheses and TypeScript wrappers
+    aside (`(null)`, `undefined as any`). Whether `undefined` still names the
+    global is the caller's question; the other three are keywords.
     """
     if len(expression) > 4096:
         return None
     source = _without_comments(expression)
     if source is None:
         return None
-    source = source.strip(_WHITESPACE)
+    source = _peel(source)
     return source if source in {"null", "undefined", "true", "false"} else None
 
 
@@ -235,7 +328,7 @@ def populate_precision(assertion: Assertion, expression: str | None = None) -> N
         source = _without_comments(expression)
         if source is None:
             return
-        number = _number(source.strip(_WHITESPACE))
+        number = _number(_peel(source))
         if number is None or not number.is_integer() or not -308 <= number <= 307:
             return
         places = int(number)
@@ -243,38 +336,43 @@ def populate_precision(assertion: Assertion, expression: str | None = None) -> N
     assertion.epsilon_kind = "places"
 
 
-def populate_delta(assertion: Assertion, expression: str) -> None:
+def populate_delta(
+    assertion: Assertion,
+    expression: str,
+    lookup: Callable[[str], str | None],
+    builtin: Callable[[tuple[str, ...]], bool],
+) -> None:
     """Record a positive chai closeTo/approximately absolute delta.
 
-    chai passes when |actual - expected| <= delta, so a larger finite Number
-    is looser. That is the absolute bound a hand-rolled `Math.abs(a - b) <
-    bound` states, so it is recorded in the same keyed form with kind `abs`:
-    a bare value in a JS file reads as `toBeCloseTo` places, and a delta of
-    1 must not compare as one decimal place. Signed zeroes are the same
-    delta. Identifiers, computed or non-finite deltas and negated
-    comparisons, whose ordering reverses, remain unknown.
+    chai passes when |actual - expected| <= delta, so a larger Number is
+    looser. That is the absolute bound a hand-rolled `Math.abs(a - b) <
+    bound` states, so it is read by the same exact reader (`read_bound`:
+    literals, `Infinity`, `Number.MAX_VALUE`, ..., one local name) and
+    recorded in the same keyed form with kind `abs` (#196 190.4): a bare
+    value in a JS file reads as `toBeCloseTo` places, and a delta of 1 must
+    not compare as one decimal place. A delta it cannot read is unknown,
+    and so is a negated comparison, whose ordering reverses.
     """
     assertion.epsilon = None
     assertion.epsilon_kind = None
-    if assertion.form != "approx" or not assertion.positive or len(expression) > 4096:
+    if assertion.form != "approx" or not assertion.positive:
         return
-    source = _without_comments(expression)
-    if source is None:
+    value = read_bound(expression, lookup, builtin)
+    if value is None:
         return
-    delta = _number(source.strip(_WHITESPACE))
-    if delta is None:
-        return
-    assertion.epsilon = f"abs={delta if delta else 0.0}"
+    assertion.epsilon = f"abs={value}"
     assertion.epsilon_kind = "abs"
 
 
 # Tolerance bounds (issue #179). How two bounds order is a verdict, so they
 # stay exact Decimals end to end (SPEC §3): `Number.EPSILON` is exactly
-# 2**-52, and a product is taken in a context wide enough to keep
-# `k * Number.EPSILON` exact for ordinary literals.
+# 2**-52, `Number.MAX_VALUE` exactly (2 - 2**-52) * 2**1023, and a product is
+# taken in a context wide enough to keep `k * Number.EPSILON` exact for
+# ordinary literals.
 _EXACT = Context(prec=80)
 _NAMED_BOUNDS = {
     ("Number", "EPSILON"): _EXACT.divide(Decimal(1), Decimal(2 ** 52)),
+    ("Number", "MAX_VALUE"): Decimal(2 ** 1024 - 2 ** 971),
     ("Number", "POSITIVE_INFINITY"): Decimal("Infinity"),
     ("Infinity",): Decimal("Infinity"),
 }
@@ -313,16 +411,13 @@ def _literal_decimal(expression: str) -> Decimal | None:
 
 
 def _bound_source(expression: str) -> str | None:
-    """A bound's text without comments, outer whitespace or parentheses."""
+    """A bound's text without comments, outer whitespace, parentheses or TS wrappers."""
     if len(expression) > 4096:
         return None
     source = _without_comments(expression)
     if source is None:
         return None
-    source = source.strip(_WHITESPACE)
-    while len(source) > 1 and source[0] == "(" and source[-1] == ")":
-        source = source[1:-1].strip(_WHITESPACE)
-    return source or None
+    return _peel(source) or None
 
 
 def _bound_value(expression: str, builtin: Callable[[tuple[str, ...]], bool]) -> Decimal | None:
@@ -366,21 +461,98 @@ def populate_tolerance(
     says whether a global such as `Number.EPSILON` is unshadowed at the
     assertion; `lookup(name)` returns the initializer a plain name reads.
 
-    Read: a Number literal, `Number.EPSILON`, `Infinity`,
-    `Number.POSITIVE_INFINITY`, a product of two of these, or one local
-    name initialized to one of them. A name bound to another name, `**`,
-    division, calls and other members are unknown and record nothing.
+    What `read_bound` reads is recorded; anything else records nothing.
     """
     assertion.epsilon = None
     assertion.epsilon_kind = None
-    value = _bound_value(expression, builtin)
+    value = read_bound(expression, lookup, builtin)
     if value is None:
-        name = _bound_source(expression)
-        initializer = lookup(name) if name is not None and _IDENTIFIER.fullmatch(name) else None
-        if initializer is None:
-            return
-        value = _bound_value(initializer, builtin)
-        if value is None:
-            return
+        return
     assertion.epsilon = f"abs={value}"
     assertion.epsilon_kind = "abs"
+
+
+def read_bound(
+    expression: str,
+    lookup: Callable[[str], str | None],
+    builtin: Callable[[tuple[str, ...]], bool],
+) -> Decimal | None:
+    """The exact value of a bound or delta operand, or None when it cannot be read.
+
+    Read: a Number literal, `Number.EPSILON`, `Number.MAX_VALUE`,
+    `Infinity`, `Number.POSITIVE_INFINITY`, a product of two of these, or
+    one local name initialized to one of them, each through parentheses and
+    TypeScript wrappers. A name bound to another name, `**`, division, calls
+    and other members are unknown. `builtin(path)` says whether a global
+    such as `Number.EPSILON` is unshadowed at the assertion; `lookup(name)`
+    returns the initializer a plain name reads.
+    """
+    value = _bound_value(expression, builtin)
+    if value is not None:
+        return value
+    name = _bound_source(expression)
+    initializer = lookup(name) if name is not None and _IDENTIFIER.fullmatch(name) else None
+    return None if initializer is None else _bound_value(initializer, builtin)
+
+
+# Operands that are not literals (#198). Two spellings of one operand on two
+# APIs (`toBeLessThan(LIMIT)`, `.below(LIMIT)`) must compare as the same, and
+# a name replaced by another one must not. These read the text only; what a
+# name holds is the binding scan's question, not theirs.
+_KEYWORDS = frozenset({
+    "true", "false", "null", "undefined", "NaN", "Infinity", "this", "super", "new",
+    "typeof", "void", "delete", "in", "instanceof", "of", "await", "yield", "async",
+    "function", "class", "return", "if", "else", "var", "let", "const", "as", "satisfies",
+})
+_NAME = re.compile(r"[A-Za-z_$][\w$]*")
+
+
+def operand_text(expression: str) -> str | None:
+    """An operand as one canonical line: no comments, parentheses or TS wrappers.
+
+    Whitespace outside strings collapses to one space, so a reformatted
+    operand reads the same. None when the text cannot be read safely: an
+    unterminated string or comment, or more than 4096 characters.
+    """
+    if len(expression) > 4096:
+        return None
+    source = _without_comments(expression)
+    if source is None:
+        return None
+    source = _peel(source)
+    parts: list[str] = []
+    last = 0
+    for index, _depth in _top_level(source):
+        if source[index] in _WHITESPACE:
+            if index > last:
+                parts.append(source[last:index])
+            if parts and parts[-1] != " ":
+                parts.append(" ")
+            last = index + 1
+    parts.append(source[last:])
+    return "".join(parts).strip() or None
+
+
+def operand_names(source: str) -> tuple[str, ...]:
+    """The names an operand reads, sorted: `make(items)` reads make and items.
+
+    The JS counterpart of the names Python's frontend records for an
+    expected side. A property after `.` or `?.`, an object key, a keyword
+    and anything inside a string or template is not a name it reads.
+    """
+    names: set[str] = set()
+    positions = [index for index, _depth in _top_level(source)]
+    code = set(positions)
+    for match in _NAME.finditer(source):
+        start, end = match.span()
+        if start not in code or (start > 0 and (source[start - 1].isalnum() or source[start - 1] in "_$")):
+            continue
+        before = source[:start].rstrip(_WHITESPACE)
+        after = source[end:].lstrip(_WHITESPACE)
+        if before.endswith(".") and not before.endswith(".."):
+            continue  # a property, including `?.` and the spread's third dot aside
+        if after.startswith(":") and not after.startswith("::") and before.endswith(("{", ",")):
+            continue  # an object key
+        if match.group() not in _KEYWORDS:
+            names.add(match.group())
+    return tuple(sorted(names))

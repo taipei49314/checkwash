@@ -1,0 +1,22 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: toBeLessThan(80) -> chai .below(80) states one bound and one direction
+origin: issue #198 row H6 (ruling 198.Q2)
+=== before: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBeLessThan(80);
+});
+=== after: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).to.be.below(80);
+});
+=== expect ===
+[]

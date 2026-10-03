@@ -8,6 +8,7 @@ to the maintainer.
 """
 
 import datetime
+from decimal import Decimal
 from pathlib import Path
 import runpy
 
@@ -75,16 +76,18 @@ def _outcome(before, after, path=_PATH):
     ("expect(lines()).to.include(2);", "lines()", "membership", 60, True, None),
     ("expect(lines()).to.contain(2);", "lines()", "membership", 60, True, None),
     ("expect(name()).to.match(/total/);", "name()", "pattern", 60, True, None),
-    ("expect(total()).to.be.above(70);", "total()", "compare_ord", 40, True, None),
-    ("expect(total()).to.be.at.least(70);", "total()", "compare_ord", 40, True, None),
-    ("expect(total()).to.be.below(80);", "total()", "compare_ord", 40, True, None),
-    ("expect(total()).to.be.at.most(80);", "total()", "compare_ord", 40, True, None),
+    # A bound word records its bound, as an ordering matcher does (#198 Q2, Q4).
+    ("expect(total()).to.be.above(70);", "total()", "compare_ord", 40, True, "70.0"),
+    ("expect(total()).to.be.at.least(70);", "total()", "compare_ord", 40, True, "70.0"),
+    ("expect(total()).to.be.below(80);", "total()", "compare_ord", 40, True, "80.0"),
+    ("expect(total()).to.be.at.most(80);", "total()", "compare_ord", 40, True, "80.0"),
     ("expect(total()).to.be.within(70, 80);", "total()", "compare_ord", 40, True, None),
     ("expect(lines()).to.have.lengthOf(2);", "lines()", "type_shape", 50, True, None),
     ("expect(total())\n      .to.equal(78.75);", "total()", "compare_eq", 90, True, "78.75"),
     ("assert(paid());", "paid()", "truthy", 20, True, None),
     ("assert.isOk(paid(), 'message');", "paid()", "truthy", 20, True, None),
-    ("assert.equal(total(), 78.75);", "total()", "compare_eq", 90, True, None),
+    # `==` keeps its scalar; the eq_loose key carries the coercion (#196 190.2).
+    ("assert.equal(total(), 78.75);", "total()", "compare_eq", 90, True, "78.75"),
     ("assert.strictEqual(total(), 78.75);", "total()", "compare_eq", 90, True, "78.75"),
     ("assert.deepEqual(total(), 78.75);", "total()", "compare_eq", 100, True, "78.75"),
     ("assert.isTrue(paid());", "paid()", "compare_eq", 90, True, "True"),
@@ -94,7 +97,7 @@ def _outcome(before, after, path=_PATH):
     ("assert.closeTo(total(), 78.75, 0.01);", "total()", "approx", 70, True, "78.75"),
     ("assert.include(lines(), 2);", "lines()", "membership", 60, True, None),
     ("assert.match(name(), /total/);", "name()", "pattern", 60, True, None),
-    ("assert.isAtLeast(total(), 70);", "total()", "compare_ord", 40, True, None),
+    ("assert.isAtLeast(total(), 70);", "total()", "compare_ord", 40, True, "70.0"),
     ("assert.lengthOf(lines(), 2);", "lines()", "type_shape", 50, True, None),
 ])
 def test_chai_spellings_reach_the_existing_lattice(body, subject, form, strength, positive, value):
@@ -134,23 +137,46 @@ def test_repeated_not_keeps_chai_negation():
     assert assertion.positive is False
 
 
-@pytest.mark.parametrize("body", [
-    "expect(total()).to.be.closeTo(78.75, 0.01);",
-    "expect(total()).to.be.approximately(78.75, 1e-2, 'message');",
-    "assert.closeTo(total(), 78.75, 0.010);",
+@pytest.mark.parametrize("body,epsilon", [
+    # Read exactly from its digits, as a hand-rolled bound is (#196 190.4).
+    ("expect(total()).to.be.closeTo(78.75, 0.01);", "abs=0.01"),
+    ("expect(total()).to.be.approximately(78.75, 1e-2, 'message');", "abs=0.01"),
+    ("assert.closeTo(total(), 78.75, 0.010);", "abs=0.010"),
+    ("expect(total()).to.be.closeTo(78.75, 5e-7);", "abs=5E-7"),
 ])
-def test_close_to_records_its_absolute_delta(body):
+def test_close_to_records_its_absolute_delta(body, epsilon):
     assertion, = _assertions(_source(body))
-    assert (assertion.epsilon, assertion.epsilon_kind) == ("abs=0.01", "abs")
+    assert (assertion.epsilon, assertion.epsilon_kind) == (epsilon, "abs")
+
+
+@pytest.mark.parametrize("body,bound", [
+    ("expect(total()).to.be.closeTo(78.75, Infinity);", Decimal("Infinity")),
+    ("expect(total()).to.be.closeTo(78.75, Number.POSITIVE_INFINITY);", Decimal("Infinity")),
+    ("expect(total()).to.be.closeTo(78.75, Number.MAX_VALUE);", Decimal(2 ** 1024 - 2 ** 971)),
+    # 2**-50 is 5**50 * 10**-50, built from its digits so no context rounds it.
+    ("expect(total()).to.be.closeTo(78.75, 4 * Number.EPSILON);",
+     Decimal((0, tuple(int(digit) for digit in str(5 ** 50)), -50))),
+    ("const BIG = 1e300;\n    expect(total()).to.be.closeTo(78.75, BIG);", Decimal("1e300")),
+    ("expect(total()).to.be.closeTo(78.75, (0.5 as number));", Decimal("0.5")),
+    # A shadowed global is the local it names.
+    ("const Infinity = 1;\n    expect(total()).to.be.closeTo(78.75, Infinity);", Decimal(1)),
+])
+def test_close_to_reads_named_and_local_deltas(body, bound):
+    # #198 M2f-M2h: a delta of Infinity, Number.MAX_VALUE or a local name
+    # used to record nothing, and the widening passed. The values are exact.
+    *_, assertion = _assertions(_source(body))
+    assert assertion.epsilon_kind == "abs"
+    assert Decimal(assertion.epsilon[len("abs="):]) == bound
 
 
 @pytest.mark.parametrize("body", [
     "expect(total()).not.to.be.closeTo(78.75, 0.01);",
     "expect(total()).to.be.closeTo(78.75, tolerance);",
-    "expect(total()).to.be.closeTo(78.75, Infinity);",
+    "expect(total()).to.be.closeTo(78.75, delta());",
+    "const BASE = 0.01;\n    const EPS = BASE;\n    expect(total()).to.be.closeTo(78.75, EPS);",
 ])
 def test_unknown_or_negated_delta_claims_no_ordering(body):
-    assertion, = _assertions(_source(body))
+    *_, assertion = _assertions(_source(body))
     assert assertion.form == "approx"
     assert assertion.epsilon is None
 

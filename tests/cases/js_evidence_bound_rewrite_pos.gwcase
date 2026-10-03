@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 111
+rule: EXPECTED_VALUE_CHANGED
+title: toBeLessThan(80) -> chai .below(1e12): the bound is recorded, so moving it is an expected-value change
+origin: issue #198 row O1 (rulings 198.Q2, 198.Q4)
+=== before: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBeLessThan(80);
+});
+=== after: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).to.be.below(1e12);
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

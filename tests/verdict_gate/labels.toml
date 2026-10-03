@@ -95,8 +95,8 @@ schema_version = 1
 # --- i198: #198 JS assertion identity across assertion APIs
 "i198/B1" = "block"  # 198.Q4: chai below -> above reverses the bound; was undecided
 "i198/B2" = "block"  # 196.190.1: chai .exist -> .null contradicts; was undecided
-"i198/B3" = "undecided"  # #198 Acceptance: "Decided by the rulings above: ... B1-B4"
-"i198/B4" = "undecided"  # #198 Acceptance: "Decided by the rulings above: ... B1-B4"
+"i198/B3" = "block"  # 196.190.2: assert.equal keeps its scalar, so 78.75 -> 75 is an expected-value change; was undecided
+"i198/B4" = "block"  # 196.190.2: .to.equal(78.75) -> assert.equal(value, 75) rewrites the expected value; was undecided
 "i198/FP1" = "pass"  # #198 Acceptance, must change: "FP1 passes as a proven strengthening"
 "i198/FP2" = "pass"  # #198 Acceptance, must change: "FP2 passes"
 "i198/FP3" = "block"  # #198 Acceptance: "FP3 keeps blocking, as a weakening"
@@ -132,18 +132,18 @@ schema_version = 1
 "i198/M2f" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
 "i198/M2g" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
 "i198/M2h" = "block"  # #201 Labels (block); #198 Acceptance: "Must block on a test-only diff: every M1 and M2 row"
-"i198/O1" = "undecided"  # #201 Labels (undecided): #198 question 4
-"i198/O2" = "undecided"  # #198 Acceptance: "Decided by the rulings above: ... O1-O2 (question 4)"
+"i198/O1" = "block"  # 198.Q4: the bound is recorded, so 80 -> 1e12 is an expected-value change; was undecided
+"i198/O2" = "block"  # 198.Q4: the bound is recorded, so 80 -> 1e12 is an expected-value change; was undecided
 "i198/S1" = "pass"  # #198 Acceptance: "S1, S2, S4, S5 keep verdict pass"
 "i198/S2" = "pass"  # #198 Acceptance: "S1, S2, S4, S5 keep verdict pass"
 "i198/S3" = "block"  # 198.Q5: @jest/globals' expect reads no chai chain, so the head assertion is gone; was undecided
 "i198/S4" = "pass"  # #198 Acceptance: "S1, S2, S4, S5 keep verdict pass"
 "i198/S5" = "pass"  # #198 Acceptance: "S1, S2, S4, S5 keep verdict pass"
-"i198/T1" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
-"i198/T2" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T1" = "block"  # 198.Q3/196.190.2: node:assert's legacy equal keeps its scalar; was undecided
+"i198/T2" = "block"  # 198.Q3/196.190.2: node:assert's legacy deepEqual keeps its scalar; was undecided
 "i198/T3" = "block"  # 198.Q3: node:assert/strict's equal is strictEqual, so 78.75 -> 75 is an expected-value change; was undecided
-"i198/T4" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
-"i198/T5" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T4" = "block"  # 198.Q3: the literal reader reads through parentheses; was undecided
+"i198/T5" = "block"  # 198.Q3: the literal reader reads through a TypeScript cast; was undecided
 "i198/T6" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
 
 # --- i199: #199 setup-skip markers trip the collection-inventory withhold

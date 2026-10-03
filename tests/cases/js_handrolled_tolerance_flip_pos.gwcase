@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 110
+rule: ASSERT_WEAKENED
+title: assert.ok(Math.abs(total - 78.75) < 0.01) -> > 0.01 reverses the bound: the test now requires the values to differ
+origin: ruling 196.189.3, through 198.Q4's direction key
+=== before: src/total.test.ts ===
+import { test } from "vitest";
+import assert from "node:assert";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(Math.abs(total(items) - 78.75) < 0.01);
+});
+=== after: src/total.test.ts ===
+import { test } from "vitest";
+import assert from "node:assert";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(Math.abs(total(items) - 78.75) > 0.01);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

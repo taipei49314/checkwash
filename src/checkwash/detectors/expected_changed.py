@@ -19,6 +19,7 @@ import operator
 import re
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.frontends.javascript.literals import operand_names
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.model import Assertion, FileIR, IR, judged_as_test
 from checkwash.detectors.snapshot_expectation import detect as detect_stored_expectations
@@ -101,6 +102,23 @@ def _surface_expected_names(assertion: Assertion) -> tuple[str, ...]:
     )
 
 
+_JS_SUFFIXES = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
+
+
+def _js_operand_names(assertion: Assertion) -> tuple[str, ...] | None:
+    """The names a JS expected value or bound reads, when it is not a literal.
+
+    None when the assertion records no such operand, or when its operand is
+    a hand-rolled tolerance's bound (an `abs=` epsilon on a form other than
+    approx), which TOLERANCE_LOOSENED owns (198.Q2).
+    """
+    if assertion.operand_source is None or assertion.form not in {"compare_eq", "compare_ord", "approx"}:
+        return None
+    if assertion.epsilon is not None and assertion.form != "approx":
+        return None
+    return operand_names(assertion.operand_source)
+
+
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = detect_stored_expectations(ir)
     for file in ir.files:
@@ -128,16 +146,14 @@ def detect(ir: IR) -> list[Finding]:
                     else "despite increased assertion strength"
                 )
                 b_lit, a_lit = b.right_value, a.right_value
-                # The bounded JS frontend proves scalar values only. Missing
-                # value evidence does not establish an independent expected
-                # call: it may be a parenthesized literal, TS assertion, legacy
-                # coercive matcher or another unsupported expression. Keep
-                # those transitions unknown without changing Python's call
-                # provenance behavior.
-                if (
-                    file.path.lower().endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"))
-                    and (b_lit is None or a_lit is None)
-                ):
+                js = file.path.lower().endswith(_JS_SUFFIXES)
+                if js and (b_lit is None) != (a_lit is None):
+                    # A JS literal replaced by an expression, or the reverse,
+                    # stays unreported in this round: the JS reader does not
+                    # resolve what a name or call yields, and a value it
+                    # cannot read (a template, an array) is no call. Both
+                    # directions wait for one definition across the two
+                    # frontends (#226, 198.IR amendment 2).
                     continue
                 if b_lit is not None and a_lit is not None:
                     # Original literal→literal path. Subject is *not* required
@@ -163,10 +179,18 @@ def detect(ir: IR) -> list[Finding]:
                     # the assertion line, not transitive deps (those belong
                     # to EXPECTATION_DEFINITION_CHANGED) and not the whole
                     # assertion text (a unittest method rename is not this).
+                    # JS reads the same names from the operand's text: a
+                    # name or call replaced by a different one (198.IR).
                     if not same_expr(b.left, a.left):
                         continue
-                    before_names = _surface_expected_names(b)
-                    after_names = _surface_expected_names(a)
+                    if js:
+                        before_names = _js_operand_names(b)
+                        after_names = _js_operand_names(a)
+                        if before_names is None or after_names is None:
+                            continue
+                    else:
+                        before_names = _surface_expected_names(b)
+                        after_names = _surface_expected_names(a)
                     if not before_names or before_names == after_names:
                         continue
                     message = (

@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: toBe(78.75) -> assert.equal(total, 78.75) widens === to == and MILD_WEAKENING holds it at warn
+origin: issue #198 row H4 (ruling 198.Q2)
+=== before: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBe(78.75);
+});
+=== after: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.equal(total(items), 78.75);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["MILD_WEAKENING"]}]

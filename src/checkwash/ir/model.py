@@ -39,6 +39,15 @@ class Assertion:
     # that predicate or its negation (`toBeDefined()` is is_undefined
     # asserted negatively). None leaves the pair to the lattice rules (#198).
     predicate: str | None = None
+    # The operand's source as one canonical line (`operand_text` in the JS
+    # literal reader): the expected value of an equality or closeTo, or the
+    # bound of a bound key. It decides only whether two spellings on two
+    # APIs state the same operand (`toBeLessThan(LIMIT)`, `.below(LIMIT)`)
+    # and which names a rewritten one reads; `right_value` stays the
+    # literal evidence. A hand-rolled `Math.abs(d) < bound` records its
+    # bound here only when the bound was read, because that bound is
+    # tolerance evidence only. JS only for now (#198).
+    operand_source: str | None = None
     # Names appearing in the asserted subject's own expression, and the names
     # the expectation transitively depends on after in-body assignments are
     # followed (`expected = sum(items)` -> ("items", "sum")). Both sorted.

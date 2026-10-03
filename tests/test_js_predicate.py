@@ -159,11 +159,23 @@ def test_a_shadowed_undefined_is_an_operand_not_the_global():
 
 # --- The relation ---------------------------------------------------------------
 
-def _keyed(key, positive=True, literal=None, form="non_null"):
+def _keyed(key, positive=True, literal=None, form=None, operand=None):
+    if form is None:
+        form = "compare_ord" if key in P.BOUNDS else "non_null"
     assertion = Assertion(id="a0", form=form, strength=30, text="", span=(0, 0), left="value",
-                          positive=positive, predicate=key)
+                          positive=positive, predicate=key, operand_source=operand)
     if literal is not None:
-        assertion.form, assertion.right_literal, assertion.right_value = "compare_eq", literal, literal
+        assertion.right_literal, assertion.right_value = literal, literal
+        if key not in P.BOUNDS:
+            assertion.form = "compare_eq"
+    return assertion
+
+
+def _hand_rolled(key, operand="0.01"):
+    """`assert.ok(Math.abs(d) <op> operand)`: a bound key on the truthy spelling."""
+    assertion = _keyed(key, form="truthy", operand=operand)
+    if operand is not None and key in {"lt", "le"}:
+        assertion.epsilon, assertion.epsilon_kind = f"abs={operand}", "abs"
     return assertion
 
 
@@ -200,6 +212,24 @@ def _keyed(key, positive=True, literal=None, form="non_null"):
     (_keyed("lt"), _keyed("le"), None),
     (_keyed("lt", False), _keyed("ge"), P.UNVERIFIABLE),
     (_keyed("lt"), _keyed("gt", False), P.UNVERIFIABLE),
+    # One bound on both sides: below, at, above it, and NaN decide (#198 evidence half).
+    (_keyed("lt", literal="80.0"), _keyed("le", literal="80.0"), P.WIDENED),
+    (_keyed("le", literal="80.0"), _keyed("lt", literal="80.0"), P.STRONGER),
+    (_keyed("lt", operand="LIMIT"), _keyed("le", operand="LIMIT"), P.WIDENED),
+    (_keyed("lt", literal="80.0"), _keyed("gt", False, literal="80.0"), P.WIDENED),
+    (_keyed("gt", False, literal="80.0"), _keyed("le", literal="80.0"), P.STRONGER),
+    (_keyed("ge", False, literal="80.0"), _keyed("le", literal="80.0"), P.UNVERIFIABLE),
+    (_keyed("lt", literal="80.0"), _keyed("le", literal="75.0"), None),
+    (_keyed("lt", literal="80.0"), _keyed("le", operand="LIMIT"), None),
+    (_keyed("lt", operand="LIMIT"), _keyed("gt", operand="LIMIT"), P.CONTRADICTS),
+    # The hand-rolled truthy spelling: a reversed bound contradicts once both
+    # bounds were read, and cannot be verified otherwise (189.3).
+    (_hand_rolled("lt"), _hand_rolled("gt"), P.CONTRADICTS),
+    (_hand_rolled("lt"), _hand_rolled("gt", None), P.UNVERIFIABLE),
+    (_hand_rolled("lt", None), _hand_rolled("ge"), P.UNVERIFIABLE),
+    (_hand_rolled("lt"), _hand_rolled("le"), P.WIDENED),
+    (_hand_rolled("lt"), _hand_rolled("lt", None), P.SAME),
+    (_keyed("lt"), _keyed("gt", form="compare_ord"), P.CONTRADICTS),
     # Keys of two families do not relate alone.
     (_keyed("truthy"), _keyed("eq_strict"), None),
     (_keyed("is_undefined", False), _keyed("gt"), None),
@@ -432,9 +462,9 @@ def _spellings():
     for op, jest, chai in [("lt", "toBeLessThan", "below"), ("le", "toBeLessThanOrEqual", "most"),
                            ("gt", "toBeGreaterThan", "above"), ("ge", "toBeGreaterThanOrEqual", "least")]:
         add("jest " + op, f"expect(value).{jest}(80);", "vitest", _bound(op), 40, "bound", op, True,
-            negatable=f"expect(value).not.{jest}(80);")
+            "80.0", negatable=f"expect(value).not.{jest}(80);")
         add("chai " + op, f"expect(value).to.be.{chai}(80);", "vitest", _bound(op), 40, "bound", op, True,
-            negatable=f"expect(value).to.not.be.{chai}(80);")
+            "80.0", negatable=f"expect(value).to.not.be.{chai}(80);")
     # The assert interfaces have no negated spellings this scan represents.
     for header in ("vitest", "chai"):
         for name, body, rung, family, key, asserts, test, literal in [
@@ -449,24 +479,24 @@ def _spellings():
             ("isTrue", "assert.isTrue(value);", 90, "presence", "is_true", True, lambda v: v is True, "True"),
             ("isFalse", "assert.isFalse(value);", 90, "presence", "is_false", True, lambda v: v is False, "False"),
             ("equal null", "assert.equal(value, null);", 90, "presence", "is_nullish", True,
-             lambda v: v in (NULL, UNDEFINED), None),
+             lambda v: v in (NULL, UNDEFINED), "None"),
             ("strictEqual", "assert.strictEqual(value, 78.75);", 90, "eq_strict", "eq_strict", True,
              lambda v: _strict(v, 78.75), "78.75"),
             ("equal", "assert.equal(value, 78.75);", 90, "eq_loose", "eq_loose", True,
-             lambda v: _loose(v, 78.75), None),
+             lambda v: _loose(v, 78.75), "78.75"),
         ]:
             add(f"{header} assert.{name}", body, header, fact(test), rung, family, key, asserts, literal)
         for op, method in [("lt", "isBelow"), ("le", "isAtMost"), ("gt", "isAbove"), ("ge", "isAtLeast")]:
-            add(f"{header} assert.{method}", f"assert.{method}(value, 80);", header, _bound(op), 40, "bound", op, True)
+            add(f"{header} assert.{method}", f"assert.{method}(value, 80);", header, _bound(op), 40, "bound", op,
+                True, "80.0")
     for header, strict in (("node", False), ("node_strict", True)):
         add(f"{header} ok", "assert.ok(value);", header, fact(_truthy), 20, "presence", "truthy", True)
         add(f"{header} equal null", "assert.equal(value, null);", header,
             fact((lambda v: v is NULL) if strict else (lambda v: v in (NULL, UNDEFINED))), 90, "presence",
-            "is_null" if strict else "is_nullish", True, "None" if strict else None)
+            "is_null" if strict else "is_nullish", True, "None")
         add(f"{header} equal", "assert.equal(value, 78.75);", header,
             fact((lambda v: _strict(v, 78.75)) if strict else (lambda v: _loose(v, 78.75))), 90,
-            "eq_strict" if strict else "eq_loose", "eq_strict" if strict else "eq_loose", True,
-            "78.75" if strict else None)
+            "eq_strict" if strict else "eq_loose", "eq_strict" if strict else "eq_loose", True, "78.75")
         add(f"{header} strictEqual true", "assert.strictEqual(value, true);", header, fact(lambda v: v is True),
             90, "presence", "is_true", True, "True")
     return out
@@ -503,10 +533,13 @@ def _expected(old, new):
     """The verdict the rulings give a test-only rewrite of `old` into `new`.
 
     The value semantics decide whenever the keys relate (198.IR). A rewritten
-    literal is EXPECTED_VALUE_CHANGED's, at any polarity. A bound that changed
-    direction contradicts (198.Q4); `<` -> `<=` needs the bound, which this
-    round does not read, so the pair stays with the lattice. Keys of two
-    families do not relate alone, and an `===` literal is a presence value.
+    literal is EXPECTED_VALUE_CHANGED's, at any polarity, and a bound is a
+    literal too (198.Q2): `toBeLessThan(80)` -> `toBe(78.75)` reports, as
+    there is no JS counterpart of Python's single-assertion restoration
+    proof. A bound that changed direction contradicts (198.Q4); with one
+    bound on both sides, as every bound here names 80, the values decide
+    `<` -> `<=`. Keys of two families do not relate alone, and an `===`
+    literal is a presence value.
     """
     if old.literal is not None and new.literal is not None and old.literal != new.literal:
         return BLOCK
@@ -515,9 +548,6 @@ def _expected(old, new):
         upper = (old.key in {"lt", "le"}) == old.asserts, (new.key in {"lt", "le"}) == new.asserts
         if upper[0] != upper[1]:
             return BLOCK
-        if old.key == new.key:
-            return PASS if old.asserts == new.asserts else BLOCK
-        return _fallback(old, new) if old.asserts == new.asserts else BLOCK
     related = (len(families) == 1 or families == {"eq_strict", "eq_loose"}
                or families == {"presence", "eq_strict"})
     if not related:
@@ -618,9 +648,10 @@ def test_strict_mode_equal_is_strict_equal(imports, call):
 
 
 @pytest.mark.parametrize("imports", ['import assert from "node:assert";\n', 'import assert from "assert";\n', ""])
-def test_legacy_equal_stays_loose_without_evidence(imports):
+def test_legacy_equal_is_loose_and_keeps_its_scalar(imports):
+    # The key carries the coercion, so the literal is evidence (#196 190.2).
     assertion = _assertion("assert.equal(value, 78.75);", 'import { test, expect } from "vitest";\n' + imports)
-    assert (assertion.predicate, assertion.right_value) == ("eq_loose", None)
+    assert (assertion.predicate, assertion.right_value, assertion.operand_source) == ("eq_loose", "78.75", "78.75")
 
 
 # --- What stays as it was ------------------------------------------------------------
@@ -656,16 +687,54 @@ def test_weakenings_across_families_still_block(before, after, rule):
 
 
 @pytest.mark.parametrize("before,after,header,verdict,message", [
+    # What the first half left to the evidence: one bound decides `<` -> `<=`.
+    ("expect(value).toBeLessThan(80);", "expect(value).toBeLessThanOrEqual(80);", VITEST, BLOCK,
+     "assertion predicate widened (< 80 -> <= 80)"),
+    ("expect(value).toBeLessThan(LIMIT);", "expect(value).to.be.at.most(LIMIT);", VITEST, BLOCK,
+     "assertion predicate widened (< LIMIT -> <= LIMIT)"),
+    # `not <` also passes NaN, which `>=` rejects: a strengthening, not a replacement.
+    ("expect(value).not.toBeLessThan(80);", "expect(value).toBeGreaterThanOrEqual(80);", VITEST, PASS, None),
+    # The hand-rolled truthy spelling flipped (189.3).
+    ("assert.ok(Math.abs(value - 78.75) < 0.01);", "assert.ok(Math.abs(value - 78.75) > 0.01);",
+     HEADERS["node"], BLOCK, "bound direction reversed (< 0.01 -> > 0.01)"),
+    ("assert.ok(Math.abs(value - 78.75) < 0.01);", "assert.ok(Math.abs(value - 78.75) > tolerance());",
+     HEADERS["node"], BLOCK, "cannot verify the replacement is equivalent (predicate < 0.01 -> > bound)"),
+    ("expect(Math.abs(value - 78.75) < 0.01).toBe(true);", "expect(Math.abs(value - 78.75) > 0.01).toBe(true);",
+     VITEST, BLOCK, "bound direction reversed (< 0.01 -> > 0.01)"),
+    # Its `=== true` and truthy spellings state one bound.
+    ("expect(Math.abs(value - 78.75) < 0.01).toBe(true);", "assert.ok(Math.abs(value - 78.75) < 0.01);",
+     'import { test, expect } from "vitest";\nimport assert from "node:assert";\n', PASS, None),
+])
+def test_residuals_the_evidence_closes(before, after, header, verdict, message):
+    observed, findings, messages = _outcome(before, after, header)
+    assert observed == verdict, messages
+    if message is None:
+        assert findings == ()
+    else:
+        assert any(message in m for m in messages), messages
+
+
+@pytest.mark.parametrize("before,after,header,verdict,message", [
     # The residuals docs/assertion-coverage.md lists, as they stand.
-    ("expect(value).toBeLessThan(80);", "expect(value).toBeLessThanOrEqual(80);", VITEST, PASS, None),
-    ("expect(value).not.toBeLessThan(80);", "expect(value).toBeGreaterThanOrEqual(80);", VITEST, BLOCK,
-     "cannot verify the replacement is equivalent (predicate not < bound -> >= bound)"),
     ("expect(value).toBeNull();", "expect(value).toBe(expected);", VITEST, PASS, None),
     ("expect(value).toBeTruthy();", "expect(value).toBeGreaterThan(0);", VITEST, PASS, None),
     ("expect(value).to.not.exist;", "expect(value).to.include(78.75);", VITEST, PASS, None),
     ("expect(value).not.toBeDefined();", "expect(value).toEqual(expected);", VITEST, PASS, None),
-    ("assert.ok(Math.abs(value - 78.75) < 0.01);", "assert.ok(Math.abs(value - 78.75) > 0.01);",
+    # A literal and an expression, either way round, wait for #226: the
+    # reader does not resolve what a name or call yields.
+    ("expect(value).toBe(78.75);", "expect(value).toBe(Number(75));", VITEST, PASS, None),
+    ("expect(value).toBe(EXPECTED);", "expect(value).toBe(75);", VITEST, PASS, None),
+    ("expect(value).toBeLessThan(80);", "expect(value).toBeLessThanOrEqual(LIMIT);", VITEST, PASS, None),
+    # Two different bounds: `<` -> `<=` is left to the operand rule.
+    ("expect(value).toBeLessThan(LIMIT);", "expect(value).toBeLessThanOrEqual(OTHER);", VITEST, BLOCK,
+     "expected call rewritten to a different call ['LIMIT'] -> ['OTHER']"),
+    # A hand-rolled bound the reader cannot read stays unknown in place.
+    ("assert.ok(Math.abs(value - 78.75) < 0.01);", "assert.ok(Math.abs(value - 78.75) < tolerance());",
      HEADERS["node"], PASS, None),
+    # No JS counterpart of Python's single-assertion restoration proof: a
+    # bound tightened into an exact value reports its new value.
+    ("expect(value).toBeLessThan(80);", "expect(value).toBe(78.75);", VITEST, BLOCK,
+     "expected value rewritten 80.0 -> 78.75 despite increased assertion strength"),
 ])
 def test_documented_residuals(before, after, header, verdict, message):
     observed, findings, messages = _outcome(before, after, header)

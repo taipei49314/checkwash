@@ -49,7 +49,8 @@ Preserving controls cover assertion messages, multiline formatting, equivalent
 numeric and string spellings, truthiness strengthened to an exact check, and
 explicit versus omitted default precision. Converting a legacy Node equality
 check to strict equality and removing parentheses around a scalar are also
-preserving controls. Each blocking case requires exactly
+preserving controls: the first is a strengthening from `==` to `===`, and the
+second states the same literal. Each blocking case requires exactly
 its stated rule, severity and verdict; preserving cases require no findings.
 Ten of these controls were added during v0.4.2 release review: equivalent scalar
 spellings cannot invent an assertion substitution or hide subject wrapping and
@@ -59,14 +60,20 @@ are in [`tests/test_js_foundation.py`](../tests/test_js_foundation.py) and
 [`tests/test_js_scalar_consumers.py`](../tests/test_js_scalar_consumers.py).
 
 This scope reads complete balanced calls and direct scalar expected arguments:
-finite Number literals, quoted strings, booleans and `null`. It does not infer
-expected values from objects, arrays, BigInt, non-finite numbers, variables or
-arbitrary expressions. Node expected-value evidence is limited to `strictEqual`
-and `deepStrictEqual`, including their `t.assert` forms, and to `equal` and
-`deepEqual` in strict mode: imported from `node:assert/strict` or
+finite Number literals, quoted strings, booleans and `null`, through redundant
+parentheses and TypeScript's `as`, `satisfies` and non-null `!`, which
+evaluate to the literal they wrap: `toBe((75))` and `toBe(75 as number)` state
+75 ([#198](https://github.com/taipei49314/checkwash/issues/198) T4, T5). It
+does not infer expected values from objects, arrays, BigInt, non-finite
+numbers, variables or arbitrary expressions; see
+[Operand evidence](#operand-evidence) for what an operand that is not a
+literal still records. Every Node equality records its scalar: `strictEqual`
+and `deepStrictEqual`, including their `t.assert` forms, `equal` and
+`deepEqual` in strict mode (imported from `node:assert/strict` or
 `assert/strict`, or reached through `assert.strict`, where they are the strict
-comparisons ([#198](https://github.com/taipei49314/checkwash/issues/198)).
-The legacy coercive `equal` and `deepEqual` keep their strength-only model. `toBeCloseTo` precision
+comparisons), and since the evidence half of #198 the legacy coercive `equal`
+and `deepEqual` too: `equal`'s `eq_loose` key carries the coercion, so a
+different scalar is still a different expected value (#196 190.2). `toBeCloseTo` precision
 evidence covers positive calls with an explicit integer precision from -308
 through 307 or the default of two digits;
 negated precision is not assigned the same weakening direction. These additions
@@ -96,8 +103,11 @@ positive ordering matchers read the same shape from their two operands, as in
 The bound is recorded the way `pytest.approx(..., abs=eps)` records its
 tolerance, and `TOLERANCE_LOOSENED` compares it as an exact decimal. It may be
 a Number literal (read exactly from its digits, not as a binary float),
-`Number.EPSILON`, `Infinity`, `Number.POSITIVE_INFINITY`, a product of two of
-these, or a local `const`, `let` or `var` initialized to one of them. The
+`Number.EPSILON`, `Number.MAX_VALUE`, `Infinity`, `Number.POSITIVE_INFINITY`,
+a product of two of these, or a local `const`, `let` or `var` initialized to
+one of them, each through parentheses and TypeScript's `as`, `satisfies` and
+`!`. The bound of an ordering matcher read this way is tolerance evidence
+only, never an expected value. The
 declaration has to end before the assertion starts: at a `;` or `,`, or at a
 line break followed by `const`, `let`, `var`, `test`, `it`, `return`, `import`
 or `function`. A `=`, `+=`, `-=`, `*=`, `/=` or postfix `++`/`--` write before
@@ -107,18 +117,26 @@ are compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
 `toBeCloseTo(x, 2)` are equal. A chai `closeTo` delta is recorded in the same
 `abs=` form (see the chai section below).
 
-Not read: lower bounds such as `Math.abs(d) > eps`, negated or falsy
-spellings, conjunctions, relative or scaled magnitudes, `**`, a literal whose
-exponent is past what an exact decimal holds (such as
-`1e99999999999999999999`), and imported, chained or TypeScript-annotated
-bounds. A declaration without a semicolon that runs on into the next line's
+A lower bound such as `Math.abs(d) > eps` asserts that two values differ, so
+it is no tolerance. Its truthy spellings still record the bound's direction,
+so a comparison flipped from `<` to `>` is reported as a bound direction
+reversed, `(< 0.01 -> > 0.01)`, and as an unverifiable replacement when either
+bound cannot be read (#196 189.3). The two spellings are compared on the
+`Math.abs(...)` side, not on the whole comparison, and `expect(cmp).toBe(true)`
+-> `assert.ok(cmp)` states the same bound.
+
+Not read: negated or falsy spellings, conjunctions, relative or scaled
+magnitudes, `**`, a literal whose exponent is past what an exact decimal holds
+(such as `1e99999999999999999999`), and imported, chained or
+TypeScript-annotated (`const eps: number = ...`) bounds. A declaration without a semicolon that runs on into the next line's
 statement, such as `const eps = 0.01` followed by `expect(...)`, is not read
 either. The binding scan does not follow other compound writes (`**=`, `%=`,
 `||=` and the rest), prefix increments, destructuring writes or writes inside
 another function such as a `beforeEach` callback, so a bound changed that way
-still reads as its initializer. A comparison flipped from `<` to `>` and a
-rewritten expected value inside `Math.abs(...)` are not reported by this
-reading. As with `toBeCloseTo`, bounds are compared on the pairs alignment
+still reads as its initializer. A rewritten expected value inside
+`Math.abs(...)` is not reported by this reading (#196 189.2), and a bound
+rewritten from a literal into one it cannot read (`< 0.01` -> `< tolerance()`)
+is not either. As with `toBeCloseTo`, bounds are compared on the pairs alignment
 forms: when one edit changes a hand-rolled check and inserts another tolerance
 check ahead of it in the same test, the position fallback can compare the
 bounds of two different checks. Replacing a hand-rolled tolerance with
@@ -152,15 +170,16 @@ takes an existing rung; the strength lattice is unchanged.
 |---|---|---|
 | `equal`/`equals`/`eq`; `assert.strictEqual` | `compare_eq`, EXACT_VALUE | scalar operand |
 | `eql`/`eqls`/`deep.equal`; `assert.deepEqual`/`deepStrictEqual` | `compare_eq`, EXACT_STRUCT | scalar operand |
-| `assert.equal` (coercive `==`) | `compare_eq`, EXACT_VALUE | none, as for Node's legacy `equal` |
+| `assert.equal` (coercive `==`) | `compare_eq`, EXACT_VALUE | scalar operand, as for Node's legacy `equal`; the `eq_loose` key carries the coercion |
 | `.true`/`.false`/`.null`; `assert.isTrue`/`isFalse`/`isNull` | `compare_eq`, EXACT_VALUE | the implied literal |
 | `.undefined`; `assert.isUndefined` | `compare_eq`, EXACT_VALUE | none |
 | `.exist`/`.exists`; `assert.exists`/`isDefined` | `non_null`, NON_NULL | none |
 | `.ok`; `assert(value)`, `assert.ok`/`isOk` | `truthy`, TRUTHY | none |
-| `closeTo`/`approximately` in both interfaces | `approx`, APPROX | center; a positive call's finite delta is its absolute tolerance (`abs=`) |
+| `closeTo`/`approximately` in both interfaces | `approx`, APPROX | center; a positive call's delta, read exactly, is its absolute tolerance (`abs=`) |
 | `include`/`includes`/`contain`/`contains`; `assert.include` | `membership`, PATTERN | none |
 | `match`/`matches`; `assert.match` | `pattern`, PATTERN | none |
-| `above`/`below`/`least`/`most` and their aliases, `within`; `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` | `compare_ord`, BOUND | none |
+| `above`/`below`/`least`/`most` and their aliases; `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` | `compare_ord`, BOUND | the bound operand |
+| `within` | `compare_ord`, BOUND | none |
 | `lengthOf`/`length(n)`; `assert.lengthOf` | `type_shape`, TYPE_SHAPE | none |
 
 Everything else stays unrepresented and visible as a coverage gap: type checks
@@ -182,39 +201,28 @@ although chai's `===` accepts both.
 
 A `closeTo` delta is the absolute bound a hand-rolled
 `Math.abs(a - b) < bound` states, so it is recorded in the same `abs=` form
-(see [Hand-rolled tolerances](#hand-rolled-tolerances)). The delta itself is
-read only from a finite Number literal, through the same number reader as the
-expected value, not from the hand-rolled bound's exact reader. Swapping one
-for the other compares the two bounds, and a Vitest `toBeCloseTo(v, p)` precision
+and read by the same exact reader (see
+[Hand-rolled tolerances](#hand-rolled-tolerances)): a Number literal from its
+digits, `Infinity`, `Number.EPSILON`, `Number.MAX_VALUE`, a product of two of
+these, or a local name initialized to one (#196 190.4). Swapping one for the
+other compares the two bounds, and a Vitest `toBeCloseTo(v, p)` precision
 compares with either through the bound it enforces: `toBeCloseTo(v, 2)` ->
-`.to.be.closeTo(v, 1)` reports a loosening, `.to.be.closeTo(v, 1)` ->
-`toBeCloseTo(v, 0)` does not.
+`.to.be.closeTo(v, 1)` and `.to.be.closeTo(v, Infinity)` report a loosening,
+`.to.be.closeTo(v, 1)` -> `toBeCloseTo(v, 0)` does not. The delta is shown as
+an exact decimal, so a delta written as an integer or with an exponent is
+spelled differently than in v0.5.0 (`abs=1.0` -> `abs=1`, `abs=5e-07` ->
+`abs=5E-7`), in the message and in the TOLERANCE_LOOSENED fingerprint of a
+pair whose old side is such a delta. A delta checkwash cannot read is unknown;
+see [Operand evidence](#operand-evidence).
 
 Some edits are not reported. They are recorded here for a maintainer decision:
 
-- `assert.equal` carries no expected value, so rewriting its operand
-  (`assert.equal(x, 78.75)` -> `assert.equal(x, 75)`) produces no finding.
-  Replacing `toBe(78.75)` or `.to.equal(78.75)` with `assert.equal(x, 75)`
-  reports only the `===` -> `==` widening, which MILD_WEAKENING holds at warn.
-  Coercive `==` evidence would apply to Node's legacy `equal` as well
-  ([#198](https://github.com/taipei49314/checkwash/issues/198), evidence
-  round).
-- A Jest -> chai rewrite that drops a tolerance into a delta with no recorded
-  bound (`toBeCloseTo(v, 2)` -> `.to.be.closeTo(v, Infinity)`) is not
-  reported; see the delta item below.
-- A hand-rolled bound inside a chai assertion
-  (`expect(Math.abs(d)).to.be.below(eps)`, `assert.isTrue(Math.abs(d) < eps)`,
-  chai's or Vitest's `assert.ok(Math.abs(d) < eps)`) is not read as a
-  tolerance, so widening `eps` there produces no finding.
-- A `closeTo` delta written as `Infinity`, `Number.EPSILON`,
-  `Number.MAX_VALUE` or a name records no bound, so widening a tolerance into
-  one of those spellings, from a delta, a hand-rolled bound or a
-  `toBeCloseTo` precision ([#198](https://github.com/taipei49314/checkwash/issues/198)),
-  produces no finding. The hand-rolled spelling of the same edit is reported,
-  except `Number.MAX_VALUE`, which the hand-rolled reader does not read
-  either. The delta is read as a binary float, so a literal with more digits
-  than a double keeps compares by its rounded value against a hand-rolled
-  bound's exact digits.
+- A hand-rolled bound inside a chai assertion is not read as a tolerance.
+  `expect(Math.abs(d)).to.be.below(eps)` records `eps` as a bound, so a
+  literal widened there is reported as an expected-value change rather than
+  a loosened tolerance; `assert.isTrue(Math.abs(d) < eps)` and chai's or
+  Vitest's `assert.ok(Math.abs(d) < eps)` record nothing for it, so widening
+  `eps` there produces no finding.
 - A chai alias read from a member expression and then reassigned, such as
   `let check = require("chai").expect` followed by `check = wrap(check)`,
   produces no coverage diagnostic.
@@ -242,11 +250,16 @@ whether it asserts that key or its negation: `toBeDefined()` asserts
 | `is_true`, `is_false` | `toBe(true)`, `.true`, `assert.isTrue`, `strictEqual(x, true)`, and the `false` spellings |
 | `eq_strict` (`===`) | `toBe(y)`, `.equal(y)`, `assert.strictEqual`, strict-mode `equal` |
 | `eq_loose` (`==`) | chai's `assert.equal`, Node's legacy `equal` |
-| `lt`, `le`, `gt`, `ge` | `toBeLessThan` and the other ordering matchers, chai's `below`/`most`/`above`/`least` and their aliases, `assert.isBelow`/`isAtMost`/`isAbove`/`isAtLeast` |
+| `lt`, `le`, `gt`, `ge` | `toBeLessThan` and the other ordering matchers, chai's `below`/`most`/`above`/`least` and their aliases, `assert.isBelow`/`isAtMost`/`isAbove`/`isAtLeast`, and a hand-rolled `Math.abs(d) < bound` in a truthy spelling (`assert.ok(...)`, `toBeTruthy()`, `toBe(true)`), keyed from the `Math.abs` side |
 
 `toEqual`, `toStrictEqual`, deep equality, `toBeCloseTo`/`closeTo`,
 membership, patterns, `within` and lengths record no key and keep the
-lattice. The Python frontend records no key in this round.
+lattice. An asymmetric matcher as the whole expected value of `toEqual` or
+`toStrictEqual` is the predicate it states, not an equality:
+`expect.anything()` is `!= null` (`is_nullish` negated, on the NON_NULL rung)
+and `expect.any(Ctor)` a type check (TYPE_SHAPE, no key), so `toBe(78.75)` ->
+`toEqual(expect.anything())` is a predicate widened (198.Q3). The Python
+frontend records no key in this round.
 
 When both assertions of a pair carry a key on the same subject, ASSERT_WEAKENED
 compares the two predicates instead of their rungs, from key and polarity
@@ -269,14 +282,19 @@ alone. A same or stronger predicate is not reported whatever the rungs say
   anything else the keys cannot establish, such as `.not.toBeNull()` ->
   `toBeFalsy()`.
 
-The other three are never mild. The relation never compares operands:
+The other three are never mild. The relation never reports an operand change:
 a rewritten expected value is EXPECTED_VALUE_CHANGED's and a widened tolerance
-TOLERANCE_LOOSENED's. It reads one operand only to place an `===` literal
-among the presence keys: `toBe(5)` is defined, not null and truthy, so
-`toBeTruthy()` -> `toBe(5)` is a strengthening and `toBe(78.75)` ->
-`.to.be.undefined` a contradiction. When both sides state a literal at one
-polarity, such as `toBe(5)` -> `.to.be.null`, the change is the literal's and
-only EXPECTED_VALUE_CHANGED reports it.
+TOLERANCE_LOOSENED's. It reads operands for two things the keys cannot say.
+An `===` literal is placed among the presence keys: `toBe(5)` is defined, not
+null and truthy, so `toBeTruthy()` -> `toBe(5)` is a strengthening and
+`toBe(78.75)` -> `.to.be.undefined` a contradiction. When both sides state a
+literal at one polarity, such as `toBe(5)` -> `.to.be.null`, the change is the
+literal's and only EXPECTED_VALUE_CHANGED reports it. And when two bounds name
+one bound (`toBeLessThan(80)` -> `toBeLessThanOrEqual(80)`, or `LIMIT` on both
+sides), the values below, at and above it, and NaN, decide:
+`<` -> `<=` is a widening, `<=` -> `<` a strengthening, and
+`.not.toBeLessThan(80)` -> `toBeGreaterThanOrEqual(80)` a strengthening,
+since the negated check also passes NaN.
 
 The keys come in three families: presence (`null`, `undefined`, truthiness),
 equality and bounds. Two keys of different families do not relate alone, so
@@ -288,11 +306,14 @@ change, so strengthening one into the other still passes.
 
 Residuals of this reading:
 
-- `toBeLessThan(80)` -> `toBeLessThanOrEqual(80)`, and any change between `<`
-  and `<=` (or `>` and `>=`) that keeps the polarity, is not reported:
-  whether both name the same bound is operand evidence this round does not
-  record. With a flipped `.not` on top, such as `.not.toBeLessThan(80)` ->
-  `toBeGreaterThanOrEqual(80)`, it is reported as an unverifiable replacement.
+- A change between `<` and `<=` (or `>` and `>=`) with two different bounds,
+  or a bound checkwash cannot read, keeps the lattice judgement, so only the
+  operand rules speak: a plain bound rewritten from `< 0.01` to `<= 0.005` is
+  an expected-value change, and a hand-rolled tolerance tightened that way
+  (`expect(Math.abs(d)).toBeLessThan(0.01)` -> `toBeLessThanOrEqual(0.005)`)
+  passes. With a flipped `.not` on top as well, such as
+  `.not.toBeLessThan(80)` -> `toBeGreaterThanOrEqual(75)`, it is reported as an
+  unverifiable replacement.
 - Keys of different families keep the lattice judgement: `toBeNull()` ->
   `toBe(expected)` and `toBeTruthy()` -> `toBeGreaterThan(0)` pass as
   strengthenings, and `toBe(5)` -> `toBeGreaterThan(3)` reports a strength
@@ -302,9 +323,6 @@ Residuals of this reading:
   assertion of another form (`.to.include(x)`, `toEqual(x)`) is no longer
   reported as a form and polarity change, and `toBeFalsy()` -> `toEqual(5)`
   now is.
-- A hand-rolled bound flipped from `<` to `>` inside `assert.ok(...)` is still
-  not reported; see [Hand-rolled tolerances](#hand-rolled-tolerances).
-
 Following the foundation precedent, the original inventory is unchanged. The
 independent supplement
 [`javascript_chai_mutations.json`](../tests/data/javascript_chai_mutations.json)
@@ -312,6 +330,69 @@ adds 39 losses, rewrites, tolerance increases and preserving or strengthening
 controls written from the chai documentation. It runs in-process in
 [`tests/test_js_chai.py`](../tests/test_js_chai.py); it is not yet part of
 the CLI qualification below.
+
+### Operand evidence
+
+The evidence half of [#198](https://github.com/taipei49314/checkwash/issues/198)
+keeps what an operand establishes across assertion APIs. A pair could read as
+preserved while the old side's expected value or tolerance had no counterpart:
+`toBe(78.75)` -> `assert.equal(value, 75)` passed because `==` recorded no
+value (M2a-c), and `toBeCloseTo(v, 2)` -> `.to.be.closeTo(v, Infinity)` because
+`Infinity` recorded no bound (M2f-h).
+
+What each JS assertion records:
+
+- **Expected values.** Every equality records its scalar operand, the
+  coercive ones included (chai's `assert.equal`, Node's legacy `equal` and
+  `deepEqual`); `toBeCloseTo` and `closeTo` record their center. The literal
+  reader reads through parentheses and TypeScript wrappers (T4, T5).
+- **Bounds.** The ordering matchers, chai's bound words and
+  `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` record their bound as a
+  Python bound is recorded (198.Q2, Q4). A bound read as a hand-rolled
+  tolerance is tolerance evidence only.
+- **Tolerances.** See [Hand-rolled tolerances](#hand-rolled-tolerances) and
+  the `closeTo` delta above.
+- **`operand_source`.** Every expected value and bound also records its text,
+  without comments, parentheses or TypeScript wrappers. It decides only
+  whether two spellings state the same operand (`toBeLessThan(LIMIT)` and
+  `.below(LIMIT)`), and which names a rewritten one reads. A hand-rolled bound
+  records it only when the bound was read.
+
+How the rules read them, as Python's do (198.IR amendment 2):
+
+- EXPECTED_VALUE_CHANGED reports a literal rewritten into another literal,
+  `toBeLessThan(80)` -> `.below(1e12)` included, and a name or call replaced by
+  a different one: `toBe(EXPECTED_A)` -> `toBe(EXPECTED_B)` reports
+  "expected call rewritten to a different call ['EXPECTED_A'] -> ['EXPECTED_B']".
+  As in Python, the same names with a changed argument (`build(1)` ->
+  `build(2)`) or member (`config.total` -> `config.subtotal`) do not.
+- A literal and an expression, in either direction, stay unreported until
+  [#226](https://github.com/taipei49314/checkwash/issues/226) decides them for
+  both frontends: `toBe(78.75)` -> `toBe(Number(75))` (T6) and
+  `toBe(EXPECTED)` -> `toBe(75)` pass. Python reports the second (#60).
+- TOLERANCE_LOOSENED compares two known tolerances. A tolerance checkwash
+  cannot read (`closeTo(v, delta())`, `toBeCloseTo(v, precision())`) is
+  unknown, and a known tolerance replaced by an unknown one on the same subject
+  is not the same tolerance (#196 190.4): ASSERT_WEAKENED reports "assertion
+  replaced; checkwash cannot verify the replacement is equivalent (tolerance
+  places=2 -> a tolerance it cannot read)", never mild.
+
+Residuals of this reading:
+
+- JS has no counterpart of Python's single-assertion restoration proof, so a
+  bound tightened into an exact value reports its new value:
+  `toBeLessThan(80)` -> `toBe(78.75)` is an expected-value change, where
+  Python passes `x < 80` -> `x == 78.75`. Honest threshold edits
+  (`toBeGreaterThan(0)` -> `toBeGreaterThanOrEqual(1)`) report as they do in
+  Python.
+- A tolerance unknown before the edit is not compared: `closeTo(v, delta())`
+  -> `closeTo(v, 1e12)` or `closeTo(v, other())` produces no finding, as
+  Python's unreadable tolerances do not.
+- `expect.objectContaining`, `expect.stringContaining` and the other
+  asymmetric matchers keep the equality reading; `expect.any(Number)` ->
+  `expect.any(String)` is not compared.
+- The JS false-positive cost of these reports is not measured; the JS/TS
+  replay corpus measures it before the release that ships them.
 
 ## Make unrepresented assertion candidates visible
 

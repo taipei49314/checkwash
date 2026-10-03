@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 111
+rule: EXPECTED_VALUE_CHANGED
+title: toBe(78.75) -> Vitest's assert.equal(total, 75): == keeps its scalar, so the rewrite is reported
+origin: issue #198 row M2a (ruling 196.190.2)
+=== before: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBe(78.75);
+});
+=== after: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.equal(total(items), 75);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["MILD_WEAKENING"]}, {"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
