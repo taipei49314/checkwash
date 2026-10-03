@@ -39,15 +39,15 @@ schema_version = 1
 "i196/P1" = "block"  # 196.186.7: Vitest's default include does not collect test/value.ts; was undecided
 "i196/P2" = "block"  # 196.186.7: Vitest's default include does not collect value_test.ts; was undecided
 "i196/P3" = "block"  # 196.186.7: node:test's default patterns do not collect value.spec.js; was undecided
-"i196/S1" = "undecided"  # #201 Labels (undecided): #196 186.8
-"i196/S2" = "undecided"  # #201 Labels (undecided): #196 186.8
-"i196/S3" = "undecided"  # #201 Labels (undecided): #196 186.8
+"i196/S1" = "block"  # 196.186.8: src/api/spec.ts declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
+"i196/S2" = "block"  # 196.186.8: src/components/Test.tsx declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
+"i196/S3" = "block"  # 196.186.8: src/ui/test.jsx declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
 "i196/Sc1" = "pass"  # ruling X.control-labels (2026-10-03): 186.3 control: the edit is in scope; matches v0.5.0, no entry needed
 "i196/Sc2" = "block"  # ruling X.control-labels (2026-10-03): 186.3 control: out-of-scope production edit; matches v0.5.0, no entry needed
-"i196/Sp1" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.8
-"i196/Sp2" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.8
-"i196/Sp3" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.8
-"i196/Sp4" = "undecided"  # no Acceptance section in the #196 comment; the row sits under 186.8
+"i196/Sp1" = "block"  # 196.186.8: src/x/test.ts declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
+"i196/Sp2" = "block"  # 196.186.8: src/lib/test-utils.ts declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
+"i196/Sp3" = "block"  # 196.186.8: src/api/Test.ts declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
+"i196/Sp4" = "block"  # 196.186.8: src/test/fixtures.ts declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
 
 # --- i197: #197 role precedence drops JS test obligations
 "i197/A1" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"
