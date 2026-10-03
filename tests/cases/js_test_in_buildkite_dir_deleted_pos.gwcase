@@ -1,0 +1,12 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: deleting a JS test kept under .buildkite/ disables its tests
+origin: issue #197 member B6 (ruled 197.Q2, 2026-10-03) - v0.5.0 passed at CI_WORKFLOW_TOUCHED warn; v0.4.2 blocked with TEST_DISABLED on both units
+=== before: .buildkite/value.test.js ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

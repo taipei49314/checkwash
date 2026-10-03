@@ -19,6 +19,7 @@ from checkwash.frontends.python.parameterized_subject_replacements import parame
 from checkwash.frontends.python.literal_extrema_replacements import literal_extrema_events
 from checkwash.frontends.python.generator_fixture_subjects import generator_fixture_subject_events
 from checkwash.ir.astutil import stable_dump
+from checkwash.ir.model import judged_as_test
 from checkwash.ir.markers import parse_expr
 from checkwash.pyenv import known_baseline
 
@@ -460,7 +461,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
     events.extend(generator_fixture_subject_events(ir, changes, root_reader=root_reader, root_searcher=inventory))
     for file in ir.files:
         change = by_path.get(file.path)
-        if file.role != "test" or change is None or not change.before or not change.after:
+        if not judged_as_test(file) or change is None or not change.before or not change.after:
             continue
         trees = None
         for unit in file.units:

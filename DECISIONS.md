@@ -2350,3 +2350,31 @@ The agent proposed this in #207 and named both departures. The maintainer
 accepted it on 2026-10-02 and asked for the documents to follow the code
 ("照建議 文件跟 code同步"); the agent wrote this entry and the SPEC text under
 that instruction.
+
+## D-067 (2026-10-03): IR_VERSION stays 2 for the additive JS fields (X.ir-policy)
+
+The 2026-10-03 rulings add optional IR fields and correct one JS value:
+`FileIR.test_obligations` (#197, 197.Q3), Assertion `predicate` and
+`operand_source` (#198), and JS `positive`, restored to the meaning
+`ir/model.py` documents (#198). The maintainer ruled them one question
+(X.ir-policy): all of them keep IR_VERSION 2. A new optional field with a
+default is additive (docs/stability.md, "When the number moves"), and the JS
+`positive` correction restores the documented meaning instead of changing it.
+`tests/test_fingerprint_scope.py` keeps pinning IR_VERSION 2.
+
+What a consumer sees: `--emit-ir` output gains `test_obligations` on every
+FileIR now, and `predicate` and `operand_source` on every Assertion after the
+#198 round. The v0.5.0 release guide's "IR JSON shapes … are unchanged"
+(docs/releases/v0.5.0-public-launch.md:70) stays true for v0.5.0 only; the
+next release guide carries one line naming these keys. 199.Q4 declines a
+Marker `kind` field because marker names are already frozen identity, not
+because new fields are forbidden.
+
+`test_obligations` (197.Q3): a JS/TS test path whose role SPEC §2 resolves
+before `test` keeps its published role, so no fingerprint that includes the
+role moves, and every test rule reads the file through one helper,
+`judged_as_test`. A pin test forbids a raw `role == "test"` comparison
+outside that helper.
+
+The agent wrote this entry in the #197 dual-obligation PR, as the rulings'
+X.doc-batch asks; the maintainer approves it there.

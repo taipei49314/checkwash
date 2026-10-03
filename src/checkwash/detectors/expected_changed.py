@@ -20,7 +20,7 @@ import re
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.astutil import same_expr
-from checkwash.ir.model import Assertion, FileIR, IR
+from checkwash.ir.model import Assertion, FileIR, IR, judged_as_test
 from checkwash.detectors.snapshot_expectation import detect as detect_stored_expectations
 from checkwash.frontends.python.constant_renames import assertions_renamed
 
@@ -104,7 +104,7 @@ def _surface_expected_names(assertion: Assertion) -> tuple[str, ...]:
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = detect_stored_expectations(ir)
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
@@ -226,7 +226,7 @@ def detect_derived(ir: IR) -> list[Finding]:
     """
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:

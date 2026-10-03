@@ -29,13 +29,13 @@ from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import argument_wraps, expr_wraps, resolve_through
 from checkwash.ir.expectation_identity import same_known_js_scalar
-from checkwash.ir.model import IR
+from checkwash.ir.model import IR, judged_as_test
 
 
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
@@ -102,7 +102,7 @@ def detect(ir: IR) -> list[Finding]:
     seen = {(f.path, f.unit, tuple(f.before.span), tuple(f.after.span)) for f in findings}
     fingerprints = {f.fingerprint for f in findings}
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         events = file.table_normalization_events
         if not isinstance(events, (tuple, list)) or len(events) > 4096:

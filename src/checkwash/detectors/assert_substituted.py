@@ -42,14 +42,14 @@ from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import expr_wraps, same_expr
 from checkwash.ir.expectation_identity import same_known_js_scalar
-from checkwash.ir.model import IR
+from checkwash.ir.model import IR, judged_as_test
 from checkwash.frontends.python.constant_renames import assertions_renamed
 
 
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:

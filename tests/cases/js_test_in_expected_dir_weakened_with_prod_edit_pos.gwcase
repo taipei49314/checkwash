@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: an unrelated production edit does not explain weakening a JS test kept under expected/
+origin: issue #197 member C5 (ruled 197.Q2, 2026-10-03) - v0.5.0 judged the file only as a snapshot and gave SNAPSHOT_CODE_COCHANGE warn; the Python edit is no repair evidence for the JS units, so it blocks like the same test at test/billing.test.js (C5ctl)
+=== before: test/expected/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== after: test/expected/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });
+=== before: app/util.py ===
+def f():
+    return 1
+=== after: app/util.py ===
+def f():
+    return 2
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]

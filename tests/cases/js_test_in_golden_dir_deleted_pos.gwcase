@@ -1,0 +1,12 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: deleting a Vitest file kept under a golden/ directory disables its tests
+origin: issue #197 member C2 (ruled 197.Q2, 2026-10-03) - v0.5.0 gave zero findings; v0.4.2 blocked with TEST_DISABLED on both units
+=== before: packages/golden/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]

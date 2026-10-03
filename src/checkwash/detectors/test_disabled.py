@@ -13,13 +13,13 @@ from checkwash.findings import (
     make_fingerprint,
 )
 from checkwash.ir.assertion_identity import fingerprint_text
-from checkwash.ir.model import IR
+from checkwash.ir.model import IR, judged_as_test
 
 
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             if unit.before is not None and unit.after is None:

@@ -1,0 +1,8 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: deleting a README kept under .github/workflows/ removes no pipeline
+origin: ruling 197.Q5 (2026-10-03) - only YAML beneath .github/workflows/ is a workflow, the definition the control-flow reader already used. v0.5.0 read this deletion as a removed workflow that ran tests (the README names pytest) and blocked at high; it stays visible at warn
+=== before: .github/workflows/README.md ===
+Run pytest locally before pushing.
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

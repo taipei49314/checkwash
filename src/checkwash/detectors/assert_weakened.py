@@ -5,7 +5,7 @@ from __future__ import annotations
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import same_expr
-from checkwash.ir.model import IR
+from checkwash.ir.model import IR, judged_as_test
 from checkwash.ir import strength as S
 from checkwash.ir.strength import name_of
 
@@ -21,7 +21,7 @@ def detect(ir: IR) -> list[Finding]:
     # carries the report.
     seen_inherited: set[tuple] = set()
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:

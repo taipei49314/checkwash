@@ -16,7 +16,7 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
-from checkwash.ir.model import IR
+from checkwash.ir.model import IR, judged_as_test
 
 
 def _parse_multi(spec: str) -> dict[str, str]:
@@ -114,7 +114,7 @@ def _js_mixed(path: str, before: str, after: str) -> tuple[bool, str, str] | Non
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:

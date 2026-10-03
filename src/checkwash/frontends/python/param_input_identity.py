@@ -15,7 +15,7 @@ from pathlib import PurePosixPath
 
 from checkwash.change import EngineError
 from checkwash.frontends.python.frontend import _Offsets, normalize_source
-from checkwash.ir.model import param_tables
+from checkwash.ir.model import judged_as_test, param_tables
 
 _MAX_BYTES = 250_000
 _MAX_NODES = 40_000
@@ -560,7 +560,7 @@ def mark_param_input_identity(ir, raw_by_path, root_reader):
         return cache[path]
 
     for file in ir.files:
-        if file.language != 'python' or file.role != 'test' or file.path not in raw_by_path:
+        if file.language != 'python' or not judged_as_test(file) or file.path not in raw_by_path:
             continue
         if any(path != file.path and before != after for path, (before, after) in raw_by_path.items()):
             continue  # an imported provider may have changed outside this file

@@ -11,7 +11,7 @@ from __future__ import annotations
 import ast
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
-from checkwash.ir.model import IR, Unit
+from checkwash.ir.model import IR, Unit, judged_as_test
 
 
 def _significant(value_repr: str) -> bool:
@@ -65,7 +65,7 @@ def detect(ir: IR) -> list[Finding]:
         return []
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             for assertion in _changed_after_assertions(unit):

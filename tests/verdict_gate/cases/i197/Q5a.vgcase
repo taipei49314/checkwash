@@ -1,0 +1,15 @@
+=== meta ===
+issue: 197
+row: Q5a
+probe: none; named by the #201 ruling 196.followup.new-gate-cases (2026-10-03)
+source: #201 ruling 196.followup.new-gate-cases; #197 ruling 197.Q5
+# a JS test moves out of .github/workflows/ to a path the runners still collect;
+# v0.5.0 read the old path as a removed workflow that ran tests
+=== options ===
+today = "2026-10-02"
+=== base: .github/workflows/a.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== rename-same: .github/workflows/a.test.ts -> src/a.test.ts ===

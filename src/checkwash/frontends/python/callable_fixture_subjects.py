@@ -14,6 +14,7 @@ from checkwash.frontends.python.frontend import _Offsets, normalize_source
 from checkwash.frontends.python.oracle_purity import pure_imported_calls
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.ir.astutil import stable_dump
+from checkwash.ir.model import judged_as_test
 from checkwash.pyenv import known_baseline
 
 
@@ -83,7 +84,7 @@ def callable_fixture_subject_events(ir, changes, *, root_reader=None, root_searc
     if (not change.before or not change.after or b'fixture' not in change.after or b'lambda' not in change.after
             or change.status != 'modified' or change.old_path is not None):
         return []
-    file = next((file for file in ir.files if file.path == change.path and file.role == 'test' and file.parse_ok), None)
+    file = next((file for file in ir.files if file.path == change.path and judged_as_test(file) and file.parse_ok), None)
     if file is None:
         return []
     try:

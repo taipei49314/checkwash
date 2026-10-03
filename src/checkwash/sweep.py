@@ -23,6 +23,7 @@ from checkwash.deps import MANIFESTS, parse_manifest, project_names
 from checkwash.engine import analyze
 from checkwash.gitio import GitError, grep_head_paths, list_range_changes, read_base_file
 from checkwash.gitio.snapshot import GitSnapshot
+from checkwash.ir.model import judged_as_test
 from checkwash.pyenv import known_baseline
 
 
@@ -137,7 +138,7 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
         result.commits += 1
         if ir.globals.prod_opaque_change:
             result.opaque_prod_change += 1
-        if any(f.role == "test" for f in ir.files) or any(
+        if any(judged_as_test(f) for f in ir.files) or any(
             f.role == "conftest" for f in ir.files
         ):
             result.touching_tests += 1

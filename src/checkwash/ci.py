@@ -4,9 +4,10 @@ from __future__ import annotations
 import re
 
 from checkwash.change import FileChange
-from checkwash.ci_control_flow import control_flow_weakenings
+from checkwash.ci_control_flow import control_flow_weakenings, is_github_workflow
 from checkwash.deps import parse_manifest_pins
 from checkwash.config import Config
+from checkwash.frontends.javascript.paths import is_js_test_path
 from checkwash.ir.model import DiffGlobals
 from checkwash.pytest_collection import pytest_collection_changes
 from checkwash.roles import (
@@ -32,9 +33,11 @@ def _is_ci_workflow(path: str) -> bool:
     almost always means the settings moved into `pyproject.toml`, which is
     housekeeping — treating that as "the test command was weakened" blocked
     two such consolidations in the corpus. The edit is still reported at warn.
+    Beneath `.github/workflows/` only YAML is a pipeline (`is_github_workflow`):
+    deleting a README or a test kept there removed no gate (#197 Q5).
     """
     p = path.replace("\\", "/")
-    return p.startswith(".github/workflows/") or p in (".gitlab-ci.yml", ".pre-commit-config.yaml")
+    return is_github_workflow(p) or p in (".gitlab-ci.yml", ".pre-commit-config.yaml")
 
 def _errexit_on(data: bytes | None) -> bool:
     """Would a failing command abort this script?
@@ -98,12 +101,13 @@ def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str
     introduced by the diff, wherever in the diff it now appears. That is what
     lets a configuration move between files — `setup.cfg` to `pyproject.toml`
     is the migration most of the ecosystem has made — without reading as a
-    weakened test command.
+    weakened test command. A JS/TS test kept in a CI directory is test code,
+    not part of this surface: its text cannot pre-date a narrowing (#197 Q5).
     """
     parts: list[str] = []
     for change in changes:
         path = change.path.replace("\\", "/")
-        if is_artifact(path) or not change.before:
+        if is_artifact(path) or not change.before or is_js_test_path(path):
             continue
         role = config.role_of(path)
         if role == "prod" and (

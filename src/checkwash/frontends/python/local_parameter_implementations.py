@@ -16,6 +16,7 @@ from .oracle_blocks import IMPLICIT_ENTRY_NAMES
 from .oracle_purity import primitive_literal_result, pure_imported_calls
 from .snapshot_context import inert_test_execution_context
 from checkwash.ir.astutil import dotted_name, stable_dump
+from checkwash.ir.model import judged_as_test
 from checkwash.pyenv import known_baseline
 
 _RESERVED = IMPLICIT_ENTRY_NAMES | {'pytest', 'pytestmark', 'pytest_plugins', 'request', 'round'}
@@ -173,7 +174,7 @@ def local_parameter_implementation_events(ir, changes, *, root_reader=None, root
     if (not change.before or not change.after or change.status != 'modified' or change.old_path is not None
             or b'parametrize' not in change.after):
         return []
-    file = next((file for file in ir.files if file.path == change.path and file.role == 'test' and file.parse_ok), None)
+    file = next((file for file in ir.files if file.path == change.path and judged_as_test(file) and file.parse_ok), None)
     if file is None:
         return []
     try:

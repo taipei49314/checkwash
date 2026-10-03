@@ -134,9 +134,10 @@ JavaScript/TypeScript file beneath a `__tests__/` directory and exact
 `test`/`spec` filenames, JSX/TSX included. Node default test paths also cover
 `test/` directories and `test-*`, `*-test`, `*_test` and exact `test` filenames
 with `js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. Configured test globs
-are not read, and a guardrail, CI or snapshot path keeps that role inside these
-layouts. So does a path under a `roles` glob for `ci`, `snapshot`, `lockfile` or
-`conftest` in the checkwash config; no test rule reads such a file
+are not read. A guardrail, CI or snapshot path inside these layouts keeps that
+role, and so does a path under a `roles` glob for `ci`, `snapshot`, `lockfile`
+or `conftest` in the checkwash config. Such a file is still judged as a test,
+beside that role's own rules
 ([#197](https://github.com/taipei49314/checkwash/issues/197)). A shell shebang
 or a `Makefile` name prefix does not make a test file a CI script.
 Build artifacts and dependencies remain excluded.

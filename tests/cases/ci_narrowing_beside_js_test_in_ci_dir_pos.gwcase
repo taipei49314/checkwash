@@ -1,0 +1,21 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: text in a JS test kept under a CI directory cannot pre-date a narrowing elsewhere
+origin: ruling 197.Q5 (2026-10-03) - a narrowing counts only when no ci-role file had the token at base. v0.5.0 counted the base side of a JS test under .github/workflows/ as CI text, so its comment hid the --ignore= introduced in tox.ini and the diff passed; that test is test code and is no longer part of the CI surface
+=== before: tox.ini ===
+[testenv]
+commands = pytest tests
+=== after: tox.ini ===
+[testenv]
+commands = pytest tests --ignore=tests/test_slow.py
+=== before: .github/workflows/gen.test.ts ===
+import { test } from "vitest";
+// see also: pytest --ignore=tests/test_slow.py
+test("a", () => {});
+=== after: .github/workflows/gen.test.ts ===
+import { test } from "vitest";
+// see also: pytest --ignore=tests/test_slow.py
+test("a", () => {});
+
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"], "path": "tox.ini"}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": ".github/workflows/gen.test.ts"}]

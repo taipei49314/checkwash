@@ -50,6 +50,19 @@ from collections import Counter
 
 from checkwash.roles import _runs_tests
 
+
+def is_github_workflow(path: str) -> bool:
+    """A GitHub Actions workflow definition: YAML beneath `.github/workflows/`.
+
+    The one definition for E6's workflow rules: the control-flow reader below
+    and the deletion escalation (`ci._is_ci_workflow`). The directory's role
+    is `ci` either way, but a README, a script or a JS/TS test kept there is
+    not a pipeline, and deleting one removes no gate (#197 Q5).
+    """
+    p = path.replace("\\", "/")
+    return p.startswith(".github/workflows/") and p.endswith((".yml", ".yaml"))
+
+
 _MAX_BYTES = 1_000_000
 _MAX_DEPTH = 48
 _MAX_FLOW_LINES = 200
@@ -778,7 +791,7 @@ def _precommit_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
 def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None) -> list[str]:
     """Why this CI file's runners stopped executing, as `ci_weakening_lines` reasons."""
     p = path.replace("\\", "/")
-    if p.startswith(".github/workflows/") and p.endswith((".yml", ".yaml")):
+    if is_github_workflow(p):
         read_sites, inventory = _workflow_sites, False
     elif p == ".pre-commit-config.yaml":
         read_sites, inventory = _precommit_sites, True

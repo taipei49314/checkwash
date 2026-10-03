@@ -27,6 +27,7 @@ from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.frontends.python.table_oracles import MAX_AST_NODES, MAX_CASES, MAX_SOURCE_BYTES, _literal
 from checkwash.ir.astutil import dotted_name, stable_dump
+from checkwash.ir.model import judged_as_test
 
 MAX_READS = 48
 MAX_AUTHORITY_READS = 64
@@ -578,7 +579,7 @@ def _eligible(file, sources):
 def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sources=None, searcher=None):
     source = _Reader(raw, reader, role_of, report_context, sources, searcher)
     for file in ir.files:
-        if file.language != "python" or file.role != "test" or not file.parse_ok or file.path not in raw:
+        if file.language != "python" or not judged_as_test(file) or not file.parse_ok or file.path not in raw:
             continue
         if any(side is None for side in raw[file.path]):
             continue
