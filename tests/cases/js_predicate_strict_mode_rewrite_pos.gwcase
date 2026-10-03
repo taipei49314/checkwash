@@ -1,0 +1,22 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: node:assert/strict's equal is strictEqual, so rewriting its operand is an expected-value change
+origin: issue #198 row T3
+=== before: src/total.test.ts ===
+import { test } from "vitest";
+import assert from "node:assert/strict";
+import { total } from "./total";
+
+test("total", () => {
+  assert.equal(total([10, 3]), 78.75);
+});
+=== after: src/total.test.ts ===
+import { test } from "vitest";
+import assert from "node:assert/strict";
+import { total } from "./total";
+
+test("total", () => {
+  assert.equal(total([10, 3]), 75);
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

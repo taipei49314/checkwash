@@ -33,6 +33,12 @@ class Assertion:
     # Flipping polarity inverts what the test proves while leaving form and
     # strength identical, so it needs to be part of the assertion's identity.
     positive: bool = True
+    # The predicate this assertion states, as one canonical key of
+    # `ir/predicate.py` (is_null, truthy, eq_strict, lt, ...), when the
+    # frontend knows it; `positive` then says whether the assertion asserts
+    # that predicate or its negation (`toBeDefined()` is is_undefined
+    # asserted negatively). None leaves the pair to the lattice rules (#198).
+    predicate: str | None = None
     # Names appearing in the asserted subject's own expression, and the names
     # the expectation transitively depends on after in-body assignments are
     # followed (`expected = sum(items)` -> ("items", "sum")). Both sorted.

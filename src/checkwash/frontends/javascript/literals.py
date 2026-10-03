@@ -200,6 +200,21 @@ def populate_expectation(assertion: Assertion, expression: str) -> None:
     assertion.right_value = repr(value)
 
 
+def keyword_operand(expression: str) -> str | None:
+    """`null`, `undefined`, `true` or `false` when the operand is exactly that word.
+
+    Comments and surrounding whitespace aside. Whether `undefined` still names
+    the global is the caller's question; the other three are keywords.
+    """
+    if len(expression) > 4096:
+        return None
+    source = _without_comments(expression)
+    if source is None:
+        return None
+    source = source.strip(_WHITESPACE)
+    return source if source in {"null", "undefined", "true", "false"} else None
+
+
 def populate_precision(assertion: Assertion, expression: str | None = None) -> None:
     """Record positive toBeCloseTo decimal places; omitted precision is two.
 

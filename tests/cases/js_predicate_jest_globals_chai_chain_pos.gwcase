@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: a chai chain on @jest/globals' expect asserts nothing, so the replaced matcher is a removal
+origin: issue #198 row S3
+=== before: src/lookup.test.ts ===
+import { test, expect } from "@jest/globals";
+import { findCustomer } from "./lookup";
+
+test("an unknown id finds no customer", () => {
+  expect(findCustomer("missing")).toBeNull();
+});
+=== after: src/lookup.test.ts ===
+import { test, expect } from "@jest/globals";
+import { findCustomer } from "./lookup";
+
+test("an unknown id finds no customer", () => {
+  expect(findCustomer("missing")).to.exist;
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

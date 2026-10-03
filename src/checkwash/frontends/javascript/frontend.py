@@ -22,6 +22,7 @@ from dataclasses import dataclass
 
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.literals import (
+    keyword_operand,
     populate_delta,
     populate_expectation,
     populate_precision,
@@ -89,6 +90,8 @@ _ASSERT_STRENGTH: dict[str, tuple[str, int]] = {
     "deepStrictEqual": ("compare_eq", S.EXACT_STRUCT),
     "ok": ("truthy", S.TRUTHY),
 }
+# node:assert's strict mode names the strict comparisons with the legacy words.
+_STRICT_MODE = {"equal": "strictEqual", "deepEqual": "deepStrictEqual"}
 
 _MATCHER_STRENGTH: dict[str, tuple[str, int]] = {
     "toBe": ("compare_eq", S.EXACT_VALUE),
@@ -106,6 +109,21 @@ _MATCHER_STRENGTH: dict[str, tuple[str, int]] = {
     "toBeGreaterThanOrEqual": ("compare_ord", S.BOUND),
     "toBeLessThan": ("compare_ord", S.BOUND),
     "toBeLessThanOrEqual": ("compare_ord", S.BOUND),
+}
+# The predicate key each Jest matcher states (`ir/predicate.py`), and whether
+# the matcher asserts it (True) or its negation (False): toBeDefined() is
+# is_undefined asserted negatively, as `.not.toBeUndefined()` is. `toBe` takes
+# its key from its operand; the other matchers state no key (#198).
+_MATCHER_PREDICATE: dict[str, tuple[str, bool]] = {
+    "toBeTruthy": ("truthy", True),
+    "toBeFalsy": ("truthy", False),
+    "toBeDefined": ("is_undefined", False),
+    "toBeUndefined": ("is_undefined", True),
+    "toBeNull": ("is_null", True),
+    "toBeGreaterThan": ("gt", True),
+    "toBeGreaterThanOrEqual": ("ge", True),
+    "toBeLessThan": ("lt", True),
+    "toBeLessThanOrEqual": ("le", True),
 }
 # Each ordering matcher as the comparison `subject <op> argument` it asserts;
 # reading a hand-rolled tolerance (issue #179) needs the direction.
@@ -132,6 +150,11 @@ class _ChaiMeaning:
     expected: int | None = None  # Operand holding the expected scalar.
     implied: str | None = None  # Literal a property terminal compares with.
     delta: int | None = None  # closeTo's absolute tolerance operand.
+    # The predicate key it states (#198), and whether it asserts that key
+    # (True) or its negation (False): `.exist` asserts `!= null`, the
+    # negation of is_nullish. The equalities take their key from the operand.
+    predicate: str | None = None
+    asserts: bool = True
 
 
 _CHAI: dict[str, _ChaiMeaning] = {
@@ -144,18 +167,25 @@ _CHAI: dict[str, _ChaiMeaning] = {
     "deep_equal": _ChaiMeaning("compare_eq", S.EXACT_STRUCT, 2, expected=1),
     # `.true` is `=== true`, the oracle equal(true) states, not `.ok`'s: two
     # spellings of one exact literal must not read as a weakening.
-    "true": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="true"),
-    "false": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="false"),
-    "null": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="null"),
+    "true": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="true", predicate="is_true"),
+    "false": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="false", predicate="is_false"),
+    "null": _ChaiMeaning("compare_eq", S.EXACT_VALUE, implied="null", predicate="is_null"),
     # `=== undefined`; the literal reader treats `undefined` as an identifier.
-    "undefined": _ChaiMeaning("compare_eq", S.EXACT_VALUE),
-    # exist (!= null) and assert.isDefined (!== undefined): toBeDefined's rung.
-    "exist": _ChaiMeaning("non_null", S.NON_NULL),
-    "ok": _ChaiMeaning("truthy", S.TRUTHY),
+    "undefined": _ChaiMeaning("compare_eq", S.EXACT_VALUE, predicate="is_undefined"),
+    # exist (!= null) and assert.isDefined (!== undefined) sit on
+    # toBeDefined's rung, and each asserts a negation: not nullish, not
+    # undefined. The rung cannot tell them apart; the key does (#198).
+    "exist": _ChaiMeaning("non_null", S.NON_NULL, predicate="is_nullish", asserts=False),
+    "defined": _ChaiMeaning("non_null", S.NON_NULL, predicate="is_undefined", asserts=False),
+    "ok": _ChaiMeaning("truthy", S.TRUTHY, predicate="truthy"),
     "close_to": _ChaiMeaning("approx", S.APPROX, 3, expected=1, delta=2),
     "include": _ChaiMeaning("membership", S.PATTERN, 2),
     "match": _ChaiMeaning("pattern", S.PATTERN, 2),
-    "bound": _ChaiMeaning("compare_ord", S.BOUND, 2),
+    # The bound words, each with its direction: `subject > operand`, ...
+    "above": _ChaiMeaning("compare_ord", S.BOUND, 2, predicate="gt"),
+    "least": _ChaiMeaning("compare_ord", S.BOUND, 2, predicate="ge"),
+    "below": _ChaiMeaning("compare_ord", S.BOUND, 2, predicate="lt"),
+    "most": _ChaiMeaning("compare_ord", S.BOUND, 2, predicate="le"),
     "within": _ChaiMeaning("compare_ord", S.BOUND, 3),
     # A length check is the len(x) == n shape.
     "length": _ChaiMeaning("type_shape", S.TYPE_SHAPE, 2),
@@ -173,10 +203,10 @@ _CHAI_METHODS: dict[str, str] = {
     "closeTo": "close_to", "approximately": "close_to",
     "include": "include", "includes": "include", "contain": "include", "contains": "include",
     "match": "match", "matches": "match",
-    "above": "bound", "gt": "bound", "greaterThan": "bound",
-    "least": "bound", "gte": "bound", "greaterThanOrEqual": "bound",
-    "below": "bound", "lt": "bound", "lessThan": "bound",
-    "most": "bound", "lte": "bound", "lessThanOrEqual": "bound",
+    "above": "above", "gt": "above", "greaterThan": "above",
+    "least": "least", "gte": "least", "greaterThanOrEqual": "least",
+    "below": "below", "lt": "below", "lessThan": "below",
+    "most": "most", "lte": "most", "lessThanOrEqual": "most",
     "within": "within",
     "lengthOf": "length", "length": "length",
 }
@@ -193,10 +223,10 @@ _CHAI_ASSERT: dict[str, str] = {
     "equal": "loose_equal", "strictEqual": "strict_equal",
     "deepEqual": "deep_equal", "deepStrictEqual": "deep_equal",
     "isTrue": "true", "isFalse": "false", "isNull": "null", "isUndefined": "undefined",
-    "exists": "exist", "isDefined": "exist",
+    "exists": "exist", "isDefined": "defined",
     "closeTo": "close_to", "approximately": "close_to",
     "include": "include", "match": "match",
-    "isAbove": "bound", "isAtLeast": "bound", "isBelow": "bound", "isAtMost": "bound",
+    "isAbove": "above", "isAtLeast": "least", "isBelow": "below", "isAtMost": "most",
     "lengthOf": "length",
 }
 
@@ -420,8 +450,41 @@ def _chai_chain(
         return meaning, not negated, operands, position
 
 
+def _equality_key(operand: str, *, strict: bool, undefined_global: bool) -> str:
+    """The predicate key an equality states with this operand (#198).
+
+    `=== null`, `=== undefined`, `=== true` and `=== false` are the presence
+    keys every other spelling of them states (toBeNull, `.to.be.true`, ...);
+    `== null` and `== undefined` both state is_nullish. Any other operand
+    leaves the equality itself, whose operand the key does not record.
+    """
+    word = keyword_operand(operand)
+    if word == "undefined" and not undefined_global:
+        word = None
+    if word in {"null", "undefined"}:
+        return ("is_" + word) if strict else "is_nullish"
+    if strict and word in {"true", "false"}:
+        return "is_" + word
+    return "eq_strict" if strict else "eq_loose"
+
+
+def _state_predicate(assertion: Assertion, key: str | None, asserts: bool, negated: bool) -> None:
+    """Record the key, and whether the assertion asserts it or its negation.
+
+    `positive` then means what `ir/model.py` documents: `toBeDefined()` and
+    `.not.toBeUndefined()` both assert is_undefined negatively. A spelling
+    with no key keeps `positive` as "not negated", which is the same thing
+    for the forms it names (#198).
+    """
+    if key is None:
+        return
+    assertion.predicate = key
+    assertion.positive = asserts != negated
+
+
 def _chai_assertion(
     meaning: str, operands: list[str], source: str, span: tuple[int, int], positive: bool = True,
+    undefined_global: bool = True,
 ) -> Assertion | None:
     """One chai assertion from subject-first operands; None when incomplete."""
     rule = _CHAI[meaning]
@@ -443,6 +506,10 @@ def _chai_assertion(
         populate_expectation(assertion, expected)
     if rule.delta is not None:
         populate_delta(assertion, operands[rule.delta])
+    key = rule.predicate
+    if meaning in {"strict_equal", "loose_equal"}:
+        key = _equality_key(operands[1], strict=meaning == "strict_equal", undefined_global=undefined_global)
+    _state_predicate(assertion, key, rule.asserts, not positive)
     return assertion
 
 
@@ -1029,6 +1096,10 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
             continue
         value = bindings.callee(match.group("callee"), match.start())
         method = value.method or None
+        if value.strict:
+            # node:assert/strict (and `assert.strict`) is the strict mode:
+            # its equal is strictEqual and its deepEqual deepStrictEqual.
+            method = _STRICT_MODE.get(method, method)
         # chai's assert interface shares this call shape and its declaration
         # filters; its methods take the meanings expect() chains use.
         is_chai = value.kind in {"chai_assert", "chai_assert_method"}
@@ -1064,9 +1135,11 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
                 continue  # A TypeScript method's return annotation.
             if text[following] == "{" and "\n" not in text[span_end:following]:
                 continue  # A method signature, not a call followed by an ASI block.
+        undefined_global = bindings.is_global(("undefined",), match.start())
         if is_chai:
             chai_call = _chai_assertion(_CHAI_ASSERT[method or "ok"], arguments,
-                                        text[match.start():span_end], (match.start(), span_end))
+                                        text[match.start():span_end], (match.start(), span_end),
+                                        undefined_global=undefined_global)
             if chai_call is not None:
                 assertions.append(chai_call)
             continue
@@ -1082,15 +1155,20 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
             span=(match.start(), span_end),
             left=arguments[0],
         )
-        # Legacy equal/deepEqual coerce values; the bounded bindings do not
-        # yet preserve strict-import mode, so only explicit strict methods
-        # can supply scalar expectation identity without guessing coercion.
+        # Legacy equal/deepEqual coerce values, so only the strict methods,
+        # spelled or imported in strict mode, supply scalar expectation
+        # identity without guessing coercion.
         if method in {"strictEqual", "deepStrictEqual"}:
             populate_expectation(assertion, arguments[1])
         # A truthy oracle, or its strict `=== true` spelling, may be a
         # hand-rolled tolerance (issue #179).
         if form == "truthy" or assertion.right_value == "True":
             _record_tolerance(assertion, text, code, bindings, argument_spans[0])
+        if form == "truthy":
+            _state_predicate(assertion, "truthy", True, False)
+        elif method in {"strictEqual", "equal"}:
+            _state_predicate(assertion, _equality_key(arguments[1], strict=method == "strictEqual",
+                                                      undefined_global=undefined_global), True, False)
         assertions.append(assertion)
     return assertions
 
@@ -1216,7 +1294,7 @@ def parse_javascript(data: bytes) -> ParsedFile:
             if not owned(candidate.start()):
                 continue
             receiver = bindings.callee(candidate.group("callee"), candidate.start()).kind
-            if receiver not in {"expect", "chai_expect"}:
+            if receiver not in {"expect", "chai_expect", "jest_expect"}:
                 continue
             subject_call = _call_arguments(text, code, candidate.end() - 1, end)
             # Vitest and chai accept an optional diagnostic message after actual.
@@ -1224,17 +1302,22 @@ def parse_javascript(data: bytes) -> ParsedFile:
                     or _EMPTY_ARGUMENT.fullmatch(subject_call[0][0])):
                 continue
             subject_arguments, subject_end = subject_call
+            undefined_global = bindings.is_global(("undefined",), candidate.start())
             # chai's own expect has no Jest matchers. Vitest's and an unimported
-            # global expect may use either style; Jest's expect has no `.to`.
+            # global expect may use either style. Jest's own expect, imported
+            # from @jest/globals, has no `.to`: a chain there stays a coverage
+            # gap (#198 Q5).
             expect = (_EXPECT_RE.match(bindings.masked, subject_end, end)
-                      if receiver == "expect" else None)
+                      if receiver in {"expect", "jest_expect"} else None)
             if expect is None:
-                chain = _chai_chain(text, code, bindings.masked, subject_end, end)
+                chain = (_chai_chain(text, code, bindings.masked, subject_end, end)
+                         if receiver != "jest_expect" else None)
                 if chain is not None:
                     meaning, positive, operands, span_end = chain
                     span = (candidate.start(), span_end)
                     chai_call = _chai_assertion(meaning, [subject_arguments[0], *operands],
-                                                text[span[0]:span[1]], span, positive)
+                                                text[span[0]:span[1]], span, positive,
+                                                undefined_global=undefined_global)
                     if chai_call is not None:
                         assertions.append(chai_call)
                 continue
@@ -1250,6 +1333,7 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 continue
             subject = subject_arguments[0]
             span_start = candidate.start()
+            negated = bool(expect.group("not"))
             assertion = Assertion(
                 id=f"a{len(assertions)}",
                 form=form,
@@ -1257,7 +1341,7 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 text=text[span_start:span_end],
                 span=(span_start, span_end),
                 left=subject,
-                positive=not bool(expect.group("not")),
+                positive=not negated,
             )
             if form in {"compare_eq", "approx"}:
                 populate_expectation(assertion, arguments[0])
@@ -1275,6 +1359,11 @@ def parse_javascript(data: bytes) -> ParsedFile:
                     bound = matcher_spans[0][0] if operator and matcher_spans[0] else None
                     _record_tolerance(assertion, text, code, bindings, subject_spans[0][0],
                                       operator, bound)
+            if matcher == "toBe":
+                _state_predicate(assertion, _equality_key(arguments[0], strict=True,
+                                                          undefined_global=undefined_global), True, negated)
+            elif matcher in _MATCHER_PREDICATE:
+                _state_predicate(assertion, *_MATCHER_PREDICATE[matcher], negated)
             assertions.append(assertion)
         assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
                           if owned(assertion.span[0]))

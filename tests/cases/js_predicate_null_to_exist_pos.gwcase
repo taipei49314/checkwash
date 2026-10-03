@@ -1,0 +1,21 @@
+=== meta ===
+bypass: 111
+rule: ASSERT_WEAKENED
+title: toBeNull() -> chai .to.exist in a Vitest file asserts the opposite fact on the same NON_NULL rung
+origin: issue #198 row M1a
+=== before: src/lookup.test.ts ===
+import { test, expect } from "vitest";
+import { findCustomer } from "./lookup";
+
+test("an unknown id finds no customer", () => {
+  expect(findCustomer("missing")).toBeNull();
+});
+=== after: src/lookup.test.ts ===
+import { test, expect } from "vitest";
+import { findCustomer } from "./lookup";
+
+test("an unknown id finds no customer", () => {
+  expect(findCustomer("missing")).to.exist;
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,21 @@
+=== meta ===
+bypass: 111
+rule: ASSERT_WEAKENED
+title: toBeLessThan(80) -> chai .to.be.above(80) reverses the bound on the same BOUND rung
+origin: issue #198 row M1c
+=== before: src/latency.test.ts ===
+import { test, expect } from "vitest";
+import { p95 } from "./latency";
+
+test("p95 latency stays under budget", () => {
+  expect(p95([12, 40, 77, 79])).toBeLessThan(80);
+});
+=== after: src/latency.test.ts ===
+import { test, expect } from "vitest";
+import { p95 } from "./latency";
+
+test("p95 latency stays under budget", () => {
+  expect(p95([12, 40, 77, 79])).to.be.above(80);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

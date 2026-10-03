@@ -28,72 +28,17 @@
 # i199 entries it closes: M1-M7. 20 entries remain: 16 known-regression
 # (i198) and 4 fp-fix. Approved by the maintainer in that fix PR
 # (X.gate-bookkeeping).
+#
+# 2026-10-03: the first #198 fix (predicate identity; rulings 198.IR, Q1,
+# Q3, Q4 and Q5) removed the ten i198 entries it closes: M1a-M1h, and M2d and
+# M2e, which the predicate relation decides as contradictions. It also added
+# four fp-fix entries, rows that v0.5.0 blocks and the fix passes with a
+# `pass` label: i198/FP1 and FP2, and FPJ1 and FPJ2 (relabelled by 198.Q3).
+# 14 entries remain: 6 known-regression (i198 M2a-M2c, M2f-M2h, for the
+# evidence half of #198) and 8 fp-fix. Approved by the maintainer in that
+# fix PR (X.gate-bookkeeping).
 
 baseline = "v0.5.0"
-
-[[accept]]
-case         = "i198/M1a"
-input_sha256 = "fb83a1d9492099f740b553f434f93094d0a849dc395252780645a4f685a8ba7a"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1a, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M1b"
-input_sha256 = "ddf125f7216d706ad0c494abb96385e16941cce58cce431cb2e8a99b8a21b8f5"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1b, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M1c"
-input_sha256 = "8601be42c3839d67812d047ee3722b22034a0616a2d5562bf6e24c6ca046e0fa"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1c, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M1d"
-input_sha256 = "80f512ea0cb981062b18a090c6d53704273750c2a170c8e4ae5b8140c0d87028"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1d, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M1e"
-input_sha256 = "9da22e9b31266f3ae7da4e67f5f01e954ba39dda5a624863b1c6e08ec1deb15e"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1e, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M1f"
-input_sha256 = "d7c96db6573e3706577c8fac06bc1793d0e3568e421b5ab1dbcc17cb3d3ff6e8"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1f, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M1g"
-input_sha256 = "4c1c9892ed9e3f1232f025c489145128fe117b79680e0185c5ea4d7c12b0b8dc"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1g, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M1h"
-input_sha256 = "3853516758d1a2939713846037dd04011016513c9e0dfbceba998eb7084b71e1"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M1h, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
 
 [[accept]]
 case         = "i198/M2a"
@@ -117,22 +62,6 @@ input_sha256 = "589abfd1dcf182131b76a71f0f91a8d619418b6738ce63317cc59c796bfe2252
 kind         = "known-regression"
 issue        = 198
 reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2c, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M2d"
-input_sha256 = "7499de952a59cb732cc97bb4170459f8be3959c44510b2996b96bcf92666707e"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2d, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M2e"
-input_sha256 = "8167ebc10ccfbea710b4d776bb2d47a6e185e1595b27af471350c09f9612a844"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2e, an open family issue; accepted until its fix lands"
 reviewed_in  = 203
 
 [[accept]]
@@ -190,3 +119,35 @@ kind         = "fp-fix"
 issue        = 197
 reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q5 makes only YAML under .github/workflows/ a workflow, so deleting a README there removes no gate"
 reviewed_in  = 227
+
+[[accept]]
+case         = "i198/FP1"
+input_sha256 = "865d8e0c6a0c13958f675338f515677df7a484ea8f91136b7cea25c4eb4a6bd4"
+kind         = "fp-fix"
+issue        = 198
+reason       = "v0.5.0 blocks, the fix passes: #198 row FP1, .not.toBeNull() -> .to.exist is a proven strengthening (196.190.1), not an inversion"
+reviewed_in  = 230
+
+[[accept]]
+case         = "i198/FP2"
+input_sha256 = "b3c3bb85f435157b9291def377fdef211eded86633e8d4fd9c83063be07026c4"
+kind         = "fp-fix"
+issue        = 198
+reason       = "v0.5.0 blocks, the fix passes: #198 row FP2, toBeFalsy() -> .to.not.be.ok states one predicate (196.190.1)"
+reviewed_in  = 230
+
+[[accept]]
+case         = "i198/FPJ1"
+input_sha256 = "ca5282eab0407ecfc4c051b2755eb901bde4ccf59f2110f37ca86c4fce50c0f7"
+kind         = "fp-fix"
+issue        = 198
+reason       = "v0.5.0 blocks, the fix passes: #198 row FPJ1, .not.toBeTruthy() -> toBeFalsy() states one predicate; relabelled pass by 198.Q3"
+reviewed_in  = 230
+
+[[accept]]
+case         = "i198/FPJ2"
+input_sha256 = "67cc3f2703fd7aea5e4283d96ab274b7f7dbd8d109ad4c06e7be45bc8f4e4e43"
+kind         = "fp-fix"
+issue        = 198
+reason       = "v0.5.0 blocks, the fix passes: #198 row FPJ2, .not.toBeUndefined() -> toBeDefined() states one predicate; relabelled pass by 198.Q3"
+reviewed_in  = 230
