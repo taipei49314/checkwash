@@ -285,3 +285,13 @@ def test_unresolved_const_alias_shapes_withhold_strength_and_remain_visible(alia
     source = _source('import assert from "node:assert";', alias + "\n  " + call + ";")
     assert _assertions(source) == []
     assert any(gap.callee.startswith("verify") for gap in _gaps(source))
+
+
+@pytest.mark.parametrize("alias", [
+    "const check: typeof assert.strictEqual = assert.strictEqual;",
+    "const check: (actual: unknown, expected: unknown) => void = assert.strictEqual;",
+])
+def test_a_typescript_annotated_alias_keeps_its_oracle(alias):
+    # The annotation sits between the name and its `=` (#240).
+    assertion, = _assertions(_source('import assert from "node:assert";', f"{alias}\n  check(total(), 5);"))
+    assert assertion.strength == S.EXACT_VALUE
