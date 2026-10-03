@@ -9,88 +9,13 @@
 # an open issue. Its label in tests/verdict_gate/labels.toml is `block`, and
 # v0.5.0 passes it, so the label anchor needs this entry until the family
 # fix lands; the fix PR removes the entry (the gate fails on a stale one).
+#
+# 2026-10-03: the #197 Q1 fix (JS/TS test paths are never runner-promoted
+# to ci) removed the ten i197 A entries it closes: A1, A2, A4, A5, A7 and
+# A9-A13. 34 entries remain. Approved by the maintainer in that fix PR,
+# under the 2026-10-03 rulings (X.gate-bookkeeping).
 
 baseline = "v0.5.0"
-
-[[accept]]
-case         = "i197/A1"
-input_sha256 = "9d89b2d38605119fbd87c801d6126f73c0438526e0782f2247daf084e8e629a1"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A1, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A10"
-input_sha256 = "b4d4fc7ac5b63b8d76839d9b4308c26a93f9e26a69214e77362005942dfd9e9d"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A10, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A11"
-input_sha256 = "7ce4a9e699aa6f6d0b0f74da1ece2a32d490e398d8321a61a89e45af8b6b03a0"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A11, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A12"
-input_sha256 = "4095d40a3792572717d5c887a0d5dd999b81b79ecd7bfc09642020792bf20f97"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A12, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A13"
-input_sha256 = "921d608f33e12b2bc4dbd6f5e34a020bd44f00f82b9bf9dfce9bbf8a92b41109"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A13, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A2"
-input_sha256 = "c2810079df17058e64ec51cd4b2ac8eb1bd70189ca22e24cdfdb2a128cc7585f"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A2, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A4"
-input_sha256 = "cad85701fb0ed7361df53b8e9c993a9b9292bf912d922f5bd8428132ed8f1840"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A4, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A5"
-input_sha256 = "28fdb9bb572d65292d7f119dae78b90abfb50179ca1fbdb4e687ef9f76290da9"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A5, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A7"
-input_sha256 = "3af27bc660cc75a66cc462046187d40c46a7a224491b334021ac5ab1b7dc305d"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A7, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/A9"
-input_sha256 = "56f749de3b3d268f7dbd3fe7230699305326a7aa9abb8791c2ebb3ec604ed187"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row A9, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
 
 [[accept]]
 case         = "i197/B1"
