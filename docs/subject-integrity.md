@@ -85,12 +85,17 @@ above an untouched `expect(invoiceTotal(items)).toBe(78.75)`. The JS pass
    assertions after the change.
 2. A stand-in for a first-party module, or for one member of it, reaches one
    of those assertions on the head side — directly, or through one hop of a
-   local binding that is not rebound.
-3. The base side of the same file replaced that target nowhere. Moving an
-   installation between a hook, a `describe` body and the test, reformatting
-   it or switching runner spelling is not a new stand-in. This check is
-   file-wide, which is quieter than the per-unit condition above: an
-   installation of the same target anywhere in the base file counts.
+   local binding that is not rebound. A namespace or `require()` module
+   object reaches it only through a member (`billing.invoiceTotal`): read
+   whole, as in `compute(billing)`, it names no export. A named or default
+   import names its export in any use (#196 188.3, as Python's row 90).
+3. The base side of the same file had not already installed that target for
+   this unit: at module level, in a hook, a `describe` body, a helper, or the
+   unit itself. An installation inside another test never ran for this one,
+   so copying it into this test is a new stand-in (#196 188.2, as Python's
+   per-unit condition); a `vi.mock` runs for the whole file wherever it is
+   written. Moving an installation between those places, reformatting it or
+   switching runner spelling is not a new stand-in.
 
 First-party means a `./` or `../` specifier that stays inside the repository
 and outside dependency or build output; `./billing`, `./billing.js` and
@@ -99,21 +104,29 @@ are hygiene. Aliases (`@/`, tsconfig `paths`, `#imports`, root-relative
 `/src`) resolve through runner configuration the scan does not execute, so
 they stay silent rather than guessed.
 
-Timing is modelled, not executed. Module-level `vi.mock` and `jest.mock` are
-hoisted above the file's imports and reach every binding of the module.
-`vi.doMock`, `jest.doMock`, `jest.unstable_mockModule`, `jest.setMock`,
-node:test `mock.module` and `t.mock.module` reach only
+Timing is modelled, not executed. `vi.mock` is hoisted above the file's
+imports wherever it is written and reaches every binding of the module in
+every test: Vitest 3.2.7 and 4.1.11 apply one written in a test, a `describe`
+body, a hook or a helper that never runs to the whole file (4.1 warns), and
+Vitest 5.0.3 refuses such a file (#196 188.1). `jest.mock` is hoisted only
+within its own block: at module level it reaches every binding, and written
+in a test, a `describe` body or a hook it reaches only `require()`/`await
+import()` bindings evaluated after it (Jest 30.5.2 keeps the real module for
+a top-level `require`). `vi.doMock`, `jest.doMock`, `jest.unstable_mockModule`,
+`jest.setMock`, node:test `mock.module` and `t.mock.module` reach only
 `require()`/`await import()` bindings evaluated after them, never a static
-import. A `vi.mock`/`jest.mock` written inside a test body gets the same
-ordered treatment. That is a conservative choice of this scan, not a claim
-about runner semantics: if a runner hoists such a call to the top of the
-file, the static import it replaces is not reported. Member replacements —
+import. Member replacements —
 `vi.spyOn`, `jest.spyOn`, `vi.mocked(x)` or `jest.mocked(x)` chained to a
 replacing `mock*` call, `x.mock*(...)` on an imported binding (also through a
 TypeScript cast or non-null assertion: `(x as Mock)`, `(<Mock>x)`, `x!`),
 `jest.replaceProperty`, and node:test `mock.method` with an implementation —
 reach reads after them in the same test, or every test when written at module
-level. A factory that reaches for the original module (`importOriginal`,
+level. A spy created in one statement and replaced in another
+(`const spy = vi.spyOn(...)` then `spy.mockReturnValue(...)`, the same for
+`jest.spyOn`, `vi.mocked` and `jest.mocked`, and node:test's `mock.method`
+without an implementation, replaced through `fn.mock.mockImplementation(...)`)
+is read through one hop of the local binding on either side, and takes effect
+where the replacing call runs (#196 188.4). A factory that reaches for the original module (`importOriginal`,
 `importActual`, `requireActual` or its own parameter) replaces every name it
 spells — an identifier, a member name, or an identifier-shaped string literal
 such as a quoted or computed key — and nothing else; no factory is an
@@ -124,10 +137,9 @@ binding of the same name.
 
 Not claimed: setup files, `__mocks__` directories and `automock`
 configuration (the conftest analogue, which needs the runner configuration);
-installations in hooks, helpers and `describe` bodies; two-statement spies
-(`const spy = vi.spyOn(...)` then `spy.mockReturnValue(...)`) on either side,
-so inlining an existing one reads as a new stand-in; plain assignment to a
-module object's member; template-literal keys and partial-factory names
+installations other than `vi.mock` in hooks, helpers and `describe` bodies;
+a namespace or `require()` object passed whole under a whole-module mock
+(`compute(billing)`); plain assignment to a module object's member; template-literal keys and partial-factory names
 spelled outside the factory (a spread of an object declared elsewhere, a
 computed key from a variable); cast types that contain parentheses;
 non-literal specifiers; re-exports and two hops; and oracles the JS frontend

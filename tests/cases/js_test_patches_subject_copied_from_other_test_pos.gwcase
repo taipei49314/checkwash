@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: a stand-in copied from another test into this one is new for this test
+origin: #196 188.2 - newness is per unit, as in Python: the base side's spy sat inside another test and never ran for this one, yet the file-wide check read it as already there
+=== before: tests/billing.spec.js ===
+import { expect, it, vi } from "vitest";
+import * as billing from "../src/billing.js";
+
+it("charges the invoice total", () => {
+  vi.spyOn(billing, "invoiceTotal").mockReturnValue(78.75);
+  expect(billing.charge([])).toBe("charged 78.75");
+});
+
+it("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(billing.invoiceTotal(items)).toBe(78.75);
+});
+=== after: tests/billing.spec.js ===
+import { expect, it, vi } from "vitest";
+import * as billing from "../src/billing.js";
+
+it("charges the invoice total", () => {
+  vi.spyOn(billing, "invoiceTotal").mockReturnValue(78.75);
+  expect(billing.charge([])).toBe("charged 78.75");
+});
+
+it("computes invoice total", () => {
+  vi.spyOn(billing, "invoiceTotal").mockReturnValue(78.75);
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(billing.invoiceTotal(items)).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]
