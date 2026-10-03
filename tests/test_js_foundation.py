@@ -354,12 +354,17 @@ def test_non_scalar_expectations_do_not_claim_literal_values(body):
 
 
 @pytest.mark.parametrize("method", ["equal", "deepEqual"])
-def test_legacy_node_equality_does_not_claim_scalar_rewrite_semantics(method):
+def test_legacy_node_equality_reports_a_scalar_rewrite(method):
+    # Flipped by #196 190.2 (#198 T1, T2): the legacy methods coerce, and
+    # equal's eq_loose key says so, but a different scalar is still a
+    # different expected value.
     before = _source(f"assert.{method}(subject(), 42);")
     after = _source(f"assert.{method}(subject(), 0);")
-    assert _assertions(before)[0].right_value is None
+    assert _assertions(before)[0].right_value == "42.0"
     _ir, findings, verdict = _analyze(before, after)
-    assert (findings, verdict) == ([], "pass")
+    assert (verdict, [(f.rule, f.severity) for f in findings]) == (
+        "block", [("EXPECTED_VALUE_CHANGED", "high")],
+    )
 
 
 @pytest.mark.parametrize("before,after", [

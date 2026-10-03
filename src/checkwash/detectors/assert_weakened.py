@@ -4,12 +4,15 @@ When both assertions of a pair state a predicate key (`ir/predicate.py`) on
 the same subject, the key relation decides instead of the lattice (#198): a
 proven same or stronger predicate is no weakening whatever the rungs say, and
 a widened, contradicting, inverted or unverifiable one is reported with what
-was established.
+was established. A JS approximate comparison whose tolerance was known and
+is now one checkwash cannot read is not preserved either: unknown evidence
+is not the same evidence (#196 190.4).
 """
 
 from __future__ import annotations
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.frontends.javascript.frontend import comparison_magnitude
 from checkwash.ir import predicate as P
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import same_expr
@@ -38,6 +41,36 @@ def _presence_meets_affirmation(b: Assertion, a: Assertion) -> bool:
         return x.positive and x.predicate not in P.PRESENCE
 
     return (check(b) and affirms(a)) or (check(a) and affirms(b))
+
+
+_JS_SUFFIXES = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
+
+
+def _subject(assertion: Assertion) -> str | None:
+    """What the assertion's predicate is about.
+
+    For `assert.ok(Math.abs(d) < bound)` that is the magnitude, not the
+    whole comparison: flipping `<` to `>` keeps the subject and reverses the
+    bound (#196 189.3).
+    """
+    if P.compared_inside(assertion) and assertion.left is not None:
+        return comparison_magnitude(assertion.left) or assertion.left
+    return assertion.left
+
+
+def _tolerance_lost(path: str, b: Assertion, a: Assertion) -> str | None:
+    """The old tolerance, when a JS approximate comparison no longer has a readable one.
+
+    A `toBeCloseTo` precision or a chai `closeTo` delta that is present but
+    unreadable (`closeTo(x, delta())`) is unknown, and a known tolerance
+    replaced by an unknown one is not the same tolerance (#196 190.4, #198).
+    TOLERANCE_LOOSENED compares two known ones. Negated comparisons record
+    no tolerance and are judged by their polarity.
+    """
+    if (not path.lower().endswith(_JS_SUFFIXES) or b.form != "approx" or a.form != "approx"
+            or not (b.positive and a.positive) or b.epsilon is None or a.epsilon is not None):
+        return None
+    return b.epsilon if "=" in b.epsilon else f"places={b.epsilon}"
 
 
 def _keyed_message(qualname: str, relation: str, b: Assertion, a: Assertion) -> str:
@@ -91,13 +124,36 @@ def detect(ir: IR) -> list[Finding]:
                 # Same structural compare SUBSTITUTED uses. Reformatting or
                 # extra parens is not a subject change; wrapping or replacing
                 # it is (E6 / review 2026-08-11 Issue 4).
-                subject_changed = not same_expr(b.left, a.left)
+                subject_changed = not same_expr(_subject(b), _subject(a))
                 # Two predicate keys on one subject: the relation decides,
-                # from key and polarity alone (#198). An operand change is
-                # not judged here; EXPECTED_VALUE_CHANGED and
-                # TOLERANCE_LOOSENED own it. A changed subject leaves the
-                # pair to the rules below, which call it a rewrite.
+                # from key and polarity (#198). An operand change is not
+                # judged here; EXPECTED_VALUE_CHANGED and TOLERANCE_LOOSENED
+                # own it. A changed subject leaves the pair to the rules
+                # below, which call it a rewrite.
                 relation = None if subject_changed else P.relation(b, a)
+                lost = None if subject_changed else _tolerance_lost(file.path, b, a)
+                if lost is not None and relation in (None, P.SAME, P.STRONGER):
+                    findings.append(
+                        Finding(
+                            rule="ASSERT_WEAKENED",
+                            severity="warn",
+                            message=(
+                                f"{unit.qualname}: assertion replaced; checkwash cannot verify the "
+                                f"replacement is equivalent (tolerance {lost} -> a tolerance it cannot read)"
+                            ),
+                            path=file.path,
+                            unit=unit.qualname,
+                            before=Evidence(text=b.text, span=b.span),
+                            after=Evidence(text=a.text, span=a.span),
+                            fingerprint=make_fingerprint(
+                                "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                            ),
+                            strength_drop=999,
+                            strength_after=a.strength,
+                            subject_changed=False,
+                        )
+                    )
+                    continue
                 if relation is not None:
                     if relation in (P.SAME, P.STRONGER):
                         continue

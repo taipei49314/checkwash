@@ -9,20 +9,25 @@ says whether the assertion asserts that predicate or its negation:
 `.not.toBeUndefined()`.
 
 `relation` compares two keyed assertions on the same subject from key and
-polarity alone. It never compares their operands: a rewritten expected value
+polarity. It never reports an operand change: a rewritten expected value
 belongs to EXPECTED_VALUE_CHANGED and a widened tolerance to
-TOLERANCE_LOOSENED (one fact, one owner). It reads one operand only to place
-an `===` literal among the presence keys, because that literal is the
-predicate: `toBe(5)` is defined, not null and truthy. When both sides state
-their expected value as a literal of the same equality and polarity, the
-change is that literal's, so the pair compares as the equality it spells.
+TOLERANCE_LOOSENED (one fact, one owner). It reads operands for three things
+the keys cannot say. An `===` literal is placed among the presence keys,
+because that literal is the predicate: `toBe(5)` is defined, not null and
+truthy. When both sides state their expected value as a literal of the same
+equality and polarity, the change is that literal's, so the pair compares as
+the equality it spells. And two bounds are compared value by value only
+when they name the same bound (`_same_bound`).
 
 The keys come in three families: presence (null, undefined, truthiness),
 equality and bounds. Keys of two families do not relate by key alone, except
 through an `===` literal, so `relation` abstains (None) and the lattice rules
 judge the pair as they judge an unkeyed one. Between `<` and `<=` (or `>` and
-`>=`) only the bound decides, so that pair abstains too: whether both name
-the same bound is operand evidence, which this round does not record.
+`>=`) only the bound decides: with one bound on both sides, `< 80` -> `<= 80`
+is a widening; with two bounds, or one that was not read, the pair abstains.
+A bound whose direction reversed contradicts the old one, except where the
+hand-rolled truthy spelling `assert.ok(Math.abs(d) > bound)` left a bound
+unread: that replacement cannot be verified (#196 189.3).
 
 Only the JavaScript frontend records keys in this round. The Python
 direction key is its own round (196.followup.python-compare-direction).
@@ -31,8 +36,9 @@ direction key is its own round (196.followup.python-compare-direction).
 from __future__ import annotations
 
 import ast
+from decimal import Decimal
 
-from checkwash.ir.model import Assertion
+from checkwash.ir.model import Assertion, normalize_text
 
 # The relation of a new assertion to the old one on the same subject.
 SAME = "same"  # both accept exactly the same values
@@ -90,15 +96,62 @@ _LOOSE_LITERAL = frozenset({"eq_loose", "is_nullish"})
 
 
 def describe(assertion: Assertion) -> str:
-    """What a keyed assertion asserts, for messages: `=== null`, `falsy`, `=== 78.75`."""
+    """What a keyed assertion asserts, for messages: `=== null`, `falsy`, `< 0.01`."""
     key = assertion.predicate or ""
     spelling = _SPELLING.get(key)
     if spelling is None:
         return key if assertion.positive else f"not {key}"
     text = spelling[0] if assertion.positive else spelling[1]
-    if key in EQUALITY and assertion.right_literal is not None:
-        text = text.replace("expected", " ".join(assertion.right_literal.split())[:40])
+    if key in EQUALITY:
+        operand = assertion.right_literal or assertion.operand_source
+        if operand is not None:
+            text = text.replace("expected", " ".join(operand.split())[:40])
+    elif key in BOUNDS and assertion.operand_source is not None:
+        text = text.replace("bound", assertion.operand_source[:40])
     return text
+
+
+def compared_inside(assertion: Assertion) -> bool:
+    """A bound key on a truthy spelling: `assert.ok(Math.abs(d) < bound)`.
+
+    Its subject is the whole comparison, while the key bounds the magnitude
+    inside it, so rules compare the magnitudes of two such spellings rather
+    than their subjects (#196 189.3).
+    """
+    return assertion.predicate in BOUNDS and assertion.form != "compare_ord"
+
+
+def _bound_evidence(assertion: Assertion) -> tuple[str, object] | None:
+    """What says which bound an assertion names: its value, else its text."""
+    epsilon = assertion.epsilon or ""
+    if assertion.epsilon_kind == "abs" and epsilon.startswith("abs="):
+        try:
+            return "value", Decimal(epsilon[len("abs="):])  # a hand-rolled bound that was read
+        except ArithmeticError:
+            pass
+    if not compared_inside(assertion) and assertion.right_value is not None:
+        return "literal", assertion.right_value
+    if assertion.operand_source is not None:
+        return "source", normalize_text(assertion.operand_source)
+    return None
+
+
+def _same_bound(before: Assertion, after: Assertion) -> bool:
+    """Do both assertions name one bound? A literal and a name never do."""
+    old, new = _bound_evidence(before), _bound_evidence(after)
+    return old is not None and old == new
+
+
+# For one bound B, what each bound key accepts, asserted or negated: values
+# below, at and above B, and NaN, which no comparison accepts and every
+# negated one does.
+_BOUND_UNIVERSE = frozenset({"below", "at", "above", "nan"})
+_BOUND_MEMBERS = {
+    "lt": frozenset({"below"}),
+    "le": frozenset({"below", "at"}),
+    "gt": frozenset({"above"}),
+    "ge": frozenset({"at", "above"}),
+}
 
 
 def _literal_base(assertion: Assertion) -> str | None:
@@ -167,13 +220,20 @@ def relation(before: Assertion, after: Assertion) -> str | None:
         universe, members = _EQUALITY_UNIVERSE, _EQUALITY_MEMBERS
     elif old_key in BOUNDS and new_key in BOUNDS:
         if _upper(old_key, old_positive) != _upper(new_key, new_positive):
-            return CONTRADICTS
+            # A hand-rolled truthy spelling whose bound was not read states
+            # a direction checkwash cannot pin to a bound (189.3).
+            unread = [side for side in (before, after)
+                      if compared_inside(side) and side.operand_source is None]
+            return UNVERIFIABLE if unread else CONTRADICTS
         if old_key == new_key:
             return SAME
-        # `< 0.01` -> `<= 0.005` tightens. Only a shared bound makes `<` ->
-        # `<=` a widening, and that is operand evidence. A flipped `.not` on
-        # top (`<` -> `not >`) is not the opposite either, and not provable.
-        return None if old_positive == new_positive else UNVERIFIABLE
+        if _same_bound(before, after):
+            universe, members = _BOUND_UNIVERSE, _BOUND_MEMBERS
+        else:
+            # `< 0.01` -> `<= 0.005` tightens, and two bounds are operand
+            # evidence the keys do not weigh. A flipped `.not` on top
+            # (`<` -> `not >`) is not the opposite either, and not provable.
+            return None if old_positive == new_positive else UNVERIFIABLE
     elif {old_key, new_key} <= PRESENCE:
         universe, members = _PRESENCE_UNIVERSE, _PRESENCE_MEMBERS
     elif {old_key, new_key} <= PRESENCE | {"eq_strict"}:

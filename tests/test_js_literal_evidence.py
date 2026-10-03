@@ -88,7 +88,7 @@ def test_string_escape_values_follow_javascript(source, expected):
     "", "undefined", "NaN", "Infinity", "-Infinity", "1e999", "1n", "0x1n",
     "00", "012", "08", "0_1", "1__0", "_1", "1_", "1._0", "0x_1",
     "0x", "0b2", "1e", "1e_2", "--1", "-+1", "1 + 2", "expected()",
-    "[1]", "({a: 1})", "`ready`", "(42)", "42 as const",
+    "[1]", "({a: 1})", "`ready`", "(42) + 1", "42 as const + 1", "a ? 42 as const : 0",
     "\u008542", "1\u0085", "'unterminated", '"a" + "b"', '"a\nb"',
     r'"\01"', r'"\8"', r'"\xG0"', r'"\u123"', r'"\u{}"', r'"\u{110000}"',
     '"' + "a" * 4096 + '"', "1" * 513,
@@ -117,6 +117,25 @@ def test_comments_are_formatting_outside_literals(source, expected):
     populate_expectation(assertion, source)
     assert assertion.right_value == expected
     assert assertion.right_literal == source.strip()
+
+
+@pytest.mark.parametrize("source,expected", [
+    # #198 T4, T5: what evaluates to the literal it wraps reads as that literal.
+    ("(42)", "42.0"),
+    ("((42))", "42.0"),
+    ("42 as const", "42.0"),
+    ("42 as unknown as number", "42.0"),
+    ("(42 satisfies number)", "42.0"),
+    ("-42 as number", "-42.0"),
+    ("'ready' as const", repr("ready")),
+    ("null!", "None"),
+    ("(/* note */ 42)", "42.0"),
+])
+def test_parentheses_and_typescript_wrappers_are_read_through(source, expected):
+    assertion = _assertion()
+    populate_expectation(assertion, source)
+    assert assertion.right_literal == source
+    assert assertion.right_value == expected
 
 
 @pytest.mark.parametrize("source", [

@@ -1,0 +1,22 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: toBe(EXPECTED_TOTAL) -> toBe(DISCOUNTED_TOTAL): an expected name replaced by another, as Python reports
+origin: ruling 198.IR amendment 2
+=== before: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, EXPECTED_TOTAL, DISCOUNTED_TOTAL } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBe(EXPECTED_TOTAL);
+});
+=== after: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, EXPECTED_TOTAL, DISCOUNTED_TOTAL } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBe(DISCOUNTED_TOTAL);
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

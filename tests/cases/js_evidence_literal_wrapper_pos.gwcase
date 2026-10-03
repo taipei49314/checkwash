@@ -1,0 +1,22 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: toBe(78.75) -> toBe((75 as number)): parentheses and a TS cast are the literal they wrap
+origin: issue #198 rows T4, T5 (ruling 198.Q3)
+=== before: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBe(78.75);
+});
+=== after: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBe((75 as number));
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

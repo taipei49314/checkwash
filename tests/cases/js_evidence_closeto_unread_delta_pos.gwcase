@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 111
+rule: ASSERT_WEAKENED
+title: closeTo(78.75, 0.005) -> closeTo(78.75, toleranceFor(items)): a known delta replaced by one checkwash cannot read
+origin: ruling 196.190.4 (an unreadable delta is unknown under #198's rule)
+=== before: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).to.be.closeTo(78.75, 0.005);
+});
+=== after: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).to.be.closeTo(78.75, toleranceFor(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

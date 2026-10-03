@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 111
+rule: TOLERANCE_LOOSENED
+title: toBeCloseTo(78.75, 2) -> chai closeTo(78.75, Infinity): the delta is read exactly, so the widening is reported
+origin: issue #198 row M2f (ruling 196.190.4)
+=== before: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).toBeCloseTo(78.75, 2);
+});
+=== after: src/total.test.ts ===
+import { test, expect, assert } from "vitest";
+import { total } from "./total";
+
+test("total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(total(items)).to.be.closeTo(78.75, Infinity);
+});
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

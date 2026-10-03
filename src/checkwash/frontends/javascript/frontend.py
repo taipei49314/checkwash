@@ -23,10 +23,11 @@ from dataclasses import dataclass
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.literals import (
     keyword_operand,
+    operand_text,
     populate_delta,
     populate_expectation,
     populate_precision,
-    populate_tolerance,
+    read_bound,
 )
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir import strength as S
@@ -134,12 +135,23 @@ _ORDER_MATCHERS: dict[str, str] = {
     "toBeGreaterThanOrEqual": ">=",
 }
 _ABS_CALL = re.compile(r"Math\s*\.\s*abs\s*\(")
+# Jest/Vitest asymmetric matchers as the expected value of toEqual and
+# toStrictEqual (#198 Q3): form, rung, predicate key and whether the matcher
+# asserts it. `expect.anything()` matches all but null and undefined, so it
+# asserts the negation of is_nullish, as `.exist` does; `expect.any(Ctor)`
+# is a type check, which states no key.
+_ASYMMETRIC: dict[str, tuple[str, int, str | None, bool]] = {
+    "anything": ("non_null", S.NON_NULL, "is_nullish", False),
+    "any": ("type_shape", S.TYPE_SHAPE, None, True),
+}
+_ASYMMETRIC_ARITY = {"anything": 0, "any": 1}
 
 
 # chai (issue #180). One meaning table serves both chai interfaces: an
 # expect() chain supplies the subject, the assert interface passes it first.
 # Every meaning sits on an existing rung; the lattice is not extended. As for
-# Jest matchers, only compare_eq/approx operands carry literal evidence.
+# Jest matchers, the expected value of an equality or closeTo and the bound
+# of a bound word carry literal evidence (#198).
 @dataclass(frozen=True)
 class _ChaiMeaning:
     """Operands are subject first; a further argument is chai's message."""
@@ -147,7 +159,7 @@ class _ChaiMeaning:
     form: str
     strength: int
     operands: int = 1
-    expected: int | None = None  # Operand holding the expected scalar.
+    expected: int | None = None  # Operand holding the expected scalar or the bound.
     implied: str | None = None  # Literal a property terminal compares with.
     delta: int | None = None  # closeTo's absolute tolerance operand.
     # The predicate key it states (#198), and whether it asserts that key
@@ -160,9 +172,9 @@ class _ChaiMeaning:
 _CHAI: dict[str, _ChaiMeaning] = {
     # expect(...).equal and assert.strictEqual compare with ===.
     "strict_equal": _ChaiMeaning("compare_eq", S.EXACT_VALUE, 2, expected=1),
-    # assert.equal is ==. As for node:assert's legacy equal, coercion leaves
-    # its operand without scalar evidence.
-    "loose_equal": _ChaiMeaning("compare_eq", S.EXACT_VALUE, 2),
+    # assert.equal is ==. Its key, eq_loose, carries the coercion, so its
+    # scalar operand is evidence as a strict one is (#196 190.2).
+    "loose_equal": _ChaiMeaning("compare_eq", S.EXACT_VALUE, 2, expected=1),
     # eql, deep.equal and assert.deepEqual compare structurally (deep-eql).
     "deep_equal": _ChaiMeaning("compare_eq", S.EXACT_STRUCT, 2, expected=1),
     # `.true` is `=== true`, the oracle equal(true) states, not `.ok`'s: two
@@ -181,11 +193,12 @@ _CHAI: dict[str, _ChaiMeaning] = {
     "close_to": _ChaiMeaning("approx", S.APPROX, 3, expected=1, delta=2),
     "include": _ChaiMeaning("membership", S.PATTERN, 2),
     "match": _ChaiMeaning("pattern", S.PATTERN, 2),
-    # The bound words, each with its direction: `subject > operand`, ...
-    "above": _ChaiMeaning("compare_ord", S.BOUND, 2, predicate="gt"),
-    "least": _ChaiMeaning("compare_ord", S.BOUND, 2, predicate="ge"),
-    "below": _ChaiMeaning("compare_ord", S.BOUND, 2, predicate="lt"),
-    "most": _ChaiMeaning("compare_ord", S.BOUND, 2, predicate="le"),
+    # The bound words, each with its direction (`subject > operand`, ...) and
+    # its bound, which a rewrite changes as it changes an expected value.
+    "above": _ChaiMeaning("compare_ord", S.BOUND, 2, expected=1, predicate="gt"),
+    "least": _ChaiMeaning("compare_ord", S.BOUND, 2, expected=1, predicate="ge"),
+    "below": _ChaiMeaning("compare_ord", S.BOUND, 2, expected=1, predicate="lt"),
+    "most": _ChaiMeaning("compare_ord", S.BOUND, 2, expected=1, predicate="le"),
     "within": _ChaiMeaning("compare_ord", S.BOUND, 3),
     # A length check is the len(x) == n shape.
     "length": _ChaiMeaning("type_shape", S.TYPE_SHAPE, 2),
@@ -450,6 +463,29 @@ def _chai_chain(
         return meaning, not negated, operands, position
 
 
+def _asymmetric_matcher(
+    text: str, code: bytearray, opening: int, limit: int, receiver: str,
+) -> str | None:
+    """`any` or `anything` when the matcher's whole operand is `<receiver>.any(...)`.
+
+    The matcher must hang off the receiver the assertion itself uses (an
+    aliased `expect` keeps its alias), and take its documented arity.
+    """
+    call = _call_argument_spans(text, code, opening, limit)
+    if call is None or len(call[0]) != 1:
+        return None
+    start, end = _trim(text, code, call[0][0])
+    pattern = re.compile(re.escape(receiver).replace(r"\.", r"\s*\.\s*")
+                         + r"\s*\.\s*(?P<word>anything|any)\s*\(")
+    match = pattern.match(text, start, end)
+    if match is None or not code[start]:
+        return None
+    inner = _call_argument_spans(text, code, match.end() - 1, end)
+    if inner is None or inner[1] != end or len(inner[0]) != _ASYMMETRIC_ARITY[match.group("word")]:
+        return None
+    return match.group("word")
+
+
 def _equality_key(operand: str, *, strict: bool, undefined_global: bool) -> str:
     """The predicate key an equality states with this operand (#198).
 
@@ -482,11 +518,27 @@ def _state_predicate(assertion: Assertion, key: str | None, asserts: bool, negat
     assertion.positive = asserts != negated
 
 
+def _bound_readers(
+    bindings: Bindings, position: int,
+) -> tuple[Callable[[str], str | None], Callable[[tuple[str, ...]], bool]]:
+    """What a bound operand at `position` reads: a name's initializer, an unshadowed global."""
+
+    def lookup(name: str) -> str | None:
+        tokens = bindings.initializer(name, position)
+        return "".join(tokens) if tokens else None
+
+    return lookup, lambda path: bindings.is_global(path, position)
+
+
 def _chai_assertion(
     meaning: str, operands: list[str], source: str, span: tuple[int, int], positive: bool = True,
-    undefined_global: bool = True,
+    undefined_global: bool = True, bindings: Bindings | None = None,
 ) -> Assertion | None:
-    """One chai assertion from subject-first operands; None when incomplete."""
+    """One chai assertion from subject-first operands; None when incomplete.
+
+    Without `bindings` a closeTo delta is read as a literal only: no name
+    is followed and no global is taken as unshadowed.
+    """
     rule = _CHAI[meaning]
     if len(operands) < rule.operands or any(
         _EMPTY_ARGUMENT.fullmatch(operand) for operand in operands[:rule.operands]
@@ -504,8 +556,14 @@ def _chai_assertion(
     expected = rule.implied if rule.expected is None else operands[rule.expected]
     if expected is not None:
         populate_expectation(assertion, expected)
+    if rule.expected is not None:
+        assertion.operand_source = operand_text(operands[rule.expected])
     if rule.delta is not None:
-        populate_delta(assertion, operands[rule.delta])
+        if bindings is None:
+            lookup, builtin = (lambda _name: None), (lambda _path: False)
+        else:
+            lookup, builtin = _bound_readers(bindings, span[0])
+        populate_delta(assertion, operands[rule.delta], lookup, builtin)
     key = rule.predicate
     if meaning in {"strict_equal", "loose_equal"}:
         key = _equality_key(operands[1], strict=meaning == "strict_equal", undefined_global=undefined_global)
@@ -1040,11 +1098,23 @@ def _absolute_value_call(text: str, code: bytearray, span: tuple[int, int]) -> b
     return call is not None and call[1] == end and len(call[0]) == 1
 
 
+_BOUND_KEYS = {"<": "lt", "<=": "le", ">": "gt", ">=": "ge"}
+_REVERSED = {"<": ">", "<=": ">=", ">": "<", ">=": "<="}
+
+
+@dataclass(frozen=True)
+class _HandRolled:
+    """A hand-rolled `Math.abs(d) <op> bound`, read from the magnitude's side."""
+
+    key: str  # lt/le bound the magnitude above (a tolerance); gt/ge below
+    operand: str | None  # the bound's text when its value was read, else None
+
+
 def _record_tolerance(
     assertion: Assertion, text: str, code: bytearray, bindings: Bindings,
     subject: tuple[int, int], operator: str | None = None,
-    bound: tuple[int, int] | None = None,
-) -> None:
+    bound: tuple[int, int] | None = None, *, lower: bool = False,
+) -> _HandRolled | None:
     """Read `Math.abs(a - b) < bound` as the absolute tolerance it states.
 
     Issue #179: `assert.ok(Math.abs(total - 78.75) < 0.01)` widened to
@@ -1054,28 +1124,61 @@ def _record_tolerance(
     ordering matcher passes subject, operator and bound. Both orientations
     count (`eps > Math.abs(d)`), but the magnitude must be an unshadowed
     `Math.abs` call on the smaller side: `Math.abs(d) > eps` asserts that
-    two values differ and records nothing. The subject text is left alone,
-    so pairing and the other rules see the assertion exactly as before.
+    two values differ and records no tolerance. With `lower`, the truthy
+    spellings still read that reversed shape as a lower bound on the
+    magnitude, so a `<` -> `>` flip can be reported (#196 189.3). The
+    subject text is left alone, so pairing and the other rules see the
+    assertion exactly as before. Returns the reading, or None when the
+    comparison is not a hand-rolled bound.
     """
     if operator is None or bound is None:
         # Redundant parentheses around the whole comparison state the same
         # bound: `assert.ok((Math.abs(d) < eps))` (review of #189).
         split = _relational_split(text, code, _without_parentheses(text, code, subject))
         if split is None:
-            return
+            return None
         subject, operator, bound = split
     if operator in {">", ">="}:
         subject, bound = bound, subject
+        operator = _REVERSED[operator]
     position = assertion.span[0]
-    if not _absolute_value_call(text, code, subject) or not bindings.is_global(("Math", "abs"), position):
-        return
+    if not bindings.is_global(("Math", "abs"), position):
+        return None
+    if _absolute_value_call(text, code, subject):
+        key = _BOUND_KEYS[operator]
+    elif lower and _absolute_value_call(text, code, bound):
+        subject, bound = bound, subject
+        key = _BOUND_KEYS[_REVERSED[operator]]
+    else:
+        return None
+    expression = text[bound[0]:bound[1]]
+    value = read_bound(expression, *_bound_readers(bindings, position))
+    if value is not None and key in {"lt", "le"}:
+        assertion.epsilon = f"abs={value}"
+        assertion.epsilon_kind = "abs"
+    return _HandRolled(key, None if value is None else operand_text(expression))
 
-    def lookup(name: str) -> str | None:
-        tokens = bindings.initializer(name, position)
-        return "".join(tokens) if tokens else None
 
-    populate_tolerance(assertion, text[bound[0]:bound[1]], lookup,
-                       lambda path: bindings.is_global(path, position))
+def comparison_magnitude(source: str) -> str | None:
+    """The `Math.abs(...)` side of a hand-rolled comparison, as `_record_tolerance` reads it.
+
+    For rules comparing two truthy spellings of the comparison: their
+    subject is the magnitude, not the whole comparison (#196 189.3). The
+    frontend has already checked that `Math` is unshadowed where it recorded
+    the bound key; this reads the text only.
+    """
+    code = _code_positions(source)
+    split = _relational_split(source, code, _without_parentheses(source, code, (0, len(source))))
+    if split is None:
+        return None
+    smaller, operator, larger = split
+    if operator in {">", ">="}:
+        smaller, larger = larger, smaller
+    for side in (smaller, larger):
+        if _absolute_value_call(source, code, side):
+            start, end = _without_parentheses(source, code, side)
+            return normalize_text(source[start:end])
+    return None
 
 
 def _node_assertions(text: str, code: bytearray, start: int, end: int,
@@ -1139,7 +1242,7 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         if is_chai:
             chai_call = _chai_assertion(_CHAI_ASSERT[method or "ok"], arguments,
                                         text[match.start():span_end], (match.start(), span_end),
-                                        undefined_global=undefined_global)
+                                        undefined_global=undefined_global, bindings=bindings)
             if chai_call is not None:
                 assertions.append(chai_call)
             continue
@@ -1155,20 +1258,27 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
             span=(match.start(), span_end),
             left=arguments[0],
         )
-        # Legacy equal/deepEqual coerce values, so only the strict methods,
-        # spelled or imported in strict mode, supply scalar expectation
-        # identity without guessing coercion.
-        if method in {"strictEqual", "deepStrictEqual"}:
+        if form == "compare_eq":
+            # Every equality records its scalar operand. The legacy methods
+            # coerce, and their key says so: equal is eq_loose (#196 190.2).
             populate_expectation(assertion, arguments[1])
-        # A truthy oracle, or its strict `=== true` spelling, may be a
-        # hand-rolled tolerance (issue #179).
-        if form == "truthy" or assertion.right_value == "True":
-            _record_tolerance(assertion, text, code, bindings, argument_spans[0])
+            assertion.operand_source = operand_text(arguments[1])
+        key = None
         if form == "truthy":
-            _state_predicate(assertion, "truthy", True, False)
+            key = "truthy"
         elif method in {"strictEqual", "equal"}:
-            _state_predicate(assertion, _equality_key(arguments[1], strict=method == "strictEqual",
-                                                      undefined_global=undefined_global), True, False)
+            key = _equality_key(arguments[1], strict=method == "strictEqual",
+                                undefined_global=undefined_global)
+        # A truthy oracle, or its strict `=== true` spelling, may be a
+        # hand-rolled tolerance (issue #179). Its key is then the bound it
+        # states, so a `<` -> `>` flip reads as one (#196 189.3).
+        if form == "truthy" or (method in {"strictEqual", "deepStrictEqual"}
+                                and assertion.right_value == "True"):
+            hand = _record_tolerance(assertion, text, code, bindings, argument_spans[0], lower=True)
+            if hand is not None:
+                key = hand.key
+                assertion.operand_source = hand.operand
+        _state_predicate(assertion, key, True, False)
         assertions.append(assertion)
     return assertions
 
@@ -1317,7 +1427,8 @@ def parse_javascript(data: bytes) -> ParsedFile:
                     span = (candidate.start(), span_end)
                     chai_call = _chai_assertion(meaning, [subject_arguments[0], *operands],
                                                 text[span[0]:span[1]], span, positive,
-                                                undefined_global=undefined_global)
+                                                undefined_global=undefined_global,
+                                                bindings=bindings)
                     if chai_call is not None:
                         assertions.append(chai_call)
                 continue
@@ -1331,6 +1442,17 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 not arguments or _EMPTY_ARGUMENT.fullmatch(arguments[0])
             ):
                 continue
+            if matcher == "toBe":
+                key, asserts = _equality_key(arguments[0], strict=True, undefined_global=undefined_global), True
+            else:
+                key, asserts = _MATCHER_PREDICATE.get(matcher, (None, True))
+            asymmetric = None
+            if matcher in {"toEqual", "toStrictEqual"}:
+                asymmetric = _asymmetric_matcher(text, code, expect.end() - 1, end, candidate.group("callee"))
+            if asymmetric is not None:
+                # `toEqual(expect.anything())` states no expected value: it
+                # is the predicate its asymmetric matcher states (#198 Q3).
+                form, strength, key, asserts = _ASYMMETRIC[asymmetric]
             subject = subject_arguments[0]
             span_start = candidate.start()
             negated = bool(expect.group("not"))
@@ -1343,8 +1465,10 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 left=subject,
                 positive=not negated,
             )
-            if form in {"compare_eq", "approx"}:
+            if form in {"compare_eq", "compare_ord", "approx"}:
+                # The expected value, or an ordering matcher's bound (#198 Q2).
                 populate_expectation(assertion, arguments[0])
+                assertion.operand_source = operand_text(arguments[0])
             if form == "approx" and assertion.positive:
                 populate_precision(assertion, arguments[1] if len(arguments) > 1 else None)
             if assertion.positive and (
@@ -1357,13 +1481,19 @@ def parse_javascript(data: bytes) -> ParsedFile:
                 operator = _ORDER_MATCHERS.get(matcher)
                 if subject_spans and subject_spans[0] and matcher_spans is not None:
                     bound = matcher_spans[0][0] if operator and matcher_spans[0] else None
-                    _record_tolerance(assertion, text, code, bindings, subject_spans[0][0],
-                                      operator, bound)
-            if matcher == "toBe":
-                _state_predicate(assertion, _equality_key(arguments[0], strict=True,
-                                                          undefined_global=undefined_global), True, negated)
-            elif matcher in _MATCHER_PREDICATE:
-                _state_predicate(assertion, *_MATCHER_PREDICATE[matcher], negated)
+                    hand = _record_tolerance(assertion, text, code, bindings, subject_spans[0][0],
+                                             operator, bound, lower=operator is None)
+                    if hand is not None and operator is not None:
+                        # A bound read as a hand-rolled tolerance is tolerance
+                        # evidence only, never an expected value (198.Q2).
+                        assertion.right_literal = assertion.right_value = None
+                        if hand.operand is None:
+                            assertion.operand_source = None
+                    elif hand is not None:
+                        # The truthy spelling states the bound key (189.3).
+                        key, asserts = hand.key, True
+                        assertion.operand_source = hand.operand
+            _state_predicate(assertion, key, asserts, negated)
             assertions.append(assertion)
         assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
                           if owned(assertion.span[0]))
