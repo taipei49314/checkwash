@@ -135,10 +135,10 @@ JavaScript/TypeScript file beneath a `__tests__/` directory and exact
 `test/` directories and `test-*`, `*-test`, `*_test` and exact `test` filenames
 with `js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. Configured test globs
 are not read, and a guardrail, CI or snapshot path keeps that role inside these
-layouts. So do a path under a `roles` glob for `ci`, `snapshot`, `lockfile` or
-`conftest` in the checkwash config, and a test file promoted to CI by a shell
-shebang or a `Makefile` name prefix plus a test runner name; no test rule
-reads such a file ([#197](https://github.com/taipei49314/checkwash/issues/197)).
+layouts. So does a path under a `roles` glob for `ci`, `snapshot`, `lockfile` or
+`conftest` in the checkwash config; no test rule reads such a file
+([#197](https://github.com/taipei49314/checkwash/issues/197)). A shell shebang
+or a `Makefile` name prefix does not make a test file a CI script.
 Build artifacts and dependencies remain excluded.
 The v0.4.1 repair for #164 also recognizes `assert.equal`,
 `assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`

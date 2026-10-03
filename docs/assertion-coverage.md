@@ -282,11 +282,11 @@ node:test do not collect them. Configured globs (`testMatch`, `include`,
 CI, snapshot) keeps that role inside these layouts, so
 `__tests__/__snapshots__/out.js` is a stored expectation, not a test. A path
 under a `roles` glob for `ci`, `snapshot`, `lockfile` or `conftest` in the
-checkwash config keeps that role too, and so does a test file promoted to CI
-because it has a shell shebang or a `Makefile` name prefix and names a test
-runner (or a script that runs one). No test rule reads such a file, so
+checkwash config keeps that role too. No test rule reads such a file, so
 weakening or deleting its tests can pass
-([#197](https://github.com/taipei49314/checkwash/issues/197)).
+([#197](https://github.com/taipei49314/checkwash/issues/197)). A shell shebang
+or a `Makefile` name prefix does not make a test file a CI script, even when the
+file names a test runner.
 Generated/build/dependency paths remain excluded. Moving a test out of every
 recognized layout, for example into a production path or a snapshot directory,
 is checked as removal from test coverage.

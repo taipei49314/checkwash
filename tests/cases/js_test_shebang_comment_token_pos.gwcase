@@ -1,0 +1,21 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: a node:test file gets no runner role from a shebang plus a comment that mentions npm test
+origin: issue #197 member A7 (ruled 197.Q1, 2026-10-03) - node:test names no runner token, so one comment line supplied it; v0.5.0 promoted the file to ci and passed the weakening at warn; v0.4.2 blocked
+=== before: test/value.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== after: test/value.test.js ===
+#!/bin/sh
+// run with: npm test
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]

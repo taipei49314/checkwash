@@ -45,7 +45,11 @@ reclassified `ci` when it is *shaped* like a runner script — a `.sh`, `.bash`,
 `GNUmakefile` basename, or a shell shebang (`sh`, `bash`, `zsh`, `dash`,
 `ksh`, `ash`, including via `env`) — **and** either side of the diff actually
 invokes a test runner. Python files are never reclassified this way;
-`noxfile.py` is covered by path instead.
+`noxfile.py` is covered by path instead. Nor are JS/TS test paths, the test
+runners' zero-configuration layouts the engine treats as tests
+(`frontends/javascript/paths.py`, THREATMODEL row 107): such a file names its
+own runner, so the content gate would hold for every one of them as soon as a
+shebang or a `Makefile` name prefix supplied the shape (#197).
 
 The discriminator has to be content because the filename cannot separate the
 two cases: a Makefile whose `test:` recipe runs pytest *is* the test command,
