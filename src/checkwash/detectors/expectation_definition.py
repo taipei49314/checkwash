@@ -70,7 +70,7 @@ import ast
 from collections import Counter
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
-from checkwash.ir.model import IR, ParamTable, normalize_text, param_tables
+from checkwash.ir.model import IR, ParamTable, judged_as_test, normalize_text, param_tables
 from checkwash.detectors.expected_provenance import detect as detect_provenance
 
 
@@ -382,7 +382,7 @@ def _name_closure(seeds: set[str], bindings: dict[str, str]) -> set[str]:
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         shared_inputs = {}
         for qualname, before_id, after_id, name in file.shared_param_input_pairs:

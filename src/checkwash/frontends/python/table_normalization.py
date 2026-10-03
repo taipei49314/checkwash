@@ -21,6 +21,7 @@ from checkwash.frontends.python.table_oracles import (
     _pytest_unshadowed, _rows,
 )
 from checkwash.ir.astutil import argument_wraps, dotted_name, expr_wraps
+from checkwash.ir.model import judged_as_test
 
 
 class _Unsupported(Exception):
@@ -210,7 +211,7 @@ def mark_table_normalization(ir, raw_by_path, root_reader, root_searcher):
     if len(changed) != 1:
         return
     for file in ir.files:
-        if file.path != changed[0] or file.role != "test" or not file.parse_ok or file.status != "modified":
+        if file.path != changed[0] or not judged_as_test(file) or not file.parse_ok or file.status != "modified":
             continue
         before, after = raw_by_path[file.path]
         if not before or not after or b"parametrize" not in after:

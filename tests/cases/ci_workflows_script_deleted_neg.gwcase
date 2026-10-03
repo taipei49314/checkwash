@@ -1,0 +1,9 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: deleting a runner script kept under .github/workflows/ is judged like any runner script
+origin: ruling 197.Q5 (2026-10-03) - only YAML beneath .github/workflows/ is a workflow. A deleted runner script is consolidation until proven otherwise (SPEC section 4), wherever it is kept; v0.5.0 escalated it to high only because of its directory. A workflow that still calls it fails on its own
+=== before: .github/workflows/run-tests.sh ===
+#!/bin/sh
+pytest tests
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

@@ -41,7 +41,7 @@ import ast
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.markers import parse_expr
-from checkwash.ir.model import IR
+from checkwash.ir.model import IR, judged_as_test
 from checkwash.pyenv import known_baseline
 
 
@@ -100,7 +100,7 @@ def detect(ir: IR) -> list[Finding]:
     deny = known_baseline() | set(ir.globals.third_party_roots)
     findings: list[Finding] = []
     for file in ir.files:
-        if file.role not in ("test", "conftest"):
+        if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
             # Condition 1.

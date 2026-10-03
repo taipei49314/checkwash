@@ -6,6 +6,7 @@ import json
 from checkwash.change import EngineError
 from checkwash.detectors.expected_changed import detect as detect_changed, detect_derived
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.ir.model import judged_as_test
 
 
 def _literal_expression(text):
@@ -24,7 +25,7 @@ def detect(ir, existing):
     native_owned = {(finding.path, finding.unit, tuple(finding.after.span))
                     for finding in [*detect_changed(ir), *detect_derived(ir)] if finding.after is not None}
     for file in ir.files:
-        if file.role != "test":
+        if not judged_as_test(file):
             continue
         records = file.expected_provenance_events
         if not isinstance(records, (tuple, list)) or len(records) > 128:

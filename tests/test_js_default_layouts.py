@@ -149,31 +149,38 @@ def test_moving_to_a_name_the_modelled_runners_do_not_collect_is_removal(old, ne
     ]
 
 
-@pytest.mark.parametrize("path,role,rule,severity", [
+@pytest.mark.parametrize("path,role,findings_expected", [
     # SPEC section 2 resolves guardrail, ci and snapshot before test. A runner
     # would collect each of these files by default, but each holds a stored
-    # expectation or an agent constraint, and that role decides the rules.
-    ("src/__tests__/__snapshots__/codegen.output.js", "snapshot", "EXPECTED_VALUE_CHANGED", "high"),
-    ("__tests__/golden/invoice.ts", "snapshot", "EXPECTED_VALUE_CHANGED", "high"),
-    ("test/expected/invoice.js", "snapshot", "EXPECTED_VALUE_CHANGED", "high"),
-    (".claude/hooks/__tests__/guard.js", "guardrail", "GUARDRAIL_TOUCHED", "critical"),
+    # expectation or an agent constraint, so it keeps that role and its rules.
+    # It is still a test, and every test rule judges it beside them (#197).
+    ("src/__tests__/__snapshots__/codegen.output.js", "snapshot",
+     [("ASSERT_WEAKENED", "high"), ("EXPECTED_VALUE_CHANGED", "high")]),
+    ("__tests__/golden/invoice.ts", "snapshot",
+     [("ASSERT_WEAKENED", "high"), ("EXPECTED_VALUE_CHANGED", "high")]),
+    ("test/expected/invoice.js", "snapshot",
+     [("ASSERT_WEAKENED", "high"), ("EXPECTED_VALUE_CHANGED", "high")]),
+    (".claude/hooks/__tests__/guard.js", "guardrail",
+     [("GUARDRAIL_TOUCHED", "critical"), ("ASSERT_WEAKENED", "high")]),
 ])
-def test_earlier_roles_keep_their_paths_inside_a_default_layout(path, role, rule, severity):
+def test_earlier_roles_keep_their_paths_and_their_test_obligations(path, role, findings_expected):
     ir, findings, verdict = _analyze(FileChange(path, "modified", EXACT, WEAK))
-    assert [file.role for file in ir.files] == [role]
+    assert [(file.role, file.test_obligations) for file in ir.files] == [(role, True)]
     assert verdict == "block"
-    assert [(finding.rule, finding.severity) for finding in findings] == [(rule, severity)]
+    assert [(finding.rule, finding.severity) for finding in findings] == findings_expected
 
 
-def test_moving_a_test_into_a_stored_expectation_directory_is_removal():
-    # Jest would still collect the destination, but as a snapshot it is never
-    # analysed as a test, so the move is judged like tests/test_x.py moving
-    # into tests/golden/.
+def test_moving_a_test_into_a_stored_expectation_directory_keeps_it_a_test():
+    # Jest still collects the destination, and there it is judged as a test
+    # beside its snapshot role, so the move removes nothing (#197 Q2). A
+    # Python test moving into tests/golden/ is still judged as removal: that
+    # twin is a separate round (#197 Q4).
     old, new = "src/billing.test.js", "src/__tests__/__snapshots__/billing.js"
     ir, findings, verdict = _analyze(FileChange(new, "renamed", EXACT, EXACT, old_path=old))
+    assert (findings, verdict) == ([], "pass")
+    assert [(file.path, file.role, file.test_obligations) for file in ir.files] == [(new, "snapshot", True)]
+    _ir, findings, verdict = _analyze(FileChange(new, "renamed", EXACT, WEAK, old_path=old))
     assert verdict == "block"
     assert [(finding.rule, finding.severity, finding.path) for finding in findings] == [
-        ("TEST_DISABLED", "high", old),
+        ("ASSERT_WEAKENED", "high", new),
     ]
-    assert any(file.path == old and file.role == "test" for file in ir.files)
-    assert any(file.path == new and file.role == "snapshot" for file in ir.files)

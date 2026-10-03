@@ -351,6 +351,22 @@ class FileIR:
     # id, expected column, old row, new row). Each record consumes one row on
     # each side; it cannot credit a same-input answer edit or another oracle.
     param_input_identity_pairs: tuple[tuple[str, str, str, str, tuple[str, ...], tuple[str, ...]], ...] = ()
+    # A JS/TS test path whose role resolved to guardrail, ci, snapshot,
+    # lockfile or conftest (SPEC section 2) is still a test: every test rule
+    # parses and judges it beside that role's own rules (#197). `role` stays
+    # the public role, so fingerprints that include it do not move. Read it
+    # through `judged_as_test`, never on its own.
+    test_obligations: bool = False
+
+
+def judged_as_test(file: FileIR) -> bool:
+    """Does every test rule judge this file?
+
+    Its role is `test`, or it is a JS/TS test path that holds another role
+    and carries test obligations beside it (#197). The one predicate for
+    test rules, in place of `file.role == "test"`.
+    """
+    return file.role == "test" or file.test_obligations
 
 
 @dataclass

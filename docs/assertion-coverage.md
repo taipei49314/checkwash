@@ -279,17 +279,21 @@ exact `test` filenames for JS/CJS/MJS/TS/CTS/MTS. Bun's `*_spec` filenames, and
 `*_test` beyond Node's extensions, are not recognized: Jest, Vitest, Mocha and
 node:test do not collect them. Configured globs (`testMatch`, `include`,
 `spec`) are not read. A path whose default role comes before `test` (guardrail,
-CI, snapshot) keeps that role inside these layouts, so
-`__tests__/__snapshots__/out.js` is a stored expectation, not a test. A path
-under a `roles` glob for `ci`, `snapshot`, `lockfile` or `conftest` in the
-checkwash config keeps that role too. No test rule reads such a file, so
-weakening or deleting its tests can pass
-([#197](https://github.com/taipei49314/checkwash/issues/197)). A shell shebang
-or a `Makefile` name prefix does not make a test file a CI script, even when the
-file names a test runner.
+CI, snapshot) keeps that role inside these layouts, and so does a path under a
+`roles` glob for `ci`, `snapshot`, `lockfile` or `conftest` in the checkwash
+config. Such a file is still a test: the test rules judge its units beside that
+role's own rules ([#197](https://github.com/taipei49314/checkwash/issues/197)).
+So `__tests__/__snapshots__/out.js` is a stored expectation, and any test units
+it holds are judged as well. A real test kept under `expected/`, `golden/` or
+`__snapshots__/` is a stored expectation too, so editing it reports
+EXPECTED_VALUE_CHANGED unless the same diff changes production code, even when
+the edit is honest. A shell shebang or a `Makefile` name prefix does not make a
+test file a CI script, even when the file names a test runner.
 Generated/build/dependency paths remain excluded. Moving a test out of every
-recognized layout, for example into a production path or a snapshot directory,
-is checked as removal from test coverage.
+recognized layout, for example into a production path, is checked as removal
+from test coverage. A move between two recognized test paths is not, whatever
+roles they hold: `src/x.test.ts` -> `test/expected/x.test.ts` is judged as an
+edit of the same test.
 
 The scan resolves bounded static Node ESM/CommonJS imports, renamed and flat
 destructured imports, simple local aliases, Jest/Vitest `expect` imports, and

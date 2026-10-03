@@ -69,6 +69,7 @@ from checkwash.frontends.javascript.frontend import (
     _code_positions,
     is_js_test_path,
 )
+from checkwash.ir.model import judged_as_test
 from checkwash.roles import is_artifact
 
 # A file that spells none of these installs nothing, so most JS test files
@@ -506,7 +507,7 @@ class _Side:
 
 def module_mock_events(ir, changes) -> list[tuple[str, str, str, str, tuple[int, int]]]:
     """(path, unit, target, text, span) for each new stand-in an existing JS oracle reads."""
-    files = {file.path: file for file in ir.files if file.role == "test"}
+    files = {file.path: file for file in ir.files if judged_as_test(file)}
     events: set[tuple[str, str, str, str, tuple[int, int]]] = set()
     for change in changes:
         path = change.path.replace("\\", "/")

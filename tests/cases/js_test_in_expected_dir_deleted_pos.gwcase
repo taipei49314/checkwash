@@ -1,0 +1,13 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: deleting a node:test file kept under an expected/ directory disables its tests
+origin: issue #197 member C1 (ruled 197.Q2, 2026-10-03) - v0.5.0 resolved the path to snapshot only and gave zero findings; v0.4.2 blocked with TEST_DISABLED on both units
+=== before: test/expected/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]

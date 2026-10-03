@@ -74,7 +74,7 @@ from checkwash.frontends.python.expected_provenance import importer_changes as e
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
-from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, normalize_text
+from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, judged_as_test, normalize_text
 from checkwash.pyenv import known_baseline
 from checkwash.report.context import ReportContext
 from checkwash.roles import (
@@ -108,19 +108,22 @@ _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"
 # SPEC section 2 resolves these roles before `test`, and a JS runner's default
 # layout does not outrank them. Jest collects every file beneath `__tests__/`,
 # but `__tests__/__snapshots__/out.js` is a stored expectation and
-# `.claude/hooks/__tests__/guard.js` an agent constraint; claiming them as
+# `.claude/hooks/__tests__/guard.js` an agent constraint; making them only
 # tests switched off EXPECTED_VALUE_CHANGED and GUARDRAIL_TOUCHED (#175
-# review). Python paths already resolve this way: `tests/golden/test_x.py`
-# is a snapshot.
+# review). Such a file keeps that public role and carries test obligations
+# beside it: making it only that role switched off every test rule instead,
+# so a weakened `.github/workflows/x.test.ts` passed at warn (#197). Python
+# paths still resolve to one role: `tests/golden/test_x.py` is a snapshot.
 _ROLES_BEFORE_TEST = frozenset({"guardrail", "ci", "snapshot", "lockfile", "conftest"})
 
 
 def _js_test(path: str, role: str) -> bool:
-    """Is this path a JS/TS test, given the role it already resolved to?
+    """Does this JS/TS test path take the public role `test`?
 
-    The one predicate behind role assignment, the JS parse gate and rename
-    expansion, so moving a test into a stored-expectation directory is judged
-    by the same rule as editing a file inside it.
+    A path whose role resolved to one of `_ROLES_BEFORE_TEST` keeps that role
+    and carries test obligations beside it instead (#197). The JS parse gate
+    and rename expansion read `is_js_test_path` itself, which no role
+    withdraws.
     """
     return role not in _ROLES_BEFORE_TEST and is_js_test_path(path)
 
@@ -154,8 +157,13 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
         if old and old != new:
             old_role = config.role_of(old)
             new_role = config.role_of(new)
-            old_test = _js_test(old, old_role) or (old_role == "test" and collectable(old))
-            new_test = _js_test(new, new_role) or (new_role == "test" and collectable(new))
+            # Collection continuity ignores roles: a runner that collected
+            # the old path collects the new one whatever role that path holds,
+            # and the destination is judged as a test either way (#197 Q2).
+            # Which runner a project uses is not known, so the JS rows form a
+            # union (`frontends/javascript/paths.py`).
+            old_test = is_js_test_path(old) or (old_role == "test" and collectable(old))
+            new_test = is_js_test_path(new) or (new_role == "test" and collectable(new))
             # Moving a file out of a supervised role is a way of escaping
             # supervision: `git mv AGENTS.md docs/AGENTS.old` or a workflow
             # out of .github/workflows/ silenced the guardrail and CI rules
@@ -663,15 +671,19 @@ def build_ir(
             # moves the manifest; a dependency bump stays production.
             role = "ci"
         is_python = path.endswith(".py")
-        is_js_test = _js_test(path, role)
-        if is_js_test:
+        # A JS/TS test path is parsed and judged as a test whatever its role.
+        # The role decides only which other rules it also answers to (#197).
+        is_js_test = is_js_test_path(path)
+        if _js_test(path, role):
             role = "test"
+        test_obligations = is_js_test and role != "test"
+        judged_test = role == "test" or test_obligations
 
         before_parsed: ParsedFile | None = None
         after_parsed: ParsedFile | None = None
         if is_python:
             is_conftest = role == "conftest"
-            collect = is_conftest or (role == "test" and collectable(path))
+            collect = is_conftest or (judged_test and collectable(path))
             if change.before is not None:
                 before_parsed = parse_python(
                     change.before, collect_tests=collect, conftest=is_conftest
@@ -686,7 +698,7 @@ def build_ir(
             if change.after is not None:
                 after_parsed = parse_javascript(change.after)
 
-        if (is_python and role == "test" and collect
+        if (is_python and judged_test and collect
                 and change.status == "modified" and change.old_path is None
                 and before_parsed is not None and after_parsed is not None):
             before_parsed, after_parsed = mark_classic_exception_removal(
@@ -752,7 +764,7 @@ def build_ir(
         native_context_unchanged = False
         if (
             single_context_change and change.old_path is None
-            and is_python and role in ("test", "conftest")
+            and is_python and (judged_test or role == "conftest")
         ):
             before_context = _native_assertion_context(change.before, before_parsed)
             after_context = _native_assertion_context(change.after, after_parsed)
@@ -765,7 +777,7 @@ def build_ir(
                 and sum(b != a for b, a in zip(before_context[1], after_context[1])) <= 1
             )
 
-        if is_python and role == "test" and collect:
+        if is_python and judged_test and collect:
             project_truthiness_oracles(path, before_parsed, after_parsed, raw_by_path, root_reader, root_searcher)
             if before_parsed is not None:
                 _merge_crossfile_oracles(path, before_parsed, 0)
@@ -773,8 +785,9 @@ def build_ir(
                 _merge_crossfile_oracles(path, after_parsed, 1)
 
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
+        file_ir.test_obligations = test_obligations
         file_ir.native_assertion_context_unchanged = native_context_unchanged
-        if role in ("test", "conftest") and path.endswith(".py"):
+        if (judged_test or role == "conftest") and path.endswith(".py"):
             from checkwash.frontends.python.constant_renames import literal_constant_renames
             file_ir.module_constant_renames = literal_constant_renames(change.before, change.after)
         if role in ("ci", "guardrail"):
@@ -792,15 +805,15 @@ def build_ir(
             # passed, while the same diff blocked on a newer Python (reader
             # audit 2026-08-02). Now it is a finding, and one that escalates
             # when the file used to parse.
-            if role in ("test", "conftest") and change.status != "deleted":
+            if (judged_test or role == "conftest") and change.status != "deleted":
                 was_parseable = before_parsed is not None and before_parsed.parse_ok
                 g.unparseable_tests.append((path, was_parseable))
                 file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
-        if role in ("test", "conftest") and after_parsed and after_parsed.parse_ok:
+        if (judged_test or role == "conftest") and after_parsed and after_parsed.parse_ok:
             g.test_file_imports[path] = list(after_parsed.imports)
         elif (
-            role in ("test", "conftest")
+            (judged_test or role == "conftest")
             and after_parsed is None
             and before_parsed
             and before_parsed.parse_ok
@@ -810,7 +823,7 @@ def build_ir(
             # could never connect a deleted test file to the feature removal
             # that explains it (starlette b133ab45ad deletes both halves).
             g.test_file_imports[path] = list(before_parsed.imports)
-        if role in ("test", "conftest"):
+        if judged_test or role == "conftest":
             for unit in file_ir.units:
                 if unit.before is None or unit.after is None:
                     g.test_logic_changed = True
@@ -843,7 +856,7 @@ def build_ir(
             if file_ir.change_evidence is None:
                 file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
-        if role in ("test", "conftest", "prod", "ci", "guardrail"):
+        if judged_test or role in ("conftest", "prod", "ci", "guardrail"):
             _scan_hidden_unicode(g, path, change.before, change.after)
 
         if path in MANIFESTS and _deps_differ(change.before, change.after, path):
@@ -999,6 +1012,12 @@ def build_ir(
                 g.guardrail_files_created.append(path)
                 if path in _OWN_CONFIG_PATHS and _created_config_loosens(change.after):
                     g.guardrail_configs_created_loosening.append(path)
+        elif role == "ci" and test_obligations:
+            # A JS/TS test kept in a CI directory is test code, and the test
+            # rules judge its lines. Read as shell, a line naming the runner
+            # beside `|| true` would be a weakened command (#197 Q5). The edit
+            # still surfaces as CI_WORKFLOW_TOUCHED at warn.
+            g.ci_files_changed.append(path)
         elif role == "ci":
             g.ci_files_changed.append(path)
             if change.status == "deleted" and _is_ci_workflow(path) and _runs_tests(change.before):
@@ -1047,7 +1066,7 @@ def build_ir(
             def _handlers(parsed: ParsedFile | None) -> tuple[str, ...]:
                 if parsed is None or not parsed.parse_ok:
                     return ()
-                if role in ("test", "conftest"):
+                if judged_test or role == "conftest":
                     return parsed.swallowing_handlers
                 return parsed.broad_handlers
 
@@ -1087,7 +1106,7 @@ def build_ir(
     # import WIN`, where _compat.py is not in the diff at all — FP sweep).
     for file in ir.files:
         parsed = after_by_path.get(file.path)
-        if file.role in ("test", "conftest") and parsed is not None:
+        if (judged_as_test(file) or file.role == "conftest") and parsed is not None:
             file.constants = _gate_constants(parsed, after_by_path, head_reader)
             file.fixture_defs = dict(parsed.fixture_defs)
             file.module_constants = _canonical_constants(parsed.constants)
@@ -1152,7 +1171,7 @@ def build_ir(
         wanted: set[str] = set()
         needles: set[str] = set()
         for file in ir.files:
-            if file.role not in ("test", "conftest"):
+            if not judged_as_test(file) and file.role != "conftest":
                 continue
             for unit in file.units:
                 if unit.before is not None and unit.after is None and unit.before.body_hash:

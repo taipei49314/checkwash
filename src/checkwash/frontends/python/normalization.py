@@ -14,6 +14,7 @@ import copy
 from pathlib import PurePosixPath
 
 from checkwash.ir.astutil import argument_wraps
+from checkwash.ir.model import judged_as_test
 from checkwash.change import EngineError
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 
@@ -263,7 +264,7 @@ def mark_normalization_equivalence(ir, raw_by_path, root_reader, root_searcher=N
         return cache[path]
 
     for file in ir.files:
-        if file.language != "python" or file.role != "test" or file.path not in raw_by_path:
+        if file.language != "python" or not judged_as_test(file) or file.path not in raw_by_path:
             continue
         if any(path != file.path and before != after
                for path, (before, after) in raw_by_path.items()):

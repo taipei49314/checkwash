@@ -21,9 +21,11 @@ of the runners above collects them, and as a row they would make
 node:test project, where it drops the test. ``__tests__`` is a runner default,
 not a configured glob: this classifier still does not read configured globs
 (``testMatch``, ``include``, ``spec``) or execute a runner. Generated/dependency
-paths keep the engine's existing artifact exclusions, and the engine lets the
-roles SPEC section 2 resolves before ``test`` (guardrail, ci, snapshot) keep
-their paths.
+paths keep the engine's existing artifact exclusions. A path whose role SPEC
+section 2 resolves before ``test`` (guardrail, ci, snapshot, lockfile,
+conftest) keeps that published role. The engine still parses and judges such a
+path as a test beside that role's rules, and a rename between two of these
+paths keeps the test whatever roles they hold (#197).
 """
 
 from __future__ import annotations

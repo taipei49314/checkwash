@@ -19,7 +19,7 @@ from checkwash.findings import SHAPE_MARKER_ADDED, Finding
 from checkwash.compat import _compat_gate, guard_always_skips, unit_is_live
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import bare_names, marker_call, parse_expr
-from checkwash.ir.model import IR, Unit, normalize_text
+from checkwash.ir.model import IR, Unit, judged_as_test, normalize_text
 ORACLE_RULES = {
     "ASSERT_REMOVED",
     # A different assertion in a deleted one's slot. The lattice reports it
@@ -365,7 +365,7 @@ def _file_restructured(ir: IR, file_constants: dict[str, dict[str, str]]) -> dic
     """
     result: dict[str, bool] = {}
     for file in ir.files:
-        if file.role != "test":
+        if not judged_as_test(file):
             continue
         gone = added = 0
         for unit in file.units:
@@ -406,7 +406,7 @@ def _split_or_renamed(
     """
     result: dict[tuple[str, str], bool] = {}
     for file in ir.files:
-        if file.role != "test":
+        if not judged_as_test(file):
             continue
         # leaf name -> remaining oracle mass this arrival can still vouch for
         budget: dict[str, int] = {}
@@ -472,6 +472,7 @@ def apply_gates(
     units = _unit_index(ir)
     active_allows = active_fingerprints(allow_entries, today)
     roles = {f.path: f.role for f in ir.files}
+    judged_tests = {f.path for f in ir.files if judged_as_test(f)}
     file_constants = {f.path: f.constants for f in ir.files}
     restructured = _file_restructured(ir, file_constants)
     split_renamed = _split_or_renamed(ir, file_constants)
@@ -485,7 +486,8 @@ def apply_gates(
         # tampering, whatever it would mean in production code (decoy run,
         # cache_invalidate).
         is_oracle = f.rule in ORACLE_RULES or (
-            f.rule == "BROAD_EXCEPT_ADDED" and roles.get(f.path) in ("test", "conftest")
+            f.rule == "BROAD_EXCEPT_ADDED"
+            and (f.path in judged_tests or roles.get(f.path) == "conftest")
         )
         if not is_oracle:
             # Non-oracle escalations from the SPEC §5 table.
