@@ -63,7 +63,7 @@ when the detector's existing fixtures still pass.
 
 ```bash
 pip install -e ".[dev]"
-pytest                      # 12911 tests: fixtures, e2e, perf and coverage gates
+pytest                      # 12912 tests: fixtures, e2e, perf and coverage gates
 checkwash demo              # sanity: 8 real cheats blocked, offline
 checkwash bench --local     # in-clone reproduce; omit --local to require sweep clones
 ```
