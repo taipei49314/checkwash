@@ -37,56 +37,14 @@
 # 14 entries remain: 6 known-regression (i198 M2a-M2c, M2f-M2h, for the
 # evidence half of #198) and 8 fp-fix. Approved by the maintainer in that
 # fix PR (X.gate-bookkeeping).
+#
+# 2026-10-03: the second #198 fix (operand evidence; rulings 196.190.2,
+# 196.190.4, 196.189.3, 198.Q2, Q3 and Q4) removed the six i198 entries it
+# closes: M2a-M2c, which `assert.equal`'s recorded scalar now reports, and
+# M2f-M2h, whose closeTo deltas are now read exactly. 8 entries remain, all
+# fp-fix. Approved by the maintainer in that fix PR (X.gate-bookkeeping).
 
 baseline = "v0.5.0"
-
-[[accept]]
-case         = "i198/M2a"
-input_sha256 = "3bd8041ed85c8c55e3215f57bf11d450817efa8aeb317f8f53aa42575ed861b1"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2a, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M2b"
-input_sha256 = "24b14726b5bf7162c42749c3ea2db416a047b8b705e4aed0342bd79eddad44ea"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2b, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M2c"
-input_sha256 = "589abfd1dcf182131b76a71f0f91a8d619418b6738ce63317cc59c796bfe2252"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2c, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M2f"
-input_sha256 = "ab63210bf0b4629633e740f1ff9c83cf2b9172494b29912a76d35fb81423593c"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2f, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M2g"
-input_sha256 = "bc192f84116cd63dbe52f99bdf4eae35acfe8513c3fd0262b20628a5d1820911"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2g, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i198/M2h"
-input_sha256 = "0d04c9accabf0dba755b4370d1b19ee3dcaf935fc2aa25d87fbba118da40b40d"
-kind         = "known-regression"
-issue        = 198
-reason       = "v0.4.2 blocks, v0.5.0 passes: #198 row M2h, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
 
 [[accept]]
 case         = "i197/R1"
