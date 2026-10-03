@@ -445,7 +445,7 @@ Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
 | E4 `META` | guardrail / greenwash-own-config touched | → critical |
 | E5 `HIDDEN_CONTROL_CHARS` | `HIDDEN_UNICODE` hit | → high |
 | E6 `CI_TEST_COMMAND_WEAKENED` | CI diff adds `continue-on-error`, `\|\| true`, `--ignore`, `-k`, `--deselect` | → high |
-| E7 `OUT_OF_SCOPE_PROD_TOUCH` | `SCOPE_DRIFT` onto a prod / ci / guardrail file | → high |
+| E7 `OUT_OF_SCOPE_PROD_TOUCH` | `SCOPE_DRIFT` onto a prod / ci / guardrail file. E7 reads a test role that comes from the path alone (a JS/TS test path, §2) only when the file declares a test on either side; otherwise it reads the role the §2 table and runner promotion give the path, so production code named like a test is a production touch (#196 186.8). Every other rule keeps the test role | → high |
 | D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
 | D2 `ASSERTION_MOVED` | removed assertion's normalized text — or, for a disappeared unit, its whole normalized body — reappears verbatim in a **live** added unit. Live means no disabling marker, or only markers that qualify as D6 compat gates: a test carried across files together with its own `skipif(WIN)` is relocated, not dead, while an unconditional skip or an always-true condition still counts as dead. A JS/TS unit is live only in a file that the file's runner still collects (§2b, from the destination's own source, else the base manifest): a unit that reappears in a file its runner does not collect does not run there (#196 186.7). Credits are a multiset, spent once each | → info |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
