@@ -2845,3 +2845,108 @@ contract-bearing corpus such as `benchmarks/decoy`. It is not measured.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-074 (2026-10-03): files beneath a test-support directory take the test role whatever their extension (#217)
+
+Since #175, a JS/TS file beneath `__tests__/` has the test role. Other files
+there kept the production role: JSON fixtures, YAML and text data. So did
+every file beneath `__mocks__/`, and every non-JS file beneath Node's `test/`.
+Editing one was an opaque production change, which granted the whole diff
+REPAIR_EVIDENCE (THREATMODEL row 2). A weakened assertion beside it passed at
+warn on v0.4.2, v0.5.0 and `main` (#217 rows D1-D3 and D6). Python had no such
+gap, because every file under `tests/**` has the test role whatever its
+extension.
+
+Ruling 196.followup.tests-dir-non-js-data (#217), with the maintainer's answer
+that `test/` belongs in the definition, as implemented:
+
+- **What a test-support path is.** A path with a `__tests__`, `__mocks__` or
+  `test` directory segment, matched whole and in any case, that is not a
+  Python file or a build artifact (`roles.is_test_support_path`).
+- **The role.** Such a path takes the role `test` when the SPEC §2 table and
+  runner promotion leave it at `prod` and it is not a JS/TS test path. Like
+  the JS test role, this is an engine overlay, not a default glob, so
+  `DEFAULT_ROLES` and the SPEC §2 table do not change.
+- **E7.** E7 reads the table role, by D-073's rule for any path-only test
+  role. An out-of-scope edit to such a file stays OUT_OF_SCOPE_PROD_TOUCH
+  (#217 E1), and E2 keeps blocking.
+- **Base side.** The opaque exemption also requires that a rename's old path
+  was not a test-support path, so test data moved into production grants
+  nothing.
+
+Readings the ruling leaves to the implementation:
+
+1. **`test/` is in.** This is the maintainer's answer to #217's open question.
+   Node's runner collects JS beneath `test/`, and the data there serves those
+   tests.
+2. **Python files are out.** A Python file keeps the table's Python rows:
+   `test/test_x.py` is already a test, and `test/helpers.py` stays production.
+   Changing those rows would move Python verdicts the ruling did not ask
+   about.
+3. **Whole segments, any case.** Directory segments match as JS test
+   obligations do (#196 186.3). `test-data/`, `__tests__x/` and `contest/` are
+   not test-support directories.
+4. **No production credit of any kind.** The test role takes these files out
+   of every production-evidence channel, not only the opaque exemption.
+   - **Snapshot alone beside test support.** A snapshot rewritten beside a
+     mock or test data alone, with no production change, now reports
+     EXPECTED_VALUE_CHANGED high [NO_PROD_CHANGE_IN_DIFF], as a snapshot beside
+     data under Python's `tests/` already did. Before, it reported
+     SNAPSHOT_CODE_COCHANGE at warn, "changed together with prod code", and
+     passed.
+   - **Snapshot beside production code.** SNAPSHOT_CODE_COCHANGE still reports
+     at warn, and its message names only the production files.
+   - **Suite controls.** A conftest suite control blocks as before. Its label
+     (SPEC §2b) reads NO_PROD_CHANGE_IN_DIFF when test support was the only
+     file changed besides it.
+5. **Renames follow the new path.** Production code moved beneath a
+   test-support directory is test support at its new path. What production
+   lost is a deletion, and a deletion buys no exemption either.
+6. **`__mocks__` and #218.** The role makes a `__mocks__/` file test code.
+   Whether a manual mock installed there stands in for the code under test is
+   #218's question, and row 109's residual does not change.
+
+**Pins.** None flip.
+- New tests: `tests/test_test_support_paths.py`.
+- New fixtures:
+  - `js_test_support_tests_dir_data_pos` (D1);
+  - `js_test_support_mocks_dir_pos` (D2);
+  - `js_test_support_fixture_yaml_pos` (D3);
+  - `js_test_support_node_test_dir_data_pos` (D6);
+  - `js_test_support_snapshot_beside_mock_pos` (reading 4).
+- Unchanged, as #217 requires:
+  - the `js_jest_tests_dir_*` fixtures, `js_jest_testfixtures_dir_neg` and
+    `runner_opaque_native_neg`;
+  - the pins in `tests/test_js_paths.py` and `tests/test_js_default_layouts.py`.
+- Gate: no case's verdict changes, so `tests/verdict_gate/labels.toml` and
+  `tests/gates/verdict_gate_accepted.toml` are unchanged.
+
+**Fingerprints.** A content-bound fingerprint includes the file's role. These
+fingerprints move:
+- SCOPE_DRIFT on these files, although its message still names `prod`;
+- SNAPSHOT_CODE_COCHANGE whose production list held one of these files.
+
+The release that ships this records the move (X.release-and-fingerprints).
+
+**Sweep.** The ruling's costs list a sweep.
+- **What the census found.** The six recorded sweep ranges in
+  `benchmarks/sweeps/*.json` hold 1,800 commits that change 4,692 paths. None
+  of those paths is a test-support path. No verdict, finding or fingerprint
+  there can move.
+- **What it cannot show.** For the same reason, the sweep cannot measure this
+  decision's cost.
+
+**Cost.** Verdicts move only toward block:
+- **Intended.** An oracle weakened beside an edit to test data, a manual mock
+  or a non-JS helper beneath such a directory now blocks when nothing else
+  explains it.
+- **False positive.** A snapshot re-recorded after a deliberate mock or
+  fixture update, with no production change, now blocks (reading 4).
+- **False positive.** Production code kept beneath a directory named `test`,
+  `__tests__` or `__mocks__` stops counting as production evidence.
+
+The JS false-positive cost is not measured. It waits on the JS history corpus
+(#212).
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
