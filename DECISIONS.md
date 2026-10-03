@@ -2416,3 +2416,72 @@ still withholds for the whole repository.
 
 The agent wrote this entry in the #199 fix PR, as the rulings' X.doc-batch
 asks; the maintainer approves it there.
+
+## D-069 (2026-10-03): predicate identity for JS assertions (#198, first half)
+
+The lattice gives different predicates one rung. `toBeNull()` and `.to.exist`
+are both NON_NULL, `toBeLessThan(80)` and `.to.be.above(80)` both BOUND, and
+JS `positive` meant "not negated". So a Jest matcher replaced by a chai
+spelling that asserts something else passed v0.5.0 (#198 M1a-h), and honest
+rewrites such as `.not.toBeNull()` -> `.to.exist` read as "the test now proves
+the opposite" (FP1, FP2, FPJ1, FPJ2).
+
+Rulings 198.IR, Q1, Q3, Q4 and Q5, as implemented in this half:
+
+- Every JS spelling of a presence, equality or bound check records a key in
+  `Assertion.predicate`, and JS `positive` says whether it asserts that key
+  or its negation, the meaning `ir/model.py` documents. `toBeDefined()`,
+  `toBeFalsy()`, `.exist`, `assert.exists` and `assert.isDefined` now assert
+  negatively; the release guide names this. IR_VERSION stays 2 (D-067).
+  Deep equality, `toBeCloseTo`/`closeTo`, membership, patterns, `within` and
+  lengths record no key. Python records none in this round (#224 is the
+  Python direction key).
+- `ir/predicate.py` computes the relation of two keyed assertions on one
+  subject from key and polarity alone, and ASSERT_WEAKENED reports it with
+  the four ruled messages: polarity inverted, contradicts (bound direction
+  reversed for bounds), predicate widened (graded by the lattice drop, so
+  MILD_WEAKENING holds `===` -> `==` at warn) and an unverifiable
+  replacement. The relation never compares operands. Pairing, gating and the
+  lattice are unchanged, and no fingerprint moves.
+- `@jest/globals` has its own module kind whose `expect` reads Jest matchers
+  only, and `node:assert/strict`, `assert/strict` and `assert.strict` are the
+  strict mode, whose `equal` and `deepEqual` are the strict comparisons.
+
+Four readings the rulings leave to the implementation:
+
+1. An `===` literal is a presence value of its own. `toBe(5)` is defined,
+   not null and truthy, so `toBeTruthy()` -> `toBe(5)` is a strengthening
+   and `toBe(78.75)` -> `.to.be.undefined` a contradiction. The relation
+   reads that one operand only to place the literal. When both sides state a
+   literal at one polarity, the change is the literal's and only
+   EXPECTED_VALUE_CHANGED reports it.
+2. Keys of two families (presence, equality, bounds) do not relate by key
+   alone, so such a pair keeps the lattice judgement, as an unkeyed pair
+   does, instead of reporting an unverifiable replacement. `toBeTruthy()` ->
+   `toBe(expected)` and `toBeDefined()` -> `toBeGreaterThan(0)` keep
+   passing.
+3. `<` -> `<=` (and `>` -> `>=`) at one polarity also keeps the lattice
+   judgement: only a shared bound makes it a widening, and
+   `toBeLessThan(0.01)` -> `toBeLessThanOrEqual(0.005)` tightens
+   (`js_handrolled_tolerance_matcher_neg`). The evidence half records the
+   operand that decides it.
+4. With `positive` in its documented meaning, the existing cross-form rule
+   would report `toBeDefined()` -> `toEqual(5)`, a strengthening that
+   `tests/test_js_foundation.py` pins as passing (#167). A presence check
+   beside an affirmative assertion of another kind is therefore no polarity
+   change, and the lattice judges the pair.
+
+The ruling allows two PRs. This first half closes M1a-h and, through
+reading 1, also M2d and M2e, so it removes those ten known-regression
+entries; the evidence half removes the other six (M2a-c, M2f-h).
+
+Cost: new blocks on Jest-only predicate swaps that passed both tags (the J
+rows, `toBeUndefined()` -> `toBe(null)` and the like), on B1, B2, S3 and T3,
+and, through reading 4's limits, on `toBeFalsy()` -> `toEqual(5)`. A negated
+absence check rewritten as an affirmative assertion of another form
+(`.to.not.exist` -> `.to.include(x)`) no longer blocks. The JS false-positive
+cost is not measured; the JS/TS replay corpus (X.js-fp-measurement) must
+measure it before the release that ships this.
+
+The agent wrote this entry in the #198 fix PR, as the rulings' X.doc-batch
+asks; the maintainer approves it there.
