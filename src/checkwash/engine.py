@@ -47,6 +47,7 @@ from checkwash.frontends.javascript.runners import (
     collected,
     collection_continues,
     focus_is_file_scoped,
+    focus_is_innermost,
     runner_evidence,
 )
 from checkwash.frontends.python.frontend import (
@@ -134,6 +135,13 @@ def _js_test(path: str, role: str, *sides: bytes | None) -> bool:
     withdraws.
     """
     return role not in _ROLES_BEFORE_TEST and is_js_test_file(path, *sides)
+
+
+def _innermost_focus(data: bytes, manifest):
+    """Is this side's runner proven to run only the innermost focus? Asked
+    only when the side holds focus, so the manifest stays unread otherwise
+    (#196 187.2)."""
+    return lambda: focus_is_innermost(runner_evidence(data, manifest))
 
 
 def _base_manifest(changes: list[FileChange], root_reader):
@@ -734,10 +742,11 @@ def build_ir(
                     change.after, collect_tests=collect, conftest=is_conftest
                 )
         elif is_js_test:
+            # Each side is judged under its own runner's focus rule.
             if change.before is not None:
-                before_parsed = parse_javascript(change.before)
+                before_parsed = parse_javascript(change.before, _innermost_focus(change.before, manifest))
             if change.after is not None:
-                after_parsed = parse_javascript(change.after)
+                after_parsed = parse_javascript(change.after, _innermost_focus(change.after, manifest))
 
         if (is_python and judged_test and collect
                 and change.status == "modified" and change.old_path is None

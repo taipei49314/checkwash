@@ -1,0 +1,36 @@
+=== meta ===
+rule: TEST_DISABLED
+title: describe.only on an inner block keeps the outer focused block's own tests under Jest
+origin: #196 187.2: Jest passes a block's focus to its direct tests when none of them is focused (control for js_focus_innermost_vitest_pos)
+=== before: tests/billing.test.ts ===
+import { describe, expect, it } from "@jest/globals";
+import { invoiceTotal, roundCents } from "../src/billing";
+
+describe.only("billing", () => {
+  describe("rounding", () => {
+    it("rounds half up", () => {
+      expect(roundCents(0.125)).toBe(0.13);
+    });
+  });
+
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.ts ===
+import { describe, expect, it } from "@jest/globals";
+import { invoiceTotal, roundCents } from "../src/billing";
+
+describe.only("billing", () => {
+  describe.only("rounding", () => {
+    it("rounds half up", () => {
+      expect(roundCents(0.125)).toBe(0.13);
+    });
+  });
+
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+=== expect ===
+[]

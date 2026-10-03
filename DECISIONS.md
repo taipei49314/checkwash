@@ -2662,3 +2662,99 @@ false-positive cost is not measured; the JS/TS replay corpus
 
 The agent wrote this entry in the runner-evidence PR, as the rulings'
 X.doc-batch asks; the maintainer approves it there.
+
+## D-072 (2026-10-03): which units a JS focus stops follows the runner (#196 187.2, 187.1)
+
+The JS frontend kept every unit under a focused block running. So `it.only`
+beside a plain test inside `describe.only` was silent, although every runner
+skips the plain test (probe 187.2a). v0.4.2 blocked that case only because it
+read the focused unit as removed; v0.5.0 passed it. The `test.unfocused`
+finding said "disabling marker added", which node:test makes false unless a
+flag set outside the file is on.
+
+Rulings 196.187.2 and 187.1, as implemented:
+
+- **Which units a focus stops follows the runner** (187.2). The runners
+  were run on Jest 30.5.2, Vitest 5.0.3, Mocha 12.0.3, Jasmine 7.0.0 and
+  Node 22.22.
+  - **Jest's rule (B)** judges Jest and every runner that is not known,
+    because it is the most permissive of them. A block's focus reaches
+    every block inside it. It also reaches the tests directly in the block,
+    unless one of those tests is focused (jest-circus,
+    `finish_describe_definition`).
+  - **The innermost rule (D)** judges a file whose runner evidence (D-071)
+    names only Vitest, Mocha, Jasmine or node:test: a focused block that
+    holds a focused declaration runs only that declaration. The ruling
+    deferred D until 186.7's evidence existed; D-071 shipped it.
+  - **Measured agreement.** Over nine named shapes and 100 random ones,
+    Jest's rule equals Jest's runs. The innermost rule equals Vitest's,
+    Jasmine's and node:test's runs, under both `--test-only` and
+    `--experimental-test-isolation=none`. Mocha runs a subset of it.
+- **The `test.unfocused` message states the runner condition** (187.1):
+  "focus elsewhere in this file; a runner that honours it stops this unit
+  (node:test only under --test-isolation=none or --test-only)". The
+  fingerprint is built from the marker name, so it does not change.
+
+Seven readings the rulings leave to the implementation:
+
+1. **Each side is judged under its own runner.** The base side's units use
+   the base side's evidence and the head side's units use the head's. Both
+   read the manifest from the base root `package.json` (D-071). A diff that
+   changes a file's runner import therefore changes the rule on that side:
+   moving from `@jest/globals` to `vitest` reports a unit the new runner
+   stops.
+2. **Tests inside tests.** node:test runs every subtest of a focused test,
+   so a unit inside a focused test runs, whatever its siblings declare. A
+   unit inside an unfocused test stands or falls with the outermost test
+   around it. Focus inside a test does not narrow the block around that test
+   under the innermost rule, because node:test meets a subtest only once its
+   test runs (measured).
+3. **Mocha stays lenient.** Mocha 12's `Suite.filterOnly` goes further: when
+   a block holds a focused test of its own, it also drops the block's inner
+   blocks (shapes S4 and S7). The ruling names the innermost rule for Mocha,
+   so those stops stay unreported (THREATMODEL row 108 residual).
+4. **What counts as focus, and whether the file holds any, are unchanged.**
+   The rule decides only which units a focus stops, and it is asked only
+   when the file holds focus. Under Jest's rule every unit the old rule
+   stopped still stops, and the innermost rule stops at least what Jest's
+   does (pinned by a random-shape property test). When the new rules stop a
+   unit in a file whose focus is new, that unit carries the report instead
+   of the file-level finding, as D-071 reading 6 words it.
+5. **Which focus a stopped unit cites.** A unit with no focused block around
+   it cites the file's first focus, as before. A unit stopped inside a
+   focused block cites the first focus inside the nearest focused block
+   around it that is not itself around the unit. It does not cite the
+   block that keeps it.
+6. **The message drops "added".** The ruling's wording begins "focus added
+   elsewhere in this file". The finding also fires when no focus was added:
+   when a unit's own `.only` is removed while another focus remains, and
+   when a unit moves out of a focused block. Without "added" the message is
+   true in both cases.
+7. **Flag spelling.** Node 22.22, which was run, accepts only
+   `--experimental-test-isolation=none`. The message keeps the ruling's
+   `--test-isolation=none`, the newer name; `docs/stability.md` names both.
+
+**Pins.** None flip: the full suite and every existing fixture keep their
+expectations.
+
+**Tests and fixtures.**
+- New tests: `tests/test_js_focus_rules.py`.
+- New fixtures: `js_focus_nested_sibling_pos` and
+  `js_focus_innermost_vitest_pos`, with the control
+  `js_focus_innermost_jest_neg`.
+
+**Fingerprints.** Unchanged for existing findings. A newly stopped unit
+uses the existing `test.unfocused` fingerprint.
+
+**Cost.**
+- **New blocks** appear only where a focused declaration sits inside a
+  focused block (Jest's rule), or where a focused block holds a focused
+  declaration in a file proven to run under Vitest, Mocha, Jasmine or
+  node:test.
+- **False positives.** A file judged by evidence that does not match how
+  the project runs it; for example, node:test honours no focus without its
+  flags (187.1, unchanged).
+- **Unmeasured.** The JS false-positive cost is not measured (X.js-fp-measurement).
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
