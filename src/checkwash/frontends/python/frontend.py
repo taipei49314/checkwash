@@ -2625,7 +2625,8 @@ def _ignored_paths(controls) -> tuple[str, ...]:
 
 
 def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
-    """Suite-level collection controls in a conftest, as one synthetic unit."""
+    """Suite-level controls in a conftest, collection and runtime alike, as one
+    synthetic unit. `conftest_controls` tells their kinds apart."""
     markers: list[Marker] = _pytestmark_markers(tree, text, off)
 
     for name, node in runtime_controls(tree):

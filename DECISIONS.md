@@ -2378,3 +2378,41 @@ outside that helper.
 
 The agent wrote this entry in the #197 dual-obligation PR, as the rulings'
 X.doc-batch asks; the maintainer approves it there.
+
+## D-068 (2026-10-03): only collection controls withhold the collection inventory (#199)
+
+The resolved collection inventory (#173) withheld its proof when any head
+conftest carried any marker on its `<suite>` unit. v0.5.0 mints one for every
+conftest fixture whose setup always ends in skip or xfail. One such fixture
+anywhere in the tree, requested or not, therefore turned a narrowing that only
+the inventory reports from block into warn (#199 M1-M8). Two runtime hooks
+already withheld it before v0.5.0 (#199 H1, R1).
+
+Rulings 199.Q1 and 199.Q2: only the collection controls of SPEC §2b withhold,
+with `pytest_plugins` and a conftest that does not parse. These are
+`collect_ignore`/`collect_ignore_glob`, the `pytest_ignore_collect` and
+`pytest_collection_modifyitems` hooks, `add_marker(...skip)` and a
+`pytestmark` mark. No runtime control withholds, whether a fixture or an
+execution or report hook. The test is still collected, and the control is
+reported where it is planted (TEST_DISABLED high at `<suite>`). M1-M8, H1 and
+R1 now block. K1 (`collect_ignore`) still passes at warn.
+
+199.Q4: one predicate over marker names tells the kinds apart, in
+`frontends/python/conftest_controls.py`. The inventory and TEST_DISABLED both
+read it; there is no `kind` field on Marker. A name it does not classify
+joins no reader, and `tests/test_conftest_controls.py` lists every place the
+Python frontend mints one. Neither the IR nor any fingerprint changes.
+TEST_DISABLED's `shape` still calls every conftest suite control
+`collection_control`, runtime ones included. Relabelling them would change
+what the findings JSON means, and needs its own entry.
+
+Cost: a tightening against both tags for repositories whose conftest carries a
+runtime hook, guarded makereport or rerun handlers included. Its size is not
+measured. The fixed Python sweep must measure it before the next release. If
+it shows real false positives in repositories that carry hooks, the ruling
+falls back to 199.Q1 (b): only fixture markers stop withholding, which still
+restores M1-M8. 199.Q3 is not done: a collection control anywhere in the tree
+still withholds for the whole repository.
+
+The agent wrote this entry in the #199 fix PR, as the rulings' X.doc-batch
+asks; the maintainer approves it there.
