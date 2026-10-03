@@ -704,6 +704,11 @@ def test_weakenings_across_families_still_block(before, after, rule):
     # Its `=== true` and truthy spellings state one bound.
     ("expect(Math.abs(value - 78.75) < 0.01).toBe(true);", "assert.ok(Math.abs(value - 78.75) < 0.01);",
      'import { test, expect } from "vitest";\nimport assert from "node:assert";\n', PASS, None),
+    # A hand-rolled bound the reader could read, replaced by one it cannot,
+    # is unknown, not unchanged (#196 189.1, as 190.4 for closeTo).
+    ("assert.ok(Math.abs(value - 78.75) < 0.01);", "assert.ok(Math.abs(value - 78.75) < tolerance());",
+     HEADERS["node"], BLOCK,
+     "cannot verify the replacement is equivalent (tolerance abs=0.01 -> a tolerance it cannot read)"),
 ])
 def test_residuals_the_evidence_closes(before, after, header, verdict, message):
     observed, findings, messages = _outcome(before, after, header)
@@ -728,9 +733,6 @@ def test_residuals_the_evidence_closes(before, after, header, verdict, message):
     # Two different bounds: `<` -> `<=` is left to the operand rule.
     ("expect(value).toBeLessThan(LIMIT);", "expect(value).toBeLessThanOrEqual(OTHER);", VITEST, BLOCK,
      "expected call rewritten to a different call ['LIMIT'] -> ['OTHER']"),
-    # A hand-rolled bound the reader cannot read stays unknown in place.
-    ("assert.ok(Math.abs(value - 78.75) < 0.01);", "assert.ok(Math.abs(value - 78.75) < tolerance());",
-     HEADERS["node"], PASS, None),
     # No JS counterpart of Python's single-assertion restoration proof: a
     # bound tightened into an exact value reports its new value.
     ("expect(value).toBeLessThan(80);", "expect(value).toBe(78.75);", VITEST, BLOCK,

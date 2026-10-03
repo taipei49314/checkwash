@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: an unchanged write before an unchanged hand-rolled check leaves the bound unknown on both sides and stays silent
+origin: issue 196 ruling 189.1 negative control — unknown on both sides replaces nothing
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total with tax", () => {
+  let eps = 0.01;
+  eps *= 2;
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < eps).toBe(true);
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total with tax", () => {
+  let eps = 0.01;
+  eps *= 2;
+  const label = "invoice";
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < eps).toBe(true);
+});
+=== expect ===
+[]

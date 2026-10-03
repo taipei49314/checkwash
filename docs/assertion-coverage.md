@@ -110,12 +110,20 @@ one of them, each through parentheses and TypeScript's `as`, `satisfies` and
 `const eps: number = 0.01`, is skipped
 ([#240](https://github.com/taipei49314/checkwash/issues/240)). The bound of an
 ordering matcher read this way is tolerance evidence only, never an expected
-value. The
-declaration has to end before the assertion starts: at a `;` or `,`, or at a
-line break followed by `const`, `let`, `var`, `test`, `it`, `return`, `import`
-or `function`. A `=`, `+=`, `-=`, `*=`, `/=` or postfix `++`/`--` write before
-the assertion, in its own function or an enclosing one, makes the name
-unknown. In JS files a `toBeCloseTo(x, p)` precision and a hand-rolled bound
+value. A
+declaration ends where JavaScript ends it: at a `;` or `,`, or at a line break
+where the next token cannot continue the expression, so `const eps = 0.01`
+directly above `expect(...)` is read without a semicolon, and `+`, `.`, `(` or
+`[` starting the next line continues it
+([#196](https://github.com/taipei49314/checkwash/issues/196) 189.1). A name
+that any write may have reached is unknown, not its initializer: every
+assignment operator (`=`, `**=`, `%=`, `||=`, `??=` and the rest), prefix and
+postfix `++`/`--`, a destructuring target, and a `for`-`in`/`of` head. A write
+in any other function counts wherever it is written, because a hook, a helper
+or a callback may run first; in the read's own function a write counts when it
+comes first, or when a loop in that function runs both. A destructuring
+declaration such as `const [eps] = [1e12]` shadows an outer `eps` with an
+unknown value. In JS files a `toBeCloseTo(x, p)` precision and a hand-rolled bound
 are compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
 `toBeCloseTo(x, 2)` are equal. A chai `closeTo` delta is recorded in the same
 `abs=` form (see the chai section below).
@@ -128,18 +136,21 @@ bound cannot be read (#196 189.3). The two spellings are compared on the
 `Math.abs(...)` side, not on the whole comparison, and `expect(cmp).toBe(true)`
 -> `assert.ok(cmp)` states the same bound.
 
+A bound read on the base side that the head side cannot read is not the same
+bound: rewritten into a call (`< 0.01` -> `< tolerance()`), past what an exact
+decimal holds, or reached by a write. Like an unreadable `closeTo` delta, it is
+reported as an unverifiable replacement (`ASSERT_WEAKENED`, "tolerance abs=0.01
+-> a tolerance it cannot read"). A bound unknown on both sides replaces nothing
+and stays silent.
+
 Not read: negated or falsy spellings, conjunctions, relative or scaled
 magnitudes, `**`, a literal whose exponent is past what an exact decimal holds
 (such as `1e99999999999999999999`), imported or chained bounds, and a bound
-behind an angle-bracket cast (`<number>0.01`). A declaration without a semicolon that runs on into the next line's
-statement, such as `const eps = 0.01` followed by `expect(...)`, is not read
-either. The binding scan does not follow other compound writes (`**=`, `%=`,
-`||=` and the rest), prefix increments, destructuring writes or writes inside
-another function such as a `beforeEach` callback, so a bound changed that way
-still reads as its initializer. A rewritten expected value inside
-`Math.abs(...)` is not reported by this reading (#196 189.2), and a bound
-rewritten from a literal into one it cannot read (`< 0.01` -> `< tolerance()`)
-is not either. As with `toBeCloseTo`, bounds are compared on the pairs alignment
+behind an angle-bracket cast (`<number>0.01`). A later write in straight-line
+code is taken to run after the read, so a function that runs twice (a helper
+called again, `test.each`) and reads a bound its own later statement rewrote
+is not followed. A rewritten expected value inside
+`Math.abs(...)` is not reported by this reading (#196 189.2). As with `toBeCloseTo`, bounds are compared on the pairs alignment
 forms: when one edit changes a hand-rolled check and inserts another tolerance
 check ahead of it in the same test, the position fallback can compare the
 bounds of two different checks. Replacing a hand-rolled tolerance with
@@ -478,8 +489,10 @@ judged as an edit of the same test, whatever roles they hold:
 The scan resolves bounded static Node ESM/CommonJS imports, renamed and flat
 destructured imports, simple local aliases, Jest/Vitest `expect` imports, and
 chai's `expect` and `assert` (including Vitest's `assert` re-export).
-Lexical declarations and function parameters can shadow those bindings; a
-lookalike object cannot retain a real assertion's strength. Unresolved assertion
+Lexical declarations and function parameters can shadow those bindings, and
+a name that any write may have reached is unknown, as in the hand-rolled
+tolerance section above; a lookalike object cannot retain a real assertion's
+strength. Unresolved assertion
 candidates still produce diagnostics. Dynamic module names, arbitrary wrapper
 functions, computed properties and template interpolations remain outside this
 evidence. This is a bounded static scan, not complete JavaScript scope or

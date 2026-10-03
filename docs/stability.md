@@ -158,7 +158,10 @@ changing to `assert.ok` or `assert(value)`, plus the corresponding
 `t.assert` methods. This addition is not in the published v0.4.0 package.
 The candidate resolves bounded static Node and Jest/Vitest imports, simple
 aliases, and lexical shadows. Unknown lookalikes do not acquire assertion
-strength. Dynamic aliases and semantic equivalence of arbitrary predicates
+strength. A name that any write may have reached, from any function, is
+unknown rather than its first value, and a declaration ends where JavaScript
+ends it, with or without a semicolon
+([#196](https://github.com/taipei49314/checkwash/issues/196) 189.1). Dynamic aliases and semantic equivalence of arbitrary predicates
 inside `assert(value)` / `assert.ok(value)` remain outside this model.
 v0.5.0 (not in the published v0.4.2 package) also reports
 `TEST_PATCHES_SUBJECT` when an existing JS unit's own assertion reads a newly

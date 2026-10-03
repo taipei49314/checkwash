@@ -215,10 +215,11 @@ def test_the_cross_unit_reading_is_javascript_only():
 def test_a_bound_past_the_decimal_range_is_unknown_not_a_crash(bound):
     # Review of #189: an exponent no exact Decimal holds, or a negation that
     # overflows the default context, escaped analyze as an engine error
-    # (exit 2). The bound is unknown instead, so the pair keeps the verdict it
-    # had before hand-rolled tolerances were read.
+    # (exit 2). The bound is unknown instead, and a known bound replaced by
+    # an unknown one is not the same bound (#196 189.1).
     assert _bound(f"assert.ok({SUBJECT} < {bound});") is None
-    assert _rules(f"assert.ok({SUBJECT} < 0.01);", f"assert.ok({SUBJECT} < {bound});") == ([], "pass")
+    assert _rules(f"assert.ok({SUBJECT} < 0.01);", f"assert.ok({SUBJECT} < {bound});") == (
+        [("ASSERT_WEAKENED", "high")], "block")
 
 
 # TypeScript declarations (#240). An annotation between the name and its `=`

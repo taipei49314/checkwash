@@ -4,9 +4,9 @@ When both assertions of a pair state a predicate key (`ir/predicate.py`) on
 the same subject, the key relation decides instead of the lattice (#198): a
 proven same or stronger predicate is no weakening whatever the rungs say, and
 a widened, contradicting, inverted or unverifiable one is reported with what
-was established. A JS approximate comparison whose tolerance was known and
-is now one checkwash cannot read is not preserved either: unknown evidence
-is not the same evidence (#196 190.4).
+was established. A JS approximate comparison or hand-rolled bound whose
+tolerance was known and is now one checkwash cannot read is not preserved
+either: unknown evidence is not the same evidence (#196 190.4, 189.1).
 """
 
 from __future__ import annotations
@@ -44,6 +44,8 @@ def _presence_meets_affirmation(b: Assertion, a: Assertion) -> bool:
 
 
 _JS_SUFFIXES = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
+# The keys a hand-rolled tolerance states: its magnitude bounded above.
+_UPPER_BOUNDS = frozenset({"lt", "le"})
 
 
 def _subject(assertion: Assertion) -> str | None:
@@ -59,16 +61,23 @@ def _subject(assertion: Assertion) -> str | None:
 
 
 def _tolerance_lost(path: str, b: Assertion, a: Assertion) -> str | None:
-    """The old tolerance, when a JS approximate comparison no longer has a readable one.
+    """The old tolerance, when a JS tolerance check no longer has a readable one.
 
     A `toBeCloseTo` precision or a chai `closeTo` delta that is present but
     unreadable (`closeTo(x, delta())`) is unknown, and a known tolerance
     replaced by an unknown one is not the same tolerance (#196 190.4, #198).
+    A hand-rolled bound (`Math.abs(d) < eps`) is the same evidence: one the
+    frontend could read and now cannot, rewritten into a call or reached by
+    a write it does not evaluate, is unknown too (#196 189.1).
     TOLERANCE_LOOSENED compares two known ones. Negated comparisons record
     no tolerance and are judged by their polarity.
     """
-    if (not path.lower().endswith(_JS_SUFFIXES) or b.form != "approx" or a.form != "approx"
-            or not (b.positive and a.positive) or b.epsilon is None or a.epsilon is not None):
+    if (not path.lower().endswith(_JS_SUFFIXES) or not (b.positive and a.positive)
+            or b.epsilon is None or a.epsilon is not None):
+        return None
+    approximate = b.form == "approx" and a.form == "approx"
+    bounded = b.predicate in _UPPER_BOUNDS and a.predicate in _UPPER_BOUNDS
+    if not (approximate or bounded):
         return None
     return b.epsilon if "=" in b.epsilon else f"places={b.epsilon}"
 

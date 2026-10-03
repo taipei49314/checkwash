@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 110
+rule: ASSERT_WEAKENED
+title: widening the bound an unchanged hand-rolled check reads with a compound write (eps **= -10) the binding scan did not follow
+origin: issue 196 ruling 189.1 — every assignment operator, prefix ++/--, destructuring and other-function write makes the bound unknown, and a known bound turned unknown is not the same bound
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total with tax", () => {
+  let eps = 0.01;
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < eps).toBe(true);
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total with tax", () => {
+  let eps = 0.01;
+  eps **= -10;
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < eps).toBe(true);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

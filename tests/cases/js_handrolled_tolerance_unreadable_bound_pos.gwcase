@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 110
+rule: ASSERT_WEAKENED
+title: replacing a hand-rolled bound the frontend reads (< 0.01) with one it cannot read (< tolerance())
+origin: issue 196 ruling 189.1 — a known bound replaced by an unknown one is an unverifiable replacement (SPEC §4), as an unreadable closeTo delta is
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < 0.01).toBe(true);
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+const tolerance = () => 1e12;
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < tolerance()).toBe(true);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
