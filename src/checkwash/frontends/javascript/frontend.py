@@ -1000,13 +1000,100 @@ def _imperative_skips(text: str, code: bytearray, bindings: Bindings,
     return found
 
 
+def _focus_stops(text: str, code: bytearray, bindings: Bindings,
+                 declarations: list[_Declaration], innermost: bool) -> dict[int, Marker]:
+    """The units a focused file stops, by id, each with the focus to cite.
+
+    Declarations nest by callback. A unit runs when it is focused, or when a
+    test around it is: node:test runs every subtest of a focused test. Any
+    other unit stands or falls with its outermost enclosing test, and the
+    blocks around that test decide (#196 187.2):
+
+    - Jest's rule, for Jest and for a runner that is not known, since it is
+      the most permissive of the runners measured: a block's focus reaches
+      every block inside it, and the tests directly in it unless one of them
+      is focused itself (jest-circus, `finish_describe_definition`).
+    - The innermost rule (`innermost`), for Vitest, Jasmine and node:test: a
+      focused block runs only its focused descendants, when it has any.
+      Focus inside a test does not count, since node:test meets a subtest
+      only once its test runs. Mocha is stricter still: a block with
+      focused tests of its own also drops its inner blocks. That stays
+      unreported.
+
+    A unit with no focused block around it is stopped by the file's first
+    focus, as before. Otherwise the cited focus is the first one inside the
+    nearest focused block around the unit that is not around the unit
+    itself.
+    """
+    for declaration in declarations:
+        if declaration.callback is None:
+            declaration.callback = _test_body(text, code, bindings, declaration)
+    parent: dict[int, _Declaration | None] = {}
+    open_blocks: list[_Declaration] = []
+    for declaration in declarations:
+        while open_blocks and open_blocks[-1].callback[1] <= declaration.start:
+            open_blocks.pop()
+        parent[id(declaration)] = next(
+            (d for d in reversed(open_blocks) if d.callback[0] <= declaration.start), None)
+        if declaration.callback is not None:
+            open_blocks.append(declaration)
+
+    def around(declaration: _Declaration) -> list[_Declaration]:
+        """The declarations enclosing this one, outermost first."""
+        found = []
+        host = parent[id(declaration)]
+        while host is not None:
+            found.append(host)
+            host = parent[id(host)]
+        return found[::-1]
+
+    focused = [d for d in declarations if d.focus is not None]
+    # Blocks that hold a focused unit directly (Jest), or a focused
+    # declaration not inside a test (the innermost rule).
+    holding: set[int] = set()
+    for declaration in focused:
+        host = parent[id(declaration)]
+        if not innermost:
+            if declaration.unit and host is not None:
+                holding.add(id(host))
+            continue
+        while host is not None and not host.unit:
+            holding.add(id(host))
+            host = parent[id(host)]
+    stops: dict[int, Marker] = {}
+    for unit in declarations:
+        if not unit.unit or unit.focus is not None:
+            continue
+        chain = around(unit)
+        if any(d.unit and d.focus is not None for d in chain):
+            continue
+        standing = next((d for d in chain if d.unit), unit)
+        blocks = around(standing)
+        if innermost:
+            runs = any(b.focus is not None and id(b) not in holding for b in blocks)
+        else:
+            runs = (bool(blocks) and any(b.focus is not None for b in blocks)
+                    and id(blocks[-1]) not in holding)
+        if runs:
+            continue
+        nearest = next((d for d in reversed(chain) if d.focus is not None), None)
+        cited = focused[0].focus
+        if nearest is not None:
+            members = {id(d) for d in chain}
+            cited = next((d.focus for d in focused
+                          if nearest.callback[0] <= d.start < nearest.callback[1]
+                          and id(d) not in members), cited)
+        stops[id(unit)] = cited
+    return stops
+
+
 def _unit_markers(declaration: _Declaration, ancestors: list[_Declaration],
-                  focus: Marker | None, imperative: list[Marker]) -> list[Marker]:
+                  stopped_by: Marker | None, imperative: list[Marker]) -> list[Marker]:
     """One liveness definition for every declaration level (issues #176, #178).
 
     A unit runs unless it, or a declaration whose callback encloses it, is
-    skipped, conditionally skipped or inverted, or unless the file is focused
-    and neither it nor an enclosing declaration is. Each effect is a state,
+    skipped, conditionally skipped or inverted, or unless the file's focus
+    stops it (`stopped_by`, from `_focus_stops`). Each effect is a state,
     not a count: `it.skip` inside `describe.skip` is one skip. Every reason
     is its own marker, as stacked Python markers are: a skipped unit outside
     the focus carries both, so re-enabling it while a committed `.only` still
@@ -1019,8 +1106,8 @@ def _unit_markers(declaration: _Declaration, ancestors: list[_Declaration],
     for marker in [m for d in chain for m in d.markers] + imperative:
         if all(marker.name != kept.name for kept in markers):
             markers.append(Marker(name=marker.name, text=marker.text, span=marker.span))
-    if focus is not None and all(d.focus is None for d in chain):
-        markers.append(Marker(name="test.unfocused", text=focus.text, span=focus.span))
+    if stopped_by is not None:
+        markers.append(Marker(name="test.unfocused", text=stopped_by.text, span=stopped_by.span))
     return markers
 
 
@@ -1313,18 +1400,28 @@ def _conditional_arm(text: str, code: bytearray, end: int) -> bool:
     return False
 
 
-def parse_javascript(data: bytes) -> ParsedFile:
+def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = None) -> ParsedFile:
+    """One JS/TS test file's units.
+
+    `innermost_focus` says whether the file's runner is proven to run only
+    the innermost focus (#196 187.2). It is asked only when the file holds
+    focus; without it, Jest's rule decides.
+    """
     text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
     declarations = _declarations(text, code, bindings)
     scanned = [d for d in declarations if d.unit and not d.table and d.name is not None]
     test_body_starts = {d.callback[0] for d in scanned if d.callback is not None}
-    # What nested units inherit, and the file's first focus: once anything
-    # is focused, every unit outside a focused declaration stops running.
+    # What nested units inherit, the file's first focus, and the units that
+    # focus stops running.
     ancestors = [d for d in declarations
                  if d.callback is not None and (d.markers or d.focus is not None)]
     focus = next((d.focus for d in declarations if d.focus is not None), None)
+    stops: dict[int, Marker] = {}
+    if focus is not None:
+        innermost = innermost_focus is not None and innermost_focus()
+        stops = _focus_stops(text, code, bindings, declarations, innermost)
     inline_body_starts: set[int] = set()
     for call in CALL.finditer(bindings.masked):
         if call.group("callee") in {"if", "for", "while", "switch", "catch", "with"}:
@@ -1501,7 +1598,7 @@ def parse_javascript(data: bytes) -> ParsedFile:
         for assertion_index, assertion in enumerate(assertions):
             assertion.id = f"a{assertion_index}"
         imperative = _imperative_skips(text, code, bindings, callback, start, end, owned)
-        markers = _unit_markers(declaration, ancestors, focus, imperative)
+        markers = _unit_markers(declaration, ancestors, stops.get(id(declaration)), imperative)
         body_hash = hashlib.sha256(normalize_text(body).encode("utf-8")).hexdigest()
         side = UnitSide(
             span=(declaration.start, unit_end),

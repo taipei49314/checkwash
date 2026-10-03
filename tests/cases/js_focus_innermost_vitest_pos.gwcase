@@ -1,0 +1,37 @@
+=== meta ===
+bypass: 108
+rule: TEST_DISABLED
+title: describe.only on an inner block stops the outer focused block's own tests under Vitest
+origin: #196 187.2 (D): Vitest runs only the innermost focus; Jest still runs them (control js_focus_innermost_jest_neg)
+=== before: tests/billing.test.ts ===
+import { describe, expect, it } from "vitest";
+import { invoiceTotal, roundCents } from "../src/billing";
+
+describe.only("billing", () => {
+  describe("rounding", () => {
+    it("rounds half up", () => {
+      expect(roundCents(0.125)).toBe(0.13);
+    });
+  });
+
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.ts ===
+import { describe, expect, it } from "vitest";
+import { invoiceTotal, roundCents } from "../src/billing";
+
+describe.only("billing", () => {
+  describe.only("rounding", () => {
+    it("rounds half up", () => {
+      expect(roundCents(0.125)).toBe(0.13);
+    });
+  });
+
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total with tax"}]

@@ -60,6 +60,10 @@ _RUNNER_MODULES = {"vitest": "vitest", "@jest/globals": "jest", "node:test": "no
 _MANIFEST_RUNNERS = ("jest", "vitest", "mocha", "jasmine")
 # Runners that scope `.only` to the file it is written in (#196 187.4).
 _FILE_SCOPED_FOCUS = frozenset({"jest", "vitest"})
+# Runners that run only the innermost focus: a focused block with a focused
+# declaration inside it runs only that one (#196 187.2). Mocha is stricter
+# still, which this leaves lenient.
+_INNERMOST_FOCUS = frozenset({"vitest", "mocha", "jasmine", "node"})
 # Runners whose rows exist only on a file's own evidence, for test
 # obligations as for continuity (#196 186.4). Never union rows.
 EVIDENCE_ONLY = frozenset({"bun", "deno"})
@@ -224,3 +228,12 @@ def evidenced_test_path(path: str, data: bytes | None) -> bool:
 def focus_is_file_scoped(evidence: frozenset[str] | None) -> bool:
     """Is the runner proven to keep `.only` inside its own file (#196 187.4)?"""
     return bool(evidence) and evidence <= _FILE_SCOPED_FOCUS
+
+
+def focus_is_innermost(evidence: frozenset[str] | None) -> bool:
+    """Is the runner proven to run only the innermost focus (#196 187.2)?
+
+    Jest, and a runner that is not known, keep Jest's rule, the most
+    permissive of the runners measured.
+    """
+    return bool(evidence) and evidence <= _INNERMOST_FOCUS

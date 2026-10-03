@@ -161,12 +161,24 @@ Unit liveness is read once, the same way at every declaration level (#176,
 the `skip`/`todo` keys of an inline options object disable a unit, and
 `.fails`/`.failing` or `{ fails }` invert its oracle. On `describe`, `suite` or
 `context` these reach every unit declared inside the block's callback.
-`.only`, `fit`/`fdescribe` and `{ only }` focus the file: every unit outside a
-focused declaration is reported as no longer running, whether or not the
-runner honours the focus; runner flags such as node:test's `--test-only` are
-outside the scan. Focus that a diff adds to a file that had none, and that
-leaves no unit in the file unfocused, is reported once for the file: Mocha and
-Jasmine apply focus to the whole suite, so every test outside the file stops
+`.only`, `fit`/`fdescribe` and `{ only }` focus the file, and a unit the focus
+stops is reported as no longer running under a runner that honours it.
+node:test honours it only under `--test-only` or `--test-isolation=none`
+(`--experimental-test-isolation=none` on Node 22), flags outside the scan, and
+the finding says so
+([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5945152490),
+187.1). Which units a focus stops follows the runner (187.2), as measured on
+Jest 30, Vitest 5, Mocha 12, Jasmine 7 and Node 22. Jest's rule, the most
+permissive of them, judges Jest and any runner that is not known: a focused
+block runs the units inside it unless a unit placed directly beside them is
+focused. The innermost rule judges a file whose imports or base manifest name
+only Vitest, Mocha, Jasmine or node:test: a focused block that holds a
+focused declaration runs only that declaration. Every subtest of a focused
+test runs. Mocha is stricter still, since a block that holds a focused test
+also drops its inner blocks, and that stays unreported. Focus that a diff
+adds to a file that had none, and that leaves no unit in the file unfocused,
+is reported once for the file: Mocha and Jasmine apply focus to the whole
+suite, so every test outside the file stops
 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5945152490),
 187.4). It stays quiet only when the runner is proven to keep focus in the
 file: a `vitest` or `@jest/globals` import, or a base-side root `package.json`

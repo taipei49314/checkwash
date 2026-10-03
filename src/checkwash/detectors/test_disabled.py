@@ -31,6 +31,12 @@ _WHAT = {
     COLLECTION: "suite-level collection control added",
     SETUP: "skip/xfail added to the setup this test runs",
 }
+# A runner decides whether focus stops anything: node:test honours it only
+# under a flag set outside the file (#196 187.1).
+_UNFOCUSED = (
+    "focus elsewhere in this file; a runner that honours it stops this unit "
+    "(node:test only under --test-isolation=none or --test-only)"
+)
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -64,7 +70,7 @@ def detect(ir: IR) -> list[Finding]:
                 for name in unit.delta.markers_added:
                     m = marker_by_name.get(name)
                     kind = marker_kind(name)
-                    what = _WHAT.get(kind, "disabling marker added")
+                    what = _UNFOCUSED if name == "test.unfocused" else _WHAT.get(kind, "disabling marker added")
                     findings.append(
                         Finding(
                             rule="TEST_DISABLED",
