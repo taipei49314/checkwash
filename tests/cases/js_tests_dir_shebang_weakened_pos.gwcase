@@ -1,0 +1,18 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: a file in Jest's __tests__/ layout keeps its test role when it gains a shell shebang
+origin: issue #197 row T1 (ruled 197.Q1, 2026-10-03) - new coverage for #175: both v0.4.2 and v0.5.0 promoted src/__tests__/value.ts to ci through the shebang and passed the weakening at warn
+=== before: src/__tests__/value.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== after: src/__tests__/value.ts ===
+#!/bin/sh
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBeTruthy(); });
+test.skip("other", () => { expect(total()).toBe(78.75); });
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]

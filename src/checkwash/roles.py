@@ -276,6 +276,19 @@ def _runner_shape(path: str, before: bytes | None, after: bytes | None) -> bool:
     """
     if path.endswith(".py"):
         return False
+    # A JS/TS test path is a test, never the project's test command (#197).
+    # It names its own runner (`from "vitest"`, `jest.mock`), so the content
+    # gate holds as soon as a shell shebang or a `Makefile` name prefix
+    # supplies the shape: one shebang line turned `src/value.test.ts` into CI
+    # config, and every later weakening, deletion or rename of that test
+    # passed at warn. Excluding it here, beside the `.py` exclusion, gives the
+    # engine's promotion, the one-hop scan, the CI base surface and the
+    # shell-only checks one answer. Imported locally: `paths` imports this
+    # module.
+    from checkwash.frontends.javascript.paths import is_js_test_path
+
+    if is_js_test_path(path):
+        return False
     base = path.rsplit("/", 1)[-1]
     return (
         path.endswith(_RUNNER_SCRIPT_SUFFIXES)

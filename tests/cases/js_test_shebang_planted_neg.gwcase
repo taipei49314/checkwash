@@ -1,0 +1,17 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: adding only a shell shebang to a JS test changes no assertion and is not a CI edit
+origin: issue #197 row A3 (ruled 197.Q1, 2026-10-03) - v0.4.2 passed with zero findings; v0.5.0 passed with CI_WORKFLOW_TOUCHED warn because the shebang made the test file a runner script. After 197.Q1 the file stays a test and nothing in it changed
+=== before: src/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== after: src/value.test.ts ===
+#!/bin/sh
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== expect ===
+[]

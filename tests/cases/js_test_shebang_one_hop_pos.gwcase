@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: a JS test that references a test-running script is still a test, not a one-hop runner
+origin: issue #197 member A10 (ruled 197.Q1, 2026-10-03) - with a shebang and a comment naming ./scripts/gen.sh, whose head content runs npm test, v0.5.0 promoted the node:test file through the one-hop scan and passed the weakening at warn; v0.4.2 blocked
+=== before: test/value.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.strictEqual(total(), 78.75); });
+test("other", () => { assert.strictEqual(total(), 78.75); });
+=== after: test/value.test.js ===
+#!/bin/sh
+// fixtures: ./scripts/gen.sh
+const test = require("node:test");
+const assert = require("node:assert");
+const { total } = require("./value");
+test("total", () => { assert.ok(total()); });
+test.skip("other", () => { assert.strictEqual(total(), 78.75); });
+=== head: scripts/gen.sh ===
+#!/bin/sh
+npm test
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]

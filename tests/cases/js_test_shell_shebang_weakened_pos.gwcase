@@ -1,0 +1,18 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: a shell shebang on a Vitest file does not make it the project's test command; the weakening beside it blocks
+origin: issue #197 member A1 (ruled 197.Q1, 2026-10-03) - v0.4.2 blocked; v0.5.0 promoted the file to ci because the shebang supplied the runner shape and its own vitest import satisfied the runner-token gate, so every test rule went quiet and the diff passed at warn
+=== before: src/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== after: src/value.test.ts ===
+#!/bin/sh
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBeTruthy(); });
+test.skip("other", () => { expect(total()).toBe(78.75); });
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]

@@ -1,0 +1,17 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: a JS test named Makefile.test.js is a test, not a make recipe file
+origin: issue #197 member A9 (ruled 197.Q1, 2026-10-03) - the Makefile name prefix supplied the runner shape with no shebang at all; v0.5.0 promoted the file to ci and passed the weakening at warn; v0.4.2 blocked
+=== before: src/Makefile.test.js ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== after: src/Makefile.test.js ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBeTruthy(); });
+test.skip("other", () => { expect(total()).toBe(78.75); });
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]

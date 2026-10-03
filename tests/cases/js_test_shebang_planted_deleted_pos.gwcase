@@ -1,0 +1,13 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: deleting a Vitest file that carries a shell shebang disables its tests
+origin: issue #197 member A5 (ruled 197.Q1, 2026-10-03) - v0.5.0 read the deletion as a removed CI file outside .github/workflows/ and passed at warn; v0.4.2 blocked with TEST_DISABLED on both units
+=== before: src/value.test.ts ===
+#!/bin/sh
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "total"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "other"}]
