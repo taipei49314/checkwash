@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 110
+rule: ASSERT_WEAKENED
+title: widening the module-level EPS from a beforeEach hook that runs before an unchanged hand-rolled check
+origin: issue 196 ruling 189.1 — a write in any other function counts wherever it is written
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+let eps = 0.01;
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < eps).toBe(true);
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+let eps = 0.01;
+
+beforeEach(() => {
+  eps = 1e12;
+});
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < eps).toBe(true);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

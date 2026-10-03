@@ -33,6 +33,10 @@ def _gaps(source):
     ('assert.strictEqual = () => {}; const check = assert.strictEqual; check(value, 5);', "check"),
     ('let check = assert.strictEqual; { check = () => {}; } check(value, 5);', "check"),
     ('const helper = { run(assert) { assert.strictEqual(value, 5); } };', "assert.strictEqual"),
+    # A write in another function may run before the read, even one never
+    # called here: unknown is the fail-safe answer (#196 189.1).
+    ('function unused() { assert.strictEqual = () => {}; } assert.strictEqual(value, 5);', "assert.strictEqual"),
+    ('const unused = () => { assert.strictEqual = () => {}; }; assert.strictEqual(value, 5);', "assert.strictEqual"),
 ])
 def test_writes_and_method_parameter_shadows_remove_the_old_oracle(body, callee):
     before = _source("assert.strictEqual(value, 5);")
@@ -53,8 +57,6 @@ def test_writes_and_method_parameter_shadows_remove_the_old_oracle(body, callee)
     "const check = assert.strictEqual; { assert.strictEqual = () => {}; } check(value, 5);",
     "{ const assert = {}; assert.strictEqual = () => {}; } assert.strictEqual(value, 5);",
     "let check = assert; { let check = standin; check = other; } check.strictEqual(value, 5);",
-    "function unused() { assert.strictEqual = () => {}; } assert.strictEqual(value, 5);",
-    "const unused = () => { assert.strictEqual = () => {}; }; assert.strictEqual(value, 5);",
     "const other = 1, check = assert; check.strictEqual(value, 5);",
     "function helper(assert = standin) {} assert.strictEqual(value, 5);",
     "const helper = { run(assert = standin) {} }; assert.strictEqual(value, 5);",

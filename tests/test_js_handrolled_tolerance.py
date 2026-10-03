@@ -215,7 +215,87 @@ def test_the_cross_unit_reading_is_javascript_only():
 def test_a_bound_past_the_decimal_range_is_unknown_not_a_crash(bound):
     # Review of #189: an exponent no exact Decimal holds, or a negation that
     # overflows the default context, escaped analyze as an engine error
-    # (exit 2). The bound is unknown instead, so the pair keeps the verdict it
-    # had before hand-rolled tolerances were read.
+    # (exit 2). The bound is unknown instead, and a known bound replaced by
+    # an unknown one is not the same bound (#196 189.1).
     assert _bound(f"assert.ok({SUBJECT} < {bound});") is None
-    assert _rules(f"assert.ok({SUBJECT} < 0.01);", f"assert.ok({SUBJECT} < {bound});") == ([], "pass")
+    assert _rules(f"assert.ok({SUBJECT} < 0.01);", f"assert.ok({SUBJECT} < {bound});") == (
+        [("ASSERT_WEAKENED", "high")], "block")
+
+
+# TypeScript declarations (#240). An annotation between the name and its `=`
+# is skipped, and a cast around a local initializer is read through, as it is
+# around an operand written in the assertion itself.
+def _ts_rules(before, after):
+    _ir, findings, verdict = analyze(
+        [FileChange("tests/sample.test.ts", "modified",
+                    _source(before).encode(), _source(after).encode())],
+        Config(), Contract(), [], datetime.date(2026, 10, 3),
+    )
+    return [(finding.rule, finding.severity) for finding in findings], verdict
+
+
+@pytest.mark.parametrize("declaration", [
+    "const EPS: number = 0.01;",
+    "const EPS = 0.01 as const;",
+    "const EPS = (0.01 as number);",
+    "const EPS = 0.01 satisfies number;",
+    "const EPS: number = (1e-2 satisfies number);",
+    "const EPS = 1e-2 as const;",
+    "const EPS = 0.01!;",
+    "const EPS: number = 0.01 as number;",
+    'const EPS: Readonly<Record<string, number>>["a"] = 0.01;',
+    "const EPS: Map<string, Array<number>> | number = 0.01;",
+    "const EPS: { abs: number }['abs'] = 0.01;",
+    "let EPS: number = 0.01 /* a cent */;",
+    "const handler: (value: number) => number = (value) => value, EPS: number = 0.01;",
+])
+def test_a_typescript_declaration_supplies_the_bound(declaration):
+    imports = f"""{NODE}{declaration}
+"""
+    assert _bound(f"assert.ok({SUBJECT} < EPS);", imports) == Decimal("0.01")
+
+
+@pytest.mark.parametrize("declaration", [
+    "let EPS!: number;",
+    "declare const EPS: number;",
+    # The annotation ends with its line: the next statement is no initializer.
+    "let EPS: number\nconst OTHER = 0.01;",
+])
+def test_a_typescript_declaration_without_an_initializer_supplies_none(declaration):
+    imports = f"""{NODE}{declaration}
+"""
+    assert _bound(f"assert.ok({SUBJECT} < EPS);", imports) is None
+
+
+def test_an_annotated_destructuring_declaration_supplies_its_member():
+    imports = f"""{NODE}const {{ EPSILON: EPS }}: NumberConstructor = Number;
+"""
+    assert _bound(f"assert.ok({SUBJECT} < EPS);", imports) * 2 ** 52 == 1
+
+
+def test_an_annotation_does_not_swallow_the_next_declaration():
+    imports = f"""{NODE}let label: string
+const EPS = 0.01;
+"""
+    assert _bound(f"assert.ok({SUBJECT} < EPS);", imports) == Decimal("0.01")
+
+
+@pytest.mark.parametrize("before,after", [
+    ("const EPS: number = 0.01;", "const EPS: number = 1e12;"),
+    ("const EPS = 0.01 as const;", "const EPS = 1e12 as const;"),
+    ("const EPS = 0.01 satisfies number;", "const EPS = (1e12 satisfies number);"),
+])
+def test_a_widened_typescript_bound_reports_tolerance_loosened(before, after):
+    assert _ts_rules(f"{before} assert.ok({SUBJECT} < EPS);", f"{after} assert.ok({SUBJECT} < EPS);") == (
+        [("TOLERANCE_LOOSENED", "high")], "block")
+
+
+@pytest.mark.parametrize("after", [
+    "const EPS: number = 0.01;",
+    "const EPS = 0.01 as const;",
+    "const EPS: number = (1e-2 satisfies number);",
+])
+def test_typing_an_unchanged_bound_stays_silent(after):
+    # A JS -> TS migration that annotates or casts the bound keeps its value.
+    assert _ts_rules(f"const EPS = 0.01; assert.ok({SUBJECT} < EPS);", f"{after} assert.ok({SUBJECT} < EPS);") == (
+        [], "pass")

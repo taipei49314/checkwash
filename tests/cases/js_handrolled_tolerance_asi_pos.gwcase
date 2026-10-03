@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 110
+rule: TOLERANCE_LOOSENED
+title: widening a semicolon-free EPS declaration (const eps = 0.01 -> 1e12) directly above an unchanged hand-rolled check
+origin: issue 196 ruling 189.1 — the declaration ends at the line break JavaScript ends it at, not at the end of the next line's check
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing")
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }]
+  const eps = 0.01
+  expect(Math.abs(invoiceTotal(items) - 78.75) < eps).toBe(true)
+})
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing")
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }]
+  const eps = 1e12
+  expect(Math.abs(invoiceTotal(items) - 78.75) < eps).toBe(true)
+})
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
