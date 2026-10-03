@@ -309,12 +309,15 @@ boundaries.
 ## Qualify the bytes that users run
 
 The `assertion qualification` workflow runs the original 248 changes plus the
-25 foundation changes through actual CLI invocations against temporary Git
+35 foundation changes through actual CLI invocations against temporary Git
 commits, separately for source, a freshly installed wheel and a zipapp. Fixture
 JavaScript is read, never executed. It checks findings and exit codes, including
 a clean range and an invalid-ref engine error. A preserving case must have no
 findings. The same additive suite is also used for the recommended Action engine
-measurement; an older engine's missing coverage remains a failure.
+measurement; an older engine's missing coverage remains a failure. The 39 chai
+records are not in this CLI qualification yet: they run in-process
+(`tests/test_js_chai.py`), and the previous-release verdict gate runs only the
+26 that expect a block (#196, ruling X.pr190-q4).
 
 Receipts identify the source commit, source package hash and dirty flag,
 artifact hash, reported version, suite hash and each case's result. Artifact
