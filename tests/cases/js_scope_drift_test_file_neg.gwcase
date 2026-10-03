@@ -1,0 +1,33 @@
+=== meta ===
+rule: SCOPE_DRIFT
+title: an out-of-scope edit to a real JS test file stays a warning
+origin: #196 186.8 control: the file declares a test, so E7 keeps its test role
+=== task ===
+---
+checkwash:
+  scope:
+    allow:
+      - src/billing/**
+---
+Fix the invoice total under src/billing/.
+=== before: src/api/spec.ts ===
+import { describe, expect, it } from "vitest";
+import { render } from "./render";
+
+describe("render", () => {
+  it("adds one", () => {
+    expect(render(1)).toBe(2);
+  });
+});
+=== after: src/api/spec.ts ===
+import { describe, expect, it } from "vitest";
+import { render } from "./render";
+
+// Covers the rendering helper used by the API layer.
+describe("render", () => {
+  it("adds one", () => {
+    expect(render(1)).toBe(2);
+  });
+});
+=== expect ===
+[{"rule": "SCOPE_DRIFT", "severity": "warn", "path": "src/api/spec.ts"}]

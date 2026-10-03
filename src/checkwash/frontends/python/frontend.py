@@ -152,6 +152,10 @@ class ParsedFile:
     # JS only: the file's first focus (`.only`, `fit`, `fdescribe`,
     # `{ only: true }`), whatever it turns off in this file (#196 187.4).
     focus: Marker | None = None
+    # JS only: whether the file declares a test, scanned as a unit or not: a
+    # `.each` table or a computed title with an inline callback counts, a
+    # `pattern.test(value)` call does not (#196 186.8).
+    declares_tests: bool = False
 
 
 def normalize_source(data: bytes) -> str:

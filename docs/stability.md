@@ -139,7 +139,12 @@ role, and so does a path under a `roles` glob for `ci`, `snapshot`, `lockfile`
 or `conftest` in the checkwash config. Such a file is still judged as a test,
 beside that role's own rules
 ([#197](https://github.com/taipei49314/checkwash/issues/197)). A shell shebang
-or a `Makefile` name prefix does not make a test file a CI script.
+or a `Makefile` name prefix does not make a test file a CI script. Under a task
+contract, a file that is a test only by its path and declares no test on either
+side is judged by its table role for the out-of-scope escalation, so an edit to
+production code named like a test outside the contract's scope blocks
+([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5945152490),
+186.8); every other rule still reads it as a test.
 Build artifacts and dependencies remain excluded.
 The v0.4.1 repair for #164 also recognizes `assert.equal`,
 `assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`
