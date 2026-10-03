@@ -12,8 +12,25 @@ from checkwash.findings import (
     Finding,
     make_fingerprint,
 )
+from checkwash.frontends.python.conftest_controls import (
+    COLLECTION,
+    FIXTURE_SETUP,
+    RUNTIME,
+    SETUP,
+    SUITE_KINDS,
+    marker_kind,
+)
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.model import IR, judged_as_test
+
+# What an added marker of each kind did. Any other kind, or none, is a plain
+# disabling marker.
+_WHAT = {
+    FIXTURE_SETUP: "conftest fixture setup now ends every requesting test in skip/xfail",
+    RUNTIME: "suite-level execution/report suppression added",
+    COLLECTION: "suite-level collection control added",
+    SETUP: "skip/xfail added to the setup this test runs",
+}
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -46,18 +63,8 @@ def detect(ir: IR) -> list[Finding]:
                 marker_by_name = {m.name: m for m in unit.after.markers}
                 for name in unit.delta.markers_added:
                     m = marker_by_name.get(name)
-                    collection = name.startswith("conftest.")
-                    what = (
-                        "conftest fixture setup now ends every requesting test in skip/xfail"
-                        if name.startswith("conftest.runtime.fixture.")
-                        else "suite-level execution/report suppression added"
-                        if name.startswith("conftest.runtime.")
-                        else "suite-level collection control added"
-                        if collection
-                        else "skip/xfail added to the setup this test runs"
-                        if name.startswith("setup.")
-                        else "disabling marker added"
-                    )
+                    kind = marker_kind(name)
+                    what = _WHAT.get(kind, "disabling marker added")
                     findings.append(
                         Finding(
                             rule="TEST_DISABLED",
@@ -70,7 +77,7 @@ def detect(ir: IR) -> list[Finding]:
                             fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, name),
                             shape=(
                                 SHAPE_COLLECTION_CONTROL
-                                if collection
+                                if kind in SUITE_KINDS
                                 else SHAPE_MARKER_ADDED
                             ),
                         )

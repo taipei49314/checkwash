@@ -112,15 +112,21 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     if any(len(v) > 1_000_000 for v in snapshot.values()) or sum(map(len, snapshot.values())) > 64_000_000:
         raise EngineError("pytest collection snapshot exceeds the source byte limit")
     from checkwash.shadow import _pytest_config_path, _runner_invocations
+    from checkwash.frontends.python.conftest_controls import is_collection_control
     from checkwash.frontends.python.frontend import parse_python
 
-    # Existing plugin/collection controls mean the default collector's finite
-    # candidates are not evidence of tests currently being run. Retain the
-    # syntax detector, but withhold this inventory-based supplemental proof.
+    # A conftest that changes what pytest collects means the default
+    # collector's finite candidates are not evidence of the tests being run:
+    # a collection control (SPEC §2b), `pytest_plugins`, or a conftest that
+    # does not parse. Retain the syntax detector, but withhold this
+    # inventory-based supplemental proof. A runtime control does not withhold
+    # it: the test is still collected, and its skip is reported where it is
+    # planted (#199 Q1, Q2).
     for path, data in snapshot.items():
         if path.rsplit("/", 1)[-1] == "conftest.py" and data:
             parsed = parse_python(data, collect_tests=False, conftest=True)
-            if not parsed.parse_ok or any(u.side.markers for u in parsed.units) or b"pytest_plugins" in data:
+            if (not parsed.parse_ok or b"pytest_plugins" in data
+                    or any(is_collection_control(m.name) for u in parsed.units for m in u.side.markers)):
                 return []
 
     # Explicit CLI targets override testpaths and may bypass filename
