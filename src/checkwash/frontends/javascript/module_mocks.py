@@ -8,30 +8,40 @@ engine read a mock call, so the reported diff passed with zero findings.
 
 Every spelling feeds one definition. An installation replaces either a whole
 first-party module or one member path of it. A test unit *consumes* it when
-one of its own assertions reads a binding of that module - directly or
-through one hop of a local binding - after the installation took effect.
-The TEST_PATCHES_SUBJECT conditions then carry over unchanged: the unit
-existed and was live on both sides, the stand-in is new (the base side of
-the file replaced that target nowhere, so moving, reformatting or respelling
-an installation is not one), and the unit's own oracle reads it. Mocking a
+one of its own assertions reads an export of that module - directly or
+through one hop of a local binding - after the installation took effect. A
+named or default import names its export in any use; a namespace or
+`require()` object only through a member, so `compute(billing)` reads none
+(#196 188.3). The TEST_PATCHES_SUBJECT conditions then carry over unchanged:
+the unit existed and was live on both sides, the stand-in is new for that
+unit (the base side installed the target neither at module level, in a hook,
+a describe body or a helper, nor in the unit itself - one inside another
+test never ran for it, #196 188.2 - so moving, reformatting or respelling an
+installation is not one), and the unit's own oracle reads it. Mocking a
 collaborator the oracle never reads is how unit tests are written, and stays
 silent.
 
 When an installation takes effect is part of the evidence:
 
-- hoisted module mocks - `vi.mock` and `jest.mock` at module level - precede
-  every import of the file (Vitest hoists them, as does babel-jest);
+- hoisted module mocks precede every import of the file: `vi.mock` wherever
+  it is written, and `jest.mock` at module level. Vitest 3.2 and 4.1 hoist a
+  `vi.mock` written in a test, a describe body, a hook or a helper to the
+  top of the file (4.1 warns) and 5.0 refuses the file; babel-jest hoists
+  `jest.mock` only within its own block (#196 188.1);
 - ordered module mocks reach only `require()` / `await import()` bindings
   evaluated after them, never a static import: `vi.doMock`, `jest.doMock`,
   `jest.unstable_mockModule`, `jest.setMock`, node:test `mock.module` and
-  `t.mock.module`. `vi.mock` / `jest.mock` written inside a test body get the
-  same ordered treatment - a conservative choice of this scan, not a claim
-  about how a runner hoists them;
+  `t.mock.module`, and `jest.mock` written inside a test body;
 - member replacements: `vi.spyOn` / `jest.spyOn` / `vi.mocked(x)` /
   `jest.mocked(x)` chained to a replacing `mock*` call, `x.mock*(...)` on an
   imported binding (also through a TypeScript cast or non-null assertion),
   `jest.replaceProperty`, and node:test `mock.method` with an
-  implementation. Inside a test body they reach only later reads.
+  implementation. A spy created in one statement and replaced in another
+  (`const spy = vi.spyOn(...)` then `spy.mockReturnValue(...)`, and the same
+  for `jest.spyOn`, `vi.mocked`, `jest.mocked` and node:test's
+  `fn.mock.mockImplementation(...)`) is read through one hop of the local
+  binding on either side (#196 188.4). Inside a test body they reach only
+  later reads.
 
 A factory that reaches for the original module (`importOriginal`,
 `importActual`, `requireActual`, or its own parameter) replaces every name it
@@ -49,12 +59,13 @@ runner configuration this scan does not execute.
 
 Silent rather than guessed: setup files, `__mocks__` directories and
 `automock` configuration (the conftest analogue, which needs that same
-configuration); installations in hooks, helpers and `describe` bodies;
-two-statement spies, on either side; plain assignment to a module object's
-member; template-literal keys and partial-factory names spelled outside the
-factory; cast types that contain parentheses; non-literal specifiers;
-re-exports and two hops; and oracles the frontend does not represent
-(interaction matchers, `.resolves`, snapshots).
+configuration); installations other than `vi.mock` in hooks, helpers and
+`describe` bodies; a namespace or `require()` object passed whole under a
+whole-module mock; plain assignment to a module object's member;
+template-literal keys and partial-factory names spelled outside the factory;
+cast types that contain parentheses; non-literal specifiers; re-exports and
+two hops; and oracles the frontend does not represent (interaction matchers,
+`.resolves`, snapshots).
 """
 
 from __future__ import annotations
@@ -335,6 +346,8 @@ class _Side:
                 # `invoiceTotal.mockReturnValue(...)` on an automocked import.
                 install = self._member_install(parts[0], parts[1] if len(parts) == 3 else None,
                                                owner, start, end)
+                if install is None and (len(parts) == 2 or parts[1] == "mock"):
+                    install = self._spy_install(parts[0], len(parts) == 3, owner, start, end)
             else:
                 install = self._install(api[0], api[1], spans, owner, start, end)
             if install is not None:
@@ -347,9 +360,62 @@ class _Side:
             name, member = (cast.group(1), cast.group(2)) if cast.group(1) else (cast.group(3), cast.group(4))
             owner = bindings._function_scope(bindings.scope(cast.start()))
             install = self._member_install(name, member, owner, cast.start(), arguments[1])
+            if install is None and member is None:
+                install = self._spy_install(name, False, owner, cast.start(), arguments[1])
             if install is not None:
                 found.append(install)
         return found
+
+    def _spy_install(self, name, through_mock, owner, start, end) -> _Install | None:
+        """`spy.mockReturnValue(v)` on a spy created in another statement.
+
+        One hop through the local binding, on either side (#196 188.4):
+        `const spy = vi.spyOn(billing, "invoiceTotal")` or `jest.spyOn`, and
+        `vi.mocked(x)` / `jest.mocked(x)`, which replace nothing until a
+        `mock*` call; node:test's `mock.method(billing, "invoiceTotal")`
+        without an implementation, replaced through `fn.mock.mock*(...)`.
+        The replacement takes effect where that call runs. A rebound name is
+        refused, not guessed at.
+        """
+        bindings = self.bindings
+        found = self._declaration(name, start)
+        if found is None or not isinstance(found[1], tuple) or bindings._written((name,), start):
+            return None
+        scope, value = found
+        if "(" not in value or value[-1] != ")":
+            return None
+        opening = value.index("(")
+        callee = value[:opening]
+        if not callee or any((token != ".") if index % 2 else not _IDENT.fullmatch(token)
+                             for index, token in enumerate(callee)):
+            return None
+        api = self._api(list(callee[::2]), bindings.scopes[scope].declarations[name][0])
+        args: list[list[str]] = [[]]
+        depth = 0
+        for token in value[opening + 1:-1]:
+            if token in {"(", "[", "{"}:
+                depth += 1
+            elif token in {")", "]", "}"}:
+                depth -= 1
+            if token == "," and depth == 0:
+                args.append([])
+            else:
+                args[-1].append(token)
+        if api in {("vi", "mocked"), ("jest", "mocked")} and not through_mock:
+            target = args[0]
+            if len(target) == 1 and _IDENT.fullmatch(target[0]):
+                return self._member_install(target[0], None, owner, start, end)
+            if len(target) == 3 and target[1] == "." and _IDENT.fullmatch(target[0]) and _IDENT.fullmatch(target[2]):
+                return self._member_install(target[0], target[2], owner, start, end)
+            return None
+        if api in {("vi", "spyOn"), ("jest", "spyOn")} and not through_mock or (
+                api == ("mock", "method") and through_mock and len(args) == 2):
+            if (len(args) < 2 or len(args[0]) != 1 or not _IDENT.fullmatch(args[0][0])
+                    or len(args[1]) != 1 or args[1][0][:1] not in {"'", '"'}
+                    or not _IDENT.fullmatch(args[1][0][1:-1])):
+                return None
+            return self._member_install(args[0][0], args[1][0][1:-1], owner, start, end)
+        return None
 
     def _member_install(self, name, member, owner, start, end) -> _Install | None:
         binding = self._binding(name, start) if name else None
@@ -402,6 +468,12 @@ class _Side:
                     return None  # Vitest `{ spy: true }` keeps every real implementation
             elif _uses_original(factory):
                 names = self._spelled(*spans[1])
+        if runner == "vi" and method == "mock":
+            # Vitest hoists `vi.mock` to the top of the file wherever it is
+            # written: 3.2 and 4.1 apply it to every test in the file (4.1
+            # warns), and 5.0 refuses the file. `jest.mock` hoists only within
+            # its own block, so in a test body it stays ordered (#196 188.1).
+            owner = 0
         hoisted = method == "mock" and owner == 0
         return _Install(module, None, names, hoisted, owner, start, self.text[start:end], (start, end))
 
@@ -485,6 +557,12 @@ class _Side:
         found: dict[str, tuple[_Install, str, tuple[str, ...]]] = {}
         for assertion in side.assertions:
             for binding, path, position in self._reach(*assertion.span):
+                if not path:
+                    # A namespace or require() object read whole, as in
+                    # `compute(billing)`, names no export; only a member of it
+                    # does. A named or default import names one in any use
+                    # (#196 188.3, as Python's row 90).
+                    continue
                 for install in self.installs:
                     if self._covers(install, binding, path, position, callback):
                         target = f"{binding.module}:{'.'.join(path) or '*'}"
@@ -492,10 +570,17 @@ class _Side:
                         break
         return found
 
-    def replaces(self, module: str, path: tuple[str, ...]) -> bool:
-        """Does any installation in this file, wherever it runs, replace it?"""
+    def replaces(self, module: str, path: tuple[str, ...],
+                 other_tests: list[tuple[int, int]] = ()) -> bool:
+        """Did this side already replace it for one unit? Every installation
+        counts - at module level, in a hook, a describe body, a helper or the
+        unit itself - except one written inside another test, which never ran
+        for this one (#196 188.2, as Python). A hoisted module mock runs for
+        the whole file wherever it is written."""
         for install in self.installs:
             if install.module != module:
+                continue
+            if not install.hoisted and any(start <= install.position < end for start, end in other_tests):
                 continue
             if install.member is not None:
                 if path[:len(install.member)] == install.member:
@@ -528,12 +613,18 @@ def module_mock_events(ir, changes) -> list[tuple[str, str, str, str, tuple[int,
             continue
         base = (_Side((change.old_path or change.path).replace("\\", "/"), change.before)
                 if _TRIGGER.search(change.before) else None)
+        base_tests = [unit.before.span for unit in file.units if unit.before is not None]
         for unit in units:
+            own = unit.before.span
+            # The base side's other tests, less any that contain this unit
+            # (a node:test subtest runs inside its parent's body).
+            other_tests = [span for span in base_tests
+                           if span != own and not span[0] <= own[0] <= own[1] <= span[1]]
             for target, (install, module, target_path) in head.consumed(unit.after).items():
-                # Condition 2: a target the base side already replaced - in a
-                # hook, a describe body or another test - moved; it was not
-                # installed by this diff.
-                if base is not None and base.replaces(module, target_path):
+                # Condition 2: a target the base side already replaced for this
+                # unit - at module level, in a hook, a describe body, a helper
+                # or the unit itself - moved; it was not installed by this diff.
+                if base is not None and base.replaces(module, target_path, other_tests):
                     continue
                 events.add((path, unit.qualname, target, install.text, install.span))
     return sorted(events)

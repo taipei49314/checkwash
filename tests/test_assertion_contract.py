@@ -13,6 +13,7 @@ import runpy
 import pytest
 
 from checkwash.frontends.javascript import frontend
+from checkwash.frontends.javascript.paths import is_js_test_path
 
 # The pytest console script need not put the repository root on sys.path.
 # Load the development tool by its owned path, independently of installation.
@@ -100,6 +101,19 @@ def test_node_discovery_paths_have_loss_and_normal_controls():
         assert {case["kind"] for case in MUTATIONS if case["path"] == path} == {
             "removal", "preserving", "weakening", "strengthening",
         }, path
+
+
+def test_every_contract_record_path_is_an_engine_js_test():
+    # The tool keeps its own copy of the path rule, so the reviewed corpora do
+    # not depend on the engine's table (#196 186.6). The engine must still judge
+    # every record as a JS test: a record it would not parse would pass the
+    # contract and qualify nothing.
+    paths = set()
+    for contract in ("DEFAULT_CONTRACT", "FOUNDATION_CONTRACT", "CHAI_CONTRACT"):
+        data = json.loads(Path(_CONTRACT_TOOLS[contract]).read_text(encoding="utf-8"))
+        paths |= {record["path"] for collection in ("apis", "mutations") for record in data.get(collection, [])}
+    assert paths
+    assert sorted(path for path in paths if not is_js_test_path(path)) == []
 
 
 def test_unbound_dynamic_unknown_and_shadowed_assertions_remain_explicit_boundaries():
