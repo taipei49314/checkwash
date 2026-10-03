@@ -1607,4 +1607,8 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             body_hash=body_hash,
         )
         units.append(ParsedUnit(qualname=name, span=(declaration.start, unit_end), side=side))
-    return ParsedFile(parse_ok=True, units=units, focus=focus)
+    # A declaration counts with an inline callback, which a runner collects
+    # as a test or a suite; a bare `.test(value)` call is a method.
+    declares_tests = bool(units) or any(
+        (d.callback or _test_body(text, code, bindings, d)) is not None for d in declarations)
+    return ParsedFile(parse_ok=True, units=units, focus=focus, declares_tests=declares_tests)

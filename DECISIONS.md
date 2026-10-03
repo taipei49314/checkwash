@@ -2758,3 +2758,90 @@ uses the existing `test.unfocused` fingerprint.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-073 (2026-10-03): E7 reads a path-only test role only when the file declares a test (#196 186.8)
+
+The JS/TS test role is an engine overlay on the SPEC §2 table (#175, #197). A
+path that some runner's defaults read as a test is judged as a test, whatever
+its content. When the overlay found no test in the file, no test rule read
+it, yet its test role still disarmed E7. Under a task contract, an
+out-of-scope edit to production code named like a test reported SCOPE_DRIFT
+at warn and passed:
+
+- `src/api/spec.ts`, `Test.tsx` and `test.jsx` (#196 rows S1-S3) on v0.5.0;
+- `test.ts`, `test-utils.ts`, `Test.ts` and `test/fixtures.ts` (rows Sp1-Sp4)
+  on both v0.4.2 and v0.5.0.
+
+Ruling 196.186.8 (a), as implemented:
+
+- **What E7 reads.** E7 reads a test role that comes from the path alone only
+  when the file declares a test on either side. Otherwise it reads the role
+  that the SPEC §2 table and runner promotion give the path.
+- **Where the role is recorded.** The engine records that role in
+  `ir.globals.scope_drift`, so gating does not change. The SCOPE_DRIFT message
+  and fingerprint name the role.
+- **Scope.** The rule covers every row of the JS path table, not only
+  v0.5.0's new Jest names.
+- **E7 only.** Every other rule keeps the test role, and no production credit
+  comes back: these files give neither REPAIR_EVIDENCE nor the opaque
+  exemption.
+- **Python.** Python helpers under `tests/` keep warn, because their table
+  role is test.
+
+Four readings the ruling leaves to the implementation:
+
+1. **What "declares a test" means.** The ruling says "at least one test
+   unit".
+   - **What counts.** The JS frontend counts every scanned unit. It also
+     counts every declaration with an inline callback, whether a unit or a
+     suite. So a `.each` table, a computed title (`it(c.name, fn)`) and a
+     `describe` whose tests a helper declares all count: the runner collects
+     them even though the unit scan does not read them.
+   - **What does not.** A pattern's `.test(value)` call has no callback, so it
+     does not count.
+   - **The exception.** `.test("literal")` does count, because the unit scan
+     already takes it for a unit (THREATMODEL row 107 residual).
+   - **Where it is carried.** `ParsedFile.declares_tests` carries the answer,
+     and the IR does not change.
+2. **Either side.** A file that declared a test at base or at head keeps the
+   test role for E7. So removing the last test from a real test file is
+   judged by the test rules (TEST_DISABLED), not by E7.
+3. **One definition for E7 and the opaque exemption (#217).** The ruling asks
+   for one "test-support path" definition to decide both.
+   - **This round's half.** This round fixes the E7 half as a rule about any
+     path-only test role. Whatever the engine moves from the table role to the
+     test side by the path alone, E7 reads the table role unless the file
+     declares a test.
+   - **#217's half.** #217's round can then give non-JS data and mocks
+     beneath test-support directories a non-production role as another such
+     overlay, not as a SPEC §2 default glob. The opaque exemption goes away,
+     and E7 still reads production: #217 E1 keeps blocking, and E2 blocks from
+     this round.
+   - **Why not a default glob.** A default `__tests__/**` glob would turn E7's
+     table role itself into test and reopen E1.
+4. **Runner promotion is part of the table role.** A promoted runner script
+   keeps `ci` for E7, as before.
+
+**Pins.** None flip.
+- New tests: `tests/test_scope_table_role.py`.
+- New fixture: `js_scope_drift_spec_name_pos`, with the control
+  `js_scope_drift_test_file_neg`.
+- Gate (X.gate-bookkeeping): `tests/verdict_gate/labels.toml` relabels
+  i196/S1-S3 and Sp1-Sp4 block. Each label matches the fix, so no accepted
+  entry is needed.
+
+**Fingerprints.** SCOPE_DRIFT's fingerprint includes the role. For these
+files the role moves from test to prod, so the fingerprint moves too. The
+release that ships this records it (X.release-and-fingerprints).
+
+**Cost.** New blocks appear only under a task contract, on out-of-scope
+edits to:
+- production code named like a test, as intended;
+- JS helpers with no test in them beneath `test/` or `__tests__/`, a false
+  positive the ruling accepts.
+
+SCOPE_DRIFT is off without a contract, so measuring this needs a
+contract-bearing corpus such as `benchmarks/decoy`. It is not measured.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

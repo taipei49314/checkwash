@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 107
+rule: SCOPE_DRIFT
+title: out-of-scope production code named like a Jest spec is a production touch
+origin: #196 186.8 (row S1): no test on either side, so E7 judges src/api/spec.ts by its SPEC §2 table role
+=== task ===
+---
+checkwash:
+  scope:
+    allow:
+      - src/billing/**
+---
+Fix the invoice total under src/billing/.
+=== before: src/api/spec.ts ===
+export function render(x: number): number {
+  return x + 1;
+}
+=== after: src/api/spec.ts ===
+export function render(x: number): number {
+  return x + 2;
+}
+=== expect ===
+[{"rule": "SCOPE_DRIFT", "severity": "high", "path": "src/api/spec.ts", "escalators": ["OUT_OF_SCOPE_PROD_TOUCH"]}]

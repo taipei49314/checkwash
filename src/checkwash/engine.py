@@ -137,6 +137,19 @@ def _js_test(path: str, role: str, *sides: bytes | None) -> bool:
     return role not in _ROLES_BEFORE_TEST and is_js_test_file(path, *sides)
 
 
+def _scope_role(role: str, table_role: str, *sides: ParsedFile | None) -> str:
+    """The role E7 judges an out-of-scope file by (#196 186.8).
+
+    A test role read from the path alone gives way to the SPEC §2 table role
+    unless the file declares a test on either side. With nothing to judge, no
+    test rule reads the file, so its test role must not disarm E7 either.
+    Every other rule keeps the test role, and no production credit comes back.
+    """
+    if role != table_role and not any(side is not None and side.declares_tests for side in sides):
+        return table_role
+    return role
+
+
 def _innermost_focus(data: bytes, manifest):
     """Is this side's runner proven to run only the innermost focus? Asked
     only when the side holds focus, so the manifest stays unread otherwise
@@ -720,6 +733,10 @@ def build_ir(
             # moves the manifest; a dependency bump stays production.
             role = "ci"
         is_python = path.endswith(".py")
+        # The role the SPEC §2 table (and runner promotion) gives the path,
+        # before any test role read from the path alone. E7 judges by it when
+        # that path-only test role finds no test to judge (#196 186.8).
+        table_role = role
         # A JS/TS test path is parsed and judged as a test whatever its role.
         # The role decides only which other rules it also answers to (#197).
         is_js_test = is_js_test_file(path, change.before, change.after)
@@ -915,7 +932,7 @@ def build_ir(
         if change.synthetic not in ("root_helper_importer", "expected_provenance_importer") and g.scope_allow and not any(
             _scope_match(path, glob) for glob in g.scope_allow
         ):
-            g.scope_drift.append((path, role))
+            g.scope_drift.append((path, _scope_role(role, table_role, before_parsed, after_parsed)))
             if file_ir.change_evidence is None:
                 file_ir.change_evidence = _change_evidence(change, rename_destinations)
 
