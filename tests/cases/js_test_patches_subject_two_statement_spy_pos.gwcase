@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: a spy created in one statement and replaced in the next replaces the subject
+origin: #196 188.4 - one hop through the local binding: const spy = vi.spyOn(...) then spy.mockReturnValue(...) is the two-statement spelling of the chained replacement
+=== before: tests/billing.spec.js ===
+import { expect, it, vi } from "vitest";
+import * as billing from "../src/billing.js";
+
+it("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(billing.invoiceTotal(items)).toBe(78.75);
+});
+=== after: tests/billing.spec.js ===
+import { expect, it, vi } from "vitest";
+import * as billing from "../src/billing.js";
+
+it("computes invoice total", () => {
+  const spy = vi.spyOn(billing, "invoiceTotal");
+  spy.mockReturnValue(78.75);
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(billing.invoiceTotal(items)).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]
