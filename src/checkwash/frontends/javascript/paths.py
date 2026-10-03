@@ -35,6 +35,13 @@ from checkwash.roles import is_artifact
 
 _NODE_EXTENSIONS = frozenset({"js", "cjs", "mjs", "ts", "cts", "mts"})
 # Jest's `?([mc])[jt]s?(x)`, as far as its default moduleFileExtensions reach.
+# That is Jest 30's default testMatch
+# (https://github.com/jestjs/jest/blob/v30.0.0/packages/jest-config/src/Defaults.ts).
+# Jest 29 matched only `[jt]s?(x)`, so it does not collect `.mjs`, `.cjs`,
+# `.mts` or `.cts` tests by default
+# (https://github.com/jestjs/jest/blob/v29.7.0/packages/jest-config/src/Defaults.ts).
+# The superset is the safe direction for test obligations: on Jest 29 such a
+# file is judged as a test that the runner would not collect (#196 186.5).
 _JEST_EXTENSIONS = _NODE_EXTENSIONS | {"jsx", "tsx"}
 # Jest's `?(*.)+(spec|test)`: an optional dotted prefix, then only those words.
 _JEST_STEM = re.compile(r"(?:.*[.])?(?:spec|test)+", re.DOTALL)
