@@ -18,6 +18,7 @@ from checkwash.frontends.javascript.frontend import parse_javascript
 DATE = datetime.date(2026, 10, 1)
 BODY = "expect(total()).toBe(5);"
 UNIT = 'it("computes", () => { ' + BODY + " });"
+VITEST = 'import { expect, it } from "vitest";\n'
 
 
 def _markers(source):
@@ -207,7 +208,9 @@ def test_describe_skip_blocks_exactly_like_the_it_skip_control():
     ('describe("billing", () => {\n  ' + UNIT + "\n});\n",
      'describe.concurrent("invoices", () => {\n  ' + UNIT + "\n});\n"),
     (UNIT + "\n", UNIT.replace("it(", "it.concurrent(") + "\n"),
-    (UNIT + "\n", UNIT.replace("it(", "it.only(") + "\n"),
+    # Vitest keeps focus inside the file, so focusing its only unit turns
+    # nothing off (#196 187.4; without the import, see below).
+    (VITEST + UNIT + "\n", VITEST + UNIT.replace("it(", "it.only(") + "\n"),
     # Re-enabled while a committed `.only` still holds the focus: the unit
     # ran in neither revision, so nothing was disabled.
     (UNIT.replace("it(", "it.skip(") + '\nit.only("other", () => { expect(other()).toBe(1); });\n',
@@ -216,6 +219,15 @@ def test_describe_skip_blocks_exactly_like_the_it_skip_control():
 def test_reenabling_unfocusing_renaming_and_neutral_modifiers_stay_silent(before, after):
     _ir, findings, verdict = _analyze(before, after)
     assert (findings, verdict) == ([], "pass")
+
+
+def test_focusing_the_only_unit_under_an_unknown_runner_reports_the_suite():
+    # Mocha and Jasmine apply focus to the whole suite, and nothing here names
+    # a runner that keeps it in the file (#196 187.4).
+    _ir, findings, verdict = _analyze(UNIT + "\n", UNIT.replace("it(", "it.only(") + "\n")
+    assert (verdict, [(f.rule, f.severity, f.unit) for f in findings]) == (
+        "block", [("TEST_DISABLED", "high", None)],
+    )
 
 
 @pytest.mark.parametrize("target,outcome", [

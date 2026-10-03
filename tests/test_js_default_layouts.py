@@ -124,8 +124,10 @@ def test_moving_out_of_a_default_layout_retains_the_disappeared_test(old, new):
 @pytest.mark.parametrize("old,new", [
     # Before #175 this move was expanded as a removal from test coverage,
     # although Jest still collects the destination with no configuration.
-    # Vitest, Mocha and node:test do not; the runner is unknown statically,
-    # so for them this is a stated residual of the union, not a guarantee.
+    # Vitest, Mocha and node:test do not, so a file that names one of them,
+    # or whose base manifest does, reports the move as removal (#196 186.7,
+    # tests/test_js_runner_evidence.py). These name no runner: the union
+    # judges them.
     ("src/billing.test.js", "src/__tests__/billing.js"),
     ("__tests__/billing.js", "packages/api/__tests__/billing.js"),
     ("__tests__/billing.js", "__tests__/billing.test.js"),

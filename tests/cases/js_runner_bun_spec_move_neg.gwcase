@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a Bun test renamed to its _spec spelling keeps running
+origin: #196 186.4: a bun:test import makes Bun's *_spec row a test row for this file
+=== before: tests/value.test.ts ===
+import { test, expect } from "bun:test";
+import { total, tax } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+
+test("tax", () => {
+  expect(tax()).toBe(3.75);
+});
+=== after: tests/value_spec.ts ===
+import { test, expect } from "bun:test";
+import { total, tax } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+
+test("tax", () => {
+  expect(tax()).toBe(3.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "path": "tests/value.test.ts", "unit": "tax", "deescalators": ["ASSERTION_MOVED"]}, {"rule": "TEST_DISABLED", "severity": "info", "path": "tests/value.test.ts", "unit": "total", "deescalators": ["ASSERTION_MOVED"]}]

@@ -285,9 +285,9 @@ def _runner_shape(path: str, before: bytes | None, after: bytes | None) -> bool:
     # engine's promotion, the one-hop scan, the CI base surface and the
     # shell-only checks one answer. Imported locally: `paths` imports this
     # module.
-    from checkwash.frontends.javascript.paths import is_js_test_path
+    from checkwash.frontends.javascript.paths import is_js_test_file
 
-    if is_js_test_path(path):
+    if is_js_test_file(path, before, after):
         return False
     base = path.rsplit("/", 1)[-1]
     return (

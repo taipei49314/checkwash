@@ -437,9 +437,10 @@ files; every JavaScript/TypeScript file beneath a `__tests__/` directory and
 exact `test`/`spec` filenames, JSX/TSX included (Jest's default `testMatch`);
 and Node's default `test/` directories and `test-*`, `*-test`, `*_test` and
 exact `test` filenames for JS/CJS/MJS/TS/CTS/MTS. Bun's `*_spec` filenames, and
-`*_test` beyond Node's extensions, are not recognized: Jest, Vitest, Mocha and
-node:test do not collect them. Configured globs (`testMatch`, `include`,
-`spec`) are not read. A path whose default role comes before `test` (guardrail,
+`*_test` beyond Node's extensions, are tests only in a file whose own source
+names Bun (a `bun:test` import) or Deno (a `Deno.test` call): Jest, Vitest,
+Mocha and node:test do not collect them. Configured globs (`testMatch`,
+`include`, `spec`) are not read. A path whose default role comes before `test` (guardrail,
 CI, snapshot) keeps that role inside these layouts, and so does a path under a
 `roles` glob for `ci`, `snapshot`, `lockfile` or `conftest` in the checkwash
 config. Such a file is still a test: the test rules judge its units beside that
@@ -450,11 +451,26 @@ it holds are judged as well. A real test kept under `expected/`, `golden/` or
 EXPECTED_VALUE_CHANGED unless the same diff changes production code, even when
 the edit is honest. A shell shebang or a `Makefile` name prefix does not make a
 test file a CI script, even when the file names a test runner.
-Generated/build/dependency paths remain excluded. Moving a test out of every
-recognized layout, for example into a production path, is checked as removal
-from test coverage. A move between two recognized test paths is not, whatever
-roles they hold: `src/x.test.ts` -> `test/expected/x.test.ts` is judged as an
-edit of the same test.
+Generated/build/dependency paths remain excluded.
+
+A move is judged by the runner that runs the test
+([#196](https://github.com/taipei49314/checkwash/issues/196), 186.7). The
+moved file's base side names it by import (`vitest`, `@jest/globals`,
+`node:test`, `bun:test`, or a `Deno.test` call); without one, the base side's
+root `package.json` does when its dependencies name exactly one of `jest`,
+`vitest`, `mocha` and `jasmine`. A move that runner's default discovery does
+not collect is checked as removal from test coverage: under Vitest,
+`x.test.ts` -> `__tests__/x.ts`, `spec.ts` or `test/x.ts`; under node:test,
+`test/x.js` -> `x.spec.js`. A unit that reappears in such a file earns no move
+credit, because it does not run there. When nothing names the runner, a move
+is benign only if a Jest or node:test default still collects the destination,
+so `x.test.ts` -> `__tests__/x.ts` stays benign on Jest-style globals. The
+runners match names case-sensitively, so moves do too: `__TESTS__/x.ts` is
+collected by none of them. A file the named runner does not collect by default
+is collected by its configured globs, which are not read, so its moves are
+judged as if no runner were named. A move between two collected test paths is
+judged as an edit of the same test, whatever roles they hold:
+`src/x.test.ts` -> `test/expected/x.test.ts`.
 
 The scan resolves bounded static Node ESM/CommonJS imports, renamed and flat
 destructured imports, simple local aliases, Jest/Vitest `expect` imports, and

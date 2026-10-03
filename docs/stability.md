@@ -164,11 +164,16 @@ the `skip`/`todo` keys of an inline options object disable a unit, and
 `.only`, `fit`/`fdescribe` and `{ only }` focus the file: every unit outside a
 focused declaration is reported as no longer running, whether or not the
 runner honours the focus; runner flags such as node:test's `--test-only` are
-outside the scan. Focus that leaves no unit in the file unfocused reports
-nothing, although Mocha and Jasmine apply focus to the whole suite (from
-their documentation as recalled, not checked against it or run; [#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5945152490),
-187.4). The `x`/`f`-prefixed globals count only with a literal name or an
-inline callback, so a `fit(points)` helper call focuses nothing.
+outside the scan. Focus that a diff adds to a file that had none, and that
+leaves no unit in the file unfocused, is reported once for the file: Mocha and
+Jasmine apply focus to the whole suite, so every test outside the file stops
+([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5945152490),
+187.4). It stays quiet only when the runner is proven to keep focus in the
+file: a `vitest` or `@jest/globals` import, or a base-side root `package.json`
+whose dependencies name Jest or Vitest and no other runner. A node:test
+import is no such proof. The `x`/`f`-prefixed globals count only with a
+literal name or an inline callback, so a `fit(points)` helper call focuses
+nothing.
 `t.skip()`/`t.todo()` on the callback's own context parameter and Mocha's
 `this.skip()` count wherever they sit in the callback; the `if` around them is
 not recorded, and a call that passes a function (tap's `t.skip(name, fn)`)

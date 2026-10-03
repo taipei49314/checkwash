@@ -137,4 +137,28 @@ def detect(ir: IR) -> list[Finding]:
                         shape=SHAPE_PARAM_CASES_REMOVED,
                     )
                 )
+        # Focus that turns nothing off in its own file can still turn off the
+        # rest of the suite, which is what Mocha and Jasmine do (#196 187.4).
+        # A unit the focus already stops carries the report instead.
+        focus = file.suite_focus_added
+        if focus is not None and not any(
+            unit.delta is not None and "test.unfocused" in unit.delta.markers_added
+            for unit in file.units
+        ):
+            findings.append(
+                Finding(
+                    rule="TEST_DISABLED",
+                    severity="warn",
+                    message=(
+                        f"focus added ({focus.text}); under a runner that applies focus "
+                        "suite-wide, every test outside this file stops"
+                    ),
+                    path=file.path,
+                    unit=None,
+                    before=None,
+                    after=Evidence(text=focus.text, span=focus.span),
+                    fingerprint=make_fingerprint("TEST_DISABLED", file.path, "<file>", focus.name),
+                    shape=SHAPE_MARKER_ADDED,
+                )
+            )
     return findings

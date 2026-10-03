@@ -149,6 +149,9 @@ class ParsedFile:
     # — swallowing an error in prod is its own cheat, but a test that provokes
     # an error on purpose and inspects it hides nothing.
     swallowing_handlers: tuple[str, ...] = ()
+    # JS only: the file's first focus (`.only`, `fit`, `fdescribe`,
+    # `{ only: true }`), whatever it turns off in this file (#196 187.4).
+    focus: Marker | None = None
 
 
 def normalize_source(data: bytes) -> str:

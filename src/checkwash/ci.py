@@ -7,7 +7,7 @@ from checkwash.change import FileChange
 from checkwash.ci_control_flow import control_flow_weakenings, is_github_workflow
 from checkwash.deps import parse_manifest_pins
 from checkwash.config import Config
-from checkwash.frontends.javascript.paths import is_js_test_path
+from checkwash.frontends.javascript.paths import is_js_test_file
 from checkwash.ir.model import DiffGlobals
 from checkwash.pytest_collection import pytest_collection_changes
 from checkwash.roles import (
@@ -107,7 +107,7 @@ def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str
     parts: list[str] = []
     for change in changes:
         path = change.path.replace("\\", "/")
-        if is_artifact(path) or not change.before or is_js_test_path(path):
+        if is_artifact(path) or not change.before or is_js_test_file(path, change.before, change.after):
             continue
         role = config.role_of(path)
         if role == "prod" and (

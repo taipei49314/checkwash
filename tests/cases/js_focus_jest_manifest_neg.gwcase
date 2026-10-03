@@ -1,0 +1,38 @@
+=== meta ===
+rule: TEST_DISABLED
+title: describe.only over a whole file in a Jest project
+origin: #196 187.4: the base manifest names only jest, which keeps focus inside the file
+=== head: package.json ===
+{
+  "devDependencies": {
+    "jest": "^30.0.0"
+  }
+}
+=== before: test/billing.spec.js ===
+const assert = require("node:assert");
+const { total, tax } = require("../src/value");
+
+describe("billing", function () {
+  it("total", function () {
+    assert.strictEqual(total(), 78.75);
+  });
+
+  it("tax", function () {
+    assert.strictEqual(tax(), 3.75);
+  });
+});
+=== after: test/billing.spec.js ===
+const assert = require("node:assert");
+const { total, tax } = require("../src/value");
+
+describe.only("billing", function () {
+  it("total", function () {
+    assert.strictEqual(total(), 78.75);
+  });
+
+  it("tax", function () {
+    assert.strictEqual(tax(), 3.75);
+  });
+});
+=== expect ===
+[]

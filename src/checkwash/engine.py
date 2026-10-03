@@ -12,6 +12,7 @@ import ast
 import datetime
 import hashlib
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import replace
 
 from checkwash.allowlist import AllowEntry
@@ -39,8 +40,15 @@ from checkwash.evidence import (
     _suppression_texts,
 )
 from checkwash.findings import Finding
-from checkwash.frontends.javascript.frontend import is_js_test_path, parse_javascript
+from checkwash.frontends.javascript.frontend import parse_javascript
 from checkwash.frontends.javascript.module_mocks import module_mock_events
+from checkwash.frontends.javascript.paths import is_js_test_file
+from checkwash.frontends.javascript.runners import (
+    collected,
+    collection_continues,
+    focus_is_file_scoped,
+    runner_evidence,
+)
 from checkwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
@@ -74,7 +82,7 @@ from checkwash.frontends.python.expected_provenance import importer_changes as e
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
-from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, judged_as_test, normalize_text
+from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, Marker, judged_as_test, normalize_text
 from checkwash.pyenv import known_baseline
 from checkwash.report.context import ReportContext
 from checkwash.roles import (
@@ -117,15 +125,38 @@ _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"
 _ROLES_BEFORE_TEST = frozenset({"guardrail", "ci", "snapshot", "lockfile", "conftest"})
 
 
-def _js_test(path: str, role: str) -> bool:
-    """Does this JS/TS test path take the public role `test`?
+def _js_test(path: str, role: str, *sides: bytes | None) -> bool:
+    """Does this JS/TS test file take the public role `test`?
 
     A path whose role resolved to one of `_ROLES_BEFORE_TEST` keeps that role
     and carries test obligations beside it instead (#197). The JS parse gate
-    and rename expansion read `is_js_test_path` itself, which no role
+    and rename expansion read `is_js_test_file` itself, which no role
     withdraws.
     """
-    return role not in _ROLES_BEFORE_TEST and is_js_test_path(path)
+    return role not in _ROLES_BEFORE_TEST and is_js_test_file(path, *sides)
+
+
+def _base_manifest(changes: list[FileChange], root_reader):
+    """A reader of the base side's root package.json, for runner evidence.
+
+    In the diff, its before side. Otherwise the head snapshot holds it
+    unchanged, so that is the base side too (#196 186.7). Read once, and only
+    when a JS test file names no runner itself.
+    """
+    read: list[bytes | None] = []
+
+    def manifest() -> bytes | None:
+        if not read:
+            for change in changes:
+                paths = (change.path.replace("\\", "/"), (change.old_path or "").replace("\\", "/"))
+                if "package.json" in paths:
+                    read.append(change.before)
+                    break
+            else:
+                read.append(root_reader("package.json") if root_reader is not None else None)
+        return read[0]
+
+    return manifest
 
 
 def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
@@ -141,7 +172,8 @@ def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) ->
     )
 
 
-def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChange]:
+def _expand_renames(changes: list[FileChange], config: Config,
+                    manifest: Callable[[], bytes | None] | None = None) -> list[FileChange]:
     """A rename that moves a test file out of collection is a disappearance.
 
     git's rename folding would otherwise analyse only the new path: `git mv
@@ -160,10 +192,16 @@ def _expand_renames(changes: list[FileChange], config: Config) -> list[FileChang
             # Collection continuity ignores roles: a runner that collected
             # the old path collects the new one whatever role that path holds,
             # and the destination is judged as a test either way (#197 Q2).
-            # Which runner a project uses is not known, so the JS rows form a
-            # union (`frontends/javascript/paths.py`).
-            old_test = is_js_test_path(old) or (old_role == "test" and collectable(old))
-            new_test = is_js_test_path(new) or (new_role == "test" and collectable(new))
+            # A JS file's runner is the one its base side or the base
+            # manifest proves; without that proof the rows form a union. The
+            # runners match case-sensitively, so continuity does too (#196
+            # 186.7, 186.3; `frontends/javascript/runners.py`).
+            if is_js_test_file(old, change.before):
+                old_test = True
+                new_test = collection_continues(old, new, runner_evidence(change.before, manifest))
+            else:
+                old_test = old_role == "test" and collectable(old)
+                new_test = is_js_test_file(new, change.after) or (new_role == "test" and collectable(new))
             # Moving a file out of a supervised role is a way of escaping
             # supervision: `git mv AGENTS.md docs/AGENTS.old` or a workflow
             # out of .github/workflows/ silenced the guardrail and CI rules
@@ -649,7 +687,10 @@ def build_ir(
         c.old_path.replace("\\", "/"): c.path.replace("\\", "/")
         for c in changes if c.old_path
     }
-    expanded_changes = sorted(_expand_renames(changes, config), key=lambda c: c.path)
+    manifest = _base_manifest(changes, root_reader)
+    expanded_changes = sorted(_expand_renames(changes, config, manifest), key=lambda c: c.path)
+    # The runner each JS test file is judged under at head, for D2 liveness.
+    js_head_runners: dict[str, frozenset[str] | None] = {}
     single_context_change = sum(not is_artifact(c.path) for c in changes) == 1
     for change in expanded_changes:
         path = change.path.replace("\\", "/")
@@ -673,8 +714,8 @@ def build_ir(
         is_python = path.endswith(".py")
         # A JS/TS test path is parsed and judged as a test whatever its role.
         # The role decides only which other rules it also answers to (#197).
-        is_js_test = is_js_test_path(path)
-        if _js_test(path, role):
+        is_js_test = is_js_test_file(path, change.before, change.after)
+        if _js_test(path, role, change.before, change.after):
             role = "test"
         test_obligations = is_js_test and role != "test"
         judged_test = role == "test" or test_obligations
@@ -787,6 +828,19 @@ def build_ir(
         file_ir = align_file(path, role, change.status, before_parsed, after_parsed)
         file_ir.test_obligations = test_obligations
         file_ir.native_assertion_context_unchanged = native_context_unchanged
+        if is_js_test and change.after is not None:
+            head_runners = runner_evidence(change.after, manifest)
+            js_head_runners[path] = head_runners
+            # Focus this diff adds to a file that had none. Jest and Vitest
+            # keep it in the file; Mocha and Jasmine apply it to the whole
+            # suite, so unless the runner is proven to be one of the first two,
+            # every test outside this file stops (#196 187.4). A move out of
+            # collection is reported as a removal instead.
+            focus = after_parsed.focus if after_parsed is not None and after_parsed.parse_ok else None
+            had_focus = before_parsed is not None and before_parsed.focus is not None
+            if (focus is not None and not had_focus and change.synthetic != "renamed_from_test"
+                    and not focus_is_file_scoped(head_runners)):
+                file_ir.suite_focus_added = Marker(name="test.focused", text=focus.text, span=focus.span)
         if (judged_test or role == "conftest") and path.endswith(".py"):
             from checkwash.frontends.python.constant_renames import literal_constant_renames
             file_ir.module_constant_renames = literal_constant_renames(change.before, change.after)
@@ -1128,8 +1182,11 @@ def build_ir(
     added_units: Counter[str] = Counter()
     for file in ir.files:
         constants = file.constants
+        # A unit that reappears in a JS file its runner does not collect does
+        # not run there, so it is not live (#196 186.7).
+        js_collected = file.path not in js_head_runners or collected(file.path, js_head_runners[file.path])
         for unit in file.units:
-            live_after = unit.after is not None and unit_is_live(unit.after, constants)
+            live_after = unit.after is not None and js_collected and unit_is_live(unit.after, constants)
             if unit.delta is not None and unit.before is not None and unit.after is not None:
                 b_by_id = {a.id: a for a in unit.before.assertions}
                 a_by_id = {a.id: a for a in unit.after.assertions}

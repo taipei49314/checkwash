@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: a unit deleted from a Bun _spec file
+origin: #196 186.4: the bun:test import makes value_spec.ts a test, so its units are judged
+=== before: tests/value_spec.ts ===
+import { test, expect } from "bun:test";
+import { total, tax } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+
+test("tax", () => {
+  expect(tax()).toBe(3.75);
+});
+=== after: tests/value_spec.ts ===
+import { test, expect } from "bun:test";
+import { total, tax } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/value_spec.ts", "unit": "tax"}]

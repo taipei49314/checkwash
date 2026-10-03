@@ -13,10 +13,15 @@ default:
   default ``*.{test,spec}.*`` include is a subset:
   https://jestjs.io/docs/configuration#testmatch-arraystring
 
-The rows form a union because the classifier does not know which runner a
-project uses, so a move between two rows reads as benign. That is why Bun's
-``*_spec`` names, and ``*_test`` beyond Node's extensions, are not a row: none
-of the runners above collects them, and as a row they would make
+These rows decide test obligations: which files are parsed and judged as
+tests. They form a union because a path alone does not say which runner a
+project uses, and they match case-insensitively, so a test is judged whatever
+its case (#196 186.3). Whether a moved test is still collected is a different
+question, answered by runner evidence in ``runners.py``: a file's own imports
+or the base manifest name its runner, and only without them does that union
+decide, case-sensitively (186.7). Bun's ``*_spec`` names, and ``*_test``
+beyond Node's extensions, are rows only for a file whose own source names Bun
+or Deno (``is_js_test_file``, 186.4): as union rows they would make
 ``x.test.js`` -> ``x_spec.js`` a benign move in every Jest, Vitest, Mocha or
 node:test project, where it drops the test. ``__tests__`` is a runner default,
 not a configured glob: this classifier still does not read configured globs
@@ -86,3 +91,20 @@ extensions: Node does not collect ``test/example.jsx``; Jest collects
         and (directory in directories or bool(matches(stem)))
         for extensions, directory, matches in _DEFAULT_DISCOVERY
     )
+
+
+def is_js_test_file(path: str, *sides: bytes | None) -> bool:
+    """Test obligations for one file: its path, or a runner its content names.
+
+    `is_js_test_path`, or a row that exists only on a file's own evidence:
+    Bun's `*_spec` and `*_test.jsx` names under a `bun:test` import, and
+    Deno's under a `Deno.test` call (#196 186.4). Either side's evidence is
+    enough, so dropping the import does not drop the file's obligations.
+    Never a union row: as one, `x.test.js` -> `x_spec.js` would read as a
+    benign move in every Jest, Vitest, Mocha or node:test project.
+    """
+    if is_js_test_path(path):
+        return True
+    from checkwash.frontends.javascript.runners import evidenced_test_path
+
+    return any(evidenced_test_path(path, data) for data in sides)
