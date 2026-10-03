@@ -96,6 +96,7 @@ from checkwash.roles import (
     _test_commands_changed,
     collectable,
     is_artifact,
+    is_test_support_path,
 )
 
 __all__ = [
@@ -742,6 +743,11 @@ def build_ir(
         is_js_test = is_js_test_file(path, change.before, change.after)
         if _js_test(path, role, change.before, change.after):
             role = "test"
+        elif role == "prod" and is_test_support_path(path):
+            # Data, mocks and helpers beneath a test-support directory serve
+            # tests: never production evidence, never the opaque exemption
+            # (#217). E7 still reads their table role (_scope_role).
+            role = "test"
         test_obligations = is_js_test and role != "test"
         judged_test = role == "test" or test_obligations
 
@@ -1046,7 +1052,8 @@ def build_ir(
                 #    folding keeps the old blob as `before` while the role
                 #    comes from the new path, so `docs/rules.md` renamed to
                 #    `app/rules.csv` counted as pre-existing production the
-                #    diff had in fact just invented.
+                #    diff had in fact just invented. Data beneath a
+                #    test-support directory was not production either (#217).
                 #  - not opacity this diff created. A prod `.py` that parsed
                 #    at base and does not parse at head is reported as
                 #    `skipped (unparseable)` in the same report; rewarding it
@@ -1068,6 +1075,7 @@ def build_ir(
                     and change.after
                     and change.before != change.after
                     and config.role_of(old_path) == "prod"
+                    and not is_test_support_path(old_path)
                     and not self_inflicted
                     # 4. A file that runs the test suite is not unreadable
                     #    production code, whatever it is called. Without this,

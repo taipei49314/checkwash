@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: YAML fixture data edited beneath __tests__/fixtures/ is not production repair evidence
+origin: #217 row D3: any extension beneath a test-support directory, at any depth, takes the test role
+=== before: src/__tests__/fixtures/order.yaml ===
+items:
+  - price: 10.0
+    qty: 3
+  - price: 5.0
+    qty: 9
+=== after: src/__tests__/fixtures/order.yaml ===
+items:
+  - price: 10.0
+    qty: 3
+  - price: 5.0
+    qty: 9
+note: x
+=== before: src/__tests__/billing.test.js ===
+import { invoiceTotal } from "../billing";
+import order from "./data.json";
+
+test("computes invoice total with tax", () => {
+  expect(invoiceTotal(order.items)).toBe(78.75);
+});
+=== after: src/__tests__/billing.test.js ===
+import { invoiceTotal } from "../billing";
+import order from "./data.json";
+
+test("computes invoice total with tax", () => {
+  expect(invoiceTotal(order.items)).toBeTruthy();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "path": "src/__tests__/billing.test.js", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

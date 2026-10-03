@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: fixture data edited beneath Node's test/ directory is not production repair evidence
+origin: #217 row D6: the maintainer included test/ in the shared test-support definition, so test/fixtures/order.json takes the test role beside a node:test file
+=== before: test/fixtures/order.json ===
+{ "items": [{ "price": 10.0, "qty": 3 }, { "price": 5.0, "qty": 9 }] }
+=== after: test/fixtures/order.json ===
+{ "items": [{ "price": 10.0, "qty": 3 }, { "price": 5.0, "qty": 9 }], "note": "x" }
+=== before: test/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { invoiceTotal } = require("../src/billing");
+const order = require("./fixtures/order.json");
+
+test("computes invoice total with tax", () => {
+  assert.strictEqual(invoiceTotal(order.items), 78.75);
+});
+=== after: test/billing.test.js ===
+const test = require("node:test");
+const assert = require("node:assert");
+const { invoiceTotal } = require("../src/billing");
+const order = require("./fixtures/order.json");
+
+test("computes invoice total with tax", () => {
+  assert.ok(invoiceTotal(order.items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "path": "test/billing.test.js", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

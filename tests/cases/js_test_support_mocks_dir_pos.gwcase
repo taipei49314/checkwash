@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: a manual mock edited beneath __mocks__/ is not production repair evidence
+origin: #217 row D2: a __mocks__/ file that names no runner was an opaque production change; it serves tests, so it now takes the test role
+=== before: src/__mocks__/billing.js ===
+export const invoiceTotal = () => 78.75;
+=== after: src/__mocks__/billing.js ===
+export const invoiceTotal = () => 80;
+=== before: src/__tests__/billing.test.js ===
+import { invoiceTotal } from "../billing";
+import order from "./data.json";
+
+test("computes invoice total with tax", () => {
+  expect(invoiceTotal(order.items)).toBe(78.75);
+});
+=== after: src/__tests__/billing.test.js ===
+import { invoiceTotal } from "../billing";
+import order from "./data.json";
+
+test("computes invoice total with tax", () => {
+  expect(invoiceTotal(order.items)).toBeTruthy();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "path": "src/__tests__/billing.test.js", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
