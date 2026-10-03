@@ -110,6 +110,27 @@ def is_artifact(path: str) -> bool:
     return segments[-1].lower().endswith(_ARTIFACT_SUFFIXES)
 
 
+# Directories whose files serve tests: Jest's `__tests__` and `__mocks__`, and
+# the `test` directory Node's runner collects beneath (#217).
+_TEST_SUPPORT_DIRECTORIES = frozenset({"__tests__", "__mocks__", "test"})
+
+
+def is_test_support_path(path: str) -> bool:
+    """Is `path` a non-Python file beneath a test-support directory (#217)?
+
+    Data, mocks and helpers there serve tests whatever their extension, as
+    every file under Python's `tests/**` already does. Directory segments match
+    case-insensitively, as JS test obligations do (#196 186.3), and whole:
+    `test-data/` and `__tests__x/` are not test-support directories. Python
+    files keep the SPEC §2 table's Python rows.
+    """
+    normalized = path.replace("\\", "/")
+    if normalized.endswith(".py") or is_artifact(normalized):
+        return False
+    *directories, _name = normalized.lower().split("/")
+    return any(directory in _TEST_SUPPORT_DIRECTORIES for directory in directories)
+
+
 def collectable(path: str) -> bool:
     """Would pytest's default collection run this file?
 

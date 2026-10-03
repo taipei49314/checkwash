@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: a data file edited beneath __tests__/ is not production repair evidence
+origin: #217 row D1: src/__tests__/data.json was an opaque production change, which granted REPAIR_EVIDENCE to every finding in the diff (THREATMODEL #4); beneath a test-support directory it now takes the test role
+=== before: src/__tests__/data.json ===
+{ "items": [{ "price": 10.0, "qty": 3 }, { "price": 5.0, "qty": 9 }] }
+=== after: src/__tests__/data.json ===
+{ "items": [{ "price": 10.0, "qty": 3 }, { "price": 5.0, "qty": 9 }], "note": "x" }
+=== before: src/__tests__/billing.test.js ===
+import { invoiceTotal } from "../billing";
+import order from "./data.json";
+
+test("computes invoice total with tax", () => {
+  expect(invoiceTotal(order.items)).toBe(78.75);
+});
+=== after: src/__tests__/billing.test.js ===
+import { invoiceTotal } from "../billing";
+import order from "./data.json";
+
+test("computes invoice total with tax", () => {
+  expect(invoiceTotal(order.items)).toBeTruthy();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "path": "src/__tests__/billing.test.js", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

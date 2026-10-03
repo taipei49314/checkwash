@@ -145,6 +145,12 @@ side is judged by its table role for the out-of-scope escalation, so an edit to
 production code named like a test outside the contract's scope blocks
 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5945152490),
 186.8); every other rule still reads it as a test.
+Any other file beneath a `__tests__/`, `__mocks__/` or `test/` directory,
+Python files aside, serves the tests: it takes the test role whatever its
+extension, as every file under Python's `tests/` does, so an edit to fixture
+data or a manual mock is not production repair evidence
+([#217](https://github.com/taipei49314/checkwash/issues/217)). The out-of-scope
+escalation still judges such a file as production.
 Build artifacts and dependencies remain excluded.
 The v0.4.1 repair for #164 also recognizes `assert.equal`,
 `assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`

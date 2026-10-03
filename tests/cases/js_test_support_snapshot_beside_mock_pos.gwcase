@@ -1,0 +1,19 @@
+=== meta ===
+bypass: 107
+rule: EXPECTED_VALUE_CHANGED
+title: a snapshot rewritten beside a mock edit alone has no production change to explain it
+origin: #217: as production, the mock made the rewrite SNAPSHOT_CODE_COCHANGE at warn ("changed together with prod code"); as test support it explains nothing, as data beside a snapshot under Python's tests/ already does not
+=== before: src/__mocks__/api.js ===
+export const fetchInvoice = async () => ({ total: 78.75 });
+=== after: src/__mocks__/api.js ===
+export const fetchInvoice = async () => ({ total: 80 });
+=== before: src/__tests__/__snapshots__/invoice.test.js.snap ===
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders the invoice total 1`] = `"Total: 78.75"`;
+=== after: src/__tests__/__snapshots__/invoice.test.js.snap ===
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders the invoice total 1`] = `"Total: 80.00"`;
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "path": "src/__tests__/__snapshots__/invoice.test.js.snap", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
