@@ -45,9 +45,12 @@ code and never to this table.
 ci, snapshot, lockfile or conftest. It then keeps that role and that role's
 rules, and every test rule still judges it (#197). The IR marks such a file
 with the optional FileIR boolean `test_obligations`, default false; `role`
-stays the published role, so no fingerprint identity moves. A rename between
-two such paths is an edit of the test, not its disappearance, whatever roles
-the two paths hold. Python paths still resolve to one role:
+stays the published role, so no fingerprint identity moves. Bun's and Deno's
+own names (`*_spec`, `*_test.tsx`) are JS/TS test paths only for a file whose
+source names that runner, by a `bun:test` import or a `Deno.test` call (#196
+186.4). A rename is an edit of the test, not its disappearance, when the
+runner that ran it still collects the new path (§2b), whatever roles the two
+paths hold. Python paths still resolve to one role:
 `tests/golden/test_x.py` is a snapshot (#219).
 
 **One role is decided by content, not by path.** A `prod` file is
@@ -125,6 +128,18 @@ between the two is a laundering route (all confirmed by reproduction):
 - a skip marker's identity includes its **condition**, so
   `skipif(False)` → `skipif(True)` is a change; and the marker is matched on
   its trailing components, so `import pytest as p; @p.mark.skip` counts
+
+For JS/TS, collection is the default discovery of the runner that runs the
+file, matched case-sensitively, as the runners match it
+(`frontends/javascript/runners.py`; #196 186.7, 186.3). The runner is the one
+the file names by import (`vitest`, `@jest/globals`, `node:test`, `bun:test`)
+or by a `Deno.test` call, else the one the base side's root `package.json`
+names alone among `jest`, `vitest`, `mocha` and `jasmine`, else unknown. A
+rename reads the moved file's base side. Unknown falls back to the union of
+the Jest and node:test defaults. A move to a path that runner does not
+collect is a disappearance. When the runner does not collect the old path by
+default either, the project configures its own globs, which are not read, and
+the union decides.
 
 ### Bounded Python carriers and table projection
 
@@ -302,7 +317,7 @@ detectors can only be disabled whole.
 |---|---|
 | `ASSERT_REMOVED` | an assertion disappeared from a surviving test unit |
 | `ASSERT_WEAKENED` | aligned assertion strength decreased, **or** its polarity flipped with the subject unchanged (`==`→`!=`, `is`→`is not`, `assertTrue`→`assertFalse`, `assertIs`→`assertIsNot`) — same form and strength, opposite meaning. Polarity is whether the assertion asserts its predicate or that predicate's negation, not whether it is spelled negated: `toBeDefined()` asserts `!== undefined`, the negation of `toBeUndefined()`. When the subject changed too it is reported as a rewrite, not as an inversion: greenwash cannot verify the replacement is equivalent, and saying "proves the opposite" would be a claim it has not established. When both assertions carry a predicate key (§3), the predicates decide instead of the lattice: a same or stronger predicate is not reported; the same key with its polarity flipped is the inversion above; a predicate change that no old value survives **contradicts** the old assertion, and a bound whose direction reversed (`<`→`>`) is reported as **bound direction reversed**; an old predicate that implies the new one is a **predicate widened**, graded by its lattice drop; any other predicate change is an **unverifiable replacement** (greenwash cannot verify the replacement is equivalent), and so is a known tolerance replaced, on the same subject, by one the frontend cannot read (a JS `closeTo` delta or `toBeCloseTo` precision it cannot read is unknown, not unchanged). Only the inversion says the test proves the opposite. An operand change within one key belongs to `EXPECTED_VALUE_CHANGED` or `TOLERANCE_LOOSENED` |
-| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, the module's `pytestmark`, `self.skipTest`, or a conftest suite control), a whole test unit disappeared (including out of collection, per §2b), or parametrized cases deleted or disabled — since v0.3.0 counted by row identity (cell texts read through `pytest.param(...)`, one table per decorator, stacked decorators a cross product of items), so a marked-off row is reported however many rows are appended beside it, and the finding says how many items are marks rather than deletions; a vanished unmarked row is left to the count (`vanished − arrived`), which is why an edited input stays silent and a deletion beside an appended row does too when its expected value survives. Replacing disappeared live rows with new input/answer pairs has a separate EXPECTATION_DEFINITION_CHANGED owner below (THREATMODEL 102, 102a). Row marks include statically true skipif conditions; false and unknown conditions do not disable a row |
+| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, the module's `pytestmark`, `self.skipTest`, or a conftest suite control), a whole test unit disappeared (including out of collection, per §2b), or parametrized cases deleted or disabled — since v0.3.0 counted by row identity (cell texts read through `pytest.param(...)`, one table per decorator, stacked decorators a cross product of items), so a marked-off row is reported however many rows are appended beside it, and the finding says how many items are marks rather than deletions; a vanished unmarked row is left to the count (`vanished − arrived`), which is why an edited input stays silent and a deletion beside an appended row does too when its expected value survives. Replacing disappeared live rows with new input/answer pairs has a separate EXPECTATION_DEFINITION_CHANGED owner below (THREATMODEL 102, 102a). Row marks include statically true skipif conditions; false and unknown conditions do not disable a row. In a JS/TS test file, focus (`.only`, `fit`, `fdescribe`, `{ only: true }`) that the diff adds to a file that had none, while no unit of the file is reported as no longer running, is reported once for the file: Mocha and Jasmine apply focus to the whole suite, so every test outside the file stops. It is not reported when the runner is proven to keep focus in the file, by a `vitest` or `@jest/globals` import or a base-side root `package.json` naming Jest or Vitest and no other runner; a node:test import is no such proof (#196 187.4) |
 | `TOLERANCE_LOOSENED` | any individual tolerance on the call got wider (each `rel`/`abs`/`places` compared separately, via Decimal) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `ASSERT_SUBSTITUTED` | an aligned pair produced by the **order fallback** — position, not text or subject — where both halves moved: the subject differs structurally and so does the expectation. The old assertion is gone and a different one holds its slot, while `strength_change` reads 0 and `assertions_removed` is empty. Requires a subject on both sides, so folding an excinfo assert into `pytest.raises(match=)` is untouched; a *wrapped* subject is `SUBJECT_NORMALIZED`'s, and a rename that keeps the expectation is neither |
@@ -432,7 +447,7 @@ Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
 | E6 `CI_TEST_COMMAND_WEAKENED` | CI diff adds `continue-on-error`, `\|\| true`, `--ignore`, `-k`, `--deselect` | → high |
 | E7 `OUT_OF_SCOPE_PROD_TOUCH` | `SCOPE_DRIFT` onto a prod / ci / guardrail file | → high |
 | D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
-| D2 `ASSERTION_MOVED` | removed assertion's normalized text — or, for a disappeared unit, its whole normalized body — reappears verbatim in a **live** added unit. Live means no disabling marker, or only markers that qualify as D6 compat gates: a test carried across files together with its own `skipif(WIN)` is relocated, not dead, while an unconditional skip or an always-true condition still counts as dead. Credits are a multiset, spent once each | → info |
+| D2 `ASSERTION_MOVED` | removed assertion's normalized text — or, for a disappeared unit, its whole normalized body — reappears verbatim in a **live** added unit. Live means no disabling marker, or only markers that qualify as D6 compat gates: a test carried across files together with its own `skipif(WIN)` is relocated, not dead, while an unconditional skip or an always-true condition still counts as dead. A JS/TS unit is live only in a file that the file's runner still collects (§2b, from the destination's own source, else the base manifest): a unit that reappears in a file its runner does not collect does not run there (#196 186.7). Credits are a multiset, spent once each | → info |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
 | D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units (liveness as in D2) ≥ the mass lost to disappeared units | hold at warn |
