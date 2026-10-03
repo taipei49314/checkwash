@@ -170,6 +170,13 @@ their ordered forms, node:test `mock.module`, or a replacing spy (issue #177).
 Only `./` and `../` specifiers count as first-party; setup files, hooks and
 bundler aliases stay outside
 ([installation contract](subject-integrity.md#javascript-module-mocks-and-replacing-spies)).
+Since v0.5.0, a `vi.mock` takes effect for the whole file wherever it is
+written, as Vitest hoists it. A stand-in is new for each test that did not
+already have it, so one copied in from another test is reported. A spy
+replaced in a second statement is read. A module object passed whole names
+no export
+([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5945152490),
+188.1-188.4).
 Unit liveness is read once, the same way at every declaration level (#176,
 #178): `.skip`, `.todo`, the `x`-prefixed globals, Vitest `skipIf`/`runIf` and
 the `skip`/`todo` keys of an inline options object disable a unit, and

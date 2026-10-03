@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: a vi.mock written inside the test is hoisted to the top of the file and replaces the subject
+origin: #196 188.1 - Vitest hoists vi.mock wherever it is written (3.2.7 and 4.1.11 measured; 5.0.3 refuses the file); read as an ordered mock, it reached no static import and the stand-in passed silently
+=== before: tests/billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    vi.mock("../src/billing.js", () => ({ invoiceTotal: () => 78.75 }));
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]
