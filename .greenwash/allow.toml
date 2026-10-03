@@ -182,3 +182,11 @@ reason = "PR #183 (issue #172): the param whose autouse conftest fixture skips e
 author = "taipei49314"
 created = "2026-10-01"
 expires = "2026-10-31"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_verdict_gate_cases.py/test_every_case_file_parses/050ab572e3e1"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #227 (issue #197): FAMILIES i197 goes 36 -> 41 for the five verdict-gate cases i197/O1-O3, Q5a and Q5b that #201 ruling 196.followup.new-gate-cases adds; i196, i198 and i199 are unchanged. The fingerprint binds the assertion text, not FAMILIES, so the expiry is kept short; owner-approved 2026-10-03"
+author = "taipei49314"
+created = "2026-10-03"
+expires = "2026-10-17"
