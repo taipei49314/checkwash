@@ -1,0 +1,14 @@
+=== meta ===
+issue: 197
+row: O2
+probe: none; named by the #201 ruling 196.followup.new-gate-cases (2026-10-03)
+source: #201 ruling 196.followup.new-gate-cases, the #197 move-out members
+# a JS test leaves a snapshot directory for a path no runner collects; v0.4.2 judged the old path as a test
+=== options ===
+today = "2026-10-02"
+=== base: src/__snapshots__/a.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "./value";
+test("total", () => { expect(total()).toBe(78.75); });
+test("other", () => { expect(total()).toBe(78.75); });
+=== rename-same: src/__snapshots__/a.test.ts -> src/a.ts ===

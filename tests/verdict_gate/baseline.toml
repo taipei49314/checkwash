@@ -16,6 +16,12 @@
 # rename-with-edit as delete + add, and deleting a test under
 # .github/workflows/ escalates), see tests/verdict_gate/README.md.
 #
+# 2026-10-03: the #197 dual-obligation PR added five cases under the #201
+# ruling 196.followup.new-gate-cases. i197/Q5a and Q5b block on v0.5.0
+# (baseline_blocked 73 -> 75); i197/O1-O3 block on v0.4.2 and pass on v0.5.0
+# (canary block_to_pass 67 -> 70). Both pins are the local gate's proposal
+# over the 154 T1 cases.
+#
 # Rotation (after a release): repoint [baseline] to the new release, re-read
 # [t3.cases] from the gate's proposal, and re-pin [baseline_blocked]. Asset
 # sha256 and size come from `gh release view vX.Y.Z --json assets` (the
@@ -30,8 +36,8 @@ sha256 = "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c"
 size = 588886
 
 [baseline_blocked]
-count = 73
-sha256 = "31d3f79f2d752091d0019b6ef69adf1c9a03d289a883dca2a9f72645ee357891"
+count = 75
+sha256 = "189fa4420979bd72b16518b2be7bc8ea868a501049b3aa482e47f3a9d0a948d1"
 
 [canary]
 block_to_pass = [
@@ -68,6 +74,9 @@ block_to_pass = [
   "i197/C2",
   "i197/C3",
   "i197/C5",
+  "i197/O1",
+  "i197/O2",
+  "i197/O3",
   "i197/U1",
   "i197/U2",
   "i198/H1",

@@ -5,7 +5,7 @@
 # maintainer's delegation while away ("完全開放授權 但只限於checkwash相關");
 # they are flagged for the maintainer's re-review (DECISIONS.md D-064).
 #
-# Every entry is a known regression from v0.4.2 to v0.5.0 that is filed as
+# Every known-regression entry is a regression from v0.4.2 to v0.5.0 filed as
 # an open issue. Its label in tests/verdict_gate/labels.toml is `block`, and
 # v0.5.0 passes it, so the label anchor needs this entry until the family
 # fix lands; the fix PR removes the entry (the gate fails on a stale one).
@@ -14,96 +14,16 @@
 # to ci) removed the ten i197 A entries it closes: A1, A2, A4, A5, A7 and
 # A9-A13. 34 entries remain. Approved by the maintainer in that fix PR,
 # under the 2026-10-03 rulings (X.gate-bookkeeping).
+#
+# 2026-10-03: the #197 dual-obligation fix (197.Q2, Q3, Q5) removed the
+# eleven i197 entries it closes: B1-B3, B5, B6, C1-C3, C5, U1 and U2. It
+# also added four fp-fix entries, rows that v0.5.0 blocks and the fix passes
+# with a `pass` label: i197/R1 and R2 (relabelled by 197.Q2) and i197/Q5a
+# and Q5b (new cases under the #201 ruling 196.followup.new-gate-cases). 27
+# entries remain: 23 known-regression (i198 16, i199 7) and 4 fp-fix.
+# Approved by the maintainer in that fix PR (X.gate-bookkeeping).
 
 baseline = "v0.5.0"
-
-[[accept]]
-case         = "i197/B1"
-input_sha256 = "07208a18f804aee5dc33728cef7ed12ff37d0fe4ae2d9d1ef99753d73fd9b4d9"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B1, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/B2"
-input_sha256 = "4a30a506facf332ac5e8d005e3c317b1682e6960b849a19d279f28d14f18a3c6"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B2, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/B3"
-input_sha256 = "f2de15ec97966317f5527bbd803701a5be9c94e15254d3b285b2b4ae8d023992"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B3, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/B5"
-input_sha256 = "2745dec30f98b32247131703b1754b755a017a731011437691356a4ee2f6480c"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B5, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/B6"
-input_sha256 = "fc9c17f86b6d63b4f85189f83af4c34be93bf50ea521a23cf810b12241e50ed7"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row B6, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/C1"
-input_sha256 = "c20268fcd3c8be4330b687ad0e7d7103e82ef30f44cfa45f08dd86b221065647"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row C1, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/C2"
-input_sha256 = "8bff7a35930198a142993cb737c301bca169e354bda88c4a80a3891e4371dd19"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row C2, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/C3"
-input_sha256 = "c846dc068b2adb135381d7b9b265cbf9a4f7ee03596d7db36664f87b3464e432"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row C3, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/C5"
-input_sha256 = "9f33c64f645af5f7c28675fbd2fecc2a46fd71b9e9cfb15ba2d73e6f84d8bec9"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row C5, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/U1"
-input_sha256 = "cd8bddd4d0374ce75e33065d343c1affb45b06c7381a2a2cc0a7fa26ce7564e5"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row U1, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
-
-[[accept]]
-case         = "i197/U2"
-input_sha256 = "bfccc3b1a752a849964158d0b32c7f2cfc78ae5a5ae09b5d0e47cdcfd1f70f59"
-kind         = "known-regression"
-issue        = 197
-reason       = "v0.4.2 blocks, v0.5.0 passes: #197 row U2, an open family issue; accepted until its fix lands"
-reviewed_in  = 203
 
 [[accept]]
 case         = "i198/M1a"
@@ -288,3 +208,35 @@ kind         = "known-regression"
 issue        = 199
 reason       = "v0.4.2 blocks, v0.5.0 passes: #199 row M7, an open family issue; accepted until its fix lands"
 reviewed_in  = 203
+
+[[accept]]
+case         = "i197/R1"
+input_sha256 = "61d64c7366fa03916f19a4ad9f4ffb9b685bf221d7e8bb99c6fd443952bc1de7"
+kind         = "fp-fix"
+issue        = 197
+reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q2 relabelled #197 row R1 pass; the destination under .github/workflows/ is still collected and is judged there as a test"
+reviewed_in  = 227
+
+[[accept]]
+case         = "i197/R2"
+input_sha256 = "619defb78d513be51857cd8ea1380c8ed96b44d32fbf4ff80d18e8ee93ec3a5d"
+kind         = "fp-fix"
+issue        = 197
+reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q2 relabelled #197 row R2 pass; the destination under test/expected/ is still collected and is judged there as a test"
+reviewed_in  = 227
+
+[[accept]]
+case         = "i197/Q5a"
+input_sha256 = "7560d475c122ba00b61ba6179eb209da5b49c4116fc888fbc0390618bae5af05"
+kind         = "fp-fix"
+issue        = 197
+reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q5 makes only YAML under .github/workflows/ a workflow, and the moved test is still collected at src/a.test.ts"
+reviewed_in  = 227
+
+[[accept]]
+case         = "i197/Q5b"
+input_sha256 = "3ff87c696784ed7872cf2d2304a515bfc03d87ee2eb2fe20318e627f7c4cd379"
+kind         = "fp-fix"
+issue        = 197
+reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q5 makes only YAML under .github/workflows/ a workflow, so deleting a README there removes no gate"
+reviewed_in  = 227
