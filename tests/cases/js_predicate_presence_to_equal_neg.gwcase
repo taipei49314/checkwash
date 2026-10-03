@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: toBeDefined() strengthened to toEqual({...}) is no polarity change
+origin: issue #198 presence control
+=== before: src/lookup.test.ts ===
+import { test, expect } from "vitest";
+import { findCustomer } from "./lookup";
+
+test("a known id finds its customer", () => {
+  expect(findCustomer("c-42")).toBeDefined();
+});
+=== after: src/lookup.test.ts ===
+import { test, expect } from "vitest";
+import { findCustomer } from "./lookup";
+
+test("a known id finds its customer", () => {
+  expect(findCustomer("c-42")).toEqual({ id: "c-42", name: "Ada" });
+});
+=== expect ===
+[]

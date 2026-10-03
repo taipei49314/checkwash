@@ -1,13 +1,63 @@
-"""ASSERT_WEAKENED: an aligned assertion's lattice strength decreased."""
+"""ASSERT_WEAKENED: an aligned assertion's lattice strength decreased.
+
+When both assertions of a pair state a predicate key (`ir/predicate.py`) on
+the same subject, the key relation decides instead of the lattice (#198): a
+proven same or stronger predicate is no weakening whatever the rungs say, and
+a widened, contradicting, inverted or unverifiable one is reported with what
+was established.
+"""
 
 from __future__ import annotations
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.ir import predicate as P
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import same_expr
-from checkwash.ir.model import IR, judged_as_test
+from checkwash.ir.model import IR, Assertion, judged_as_test
 from checkwash.ir import strength as S
 from checkwash.ir.strength import name_of
+
+
+# Presence checks: `toBeDefined()`, `.exist`, `.not.toBeNull()` assert that
+# a value is not null, not undefined or not nullish, which is a negation.
+_PRESENCE_CHECKS = frozenset({"is_null", "is_undefined", "is_nullish"})
+
+
+def _presence_meets_affirmation(b: Assertion, a: Assertion) -> bool:
+    """One side checks presence, the other affirms something outside presence.
+
+    `toBeDefined()` -> `toEqual(5)` flips `positive` without either side
+    negating the other: the affirmative assertion needs the value it checks
+    to be there. Such a pair is judged by the lattice, as it was before
+    `positive` meant "asserts the predicate" (#167's strengthening pin, #198).
+    """
+    def check(x: Assertion) -> bool:
+        return x.predicate in _PRESENCE_CHECKS and not x.positive
+
+    def affirms(x: Assertion) -> bool:
+        return x.positive and x.predicate not in P.PRESENCE
+
+    return (check(b) and affirms(a)) or (check(a) and affirms(b))
+
+
+def _keyed_message(qualname: str, relation: str, b: Assertion, a: Assertion) -> str:
+    """The finding message for a keyed pair the relation does not accept."""
+    old, new = P.describe(b), P.describe(a)
+    if relation == P.OPPOSITE:
+        return f"{qualname}: assertion polarity inverted ({old} -> {new}) — the test now proves the opposite"
+    if relation == P.CONTRADICTS:
+        if b.predicate in P.BOUNDS and a.predicate in P.BOUNDS:
+            return f"{qualname}: bound direction reversed ({old} -> {new}) — the new assertion contradicts the old one"
+        return f"{qualname}: assertion contradicts the old one ({old} -> {new}) — no value passes both"
+    if relation == P.WIDENED:
+        message = (f"{qualname}: assertion predicate widened ({old} -> {new}) — the new assertion "
+                   "also passes values the old one rejected")
+        if (b.strength or 0) > (a.strength or 0):
+            message += (f"; strength {name_of(b.strength)}({b.strength}) -> "
+                        f"{name_of(a.strength)}({a.strength})")
+        return message
+    return (f"{qualname}: assertion replaced; checkwash cannot verify the replacement is equivalent "
+            f"(predicate {old} -> {new})")
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -42,6 +92,42 @@ def detect(ir: IR) -> list[Finding]:
                 # extra parens is not a subject change; wrapping or replacing
                 # it is (E6 / review 2026-08-11 Issue 4).
                 subject_changed = not same_expr(b.left, a.left)
+                # Two predicate keys on one subject: the relation decides,
+                # from key and polarity alone (#198). An operand change is
+                # not judged here; EXPECTED_VALUE_CHANGED and
+                # TOLERANCE_LOOSENED own it. A changed subject leaves the
+                # pair to the rules below, which call it a rewrite.
+                relation = None if subject_changed else P.relation(b, a)
+                if relation is not None:
+                    if relation in (P.SAME, P.STRONGER):
+                        continue
+                    findings.append(
+                        Finding(
+                            rule="ASSERT_WEAKENED",
+                            severity="warn",
+                            message=_keyed_message(unit.qualname, relation, b, a),
+                            path=file.path,
+                            unit=unit.qualname,
+                            before=Evidence(text=b.text, span=b.span),
+                            after=Evidence(text=a.text, span=a.span),
+                            fingerprint=make_fingerprint(
+                                "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                            ),
+                            # Only a proven widening is graded by the
+                            # lattice, so MILD_WEAKENING can hold a widening
+                            # inside the exact family (=== -> ==) at warn.
+                            # Inverted, contradicting and unverifiable pairs
+                            # are never mild.
+                            strength_drop=(
+                                max((b.strength or 0) - (a.strength or 0), 0)
+                                if relation == P.WIDENED
+                                else 999
+                            ),
+                            strength_after=a.strength,
+                            subject_changed=False,
+                        )
+                    )
+                    continue
                 # A flipped polarity (== -> !=, is -> is not, assertTrue ->
                 # assertFalse) leaves form and strength identical while
                 # inverting what the test proves — invisible to the lattice
@@ -56,14 +142,18 @@ def detect(ir: IR) -> list[Finding]:
                 # reported as a rewrite; it still blocks without repair
                 # evidence, because MILD_WEAKENING already refuses to excuse a
                 # changed subject.
-                if b.positive != a.positive:
+                # Two different predicate keys in one form are a replacement
+                # too: `.not.toBe(true)` -> `assert.equal(x, 75)` proves no
+                # opposite (#198).
+                keys_differ = bool(b.predicate and a.predicate and b.predicate != a.predicate)
+                if b.positive != a.positive and not _presence_meets_affirmation(b, a):
                     if subject_changed:
                         message = (
                             f"{unit.qualname}: assertion replaced — subject and polarity "
                             f"both changed ({b.text.strip()[:60]} -> {a.text.strip()[:60]}); "
                             "checkwash cannot verify the replacement is equivalent"
                         )
-                    elif b.form == a.form:
+                    elif b.form == a.form and not keys_differ:
                         message = (
                             f"{unit.qualname}: assertion polarity inverted "
                             f"({'positive' if b.positive else 'negative'} -> "

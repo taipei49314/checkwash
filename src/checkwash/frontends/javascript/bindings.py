@@ -20,6 +20,9 @@ _IDENT = re.compile(NAME + r"\Z")
 class Value:
     kind: str
     method: str = ""
+    # node:assert's strict mode (`node:assert/strict`, `assert.strict`), whose
+    # equal and deepEqual are the strict comparisons (#198 Q3).
+    strict: bool = False
 
 
 UNKNOWN = Value("unknown")
@@ -87,12 +90,19 @@ class Bindings:
 
     @staticmethod
     def module(name: str) -> Value:
-        if name in {"assert", "node:assert", "assert/strict", "node:assert/strict"}:
+        if name in {"assert", "node:assert"}:
             return Value("node")
+        if name in {"assert/strict", "node:assert/strict"}:
+            return Value("node", strict=True)
         if name == "node:test":
             return Value("node_test")
-        if name in {"@jest/globals", "vitest"}:
+        # Vitest's expect reads Jest matchers and chai chains, and Vitest
+        # re-exports chai's assert. Jest's own expect has no chai chain and
+        # @jest/globals no assert, so it is a kind of its own (#198 Q5).
+        if name == "vitest":
             return Value("jest")
+        if name == "@jest/globals":
+            return Value("jest_globals")
         if name == "chai":
             return Value("chai")
         return UNKNOWN
@@ -100,11 +110,13 @@ class Bindings:
     @staticmethod
     def member(value: Value, name: str) -> Value:
         if value.kind in {"node", "node_namespace", "node_context"}:
-            return Value("node") if name == "strict" else Value("node_method", name)
+            if name == "strict":
+                return Value("node", strict=True)
+            return Value("node_method", name, strict=value.strict)
         if value.kind == "jest" and name == "expect":
             return Value("expect")
-        # Vitest re-exports chai's assert interface. @jest/globals shares this
-        # module kind but has no such export to call.
+        if value.kind == "jest_globals" and name == "expect":
+            return Value("jest_expect")
         if value.kind == "jest" and name == "assert":
             return Value("chai_assert")
         if value.kind == "chai" and name in {"expect", "assert"}:
@@ -185,7 +197,8 @@ class Bindings:
                 self._declare(scope, self.token(i + 1), default)
             for j in range(i + 1, end):
                 if self.token(j) == "*" and self.token(j + 1) == "as":
-                    self._declare(scope, self.token(j + 2), Value("node_namespace") if module.kind == "node" else module)
+                    self._declare(scope, self.token(j + 2),
+                                  Value("node_namespace", strict=module.strict) if module.kind == "node" else module)
                 if self.token(j) == "{" and j in self.pairs:
                     for exported, local in self._pattern(j + 1, self.pairs[j]):
                         self._declare(scope, local, self.member(module, exported))
@@ -496,7 +509,11 @@ class Bindings:
             return frozenset({"Node"})
         if value.kind in {"context", "expect", "jest"}:
             return frozenset({value.kind})
-        if value.kind == "chai_expect":
+        # @jest/globals offers only expect among assertion members, which
+        # the `jest` family already keeps.
+        if value.kind == "jest_globals":
+            return frozenset({"jest"})
+        if value.kind in {"chai_expect", "jest_expect"}:
             return frozenset({"expect"})
         if value.kind in {"chai_assert", "chai_assert_method"}:
             return frozenset({"chai"})
@@ -580,12 +597,16 @@ class Bindings:
         if value.kind == "context" and not member("assert"):
             return None
         # Both Vitest's module and chai's export expect and chai's assert;
-        # their other members are not assertion candidates.
+        # their other members are not assertion candidates. @jest/globals
+        # exports expect only.
         if value.kind in {"jest", "chai"} and not (member("expect") or member("assert")):
+            return None
+        if value.kind == "jest_globals" and not member("expect"):
             return None
         if value.kind in {"node", "node_method", "node_namespace", "node_context", "context"}:
             return "Node"
-        if value.kind in {"expect", "chai_expect"} or (value.kind in {"jest", "chai"} and member("expect")):
+        if (value.kind in {"expect", "chai_expect", "jest_expect"}
+                or (value.kind in {"jest", "chai", "jest_globals"} and member("expect"))):
             return "expect"
         if value.kind in {"jest", "chai", "chai_assert", "chai_assert_method"}:
             return "chai"

@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: .not.toBeNull() -> chai .to.exist is a proven strengthening, not an inversion
+origin: issue #198 row FP1
+=== before: src/lookup.test.ts ===
+import { test, expect } from "vitest";
+import { findCustomer } from "./lookup";
+
+test("a known id finds its customer", () => {
+  expect(findCustomer("c-42")).not.toBeNull();
+});
+=== after: src/lookup.test.ts ===
+import { test, expect } from "vitest";
+import { findCustomer } from "./lookup";
+
+test("a known id finds its customer", () => {
+  expect(findCustomer("c-42")).to.exist;
+});
+=== expect ===
+[]

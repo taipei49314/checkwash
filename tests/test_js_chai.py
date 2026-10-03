@@ -64,8 +64,10 @@ def _outcome(before, after, path=_PATH):
     ("expect(paid()).to.be.false;", "paid()", "compare_eq", 90, True, "False"),
     ("expect(failure()).to.be.null;", "failure()", "compare_eq", 90, True, "None"),
     ("expect(failure()).to.be.undefined;", "failure()", "compare_eq", 90, True, None),
-    ("expect(failure()).to.exist;", "failure()", "non_null", 30, True, None),
-    ("expect(failure()).to.not.exist;", "failure()", "non_null", 30, False, None),
+    # `positive` is what the assertion asserts of its predicate key (#198):
+    # `.exist` asserts `!= null`, the negation of is_nullish.
+    ("expect(failure()).to.exist;", "failure()", "non_null", 30, False, None),
+    ("expect(failure()).to.not.exist;", "failure()", "non_null", 30, True, None),
     ("expect(paid()).to.be.ok;", "paid()", "truthy", 20, True, None),
     ("expect(paid()).to.be.ok();", "paid()", "truthy", 20, True, None),
     ("expect(total()).to.be.closeTo(78.75, 0.01);", "total()", "approx", 70, True, "78.75"),
@@ -87,8 +89,8 @@ def _outcome(before, after, path=_PATH):
     ("assert.deepEqual(total(), 78.75);", "total()", "compare_eq", 100, True, "78.75"),
     ("assert.isTrue(paid());", "paid()", "compare_eq", 90, True, "True"),
     ("assert.isNull(failure());", "failure()", "compare_eq", 90, True, "None"),
-    ("assert.exists(failure());", "failure()", "non_null", 30, True, None),
-    ("assert.isDefined(failure());", "failure()", "non_null", 30, True, None),
+    ("assert.exists(failure());", "failure()", "non_null", 30, False, None),
+    ("assert.isDefined(failure());", "failure()", "non_null", 30, False, None),
     ("assert.closeTo(total(), 78.75, 0.01);", "total()", "approx", 70, True, "78.75"),
     ("assert.include(lines(), 2);", "lines()", "membership", 60, True, None),
     ("assert.match(name(), /total/);", "name()", "pattern", 60, True, None),

@@ -62,9 +62,11 @@ This scope reads complete balanced calls and direct scalar expected arguments:
 finite Number literals, quoted strings, booleans and `null`. It does not infer
 expected values from objects, arrays, BigInt, non-finite numbers, variables or
 arbitrary expressions. Node expected-value evidence is limited to `strictEqual`
-and `deepStrictEqual`, including their `t.assert` forms. `equal` and `deepEqual`
-retain their existing strength-only model because the bounded bindings do not
-distinguish their strict and coercive import modes. `toBeCloseTo` precision
+and `deepStrictEqual`, including their `t.assert` forms, and to `equal` and
+`deepEqual` in strict mode: imported from `node:assert/strict` or
+`assert/strict`, or reached through `assert.strict`, where they are the strict
+comparisons ([#198](https://github.com/taipei49314/checkwash/issues/198)).
+The legacy coercive `equal` and `deepEqual` keep their strength-only model. `toBeCloseTo` precision
 evidence covers positive calls with an explicit integer precision from -308
 through 307 or the default of two digits;
 negated precision is not assigned the same weakening direction. These additions
@@ -132,7 +134,11 @@ to `.to.exist` passed with only a coverage warning. chai's `expect` and
 `assert` now resolve from `chai` imports and requires (named, renamed,
 namespace and default), from Vitest's `expect` and `assert`, and for an
 unimported global `expect`. An unimported `assert` keeps its Node default:
-methods that both libraries spell the same cannot be told apart.
+methods that both libraries spell the same cannot be told apart. Jest's own
+`expect`, imported from `@jest/globals`, reads Jest matchers only: Jest's
+`expect` has no `.to`, so a chai chain on it stays a coverage gap, and
+`@jest/globals` exports no `assert`
+([#198](https://github.com/taipei49314/checkwash/issues/198)).
 
 An `expect(...)` chain is represented only when it ends in exactly one
 terminal assertion. Language chains (`to`, `be`, `been`, `is`, `that`,
@@ -168,10 +174,11 @@ core assertion word are not modeled. Should-style assertions
 (`value.should.equal(...)`) are not scanned and produce no diagnostic.
 
 The `.null` spelling is chai's `=== null`, so it shares `equal(null)`'s
-EXACT_VALUE rung while Jest's `toBeNull()` keeps NON_NULL. In a Vitest file,
-rewriting `.to.be.null` as `toBeNull()` therefore reports a weakening, as
-`toBe(null)` -> `toBeNull()` already does. Scalar evidence keeps `0` and `-0`
-distinct although chai's `===` accepts both.
+EXACT_VALUE rung while Jest's `toBeNull()` keeps NON_NULL. The rungs differ,
+but the predicate is the same (see [Predicate identity](#predicate-identity)),
+so rewriting `.to.be.null` as `toBeNull()` is not reported, and neither is
+`toBe(null)` -> `toBeNull()`. Scalar evidence keeps `0` and `-0` distinct
+although chai's `===` accepts both.
 
 A `closeTo` delta is the absolute bound a hand-rolled
 `Math.abs(a - b) < bound` states, so it is recorded in the same `abs=` form
@@ -186,24 +193,15 @@ compares with either through the bound it enforces: `toBeCloseTo(v, 2)` ->
 Some edits are not reported. They are recorded here for a maintainer decision:
 
 - `assert.equal` carries no expected value, so rewriting its operand
-  (`assert.equal(x, 78.75)` -> `assert.equal(x, 75)`), or replacing
-  `.to.equal(78.75)` with `assert.equal(x, 75)`, produces no finding. Coercive
-  `==` evidence would apply to Node's legacy `equal` as well.
-- A presence or truthiness check rewritten as an exact absent or falsy value
-  (`.to.exist` -> `.to.be.null` or `.to.be.undefined`, `assert.exists` ->
-  `assert.isNull`, `.to.be.ok` -> `.to.be.false`) reads as a strength
-  increase, and JavaScript expected-value evidence needs a literal on both
-  sides. Jest's `toBeDefined()` -> `toBe(undefined)` has the same gap.
-- In a Vitest file that mixes styles, `toBeNull()` -> `.to.exist` keeps the
-  NON_NULL rung and polarity, so it is not reported. Some other Jest -> chai
-  rewrites that change the predicate or the direction of a bound, or drop an
-  expected value or tolerance, are not reported either: those that keep the
-  rung and polarity, read as a strength increase, or leave the new side with
-  no expected value or tolerance, for example `toBeLessThan(80)` ->
-  `.to.be.above(80)` and `toBe(78.75)` -> `.to.be.undefined`; v0.4.2 reported
-  them as removals ([#198](https://github.com/taipei49314/checkwash/issues/198)).
-  A rewrite whose two sides both carry the fact (a literal, a negation or a
-  finite delta) is still reported.
+  (`assert.equal(x, 78.75)` -> `assert.equal(x, 75)`) produces no finding.
+  Replacing `toBe(78.75)` or `.to.equal(78.75)` with `assert.equal(x, 75)`
+  reports only the `===` -> `==` widening, which MILD_WEAKENING holds at warn.
+  Coercive `==` evidence would apply to Node's legacy `equal` as well
+  ([#198](https://github.com/taipei49314/checkwash/issues/198), evidence
+  round).
+- A Jest -> chai rewrite that drops a tolerance into a delta with no recorded
+  bound (`toBeCloseTo(v, 2)` -> `.to.be.closeTo(v, Infinity)`) is not
+  reported; see the delta item below.
 - A hand-rolled bound inside a chai assertion
   (`expect(Math.abs(d)).to.be.below(eps)`, `assert.isTrue(Math.abs(d) < eps)`,
   chai's or Vitest's `assert.ok(Math.abs(d) < eps)`) is not read as a
@@ -220,10 +218,92 @@ Some edits are not reported. They are recorded here for a maintainer decision:
 - A chai alias read from a member expression and then reassigned, such as
   `let check = require("chai").expect` followed by `check = wrap(check)`,
   produces no coverage diagnostic.
+- The predicate-identity residuals listed in [Predicate identity](#predicate-identity).
 
-Some honest edits are reported instead: `.to.not.exist` -> `.to.be.null` and
-`.to.not.be.undefined` -> `.to.exist` change form and polarity, `.to.exist` ->
-`.to.be.ok` falls from NON_NULL to TRUTHY.
+`.to.not.exist` -> `.to.be.null`, `.to.not.be.undefined` -> `.to.exist` and
+`.to.exist` -> `.to.be.ok` are proven strengthenings and are not reported.
+
+### Predicate identity
+
+Issue [#198](https://github.com/taipei49314/checkwash/issues/198) found that
+the lattice gives different predicates one rung: `toBeNull()` and `.to.exist`
+are both NON_NULL, `toBeLessThan(80)` and `.to.be.above(80)` both BOUND, so a
+Jest matcher replaced by a chai spelling that asserts something else passed.
+Each JS spelling below now records a predicate key, and `positive` says
+whether it asserts that key or its negation: `toBeDefined()` asserts
+`is_undefined` negatively, like `.not.toBeUndefined()`.
+
+| Key | Spellings |
+|---|---|
+| `is_null` (`=== null`) | `toBeNull()`, `toBe(null)`, `.null`, `.equal(null)`, `assert.isNull`, `strictEqual(x, null)`, strict-mode `equal(x, null)` |
+| `is_undefined` (`=== undefined`) | `toBeUndefined()`, `toBe(undefined)`, `.undefined`, `assert.isUndefined`; negated: `toBeDefined()`, `assert.isDefined` |
+| `is_nullish` (`== null`) | coercive `assert.equal(x, null)` or `(x, undefined)`; negated: `.exist`, `assert.exists` |
+| `truthy` | `toBeTruthy()`, `.ok`, `assert(x)`, `assert.ok`/`isOk`; negated: `toBeFalsy()` |
+| `is_true`, `is_false` | `toBe(true)`, `.true`, `assert.isTrue`, `strictEqual(x, true)`, and the `false` spellings |
+| `eq_strict` (`===`) | `toBe(y)`, `.equal(y)`, `assert.strictEqual`, strict-mode `equal` |
+| `eq_loose` (`==`) | chai's `assert.equal`, Node's legacy `equal` |
+| `lt`, `le`, `gt`, `ge` | `toBeLessThan` and the other ordering matchers, chai's `below`/`most`/`above`/`least` and their aliases, `assert.isBelow`/`isAtMost`/`isAbove`/`isAtLeast` |
+
+`toEqual`, `toStrictEqual`, deep equality, `toBeCloseTo`/`closeTo`,
+membership, patterns, `within` and lengths record no key and keep the
+lattice. The Python frontend records no key in this round.
+
+When both assertions of a pair carry a key on the same subject, ASSERT_WEAKENED
+compares the two predicates instead of their rungs, from key and polarity
+alone. A same or stronger predicate is not reported whatever the rungs say
+(`.to.be.null` -> `toBeNull()`, `.exist` -> `.ok`, `.not.toBeNull()` ->
+`.exist`). Otherwise the finding says what was established:
+
+- **polarity inverted**: the same key with its polarity flipped,
+  `toBeTruthy()` -> `toBeFalsy()`. Only this one says the test now proves the
+  opposite.
+- **contradicts**: no value passes both, `toBeNull()` -> `.to.exist`,
+  `toBeTruthy()` -> `.to.be.false`; for bounds, **bound direction reversed**,
+  `toBeLessThan(80)` -> `.to.be.above(80)`.
+- **predicate widened**: the old predicate implies the new one,
+  `toBeNull()` -> `.to.not.exist` (now also `undefined`), `toBe(78.75)` ->
+  `assert.equal(x, 78.75)` (`===` -> `==`). The finding carries the honest
+  rung drop, so MILD_WEAKENING holds a widening that stays inside the exact
+  family at warn.
+- **replaced; checkwash cannot verify the replacement is equivalent**:
+  anything else the keys cannot establish, such as `.not.toBeNull()` ->
+  `toBeFalsy()`.
+
+The other three are never mild. The relation never compares operands:
+a rewritten expected value is EXPECTED_VALUE_CHANGED's and a widened tolerance
+TOLERANCE_LOOSENED's. It reads one operand only to place an `===` literal
+among the presence keys: `toBe(5)` is defined, not null and truthy, so
+`toBeTruthy()` -> `toBe(5)` is a strengthening and `toBe(78.75)` ->
+`.to.be.undefined` a contradiction. When both sides state a literal at one
+polarity, such as `toBe(5)` -> `.to.be.null`, the change is the literal's and
+only EXPECTED_VALUE_CHANGED reports it.
+
+The keys come in three families: presence (`null`, `undefined`, truthiness),
+equality and bounds. Two keys of different families do not relate alone, so
+such a pair, and a pair with an unkeyed side, keeps the lattice judgement
+with `positive` in its documented meaning. A presence check (`toBeDefined()`,
+`.exist`, `.not.toBeNull()`) beside an affirmative assertion of another kind
+(`toEqual({...})`, `toContain(x)`, `toBe(expected)`) is not a polarity
+change, so strengthening one into the other still passes.
+
+Residuals of this reading:
+
+- `toBeLessThan(80)` -> `toBeLessThanOrEqual(80)`, and any change between `<`
+  and `<=` (or `>` and `>=`) that keeps the polarity, is not reported:
+  whether both name the same bound is operand evidence this round does not
+  record. With a flipped `.not` on top, such as `.not.toBeLessThan(80)` ->
+  `toBeGreaterThanOrEqual(80)`, it is reported as an unverifiable replacement.
+- Keys of different families keep the lattice judgement: `toBeNull()` ->
+  `toBe(expected)` and `toBeTruthy()` -> `toBeGreaterThan(0)` pass as
+  strengthenings, and `toBe(5)` -> `toBeGreaterThan(3)` reports a strength
+  drop.
+- With `positive` in its documented meaning, a negated absence check
+  (`.to.not.exist`, `.not.toBeDefined()`) rewritten as an affirmative
+  assertion of another form (`.to.include(x)`, `toEqual(x)`) is no longer
+  reported as a form and polarity change, and `toBeFalsy()` -> `toEqual(5)`
+  now is.
+- A hand-rolled bound flipped from `<` to `>` inside `assert.ok(...)` is still
+  not reported; see [Hand-rolled tolerances](#hand-rolled-tolerances).
 
 Following the foundation precedent, the original inventory is unchanged. The
 independent supplement
