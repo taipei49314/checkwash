@@ -2950,3 +2950,103 @@ The JS false-positive cost is not measured. It waits on the JS history corpus
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-075 (2026-10-03): JS stand-ins - where they take effect, for whom they are new, what reads them (#196 188.1-188.4)
+
+The JS spelling of TEST_PATCHES_SUBJECT (#177, THREATMODEL row 109) carried
+four known gaps from #188:
+
+- **Timing.** It read every `vi.mock` written below module level as an
+  ordered mock. An ordered mock reaches no static import, so a `vi.mock`
+  slipped into a test body passed silently.
+- **Newness.** It judged "the stand-in is new" file-wide. A replacement
+  copied from one test into another was read as already there, although it
+  had never run for the second test.
+- **Module objects.** A namespace or `require()` object passed whole
+  (`new UserService(apiClient)`, `compute(billing)`) counted as reading a
+  whole-module mock. Python's row 90 counts only a read that names a
+  replaced export.
+- **Two-statement spies.** `const spy = vi.spyOn(...)` followed by
+  `spy.mockReturnValue(...)` installed nothing on either side. As a stand-in
+  it was missed, and as an existing installation it was not seen, so
+  inlining one read as new.
+
+Rulings 196.188.1 (B), 188.2 (B), 188.3 (C) and 188.4 (C, the closing round),
+as implemented in `frontends/javascript/module_mocks.py`:
+
+- **188.1: `vi.mock` takes effect for the whole file, wherever it is
+  written.** `jest.mock` keeps its timing: hoisted at module level, ordered in
+  a test body. Measured with real runners on the same five placements (a
+  test, another test, a describe body, a hook, a helper that never runs):
+  - Vitest 3.2.7 and 4.1.11 apply the stand-in to every test in the file.
+    4.1.11 warns that the call "will be hoisted and executed before any
+    tests run".
+  - Vitest 5.0.3 refuses the file before any test runs, with the same
+    explanation.
+  - Jest 30.5.2 keeps the real module for a top-level `require` when
+    `jest.mock` sits in a test, a describe body or a hook, and applies it at
+    module level.
+- **188.2: newness per unit, as Python.** A target is new for unit U unless
+  the base side installed it at module level, in a hook, a describe body, a
+  helper or U itself. An installation inside another test does not count.
+  A hoisted `vi.mock` counts wherever it is written, because it ran for the
+  whole file.
+- **188.3: a read names an export.** A named or default import counts in any
+  use. A namespace or `require()` object counts only through member access.
+- **188.4: one hop through the spy's local binding, on both sides.** The
+  closing round 188.4 asks for. It covers `vi.spyOn`, `jest.spyOn`,
+  `vi.mocked` and `jest.mocked` replaced in a later `mock*` call, and
+  node:test's `mock.method` without an implementation replaced through
+  `fn.mock.mockImplementation(...)`. The replacement takes effect where that
+  call runs. A rebound spy name is refused. A bare spy is still no
+  installation, as ruling 188.4's option A keeps.
+
+Readings the rulings leave to the implementation:
+
+1. **"Wherever it is written" includes a helper that never runs.** Vitest
+   hoists the call itself, not the function around it; both measured
+   versions that run the file applied it.
+2. **Vitest 5 is not modelled apart.** On Vitest 5 a nested `vi.mock` fails
+   the file, so a finding there accompanies a red run instead of a silent
+   pass. Without runner-version evidence one model serves every version.
+3. **"Inside another test" is position-based.** An installation counts as
+   inside another test when it lies in that test's span. A test that
+   contains this unit (a node:test parent around a subtest) is not "another
+   test": its body runs for the subtest.
+4. **188.4 includes node:test.** The ruling's example is `vi.spyOn`;
+   node:test's `mock.method` without an implementation is the same
+   two-statement shape (a spy that replaces nothing until a later call), so
+   the round closes it too.
+5. **The 188.3 residual is pinned in unit tests, not in a fixture.** A
+   fixture's expectation can never be changed, and a later round may close
+   this residual.
+
+**Pins.** None flip.
+- New tests: `tests/test_js_mock_installations.py`. 13 of them fail on
+  `main`; the 16 controls pass on both.
+- New fixtures:
+  - `js_test_patches_subject_vi_mock_in_test_pos` (188.1);
+  - `js_test_patches_subject_copied_from_other_test_pos` (188.2);
+  - `js_test_patches_subject_two_statement_spy_pos` (188.4).
+- Every existing `js_test_patches_subject_*` fixture and
+  `tests/test_js_module_mocks.py` keep their expectations, including the
+  timing pins for `vi.doMock` and for `jest.mock` inside a describe body.
+
+**SPEC.** The sentence of ruling 196.spec.4-test-patches-subject joins the
+SPEC §4 TEST_PATCHES_SUBJECT row in the same commit as the row 109 edits, as
+that ruling asks.
+
+**Fingerprints.** Unchanged: TEST_PATCHES_SUBJECT is keyed by path, unit and
+target, and no target changes its spelling.
+
+**Cost.**
+- **New findings** (TEST_PATCHES_SUBJECT, high without repair evidence):
+  - a nested `vi.mock`;
+  - a replacement copied between tests;
+  - a two-statement spy.
+- **Fewer findings:** a module object passed whole under a whole-module mock
+  (the accepted 188.3 residual).
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
