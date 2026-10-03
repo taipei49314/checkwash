@@ -1,0 +1,24 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: typing an unchanged hand-rolled bound (const EPS = 0.01 -> const EPS: number = 0.01 as const) keeps the same tolerance and stays silent
+origin: issue 240 negative control — an annotation and a cast added during a TypeScript migration change no value
+=== before: tests/billing.test.ts ===
+import { invoiceTotal } from "../src/billing";
+
+const EPS = 0.01;
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < EPS).toBe(true);
+});
+=== after: tests/billing.test.ts ===
+import { invoiceTotal } from "../src/billing";
+
+const EPS: number = 0.01 as const;
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < EPS).toBe(true);
+});
+=== expect ===
+[]

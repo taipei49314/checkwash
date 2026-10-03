@@ -84,6 +84,9 @@ _CAST = re.compile(r"(?:as|satisfies)(?![\w$])")
 # A type that ends the operand: names, members, generics, unions, tuples and
 # literal types. `42 as const + 1` adds to the cast, so `+` is not one.
 _CAST_TYPE = re.compile(r"[\w$.<>\[\]|&,'\" \t]+")
+# The sign of a decimal exponent (`1e-2`) belongs to its literal: it is no
+# operator that a cast could apply after (#240).
+_EXPONENT_SIGN = re.compile(r"(?<![\w$.])(?:\d[\d_]*(?:\.[\d_]*)?|\.\d[\d_]*)[eE](?=[+-]\d)")
 
 
 def _top_level(source: str):
@@ -135,7 +138,9 @@ def _cast_operand(source: str) -> str | None:
         if not _CAST_TYPE.fullmatch(source, cast.end()):
             return None
         head = source[:index].strip(_WHITESPACE)
-        operators = [i for i, level in _top_level(head) if level == 0 and head[i] in "?:=|&<>,+-*/%^"]
+        signs = {match.end() for match in _EXPONENT_SIGN.finditer(head)}
+        operators = [i for i, level in _top_level(head)
+                     if level == 0 and head[i] in "?:=|&<>,+-*/%^" and i not in signs]
         if not head or any(i > 0 or head[i] not in "+-" for i in operators):
             return None
         return head
