@@ -1,0 +1,21 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: a Vitest test moved under __tests__ stops running
+origin: #196 186.7 (M0): Vitest's default include does not collect __tests__/value.ts, so the moved unit is not live and earns no move credit
+=== before: tests/value.test.ts ===
+import { test, expect } from "vitest";
+import { total } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== after: tests/__tests__/value.ts ===
+import { test, expect } from "vitest";
+import { total } from "../../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/value.test.ts", "unit": "total"}]

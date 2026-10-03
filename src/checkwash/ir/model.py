@@ -372,6 +372,12 @@ class FileIR:
     # the public role, so fingerprints that include it do not move. Read it
     # through `judged_as_test`, never on its own.
     test_obligations: bool = False
+    # A focus this diff adds to a JS/TS test file that had none, when the
+    # file's runner is not proven to keep focus inside the file: under
+    # Mocha or Jasmine every test outside it stops (#196 187.4). The head
+    # side's first focus; TEST_DISABLED reports it when no unit of the file
+    # already reports the focus.
+    suite_focus_added: Marker | None = None
 
 
 def judged_as_test(file: FileIR) -> bool:

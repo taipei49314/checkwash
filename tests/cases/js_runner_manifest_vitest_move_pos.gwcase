@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: the base manifest names Vitest for a test on globals
+origin: #196 186.7: package.json names only vitest, whose default include does not collect __tests__/value.ts
+=== head: package.json ===
+{
+  "devDependencies": {
+    "vitest": "^3.2.0"
+  }
+}
+=== before: tests/value.test.ts ===
+import { total } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== after: tests/__tests__/value.ts ===
+import { total } from "../../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/value.test.ts", "unit": "total"}]

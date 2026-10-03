@@ -1510,4 +1510,4 @@ def parse_javascript(data: bytes) -> ParsedFile:
             body_hash=body_hash,
         )
         units.append(ParsedUnit(qualname=name, span=(declaration.start, unit_end), side=side))
-    return ParsedFile(parse_ok=True, units=units)
+    return ParsedFile(parse_ok=True, units=units, focus=focus)

@@ -1,0 +1,18 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test on Jest-style globals moved under __tests__ keeps running
+origin: #196 186.2: with no runner evidence the union judges the move, and Jest collects the destination
+=== before: tests/value.test.ts ===
+import { total } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== after: tests/__tests__/value.ts ===
+import { total } from "../../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "path": "tests/value.test.ts", "unit": "total", "deescalators": ["ASSERTION_MOVED"]}]

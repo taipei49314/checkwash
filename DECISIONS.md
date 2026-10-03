@@ -2573,3 +2573,92 @@ false-positive cost is not measured; the JS/TS replay corpus
 
 The agent wrote this entry in the #198 evidence PR, as the rulings'
 X.doc-batch asks; the maintainer approves it there.
+
+## D-071 (2026-10-03): runner evidence decides JS collection continuity and suite-wide focus (#196)
+
+The JS path rows form a union because a path alone does not say which runner
+a project uses. So every move between two rows read as benign, although
+Vitest, Mocha and node:test stop collecting many of them (#196 rows M0-M5,
+P1-P3), and focus that turned off nothing in its own file was silent,
+although Mocha and Jasmine apply it to the whole suite (F3-F6).
+
+Rulings 196.186.7, 186.2, 186.3, 186.4, 187.4 and 198.Q5, as implemented:
+
+- One runner-evidence predicate (`frontends/javascript/runners.py`) answers
+  which runner collects a JS/TS file: the runners its own source names, by a
+  `vitest`, `@jest/globals`, `node:test` or `bun:test` import or a
+  `Deno.test` call, else the one the base side's root `package.json` names
+  alone among `jest`, `vitest`, `mocha` and `jasmine`, else unknown (186.7,
+  198.Q5).
+- Each runner's row is its documented default discovery, matched
+  case-sensitively (186.3): Jest 30 `testMatch`, Vitest's `defaultInclude`,
+  Node's test-runner patterns, Mocha 12's `test` directory (not recursive),
+  `jasmine init`'s `spec/**/*[sS]pec.?(m)js`, Bun's four suffixes and Deno's
+  `{*_,*.,}test` names and `__tests__`.
+- Rename expansion and D2's "live" read it. A move to a path the runner does
+  not collect is a disappearance, and a unit that reappears in such a file
+  earns no move credit. Unknown evidence falls back to the union of the Jest
+  and node:test defaults (186.7, 186.2).
+- Bun's and Deno's rows exist only on a file's own evidence, for test
+  obligations as for continuity; never as union rows (186.4).
+- Focus a diff adds to a JS/TS test file that had none, when no unit of the
+  file is reported as unfocused, is TEST_DISABLED once for the file, with a
+  conditional message, unless a `vitest` or `@jest/globals` import or a base
+  manifest naming Jest or Vitest alone proves the runner keeps focus in the
+  file (187.4). The IR carries it as the optional FileIR field
+  `suite_focus_added`; IR_VERSION stays 2 (D-067).
+
+Seven readings the rulings leave to the implementation:
+
+1. **What evidence is.** `chai` is an assertion library that runs under any
+   runner, so it names none and leaves the others standing. A file that
+   names several runners is proven to run under one of them, and a path is
+   collected when any of them collects it. Type-only imports and Node's
+   `test` package name nothing.
+2. **Which side is read.** A rename reads the moved file's base side, as the
+   ruling's base manifest does, so the diff cannot choose the runner it is
+   judged by. D2 reads the file where a unit reappears, and focus the file
+   that holds it, both on the head side: that is the file the runner loads.
+3. **Evidence judges only the paths its runner collects by default.** When
+   the named runner does not collect the old path by default either, the
+   project configures its own globs, which are not read, and the union
+   judges the move: `__tests__/a.ts` -> `__tests__/b.ts` stays benign in a
+   Vitest project. D2 has no such fallback, as the ruling words it.
+4. **Case.** Continuity matches case-sensitively, the union fallback
+   included, which closes M4 without evidence. Test obligations stay
+   case-insensitive (186.3), so a test with a case-folded name is still
+   judged, and a move of it is judged by the case-sensitive rows.
+5. **Bun and Deno obligations.** Either side's evidence makes the file a
+   test, so dropping the import does not drop the file's obligations. Their
+   assertions stay unread (`expect` from `bun:test`, Deno's `assert*`): the
+   units are judged for removal and disables only.
+6. **What "adds focus" means.** The head side has a focus and the base side
+   had none; an added file counts. A unit the focus turns off carries the
+   report instead, so Fc1 keeps its one finding, and a move out of
+   collection is reported as the removal instead.
+7. **Mocha's and Jasmine's rows are relative to a working directory the scan
+   does not know.** Mocha's is a file directly inside any `test` directory,
+   Jasmine's a file beneath any `spec` directory, so a package's own
+   directories count in a monorepo. Both are known only from the root
+   manifest.
+
+Pins. The ruling flips no listed pin. 187.4 implies one:
+`tests/test_js_liveness.py` pinned `it` -> `it.only` on the only unit of a
+file on globals as silent; with no evidence it now reports the suite, and the
+silent case moves to a Vitest file.
+
+Fingerprints: the file-level focus finding has a new fingerprint, built from
+the path, `<file>` and the marker `test.focused`. The release that ships
+this records it in its D-063-style entry (X.release-and-fingerprints).
+
+Cost: new blocks on rows that passed v0.5.0 (M0-M5, P1-P3, F3-F6). False
+positives: a project whose configured globs collect a destination its
+runner's defaults do not, such as a Vitest `include` or a recursive Mocha
+`spec` when a top-level `test/` file moves into a subdirectory, and a Jest
+project on injected globals without a manifest naming Jest alone that
+focuses a whole file. The JS
+false-positive cost is not measured; the JS/TS replay corpus
+(X.js-fp-measurement) must measure it before the release that ships this.
+
+The agent wrote this entry in the runner-evidence PR, as the rulings'
+X.doc-batch asks; the maintainer approves it there.

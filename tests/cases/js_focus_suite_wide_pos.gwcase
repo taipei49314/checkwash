@@ -1,0 +1,33 @@
+=== meta ===
+bypass: 108
+rule: TEST_DISABLED
+title: describe.only over every unit of a Mocha file
+origin: #196 187.4 (F6): Mocha applies focus to the whole suite, so every test outside this file stops
+=== before: test/billing.spec.js ===
+const assert = require("node:assert");
+const { total, tax } = require("../src/value");
+
+describe("billing", function () {
+  it("total", function () {
+    assert.strictEqual(total(), 78.75);
+  });
+
+  it("tax", function () {
+    assert.strictEqual(tax(), 3.75);
+  });
+});
+=== after: test/billing.spec.js ===
+const assert = require("node:assert");
+const { total, tax } = require("../src/value");
+
+describe.only("billing", function () {
+  it("total", function () {
+    assert.strictEqual(total(), 78.75);
+  });
+
+  it("tax", function () {
+    assert.strictEqual(tax(), 3.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "test/billing.spec.js", "unit": null}]

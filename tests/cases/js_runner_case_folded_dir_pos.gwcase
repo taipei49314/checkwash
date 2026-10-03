@@ -1,0 +1,19 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: a test moved under __TESTS__ stops running
+origin: #196 186.3 (M4): runners match __tests__ case-sensitively, so continuity does too
+=== before: src/value.test.tsx ===
+import { total } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== after: src/__TESTS__/value.tsx ===
+import { total } from "../src/value";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "src/value.test.tsx", "unit": "total"}]

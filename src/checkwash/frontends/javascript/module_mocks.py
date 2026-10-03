@@ -67,8 +67,8 @@ from checkwash.frontends.javascript.bindings import CALL, NAME, Bindings
 from checkwash.frontends.javascript.frontend import (
     _call_argument_spans,
     _code_positions,
-    is_js_test_path,
 )
+from checkwash.frontends.javascript.paths import is_js_test_file
 from checkwash.ir.model import judged_as_test
 from checkwash.roles import is_artifact
 
@@ -512,7 +512,7 @@ def module_mock_events(ir, changes) -> list[tuple[str, str, str, str, tuple[int,
     for change in changes:
         path = change.path.replace("\\", "/")
         file = files.get(path)
-        if (file is None or not is_js_test_path(path) or change.before is None
+        if (file is None or not is_js_test_file(path, change.before, change.after) or change.before is None
                 or change.after is None or not _TRIGGER.search(change.after)):
             continue
         # Condition 1: a test written with its mock was written against the
