@@ -206,3 +206,11 @@ reason = "PR #242 (issue #196, ruling 189.1): the unreadable hand-rolled bound (
 author = "taipei49314"
 created = "2026-10-03"
 expires = "2026-10-31"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_js_handrolled_tolerance.py/test_a_bound_past_the_decimal_range_is_unknown_not_a_crash/7445d5bcc1f4"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #242 (issue #196, ruling 189.1): a bound past Decimal's range is unknown, and a known bound replaced by an unknown one now reports ASSERT_WEAKENED (SPEC §4), so this pin's expected verdict moves from pass to block; its no-crash half stands; maintainer ruling 2026-10-03"
+author = "taipei49314"
+created = "2026-10-04"
+expires = "2026-10-31"
