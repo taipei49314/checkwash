@@ -22,7 +22,7 @@ from checkwash.frontends.python.conftest_controls import (
     marker_kind,
 )
 from checkwash.ir.assertion_identity import fingerprint_text
-from checkwash.ir.markers import skip_condition
+from checkwash.ir.markers import is_setup_skip, skip_condition
 from checkwash.ir.model import IR, judged_as_test
 
 # What an added marker of each kind did. Any other kind, or none, is a plain
@@ -91,6 +91,11 @@ def detect(ir: IR) -> list[Finding]:
                         )
                     )
             for name in unit.delta.guards_weakened:
+                # A skip in the setup this test runs says so, and names its
+                # provider: its evidence is the fixture's or callback's line.
+                where, which = (
+                    (" in the setup this test runs", f" ({name})") if is_setup_skip(name) else ("", "")
+                )
                 was = removed_skip_guard(name, unit, file.constants_before)
                 if was is not None:
                     m = next(
@@ -101,12 +106,12 @@ def detect(ir: IR) -> list[Finding]:
                         ),
                         None,
                     )
-                    message = f"{unit.qualname}: skip guard removed (was {was!r})"
+                    message = f"{unit.qualname}: skip guard removed{where} (was {was!r}){which}"
                 else:
                     m = next((x for x in unit.after.markers if x.name == name), None)
                     message = (
-                        f"{unit.qualname}: skip guard now always fires "
-                        f"({(m.guard if m else name)!r})"
+                        f"{unit.qualname}: skip guard{where} now always fires "
+                        f"({(m.guard if m else name)!r}){which}"
                     )
                 findings.append(
                     Finding(

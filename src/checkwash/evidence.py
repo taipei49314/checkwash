@@ -26,7 +26,8 @@ def _mark_weakened_guards(file) -> None:
     is evaluated in both environments; only "used to run somewhere, now
     skips everywhere" counts, so honest version-gate bumps stay silent.
     Removing the guard outright is the same event with nothing left to
-    evaluate (#196 183.2, `compat.removed_skip_guard`).
+    evaluate (#196 183.2, `compat.removed_skip_guard`). A skip in the setup a
+    unit runs carries its guard too, and is read the same way.
     """
     from checkwash.gating import guard_always_skips
 

@@ -4,7 +4,9 @@ Family: an outcome the unit reaches during setup, outside its own body and
 markers - a requested or autouse fixture, what that fixture requests, or the
 xunit setup pytest calls. Conftest fixtures are suite-level runtime controls;
 a test module's own providers mark the units that reach them. Every path
-reads the one definition in `setup_skip_controls.callback_outcome`.
+reads the one definition in `setup_skip_controls.callback_outcome`, and a
+unit's own setup also records a guarded skip with its guard (`setup_outcome`,
+#196 183.2; tests/test_issue196_setup_guards.py).
 """
 import datetime
 import os
@@ -170,13 +172,23 @@ def test_autouse_class_fixtures_and_xunit_setup_reach_their_units():
 
 
 @pytest.mark.parametrize("setup", [
-    "    if not os.environ.get('DB'):\n        pytest.skip('no db')\n    yield\n",
     "    yield\n    pytest.skip('teardown')\n",
     "    pytest.importorskip('sqlite3')\n    yield\n",
 ])
 def test_guarded_teardown_or_environment_skips_mark_nothing(setup):
     source = MODULE.replace(SETUP, setup) + "def test_param(db):\n    assert db is None\n"
     assert setup_names(source) == {"test_param": []}
+
+
+def test_a_guarded_setup_skip_marks_the_unit_with_its_guard():
+    # Moved out of the list above by ruling 196.183.2: a guarded skip in a
+    # unit's own setup is recorded with the condition its setup reaches it
+    # under, and judged as a guarded skip in the body is.
+    setup = "    if not os.environ.get('DB'):\n        pytest.skip('no db')\n    yield\n"
+    source = MODULE.replace(SETUP, setup) + "def test_param(db):\n    assert db is None\n"
+    assert setup_names(source) == {"test_param": ["setup.db.skip"]}
+    [unit] = parse_python(source.encode(), collect_tests=True).units
+    assert [marker.guard for marker in unit.side.markers] == ["not os.environ.get('DB')"]
 
 
 def test_test_module_fixture_skip_blocks_the_requesting_test():

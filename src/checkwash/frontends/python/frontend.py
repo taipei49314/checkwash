@@ -3059,10 +3059,16 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # A unit's setup runs before its body: the same-file fixtures it reaches
     # and the xunit setup pytest calls for it. An unconditional skip there
     # disables the unit as surely as a marker does, so it is recorded as one
-    # (issue #172). Conftest fixtures are judged suite-wide in `_conftest_unit`.
+    # (issue #172), and a guarded one is recorded with its guard, like a skip
+    # in the body (#196 183.2). Conftest fixtures are judged suite-wide in
+    # `_conftest_unit`.
     setup_scopes: tuple[SetupScope, ...] = ()
+
+    def condition(node: ast.AST) -> str:
+        return text.seg(node) or ast.unparse(node)
+
     if collect_tests and not conftest and any(token in raw for token in _SETUP_OUTCOME_TOKENS):
-        setup_scopes = (SetupScope(tree.body, module_bindings(tree)),)
+        setup_scopes = (SetupScope(tree.body, module_bindings(tree), condition=condition),)
     class_setup: dict[int, SetupScope] = {}
 
     def nested_setup(scopes: tuple[SetupScope, ...], *classes: ast.ClassDef) -> tuple[SetupScope, ...]:
@@ -3072,7 +3078,8 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         for cls in classes:
             if id(cls) not in class_setup:
                 class_setup[id(cls)] = SetupScope(
-                    cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list, bases=cls.bases
+                    cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list, bases=cls.bases,
+                    condition=condition,
                 )
             scopes = scopes + (class_setup[id(cls)],)
         return scopes
@@ -3081,8 +3088,10 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         if not scopes:
             return []
         return [
-            Marker(name=f"setup.{provider}.{effect}", text=text.seg(node) or provider, span=off.span(node))
-            for provider, effect, node in setup_outcomes(scopes, func, method=len(scopes) > 1)
+            Marker(
+                name=f"setup.{provider}.{effect}", text=text.seg(node) or provider, span=off.span(node), guard=guard
+            )
+            for provider, effect, node, guard in setup_outcomes(scopes, func, method=len(scopes) > 1)
         ]
 
     def visit(

@@ -40,6 +40,20 @@ def bare_names(node: ast.AST) -> set[str]:
 GUARDED_SKIP_CALLS = frozenset({"pytest.skip", "pytest.xfail", "self.skipTest"})
 
 
+def is_setup_skip(name: str) -> bool:
+    """A skip or xfail in the setup a unit runs: a same-file fixture or xunit setup (#172)."""
+    return name.startswith("setup.")
+
+
+def is_guarded_skip(name: str) -> bool:
+    """Does this marker's recorded guard say when it fires?
+
+    The body skips D6 reads, and a skip in the setup a unit runs, whose guard
+    is the condition its setup callback reaches it under (#196 183.2).
+    """
+    return name in GUARDED_SKIP_CALLS or is_setup_skip(name)
+
+
 def skip_condition(marker, side) -> str | None:
     """What a body skip ran under on one side, as far as the IR records it.
 
@@ -49,7 +63,9 @@ def skip_condition(marker, side) -> str | None:
     ImportError:` / `pytest.skip(...)` is an optional-dependency gate, not an
     unconditional kill. None when neither holds, so nothing the IR records
     keeps the skip from firing. Loop bodies and `match` cases record no
-    condition (#196 183.2).
+    condition (#196 183.2). A setup skip's guard already holds its `except`
+    blocks, and its evidence lies in a fixture or callback outside the unit,
+    which no handler of the unit encloses.
     """
     if marker.guard:
         return marker.guard
