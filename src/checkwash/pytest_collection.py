@@ -92,8 +92,11 @@ def _pytest_arguments(words):
     return None
 
 
-def _option_arguments(text):
-    yield from collection_settings(text).get("addopts", ())
+def _commands(text):
+    """Each simple command of a text, as (its line's command text, its words).
+
+    A line that does not lex yields its command text with None for words.
+    """
     # Literal shell continuations retain arguments on the invocation line.
     for line in text.replace("\\\n", " ").replace("`\n", " ").splitlines():
         if _SETTING.match(line):
@@ -112,47 +115,59 @@ def _option_arguments(text):
             lexer.whitespace_split = True
             tokens = list(lexer)
         except ValueError:
+            yield command, None
             continue
         words = []
         for token in [*tokens, ";"]:
             if token and set(token) <= set(";&|"):
-                arguments = _pytest_arguments(words)
-                if arguments is not None:
-                    yield arguments
+                yield command, words
                 words = []
             else:
                 words.append(token)
 
 
+def _option_arguments(text):
+    yield from collection_settings(text).get("addopts", ())
+    for _command, words in _commands(text):
+        arguments = None if words is None else _pytest_arguments(words)
+        if arguments is not None:
+            yield arguments
+
+
+def _spelled_options(words):
+    """Each collection option in one invocation's arguments, with the span of words that spells it."""
+    index = 0
+    while index < len(words):
+        start, word = index, words[index]
+        if word == "--":
+            break
+        name, equals, value = word.partition("=")
+        if word.startswith(("-k", "-m")) and len(word) > 2 and not word.startswith("--"):
+            name, equals, value = word[:2], True, word[2:]
+        elif word.startswith("-p") and len(word) > 2 and not word.startswith("--"):
+            name, equals, value = "-p", True, word[2:]
+        option = None
+        if word in _COLLECT_ONLY:
+            option = ("collect-only", "")
+        elif name in _VALUE_OPTIONS:
+            if not equals and index + 1 < len(words):
+                index += 1
+                value = words[index]
+            if value and not value.startswith("-"):
+                option = (name, value)
+        elif name == "-p":
+            if not equals and index + 1 < len(words):
+                index += 1
+                value = words[index]
+            if value.startswith("no:"):
+                option = ("-p", value)
+        if option is not None:
+            yield option, range(start, index + 1)
+        index += 1
+
+
 def collection_options(text: str) -> Counter[tuple[str, str]]:
-    options: Counter[tuple[str, str]] = Counter()
-    for words in _option_arguments(text):
-        index = 0
-        while index < len(words):
-            word = words[index]
-            if word == "--":
-                break
-            name, equals, value = word.partition("=")
-            if word.startswith(("-k", "-m")) and len(word) > 2 and not word.startswith("--"):
-                name, equals, value = word[:2], True, word[2:]
-            elif word.startswith("-p") and len(word) > 2 and not word.startswith("--"):
-                name, equals, value = "-p", True, word[2:]
-            if word in _COLLECT_ONLY:
-                options[("collect-only", "")] += 1
-            elif name in _VALUE_OPTIONS:
-                if not equals and index + 1 < len(words):
-                    index += 1
-                    value = words[index]
-                if value and not value.startswith("-"):
-                    options[(name, value)] += 1
-            elif name == "-p":
-                if not equals and index + 1 < len(words):
-                    index += 1
-                    value = words[index]
-                if value.startswith("no:"):
-                    options[("-p", value)] += 1
-            index += 1
-    return options
+    return Counter(option for words in _option_arguments(text) for option, _span in _spelled_options(words))
 
 
 def resolved_collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:

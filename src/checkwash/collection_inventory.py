@@ -10,16 +10,32 @@ the tests beneath the targets for a run with explicit targets (#196 184.1).
 A path option or a `-p no:` plugin counts only when it can leave one of those
 tests out (#196 184.2). A run with explicit targets ignores testpaths, so the
 settings proof does not reach it.
+
+An option every base-side pytest command in the runner files carried, which
+the head commands dropped and nothing else, moved into the config: each run
+passes it before and after, so it is not new (#196 184.3). A command this
+reader cannot parse leaves that proof open, and the option is judged.
 """
 from __future__ import annotations
 
 import ast
 import fnmatch
 import posixpath
+import re
+import shlex
 
 from checkwash.change import EngineError
-from checkwash.pytest_collection import collection_options, resolved_collection_settings
+from checkwash.ci_control_flow import _read_yaml, _step_command, is_github_workflow
+from checkwash.pytest_collection import (
+    _commands,
+    _pytest_arguments,
+    _spelled_options,
+    collection_options,
+    collection_settings,
+    resolved_collection_settings,
+)
 from checkwash.roles import _runs_tests, is_artifact
+from checkwash.runner_command import invokes_test_runner
 
 _CONFIGS = ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg")
 _DEFAULTS = {"python_files": ("test_*.py", "*_test.py"),
@@ -38,6 +54,106 @@ _NESTED_CONFIGS = ("pytest.toml", ".pytest.toml", "pytest.ini", ".pytest.ini", "
 
 def _nested_config(path):
     return "/" in path and path.rsplit("/", 1)[-1] in _NESTED_CONFIGS and not is_artifact(path)
+
+
+def _runner(path):
+    """A file whose pytest commands are the runs a root config governs."""
+    return not is_artifact(path) and (
+        path.startswith((".github/workflows/", "scripts/"))
+        or path.endswith((".sh", ".bash", ".ps1", ".bat", ".cmd"))
+        or path in {"Makefile", ".gitlab-ci.yml", "noxfile.py", "tox.ini"})
+
+
+def _calls(path, data):
+    """Every pytest command a runner file runs, as its words, or None (#196 184.3).
+
+    None means the file may run a test runner in a way this reader cannot
+    parse, so what its runs pass is not known: a command that may run one
+    (`invokes_test_runner`) and is not a pytest command the option reader
+    parses (`coverage run -m pytest`, `tox`, `make test`, a nox session), a
+    line that does not lex, a step that runs a runner action, a `tox.ini`
+    environment's commands, pytest settings the file writes itself,
+    `PYTEST_ADDOPTS`, `--override-ini` or ` -o `. A workflow is read step by
+    step, so a step's name or a cache key is not a command.
+    """
+    if not _runs_tests(data):
+        return []
+    text = data.decode("utf-8-sig", errors="replace")
+    if path == "tox.ini":
+        # Its pytest sections configure; only an environment's commands run.
+        return None if re.search(r"(?m)^\s*commands(?:_pre|_post)?\s*=", text) else []
+    if any(marker in data for marker in (b"PYTEST_ADDOPTS", b"--override-ini", b" -o ")):
+        return None
+    texts = [text]
+    if is_github_workflow(path):
+        tree = _read_yaml(data)
+        jobs = tree.get("jobs") if isinstance(tree, dict) else None
+        if not isinstance(jobs, dict):
+            return None
+        texts = []
+        for job in jobs.values():
+            steps = job.get("steps") if isinstance(job, dict) else None
+            for step in steps if isinstance(steps, list) else ():
+                if isinstance(step, dict) and isinstance(step.get("run"), str):
+                    texts.append(step["run"])
+                elif isinstance(step, dict) and _step_command(step) is not None:
+                    return None
+    calls = []
+    for text in texts:
+        if collection_settings(text):
+            return None
+        for command, words in _commands(text):
+            if words is None:
+                if invokes_test_runner(command):
+                    return None
+            elif _pytest_arguments(words) is not None:
+                calls.append(tuple(words))
+            elif words and invokes_test_runner(shlex.join(words)):
+                return None
+    return calls
+
+
+def _side_calls(files):
+    calls = {}
+    for path, data in files.items():
+        found = _calls(path, data)
+        if found is None:
+            return None
+        calls[path] = found
+    return calls
+
+
+def _without(call, options):
+    """One pytest command's words without the words that spell these options."""
+    arguments = _pytest_arguments(list(call))
+    offset = len(call) - len(arguments)
+    dropped = {offset + index for option, span in _spelled_options(arguments) if option in options for index in span}
+    return tuple(word for index, word in enumerate(call) if index not in dropped)
+
+
+def _migrated(new_options, before_calls, after_calls):
+    """The new config options a provably identical migration moved (#196 184.3).
+
+    Every pytest command the runner files ran at base carried each of them,
+    and each file's head commands are its base commands with exactly those
+    options removed, so every run passes them before and after. pytest keeps
+    the last `-m` or `-k` only, so one moves only when the config holds no
+    other value for it. Anything less proves nothing, and the options stay
+    judged.
+    """
+    if before_calls is None or after_calls is None:
+        return set()
+    calls = [call for path in sorted(before_calls) for call in before_calls[path]]
+    if not calls:
+        return set()
+    carried = [{option for option, _span in _spelled_options(_pytest_arguments(list(call)))} for call in calls]
+    moved = {option for option in new_options
+             if all(option in options for options in carried)
+             and not (option[0] in ("-m", "-k") and sum(name == option[0] for name, _value in new_options) > 1)}
+    if moved and all([_without(call, moved) for call in before_calls.get(path, [])] == after_calls.get(path, [])
+                     for path in before_calls.keys() | after_calls.keys()):
+        return moved
+    return set()
 
 
 def _matches(name, patterns, *, prefix=False):
@@ -155,10 +271,7 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
            or any(part in {"", ".", ".."} for part in p.split("/")) for p in paths):
         raise EngineError("pytest collection snapshot has an unsafe inventory path")
     path_set = set(paths)
-    runners = {p for p in path_set if not is_artifact(p) and (
-        p.startswith((".github/workflows/", "scripts/"))
-        or p.endswith((".sh", ".bash", ".ps1", ".bat", ".cmd"))
-        or p in {"Makefile", ".gitlab-ci.yml", "noxfile.py", "tox.ini"})}
+    runners = {p for p in path_set if _runner(p)}
     selected = runners | {p for p in path_set if p in _CONFIGS or _nested_config(p)
                           or (p.endswith(".py") and not is_artifact(p))}
     if len(selected) > 4096:
@@ -256,6 +369,18 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     # plugin are judged by what they can leave out (#196 184.2). A tree that
     # collected nothing at base has nothing for a selector to deselect.
     introduced = sorted(option for option in new_options.keys() - old_options.keys() if _drops(option, reached))
+    if introduced:
+        # An option every run's command carried moved into the config, if
+        # the head commands dropped it and nothing else (#196 184.3).
+        head_runners = {p: snapshot[p] for p in runners}
+        base_runners = dict(head_runners)
+        for change in changes:
+            base_runners.pop(change.path, None)
+            origin = change.old_path or change.path
+            if change.before is not None and _runner(origin):
+                base_runners[origin] = change.before
+        moved = _migrated(new_options, _side_calls(base_runners), _side_calls(head_runners))
+        introduced = [option for option in introduced if option not in moved]
     if introduced:
         return [(path, "resolved pytest collection option introduced: " + " ".join(introduced[0]).rstrip())]
     # A targeted run ignores testpaths, so the settings proof stays withheld.
