@@ -106,8 +106,11 @@ a Number literal (read exactly from its digits, not as a binary float),
 `Number.EPSILON`, `Number.MAX_VALUE`, `Infinity`, `Number.POSITIVE_INFINITY`,
 a product of two of these, or a local `const`, `let` or `var` initialized to
 one of them, each through parentheses and TypeScript's `as`, `satisfies` and
-`!`. The bound of an ordering matcher read this way is tolerance evidence
-only, never an expected value. The
+`!`. A TypeScript annotation between the name and its `=`, as in
+`const eps: number = 0.01`, is skipped
+([#240](https://github.com/taipei49314/checkwash/issues/240)). The bound of an
+ordering matcher read this way is tolerance evidence only, never an expected
+value. The
 declaration has to end before the assertion starts: at a `;` or `,`, or at a
 line break followed by `const`, `let`, `var`, `test`, `it`, `return`, `import`
 or `function`. A `=`, `+=`, `-=`, `*=`, `/=` or postfix `++`/`--` write before
@@ -127,8 +130,8 @@ bound cannot be read (#196 189.3). The two spellings are compared on the
 
 Not read: negated or falsy spellings, conjunctions, relative or scaled
 magnitudes, `**`, a literal whose exponent is past what an exact decimal holds
-(such as `1e99999999999999999999`), and imported, chained or
-TypeScript-annotated (`const eps: number = ...`) bounds. A declaration without a semicolon that runs on into the next line's
+(such as `1e99999999999999999999`), imported or chained bounds, and a bound
+behind an angle-bracket cast (`<number>0.01`). A declaration without a semicolon that runs on into the next line's
 statement, such as `const eps = 0.01` followed by `expect(...)`, is not read
 either. The binding scan does not follow other compound writes (`**=`, `%=`,
 `||=` and the rest), prefix increments, destructuring writes or writes inside

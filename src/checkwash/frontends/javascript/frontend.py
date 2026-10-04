@@ -524,8 +524,7 @@ def _bound_readers(
     """What a bound operand at `position` reads: a name's initializer, an unshadowed global."""
 
     def lookup(name: str) -> str | None:
-        tokens = bindings.initializer(name, position)
-        return "".join(tokens) if tokens else None
+        return bindings.initializer(name, position) or None
 
     return lookup, lambda path: bindings.is_global(path, position)
 

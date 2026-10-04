@@ -50,6 +50,8 @@ class Bindings:
         self.enclosing: list[int | None] = []
         self.writes: list[tuple[tuple[str, ...], int, int]] = []
         self.initializers: set[int] = set()
+        # (scope, name) -> (ready, source text) of a plain `name = value` declaration.
+        self.initializer_text: dict[tuple[int, str], tuple[int, str]] = {}
         self.parameter_tokens: set[int] = set()
         self.context_parameters: list[tuple[int, str, int]] = []
         stack: list[int] = []
@@ -336,6 +338,10 @@ class Bindings:
                     assignment = cursor + 1
                 else:
                     break
+                if self.token(assignment) == "!" and self.token(assignment + 1) == ":":
+                    assignment += 1  # TypeScript's definite assignment, `let x!: T`
+                if self.token(assignment) == ":":
+                    assignment = self._annotation_end(assignment + 1)
                 ending = self._expression_end(assignment + 1) if self.token(assignment) == "=" else assignment
                 if self.token(assignment) == "=":
                     self.initializers.add(assignment)
@@ -344,9 +350,51 @@ class Bindings:
                 for member, local in names:
                     value = (*expression, ".", member) if member and expression else expression
                     self._declare(scope, local, value or UNKNOWN, ready)
+                    if expression and not member:
+                        self.initializer_text[(scope, local)] = (
+                            ready, self.masked[self.tokens[assignment + 1][1]:ready])
                 if self.token(ending) != ",":
                     break
                 cursor = ending + 1
+
+    def _annotation_end(self, first: int) -> int:
+        """Index of the first token after a TypeScript type annotation that starts at `first`.
+
+        `const eps: number = 0.01` declares eps with the initializer after the
+        type (#240). The type ends at a top-level `=`, `,`, `;` or unmatched
+        closer, outside `<...>` and brackets, or where JavaScript would end
+        the statement at a line break: `let eps: number` with a name starting
+        the next line.
+        """
+        i = first
+        depth = 0
+        while i < len(self.tokens):
+            token = self.token(i)
+            if token in {")", "]", "}"}:
+                break
+            if depth == 0 and token in {"=", ",", ";"}:
+                break
+            if (depth == 0 and i > first and "\n" in self.text[self.tokens[i - 1][2]:self.tokens[i][1]]
+                    and _IDENT.fullmatch(token) and self._type_ends(i - 1)):
+                break
+            if token == "<":
+                depth += 1
+            elif token == ">" and depth:
+                depth -= 1
+            elif token in {"(", "[", "{"} and i in self.pairs:
+                i = self.pairs[i]
+            i += 1
+        return i
+
+    def _type_ends(self, i: int) -> bool:
+        """Can a type annotation end with token `i`?"""
+        token = self.token(i)
+        if token in {")", "]", "}", ">"} or token[:1] in {"'", '"'} or token[:1].isdigit():
+            return True
+        return bool(_IDENT.fullmatch(token)) and token not in {
+            "keyof", "typeof", "extends", "infer", "readonly", "unique", "is", "asserts", "in", "as", "new",
+            "abstract",
+        }
 
     def _assignments(self) -> None:
         for i, (token, start, _) in enumerate(self.tokens):
@@ -476,8 +524,8 @@ class Bindings:
                 return True
             scope = parent
 
-    def initializer(self, name: str, position: int) -> tuple[str, ...] | None:
-        """Initializer tokens of the `const`/`let`/`var` that `name` reads here.
+    def initializer(self, name: str, position: int) -> str | None:
+        """Source of the initializer of the `const`/`let`/`var` that `name` reads here.
 
         The declaration `resolve` would pick, innermost scope first and ready
         before the read, and only while no earlier write reaches the read: a
@@ -487,6 +535,9 @@ class Bindings:
         writes, and writes inside another function, are not followed, so such
         a name still reads its initializer (a stated residual). Imports,
         parameters, functions and uninitialized names have no initializer.
+        A plain `name = value` declaration returns its text as written, with
+        comments blanked, so `0.01 as const` keeps the spaces its reader needs
+        (#240); a destructured member returns its `value.member` path.
         """
         if self._written((name,), position):
             return None
@@ -497,7 +548,10 @@ class Bindings:
                 ready, value = declaration
                 if ready > position or isinstance(value, Value) or not value:
                     return None
-                return value
+                text = self.initializer_text.get((scope, name))
+                if text is not None and text[0] == ready:
+                    return text[1]
+                return "".join(value)
             parent = self.scopes[scope].parent
             if parent is None:
                 return None
