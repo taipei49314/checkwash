@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 114
+rule: ASSERT_REMOVED
+title: node:assert assert.throws(() => invoiceTotal(items, -1), RangeError) deleted is a removed assertion
+origin: #196 190.5 — v0.5.0 passed this diff with zero findings; assert.throws was a coverage notice only
+=== before: tests/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("rejects a negative tax rate", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items, 0.05), 78.75);
+  assert.throws(() => invoiceTotal(items, -1), RangeError);
+});
+=== after: tests/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("rejects a negative tax rate", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items, 0.05), 78.75);
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

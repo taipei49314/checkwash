@@ -222,6 +222,22 @@ def test_invalid_contract_records_fail_before_qualification(collection, field, v
         validate_contract(contract)
 
 
+@pytest.mark.parametrize("status,strength,match", [
+    ("unsupported", 40, "an unsupported entry records no strength"),
+    ("supported", None, "strength must be an integer"),
+])
+def test_only_an_unsupported_entry_records_an_assertion_with_no_strength(status, strength, match):
+    # An unsupported API's call may be recorded with no strength, so that its
+    # removal is reported; a strength is a claim only a supported entry makes
+    # (#196 190.5).
+    contract = copy.deepcopy(CONTRACT)
+    entry = next(case for case in contract["apis"] if case["id"] == "node.match")
+    entry["status"] = status
+    entry["assertions"] = [{"form": "unknown", "strength": strength, "left": "subject()"}]
+    with pytest.raises(ValueError, match=match):
+        validate_contract(contract)
+
+
 def test_duplicate_case_ids_are_rejected():
     contract = copy.deepcopy(CONTRACT)
     contract["apis"].append(contract["apis"][0])

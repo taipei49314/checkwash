@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: expect(save).toHaveBeenCalledWith(78.75) rewritten into expect(save.mock.calls[0][0]).toBe(78.75) is a compensated rewrite
+origin: #196 190.5 control — a spy check replaced by a newly written exact check keeps the oracle; the removal is held at warn
+=== before: tests/checkout.test.ts ===
+import { expect, test, vi } from "vitest";
+import { checkout } from "../src/checkout";
+
+test("checkout saves the invoice total", () => {
+  const save = vi.fn();
+  checkout([{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }], save);
+  expect(save).toHaveBeenCalledWith(78.75);
+});
+=== after: tests/checkout.test.ts ===
+import { expect, test, vi } from "vitest";
+import { checkout } from "../src/checkout";
+
+test("checkout saves the invoice total", () => {
+  const save = vi.fn();
+  checkout([{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }], save);
+  expect(save.mock.calls[0][0]).toBe(78.75);
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "warn", "deescalators": ["SAME_UNIT_REWRITE"]}]

@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 111
+rule: ASSERT_REMOVED
+title: chai expect(order).to.have.property('total') deleted is a removed assertion, not a coverage notice
+origin: #196 190.5 — v0.5.0 passed this diff with zero findings; the property check was a coverage notice only
+=== before: test/billing.spec.js ===
+import { expect } from "chai";
+import { buildOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("builds an order with a total", function () {
+    const order = buildOrder([{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }]);
+    expect(order).to.have.property('total');
+    expect(order.items).to.have.lengthOf(2);
+  });
+});
+=== after: test/billing.spec.js ===
+import { expect } from "chai";
+import { buildOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("builds an order with a total", function () {
+    const order = buildOrder([{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }]);
+    expect(order.items).to.have.lengthOf(2);
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

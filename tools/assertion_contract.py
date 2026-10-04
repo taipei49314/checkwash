@@ -74,15 +74,23 @@ def validate_contract(contract: Any) -> dict:
                          f"{case_id}: source is required")
                 assertions = record.get("assertions")
                 _require(isinstance(assertions, list), f"{case_id}: assertions must be a list")
-                _require(bool(assertions) == (record["status"] == "supported"),
+                supported = record["status"] == "supported"
+                _require(bool(assertions) or not supported,
                          f"{case_id}: status contradicts expected recognition")
                 for assertion in assertions:
                     _require(isinstance(assertion, dict), f"{case_id}: assertion must be an object")
                     _require(isinstance(assertion.get("form"), str) and bool(assertion["form"]),
                              f"{case_id}: assertion form is required")
-                    _require(type(assertion.get("strength")) is int
-                             and 0 <= assertion["strength"] <= 100,
-                             f"{case_id}: strength must be an integer in [0, 100]")
+                    if supported:
+                        _require(type(assertion.get("strength")) is int
+                                 and 0 <= assertion["strength"] <= 100,
+                                 f"{case_id}: strength must be an integer in [0, 100]")
+                    else:
+                        # An unsupported API's predicate is not read; the JS
+                        # frontend may still record its call with no strength,
+                        # so that its removal is reported (#196 190.5).
+                        _require("strength" in assertion and assertion["strength"] is None,
+                                 f"{case_id}: an unsupported entry records no strength")
                     _require(isinstance(assertion.get("left"), str) and bool(assertion["left"]),
                              f"{case_id}: subject is required")
             else:

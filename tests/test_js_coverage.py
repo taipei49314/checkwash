@@ -182,13 +182,16 @@ def test_coverage_locations_use_normalized_bom_crlf_source():
     assert (gap.path, gap.side, gap.line, gap.column) == ("tests/總額.test.mjs", "before", 2, 3)
 
 
-def test_deleted_unknown_assertion_is_reported_on_the_base_side_without_a_finding():
+def test_deleted_unknown_assertion_is_reported_on_the_base_side_and_removed():
+    # The frontend records it with no strength, so its removal is
+    # ASSERT_REMOVED; the coverage notice still names the unread call
+    # (#196 190.5).
     context = ReportContext(collect_locations=False)
     _ir, findings, verdict = _analyze("assert.match(value, /expected/);", "runTransaction();", context)
     gap, = context.coverage_gaps
     assert (gap.side, gap.callee) == ("before", "assert.match")
-    assert findings == []
-    assert verdict == "pass"
+    assert [(f.rule, f.severity) for f in findings] == [("ASSERT_REMOVED", "high")]
+    assert verdict == "block"
     assert context._sources == {}
     assert context._origins == {}
 

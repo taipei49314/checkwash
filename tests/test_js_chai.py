@@ -276,7 +276,9 @@ def test_lookalikes_and_shadows_do_not_acquire_chai_strength(imports, body):
 ])
 def test_unsupported_chai_spellings_remain_coverage_gaps(body, callee):
     source = _source(body)
-    assert _assertions(source) == []
+    # Recorded with no strength, so deleting it is ASSERT_REMOVED; its
+    # predicate is still not read (#196 190.5).
+    assert [(a.form, a.strength) for a in _assertions(source)] == [("unknown", None)]
     gap, = _gaps(source)
     assert gap.callee == callee
     assert "not represented" in gap.reason
