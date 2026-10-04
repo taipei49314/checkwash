@@ -1,0 +1,31 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: a workflow whose base side ran no test runner becomes unreadable at head
+origin: issue #196 ruling 191.3 — the escalation applies only when the base side ran at least
+origin2: one live runner site: a docs workflow that gains a YAML tag stops no suite. A CI change
+origin3: at warn, as on v0.5.0.
+=== before: .github/workflows/docs.yml ===
+name: docs
+on:
+  pull_request:
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .[docs]
+      - run: sphinx-build -W docs docs/_build
+=== after: .github/workflows/docs.yml ===
+name: docs
+on:
+  pull_request:
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .[docs]
+      - run: sphinx-build -W docs docs/_build
+        timeout-minutes: !!int 10
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]
