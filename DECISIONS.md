@@ -3421,3 +3421,139 @@ Readings the ruling leaves to the implementation:
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-079 (2026-10-04): a runner site is a command that runs a test runner (#196 191.5)
+
+#181 judged runner sites, the workflow steps and pre-commit hooks that run
+the suite, by row 69's predicate, which asks whether a whole file names a
+runner anywhere. One step read that way made false sites: `if: false` on
+`pip install pytest`, on `./deploy-majestic.sh` or on `uses:
+pmeier/pytest-results-action` blocked at high as a weakened test command. An
+`echo pytest` step counted as a live runner too, so a runner reworded and
+disabled beside one passed (191.8).
+
+Ruling 196.191.5, as implemented:
+
+- **One predicate reads one command.** `runner_command.invokes_test_runner`
+  keeps row 69's runner names, matched as whole words, and is the predicate
+  the JS runner vocabulary will share (#216).
+- **Contexts known not to run a runner are excluded:** `echo` and `printf`
+  text, heredoc text, install subcommands, and `uses:` steps whose `with:`
+  inputs name no runner.
+- **Every other wrapper keeps its runner:** `bash -c`, `docker compose run`,
+  `nix develop --command`, `sudo`, `env` and commands checkwash does not
+  know.
+- **Runner sites only.** Row 69's `_runs_tests` keeps the deletion check and
+  the opaque-exemption denial.
+
+Readings the ruling leaves to the implementation:
+
+1. **A whole word.** A name preceded by a word character or a dot, or
+   followed by a word character, is part of another word: `jest` in
+   `deploy-majestic.sh`, `tox` in `.tox` and in `TOX_PYTHON`. A dot after a
+   name may begin an extension, so `pytest.exe` and `tox.ini` count, and so
+   does `run-pytest.sh`. A tool with a subcommand (`make test`, `npm test`)
+   needs the tool as a whole word, and its target may go on (`make tests`,
+   `make test_unit`, `yarn test:unit`), as substring matching allowed. Names
+   that matched only inside another word stop making a site, including a few
+   that do run tests: `python -m django test`, `npx detox test`, `gmake
+   test`, `ctest -R unittests`. They are candidates for the shared
+   vocabulary (#216).
+2. **Echo and heredoc text.** An `echo` or `printf` command is excluded
+   whole, its words and its redirections. A heredoc body is excluded when
+   `cat`, `tee`, `echo` or `printf` takes it. A heredoc fed to anything else
+   (`bash <<EOF`, `python - <<EOF`, `ssh host <<EOF`) keeps its names, and so
+   does a body whose unquoted delimiter lets it expand a command
+   substitution.
+3. **Install subcommands, as the ruling lists them.** pip counts in any
+   spelling: `pip3`, `pip3.12`, a path to it, `python -m pip` and `uv pip`.
+   npm counts with its own aliases of `install` and `ci`, never
+   `install-test`, `it` or `cit`, which run the tests. Options may stand
+   between the tool and its subcommand (`apt-get -y install`). Other
+   installers keep their names (`uv tool install`, `uv add`, `pnpm add`,
+   `yarn global add`, `gem install`), so the worst they cost is a false
+   reason.
+4. **Text that runs is never excluded:** a command substitution, a process
+   substitution, output piped onward (`echo pytest | sh`) and output written
+   into a process substitution.
+5. **A shell comment is excluded too.** This goes beyond the ruling's list:
+   no shell runs a comment. In cmd, a line that starts with `#` runs `#`,
+   not the runner. The narrowing is the agent's; the maintainer approves or
+   overrules it here.
+6. **The lexer reads bash, and gives up when it cannot follow the text.**
+   Its triggers are an unterminated quote, an unbalanced substitution or
+   parenthesis, a `case` pattern, a heredoc inside a substitution or without
+   its terminator, and nesting past 64. Every name in such text counts.
+   Other shells are read with bash's rules: PowerShell spells `;`, `&&`,
+   `|`, `#` and `echo` the same way, and where it differs (a backtick
+   escape) the text usually fails to lex.
+7. **A `uses:` step: exclusion only.** It is a site when its name names a
+   runner, as before, and one of its `with:` inputs names one too. The input
+   may be a key, with underscores read as word breaks (`tox_env`), or a
+   value read as a command (`test-command: npm test`). Its text stays the
+   `uses:` value, so a site that stays a site keeps its reason. An action
+   whose name holds no runner is still not a site, whatever its inputs
+   (`nick-fields/retry` given `command: pytest`): the ruling excludes and
+   adds nothing. An action named for its runner, with no runner in its
+   inputs, stops being a site, including `uses: ./.github/actions/pytest`.
+   Reading a composite action's own steps belongs to #213.
+8. **Pre-commit entries** are read with the same predicate.
+
+**The echo decoy (191.8) closes.** A runner reworded and disabled beside a
+new `echo pytest` step blocks, and so does a pytest hook whose entry becomes
+`echo pytest`. A decoy that does run the runner (`pytest --version`) still
+hides it, which row 112 keeps as a residual.
+
+**Tests and fixtures.**
+- New tests: `tests/test_runner_command.py`, and 18 in
+  `tests/test_ci_control_flow.py`.
+- New negative fixtures, each a v0.5.0 block:
+  - `ci_install_step_if_false_neg`;
+  - `ci_echo_step_if_false_neg`;
+  - `ci_results_publisher_if_false_neg`;
+  - `ci_runner_name_inside_word_neg`.
+- New fixtures, `bypass: 112`, each a v0.5.0 pass:
+  - `ci_reworded_runner_beside_echo_decoy_pos`;
+  - `precommit_test_hook_echo_decoy_pos`.
+- No existing fixture changes its expectation.
+
+**Fingerprints.** Unchanged: a site that stays a site keeps its text, so
+every finding that stays keeps its reason.
+
+**Cost.**
+- **v0.5.0 blocks that become passes,** for the next release guide. These
+  are `if: false`, a push-only or `failure()` condition, or a dead trigger
+  on a step or hook whose only runner name is:
+  - an install argument;
+  - `echo`, `printf` or heredoc text, or a comment;
+  - part of another word;
+  - in an action's name, with no runner in its inputs.
+
+  Most were false reasons. The exceptions run a suite: `django test`,
+  `detox test`, `gmake test`, `ctest -R unittests`, and an action named for
+  its runner that takes no input naming it.
+- **New blocks:** the echo decoy, in a workflow and in a pre-commit config.
+- **Sweep:** the full history of attrs, click, flask, httpx, rich and
+  starlette has 821 commits that touch a workflow or `.pre-commit-config.yaml`
+  (1,130 file changes).
+  - Neither engine reports a control-flow weakening on any of them, so no
+    verdict changes.
+  - 29 distinct step texts stop being sites and none becomes one. All 29 are
+    install steps (`pip install tox`, `python -Im pip install tox-uv`, `uv
+    pip install --system tox-uv`) or attrs's steps that echo `TOX_PYTHON`
+    into the environment.
+- **Verdict gate:** every one of its 180 cases keeps the verdict and the
+  findings of a candidate built from `main`, so no case is relabelled.
+- **Corpus:** no verdict, finding or IR changes for the 579 existing
+  fixtures; the six new fixtures are this round's.
+- **Time:** linear, and bounded by the reader's 1 MB. The worst case, one
+  1 MB `run:` script of 50,000 simple commands, takes about 0.7 s per side,
+  where the substring check took 0.06 s. Real steps are short.
+- **Not measured:** workflows of JS projects beyond the unit tests; no JS
+  repository is in the sweep (#212).
+
+SPEC §4 gains no text in this round. The runner-site paragraph that names
+this predicate is the spec.4-ci-runner-sites round, after the 191.x rounds.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
