@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import Counter
 
+from checkwash.compat import removed_skip_guard
 from checkwash.frontends.python.frontend import ParsedFile, module_constants
 from checkwash.ir.markers import bare_names, marker_call, parse_expr
 from checkwash.ir.model import DiffGlobals
@@ -16,7 +17,7 @@ _MAX_DUP_READS = 8
 
 
 def _mark_weakened_guards(file) -> None:
-    """Flag skips whose text is unchanged but whose meaning became "always skip".
+    """Flag skips whose marker is unchanged but whose meaning became "always skip".
 
     `STRICT = True` -> `STRICT = False` under `if not STRICT: pytest.skip(...)`
     silences a test with no marker event of any kind: the guard text is
@@ -24,6 +25,8 @@ def _mark_weakened_guards(file) -> None:
     in one line on the first try (decoy probe arm 2026-08-04). The condition
     is evaluated in both environments; only "used to run somewhere, now
     skips everywhere" counts, so honest version-gate bumps stay silent.
+    Removing the guard outright is the same event with nothing left to
+    evaluate (#196 183.2, `compat.removed_skip_guard`).
     """
     from checkwash.gating import guard_always_skips
 
@@ -46,6 +49,13 @@ def _mark_weakened_guards(file) -> None:
                 old.guard, file.constants_before
             ):
                 unit.delta.guards_weakened.append(m.name)
+        # The guard removed rather than made always true (THREATMODEL 54,
+        # #196 183.2): the call keeps its name, so no marker is added, and the
+        # head side has no guard left to evaluate.
+        quiet = set(unit.delta.guards_weakened) | set(unit.delta.markers_added)
+        for name in sorted({m.name for m in unit.after.markers} - quiet):
+            if removed_skip_guard(name, unit, file.constants_before) is not None:
+                unit.delta.guards_weakened.append(name)
         # A conftest that already had a collection control produced no event at
         # all when a second one was appended: markers deduplicate by name, so
         # `collect_ignore.append(...)` beside an existing `collect_ignore = [...]`

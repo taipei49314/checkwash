@@ -260,11 +260,12 @@ class UnitDelta:
     # appended, where the live count never moved (F-063). Zero whenever the
     # rows could not be paired, so the count rule's message is unchanged.
     param_cases_disabled: int = 0
-    # Skips whose condition text never changed but whose *meaning* did,
-    # because a constant it names was edited: `STRICT = True` -> `False`
-    # under `if not STRICT: pytest.skip(...)` silences the test with no
-    # marker event at all (decoy probe arm 2026-08-04). Entries are marker
-    # names, matched to the after side.
+    # Skips whose guard stopped discriminating while the marker stayed the
+    # same: a constant it names was edited (`STRICT = True` -> `False` under
+    # `if not STRICT: pytest.skip(...)` silences the test with no marker
+    # event at all, decoy probe arm 2026-08-04), its text now always holds
+    # (`if True:`, THREATMODEL 54), or it was removed (#196 183.2). Entries
+    # are marker names, matched to the after side.
     guards_weakened: list[str] = field(default_factory=list)
 
 

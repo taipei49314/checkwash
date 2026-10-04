@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: removing an always-true guard disables nothing that ran
+origin: #196 183.2 — the base already skipped everywhere, so dropping `if True:` is a cleanup
+=== before: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    if True:
+        pytest.skip("parked")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    pytest.skip("parked")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[]

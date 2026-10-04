@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an if-guarded skip rewritten as a try/except ImportError gate keeps its condition
+origin: #196 183.2 — the skip still runs only when numpy is missing; the except block stands for its condition
+=== before: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+HAS_NUMPY = False
+
+
+def test_weighted_quota():
+    if not HAS_NUMPY:
+        pytest.skip("needs numpy")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    try:
+        import numpy
+    except ImportError:
+        pytest.skip("needs numpy")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[]
