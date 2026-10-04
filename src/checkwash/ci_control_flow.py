@@ -42,12 +42,15 @@ suite. A site is dead only for a reason that holds statically:
 Two predicates read the inventory. *Disabled*: a runner command lost a live
 site and gained a dead one, so the suite is still written there and cannot
 execute. A runner reworded as it is disabled counts when the inventory moved
-a site, one live fewer and one dead more; a runner born dead beside a
-reworded live one disabled nothing that ran. *Removed*
-(row 69's two-sided rule, hook inventory only): the file ran a suite at base
-and runs none at head. Removal is not judged for workflows: a step that
-leaves one may have moved to a reusable workflow, a composite action or a
-script, and one file's head side cannot tell that from deletion.
+a site, one live fewer and one dead more, and its reason names both commands,
+as text alone cannot prove they are one site (#196 191.8); a runner born dead
+beside a reworded live one disabled nothing that ran. *Removed* (row 69's
+two-sided rule, hook inventory only): the hook entries invoked a recognised
+runner at base and none does at head. A hook's id and name are the author's
+to choose and prove nothing (#196 191.7). Removal is not judged for
+workflows: a step that leaves one may have moved to a reusable workflow, a
+composite action or a script, and one file's head side cannot tell that from
+deletion.
 
 Not evaluated: path filters that leave any path, `pull_request` branch
 filters, activity `types` that keep one of the three (`[opened]` runs on a
@@ -902,14 +905,19 @@ def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None
     # everywhere) moves nothing between them, hence `shifted`.
     shifted = len(new_dead) > len(old_dead) or len(new_live) < len(old_live)
     disabled = stopped & parked if shifted else Counter()
-    if not disabled and len(new_live) < len(old_live) and len(new_dead) > len(old_dead):
-        # The inventory moved a site, one live fewer and one dead more: a
-        # runner reworded as it was disabled (`pytest` -> `python -m pytest`
-        # under `if: false`) is still the runner that stopped.
-        disabled = parked
     if disabled:
         command, cause = min(site for site in new_dead if site[0] in disabled)
         return [f"{command} is disabled ({cause})"]
+    if len(new_live) < len(old_live) and len(new_dead) > len(old_dead):
+        # The inventory moved a site, one live fewer and one dead more: a
+        # runner reworded as it was disabled (`pytest` -> `python -m pytest`
+        # under `if: false`) is still the runner that stopped. Text alone
+        # cannot prove the two are one site, so the reason names both
+        # (#196 191.8).
+        command, cause = min(site for site in new_dead if site[0] in parked)
+        return [f"{min(stopped)} no longer runs, and {command} is disabled ({cause})"]
     if inventory and old_live and not new_live:
-        return [f"{min(old_live)} is no longer run by any pre-commit hook"]
+        # The hook's id and name are the author's to choose and prove
+        # nothing: only its entry is evidence (#196 191.7).
+        return [f"no pre-commit hook entry invokes a recognised test runner any more (was: {min(old_live)})"]
     return []
