@@ -204,16 +204,20 @@ def _discriminates(condition: ast.AST, consts: dict[str, ast.AST] | None) -> boo
 # them. unittest.skipIf is deliberately absent for now: unmeasured, and the
 # credit should not outrun the corpus.
 _GATE_DECORATORS = ("pytest.mark.skipif", "pytest.mark.xfail")
-# Imperative skips whose recorded guard plays the role of the condition.
-_GATE_CALLS = (
-    "pytest.skip",
-    "pytest.xfail",
-    "self.skipTest",
-    # Same shape one level up: `if not PY_3_14_PLUS: collect_ignore.extend(...)`
-    # is a compatibility gate over a whole file, and its recorded guard is the
-    # condition (attrs 61e8179545). Unguarded, it earns nothing.
+# The suite-level collection controls of a conftest: `collect_ignore`, the
+# collection hooks, and an `add_marker` skip in one. Same shape one level up:
+# `if not PY_3_14_PLUS: collect_ignore.extend(...)` is a compatibility gate
+# over a whole file, and its recorded guard is the condition (attrs
+# 61e8179545). A hook's guard is the condition its effects fire under (#209
+# Q1). Unguarded, each earns nothing.
+_SUITE_GATES = (
     "conftest.collect_ignore",
+    "conftest.pytest_collection_modifyitems",
+    "conftest.pytest_ignore_collect",
+    "conftest.add_marker_skip",
 )
+# Imperative skips whose recorded guard plays the role of the condition.
+_GATE_CALLS = ("pytest.skip", "pytest.xfail", "self.skipTest", *_SUITE_GATES)
 
 
 def _parse_constants(raw: dict[str, str]) -> dict[str, ast.AST]:
@@ -256,8 +260,10 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     # None: collect_ignore.append(...)` names no interpreter and no OS, and an
     # adversarial audit caught this build blocking exactly that, on a PR that
     # *added* the tests it was guarding. Still has to discriminate: an
-    # always-true guard is a disable wearing a condition.
-    if canonical != "conftest.collect_ignore" and not any(
+    # always-true guard is a disable wearing a condition. A collection hook
+    # is judged the same way, so pytest's `--runslow` recipe holds as its
+    # `collect_ignore` spelling does (D-028, #209 Q1).
+    if canonical not in _SUITE_GATES and not any(
         tok in searched for tok in _COMPAT_TOKENS
     ):
         return False
@@ -265,24 +271,16 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     return _discriminates(condition, consts)
 
 
-def _compat_gate(unit: Unit | None, constants: dict[str, str] | None = None) -> bool:
-    """A skip keyed on interpreter/OS version is a compat gate, not a kill.
+def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: str | None) -> bool:
+    """Is the disabling marker this finding reports a qualified gate? (#208)
 
+    A skip keyed on interpreter/OS version is a compat gate, not a kill.
     Three spellings earn the credit, all evaluated the same way: `skipif(cond)`,
     non-strict `xfail(cond)` (strict inverts the oracle instead of skipping
     it, which is not a gate), and an imperative `pytest.skip()`/`pytest.xfail()`
     /`self.skipTest()` under recorded `if` guards, in the test's body or in the
-    setup it runs (#196 183.2).
-    """
-    if unit is None or unit.after is None:
-        return False
-    raw = constants or {}
-    consts = _parse_constants(raw)
-    return any(_marker_is_compat_gate(m, raw, consts) for m in unit.after.markers)
-
-
-def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: str | None) -> bool:
-    """Is the disabling marker this finding reports a qualified gate? (#208)
+    setup it runs (#196 183.2). A conftest's suite-level collection control
+    earns it on its own guard (D-028, #209 Q1).
 
     D6 judges the added skip, so the hold is a fact about the finding's own
     marker, not about the unit. Every after-side marker with that name must

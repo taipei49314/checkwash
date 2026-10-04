@@ -142,18 +142,18 @@ def test_one_guard_of_two_removed_is_reported():
     assert removed(before, after).message.endswith(": skip guard removed (was 'sys.version_info < (3, 9)')")
 
 
-def test_an_honest_gate_beside_it_holds_it_at_warn():
-    # Residual (#208): D6 grants COMPAT_GATE per unit, not per marker, so a
-    # qualified version or platform gate left on the unit holds the removed
-    # guard at warn. The finding is still reported.
+def test_an_honest_gate_beside_it_lends_it_nothing():
+    # D6 judges the marker a finding reports (#208). A removed guard reports
+    # no marker of its own, so the platform gate left on the unit no longer
+    # holds it at warn, as it did while the hold was granted per unit.
     before = GUARDED.replace("    assert total()",
                              '    if sys.platform == "win32":\n        pytest.skip("posix only")\n    assert total()')
     after = before.replace('    if sys.version_info < (3, 9):\n        pytest.skip("needs 3.9")\n',
                            '    pytest.skip("needs 3.9")\n')
     found, verdict = analyze_test(before, after)
-    assert verdict == "pass"
+    assert verdict == "block"
     assert [(f.severity, f.deescalators, f.message) for f in found] == [
-        ("warn", ["COMPAT_GATE"], "test_total: skip guard removed (was 'sys.version_info < (3, 9)')")
+        ("high", [], "test_total: skip guard removed (was 'sys.version_info < (3, 9)')")
     ]
 
 

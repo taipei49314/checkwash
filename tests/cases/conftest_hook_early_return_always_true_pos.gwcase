@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 116
+rule: TEST_DISABLED
+title: an early return that never happens guards nothing
+origin: #209: the --runslow shape with a condition that is never true.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+=== after: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    if sys.version_info < (3, 0):
+        return
+    items[:] = []
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

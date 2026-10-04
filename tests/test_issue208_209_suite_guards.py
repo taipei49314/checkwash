@@ -18,12 +18,13 @@ import datetime
 import pytest
 
 from checkwash.change import FileChange
-from checkwash.compat import compat_gate_for, guard_can_be_false
+from checkwash.compat import _SUITE_GATES, compat_gate_for, guard_can_be_false
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.detectors.test_disabled import finding_marker
 from checkwash.engine import analyze
 from checkwash.frontends.python import frontend as F
+from checkwash.frontends.python.conftest_controls import COLLECTION_NAMES
 from checkwash.frontends.python.hook_guards import weakest
 
 CONFTEST = "tests/conftest.py"
@@ -352,6 +353,46 @@ def test_a_builtin_the_conftest_may_rebind_is_not_a_read(module):
 ])
 def test_guard_can_be_false(guard, constants, can_be_false):
     assert guard_can_be_false(guard, constants) is can_be_false
+
+
+
+def test_every_collection_control_qualifies_on_its_own_guard():
+    # D-028's exemption from the compat-token filter covers exactly the
+    # controls the frontend mints (#209 Q1).
+    assert set(_SUITE_GATES) == COLLECTION_NAMES
+
+
+
+# --- 209.Q4 in gating: the finding's own control -------------------------------
+
+DEPLOY = "scripts/deploy.sh"
+OPAQUE_PROD = FileChange(
+    DEPLOY, "modified",
+    b"#!/usr/bin/env bash\nrsync -a build/ prod:/srv/app/\n",
+    b"#!/usr/bin/env bash\nrsync -a --delete build/ prod:/srv/app/\n",
+)
+
+
+def test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one():
+    # Each finding asks about its own control: the unguarded drop refuses the
+    # evidence, and the guarded hook beside it keeps it (#208, #209 Q4).
+    after = hook(NETWORK) + "\ncollect_ignore = [\"test_billing.py\"]\n"
+    _ir, found, verdict = analyze_change(FileChange(CONFTEST, "modified", HEAD.encode(), after.encode()), OPAQUE_PROD)
+    assert sorted((f.message.rsplit("(", 1)[1], f.severity, tuple(f.deescalators)) for f in found) == [
+        ("conftest.collect_ignore)", "high", ()),
+        ("conftest.pytest_collection_modifyitems)", "warn", ("REPAIR_EVIDENCE",)),
+    ]
+    assert verdict == "block"
+
+
+def test_a_weakened_suite_guard_earns_no_repair_evidence():
+    # A guard edited to one that always holds leaves its control acting
+    # everywhere: the finding has no marker of its own and is unguarded.
+    before = hook(NETWORK)
+    after = before.replace('if not os.environ.get("NETWORK"):', "if sys.version_info >= (3, 0):")
+    _ir, found, verdict = analyze_change(FileChange(CONFTEST, "modified", before.encode(), after.encode()), OPAQUE_PROD)
+    assert [(f.severity, f.escalators) for f in found] == [("high", ["COLLECTION_CONTROL_UNEXPLAINED"])]
+    assert verdict == "block"
 
 
 # --- a hook's guard edited to one that always holds ---------------------------
