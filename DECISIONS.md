@@ -3050,3 +3050,121 @@ target, and no target changes its spelling.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-076 (2026-10-03): every write reaches the JS binding scan, and an unknown bound is not unchanged (#196 189.1)
+
+The JS binding scan (`frontends/javascript/bindings.py`) reads a hand-rolled
+tolerance bound and an assertion alias through their initializer. It carried
+two known gaps from #189:
+
+- **Writes.** Only `=`, `+=`, `-=`, `*=`, `/=` and postfix `++`/`--` made a
+  name unknown, and only when written before the read in the read's own
+  function or an enclosing one. A bound widened with `**=`, `||=`, `??=` or
+  another compound operator, a prefix increment, a destructuring
+  assignment, or a write in a `beforeEach` hook or a helper, still read as
+  its initializer.
+- **Statement ends.** A declaration without a semicolon ran on into the
+  next line unless that line began with one of eight keywords, so
+  `const eps = 0.01` directly above `expect(...)`, or `const check = expect`
+  above `check(value).toBe(...)`, was not read.
+
+A write the scan did follow turned a known bound into an unknown one, and
+that was silent too: ASSERT_WEAKENED's known -> unknown rule (#198, 190.4)
+covered `toBeCloseTo` and chai `closeTo` only. The ruling's reasoning names
+that rule as the one 189.1 relies on.
+
+Ruling 196.189.1 (a), as implemented:
+
+- **Every write.**
+  - Every assignment operator.
+  - Prefix and postfix `++`/`--`. A postfix operator needs its operand on
+    the same line; after a line break it is prefix, as in JavaScript.
+  - Each target of a destructuring assignment, nested, rest and default
+    included.
+  - The target of a `for`-`in`/`of` head without a declaration.
+  - A member target (`a.b = `, `a[k] = `) writes that path. A property of a
+    call result or a private field writes no binding.
+- **Writes from any function.**
+  - A write in any other function counts wherever it is written: a hook,
+    a helper or a callback may run before the read. Module code after a
+    test's definition runs before its body.
+  - In the read's own function a write counts when it comes first, or
+    when a loop in that function runs both.
+- **Statement ends.** A declaration ends at a `;`, a `,` or an unmatched
+  closer. It also ends at a line break where the token before completes an
+  operand and the token after cannot continue the expression: a name, a
+  literal, `!` or a prefix `++`/`--`. An operator, `.`, `?.`, `(`, `[` or
+  `{` on the next line continues it, as in JavaScript.
+- **Unknown is not unchanged.** A hand-rolled bound read on the base side
+  and unreadable on the head side is the unverifiable replacement SPEC §4
+  already names: "a known tolerance replaced, on the same subject, by one
+  the frontend cannot read". It is reported as ASSERT_WEAKENED "tolerance
+  abs=0.01 -> a tolerance it cannot read", as an unreadable `closeTo` delta
+  is. This covers a bound reached by a write, rewritten into a call, or
+  past Decimal's range. A bound unknown on both sides replaces nothing and
+  stays silent.
+
+Readings the ruling leaves to the implementation:
+
+1. **"Writes from any function" counts them wherever they are written.**
+   Position orders nothing across functions. A write in a function that is
+   never called still counts: the scan cannot tell it is never called.
+2. **The read's own function keeps position order, except in a loop.** The
+   capture-time pins in `tests/test_js_binding_writes.py` stay: a method
+   captured before a later overwrite in straight-line code keeps its
+   authority. A later write that reaches an earlier read when its function
+   runs again (a helper called twice, `test.each`) is a stated residual.
+   Counting it would also flip those pins.
+3. **The known -> unknown rule extends to hand-rolled bounds in this round.**
+   Without it every newly followed write would turn a silent widening into
+   a silent unknown, and the ruling's reasoning names this rule as the one
+   the round relies on. It closes two row 110 residuals: a bound rewritten
+   into one checkwash cannot read (`< 0.01` -> `< tolerance()`), and
+   literals past Decimal's exponent range.
+4. **A destructuring declaration declares its names.** `const [eps] =
+   [1e12]` shadows an outer `eps` with an unknown value. Before, an array or
+   nested pattern declared nothing, so the read reached the outer name.
+5. **What looks like an assignment but is not one is excluded.** A JSX
+   attribute (`<Range max={5} />`), a class field (`static eps = 5`) and a
+   TypeScript type alias (`type eps = number`) write nothing.
+6. **#240 lands first.** Its PR reads TypeScript-annotated and cast
+   declarations. Without it, an honest JS -> TS migration
+   (`const EPS = 0.01` -> `const EPS: number = 0.01`) would read as known ->
+   unknown and block.
+
+**Pins.** Five flip, each a direct consequence of the ruling.
+- `tests/test_js_binding_writes.py`: the two "unused function" cases move
+  from "preserve the original oracle" to "remove the old oracle"
+  (`function unused() { assert.strictEqual = () => {}; }` and its arrow
+  twin). A write from any function counts.
+- `tests/test_js_handrolled_tolerance.py`:
+  `test_a_bound_past_the_decimal_range_is_unknown_not_a_crash`, both
+  parameters. The pair now blocks with ASSERT_WEAKENED instead of passing;
+  the no-crash half of the pin stands.
+- `tests/test_js_predicate.py`: `< 0.01` -> `< tolerance()` moves from the
+  documented residuals to the residuals the evidence closes.
+
+**Tests and fixtures.**
+- New tests: `tests/test_js_write_reach.py`.
+- New fixtures, `bypass: 110`:
+  - `js_handrolled_tolerance_compound_write_pos`;
+  - `js_handrolled_tolerance_hook_write_pos`;
+  - `js_handrolled_tolerance_asi_pos`;
+  - `js_handrolled_tolerance_unreadable_bound_pos`;
+  - control `js_handrolled_tolerance_unchanged_write_neg`.
+- No existing fixture changes its expectation.
+
+**Fingerprints.** Unchanged. ASSERT_WEAKENED is keyed by path, unit and the
+before assertion, and no assertion text changes.
+
+**Cost.**
+- **New findings:** ASSERT_WEAKENED "cannot verify", high without repair
+  evidence, on a hand-rolled bound that a new write, a call or an
+  out-of-range literal makes unknown on the head side only. Semicolon-free
+  files gain readings, so findings move both ways there.
+- **Not measured:** the JS false-positive cost, which waits on #212. The
+  known new false-positive class is a write that never runs before the read
+  (a write in an uncalled helper), added on the head side.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

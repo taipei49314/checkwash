@@ -1,8 +1,10 @@
 """Bounded static JS import bindings and lexical shadows, without execution.
 
 This is not a JavaScript interpreter. Flat imports/destructuring, simple aliases,
-block scopes, function parameters and direct writes are resolved. Unknown values
-never acquire assertion strength merely by using an assertion's name.
+block scopes and function parameters are resolved, and every write is followed:
+a name that any write may have reached is unknown, never its first value.
+Unknown values never acquire assertion strength merely by using an assertion's
+name.
 """
 
 from __future__ import annotations
@@ -12,8 +14,26 @@ import re
 
 NAME = r"[A-Za-z_$][\w$]*"
 CALL = re.compile(r"(?<![\w$.#])(?P<callee>" + NAME + r"(?:\s*\.\s*" + NAME + r")*)\s*\(")
-_TOKEN = re.compile(r"(?P<quote>['\"])(?:\\.|(?!(?P=quote)).)*(?P=quote)|" + NAME + r"|=>|===|!==|==|!=|\?\.|\+\+|--|[+*/-]=|[^\s]", re.DOTALL)
+_TOKEN = re.compile(
+    r"(?P<quote>['\"])(?:\\.|(?!(?P=quote)).)*(?P=quote)|" + NAME
+    + r"|=>|===|!==|==|!=|\?\.|\+\+|--|>>>=|<<=|>>=|\*\*=|&&=|\|\|=|\?\?=|[+*/%&|^-]=|[^\s]",
+    re.DOTALL,
+)
 _IDENT = re.compile(NAME + r"\Z")
+# Every assignment operator. Each one rebinds its target to a value this
+# model does not compute (#196 189.1).
+_ASSIGNMENTS = frozenset({
+    "=", "+=", "-=", "*=", "/=", "%=", "**=", "<<=", ">>=", ">>>=", "&=", "|=", "^=", "&&=", "||=", "??=",
+})
+# Words that leave an expression waiting for its operand, and words that
+# continue one across a line break (ASI, #196 189.1).
+_OPERATOR_WORDS = frozenset({
+    "typeof", "void", "delete", "await", "new", "in", "instanceof", "of", "as", "satisfies", "yield",
+    "return", "throw", "case", "extends", "class", "function", "async", "else", "do", "keyof",
+})
+_CONTINUING_WORDS = frozenset({"in", "instanceof", "as", "satisfies"})
+# Identifier-shaped words after which `[` opens an array, not a member access.
+_STATEMENT_WORDS = _OPERATOR_WORDS | {"const", "let", "var"}
 
 
 @dataclass(frozen=True)
@@ -73,6 +93,7 @@ class Bindings:
                 self.pairs[i] = opening
                 if token == "}":
                     self.scopes[scopes.pop()].end = start
+        self.loops = self._loops()
         self._imports(code)
         self._functions()
         self._variables()
@@ -206,19 +227,93 @@ class Bindings:
                         self._declare(scope, local, self.member(module, exported))
 
     def _expression_end(self, start: int, limit: int | None = None) -> int:
+        """Index of the token that ends the expression starting at `start`.
+
+        `;`, `,` or an unmatched closer ends it, and so does a line break
+        where the token before completes an operand and the token after
+        cannot continue it: the statement end JavaScript inserts there (ASI,
+        #196 189.1). `const check = expect` with `check(value)` on the next
+        line is two statements, not one call; `+`, `.`, `(` or `[` on the
+        next line continues the expression, as it does in JavaScript.
+        """
         i = start
         limit = len(self.tokens) if limit is None else limit
         while i < limit:
             token = self.token(i)
-            if token in {";", ",", "}", ")"}:
+            if token in {";", ",", "}", ")", "]"}:
                 break
-            if i > start and "\n" in self.text[self.tokens[i - 1][2]:self.tokens[i][1]]:
-                if token in {"const", "let", "var", "test", "it", "return", "import", "function"}:
-                    break
+            if i > start and self._line_break(i) and self._completes(i - 1) and not self._continues(i):
+                break
             if token in {"(", "[", "{"} and i in self.pairs:
                 i = self.pairs[i]
             i += 1
         return i
+
+    def _line_break(self, i: int) -> bool:
+        """Is there a line break between token `i - 1` and token `i`?"""
+        return "\n" in self.text[self.tokens[i - 1][2]:self.tokens[i][1]]
+
+    def _control_head(self, opening: int) -> bool:
+        """Is the `(` at `opening` the head of `if`, a loop, `with`, `switch` or `catch`?"""
+        keyword = opening - 1
+        if self.token(keyword) == "await":
+            keyword -= 1
+        return (self.token(keyword) in {"if", "for", "while", "with", "switch", "catch"}
+                and self.token(keyword - 1) not in {".", "?."})
+
+    def _completes(self, i: int) -> bool:
+        """Does token `i` complete an operand, so that a line break after it can end the statement?"""
+        token = self.token(i)
+        if token in {"]", "}", "++", "--"} or token[:1] in {"'", '"'} or token[:1].isdigit():
+            return True
+        if token == ")":
+            return i not in self.pairs or not self._control_head(self.pairs[i])
+        return bool(_IDENT.fullmatch(token)) and token not in _OPERATOR_WORDS
+
+    def _continues(self, i: int) -> bool:
+        """Can token `i`, first on its line, continue the expression before it?
+
+        An operator, `.`, `?.`, `(`, `[` or `{` can; a name, a literal, `!`
+        or a prefix `++`/`--` cannot, so JavaScript ends the statement first.
+        """
+        token = self.token(i)
+        if token in {"++", "--"}:
+            return False
+        if token in {"!=", "!=="} or token in _CONTINUING_WORDS:
+            return True
+        return token[:1] in set("+-*/%<>=&|^?:.,([{")
+
+    def _loops(self) -> list[tuple[int, int]]:
+        """Text spans of the loop statements, head and body (#196 189.1).
+
+        A write late in a loop body reaches a read early in it on the next
+        iteration, so `_written` cannot order the two by position.
+        """
+        loops = []
+        for i, (token, start, _) in enumerate(self.tokens):
+            if token not in {"for", "while", "do"} or self.token(i - 1) in {".", "?."}:
+                continue
+            if token == "do":
+                last = self._statement_last(i + 1)
+                if self.token(last + 1) == "while" and last + 2 in self.pairs:
+                    last = self.pairs[last + 2]
+            else:
+                head = i + 1 + (self.token(i + 1) == "await")
+                if self.token(head) != "(" or head not in self.pairs:
+                    continue
+                last = self._statement_last(self.pairs[head] + 1)
+            end = self.tokens[last][2] if 0 <= last < len(self.tokens) else len(self.text)
+            loops.append((start, end))
+        return loops
+
+    def _statement_last(self, first: int) -> int:
+        """Index of the last token of the statement that starts at token `first`."""
+        if self.token(first) == "{" and first in self.pairs:
+            return self.pairs[first]
+        end = self._expression_end(first)
+        while self.token(end) == ",":
+            end = self._expression_end(end + 1)  # `a, b` is one statement
+        return end if self.token(end) == ";" else end - 1
 
     def _functions(self) -> None:
         # Register parameters before resolving variable initializers, so a
@@ -329,9 +424,9 @@ class Bindings:
             cursor = i + 1
             while cursor < len(self.tokens):
                 pattern = self.token(cursor)
-                if pattern == "{" and cursor in self.pairs:
+                if pattern in {"{", "["} and cursor in self.pairs:
                     closing = self.pairs[cursor]
-                    names = self._pattern(cursor + 1, closing)
+                    names = self._declared(cursor)
                     assignment = closing + 1
                 elif _IDENT.fullmatch(pattern):
                     names = [("", pattern)]
@@ -348,9 +443,12 @@ class Bindings:
                 expression = tuple(self.token(j) for j in range(assignment + 1, ending)) if self.token(assignment) == "=" else ()
                 ready = self.tokens[ending - 1][2] if ending > assignment else self.tokens[cursor][2]
                 for member, local in names:
-                    value = (*expression, ".", member) if member and expression else expression
-                    self._declare(scope, local, value or UNKNOWN, ready)
-                    if expression and not member:
+                    if member is None:
+                        value: Value | tuple[str, ...] = UNKNOWN
+                    else:
+                        value = ((*expression, ".", member) if member and expression else expression) or UNKNOWN
+                    self._declare(scope, local, value, ready)
+                    if expression and member == "":
                         self.initializer_text[(scope, local)] = (
                             ready, self.masked[self.tokens[assignment + 1][1]:ready])
                 if self.token(ending) != ",":
@@ -396,23 +494,231 @@ class Bindings:
             "abstract",
         }
 
+    def _declared(self, opening: int) -> list[tuple[str | None, str]]:
+        """(member, local) for every name a declaration's pattern binds.
+
+        A flat object property reads that member of the initializer. An array
+        element, a nested pattern, a computed key or a rest element is unknown
+        (None), but it still declares its name, so it shadows an outer one:
+        `const [eps] = [1e12]` is not the outer `eps` (#196 189.1).
+        """
+        closing = self.pairs[opening]
+        flat: dict[str, str] = {}
+        if self.token(opening) == "{":
+            for start, end in self._parts(opening + 1, closing):
+                key = self.token(start)
+                if not _IDENT.fullmatch(key):
+                    continue
+                if start + 1 == end or self.token(start + 1) == "=":
+                    flat[key] = key
+                elif (self.token(start + 1) == ":" and _IDENT.fullmatch(self.token(start + 2))
+                      and (start + 3 == end or self.token(start + 3) == "=")):
+                    flat[self.token(start + 2)] = key
+        return [(flat.get(name), name) for name in self._binding_names(opening, closing + 1)]
+
     def _assignments(self) -> None:
+        """Record every write (#196 189.1).
+
+        Every assignment operator, prefix and postfix `++`/`--`, each target
+        of a destructuring assignment, and the target of a `for`-`in`/`of`
+        head without a declaration. A write to a member (`a.b = `, `a[k] = `)
+        is a write to that path; a property of a call result or a private
+        field is no binding.
+        """
         for i, (token, start, _) in enumerate(self.tokens):
-            if token not in {"=", "+=", "-=", "*=", "/=", "++", "--"}:
-                continue
             if i in self.initializers or i in self.parameter_tokens:
                 continue
-            j = i - 1
-            path = []
-            while j >= 0 and _IDENT.fullmatch(self.token(j)):
-                path.insert(0, self.token(j))
-                j -= 1
-                if self.token(j) != ".":
-                    break
-                j -= 1
-            if not path or self.token(j) in {"const", "let", "var"}:
+            if token in _ASSIGNMENTS:
+                if self._class_field(i):
+                    continue
+                path, first = self._target_before(i)
+                if path is not None and self._declarative(first):
+                    continue
+                if path is not None:
+                    targets = [path]
+                elif token == "=" and self.token(i - 1) in {"]", "}"} and i - 1 in self.pairs:
+                    targets = self._pattern_targets(self.pairs[i - 1])
+                else:
+                    continue
+            elif token in {"++", "--"}:
+                # Postfix needs its operand on the same line; after a line
+                # break JavaScript ends the statement and the operator is prefix.
+                postfix = self._operand_end(i - 1) and not self._line_break(i)
+                targets = [self._path_before(i) if postfix else self._path_after(i)]
+            elif token in {"of", "in"}:
+                targets = self._loop_targets(i)
+            else:
                 continue
-            self.writes.append((tuple(path), start, self.scope(start)))
+            for path in targets:
+                if path:
+                    self.writes.append((path, start, self.scope(start)))
+
+    def _operand_end(self, i: int) -> bool:
+        """Can a postfix `++`/`--` apply to the operand that token `i` ends?"""
+        token = self.token(i)
+        if token == "]":
+            return True
+        if token == ")":
+            return i in self.pairs and not self._control_head(self.pairs[i])
+        return bool(_IDENT.fullmatch(token)) and token not in _STATEMENT_WORDS
+
+    def _chain_path(self, elements: list[tuple[str, str]]) -> tuple[str, ...]:
+        """The binding path a member chain writes: its leading names.
+
+        `a.b` writes a.b, and `a[k]` or `a.b[k].c` a member of a or a.b. A
+        chain whose leading names are called (`f().x`) writes no binding.
+        """
+        path = []
+        for kind, name in elements:
+            if kind != "name":
+                return () if kind == "call" else tuple(path)
+            path.append(name)
+        return tuple(path)
+
+    def _path_before(self, i: int, floor: int = 0) -> tuple[str, ...] | None:
+        """The path written by the assignment target that ends just before token `i`.
+
+        None when no member chain ends there (an array or object pattern);
+        `()` when the chain writes no binding. The target starts at `floor`
+        or later: a rest element's `...` is not a member access.
+        """
+        return self._target_before(i, floor)[0]
+
+    def _target_before(self, i: int, floor: int = 0) -> tuple[tuple[str, ...] | None, int]:
+        """`_path_before`, with the index of the target's first token."""
+        j = i - 1
+        if self.token(j) == "!" and j > floor and self._operand_end(j - 1):
+            j -= 1  # TypeScript's non-null `x! = ...`
+        elements: list[tuple[str, str]] = []
+        while j >= floor:
+            token = self.token(j)
+            if token in {"]", ")"} and j in self.pairs:
+                opening = self.pairs[j]
+                if opening <= floor or not self._operand_end(opening - 1):
+                    if token == ")" and not elements:
+                        return self._parenthesized(opening), opening
+                    return None, j
+                elements.append(("computed" if token == "]" else "call", ""))
+                j = opening - 1
+                continue
+            if not _IDENT.fullmatch(token) or token in _STATEMENT_WORDS:
+                return None, j
+            if j > floor and self.token(j - 1) == "#":
+                return (), j  # a private field: `this.#x = ...`
+            elements.append(("name", token))
+            if j - 1 <= floor or self.token(j - 1) not in {".", "?."}:
+                break
+            j -= 2
+        if not elements:
+            return None, j
+        elements.reverse()
+        return self._chain_path(elements), j
+
+    def _declarative(self, first: int) -> bool:
+        """Does the name at token `first` follow a word or a string that makes `=` declare, not write?
+
+        `let x = `, a JSX attribute (`<Range max={5} />`, `class="a" max=`),
+        a class field modifier (`static x = `, `readonly x = `) or a TS type
+        alias (`type X = `). Two names side by side are never one JavaScript
+        expression, except after a keyword that takes an operand.
+        """
+        before = self.token(first - 1)
+        if before in {"const", "let", "var", "using"} or before[:1] in {"'", '"'}:
+            return True
+        return bool(_IDENT.fullmatch(before)) and before not in _OPERATOR_WORDS
+
+    def _parenthesized(self, opening: int) -> tuple[str, ...] | None:
+        """The path of a parenthesized target: `(x) = `, `(x as T) = `."""
+        closing = self.pairs[opening]
+        end = closing
+        for k in range(opening + 1, closing):
+            if self.token(k) in {"as", "satisfies"} and self.enclosing[k] == opening:
+                end = k
+                break
+        if end == opening + 1:
+            return None
+        return self._path_before(end)
+
+    def _path_after(self, i: int) -> tuple[str, ...]:
+        """The path a prefix `++`/`--` at token `i` writes."""
+        j = i + 1
+        if self.token(j) == "(" and j in self.pairs:
+            return self._parenthesized(j) or ()
+        if not _IDENT.fullmatch(self.token(j)) or self.token(j) in _STATEMENT_WORDS:
+            return ()
+        elements = [("name", self.token(j))]
+        j += 1
+        while True:
+            token = self.token(j)
+            if token in {".", "?."} and _IDENT.fullmatch(self.token(j + 1)):
+                elements.append(("name", self.token(j + 1)))
+                j += 2
+            elif token in {"[", "("} and j in self.pairs:
+                elements.append(("computed" if token == "[" else "call", ""))
+                j = self.pairs[j] + 1
+            else:
+                break
+        return self._chain_path(elements)
+
+    def _pattern_targets(self, opening: int) -> list[tuple[str, ...]]:
+        """Every path a destructuring assignment pattern writes: `[a, b.c] = `, `({ d, e: f } = )`."""
+        closing = self.pairs[opening]
+        targets = []
+        for start, end in self._parts(opening + 1, closing):
+            while start < end and self.token(start) == ".":
+                start += 1  # a rest element
+            if self.token(opening) == "{":
+                cursor = start
+                while cursor < end and self.token(cursor) not in {":", "="}:
+                    if self.token(cursor) in {"(", "[", "{"} and cursor in self.pairs:
+                        cursor = self.pairs[cursor]
+                    cursor += 1
+                if self.token(cursor) == ":":
+                    start = cursor + 1  # skip the property key
+            stop = start
+            while stop < end and self.token(stop) != "=":
+                if self.token(stop) in {"(", "[", "{"} and stop in self.pairs:
+                    stop = self.pairs[stop]
+                stop += 1  # stop before a default value
+            if start >= stop:
+                continue
+            if self.token(start) in {"[", "{"} and self.pairs.get(start) == stop - 1:
+                targets.extend(self._pattern_targets(start))
+            else:
+                path = self._path_before(stop, start)
+                if path:
+                    targets.append(path)
+        return targets
+
+    def _loop_targets(self, i: int) -> list[tuple[str, ...]]:
+        """The paths a `for (target of/in ...)` head writes, without a declaration."""
+        opening = self.enclosing[i] if 0 <= i < len(self.enclosing) else None
+        if opening is None or self.token(opening) != "(" or not self._control_head(opening):
+            return []
+        keyword = opening - 1 - (self.token(opening - 1) == "await")
+        first = opening + 1
+        if self.token(keyword) != "for" or self.token(first) in {"const", "let", "var", "using"}:
+            return []
+        if any(self.token(k) == ";" and self.enclosing[k] == opening for k in range(first, i)):
+            return []  # `in` inside a three-clause head is the operator
+        if self.token(first) in {"[", "{"} and self.pairs.get(first) == i - 1:
+            return self._pattern_targets(first)
+        path = self._path_before(i, first)
+        return [path] if path else []
+
+    def _class_field(self, i: int) -> bool:
+        """Is the `=` at token `i` a class field initializer (`class C { eps = 0.01 }`)?"""
+        owner = self.enclosing[i] if 0 <= i < len(self.enclosing) else None
+        if owner is None or self.token(owner) != "{" or self.token(i) != "=":
+            return False
+        cursor = owner - 1
+        while cursor >= 0 and self.token(cursor) not in {";", "{", "}", "=", "(", ","}:
+            if self.token(cursor) == "class":
+                return True
+            if self.token(cursor) in {")", "]"} and cursor in self.pairs:
+                cursor = self.pairs[cursor]  # `extends mixin(A, B)`
+            cursor -= 1
+        return False
 
     def scope(self, position: int) -> int:
         candidates = [(scope.end - scope.start, -index, index) for index, scope in enumerate(self.scopes)
@@ -437,19 +743,28 @@ class Bindings:
         return scope
 
     def _written(self, path: tuple[str, ...], position: int) -> bool:
-        """Track writes to this binding across blocks, not across functions.
+        """Can a write to this binding, or to a prefix of the path, reach `position`?
 
-        A block does not create a new identity for an outer variable. A local
-        declaration with the same spelling does, and writes in a separate
-        function are not evidence that that function executed at this read.
+        A write in any other function counts wherever it is written: a hook,
+        a helper or a callback may run before the read, and unknown is the
+        fail-safe answer (#196 189.1). In the read's own function a write
+        counts when it comes first, or when a loop in that function runs both
+        (the next iteration reads it). A later write in straight-line code
+        does not, so a method captured before it is overwritten keeps its
+        authority. A block does not create a new identity for an outer
+        variable; a local declaration with the same spelling does.
         """
         owner = self._binding_scope(path[0], position)
-        return any(
-            path[:len(written)] == written and at < position
-            and self._binding_scope(written[0], at) == owner
-            and self._contains(self._function_scope(write_scope), position)
-            for written, at, write_scope in self.writes
-        )
+        reader = self._function_scope(self.scope(position))
+        for written, at, write_scope in self.writes:
+            if path[:len(written)] != written or self._binding_scope(written[0], at) != owner:
+                continue
+            if at < position or self._function_scope(write_scope) != reader:
+                return True
+            if any(start <= position and at <= end and self._function_scope(self.scope(start)) == reader
+                   for start, end in self.loops):
+                return True
+        return False
 
     def resolve(self, name: str, position: int, seen: frozenset[tuple[int, str]] = frozenset()) -> Value:
         scope = self.scope(position)
@@ -528,16 +843,15 @@ class Bindings:
         """Source of the initializer of the `const`/`let`/`var` that `name` reads here.
 
         The declaration `resolve` would pick, innermost scope first and ready
-        before the read, and only while no earlier write reaches the read: a
-        `let` reassigned by a write `_assignments` records (`=`, `+=`, `-=`,
-        `*=`, `/=`, postfix `++`/`--`) in this function or an enclosing one is
-        unknown, not its first value. Other compound, prefix and destructuring
-        writes, and writes inside another function, are not followed, so such
-        a name still reads its initializer (a stated residual). Imports,
-        parameters, functions and uninitialized names have no initializer.
-        A plain `name = value` declaration returns its text as written, with
-        comments blanked, so `0.01 as const` keeps the spaces its reader needs
-        (#240); a destructured member returns its `value.member` path.
+        before the read, and only while no write can reach the read: a `let`
+        that any write `_assignments` records may have changed (any assignment
+        operator, `++`/`--`, a destructuring target, a `for`-`in`/`of` head,
+        from this function or any other) is unknown, not its first value
+        (#196 189.1). Imports, parameters, functions, uninitialized names and
+        names bound by an array or nested pattern have no initializer. A plain
+        `name = value` declaration returns its text as written, with comments
+        blanked, so `0.01 as const` keeps the spaces its reader needs (#240); a
+        destructured member returns its `value.member` path.
         """
         if self._written((name,), position):
             return None
