@@ -89,6 +89,7 @@ def test_string_escape_values_follow_javascript(source, expected):
     "00", "012", "08", "0_1", "1__0", "_1", "1_", "1._0", "0x_1",
     "0x", "0b2", "1e", "1e_2", "--1", "-+1", "1 + 2", "expected()",
     "[1]", "({a: 1})", "`ready`", "(42) + 1", "42 as const + 1", "a ? 42 as const : 0",
+    "1e-2 - 3 as number", "x - 1e-2 as number",
     "\u008542", "1\u0085", "'unterminated", '"a" + "b"', '"a\nb"',
     r'"\01"', r'"\8"', r'"\xG0"', r'"\u123"', r'"\u{}"', r'"\u{110000}"',
     '"' + "a" * 4096 + '"', "1" * 513,
@@ -130,6 +131,9 @@ def test_comments_are_formatting_outside_literals(source, expected):
     ("'ready' as const", repr("ready")),
     ("null!", "None"),
     ("(/* note */ 42)", "42.0"),
+    # An exponent's sign is part of its literal, not an operator (#240).
+    ("1e-2 as number", "0.01"),
+    ("(-1.5E+2 satisfies number)", "-150.0"),
 ])
 def test_parentheses_and_typescript_wrappers_are_read_through(source, expected):
     assertion = _assertion()

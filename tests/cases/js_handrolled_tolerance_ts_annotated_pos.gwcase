@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 110
+rule: TOLERANCE_LOOSENED
+title: widening a TypeScript-annotated EPS (const EPS: number = 0.01 -> 1e12) that an unchanged hand-rolled check reads
+origin: issue 240 — the type annotation sat between the name and its initializer, so the bound was never read
+=== before: tests/billing.test.ts ===
+import { invoiceTotal } from "../src/billing";
+
+const EPS: number = 0.01;
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < EPS).toBe(true);
+});
+=== after: tests/billing.test.ts ===
+import { invoiceTotal } from "../src/billing";
+
+const EPS: number = 1e12;
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(Math.abs(invoiceTotal(items) - 78.75) < EPS).toBe(true);
+});
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
