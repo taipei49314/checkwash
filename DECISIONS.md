@@ -4008,3 +4008,86 @@ message.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-085 (2026-10-04): rulings that change words only - a manifest's test command, setup skips, runner sites and E6 (#196 183.1, 185.1, 185.2)
+
+The 2026-10-03 rulings settled eight items that need no code. Three keep
+shipped behaviour and disclose what it costs (183.1, 185.1, 185.2). Five are
+SPEC proposals from #183, #184, #185 and #191 that were to wait for their
+rulings or their rounds. This entry records them as applied.
+
+**Shipped behaviour kept:**
+
+- **185.1 (A): a manifest's narrowing base is its base-side test command.**
+  #185 shipped this in v0.5.0: the narrowing base surface reads a manifest's
+  base-side test command, not the whole file. SPEC §4 now says so in #185's
+  words, and §2 says that a manifest contributes only its test command.
+  - Cost (185.1b): a narrowing that only a non-test script carried at base
+    blocks once the diff copies it into `test`.
+  - Wiring that script into `test` unedited stays at warn
+    (`runner_package_json_pulled_in_script_neg`).
+  - Row 106 discloses the shape.
+- **185.2 (A, permanently): a manifest's hop is bounded by where it starts.**
+  SPEC §4's one-hop sentence splits:
+  - A shell-script hop must end in a real runner.
+  - A manifest hop takes whatever `test` or a `test:*` script names through
+    a script runner, because `npm test` runs `scripts.test` whatever it says.
+  - Cost (185.2b): an honest narrowing added to a build script that `test`
+    calls reads as a weakened test command. It is unmeasured: no JS corpus.
+  - A build script that only `prepublishOnly` calls stays production
+    (`runner_package_json_prepublish_hop_neg`).
+  - Row 106 discloses the shape.
+- **183.1 (a): the high on a new always-skip conftest fixture stays.**
+  - Row 104 now discloses the request side (#223): an existing test that
+    starts requesting an existing conftest skip fixture passes with no
+    finding, while the same request of a same-file skip fixture blocks.
+  - Until #223 ships, the finding on the added fixture is the defence.
+  - So an honest skip fixture added for new tests only blocks once, and can
+    be allowlisted.
+
+**SPEC proposals applied:**
+
+- **spec.4-test-disabled.** TEST_DISABLED names an unconditional skip/xfail
+  in the setup a unit runs, in the ruling's words. Guarded setup skips are not
+  judged until the 183.2 round, which edits this wording again.
+- **spec.4-ci-first-adoption.** The first-adoption warn describes the syntax
+  scanner; the resolved collection inventory (§2b) still judges a first
+  configuration when it runs. Row 105's "per SPEC §5" becomes §4.
+- **spec.2-manifest-promotion.**
+  - §2 gains a paragraph on `package.json` and `Pipfile`, and
+    CI_WORKFLOW_TOUCHED gains "package manifests whose test command changed
+    (§2)".
+  - The ruling's batch with 197.Q1 and 197.Q2 did not happen: they landed in
+    their own rounds. The membership rule (keys, runner-invoking scripts, the
+    hop) needs more than one sentence, so it is its own paragraph after the
+    runner-script one.
+- **spec.4-ci-runner-sites.** CI_WORKFLOW_TOUCHED gains a condensed
+  runner-site paragraph, the one D-079, D-080 and D-082 point to. It names:
+  - the runner-site predicate, including `uses:` steps (191.5);
+  - event reachability, with activity `types` and the all-paths filter
+    (191.9, 191.2(d));
+  - `needs:` propagation, and status functions read on a green run;
+  - the disabled suite, including a reworded runner (191.8), and the
+    pre-commit inventory, read by hook entries (191.7).
+
+  It sits before the sentences that earlier rounds added: 191.3's
+  escalation and 197.Q5's YAML-only workflow definition. Evaluator internals
+  stay in the `ci_control_flow` docstring, and the residuals in row 112.
+- **spec.5-e6.** E6's condition becomes "CI diff weakens the test command as
+  defined in §4 `CI_WORKFLOW_TOUCHED`". The old condition listed five tokens;
+  §4 has defined more than that for a long time (swallows, narrowings,
+  collection syntax, make recipes, errexit, runner sites). 191.3's escalator
+  already has its own row (E8, D-082).
+
+**Not in this round:** spec.4-tolerance-loosened waits for 190.3.
+
+**Verification.** No code, test, fixture, gate input or fingerprint changes.
+On this branch's engine:
+- 185.1b blocks (copied into `test`), and the wired control is warn.
+- 185.2b blocks (a build hop), and the `prepublishOnly` control passes.
+- #223's S1, S2 and S4 pass with no finding, and S3 blocks.
+- A new conftest skip fixture that only a new test requests blocks with
+  `<suite>` high.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
