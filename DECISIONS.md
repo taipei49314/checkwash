@@ -4091,3 +4091,89 @@ On this branch's engine:
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-086 (2026-10-04): a body skip whose guard the diff removed is reported (#196 183.2, first stage)
+
+THREATMODEL 54. `if sys.version_info < (3, 9): pytest.skip()` becoming
+`if True: pytest.skip()` has reported "skip guard now always fires" since
+T1.8: the edited guard can be evaluated, and it holds everywhere. Removing
+the `if` instead left nothing to evaluate. The call keeps its name, so no
+marker is added, and v0.4.2, v0.5.0 and `main` all pass a test whose skip
+now fires on every run. The same holds for `pytest.xfail` and
+`self.skipTest`, and for a skip moved out of its `except ImportError:`
+block.
+
+Ruling 196.183.2 (c) asks for this first: close guard removal, then judge
+guarded setup skips like a body skip, with one guard definition shared with
+#208 and #209. This entry is the first stage only.
+
+**As implemented:** a body skip that ran only under a condition at base,
+and runs under none at head, reports TEST_DISABLED "skip guard removed (was
+'<condition>')". It joins the guard family (`guards_weakened`, shape
+`guard_weakened`, fingerprint identity `guard:<call>`), so no marker
+identity, IR field or recorded fingerprint changes.
+
+Readings the ruling leaves to the implementation:
+
+1. **"Ran only under a condition."** Two things count:
+   - an `if` guard that does not hold everywhere under the base constants.
+     An unevaluable guard counts, since it still ran the test somewhere.
+   - an enclosing `except` block, because entering one needs an exception.
+     The innermost block names the condition in the message.
+
+   Every base instance of the call must have run under one. A unit that
+   already skipped unconditionally at another site loses nothing that ran.
+2. **"Runs under none."** At head, some instance of the call has no `if`
+   guard and sits in no `except` block. A `with` body, a `try` body and a
+   `finally` block run, so a skip there fires. Loop bodies and `match` cases
+   record no condition, so a skip moved there reads as unconditional.
+3. **The calls:** `pytest.skip`, `pytest.xfail` and `self.skipTest`, whose
+   recorded guard D6 already reads as their condition.
+   `pytest.importorskip` is conditional by itself. Aliased and raised
+   spellings are not read in a test body at all (#220).
+4. **A second skip beside the guarded one.** Markers count as a multiset,
+   so a new bare `pytest.skip()` added beside a guarded one is a marker
+   added. It stays on that path, and is not also reported as a removed
+   guard.
+
+**Tests and fixtures.**
+- **Tests:** 27 in `tests/test_issue196_guard_removal.py`, end to end
+  through `engine.analyze`. All 12 mutants of the new code are killed.
+- **Fixtures:**
+  - pinning row 54: `skip_guard_removed_pos`, `skiptest_guard_removed_pos`
+    and `skip_moved_out_of_except_pos` (`bypass: 54`). Each blocks here and
+    passes with no finding on v0.4.2, v0.5.0 and #252.
+  - controls: `skip_guard_into_except_neg` and
+    `skip_always_true_guard_removed_neg`, which pass with no finding on all
+    four engines.
+  - No existing fixture or test changes its expectation.
+
+**Fingerprints.** A finding of the new kind has the guard family's
+existing identity. No existing finding's fingerprint changes.
+
+**Cost.**
+- **New blocks:** the three fixture shapes, without repair evidence. With a
+  production change beside them, they hold at warn like any disable.
+- **Residual:** recorded in row 54.
+  - A skip moved into a loop body or `match` case reads as unconditional.
+  - A qualified version or platform gate left on the same unit holds the
+    finding at warn, because D6 grants COMPAT_GATE per unit (#208).
+- **Sweep:** the last 300 non-merge commits of attrs, click, flask, httpx,
+  rich and starlette (1,800 commits) give this round's engine the same
+  verdicts and findings as the candidate built from #252, with 48 blocked
+  commits on both. The new rule reports none of them, so the sweep shows
+  that nothing else moves, not the new finding.
+- **Verdict gate:** every one of its 182 cases keeps its verdict and its
+  findings' rules, severities and files against the candidate built from
+  #251, whose code #252 does not change, so no case is relabelled. Ruling
+  196.followup.new-gate-cases names no case for 183.2.
+- **Corpus:** the 594 existing fixtures keep their findings and IR; the five
+  new fixtures are this round's.
+
+**Next stages of 183.2:** first the guard on `setup.<provider>.<effect>`
+markers (same-file fixtures and xunit setup), judged like a body skip.
+Then conftest fixtures, after #223. Both share one guard definition with
+#208 and #209.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

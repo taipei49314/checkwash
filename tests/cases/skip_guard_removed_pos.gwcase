@@ -1,4 +1,5 @@
 === meta ===
+bypass: 54
 rule: TEST_DISABLED
 title: removing the if around an existing pytest.skip leaves it firing everywhere
 origin: #196 183.2 — THREATMODEL 54's other half. The call keeps its name, so no marker is added, and with no guard left nothing was evaluated; v0.5.0 passes it

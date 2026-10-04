@@ -1,7 +1,7 @@
 === meta ===
 rule: TEST_DISABLED
 title: rewriting one discriminating guard into another is not a kill
-origin: T1.8 — only discriminating -> always-true fires. THREATMODEL 54 stays Open until the maintainer closes the row.
+origin: T1.8 — only discriminating -> always-true fires. One discriminating guard rewritten into another is THREATMODEL 54's residual.
 === before: tests/test_quota.py ===
 import pytest
 

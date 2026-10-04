@@ -11,18 +11,12 @@ it is known not to.
 
 ## The short version
 
-- **132 bypasses** are documented, of which **33 are not closed**.
+- **132 bypasses** are documented, of which **32 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
-
-## Open — no defence at all (1)
-
-| # | shape | pinned by |
-|---|---|---|
-| 54 | Edit the guard of an existing imperative skip: `if version < X: pytest.skip()` → `if True: pytest.skip()` | — |
 
 ## Narrowed, still open (3)
 
@@ -68,7 +62,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (96)
+## Closed — each pinned by something that runs (97)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -128,6 +122,7 @@ behind it* unshippable.
 | 51 | Introduce syntax the analysing interpreter cannot parse; the file is skipped and the run passes | `unparseable_test_regressed_pos.gwcase` |
 | 52 | Hide the always-true condition behind a module constant — `GATE = sys.version_info >= (3, 8)` then `skipif(GATE)`, with compat tokens smuggled into `reason=` so the old text filter passed | `compat_gate_constant_always_true_pos.gwcase`, `compat_gate_reason_smuggle_pos.gwcase` |
 | 53 | Same, with the constant imported — `from app._compat import GATE` where the defining file is outside the diff | `compat_gate_imported_always_true_pos.gwcase` |
+| 54 | Edit the guard of an existing imperative skip, or remove it: `if version < X: pytest.skip()` → `if True: pytest.skip()`, or → `pytest.skip()` alone | `guard_text_always_true_pos.gwcase`, `skip_guard_removed_pos.gwcase`, `skip_moved_out_of_except_pos.gwcase`, `skiptest_guard_removed_pos.gwcase` |
 | 55 | Launder a deleted test by "relocating" it into a copy wearing `@pytest.mark.skip`, or a `skipif` costume that is always true | `relocation_into_alwaystrue_skipif_pos.gwcase`, `relocation_into_skipped_unit_pos.gwcase` |
 | 58 | Pre-plant a "duplicate" of a failing test, then delete the running copy — pointing D10 at a survivor that is skipped, uncollectable, or quietly different | `duplicate_remains_body_differs_pos.gwcase`, `duplicate_remains_disabled_copy_pos.gwcase` |
 | 59 | Flip the constant behind an existing skip guard — `STRICT = True` → `False` under `if not STRICT: pytest.skip(...)` — so the guard text never changes and no marker event fires | `guard_constant_flip_pos.gwcase` |

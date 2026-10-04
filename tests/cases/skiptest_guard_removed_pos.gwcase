@@ -1,4 +1,5 @@
 === meta ===
+bypass: 54
 rule: TEST_DISABLED
 title: removing the platform check around self.skipTest skips the test on every platform
 origin: #196 183.2 — the unittest spelling of skip_guard_removed_pos; v0.5.0 passes it
