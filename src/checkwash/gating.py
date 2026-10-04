@@ -16,8 +16,8 @@ from checkwash.allowlist import AllowEntry, active_fingerprints
 from checkwash.ci_control_flow import became_unanalysable
 from checkwash.config import SEVERITY_ORDER, Config
 from checkwash.contract import Contract
-from checkwash.findings import SHAPE_MARKER_ADDED, Finding
-from checkwash.compat import _compat_gate, guard_always_skips, unit_is_live
+from checkwash.findings import SHAPE_GUARD_WEAKENED, SHAPE_MARKER_ADDED, Finding
+from checkwash.compat import compat_gate_for, guard_always_skips, guard_can_be_false, unit_is_live
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import bare_names, marker_call, parse_expr
 from checkwash.ir.model import IR, Unit, judged_as_test, normalize_text
@@ -464,6 +464,10 @@ def apply_gates(
     today: datetime.date,
 ) -> str:
     """Mutates findings' severity/escalators in place; returns the verdict."""
+    # The TEST_DISABLED detector keys a finding by its marker. Imported here:
+    # the detectors import the frontends, which import this module.
+    from checkwash.detectors.test_disabled import finding_marker
+
     # A multiset of credits: each ASSERTION_MOVED de-escalation spends one, so
     # two deletions cannot both be excused by a single re-appearance. Whole
     # units get the same treatment via their body hashes.
@@ -604,6 +608,9 @@ def apply_gates(
             and not f.subject_changed
         )
 
+        # The disabling marker a TEST_DISABLED finding reports, or None (#208).
+        marker = finding_marker(f, unit)
+
         # Compensation evidence from the triage clusters: all of these hold
         # the finding at warn (visible, allowlistable) instead of blocking.
         compensation = None
@@ -638,7 +645,10 @@ def apply_gates(
             and split_renamed.get((f.path, f.unit or ""))
         ):
             compensation = "SPLIT_OR_RENAMED"
-        elif f.rule == "TEST_DISABLED" and _compat_gate(unit, file_constants.get(f.path)):
+        elif f.rule == "TEST_DISABLED" and compat_gate_for(unit, file_constants.get(f.path), marker):
+            # D6 judges the marker the finding reports, not the unit it sits
+            # on: an honest gate beside a new disable lent it its credit, on a
+            # conftest's `<suite>` and on a test alike (#208).
             compensation = "COMPAT_GATE"
         elif (
             f.rule == "TEST_DISABLED"
@@ -703,10 +713,19 @@ def apply_gates(
         # high (adversarial audit 2026-08-07, same day it shipped). A guard is
         # the difference between "these tests cannot run here" and "these
         # tests do not run any more".
-        added_markers = set(unit.delta.markers_added) if unit is not None and unit.delta else set()
+        #
+        # "Unguarded" is the finding's own control with no guard that can be
+        # false: a guard that always holds is no guard (#209 Q4), and a gate
+        # elsewhere in the conftest guards nothing here (#208). A finding
+        # with no marker of its own reports a guard that now always fires,
+        # or a path added to an unguarded control (row 81): either way its
+        # control acts everywhere.
         after_markers = unit.after.markers if unit is not None and unit.after is not None else []
-        unguarded_control = any(
-            m.guard is None for m in after_markers if m.name in added_markers
+        own = [m for m in after_markers if marker is not None and m.name == marker]
+        unguarded_control = (
+            any(not guard_can_be_false(m.guard, file_constants.get(f.path)) for m in own)
+            if own
+            else f.shape == SHAPE_GUARD_WEAKENED
         )
         suite_control = (
             f.rule == "TEST_DISABLED"
