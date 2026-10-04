@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: a YAML tag in the pytest hook puts the pre-commit config out of the reader's reach
+origin: issue #196 ruling 191.3 — the hook inventory reads the base side, whose pytest hook
+origin2: runs, and declines the head side, where the hook's stages hide behind a tag.
+origin3: v0.5.0 read neither side's change and passed this diff at warn.
+=== before: .pre-commit-config.yaml ===
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+=== after: .pre-commit-config.yaml ===
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: !!seq [manual]
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_BECAME_UNANALYSABLE"]}]

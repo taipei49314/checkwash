@@ -546,3 +546,16 @@ def test_an_unreadable_head_is_not_called_a_weakened_command():
     late = tox.replace("tox -e py\n", "tox -e py || true\n") + "        if: !!bool false\n"
     (finding,) = _ci_findings(tox, late)
     assert finding.message == "CI configuration changed; test command weakened: tox -e py || true"
+
+
+def test_an_unreadable_head_carries_its_own_escalator():
+    # A fixture's escalator list matches as a subset, so it cannot say that
+    # CI_TEST_COMMAND_WEAKENED is absent: pin both lists here.
+    tagged = WORKFLOW.replace("- run: pytest\n", "- run: pytest\n        if: !!bool false\n")
+    (finding,) = _ci_findings(WORKFLOW, tagged)
+    assert finding.escalators == ["CI_BECAME_UNANALYSABLE"]
+    swallowed = tagged.replace("- run: pytest\n", "- run: pytest || true\n")
+    (finding,) = _ci_findings(WORKFLOW, swallowed)
+    assert finding.escalators == ["CI_TEST_COMMAND_WEAKENED", "CI_BECAME_UNANALYSABLE"]
+    (finding,) = _ci_findings(WORKFLOW, WORKFLOW + "        if: false\n")
+    assert finding.escalators == ["CI_TEST_COMMAND_WEAKENED"]
