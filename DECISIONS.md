@@ -3557,3 +3557,95 @@ this predicate is the spec.4-ci-runner-sites round, after the 191.x rounds.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-080 (2026-10-04): a trigger that never fires for a pull request is dead (#196 191.9, 191.2(d))
+
+#181 decided whether a workflow can run on a pull request's commits from its
+event names and a `push` trigger's branch filters. Two shapes stop a trigger
+for every pull request and were not read:
+
+- `types: [closed]` on `pull_request`;
+- a path filter that leaves no file: `paths-ignore: ['**']`, or `paths`
+  listing only negations.
+
+With either one, the suite stopped running on pull requests while every
+runner line stayed in place, and the diff passed at warn.
+
+Rulings 196.191.9 (b, narrow) and 196.191.2 (d), in the one trigger-model
+round the rulings ask for, as implemented:
+
+- **191.9.** A `pull_request` or `pull_request_target` whose explicit
+  activity `types` hold none of `opened`, `synchronize` and `reopened` is a
+  dead event. `[opened]` alone stays a disclosed residual.
+- **191.2(d).** A trigger whose `paths-ignore` holds `**`, or whose `paths`
+  lists only negations, is a dead event. Path filters stay unevaluated
+  against a diff's changed files, as (b) and (c) are declined.
+- **The reason is the existing one.** A workflow whose suite only dead
+  events could run reports "pytest is disabled (no trigger runs it on a
+  pull request)", as when `pull_request` is dropped.
+
+Readings the rulings leave to the implementation:
+
+1. **Activity types.**
+   - Without `types`, a trigger keeps GitHub's default (`opened`,
+     `synchronize`, `reopened`) and is live.
+   - An explicit list with none of the three is dead: `[closed]`,
+     `[labeled]`, `[ready_for_review]`, `[labeled, ready_for_review]`.
+   - A list that keeps any of the three is live, including `[opened]`,
+     which runs on a pull request's first commit only.
+   - An empty list, or a shape the reader does not take, keeps the trigger
+     live.
+2. **Path filters, read literally.** `paths-ignore` must hold `**` itself,
+   and `paths` must hold patterns that all start with `!`. Other spellings
+   that ignore every file (`**/*`, a list naming every top-level
+   directory) are not read, and keep the trigger live.
+3. **`pull_request_target` takes the path rule too.** The ruling names
+   `push` and `pull_request`; `pull_request_target` honours the same
+   filters. This is the agent's reading, and the maintainer approves or
+   overrules it here.
+4. **GitHub's behaviour, recalled.** Three facts were not re-read
+   from GitHub's documentation, because docs.github.com is not reachable
+   from the environment that wrote this round:
+   - the default activity types;
+   - that a `paths` filter needs a pattern without `!` to match anything;
+   - that `paths-ignore: ['**']` matches every file.
+
+   The fixtures pin the reading, not GitHub.
+
+**Tests and fixtures.**
+- New tests: 28 in `tests/test_ci_control_flow.py`.
+- New fixtures, `bypass: 112`, each a v0.5.0 pass at warn:
+  - `ci_trigger_types_closed_only_pos`;
+  - `ci_trigger_paths_ignore_all_pos`;
+  - `ci_trigger_paths_only_negations_pos`.
+- Control: `ci_trigger_types_opened_only_neg`, the residual, at warn.
+- No existing fixture changes its expectation.
+
+**Fingerprints.** Unchanged: the round adds findings with an existing
+reason and changes none.
+
+**Cost.**
+- **New blocks:** a trigger narrowed to activity types that never run on a
+  pull request's commits, and a path filter that leaves no file, when no
+  other event runs the suite on a pull request.
+- **Sweep:** the full history of attrs, click, flask, httpx, rich and
+  starlette has 821 commits that touch a workflow or
+  `.pre-commit-config.yaml` (1,130 file changes).
+  - Neither engine reports a control-flow weakening on any of them, and no
+    runner site changes liveness.
+  - The 701 workflow versions with an `on:` mapping hold 137
+    `pull_request` path filters, 143 `push` path filters and no
+    `pull_request` `types`. None of them ignores every path or lists only
+    negations.
+  - So the sweep shows that nothing else moves, not the new findings.
+- **Verdict gate:** every one of its 180 cases keeps the verdict and the
+  findings of a candidate built from `main`, so no case is relabelled.
+- **Corpus:** no verdict, finding or IR changes for the 585 existing
+  fixtures; the four new fixtures are this round's.
+
+SPEC §4 gains no text in this round. Event reachability, with these
+types and the all-paths filter, is part of the runner-site paragraph of
+the spec.4-ci-runner-sites round, after the 191.x rounds.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
