@@ -3912,3 +3912,99 @@ first-adoption rule.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-084 (2026-10-04): a selector moved out of every run's command into the config is not new (#196 184.3)
+
+#173's resolved collection inventory judges an option the root config gains
+against the tests the runs it governs collect (D-083). It judged the config
+alone. Moving `-m 'not slow'` from the workflow's `pytest -m 'not slow'` into
+a first or an existing config's addopts reported "resolved pytest collection
+option introduced: -m not slow" and blocked, although every run passed the
+selector before and after (W1 and W3 in the rulings' probe; v0.4.2 and v0.5.0
+both block them). SPEC §2b already says that moving a filtering addopts
+between files is not a weakened test command, and the token scan and the
+syntax scanner read such a move that way. The inventory did not.
+
+Ruling 196.184.3 (c), as implemented:
+
+- **A provably identical migration is quiet.** An option the config gains is
+  not new when every base-side pytest command in the inventory's runner files
+  carried it, and each runner file's head commands are its base commands with
+  exactly the moved options removed.
+- **Everything else is reported as before**, including a move this reader
+  cannot prove.
+- **How the files are read.** The proof reads each runner file on both sides:
+  a GitHub workflow step by step (its `run:` texts), every other runner file
+  line by line, with the option reader's own command split.
+
+Readings the ruling leaves to the implementation:
+
+1. **"Every base-side pytest invocation."** The move is unproven when a
+   command may run a test runner (the runner-site predicate of 191.5) and is
+   not a pytest command the option reader parses: `coverage run -m pytest`,
+   `tox`, `make test`, a nox session, a step that runs a runner action, or a
+   line that does not lex. It is also unproven for a `tox.ini` whose
+   environments have commands, for pytest settings a runner file writes
+   itself, and for `PYTEST_ADDOPTS`, `--override-ini` or ` -o ` on either
+   side. A workflow step's name, a cache key or an install command that
+   names pytest is not a run. A `tox.ini` that only configures pytest runs
+   nothing.
+2. **"Dropped exactly it."** Each runner file's head pytest commands, in
+   order, equal its base commands with the moved options' words removed. The
+   program, the targets, every other argument and every other command stay as
+   they were. A run the diff adds, deletes or renames is not one that dropped
+   the option. A base command that also drops an option the config does not
+   gain leaves the move unproven, even though that drop broadens the run.
+3. **Options move together.** The moved set is every option the config holds
+   that every base command carried, whether or not it can leave a test out
+   (`-p no:cacheprovider` beside `-m`). pytest keeps only the last `-m` and
+   `-k`, so one of them moves only when the config holds no other value for
+   it.
+4. **The runner files are the inventory's own:** workflows, `scripts/`, shell
+   and batch scripts, `Makefile`, `.gitlab-ci.yml`, `noxfile.py` and
+   `tox.ini`. Runs defined elsewhere (another CI's configuration, a composite
+   action, a reusable workflow) are outside this proof, as they are outside
+   184.1's reach. Row 105 discloses both.
+
+**Tests and fixtures.**
+- New tests: 60 in `tests/test_issue184_collection_selectors.py`, end to
+  end through `engine.analyze` with a closed path inventory. All 28 mutants
+  of the new code are killed.
+- No fixture: the golden runner supplies no path inventory.
+- No existing test or fixture changes its expectation.
+
+**Verdict gate.** Two cases, as #201 ruling 196.followup.new-gate-cases asks:
+- `i196/W1`, labelled pass, with an fp-fix entry, because v0.5.0 blocks it;
+- `i196/Wc1`, its two-invocation counter-case, labelled block.
+
+`baseline_blocked` goes 75 -> 77. The FAMILIES pin goes i196 28 -> 30. That
+assertion change rides on the existing exemption of PR #227, whose
+fingerprint binds the assertion text and not FAMILIES (expires 2026-10-17).
+No allowlist entry is added.
+
+**Fingerprints.** Unchanged: the round removes findings and changes no
+message.
+
+**Cost.**
+- **New passes:** W1 and W3, block -> pass on both tags. The stated reason is
+  SPEC §2b, and the next release guide names them
+  (X.release-and-fingerprints).
+- **Sweep:** the 1,018 commits that touch a pytest config in the full history
+  of attrs, click, flask, httpx, rich and starlette give the same inventory
+  output as the candidate built from #250. The one line either reports,
+  click 3ded26d's `-p no:warnings`, still blocks. No commit there moves a
+  selector out of a runner command, so the sweep shows that nothing else
+  moves, not the new passes.
+- **Refactor:** the option reader's command split and option spelling now
+  serve the proof too. On every blob that a commit in those six histories
+  wrote at a CI or config path (2,761 blobs, 2,809 before/after pairs), the
+  reader's options, argument lists, resolved settings and scanner reasons are
+  identical before and after.
+- **Verdict gate:** every one of its 180 existing cases keeps its verdict
+  and its findings' rules, severities and files against the candidate built
+  from #250. `i196/W1` goes block -> pass with its fp-fix entry, and
+  `i196/Wc1` blocks on v0.4.2, v0.5.0 and the candidate.
+- **Corpus:** unchanged; no fixture reaches the inventory.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
