@@ -1,0 +1,42 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: `if: false` on a step that only prints the runner's name disables no suite
+origin: issue #196 ruling 191.5 — echo and printf text runs nothing, so a step that writes "pytest" into
+origin2: the job summary is not a runner site. v0.5.0 blocked this diff as a disabled test command.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+      - run: echo "Run pytest -m slow before merging." >> $GITHUB_STEP_SUMMARY
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+      - run: echo "Run pytest -m slow before merging." >> $GITHUB_STEP_SUMMARY
+        if: false
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

@@ -1,0 +1,43 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: rewording pytest as it is disabled, beside a new step that only echoes its name, still stops the suite
+origin: issue #196 rulings 191.5 and 191.8 — the echo named the runner and counted as a live runner site,
+origin2: so the inventory moved no site and v0.5.0 passed this diff. Echo text runs nothing; the runner
+origin3: stopped is the one parked.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: python -m pytest
+        if: false
+      - run: echo pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

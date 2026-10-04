@@ -8,9 +8,15 @@ or a hook inventory stops a runner without touching one: `if: false` under
 those diffs passed at warn while `pytest || true` blocked (issue #181).
 
 The shared definition is the *runner site*: a workflow step or a pre-commit
-hook whose own command invokes a test runner (`_runs_tests`, the predicate
-row 69 already uses), and whether it can execute for a pull request's
-commits. A site is dead only for a reason that holds statically:
+hook whose own command invokes a test runner, and whether it can execute for
+a pull request's commits. Whether a command invokes one is
+`runner_command.invokes_test_runner` (#196 191.5): a runner name as a whole
+word, outside the contexts known not to run it (`echo` and `printf` text,
+heredoc text that `cat` or `tee` writes out, install commands, comments). A
+`uses:` step is a site when the action's name and one of its `with:` inputs
+both name a runner, so a publisher action given a report path is not one.
+Row 69's broader `_runs_tests` still decides whether a deleted workflow ran a
+suite. A site is dead only for a reason that holds statically:
 
 - a step or job `if:` that is false whatever the run looks like, or false for
   every event that can run the workflow on a pull request. `github.event_name`
@@ -48,7 +54,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 
-from checkwash.roles import _runs_tests
+from checkwash.runner_command import invokes_test_runner, names_test_runner
 
 
 def is_github_workflow(path: str) -> bool:
@@ -693,6 +699,43 @@ def _pr_events(on) -> list[str] | None:
     )
 
 
+def _strings(value):
+    """Every string a `with:` value holds, however the reader shaped it."""
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from _strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _strings(item)
+    elif value is not None:
+        yield str(value)
+
+
+def _step_command(step: dict) -> str | None:
+    """The command text of a step that invokes a test runner, or None (#196 191.5).
+
+    A `run:` step is read as a command. A `uses:` step runs an action whose
+    name may say nothing about what it does: it is a site only when its name
+    and one of its `with:` inputs both name a runner, by the input's key
+    (`tox_env`, underscores read as word breaks) or by a command in its value.
+    A publisher (`pmeier/pytest-results-action` given a report path) and a
+    setup action (`wntrblm/nox`) are not sites. Its text is the `uses:` value.
+    """
+    run = step.get("run")
+    if isinstance(run, str):
+        return run if invokes_test_runner(run) else None
+    uses = step.get("uses")
+    if not isinstance(uses, str) or not names_test_runner(uses):
+        return None
+    inputs = step.get("with")
+    if isinstance(inputs, dict) and any(
+        names_test_runner(str(key).replace("_", "-")) or any(invokes_test_runner(text) for text in _strings(value))
+        for key, value in inputs.items()
+    ):
+        return uses
+    return None
+
+
 def _workflow_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
     """Live runner commands and dead (command, cause) runner sites of a workflow."""
     if not isinstance(tree, dict) or not isinstance(tree.get("jobs"), dict):
@@ -738,8 +781,8 @@ def _workflow_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
         for step in steps if isinstance(steps, list) else ():
             if not isinstance(step, dict):
                 continue
-            command = step.get("run") if isinstance(step.get("run"), str) else step.get("uses")
-            if not isinstance(command, str) or not _runs_tests(command.encode("utf-8")):
+            command = _step_command(step)
+            if command is None:
                 continue
             condition = step.get("if")
             if any(
@@ -778,7 +821,7 @@ def _precommit_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
         hooks = repo.get("hooks") if isinstance(repo, dict) else None
         for hook in hooks if isinstance(hooks, list) else ():
             entry = hook.get("entry") if isinstance(hook, dict) else None
-            if not isinstance(entry, str) or not _runs_tests(entry.encode("utf-8")):
+            if not isinstance(entry, str) or not invokes_test_runner(entry):
                 continue
             stages = _patterns(hook["stages"] if "stages" in hook else default_stages)
             if stages and all(stage == "manual" for stage in stages):

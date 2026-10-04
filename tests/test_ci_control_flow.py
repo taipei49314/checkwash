@@ -263,3 +263,68 @@ def test_a_trigger_block_past_any_real_event_count_binds_nothing():
     # live, while a literal false still folds.
     assert _weakenings(before, before + "        if: github.event_name == 'push'\n") == []
     assert _weakenings(before, before + "        if: false\n") == ["pytest is disabled (if: false)"]
+
+
+# --- #196 191.5: which steps are runner sites ------------------------------------------
+
+def _with_step(step, condition=None):
+    if condition is not None:
+        step = step.replace("      - ", f"      - if: {condition}\n        ", 1)
+    return WORKFLOW + step
+
+
+@pytest.mark.parametrize("step", [
+    "      - run: pip install pytest pytest-cov\n",
+    "      - run: python -m pip install --upgrade tox\n",
+    "      - run: npm install --save-dev jest\n",
+    "      - run: echo \"pytest_args=-x\" >> $GITHUB_OUTPUT\n",
+    "      - run: |\n          cat <<EOF >> $GITHUB_STEP_SUMMARY\n          Run pytest locally first.\n          EOF\n",
+    "      - run: ./deploy-majestic.sh\n",
+    "      - run: rm -rf .tox\n",
+    "      - uses: pmeier/pytest-results-action@v0\n        with:\n          path: junit.xml\n",
+    "      - uses: wntrblm/nox@2024.10.09\n",
+    "      - uses: ./.github/actions/pytest\n",
+])
+def test_switching_off_a_step_that_runs_no_runner_disables_nothing(step):
+    assert _read_yaml(_with_step(step, "false").encode("utf-8")) is not None
+    assert _weakenings(_with_step(step), _with_step(step, "false")) == []
+
+
+@pytest.mark.parametrize("step, site", [
+    # The action's name and one of its inputs both name a runner.
+    ("      - uses: mattallty/jest-github-action@v1\n        with:\n          test-command: npm test\n",
+     "mattallty/jest-github-action@v1"),
+    ("      - uses: fedora-python/tox-github-action@main\n        with:\n          tox_env: py312\n",
+     "fedora-python/tox-github-action@main"),
+    ("      - uses: some-org/pytest-action@v2\n        with:\n          args: [pytest, -x]\n",
+     "some-org/pytest-action@v2"),
+    # Every other wrapper keeps its runner.
+    ("      - run: docker compose run --rm web pytest\n", "docker compose run --rm web pytest"),
+    ("      - run: pip install -e . && python -m pytest\n", "pip install -e . && python -m pytest"),
+])
+def test_switching_off_a_step_that_runs_a_runner_disables_it(step, site):
+    assert _weakenings(_with_step(step), _with_step(step, "false")) == [f"{site} is disabled (if: false)"]
+
+
+def test_an_action_whose_name_holds_no_runner_is_not_a_site_whatever_it_runs():
+    # The ruling excludes; it adds no site the runner check did not make.
+    step = "      - uses: nick-fields/retry@v3\n        with:\n          command: pytest\n"
+    assert _weakenings(_with_step(step), _with_step(step, "false")) == []
+
+
+def test_an_echo_no_longer_hides_a_runner_reworded_and_disabled():
+    # 191.8: the decoy names the runner without running it.
+    disabled = WORKFLOW.replace("- run: pytest\n", "- run: python -m pytest\n        if: false\n")
+    assert _weakenings(WORKFLOW, disabled + "      - run: echo pytest\n") == [
+        "python -m pytest is disabled (if: false)"
+    ]
+    # A decoy that does run the runner still hides it: row 112's residual.
+    assert _weakenings(WORKFLOW, disabled + "      - run: pytest --version\n") == []
+
+
+def test_an_echo_entry_is_not_a_test_hook():
+    path = ".pre-commit-config.yaml"
+    decoy = PRECOMMIT.replace("entry: pytest", "entry: echo pytest")
+    assert _weakenings(PRECOMMIT, decoy, path) == ["pytest is no longer run by any pre-commit hook"]
+    installer = PRECOMMIT.replace("entry: pytest", "entry: pip install pytest")
+    assert _weakenings(PRECOMMIT, installer, path) == ["pytest is no longer run by any pre-commit hook"]
