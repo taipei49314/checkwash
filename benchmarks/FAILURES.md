@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **131 bypasses** are documented, of which **33 are not closed**.
+- **132 bypasses** are documented, of which **33 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -68,7 +68,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (95)
+## Closed — each pinned by something that runs (96)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -173,6 +173,7 @@ behind it* unshippable.
 | 109 | Install a stand-in for the code under test from a JS/TS test file: `vi.mock("./src/billing.js", () => ({ invoiceTotal: () => 78.75 }))` (or `jest.mock`, the doMock / `unstable_mockModule` / `setMock` forms, node:test `mock.module`, or a replacing `vi.spyOn` / `jest.spyOn` / `vi.mocked` / `jest.replaceProperty` / `mock.method`) above an untouched `expect(invoiceTotal(items)).toBe(78.75)` | `js_test_patches_subject_copied_from_other_test_pos.gwcase`, `js_test_patches_subject_do_mock_pos.gwcase`, `js_test_patches_subject_jest_mock_hop_pos.gwcase`, `js_test_patches_subject_node_mock_module_pos.gwcase`, `js_test_patches_subject_partial_quoted_key_pos.gwcase`, `js_test_patches_subject_spyon_pos.gwcase`, `js_test_patches_subject_ts_cast_pos.gwcase`, `js_test_patches_subject_two_statement_spy_pos.gwcase`, `js_test_patches_subject_vi_automock_pos.gwcase`, `js_test_patches_subject_vi_mock_in_test_pos.gwcase`, `js_test_patches_subject_vi_mock_pos.gwcase`, `js_test_patches_subject_vi_mocked_spy_pos.gwcase` |
 | 110 | Widen a hand-rolled JS tolerance: `assert.ok(Math.abs(total - 78.75) < 0.01)` -> `< 1e12`, or the `const EPS` it reads, or `expect(Math.abs(d)).toBeLessThan(eps)` | `js_handrolled_tolerance_asi_pos.gwcase`, `js_handrolled_tolerance_centre_pos.gwcase`, `js_handrolled_tolerance_compound_write_pos.gwcase`, `js_handrolled_tolerance_const_pos.gwcase`, `js_handrolled_tolerance_flip_pos.gwcase`, `js_handrolled_tolerance_hoisted_subject_pos.gwcase`, `js_handrolled_tolerance_hook_write_pos.gwcase`, `js_handrolled_tolerance_matcher_centre_pos.gwcase`, `js_handrolled_tolerance_matcher_pos.gwcase`, `js_handrolled_tolerance_pos.gwcase`, `js_handrolled_tolerance_ts_annotated_pos.gwcase`, `js_handrolled_tolerance_unreadable_bound_pos.gwcase` |
 | 113 | Rewrite the expected centre of a hand-rolled Python tolerance: `assert abs(total() - 78.75) < 0.01` -> `abs(total() - 75) < 0.01`, or its `self.assertLess(abs(...), eps)` spelling | `handrolled_tolerance_centre_pos.gwcase`, `handrolled_tolerance_unittest_centre_pos.gwcase` |
+| 114 | Delete a JS/TS assertion checkwash does not read, instead of fixing code: a throw check (`expect(fn).toThrow(RangeError)`, `expect(promise).rejects.toThrow()`, `assert.throws`, `assert.rejects`, chai's `.to.throw()`), a spy check (`expect(save).toHaveBeenCalledWith(78.75)`), `assert.match`, `assert.notStrictEqual`, `assert.fail`, an unread Jest matcher (`toHaveLength`, `toMatchObject`, `toMatchSnapshot`, `.resolves`) or `expect.assertions(n)` | `js_node_assert_throws_deleted_pos.gwcase`, `js_unread_spy_check_deleted_pos.gwcase`, `js_unread_throw_check_deleted_pos.gwcase` |
 
 ## Unclassified (11)
 

@@ -3325,3 +3325,99 @@ fingerprint.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-078 (2026-10-04): a JS assertion checkwash does not read is recorded with no strength (#196 190.5)
+
+A JavaScript assertion whose predicate the scans do not read was a coverage
+notice and nothing else: a throw check (`expect(fn).toThrow(RangeError)`,
+`assert.throws`), a spy check (`expect(save).toHaveBeenCalledWith(78.75)`),
+`assert.match`, an unread Jest matcher or chai word. Deleting one passed with
+zero findings. #180 proposed escalating the notices toward the gate.
+
+Ruling 196.190.5 (c), as implemented:
+
+- **No notice escalates.** The JS frontend records such a call as an
+  assertion with strength null (SPEC §3), as Python records `assertRaises`:
+  `raises` for the throw family, `unknown` otherwise.
+- **Removal is ASSERT_REMOVED; a rewrite is not judged.** Two strength-null
+  assertions compare to nothing, and alignment never pairs one with a
+  classified assertion.
+- **The frontend's own recognizer.** `_candidate_assertions` decides what
+  is recorded; the coverage inventory keeps its own recognizer, so a call
+  the frontend misses stays visible there.
+
+Readings the ruling leaves to the implementation:
+
+1. **Only a resolved assertion API is recorded.** That is a node:assert
+   method the scan does not read, a chai assert method the scan does not
+   read, an `expect(...)` call with a matcher chain, or an `expect` member
+   that asserts (`expect.assertions`, `expect.soft`). A lookalike is not: a
+   name imported from another module, a shadowed name, a written member.
+   Recorded, the stand-in would pair by text with the oracle it replaced,
+   which the binding pins forbid.
+2. **What the scans read stays theirs.** A matcher or method the scans read
+   but left out for its arguments (`expect(x).toBe()`,
+   `assert.strictEqual(x)`) stays unrepresented. So do a name node:assert
+   does not export (`assert.okay`), a Jest matcher on chai's `expect`, and a
+   chai chain on the `expect` of `@jest/globals` (#198 Q5).
+3. **The throw family.** It is `throws` and `rejects` (node:assert and
+   chai), `toThrow` and its variants, a `.rejects` chain, and chai's
+   `throw`, `Throw`, `rejected`, `rejectedWith` and `isRejected`. A negated
+   one (`.not`, `doesNotThrow`, `doesNotReject`) is `unknown`.
+4. **Not assertions:** a bare `expect(value)`, asymmetric matchers and
+   registration (`expect.any`, `expect.extend`), a call inside another
+   assertion's arguments, and a call in a nested function.
+5. **The subject is the first argument** of `expect(...)` or of the call,
+   so an edited check pairs with itself on its subject.
+6. **A recorded call stays a coverage notice.** Its reason says the
+   predicate is not read and a rewrite is not judged; an unrecorded
+   candidate keeps the old reason.
+
+7. **The support inventory declares the recording.** The contract's
+   unsupported API entries said the frontend recognizes nothing, and its
+   validator allowed no assertion without a strength. An unsupported entry
+   may now declare a call recorded with no strength; only a supported
+   entry states a strength. The 33 unsupported entries the frontend now
+   records declare that recording, with their status unchanged. No
+   mutation case changes, and none is added: the recommended Action's
+   pinned engine is qualified against the same mutations and would stay
+   red on them.
+
+**Pins.** Two move, each a direct consequence of the ruling.
+- `tests/test_js_chai.py::test_unsupported_chai_spellings_remain_coverage_gaps`:
+  its eight spellings are now recorded as `unknown` with no strength; each
+  stays a coverage notice.
+- `tests/test_js_coverage.py::test_deleted_unknown_assertion_is_reported_on_the_base_side_without_a_finding`
+  is now `..._and_removed`: deleting `assert.match(...)` is ASSERT_REMOVED,
+  high, and blocks.
+
+**Tests and fixtures.**
+- New tests: `tests/test_js_unjudged_assertions.py`, and two rows of the
+  contract validator's tests.
+- New fixtures, `bypass: 114`: `js_unread_throw_check_deleted_pos`,
+  `js_unread_spy_check_deleted_pos`, `js_node_assert_throws_deleted_pos`.
+- New fixture, `bypass: 111`: `js_chai_property_deleted_pos`.
+- Control: `js_unread_spy_check_rewritten_exact_neg`, a spy check rewritten
+  into a newly written exact check (ASSERT_REMOVED at warn,
+  SAME_UNIT_REWRITE).
+- No existing fixture changes its expectation, and no case of the JS
+  assertion contract's 283 mutations changes (reading 7 for its API
+  entries).
+
+**Fingerprints.** Unchanged: the round adds findings and changes none.
+
+**Cost.**
+- **New findings:** ASSERT_REMOVED, high without repair evidence, on a
+  deleted unread assertion.
+- **Compensated:** an unread check rewritten into a newly written strong
+  check is held at warn (SAME_UNIT_REWRITE).
+- **Corpus:** no verdict or finding changes. One IR changes:
+  `js_test_patches_subject_spy_passthrough_neg` records its spy check.
+- **Verdict gate:** every one of its 180 cases keeps the verdict and the
+  findings of a candidate built from `main`, so no case is relabelled.
+- **Known false positive:** an unread check moved into a helper function,
+  as for any JS assertion the scans read.
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

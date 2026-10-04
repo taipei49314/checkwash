@@ -298,7 +298,9 @@ strength decreases. Defined once, in `src/greenwash/ir/strength.py`.
 Assertion forms that cannot be classified (e.g. `assertRaises`, custom
 helpers) get strength `null` and are **excluded** from weakening comparisons
 (fail-safe: no guess, no noise). Their removal still counts for
-`ASSERT_REMOVED`.
+`ASSERT_REMOVED`. The JavaScript frontend records a call to a resolved
+assertion API whose predicate it does not read the same way: `raises` for a
+throw check, `unknown` otherwise (#196 190.5).
 
 A frontend may also record the predicate an assertion states, as one key of
 `ir/predicate.py` (the JavaScript frontend does, since #198): presence

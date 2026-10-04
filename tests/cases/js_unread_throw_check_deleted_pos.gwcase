@@ -1,4 +1,5 @@
 === meta ===
+bypass: 114
 rule: ASSERT_REMOVED
 title: expect(() => invoiceTotal(items, -1)).toThrow(RangeError) deleted is a removed assertion, not a coverage notice
 origin: #196 190.5 — v0.5.0 passed this diff with zero findings; the throw check was a coverage notice only
