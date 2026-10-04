@@ -6,7 +6,7 @@ contract for every file here.
 
 | file | what it holds | who edits it |
 |---|---|---|
-| `cases/{i196,i197,i198,i199}/<row>.vgcase` | the T1 cases: 149 transcribed from the #196-#199 probe matrices, and the cases a ruling adds in its fix PR (`i197/O1`-`O3`, `Q5a`, `Q5b`) | a reviewed PR; inputs only, never an expected verdict |
+| `cases/{i196,i197,i198,i199}/<row>.vgcase` | the T1 cases: 149 transcribed from the #196-#199 probe matrices, and the cases a ruling adds in its fix PR (`i197/O1`-`O3`, `Q5a`, `Q5b`; `i196/W1`, `Wc1`) | a reviewed PR; inputs only, never an expected verdict |
 | `labels.toml` | `block`, `pass` or `undecided` for every T1 case, each with its source | a label changes only by maintainer ruling (`AGENTS.md` rule 2) |
 | `baseline.toml` | the pins: baseline engine, canary pair, `[t3.cases]`, and later `baseline_blocked` and `[canary] block_to_pass` | a reviewed PR (rotation after a release) |
 
@@ -32,7 +32,9 @@ deleting a test under `.github/workflows/` escalates to high. The canary set
 is therefore 67 rows, not the matrices' 68, and B7 needs no acceptance entry.
 The five cases added on 2026-10-03 (#201 ruling 196.followup.new-gate-cases)
 raise the canary set to 70 (`i197/O1`-`O3`) and `baseline_blocked` to 75
-(`i197/Q5a`, `Q5b`).
+(`i197/Q5a`, `Q5b`). The two cases added on 2026-10-04 (`i196/W1` and `Wc1`,
+ruling 196.184.3) raise `baseline_blocked` to 77; v0.4.2 blocks both too, so
+the canary set stays 70.
 `options` sets `today` (every case: `2026-10-02`) and, for the #196 S rows,
 `task = "TASK.md"`.
 

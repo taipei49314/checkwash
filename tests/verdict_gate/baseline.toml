@@ -22,6 +22,10 @@
 # (canary block_to_pass 67 -> 70). Both pins are the local gate's proposal
 # over the 154 T1 cases.
 #
+# 2026-10-04: the 184.3 PR added i196/W1 and Wc1 under the same ruling. Both
+# block on v0.5.0 (baseline_blocked 75 -> 77) and on v0.4.2, so the canary
+# set stays 70. The pin is the local gate's proposal over the 156 T1 cases.
+#
 # Rotation (after a release): repoint [baseline] to the new release, re-read
 # [t3.cases] from the gate's proposal, and re-pin [baseline_blocked]. Asset
 # sha256 and size come from `gh release view vX.Y.Z --json assets` (the
@@ -36,8 +40,8 @@ sha256 = "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c"
 size = 588886
 
 [baseline_blocked]
-count = 75
-sha256 = "189fa4420979bd72b16518b2be7bc8ea868a501049b3aa482e47f3a9d0a948d1"
+count = 77
+sha256 = "cfe6192279f4ac0f6658a4ce97e93fe43b5ae418f15b6aaca8022463e8a187a4"
 
 [canary]
 block_to_pass = [
