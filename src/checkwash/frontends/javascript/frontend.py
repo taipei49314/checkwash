@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.literals import (
     keyword_operand,
+    number_operand,
     operand_text,
     populate_delta,
     populate_expectation,
@@ -1159,6 +1160,107 @@ def _relational_split(
     return (start, found[0]), text[found[0]:found[1]], (found[1], end)
 
 
+# Prefix keywords: a `-` after one is a sign, as after an operator.
+_PREFIX_WORDS = frozenset({"typeof", "void", "await", "delete", "new", "yield"})
+# Binary words that bind looser than a subtraction (`a - b in c`, `a - b as T`).
+_LOOSER_WORDS = frozenset({"in", "instanceof", "as", "satisfies"})
+_WORD = re.compile(r"[^\W\d][\w$]*|\$[\w$]*")
+_EXPONENT_HEAD = re.compile(r"(?:\d[\d_]*(?:\.[\d_]*)?|\.\d[\d_]*)[eE]")
+
+
+def _difference_split(
+    text: str, code: bytearray, span: tuple[int, int],
+) -> tuple[tuple[int, int], tuple[int, int]] | None:
+    """`a - b` as (a, b), when that one subtraction is the whole expression.
+
+    Exactly one top-level binary `-`. A second additive operator, or one
+    that binds looser (a comparison, equality, logical, conditional,
+    assignment, sequence or shift operator, `in`, `instanceof`, `as`,
+    `satisfies`), makes the difference part of something larger, and
+    nothing is claimed; `*`, `/`, `%` and `**` bind tighter and stay inside
+    a side. A `-` after an operator, an opening bracket, a prefix keyword or
+    nothing is a sign, and so is the one in an exponent (`1e-5`). `--`,
+    `++`, `-=` and `+=` are never a difference. Brackets nest; literal and
+    comment contents are outside the code mask.
+    """
+    start, end = span
+    depth = 0
+    found: int | None = None
+    operand = False  # does the code read so far end an operand?
+    i = start
+    while i < end:
+        char = text[i]
+        if not code[i] or char.isspace():
+            i += 1
+            continue
+        if char in "([{":
+            depth += 1
+            operand = False
+        elif char in ")]}":
+            depth -= 1
+            if depth < 0:
+                return None
+            operand = True
+        elif depth:
+            operand = False
+        elif char in "+-":
+            following = text[i + 1] if i + 1 < end else ""
+            if following in {char, "="}:
+                return None
+            if operand:
+                if char == "+" or found is not None:
+                    return None
+                found = i
+            operand = False
+        elif char == "?" and text[i + 1:i + 2] == "." and not text[i + 2:i + 3].isdigit():
+            i += 2  # optional chaining reads a member, like `.`
+            operand = False
+            continue
+        elif char in "<>=!&|^?:,;":
+            return None
+        elif char.isdigit() or char == ".":
+            number = _EXPONENT_HEAD.match(text, i, end)
+            if number is not None and number.end() < end and text[number.end()] in "+-":
+                i = number.end() + 1  # the exponent's sign is part of the number
+                continue
+            operand = True
+        else:
+            word = _WORD.match(text, i, end)
+            if word is None:
+                operand = False
+            else:
+                if word.group() in _LOOSER_WORDS:
+                    return None
+                operand = word.group() not in _PREFIX_WORDS
+                i = word.end()
+                continue
+        i += 1
+    if found is None or depth:
+        return None
+    left = _operand_span(text, code, (start, found))
+    right = _operand_span(text, code, (found + 1, end))
+    if left[0] == left[1] or right[0] == right[1]:
+        return None
+    return left, right
+
+
+def _operand_span(text: str, code: bytearray, span: tuple[int, int]) -> tuple[int, int]:
+    """An operand without surrounding whitespace, and its redundant parentheses when it has code edges.
+
+    The code mask leaves out string contents as well as comments, so an
+    operand that begins or ends with a literal (`value - "78.75"`) is kept as
+    written rather than trimmed into its neighbour.
+    """
+    start, end = span
+    while start < end and text[start].isspace():
+        start += 1
+    while end > start and text[end - 1].isspace():
+        end -= 1
+    if start < end and code[start] and code[end - 1]:
+        return _without_parentheses(text, code, (start, end))
+    return start, end
+
+
 def _without_parentheses(text: str, code: bytearray, span: tuple[int, int]) -> tuple[int, int]:
     """An expression without surrounding whitespace, comments or redundant parentheses.
 
@@ -1199,7 +1301,7 @@ class _HandRolled:
 def _record_tolerance(
     assertion: Assertion, text: str, code: bytearray, bindings: Bindings,
     subject: tuple[int, int], operator: str | None = None,
-    bound: tuple[int, int] | None = None, *, lower: bool = False,
+    bound: tuple[int, int] | None = None,
 ) -> _HandRolled | None:
     """Read `Math.abs(a - b) < bound` as the absolute tolerance it states.
 
@@ -1208,14 +1310,14 @@ def _record_tolerance(
     truthy subject. Every spelling goes through this one reading: a truthy
     oracle passes its subject and the comparison is split out of it; an
     ordering matcher passes subject, operator and bound. Both orientations
-    count (`eps > Math.abs(d)`), but the magnitude must be an unshadowed
-    `Math.abs` call on the smaller side: `Math.abs(d) > eps` asserts that
-    two values differ and records no tolerance. With `lower`, the truthy
-    spellings still read that reversed shape as a lower bound on the
-    magnitude, so a `<` -> `>` flip can be reported (#196 189.3). The
-    subject text is left alone, so pairing and the other rules see the
-    assertion exactly as before. Returns the reading, or None when the
-    comparison is not a hand-rolled bound.
+    count (`eps > Math.abs(d)`), and the magnitude must be an unshadowed
+    `Math.abs` call. On the larger side (`Math.abs(d) > eps`) it asserts
+    that two values differ: a lower bound, read for its direction so a
+    `<` -> `>` flip can be reported (#196 189.3), which records no
+    tolerance. Either way the assertion's `left` becomes what the magnitude
+    measures, and a literal centre its expected value (`_decompose`, #196
+    189.2), so both directions of one check share a subject. Returns the
+    reading, or None when the comparison is not a hand-rolled bound.
     """
     if operator is None or bound is None:
         # Redundant parentheses around the whole comparison state the same
@@ -1232,7 +1334,7 @@ def _record_tolerance(
         return None
     if _absolute_value_call(text, code, subject):
         key = _BOUND_KEYS[operator]
-    elif lower and _absolute_value_call(text, code, bound):
+    elif _absolute_value_call(text, code, bound):
         subject, bound = bound, subject
         key = _BOUND_KEYS[_REVERSED[operator]]
     else:
@@ -1242,16 +1344,46 @@ def _record_tolerance(
     if value is not None and key in {"lt", "le"}:
         assertion.epsilon = f"abs={value}"
         assertion.epsilon_kind = "abs"
+    _decompose(assertion, text, code, subject)
     return _HandRolled(key, None if value is None else operand_text(expression))
+
+
+def _decompose(assertion: Assertion, text: str, code: bytearray, magnitude: tuple[int, int]) -> None:
+    """Record what `Math.abs(...)` measures as `left`, and a literal centre as the expected value.
+
+    `Math.abs(total - 78.75) < 0.01` checks `total` against 78.75 within
+    0.01, as `pytest.approx(78.75, abs=0.01)` would: the subject is `total`,
+    78.75 is the expected value and the bound the tolerance (#196 189.2).
+    So rewriting the centre is an expected value rewritten, and pairing
+    keys on the subject. Only a Number literal is a centre, on either side
+    of the one subtraction; with none (`Math.abs(total - expected)`,
+    `Math.abs(d)`) or two, the whole argument is `left` and there is no
+    expected value. Either signed zero is the same centre, because the
+    comparison measures a distance.
+    """
+    start, end = _without_parentheses(text, code, magnitude)
+    call = _call_argument_spans(text, code, _ABS_CALL.match(text, start, end).end() - 1, end)
+    argument = _operand_span(text, code, call[0][0])
+    subject, centre, value = argument, None, None
+    split = _difference_split(text, code, argument)
+    if split is not None:
+        values = [number_operand(text[side[0]:side[1]]) for side in split]
+        if (values[0] is None) != (values[1] is None):
+            index = 0 if values[0] is not None else 1
+            centre, subject, value = split[index], split[1 - index], values[index]
+    assertion.left = text[subject[0]:subject[1]]
+    assertion.right_literal = assertion.right_value = None
+    if centre is not None:
+        assertion.right_literal = text[centre[0]:centre[1]]
+        assertion.right_value = repr(0.0 if value == 0 else value)
 
 
 def comparison_magnitude(source: str) -> str | None:
     """The `Math.abs(...)` side of a hand-rolled comparison, as `_record_tolerance` reads it.
 
-    For rules comparing two truthy spellings of the comparison: their
-    subject is the magnitude, not the whole comparison (#196 189.3). The
-    frontend has already checked that `Math` is unshadowed where it recorded
-    the bound key; this reads the text only.
+    This reads the text only; whether `Math` is unshadowed is the caller's
+    question. Rules no longer need it: the frontend records what the
+    magnitude measures as the assertion's `left` (#196 189.3, 189.2).
     """
     code = _code_positions(source)
     split = _relational_split(source, code, _without_parentheses(source, code, (0, len(source))))
@@ -1360,7 +1492,7 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         # states, so a `<` -> `>` flip reads as one (#196 189.3).
         if form == "truthy" or (method in {"strictEqual", "deepStrictEqual"}
                                 and assertion.right_value == "True"):
-            hand = _record_tolerance(assertion, text, code, bindings, argument_spans[0], lower=True)
+            hand = _record_tolerance(assertion, text, code, bindings, argument_spans[0])
             if hand is not None:
                 key = hand.key
                 assertion.operand_source = hand.operand
@@ -1578,11 +1710,11 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
                 if subject_spans and subject_spans[0] and matcher_spans is not None:
                     bound = matcher_spans[0][0] if operator and matcher_spans[0] else None
                     hand = _record_tolerance(assertion, text, code, bindings, subject_spans[0][0],
-                                             operator, bound, lower=operator is None)
+                                             operator, bound)
                     if hand is not None and operator is not None:
                         # A bound read as a hand-rolled tolerance is tolerance
-                        # evidence only, never an expected value (198.Q2).
-                        assertion.right_literal = assertion.right_value = None
+                        # evidence only, never an expected value (198.Q2): the
+                        # expected value is the centre, if any (189.2).
                         if hand.operand is None:
                             assertion.operand_source = None
                     elif hand is not None:

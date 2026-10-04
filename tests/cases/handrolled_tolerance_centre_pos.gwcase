@@ -1,0 +1,23 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: assert abs(total() - 78.75) < 0.01 -> abs(total() - 75) rewrites the expected value inside the tolerance
+origin: issue 225 (#196 189.2) — v0.5.0 passed this diff with zero findings; the bound was read as the expected value
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert abs(total() - 78.75) < 0.01
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert abs(total() - 75) < 0.01
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

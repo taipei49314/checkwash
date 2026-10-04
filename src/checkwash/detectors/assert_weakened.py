@@ -12,7 +12,6 @@ either: unknown evidence is not the same evidence (#196 190.4, 189.1).
 from __future__ import annotations
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
-from checkwash.frontends.javascript.frontend import comparison_magnitude
 from checkwash.ir import predicate as P
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import same_expr
@@ -46,18 +45,6 @@ def _presence_meets_affirmation(b: Assertion, a: Assertion) -> bool:
 _JS_SUFFIXES = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
 # The keys a hand-rolled tolerance states: its magnitude bounded above.
 _UPPER_BOUNDS = frozenset({"lt", "le"})
-
-
-def _subject(assertion: Assertion) -> str | None:
-    """What the assertion's predicate is about.
-
-    For `assert.ok(Math.abs(d) < bound)` that is the magnitude, not the
-    whole comparison: flipping `<` to `>` keeps the subject and reverses the
-    bound (#196 189.3).
-    """
-    if P.compared_inside(assertion) and assertion.left is not None:
-        return comparison_magnitude(assertion.left) or assertion.left
-    return assertion.left
 
 
 def _tolerance_lost(path: str, b: Assertion, a: Assertion) -> str | None:
@@ -132,8 +119,11 @@ def detect(ir: IR) -> list[Finding]:
                     seen_inherited.add(origin)
                 # Same structural compare SUBSTITUTED uses. Reformatting or
                 # extra parens is not a subject change; wrapping or replacing
-                # it is (E6 / review 2026-08-11 Issue 4).
-                subject_changed = not same_expr(_subject(b), _subject(a))
+                # it is (E6 / review 2026-08-11 Issue 4). For a hand-rolled
+                # `Math.abs(d) < bound` the frontend records what the
+                # magnitude measures, so flipping `<` to `>` keeps the subject
+                # and reverses the bound (#196 189.3, 189.2).
+                subject_changed = not same_expr(b.left, a.left)
                 # Two predicate keys on one subject: the relation decides,
                 # from key and polarity (#198). An operand change is not
                 # judged here; EXPECTED_VALUE_CHANGED and TOLERANCE_LOOSENED

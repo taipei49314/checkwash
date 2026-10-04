@@ -1,0 +1,23 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: assert abs(total() - 78.75) < 0.01 -> < 1e12 widens the tolerance the bound states
+origin: #196 189.2 — the bound is the tolerance now; v0.5.0 blocked this as EXPECTED_VALUE_CHANGED 0.01 -> 1e12
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert abs(total() - 78.75) < 0.01
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert abs(total() - 78.75) < 1e12
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -161,7 +161,11 @@ aliases, and lexical shadows. Unknown lookalikes do not acquire assertion
 strength. A name that any write may have reached, from any function, is
 unknown rather than its first value, and a declaration ends where JavaScript
 ends it, with or without a semicolon
-([#196](https://github.com/taipei49314/checkwash/issues/196) 189.1). Dynamic aliases and semantic equivalence of arbitrary predicates
+([#196](https://github.com/taipei49314/checkwash/issues/196) 189.1). In a
+hand-rolled `Math.abs(x - 78.75) < bound`, and in its Python `abs(...)` twin,
+the subject is what the magnitude measures and a literal centre is the
+expected value, so a rewritten centre is reported
+([#225](https://github.com/taipei49314/checkwash/issues/225), 189.2). Dynamic aliases and semantic equivalence of arbitrary predicates
 inside `assert(value)` / `assert.ok(value)` remain outside this model.
 v0.5.0 (not in the published v0.4.2 package) also reports
 `TEST_PATCHES_SUBJECT` when an existing JS unit's own assertion reads a newly

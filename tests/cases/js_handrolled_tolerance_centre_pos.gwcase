@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 110
+rule: EXPECTED_VALUE_CHANGED
+title: assert.ok(Math.abs(total - 78.75) < 0.01) -> Math.abs(total - 75) rewrites the expected value inside the tolerance
+origin: issue 225 (#196 189.2) — v0.5.0 passed this diff with zero findings; the centre was part of the subject text
+=== before: tests/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(Math.abs(invoiceTotal(items) - 78.75) < 0.01);
+});
+=== after: tests/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(Math.abs(invoiceTotal(items) - 75) < 0.01);
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
