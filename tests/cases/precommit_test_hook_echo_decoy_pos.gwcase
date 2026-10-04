@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: a pytest hook whose entry becomes an echo of pytest runs no suite
+origin: issue #196 rulings 191.5 and 191.7 — the hook keeps its id and its name, and its entry still names
+origin2: pytest, but echo text runs nothing: the config ran a suite at base and runs none at head. v0.5.0
+origin3: counted the echo as a live test hook and passed this diff.
+=== before: .pre-commit-config.yaml ===
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+=== after: .pre-commit-config.yaml ===
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: echo pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
