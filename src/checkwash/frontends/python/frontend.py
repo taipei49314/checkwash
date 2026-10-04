@@ -16,6 +16,7 @@ import re
 from dataclasses import dataclass, field
 
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.frontends.python.setup_skip_controls import SetupScope, module_bindings, setup_outcomes
 from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
@@ -2767,20 +2768,34 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
             Marker(name="conftest.collect_ignore", text=seg, span=off.span(node), guard=combined)
         )
 
+    # A collection hook, and an `add_marker` skip in one, carries the condition
+    # its effects fire under (#209 Q1, `hook_guards`). Several controls under
+    # one name keep the weakest guard, as `collect_ignore` does above: the
+    # markers deduplicate by name.
+    hook_guards, marker_guards = collection_hook_guards(
+        tree, lambda node: text.seg(node) or ast.unparse(node)
+    )
+    found: list[tuple[str, ast.AST, str | None]] = []
     for node in ast.walk(tree):
-        name = None
+        name = guard = None
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in _CONFTEST_HOOKS:
             name = f"conftest.{node.name}"
+            guard = hook_guards.get(id(node))
         elif isinstance(node, ast.Call) and (_dotted(node.func) or "").endswith("add_marker"):
             arg = _dotted(node.args[0].func) if node.args and isinstance(node.args[0], ast.Call) else (
                 _dotted(node.args[0]) if node.args else None
             )
             if arg in _SKIP_DECORATORS:
                 name = "conftest.add_marker_skip"
-        if name is None:
-            continue
+                guard = marker_guards.get(id(node))
+        if name is not None:
+            found.append((name, node, guard))
+    combined: dict[str, list[str | None]] = {}
+    for name, _node, guard in found:
+        combined.setdefault(name, []).append(guard)
+    for name, node, _guard in found:
         seg = (text.seg(node) or name).split("\n")[0]
-        markers.append(Marker(name=name, text=seg, span=off.span(node)))
+        markers.append(Marker(name=name, text=seg, span=off.span(node), guard=weakest(combined[name])))
 
     seen: set[str] = set()
     unique = []

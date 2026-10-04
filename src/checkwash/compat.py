@@ -281,6 +281,27 @@ def _compat_gate(unit: Unit | None, constants: dict[str, str] | None = None) -> 
     return any(_marker_is_compat_gate(m, raw, consts) for m in unit.after.markers)
 
 
+def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: str | None) -> bool:
+    """Is the disabling marker this finding reports a qualified gate? (#208)
+
+    D6 judges the added skip, so the hold is a fact about the finding's own
+    marker, not about the unit. Every after-side marker with that name must
+    qualify on its own guard, as row 71's weakest guard does for
+    `collect_ignore`: an unguarded `pytest.skip` beside a guarded one is not
+    held. A gate elsewhere on the unit lends nothing, and a finding with no
+    marker of its own (`name` None: a unit gone, rows removed, a guard
+    weakened or removed) gets no hold.
+    """
+    if name is None or unit is None or unit.after is None:
+        return False
+    markers = [m for m in unit.after.markers if m.name == name]
+    if not markers:
+        return False
+    raw = constants or {}
+    consts = _parse_constants(raw)
+    return all(_marker_is_compat_gate(m, raw, consts) for m in markers)
+
+
 def guard_always_skips(guard: str, constants: dict[str, str] | None) -> bool:
     """Is this if-guard true in every environment checkwash considers?
 
@@ -298,6 +319,21 @@ def guard_always_skips(guard: str, constants: dict[str, str] | None) -> bool:
         (v := _eval_condition(condition, env, consts)) is not MAYBE and bool(v)
         for env in _ENV_MATRIX
     )
+
+
+def guard_can_be_false(guard: str | None, constants: dict[str, str] | None) -> bool:
+    """Is this a guard at all: a condition that does not hold everywhere? (#209 Q4)
+
+    A suite-level control with no guard that can be false is unguarded:
+    `if True:` or `if sys.version_info >= (3, 0):` wrapped around a drop
+    guards nothing. Judged by the evaluator D6 uses, so the parts checkwash
+    cannot see stay unknown and only a guard true under every assignment of
+    them guards nothing. An `except` block's condition that is not an
+    expression still counts, as it always has.
+    """
+    if not guard:
+        return False
+    return not guard_always_skips(guard, constants)
 
 
 def removed_skip_guard(name: str, unit, constants_before: dict[str, str] | None) -> str | None:
