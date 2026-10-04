@@ -3816,3 +3816,99 @@ and the E8 row.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-083 (2026-10-04): a new pytest selector reaches a targeted run, and counts by what it can leave out (#196 184.1, 184.2)
+
+#173's resolved collection inventory (#90, #184) judges a pytest config
+change against the tests the base settings collect. It had two gaps in what
+a new selector reaches and what it costs:
+
+- **A run with explicit targets** (`pytest tests`) withheld the whole
+  proof, because targets override testpaths. pytest still prepends the root
+  config's addopts to such a run, so a first `addopts = "-m 'not slow'"`
+  over a marked test passed in every repository whose CI names its tests
+  directory.
+- **An option that leaves no test out** blocked as a new selector: a first
+  config's `-p no:cacheprovider`, or `--ignore=docs` with no tests in docs.
+
+Rulings 196.184.1 (b) and 196.184.2 (b), shipped together as 184.1 asks, as
+implemented:
+
+- **184.1.** A targeted invocation no longer withholds the inventory. A new
+  root-config selector is judged against the base-suite tests beneath its
+  targets, when discovery from the targets finds the same root config on
+  both sides. A run without targets still reaches the whole suite. The
+  settings proof stays withheld whenever a run has targets, and every other
+  withholding condition stands.
+- **184.2.** A new option counts only when it can leave out a test that the
+  governed runs collect. `-m`, `-k` and `--co` are not evaluated and count
+  whenever such a test exists. `--ignore` counts by path prefix,
+  `--ignore-glob` against each test's path and the directories above it,
+  and `--deselect` by node-id prefix. `-p no:` counts unless the plugin is
+  `cacheprovider`, `faulthandler`, `pastebin` or `stepwise`; `no:python`,
+  `no:unittest` and every other plugin keep blocking.
+
+Readings the rulings leave to the implementation:
+
+1. **"A base-suite test beneath a target."** The suite is what the base
+   settings collect, testpaths included. A test that only a targeted run
+   collects, outside testpaths, does not count, so such a run is reached
+   only through tests both would collect.
+2. **"The same root config on both sides."** Discovery from the targets
+   must find, on each side, the root config the inventory judges. A nested
+   config at base or at head (a `tests/pytest.ini` the diff adds or
+   deletes) withholds that run. Nested config files, `pytest.toml` and
+   `.pytest.toml` included, are now read for this check only; the root
+   config is still chosen among the root carriers as before.
+3. **The plugin list.** Each plugin on it changes no collection and no
+   outcome: `cacheprovider` keeps `--lf`/`--ff` state, `faulthandler` dumps
+   tracebacks, `pastebin` uploads a report, and `stepwise` acts only under
+   `--sw`. `no:warnings` is not on it: it drops `filterwarnings = error`,
+   which can turn a failing test into a passing one. `no:doctest` drops
+   doctests.
+4. **Path options, read literally.** `--ignore=.` drops everything. A
+   `--deselect` of one parametrized case of a suite test (`::test_x[1]`)
+   counts as a loss. An absolute path names nothing in the inventory and
+   counts as dropping nothing.
+5. **The reported option** is the first in sort order among those that can
+   drop a test. When a non-dropping option sorted first beside a selector
+   (`--ignore=docs -m 'not slow'`), the message names the selector now.
+
+**Tests and fixtures.**
+- New tests: 144 in `tests/test_issue184_collection_selectors.py`, end to
+  end through `engine.analyze` with a closed path inventory.
+- No fixture: the golden runner supplies no path inventory, as for #90 and
+  #173. No existing test or fixture changes its expectation.
+
+**Fingerprints.** In a repository whose CI passes explicit targets, an
+existing config that gains a selector now reports the inventory's line
+("resolved pytest collection option introduced: ...") instead of the syntax
+scanner's ("pytest collection option introduced: ..."): the same severity,
+a new message and fingerprint.
+
+**Cost.**
+- **New blocks:** a first config's selector in a repository whose CI
+  passes explicit targets, when a base-suite test lies beneath them.
+- **New passes** (O1 to O3 in the rulings): a first config's option that
+  leaves no test out, such as `-p no:cacheprovider`, or `--ignore=docs`
+  with no tests in docs. The same option added to an existing config still
+  blocks through the token scan and the syntax scanner, which do not
+  evaluate it; this asymmetry is disclosed in row 105.
+- **Sweep:** the 1,018 commits that touch `pytest.ini`, `.pytest.ini`,
+  `pyproject.toml`, `tox.ini` or `setup.cfg` in the full history of attrs,
+  click, flask, httpx, rich and starlette give the same inventory output on
+  both engines. The one line either reports is click 3ded26d, whose
+  `setup.cfg` gains `-p no:warnings`, and it still blocks. Twelve flask
+  commits stop on a submodule on both.
+- **Verdict gate:** every one of its 180 cases keeps its verdict and its
+  findings' rules, severities and files against the candidate built from
+  #249, so no case is relabelled.
+- **Corpus:** unchanged; no fixture reaches the inventory.
+
+This round also carries ruling 196.184.4's disclosure, which needs no code:
+row 105 now lists a newly added workflow with no base CI surface, which can
+carry a selector or exclude named existing tests at warn under SPEC's
+first-adoption rule.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

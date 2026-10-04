@@ -3,6 +3,13 @@
 This supplements the syntax-only CI scanner when a complete snapshot exists.
 The finite comparison handles arbitrary literal glob changes and first-time
 configuration without declaring ordinary configuration creation a weakening.
+
+A new selector in the root config is judged against the base-suite tests
+that a run it governs collects: every test for a run without targets, and
+the tests beneath the targets for a run with explicit targets (#196 184.1).
+A path option or a `-p no:` plugin counts only when it can leave one of those
+tests out (#196 184.2). A run with explicit targets ignores testpaths, so the
+settings proof does not reach it.
 """
 from __future__ import annotations
 
@@ -18,6 +25,19 @@ _CONFIGS = ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg
 _DEFAULTS = {"python_files": ("test_*.py", "*_test.py"),
              "python_classes": ("Test",), "python_functions": ("test",),
              "norecursedirs": ("*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}")}
+# Built-in plugins whose absence cannot leave a test out or turn a failure
+# into a pass: the cache (`--lf`/`--ff` state), the faulthandler traceback
+# dump, the pastebin upload and `--stepwise` bookkeeping (#196 184.2). Every
+# other `-p no:` keeps blocking, `no:python` and `no:unittest` included.
+_HARMLESS_PLUGINS = frozenset({"cacheprovider", "faulthandler", "pastebin", "stepwise"})
+# Config files that discovery from a targeted run's targets can meet beneath
+# the root: such a nested config governs that run instead of the root config
+# (#196 184.1).
+_NESTED_CONFIGS = ("pytest.toml", ".pytest.toml", "pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg")
+
+
+def _nested_config(path):
+    return "/" in path and path.rsplit("/", 1)[-1] in _NESTED_CONFIGS and not is_artifact(path)
 
 
 def _matches(name, patterns, *, prefix=False):
@@ -30,6 +50,42 @@ def _settings(path, source):
     if any(len(value) != 1 for key, value in settings.items() if key != "addopts"):
         return None
     return {key: next(iter(value)) for key, value in settings.items() if key != "addopts"}
+
+
+def _under(path, targets):
+    """Is this test file among what an invocation's explicit targets collect?"""
+    return any(path == target or path.startswith(target + "/") or fnmatch.fnmatchcase(path, target)
+               for target in targets)
+
+
+def _drops(option, tests):
+    """Can an option the diff introduces leave out one of these tests (#196 184.2)?
+
+    A path option is evaluated against the tests' paths and node ids, and a
+    `-p no:` against the plugins whose absence changes no outcome. Markers,
+    keywords and `--co` are not evaluated: they count whenever a test is
+    there to lose.
+    """
+    if not tests:
+        return False
+    name, value = option
+    if name == "-p":
+        return value.removeprefix("no:") not in _HARMLESS_PLUGINS
+    if name == "--ignore":
+        root = posixpath.normpath(value.replace("\\", "/"))
+        return root == "." or any(path == root or path.startswith(root + "/") for path, _ in tests)
+    if name == "--ignore-glob":
+        pattern = posixpath.normpath(value.replace("\\", "/"))
+        # pytest skips a directory that matches with everything beneath it.
+        return any(fnmatch.fnmatchcase(prefix, pattern)
+                   for path, _ in tests
+                   for prefix in ["/".join(path.split("/")[:end]) for end in range(1, path.count("/") + 2)])
+    if name == "--deselect":
+        # A node id prefix deselects every test it starts; a parametrized
+        # case (`::test_x[1]`) is a test the suite partly loses.
+        return any(node.startswith(value) or value.startswith(node + "[")
+                   for node in (path + "::" + test.replace(".", "::") for path, test in tests))
+    return True
 
 
 def _disabled(body):
@@ -103,7 +159,8 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
         p.startswith((".github/workflows/", "scripts/"))
         or p.endswith((".sh", ".bash", ".ps1", ".bat", ".cmd"))
         or p in {"Makefile", ".gitlab-ci.yml", "noxfile.py", "tox.ini"})}
-    selected = runners | {p for p in path_set if p in _CONFIGS or (p.endswith(".py") and not is_artifact(p))}
+    selected = runners | {p for p in path_set if p in _CONFIGS or _nested_config(p)
+                          or (p.endswith(".py") and not is_artifact(p))}
     if len(selected) > 4096:
         raise EngineError("pytest collection snapshot exceeds the source read limit")
     snapshot = batch_reader(sorted(selected))
@@ -130,22 +187,28 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
                 return []
 
     # Explicit CLI targets override testpaths and may bypass filename
-    # patterns. Such invocations need their own collection model; do not
-    # attribute their collection to an implicit targetless root invocation.
-    for path in runners - set(_CONFIGS):
+    # patterns, so a targeted invocation does not inherit the root config's
+    # collection settings. It still inherits its addopts: a new selector there
+    # is judged against the base-suite tests beneath the targets (#196 184.1).
+    invocations = []
+    for path in sorted(runners - set(_CONFIGS)):
         data = snapshot[path]
         if _runs_tests(data):
-            invocations = _runner_invocations(path, data)
-            if (not invocations or any(item.targets or item.config_path or item.cwd for item in invocations)
+            found = _runner_invocations(path, data)
+            if (not found or any(item.config_path or item.cwd for item in found)
                     or collection_options(data.decode("utf-8-sig", errors="replace"))
                     or b"PYTEST_ADDOPTS" in data or b"--override-ini" in data or b" -o " in data):
                 return []
+            invocations.extend(found)
+    targeted = [item.targets for item in invocations if item.targets]
+    # With no runner in the tree, the suite is the implicit targetless run's.
+    targetless = not invocations or any(not item.targets for item in invocations)
 
     sides = []
     for side in ("before", "after"):
         contents = dict(snapshot)
         for change in changes:
-            if change.path not in _CONFIGS and not change.path.endswith(".py"):
+            if change.path not in _CONFIGS and not change.path.endswith(".py") and not _nested_config(change.path):
                 continue
             data = change.before if side == "before" else change.after
             if data is None:
@@ -179,13 +242,24 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     old_options = collection_options((before.get(before_path) or b"").decode("utf-8-sig", errors="replace"))
     new_options = collection_options((after.get(after_path) or b"").decode("utf-8-sig", errors="replace"))
     path = after_path if after_path in touched else before_path
-    # Markers, keywords and node ids are not evaluated, so a new selector is
-    # judged against the existence of that suite, not test by test. A tree
-    # that collected nothing at base has nothing for it to deselect.
-    if suite and new_options.keys() - old_options.keys():
-        option = sorted(new_options.keys() - old_options.keys())[0]
-        return [(path, "resolved pytest collection option introduced: " + " ".join(option).rstrip())]
-    if old == new:
+    # The base-suite tests a run the root config governs collects: all of
+    # them for a targetless run, and those beneath the targets for a targeted
+    # one, when discovery from its targets finds this same config on both
+    # sides rather than a nested one (#196 184.1).
+    reached = set(suite) if targetless else set()
+    for targets in targeted:
+        if (_pytest_config_path(before, "", targets, contents=before) == before_path
+                and _pytest_config_path(after, "", targets, contents=after) == after_path):
+            reached |= {(test_path, name) for test_path, name in suite if _under(test_path, targets)}
+    # Markers, keywords and `--co` are not evaluated, so such a selector is
+    # judged against the existence of those tests; a path option and a
+    # plugin are judged by what they can leave out (#196 184.2). A tree that
+    # collected nothing at base has nothing for a selector to deselect.
+    introduced = sorted(option for option in new_options.keys() - old_options.keys() if _drops(option, reached))
+    if introduced:
+        return [(path, "resolved pytest collection option introduced: " + " ".join(introduced[0]).rstrip())]
+    # A targeted run ignores testpaths, so the settings proof stays withheld.
+    if targeted or old == new:
         return []
     # Settings are judged test by test, and only for their own effect: the old
     # and the new settings are applied to the same head tree, so deleting,
