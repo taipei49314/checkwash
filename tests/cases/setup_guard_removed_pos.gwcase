@@ -1,0 +1,40 @@
+=== meta ===
+bypass: 54
+rule: TEST_DISABLED
+title: removing the if around a fixture's pytest.skip skips every test that requests it, on every platform
+origin: #196 183.2, second stage — a guarded skip in a unit's own setup is recorded with its guard, so removing the if is THREATMODEL 54's removal ("skip guard removed in the setup this test runs"); v0.5.0 blocks it as a skip added to the setup
+=== before: tests/test_quota.py ===
+import sys
+
+import pytest
+
+from app import remaining
+
+
+@pytest.fixture
+def posix_only():
+    if sys.platform == "win32":
+        pytest.skip("posix only")
+    yield
+
+
+def test_weighted_quota(posix_only):
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import sys
+
+import pytest
+
+from app import remaining
+
+
+@pytest.fixture
+def posix_only():
+    pytest.skip("posix only")
+    yield
+
+
+def test_weighted_quota(posix_only):
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_weighted_quota"}]

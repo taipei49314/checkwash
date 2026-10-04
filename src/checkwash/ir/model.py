@@ -113,8 +113,11 @@ class Marker:
     # enclosing `if` conditions, source text, `not (...)`-wrapped for else
     # branches. `if PY_3_14_PLUS: pytest.xfail(...)` is the imperative spelling
     # of `skipif(PY_3_14_PLUS)`, and without the guard D6 cannot tell it from
-    # an unconditional kill. Deliberately NOT part of the marker's identity:
-    # fingerprints (and therefore recorded allowlist entries) must not change.
+    # an unconditional kill. For a skip in the setup a unit runs
+    # (`setup.<provider>.<effect>`): the condition its setup callback reaches
+    # it under, None when every call does (#196 183.2). Deliberately NOT part
+    # of the marker's identity: fingerprints (and therefore recorded allowlist
+    # entries) must not change.
     guard: str | None = None
 
 
@@ -264,8 +267,9 @@ class UnitDelta:
     # same: a constant it names was edited (`STRICT = True` -> `False` under
     # `if not STRICT: pytest.skip(...)` silences the test with no marker
     # event at all, decoy probe arm 2026-08-04), its text now always holds
-    # (`if True:`, THREATMODEL 54), or it was removed (#196 183.2). Entries
-    # are marker names, matched to the after side.
+    # (`if True:`, THREATMODEL 54), or it was removed (#196 183.2), in the
+    # test body or in the setup it runs. Entries are marker names, matched to
+    # the after side.
     guards_weakened: list[str] = field(default_factory=list)
 
 

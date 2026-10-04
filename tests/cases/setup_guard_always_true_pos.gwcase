@@ -1,0 +1,41 @@
+=== meta ===
+bypass: 54
+rule: TEST_DISABLED
+title: a fixture's version gate edited to one that always holds skips the requesting test everywhere
+origin: #196 183.2, second stage — the setup guard is evaluated as a body guard is; v0.5.0 passes it with no finding, because a guarded setup skip minted no marker on either side
+=== before: tests/test_quota.py ===
+import sys
+
+import pytest
+
+from app import remaining
+
+
+@pytest.fixture
+def modern_python():
+    if sys.version_info < (3, 9):
+        pytest.skip("needs 3.9")
+    yield
+
+
+def test_weighted_quota(modern_python):
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import sys
+
+import pytest
+
+from app import remaining
+
+
+@pytest.fixture
+def modern_python():
+    if sys.version_info >= (3, 0):
+        pytest.skip("needs 3.9")
+    yield
+
+
+def test_weighted_quota(modern_python):
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_weighted_quota"}]

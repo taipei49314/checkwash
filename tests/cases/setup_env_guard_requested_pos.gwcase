@@ -1,0 +1,41 @@
+=== meta ===
+bypass: 104
+rule: TEST_DISABLED
+title: an existing test that starts requesting a fixture which skips unless an environment variable is set is a disable
+origin: #196 183.2, second stage — judged as the same guard in the test body is: an environment condition earns no COMPAT_GATE; v0.5.0 passes it with no finding
+=== before: tests/test_quota.py ===
+import os
+
+import pytest
+
+from app import remaining
+
+
+@pytest.fixture
+def database():
+    if not os.environ.get("DATABASE_URL"):
+        pytest.skip("set DATABASE_URL")
+    yield
+
+
+def test_weighted_quota():
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import os
+
+import pytest
+
+from app import remaining
+
+
+@pytest.fixture
+def database():
+    if not os.environ.get("DATABASE_URL"):
+        pytest.skip("set DATABASE_URL")
+    yield
+
+
+def test_weighted_quota(database):
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_weighted_quota"}]

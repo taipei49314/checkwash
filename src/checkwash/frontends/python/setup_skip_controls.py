@@ -11,9 +11,14 @@ That one reading (`callback_outcome`) is shared by every path a unit's setup
 runs through (issue #172): the closed `pytest_runtest_setup` hook proof below,
 conftest fixtures as suite-level runtime controls (`fixture_setup_controls`),
 and a test module's own fixtures and xunit setup callbacks as markers on the
-units that reach them (`SetupScope`, `setup_outcomes`). A guarded skip is not
-this evidence on any of them: its guard is its justification, and an
-environment condition is not something a source reading can settle.
+units that reach them (`SetupScope`, `setup_outcomes`).
+
+A guarded skip is not this evidence: its guard is its justification, and an
+environment condition is not something a source reading can settle. A unit's
+own setup still records it, with that guard (`setup_outcome`, #196 183.2), so
+it is judged as a guarded skip in a test body is. The conftest paths read only
+the unconditional outcome until their requests are resolved
+(196.followup.conftest-request-side).
 """
 from __future__ import annotations
 
@@ -181,6 +186,17 @@ def _names(nodes, *, mutated=False):
     return names
 
 
+def _local(function, bindings, receiver):
+    args = function.args
+    positional = [*args.posonlyargs, *args.args]
+    params = [arg.arg for arg in (*positional, *args.kwonlyargs, args.vararg, args.kwarg) if arg is not None]
+    stored = _names(function.body)
+    local = {**bindings, **dict.fromkeys([*params, *sorted(stored)])}
+    if receiver and positional and positional[0].arg not in stored:
+        local[positional[0].arg] = 'self'
+    return local
+
+
 def callback_outcome(function, bindings, *, receiver=False):
     """(effect, evidence) for the first native outcome every call of `function` reaches.
 
@@ -189,14 +205,140 @@ def callback_outcome(function, bindings, *, receiver=False):
     it shadows the module binding. `receiver` reads the first positional
     parameter as the instance, which is how `self.skipTest` resolves.
     """
-    args = function.args
-    positional = [*args.posonlyargs, *args.args]
-    params = [arg.arg for arg in (*positional, *args.kwonlyargs, args.vararg, args.kwarg) if arg is not None]
-    stored = _names(function.body)
-    local = {**bindings, **dict.fromkeys([*params, *sorted(stored)])}
-    if receiver and positional and positional[0].arg not in stored:
-        local[positional[0].arg] = 'self'
-    return _reached(_body(function.body), local)[0]
+    return _reached(_body(function.body), _local(function, bindings, receiver))[0]
+
+
+# How a walk over statements ends: every path ends there (in an outcome, or by
+# leaving), control falls through to what follows, or some path may leave
+# under a condition the walk does not follow.
+_ENDS, _FALLS, _STOPS = 'ends', 'falls', 'stops'
+
+
+def _handler_condition(try_statement, handler):
+    # Imported late: the frontend imports this module.
+    from .frontend import _handler_guard
+
+    return _handler_guard(try_statement, handler)
+
+
+def _guarded(statements, bindings, conds, sites, condition):
+    """Walk `statements` under the path condition `conds`, a tuple of source texts.
+
+    Appends (effect, evidence, conds) for each native outcome a run reaches
+    whenever its path condition holds, and returns how the walk ends and
+    whether some path left without an outcome. The path condition is the one
+    guard definition of #196 183.2: each enclosing `if` test, `not (...)` for
+    an `else` branch and for the code after a branch that always ends, and an
+    `except` block's own condition (`_handler_guard`, as a conftest's
+    `collect_ignore` records it). A path this reading cannot follow ends the
+    walk rather than widening a guard: code after a branch that may leave
+    without always leaving, and any other compound statement that may leave.
+    Loop, `with` and `match` bodies and a `try` body are not read for
+    outcomes, as `callback_outcome` does not read them.
+    """
+    left = False
+    for statement in statements:
+        found = _outcome(statement, bindings)
+        if found is not None:
+            sites.append((*found, conds))
+            return _ENDS, left
+        if isinstance(statement, ast.If):
+            truth = _fold(statement.test)
+            if truth is not None:
+                state, leaves = _guarded(statement.body if truth else statement.orelse,
+                                         bindings, conds, sites, condition)
+                left |= leaves
+                if state != _FALLS or leaves:
+                    return state if state != _FALLS else _STOPS, left
+                continue
+            test = condition(statement.test)
+            body, body_left = _guarded(statement.body, bindings, (*conds, test), sites, condition)
+            orelse, orelse_left = _guarded(statement.orelse, bindings, (*conds, f'not ({test})'), sites, condition)
+            left |= body_left or orelse_left
+            if _STOPS in (body, orelse):
+                return _STOPS, left
+            if body == orelse == _ENDS:
+                return _ENDS, left
+            if body == _ENDS and not orelse_left:
+                conds = (*conds, f'not ({test})')
+            elif orelse == _ENDS and not body_left:
+                conds = (*conds, test)
+            elif body_left or orelse_left:
+                return _STOPS, left
+            continue
+        if isinstance(statement, ast.Try) and not statement.handlers and not _may_leave(statement.finalbody):
+            state, leaves = _guarded(statement.body + statement.finalbody, bindings, conds, sites, condition)
+            left |= leaves
+            if state != _FALLS or leaves:
+                return state if state != _FALLS else _STOPS, left
+            continue
+        if isinstance(statement, ast.Try):
+            if _may_leave([*statement.body, *statement.orelse, *statement.finalbody]):
+                return _STOPS, left
+            for handler in statement.handlers:
+                state, leaves = _guarded(handler.body, bindings, (*conds, _handler_condition(statement, handler)),
+                                         sites, condition)
+                if state == _STOPS or leaves:
+                    return _STOPS, left or leaves
+            continue
+        if isinstance(statement, (ast.Return, ast.Raise)) or (
+                isinstance(statement, ast.Expr) and isinstance(statement.value, (ast.Yield, ast.YieldFrom))):
+            return _ENDS, True
+        if _may_leave([statement]):
+            return _STOPS, left
+    return _FALLS, left
+
+
+def _expression(text):
+    try:
+        return ast.parse(text, mode='eval').body
+    except SyntaxError:
+        return None
+
+
+def _conjunction(conds):
+    """`conds` joined with `and`, or None for none.
+
+    A test written across lines inside parentheses keeps them, and a conjunct
+    that would bind more loosely than `and` is wrapped. An `except` block's
+    condition that is not an expression stays as written: the guard then
+    earns nothing that needs it parsed, and still counts as a condition.
+    """
+    parts = []
+    for cond in conds:
+        node = _expression(cond)
+        if node is None and _expression(f'({cond})') is not None:
+            cond, node = f'({cond})', _expression(f'({cond})')
+        loose = isinstance(node, (ast.BoolOp, ast.IfExp, ast.Lambda, ast.NamedExpr))
+        parts.append(f'({cond})' if len(conds) > 1 and loose else cond)
+    return ' and '.join(parts) or None
+
+
+def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse):
+    """(effect, evidence, guard) for the outcome a unit's setup callback ends in, or None.
+
+    guard None: every call reaches it, read exactly as `callback_outcome`
+    reads it. Otherwise each outcome a call reaches whenever its path
+    condition holds counts (`_guarded`), and the guard is the disjunction of
+    those conditions (#196 183.2), so two branches that between them cover
+    every run read as the unconditional skip they are wherever the guard can
+    be evaluated. The first such outcome names the effect and is the evidence.
+    `condition` gives an expression's source text.
+    """
+    local = _local(function, bindings, receiver)
+    body = _body(function.body)
+    found = _reached(body, local)[0]
+    if found is not None:
+        return (*found, None)
+    sites = []
+    _guarded(body, local, (), sites, condition)
+    if not sites:
+        return None
+    effect, evidence, _conds = sites[0]
+    clauses = [_conjunction(conds) for _effect, _evidence, conds in sites]
+    if None in clauses:
+        return effect, evidence, None
+    return effect, evidence, clauses[0] if len(clauses) == 1 else ' or '.join(f'({c})' for c in clauses)
 
 
 def module_bindings(tree):
@@ -362,13 +504,15 @@ class SetupScope:
 
     `fixtures`: registered name -> (requested names, autouse, outcome or None).
     `implicit`: xunit callback name -> (units it runs for, outcome or None).
+    An outcome is `setup_outcome`'s (effect, evidence, guard).
     `usefixtures`: names marks request for every unit in scope. `direct`:
     argnames a class or module `parametrize` supplies to every unit in scope.
     Only a name's final binding provides anything: pytest reads the finished
     namespace. `bases` is the class's base list, None when unknown.
+    `condition` gives a guard's source text.
     """
 
-    def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None):
+    def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None, condition=ast.unparse):
         self.bindings = bindings
         self.fixtures = {}
         self.implicit = {}
@@ -395,14 +539,15 @@ class SetupScope:
             if fixture is not None:
                 name, autouse = fixture
                 self.fixtures[name] = (_requests(statement, receiver=in_class), autouse,
-                                       callback_outcome(statement, bindings, receiver=in_class))
+                                       setup_outcome(statement, bindings, receiver=in_class, condition=condition))
             elif statement.name in callbacks:
                 decorators = statement.decorator_list
                 plain = (isinstance(statement, ast.FunctionDef) and not _generator(statement)
                          and (not decorators or len(decorators) == 1 and isinstance(decorators[0], ast.Name)
                               and decorators[0].id in {'classmethod', 'staticmethod'}
                               and decorators[0].id not in bindings))
-                outcome = (callback_outcome(statement, bindings, receiver=in_class and not decorators)
+                outcome = (setup_outcome(statement, bindings, receiver=in_class and not decorators,
+                                         condition=condition)
                            if plain else None)
                 self.implicit[statement.name] = (callbacks[statement.name], outcome)
         module_setup = last.get('setUpModule')
@@ -414,7 +559,7 @@ class SetupScope:
 
 
 def setup_outcomes(scopes, function, *, method):
-    """(provider, effect, evidence) for every outcome this unit's setup reaches.
+    """(provider, effect, evidence, guard) for every outcome this unit's setup reaches.
 
     `scopes` runs from the module to the innermost enclosing class. The unit
     reaches what its arguments name, what `usefixtures` names, the autouse
@@ -466,10 +611,11 @@ def fixture_setup_controls(tree):
     a suite-level runtime control, named per fixture: another such fixture in
     a conftest that already had one is still an event (THREATMODEL 81's
     lesson). Which tests request it is not resolved: they may live anywhere
-    under the directory, outside the diff.
+    under the directory, outside the diff. A guarded one is not read until
+    they are (196.followup.conftest-request-side).
     """
     fixtures = SetupScope(tree.body, module_bindings(tree)).fixtures
     for name in sorted(fixtures):
         outcome = fixtures[name][2]
-        if outcome is not None:
+        if outcome is not None and outcome[2] is None:
             yield f'conftest.runtime.fixture.{name}.{outcome[0]}', outcome[1]

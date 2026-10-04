@@ -6,8 +6,9 @@ import operator
 
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import (
-    GUARDED_SKIP_CALLS,
     bare_names,
+    is_guarded_skip,
+    is_setup_skip,
     marker_call,
     parse_expr,
     skip_condition,
@@ -240,7 +241,9 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
         if canonical == "pytest.mark.xfail" and _xfail_strict(call):
             return False
         condition = call.args[0]
-    elif canonical in _GATE_CALLS and m.guard:
+    elif (canonical in _GATE_CALLS or is_setup_skip(canonical)) and m.guard:
+        # A skip in the setup the unit runs is judged as one in its body is
+        # (#196 183.2): its guard is the condition its setup reaches it under.
         condition = parse_expr(m.guard)
     if condition is None:
         return False
@@ -268,7 +271,8 @@ def _compat_gate(unit: Unit | None, constants: dict[str, str] | None = None) -> 
     Three spellings earn the credit, all evaluated the same way: `skipif(cond)`,
     non-strict `xfail(cond)` (strict inverts the oracle instead of skipping
     it, which is not a gate), and an imperative `pytest.skip()`/`pytest.xfail()`
-    /`self.skipTest()` under recorded `if` guards.
+    /`self.skipTest()` under recorded `if` guards, in the test's body or in the
+    setup it runs (#196 183.2).
     """
     if unit is None or unit.after is None:
         return False
@@ -305,10 +309,11 @@ def removed_skip_guard(name: str, unit, constants_before: dict[str, str] | None)
     `guard_always_skips` has nothing to read. Every base instance of the call
     must have run under a condition that does not always fire, and some head
     instance must run under none (`skip_condition`). The first base condition
-    comes back for the message; None otherwise, and for any call outside
-    GUARDED_SKIP_CALLS.
+    comes back for the message; None otherwise, and for any marker whose
+    guard does not say when it fires. A skip in the setup the unit runs is
+    read the same way, by its own guard (183.2's second stage).
     """
-    if name not in GUARDED_SKIP_CALLS or unit.before is None or unit.after is None:
+    if not is_guarded_skip(name) or unit.before is None or unit.after is None:
         return None
     conditions = []
     for m in unit.before.markers:

@@ -4177,3 +4177,157 @@ Then conftest fixtures, after #223. Both share one guard definition with
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-087 (2026-10-04): a guarded skip in a unit's setup carries its guard, and is judged as a body skip is (#196 183.2, second stage)
+
+THREATMODEL 104 and 54. A same-file fixture or xunit setup callback whose
+skip runs only under a condition minted no marker at all. Its guard was its
+justification, so the shipped default read nothing. A test that newly
+requested `if not os.environ.get("DB"): pytest.skip()` passed with no
+finding, and so did a fixture whose version gate was edited to one that
+always holds, or whose `STRICT` constant flipped. v0.4.2, v0.5.0 and #253
+pass all three.
+
+Ruling 196.183.2 (c), after its first stage (D-086): record the guard on
+`setup.<provider>.<effect>` unit markers (same-file fixtures, xunit setup),
+judged exactly like a body skip; conftest fixtures wait for
+196.followup.conftest-request-side; one guard definition is shared with
+#208 (COMPAT_GATE per marker) and #209 (guarded conftest hooks).
+
+**As implemented:** `setup_skip_controls.setup_outcome` reads a unit's own
+setup callback. The outcome every call reaches (`callback_outcome`) gives the
+marker #172 recorded, unchanged, with no guard. Otherwise each outcome a
+call reaches whenever its path condition holds counts, and the marker's
+guard is the disjunction of those conditions. The marker keeps its name, so
+the identities #172 recorded do not move. The guard is judged by the same
+code as a body skip's: D6 (`_marker_is_compat_gate`), liveness
+(`unit_is_live`), a guard that now always holds (`guards_weakened`) and a
+guard removed (`removed_skip_guard`). A guard finding says "in the setup
+this test runs" and names the marker.
+
+Readings the ruling leaves to the implementation:
+
+1. **The guard definition.** The condition on the path to the outcome:
+   - each enclosing `if` test, and `not (...)` for an `else` branch;
+   - `not (...)` for the code after a branch that always ends (an outcome,
+     `return`, `raise` or `yield`), the `--runslow` shape #209 names;
+   - an `except` block's own condition, as a conftest's `collect_ignore`
+     records it (`_handler_guard`: `find_spec("numpy") is None` for an
+     import-only `try`, else `except <type>`, which earns nothing that needs
+     it parsed).
+
+   Several outcomes join with `or`, so two branches that between them cover
+   every run read as the unconditional skip they are, wherever the guard can
+   be evaluated. This is the definition #209's hook reading is to share: it
+   is written over statements, not over fixtures.
+2. **What the reading does not follow.** As `callback_outcome` does not,
+   it reads no loop, `with` or `match` body and no `try` body. A path that
+   may leave without always leaving (a `return` under a second `if`, a loop
+   that may return) ends the reading instead of widening a guard, so those
+   shapes still mint nothing.
+3. **Judged exactly like a body skip.** An interpreter or OS gate holds a
+   newly reached setup skip at warn (COMPAT_GATE). Any other guard (an
+   environment variable, an optional import, a feature flag) blocks, as the
+   same guard in the body does. A guard edited to one that always holds, a
+   flipped constant, a guard removed and a skip moved out of its `except`
+   block are reported with the guard family's `guard:<marker>` identity.
+4. **#208.** D6 judges each marker by its own guard, which is what #208's
+   per-marker hold will call, but the hold is still granted per unit. A
+   setup gate therefore lends it to another new disable on the same unit,
+   as any gate does today. It adds no capability: #208's U5 already passes
+   a `skipif(sys.platform == "win32")` added beside the `skip`. The
+   residual is pinned by a test and named in row 104.
+
+Conftest fixtures and a `pytest_runtest_setup` hook still read only the
+unconditional outcome.
+
+**Tests and fixtures.**
+- **Tests:** 62 in `tests/test_issue196_setup_guards.py`. All 26 mutants
+  of the new code are killed.
+- **The ruled move:** the guarded-environment case of
+  `test_guarded_teardown_or_environment_skips_mark_nothing` moves into
+  `test_a_guarded_setup_skip_marks_the_unit_with_its_guard`, because the
+  ruling records it. It is the one existing expectation this round changes,
+  under the TEST_DISABLED exemption that #255 adds, which the owner approved
+  on 2026-10-04.
+- **Fixtures:**
+  - pinning row 54: `setup_guard_removed_pos`, `setup_guard_always_true_pos`;
+  - pinning row 59: `setup_guard_constant_flip_pos`;
+  - pinning row 104: `setup_env_guard_requested_pos`;
+  - control: `setup_platform_gate_requested_neg` (warn, COMPAT_GATE).
+
+  The four blocking fixtures block here. v0.4.2 passes them all; v0.5.0 and
+  #253 block only `setup_guard_removed_pos`, as a skip added to the setup.
+  No existing fixture changes its expectation.
+
+**Fingerprints.** A guard removed from a unit's setup was reported by v0.5.0
+as a skip added to the setup (`setup.<provider>.<effect>`), because the
+guarded side minted no marker. It now has the guard family's
+`guard:setup.<provider>.<effect>` identity, as a removed body guard does: a
+recorded allowlist entry for that shape needs re-recording, and the next
+release guide names it (X.release-and-fingerprints). Every other finding of
+this round is new.
+
+**Cost.**
+- **New blocks:** a guarded setup skip that an existing test newly reaches,
+  or that is added to a setup it already runs, unless the guard is an
+  interpreter or OS gate. An optional-dependency gate blocks, as it does in
+  the body.
+- **Sweep, standard:** this round's engine gives the same verdicts and
+  findings as the candidate built from #253 on two sets:
+  - the last 300 non-merge commits of attrs, click, flask, httpx, rich and
+    starlette (1,800 commits);
+  - the 104 commits in their full histories that change a test file holding
+    both a setup callback and a skip token (attrs 25, flask 75, starlette 4;
+    15 flask commits fail on both engines).
+
+  None of these commits reaches a guarded setup skip.
+- **Sweep, targeted:** so the round was measured where it applies. The full
+  histories of six more repositories were filtered to the commits where a
+  changed test file carries a setup marker on either side under this round:
+  uvicorn 16, werkzeug 18, scrapy 55, pytest 32, aiohttp 21, requests 0.
+  Neither engine reads aiohttp (a git submodule), and 9 scrapy and 3 pytest
+  commits fail on both. Five verdicts move from pass to block.
+  - Three disable nothing:
+    - werkzeug `551885fd` (3 findings): the redis and memcached test
+      classes, defined only when their package imported, move into a class
+      fixture that skips, so the skip becomes visible;
+    - scrapy `526585393` and `f46a45008` (5 and 19 findings): an abstract
+      test base whose `setUp` skips on a class attribute that is `None`.
+      The guard reading does not resolve class attributes (#254).
+  - Two stop tests in one environment, for a reason the commit states. The
+    same guard in the body blocks too:
+    - scrapy `7327145bf` (3): the pinned tox environment stops installing
+      mitmproxy, and `setUp` skips without it;
+    - pytest `f573b56bb` (2): a fixture skips when chmod cannot make the
+      cache directory unwritable, as under root, in place of `skipif(win)`.
+- **Already-blocked commits:** five gain findings.
+  - uvicorn `25208ee`: 12 high, from a fixture that skips when an optional
+    reloader is missing.
+  - scrapy `6b2997af90`: 3 high. An import-guarded skip carried from
+    `setUp` to `setup_method` reads as added, because a setup marker names
+    its provider, as #172's markers do.
+  - scrapy `d825133284`: 2 warn, from a setup platform gate (COMPAT_GATE).
+    By #208's lending, the same gate holds a body `pytest.skip` at warn
+    instead of high.
+  - scrapy `7bbe775040` and `380c2279b9`: liveness. A unit added beside a
+    disappeared one no longer covers it when it carries a guarded setup
+    skip that is not a gate, so the disappearance goes from warn to high.
+    The same effect raises a disappearance in `526585393` (warn to high),
+    and two disappearances and a removed assertion in `f46a45008` (info to
+    high).
+- **Verdict gate:** every one of its 182 cases keeps its verdict and its
+  findings' rules, severities and files against the candidate built from
+  #253, so no case is relabelled. Ruling 196.followup.new-gate-cases names
+  no case for 183.2.
+- **Corpus:** the 599 existing fixtures keep their findings and IR; the five
+  new fixtures are this round's.
+
+**Maintainer decision (2026-10-04).** After this sweep, the maintainer kept
+the ruling as written: a guarded setup skip is judged as a body skip. The
+alternative was a narrower variant that would hold a newly reached non-gate
+setup skip at warn and leave liveness alone. #254 takes the class-attribute
+shape, for body and setup skips alike.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

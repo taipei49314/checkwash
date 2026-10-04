@@ -1,0 +1,40 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an existing test that starts requesting a fixture with a platform gate holds at warn
+origin: #196 183.2, second stage — the setup guard is a D6 interpreter/OS gate, as the same guard in the test body is; v0.5.0 passes it with no finding
+=== before: tests/test_quota.py ===
+import sys
+
+import pytest
+
+from app import remaining
+
+
+@pytest.fixture
+def posix_only():
+    if sys.platform == "win32":
+        pytest.skip("posix only")
+    yield
+
+
+def test_weighted_quota():
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import sys
+
+import pytest
+
+from app import remaining
+
+
+@pytest.fixture
+def posix_only():
+    if sys.platform == "win32":
+        pytest.skip("posix only")
+    yield
+
+
+def test_weighted_quota(posix_only):
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"], "unit": "test_weighted_quota"}]
