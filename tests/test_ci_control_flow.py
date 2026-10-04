@@ -7,7 +7,7 @@ which YAML the bounded reader models or declines, and the reasons it gives.
 
 import pytest
 
-from checkwash.ci_control_flow import _UNKNOWN, _never_true, _read_yaml, control_flow_weakenings
+from checkwash.ci_control_flow import _UNKNOWN, _never_true, _pr_events, _read_yaml, control_flow_weakenings
 
 PATH = ".github/workflows/ci.yml"
 WORKFLOW = (
@@ -328,3 +328,55 @@ def test_an_echo_entry_is_not_a_test_hook():
     assert _weakenings(PRECOMMIT, decoy, path) == ["pytest is no longer run by any pre-commit hook"]
     installer = PRECOMMIT.replace("entry: pytest", "entry: pip install pytest")
     assert _weakenings(PRECOMMIT, installer, path) == ["pytest is no longer run by any pre-commit hook"]
+
+
+# --- #196 191.9 and 191.2(d): events that never fire for a pull request ------------------
+
+@pytest.mark.parametrize("trigger, events", [
+    # Activity types: only opened, synchronize and reopened run on a PR's commits.
+    ({"pull_request": {"types": ["closed"]}}, []),
+    ({"pull_request": {"types": "closed"}}, []),
+    ({"pull_request": {"types": ["labeled", "ready_for_review"]}}, []),
+    ({"pull_request_target": {"types": ["closed"]}}, []),
+    ({"pull_request": {"types": ["opened"]}}, ["pull_request"]),
+    ({"pull_request": {"types": ["labeled", "synchronize"]}}, ["pull_request"]),
+    ({"pull_request": {"types": []}}, ["pull_request"]),
+    ({"pull_request": {"types": {"closed": None}}}, ["pull_request"]),
+    ({"pull_request": None}, ["pull_request"]),
+    # A path filter that leaves no file to fire on.
+    ({"pull_request": {"paths-ignore": ["**"]}}, []),
+    ({"pull_request": {"paths-ignore": "**"}}, []),
+    ({"pull_request": {"paths": ["!docs/**", "!*.md"]}}, []),
+    ({"pull_request_target": {"paths-ignore": ["docs/**", "**"]}}, []),
+    ({"push": {"paths-ignore": ["**"]}}, []),
+    ({"push": {"branches": ["**"], "paths": ["!**"]}}, []),
+    ({"pull_request": {"paths-ignore": ["docs/**"]}}, ["pull_request"]),
+    ({"pull_request": {"paths": ["src/**", "!src/docs/**"]}}, ["pull_request"]),
+    ({"pull_request": {"paths-ignore": ["**/*.md"]}}, ["pull_request"]),
+    ({"pull_request": {"paths": []}}, ["pull_request"]),
+    ({"push": None, "pull_request": {"types": ["closed"]}}, ["push"]),
+    ({"pull_request": {"types": ["closed"]}, "merge_group": None}, ["merge_group"]),
+])
+def test_an_event_that_never_fires_for_a_pull_request_is_dead(trigger, events):
+    assert _pr_events(trigger) == events
+
+
+@pytest.mark.parametrize("filters, cause", [
+    ("    types: [closed]\n", "pytest is disabled (no trigger runs it on a pull request)"),
+    ("    paths-ignore: ['**']\n", "pytest is disabled (no trigger runs it on a pull request)"),
+    ("    paths: ['!docs/**']\n", "pytest is disabled (no trigger runs it on a pull request)"),
+])
+def test_a_pull_request_trigger_that_never_fires_disables_the_suite(filters, cause):
+    after = WORKFLOW.replace("  pull_request:\n", "  pull_request:\n" + filters)
+    assert _weakenings(WORKFLOW, after) == [cause]
+
+
+@pytest.mark.parametrize("filters", [
+    "    types: [opened]\n",
+    "    types: [opened, synchronize, reopened, closed]\n",
+    "    paths-ignore: ['docs/**']\n",
+    "    paths: ['src/**', 'tests/**']\n",
+])
+def test_a_pull_request_trigger_that_still_fires_keeps_the_suite(filters):
+    after = WORKFLOW.replace("  pull_request:\n", "  pull_request:\n" + filters)
+    assert _weakenings(WORKFLOW, after) == []

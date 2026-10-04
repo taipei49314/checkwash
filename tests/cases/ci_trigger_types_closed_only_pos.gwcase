@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: a pull_request trigger narrowed to closed pull requests never tests a pull request's commits
+origin: issue #196 ruling 191.9 — explicit activity types with none of opened, synchronize and reopened
+origin2: run the workflow only after the pull request is closed. v0.5.0 passed this diff at warn.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [closed]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
