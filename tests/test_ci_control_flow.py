@@ -5,9 +5,23 @@ fixture cannot show directly: which `if:` spellings are statically false,
 which YAML the bounded reader models or declines, and the reasons it gives.
 """
 
+import datetime
+
 import pytest
 
-from checkwash.ci_control_flow import _UNKNOWN, _never_true, _pr_events, _read_yaml, control_flow_weakenings
+from checkwash.change import FileChange
+from checkwash.ci_control_flow import (
+    _UNKNOWN,
+    _never_true,
+    _pr_events,
+    _read_document,
+    _read_yaml,
+    became_unanalysable,
+    control_flow_weakenings,
+)
+from checkwash.config import Config
+from checkwash.contract import Contract
+from checkwash.engine import analyze
 
 PATH = ".github/workflows/ci.yml"
 WORKFLOW = (
@@ -413,3 +427,144 @@ def test_a_hook_that_keeps_its_id_but_runs_no_runner_is_a_removal():
     assert _weakenings(tox_first, "repos: []\n", path) == [
         "no pre-commit hook entry invokes a recognised test runner any more (was: pytest)"
     ]
+
+
+# --- #196 191.3: a head the reader declines -----------------------------------------------
+
+_DEEP = "".join(" " * level + f"k{level}:\n" for level in range(60)) + " " * 60 + "v\n"
+
+
+@pytest.mark.parametrize("data, cause", [
+    (b"jobs:\n  test:\n    if: !!bool false\n", "a YAML tag"),
+    (b"!tag key: value\n", "a YAML tag"),
+    (b"a: !b: |\n  text\n", "a YAML tag"),
+    (b"jobs:\n\ttest:\n", "tab indentation"),
+    (b"%YAML 1.2\n---\njobs: {}\n", "a YAML directive"),
+    (b"a: 1\n---\nb: 2\n", "a second YAML document"),
+    (b"a: 1\n...\nb: 2\n", "a second YAML document"),
+    (b"a: [1,\n", "an unclosed flow collection"),
+    (b"a: [1, ]]\n", "an unbalanced flow collection"),
+    (b"a: [1] x\n", "a flow collection the reader does not take"),
+    (b"[pytest]\naddopts = -q\n", "a mapping key the reader does not take"),
+    (b"a: & v\n", "an empty anchor"),
+    (b"  a: 1\nb: 2\n", "indentation the reader cannot place"),
+    (_DEEP.encode("utf-8"), "nesting deeper than 48 levels"),
+    (b"a: 1\n- b\n", "a sequence item among mapping keys"),
+    (b"a: &x 1\nb:\n  <<: *x\n", "a merge key whose value is not a mapping"),
+    (b"a: b: |\n  text\n", "text before a block scalar indicator"),
+    (b"jobs:\n  test:\n    if: *missing\n", "an alias to an undefined anchor"),
+    (b"a: 'x\n", "an unclosed quoted scalar"),
+    (b"a: @x\n", "a reserved indicator"),
+    (b"a: |x\n", "a block scalar indicator the reader does not take"),
+])
+def test_reader_names_what_it_declines(data, cause):
+    assert _read_document(data) == (None, cause)
+    assert _read_yaml(data) is None
+
+
+def test_reader_names_its_byte_limit():
+    # Built here rather than in the list above: pytest names a parametrized
+    # test after its arguments and writes the name to PYTEST_CURRENT_TEST, and
+    # a 1 MB name is past the 32,767 characters a Windows environment variable
+    # holds. The Windows legs hung with it in the list.
+    data = b"a: " + b"x" * 1_000_000 + b"\n"
+    assert _read_document(data) == (None, "over 1000000 bytes")
+    assert _read_yaml(data) is None
+
+
+def test_reader_names_the_merge_budget():
+    chain = "a0: &a0\n  k0: v\n" + "".join(
+        f"a{index}: &a{index}\n  <<: *a{index - 1}\n  k{index}: v\n" for index in range(1, 500)
+    )
+    assert _read_document(chain.encode("utf-8")) == (None, "merge keys that copy over 100000 entries")
+
+
+@pytest.mark.parametrize("data", [None, b"", b"# a comment\n\n"])
+def test_nothing_to_read_is_not_declined(data):
+    assert _read_document(data) == (None, None)
+
+
+def test_a_document_end_marker_ends_the_document():
+    # `...` closes the document, so only blank lines and comments may follow;
+    # attrs ends its workflows that way.
+    tree = _read_yaml(("---\n" + WORKFLOW + "...\n# trailing comment\n\n").encode("utf-8"))
+    assert tree == _read_yaml(WORKFLOW.encode("utf-8"))
+    marked = "---\n" + WORKFLOW + "...\n"
+    assert _weakenings(marked, marked.replace("- run: pytest\n", "- run: pytest\n        if: false\n")) == [
+        "pytest is disabled (if: false)"
+    ]
+    assert _weakenings(WORKFLOW, marked) == []
+
+
+def test_a_head_the_reader_declines_is_out_of_reach():
+    tagged = WORKFLOW.replace("- run: pytest\n", "- run: pytest\n        if: !!bool false\n")
+    assert _weakenings(WORKFLOW, tagged) == [
+        "runner sites can no longer be read at head (a YAML tag); base ran: pytest"
+    ]
+    # With several live runners, the first in sort order.
+    two = WORKFLOW.replace("      - run: pytest\n", "      - run: tox -e py\n      - run: pytest\n")
+    assert _weakenings(two, two + "---\n") == [
+        "runner sites can no longer be read at head (a second YAML document); base ran: pytest"
+    ]
+    # The hook inventory too.
+    path = ".pre-commit-config.yaml"
+    assert _weakenings(PRECOMMIT, PRECOMMIT.replace("entry: pytest", "entry: !!str pytest"), path) == [
+        "runner sites can no longer be read at head (a YAML tag); base ran: pytest"
+    ]
+
+
+def test_a_declined_head_needs_a_base_that_ran_a_suite():
+    tagged = "on: !!str pull_request\n"
+    # No live runner site at base: a dead one, or none at all.
+    dead = WORKFLOW + "        if: false\n"
+    assert _weakenings(dead, dead + tagged) == []
+    no_runner = WORKFLOW.replace("- run: pytest\n", "- run: make docs\n")
+    assert _weakenings(no_runner, no_runner + tagged) == []
+    # A base side the reader declines too, and a head side holding no YAML.
+    assert _weakenings(WORKFLOW + tagged, WORKFLOW + tagged + "# edited\n") == []
+    assert _weakenings(WORKFLOW, "# the workflow is retired\n") == []
+
+
+def test_became_unanalysable_reads_only_its_own_reason():
+    assert became_unanalysable("runner sites can no longer be read at head (a YAML tag); base ran: pytest")
+    assert not became_unanalysable("pytest is disabled (if: false)")
+    assert not became_unanalysable("no pre-commit hook entry invokes a recognised test runner any more (was: pytest)")
+    assert not became_unanalysable("pytest || true")
+
+
+def _ci_findings(before, after, path=PATH):
+    changes = [FileChange(path, "modified", before.encode("utf-8"), after.encode("utf-8"))]
+    findings = analyze(changes, Config(), Contract(), [], datetime.date(2026, 10, 4))[1]
+    return [f for f in findings if f.rule == "CI_WORKFLOW_TOUCHED"]
+
+
+def test_an_unreadable_head_is_not_called_a_weakened_command():
+    tagged = WORKFLOW.replace("- run: pytest\n", "- run: pytest\n        if: !!bool false\n")
+    (finding,) = _ci_findings(WORKFLOW, tagged)
+    assert finding.severity == "high"
+    assert finding.message == (
+        "CI configuration changed; runner sites can no longer be read at head (a YAML tag); base ran: pytest"
+    )
+    assert finding.after.text == "runner sites can no longer be read at head (a YAML tag); base ran: pytest"
+    # A weakened command beside it is still named as one.
+    swallowed = tagged.replace("- run: pytest\n", "- run: pytest || true\n")
+    (finding,) = _ci_findings(WORKFLOW, swallowed)
+    assert finding.message == "CI configuration changed; test command weakened: - run: pytest || true"
+    # Even when the unreadable reason sorts first.
+    tox = WORKFLOW + "      - run: |\n          tox -e py\n"
+    late = tox.replace("tox -e py\n", "tox -e py || true\n") + "        if: !!bool false\n"
+    (finding,) = _ci_findings(tox, late)
+    assert finding.message == "CI configuration changed; test command weakened: tox -e py || true"
+
+
+def test_an_unreadable_head_carries_its_own_escalator():
+    # A fixture's escalator list matches as a subset, so it cannot say that
+    # CI_TEST_COMMAND_WEAKENED is absent: pin both lists here.
+    tagged = WORKFLOW.replace("- run: pytest\n", "- run: pytest\n        if: !!bool false\n")
+    (finding,) = _ci_findings(WORKFLOW, tagged)
+    assert finding.escalators == ["CI_BECAME_UNANALYSABLE"]
+    swallowed = tagged.replace("- run: pytest\n", "- run: pytest || true\n")
+    (finding,) = _ci_findings(WORKFLOW, swallowed)
+    assert finding.escalators == ["CI_TEST_COMMAND_WEAKENED", "CI_BECAME_UNANALYSABLE"]
+    (finding,) = _ci_findings(WORKFLOW, WORKFLOW + "        if: false\n")
+    assert finding.escalators == ["CI_TEST_COMMAND_WEAKENED"]

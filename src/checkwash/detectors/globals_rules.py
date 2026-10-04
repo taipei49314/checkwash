@@ -8,6 +8,7 @@ SCOPE_DRIFT, HIDDEN_UNICODE.
 from __future__ import annotations
 
 from checkwash.change import EngineError
+from checkwash.ci_control_flow import became_unanalysable
 from checkwash.findings import (
     Evidence,
     Finding,
@@ -113,31 +114,31 @@ def detect_suppression(ir: IR) -> list[Finding]:
 
 def detect_ci_touched(ir: IR) -> list[Finding]:
     files = {file.path: file for file in ir.files}
-    weakened = {path for path, _line in ir.globals.ci_weakening_lines}
-    lines_by_path: dict[str, str] = {}
+    reasons_by_path: dict[str, list[str]] = {}
     for path, line in ir.globals.ci_weakening_lines:
-        lines_by_path.setdefault(path, line)
+        reasons_by_path.setdefault(path, []).append(line)
     findings = []
     for path in ir.globals.ci_files_changed:
         if path not in files:
             raise EngineError(f"CI_WORKFLOW_TOUCHED/{path}: missing file evidence")
-        weak = path in weakened
+        reasons = reasons_by_path.get(path, [])
+        # A file the reader can no longer read at head has no weakened command
+        # to name, so its reason is not labelled one (#196 191.3).
+        weakened = [line for line in reasons if not became_unanalysable(line)]
+        shown = weakened[0] if weakened else reasons[0] if reasons else None
         findings.append(
             Finding(
                 rule="CI_WORKFLOW_TOUCHED",
                 severity="warn",
                 message=(
-                    f"CI configuration changed"
-                    + (f"; test command weakened: {lines_by_path[path]}" if weak else "")
+                    "CI configuration changed"
+                    + (f"; test command weakened: {shown}" if weakened else f"; {shown}" if reasons else "")
                 ),
                 path=path,
                 unit=None,
-                after=Evidence(text=lines_by_path[path], span=(0, 0)) if weak else None,
+                after=Evidence(text=shown, span=(0, 0)) if shown is not None else None,
                 fingerprint=make_change_fingerprint(
-                    "CI_WORKFLOW_TOUCHED", files[path],
-                    {"weakening_lines": sorted(
-                        line for p, line in ir.globals.ci_weakening_lines if p == path
-                    )},
+                    "CI_WORKFLOW_TOUCHED", files[path], {"weakening_lines": sorted(reasons)},
                 ),
             )
         )

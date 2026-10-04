@@ -1,0 +1,47 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: a document end marker added beside a new gate job leaves every runner readable
+origin: issue #196 ruling 191.3 — the shape of attrs 36d6f83 (2022-09-26), the one change in the
+origin2: six-repository sweep whose head the reader declined while its base ran a suite: the head
+origin3: only gains `...`, which ends the document. A CI change at warn, as on v0.5.0.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install tox
+      - run: python -m tox
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install tox
+      - run: python -m tox
+
+  check:  # This job does nothing and is only used for the branch protection
+    if: always()
+    needs:
+      - tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
+
+...
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

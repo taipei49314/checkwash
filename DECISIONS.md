@@ -3720,3 +3720,99 @@ these findings stops matching.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-082 (2026-10-04): a CI file the reader can no longer read at head is out of reach (#196 191.3)
+
+#181's control-flow reader takes a subset of YAML, and a file outside it was
+left at warn on either side. A diff could take a workflow or
+`.pre-commit-config.yaml` that ran a suite out of the reader's reach, and
+then do anything to that suite: `if: !!bool false` on the test step, a YAML
+tag on the hook's `stages`. Row 112 listed "YAML the bounded reader
+declines" as a residual.
+
+Ruling 196.191.3, option (b), as implemented:
+
+- **The escalator.** A workflow or pre-commit config whose base side the
+  reader read with at least one live runner site, and whose head side it
+  declines, is high under its own escalator, `CI_BECAME_UNANALYSABLE` (SPEC
+  §5 E8). It is not labelled a weakened command, which would be a false
+  reason (option (d), declined).
+- **The reason** rides on `ci_weakening_lines`, so the IR keeps its shape:
+  "runner sites can no longer be read at head (a YAML tag); base ran:
+  pytest". It names what the reader declined and the first live runner of
+  the base side in sort order. `CI_WORKFLOW_TOUCHED`'s message labels only
+  a reason that names a weakened command as "test command weakened".
+- **Both escalators** apply when the same file also weakens a test command
+  (`pytest || true` added beside the tag): E6 names that command, and E8
+  says the rest is out of reach.
+
+Readings the ruling leaves to the implementation:
+
+1. **What "declines" means.** The reader declines YAML outside its subset,
+   and a file over its 1000000-byte cap. Each decline now names what was
+   declined: a YAML tag, tab indentation, a YAML directive, a second YAML
+   document, a flow collection, a mapping key, an anchor or alias, a merge
+   key, nesting depth, a quoted scalar, a block scalar or reserved
+   indicator, or the size cap. A head side with nothing to read (empty, or
+   only comments) is not declined, and neither is one the reader takes into
+   a shape that is not a workflow (no `jobs` mapping) or a pre-commit config
+   (no `repos` list): both stay unjudged, as before.
+2. **A document end marker ends the document.** The reader read `...` after
+   the document as a second document, and declined every workflow written
+   `---` ... `...`, as attrs writes its workflows. In the six-repository
+   sweep this was the only change whose base side ran a suite and whose head
+   side the reader declined: attrs 36d6f83 (2022-09-26) adds `...` with a
+   gate job. Without the fix, the escalator's one hit there is a false
+   positive. It was a false negative too: `if: false` on the test step of
+   such a workflow passed at warn, and now blocks. Only blank lines and
+   comments may follow the marker; anything else is a second document.
+3. **The reason is recognised by its words.** Gating and the message read
+   a reason that begins "runner sites can no longer be read at head (" as
+   this one. A line a diff adds that begins with those words, and that also
+   swallows or narrows a runner, would carry `CI_BECAME_UNANALYSABLE`
+   instead of `CI_TEST_COMMAND_WEAKENED`. The severity is the same.
+4. **GitHub's YAML, not re-read.** Whether GitHub accepts YAML tags in a
+   workflow was not verified, as the ruling notes; docs.github.com is not
+   reachable from the environment that wrote this round. The escalation
+   does not depend on it: a head side the reader declines is out of reach
+   either way.
+
+**Tests and fixtures.**
+- New tests: 32 in `tests/test_ci_control_flow.py` (each named decline, the
+  end marker, the reason and its precondition, the predicate, the message,
+  and the escalators).
+- New fixtures:
+  - `ci_head_yaml_tag_pos` and `precommit_head_yaml_tag_pos` (`bypass:
+    112`, v0.5.0 passes at warn): `CI_BECAME_UNANALYSABLE`;
+  - `ci_step_if_false_document_end_marker_pos` (`bypass: 112`, a v0.5.0
+    pass at warn): `CI_TEST_COMMAND_WEAKENED`;
+  - controls at warn: `ci_document_end_marker_added_neg` (attrs 36d6f83's
+    shape) and `ci_head_unreadable_without_live_runner_neg` (no live runner
+    at base).
+- No existing fixture changes its expectation.
+
+**Fingerprints.** The new reason is part of `CI_WORKFLOW_TOUCHED`'s
+fingerprint, so a finding that carries it has a new one. No existing
+finding's fingerprint changes.
+
+**Cost.**
+- **New blocks:** a workflow or pre-commit config whose base side ran a
+  live runner site and whose head side the reader declines, and a
+  control-flow weakening in a workflow that ends with `...`.
+- **Sweep:** the 821 commits that touch a workflow or
+  `.pre-commit-config.yaml` in the full history of attrs, click, flask,
+  httpx, rich and starlette (1,130 file changes) give no control-flow
+  reason. Every file version the reader declined there (17, all ending with
+  `...`) is read now, and none of them gives a reason.
+- **Verdict gate:** every one of its 180 cases keeps its verdict and its
+  findings' rules, severities and files against the candidate built from
+  #248, so no case is relabelled.
+- **Corpus:** the 589 existing fixtures keep their findings and IR; the five
+  new fixtures are this round's.
+
+SPEC §4's runner-site paragraph (the spec.4-ci-runner-sites round) names
+this escalation too; this round adds one sentence to `CI_WORKFLOW_TOUCHED`
+and the E8 row.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

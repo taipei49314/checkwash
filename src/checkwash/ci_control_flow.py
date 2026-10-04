@@ -52,11 +52,18 @@ workflows: a step that leaves one may have moved to a reusable workflow, a
 composite action or a script, and one file's head side cannot tell that from
 deletion.
 
+A file the reader takes at base, with a live runner site, and declines at
+head (tags, complex keys, directives, tab indentation, a second document) is
+out of reach (#196 191.3). Its reason names what the reader declined and the
+runner the base side ran, and says nothing of a weakened command: gating
+gives it its own escalator. A document end marker (`...`) ends the document
+and is not a second one.
+
 Not evaluated: path filters that leave any path, `pull_request` branch
 filters, activity `types` that keep one of the three (`[opened]` runs on a
-pull request's first commit only), matrix legs, GitLab `rules:`. YAML
-outside the reader's subset (tags, complex keys, directives, tab
-indentation) leaves the file at the existing warn.
+pull request's first commit only), matrix legs, GitLab `rules:`. YAML the
+reader declines at base, or at head when the base side ran no live runner
+site, leaves the file at the existing warn.
 """
 from __future__ import annotations
 
@@ -90,7 +97,11 @@ _MAX_EVENTS = 64
 
 
 class _Unsupported(Exception):
-    """YAML outside the modelled subset; `_read_yaml` turns it into None."""
+    """YAML outside the modelled subset; `_read_yaml` turns it into None.
+
+    Its argument names what the reader declined, for the unreadable-at-head
+    reason (#196 191.3): a short phrase, such as "a YAML tag".
+    """
 
 
 class _ExprError(Exception):
@@ -183,12 +194,20 @@ def _logical_lines(text: str) -> list[tuple[int, str, str | None]]:
         content = body.lstrip(" ")
         if not content:
             continue
-        if content[0] in "\t%":
-            raise _Unsupported  # tab indentation, or a directive
+        if content[0] == "\t":
+            raise _Unsupported("tab indentation")
+        if content[0] == "%":
+            raise _Unsupported("a YAML directive")
         indent = len(body) - len(content)
+        if content == "..." and out:
+            # The document end marker: the document is over, and only blank
+            # lines and comments may follow it.
+            if any(_strip_comment(line).strip() for line in raw[index:]):
+                raise _Unsupported("a second YAML document")
+            break
         if content in ("---", "..."):
             if out:
-                raise _Unsupported  # a second document
+                raise _Unsupported("a second YAML document")
             continue
         block = None
         indicator = _BLOCK_INDICATOR.search(content)
@@ -214,7 +233,7 @@ def _logical_lines(text: str) -> list[tuple[int, str, str | None]]:
             parts = [content]
             while depth > 0:
                 if index >= len(raw) or len(parts) > _MAX_FLOW_LINES:
-                    raise _Unsupported
+                    raise _Unsupported("an unclosed flow collection")
                 part = _strip_comment(raw[index]).strip()
                 index += 1
                 if part:
@@ -236,7 +255,7 @@ def _unescape(text: str) -> str:
 def _split_key(text: str) -> tuple[str, str]:
     match = _KEY.match(text)
     if match is None:
-        raise _Unsupported
+        raise _Unsupported("a YAML tag" if text.startswith("!") else "a mapping key the reader does not take")
     if match.group("double") is not None:
         key = _unescape(match.group("double"))
     elif match.group("single") is not None:
@@ -252,7 +271,7 @@ def _split_anchor(text: str) -> tuple[str | None, str]:
         return None, text
     name, _, rest = text.partition(" ")
     if len(name) < 2:
-        raise _Unsupported
+        raise _Unsupported("an empty anchor")
     return name[1:], rest.strip()
 
 
@@ -270,7 +289,7 @@ def _flow_items(inner: str) -> list[str]:
             items.append(inner[start:index])
             start = index + 1
     if depth:
-        raise _Unsupported
+        raise _Unsupported("an unbalanced flow collection")
     items.append(inner[start:])
     return [item.strip() for item in items if item.strip()]
 
@@ -291,12 +310,12 @@ class _Reader:
     def document(self):
         node, end = self.node(0, 0)
         if end != len(self.lines):
-            raise _Unsupported
+            raise _Unsupported("indentation the reader cannot place")
         return node
 
     def node(self, index: int, depth: int):
         if depth > _MAX_DEPTH:
-            raise _Unsupported
+            raise _Unsupported(f"nesting deeper than {_MAX_DEPTH} levels")
         indent, text, _block = self.lines[index]
         if _is_dash(text):
             return self.sequence(index, indent, depth)
@@ -324,7 +343,7 @@ class _Reader:
         while index < len(self.lines) and self.lines[index][0] == indent:
             _, text, block = self.lines[index]
             if _is_dash(text):
-                raise _Unsupported
+                raise _Unsupported("a sequence item among mapping keys")
             key, rest = _split_key(text)
             anchor, rest = _split_anchor(rest)
             value, index = self.value(rest, block, index + 1, indent, depth, indentless=True)
@@ -334,10 +353,10 @@ class _Reader:
                 # A merge key: explicit keys win, wherever they are written.
                 for source in value if isinstance(value, list) else [value]:
                     if not isinstance(source, dict):
-                        raise _Unsupported
+                        raise _Unsupported("a merge key whose value is not a mapping")
                     self.merged += len(source)
                     if self.merged > _MAX_MERGED:
-                        raise _Unsupported
+                        raise _Unsupported(f"merge keys that copy over {_MAX_MERGED} entries")
                     for name, item in source.items():
                         out.setdefault(name, item)
             else:
@@ -349,7 +368,7 @@ class _Reader:
         lines = self.lines
         if block is not None:
             if rest:
-                raise _Unsupported
+                raise _Unsupported("a YAML tag" if rest.startswith("!") else "text before a block scalar indicator")
             return block, index
         deeper = index < len(lines) and lines[index][0] > indent
         if not rest and deeper and (_is_dash(lines[index][1]) or _KEY.match(lines[index][1])):
@@ -367,11 +386,11 @@ class _Reader:
 
     def scalar(self, text: str, depth: int):
         if depth > _MAX_DEPTH:
-            raise _Unsupported
+            raise _Unsupported(f"nesting deeper than {_MAX_DEPTH} levels")
         text = text.strip()
         if text.startswith("*"):
             if text[1:] not in self.anchors:
-                raise _Unsupported
+                raise _Unsupported("an alias to an undefined anchor")
             return self.anchors[text[1:]]
         anchor, text = _split_anchor(text)
         result: object
@@ -387,11 +406,11 @@ class _Reader:
             result = mapping
         elif text[0] in "\"'":
             if len(text) < 2 or text[-1] != text[0]:
-                raise _Unsupported
+                raise _Unsupported("an unclosed quoted scalar")
             inner = text[1:-1]
             result = _Quoted(_unescape(inner) if text[0] == '"' else inner.replace("''", "'"))
         elif text[0] in "!%@`|>[{":
-            raise _Unsupported  # a tag, a reserved indicator, an unclosed collection
+            raise _Unsupported(_INDICATOR_CAUSES[text[0]])
         else:
             result = text
         if anchor is not None:
@@ -399,16 +418,40 @@ class _Reader:
         return result
 
 
-def _read_yaml(data: bytes | None):
-    """The parsed document, or None when absent or outside the subset."""
-    if not data or len(data) > _MAX_BYTES:
-        return None
+# What a scalar starting with each indicator the reader does not take holds.
+_INDICATOR_CAUSES = {
+    "!": "a YAML tag",
+    "%": "a reserved indicator",
+    "@": "a reserved indicator",
+    "`": "a reserved indicator",
+    "|": "a block scalar indicator the reader does not take",
+    ">": "a block scalar indicator the reader does not take",
+    "[": "a flow collection the reader does not take",
+    "{": "a flow collection the reader does not take",
+}
+
+
+def _read_document(data: bytes | None):
+    """(document, cause): the parsed document, or None and what the reader declined.
+
+    The cause is None when the reader took the file, and when there was
+    nothing to take: an absent or empty file, or one holding only comments.
+    """
+    if not data:
+        return None, None
+    if len(data) > _MAX_BYTES:
+        return None, f"over {_MAX_BYTES} bytes"
     text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
     try:
         lines = _logical_lines(text)
-        return _Reader(lines).document() if lines else None
-    except _Unsupported:
-        return None
+        return (_Reader(lines).document() if lines else None), None
+    except _Unsupported as declined:
+        return None, str(declined)
+
+
+def _read_yaml(data: bytes | None):
+    """The parsed document, or None when absent or outside the subset."""
+    return _read_document(data)[0]
 
 
 # ------------------------------------------------- GitHub Actions expressions
@@ -883,6 +926,17 @@ def _precommit_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
     return live, dead
 
 
+# The reason a file gives when the reader takes its base side and declines its
+# head side (#196 191.3). It names no weakened command, so gating reads it as
+# its own escalator, CI_BECAME_UNANALYSABLE.
+_UNREADABLE_AT_HEAD = "runner sites can no longer be read at head"
+
+
+def became_unanalysable(reason: str) -> bool:
+    """Is this `ci_weakening_lines` reason the unreadable-at-head one (#196 191.3)?"""
+    return reason.startswith(_UNREADABLE_AT_HEAD + " (")
+
+
 def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None) -> list[str]:
     """Why this CI file's runners stopped executing, as `ci_weakening_lines` reasons."""
     p = path.replace("\\", "/")
@@ -892,8 +946,18 @@ def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None
         read_sites, inventory = _precommit_sites, True
     else:
         return []
-    old, new = read_sites(_read_yaml(before)), read_sites(_read_yaml(after))
-    if old is None or new is None:
+    old = read_sites(_read_yaml(before))
+    if old is None:
+        return []
+    head, declined = _read_document(after)
+    if declined is not None:
+        # The base side ran a suite the reader could see, and the head side is
+        # out of its reach: whatever the head does to that suite, nothing here
+        # can say. The reason claims only that, and what the reader declined
+        # (#196 191.3).
+        return [f"{_UNREADABLE_AT_HEAD} ({declined}); base ran: {min(old[0])}"] if old[0] else []
+    new = read_sites(head)
+    if new is None:
         return []
     (old_live, old_dead), (new_live, new_dead) = old, new
     stopped = Counter(old_live) - Counter(new_live)
