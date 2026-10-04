@@ -1,4 +1,5 @@
 === meta ===
+bypass: 113
 rule: EXPECTED_VALUE_CHANGED
 title: assert abs(total() - 78.75) < 0.01 -> abs(total() - 75) rewrites the expected value inside the tolerance
 origin: issue 225 (#196 189.2) — v0.5.0 passed this diff with zero findings; the bound was read as the expected value
