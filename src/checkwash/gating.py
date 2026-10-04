@@ -13,6 +13,7 @@ import datetime
 import operator
 
 from checkwash.allowlist import AllowEntry, active_fingerprints
+from checkwash.ci_control_flow import became_unanalysable
 from checkwash.config import SEVERITY_ORDER, Config
 from checkwash.contract import Contract
 from checkwash.findings import SHAPE_MARKER_ADDED, Finding
@@ -519,8 +520,15 @@ def apply_gates(
             elif f.rule == "CI_WORKFLOW_TOUCHED" and any(
                 path == f.path for path, _ in ir.globals.ci_weakening_lines
             ):
+                # A file the reader took at base and declines at head has no
+                # weakened command to name: its runners are out of reach, which
+                # is its own escalator (#196 191.3).
+                reasons = [line for path, line in ir.globals.ci_weakening_lines if path == f.path]
                 f.severity = "high"
-                f.escalators.append("CI_TEST_COMMAND_WEAKENED")
+                if not all(became_unanalysable(line) for line in reasons):
+                    f.escalators.append("CI_TEST_COMMAND_WEAKENED")
+                if any(became_unanalysable(line) for line in reasons):
+                    f.escalators.append("CI_BECAME_UNANALYSABLE")
             # A test file that parsed before this diff and does not parse now
             # has been taken out of checkwash's reach. A file that never
             # parsed (new, or newer syntax than the analyser) stays at warn:
