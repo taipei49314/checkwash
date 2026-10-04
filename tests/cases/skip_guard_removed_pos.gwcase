@@ -1,0 +1,32 @@
+=== meta ===
+bypass: 54
+rule: TEST_DISABLED
+title: removing the if around an existing pytest.skip leaves it firing everywhere
+origin: #196 183.2 — THREATMODEL 54's other half. The call keeps its name, so no marker is added, and with no guard left nothing was evaluated; v0.5.0 passes it
+=== before: tests/test_quota.py ===
+import sys
+
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    if sys.version_info < (3, 9):
+        pytest.skip("needs 3.9")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import sys
+
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    pytest.skip("needs 3.9")
+
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_weighted_quota"}]

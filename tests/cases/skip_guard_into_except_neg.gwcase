@@ -1,16 +1,18 @@
 === meta ===
 rule: TEST_DISABLED
-title: rewriting one discriminating guard into another is not a kill
-origin: T1.8 — only discriminating -> always-true fires. One discriminating guard rewritten into another is THREATMODEL 54's residual.
+title: an if-guarded skip rewritten as a try/except ImportError gate keeps its condition
+origin: #196 183.2 — the skip still runs only when numpy is missing; the except block stands for its condition
 === before: tests/test_quota.py ===
 import pytest
 
 from app import remaining
 
+HAS_NUMPY = False
+
 
 def test_weighted_quota():
-    if sys.version_info < (3, 10):
-        pytest.skip("needs 3.10")
+    if not HAS_NUMPY:
+        pytest.skip("needs numpy")
 
     assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
 === after: tests/test_quota.py ===
@@ -20,8 +22,10 @@ from app import remaining
 
 
 def test_weighted_quota():
-    if sys.version_info < (3, 11):
-        pytest.skip("needs 3.11")
+    try:
+        import numpy
+    except ImportError:
+        pytest.skip("needs numpy")
 
     assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
 === expect ===

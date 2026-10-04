@@ -33,3 +33,28 @@ def parse_expr(text: str) -> ast.AST | None:
 def bare_names(node: ast.AST) -> set[str]:
     """Every ast.Name id in the expression (attribute roots included)."""
     return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
+
+
+# Imperative body skips whose recorded `if` guard is their condition, as D6
+# reads them (compat._GATE_CALLS without the conftest control).
+GUARDED_SKIP_CALLS = frozenset({"pytest.skip", "pytest.xfail", "self.skipTest"})
+
+
+def skip_condition(marker, side) -> str | None:
+    """What a body skip ran under on one side, as far as the IR records it.
+
+    Its recorded `if` guard first. A skip with none that sits inside an
+    `except` block runs only when that block catches, so the block's first
+    line stands for its condition: `try: import numpy` / `except
+    ImportError:` / `pytest.skip(...)` is an optional-dependency gate, not an
+    unconditional kill. None when neither holds, so nothing the IR records
+    keeps the skip from firing. Loop bodies and `match` cases record no
+    condition (#196 183.2).
+    """
+    if marker.guard:
+        return marker.guard
+    start, end = marker.span
+    inside = [h for h in side.handlers if h.span[0] <= start and end <= h.span[1]]
+    if not inside:
+        return None
+    return min(inside, key=lambda h: h.span[1] - h.span[0]).text

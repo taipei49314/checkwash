@@ -1,7 +1,7 @@
 === meta ===
 rule: TEST_DISABLED
-title: rewriting one discriminating guard into another is not a kill
-origin: T1.8 — only discriminating -> always-true fires. One discriminating guard rewritten into another is THREATMODEL 54's residual.
+title: removing an always-true guard disables nothing that ran
+origin: #196 183.2 — the base already skipped everywhere, so dropping `if True:` is a cleanup
 === before: tests/test_quota.py ===
 import pytest
 
@@ -9,8 +9,8 @@ from app import remaining
 
 
 def test_weighted_quota():
-    if sys.version_info < (3, 10):
-        pytest.skip("needs 3.10")
+    if True:
+        pytest.skip("parked")
 
     assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
 === after: tests/test_quota.py ===
@@ -20,8 +20,7 @@ from app import remaining
 
 
 def test_weighted_quota():
-    if sys.version_info < (3, 11):
-        pytest.skip("needs 3.11")
+    pytest.skip("parked")
 
     assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
 === expect ===

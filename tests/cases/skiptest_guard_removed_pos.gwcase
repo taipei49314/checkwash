@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 54
+rule: TEST_DISABLED
+title: removing the platform check around self.skipTest skips the test on every platform
+origin: #196 183.2 — the unittest spelling of skip_guard_removed_pos; v0.5.0 passes it
+=== before: tests/test_quota.py ===
+import sys
+import unittest
+
+from app import remaining
+
+
+class TestQuota(unittest.TestCase):
+    def test_weighted_quota(self):
+        if sys.platform == "win32":
+            self.skipTest("posix only")
+        self.assertEqual(remaining(10, [("get", 1), ("bulk", 4)]), 5)
+=== after: tests/test_quota.py ===
+import sys
+import unittest
+
+from app import remaining
+
+
+class TestQuota(unittest.TestCase):
+    def test_weighted_quota(self):
+        self.skipTest("posix only")
+        self.assertEqual(remaining(10, [("get", 1), ("bulk", 4)]), 5)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "TestQuota.test_weighted_quota"}]

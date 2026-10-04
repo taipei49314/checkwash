@@ -401,11 +401,15 @@ the older patch-API predicates above retain their own bounds.
 All twenty-two are live (thirteen as of M1, `CONFTEST_PATCHES_PROD` as of
 v0.1.7, `TEST_PATCHES_SUBJECT` as of v0.1.25), plus one derived rule,
 `EXEMPTION_ADDED` (§6). `TEST_DISABLED`
-additionally fires when an *unchanged* skip guard's condition, evaluated
-with each side's resolved constants, goes from "false somewhere" to "true
+additionally fires when a skip guard's condition, evaluated with each
+side's resolved constants, goes from "false somewhere" to "true
 everywhere" — the one-line `STRICT = True` → `False` flip that silences a
-guarded test without any marker event (probe arm, same day). Rule-specific
-notes:
+guarded test without any marker event (probe arm, same day), or an edit of
+the guard's own text to one that always holds (THREATMODEL 54). It also
+fires when a body skip (`pytest.skip`, `pytest.xfail`, `self.skipTest`)
+that ran only under an `if` guard or inside an `except` block runs under
+neither: the guard was removed, and nothing is left to evaluate (#196
+183.2). Rule-specific notes:
 
 - `TOLERANCE_LOOSENED` direction depends on the tolerance kind: `rel`/`abs`/
   `delta` loosen as they grow; unittest's `places` loosens as it *shrinks*.

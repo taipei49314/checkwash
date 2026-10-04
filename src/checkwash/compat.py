@@ -5,7 +5,13 @@ import ast
 import operator
 
 from checkwash.ir.astutil import dotted_name as _dotted_name
-from checkwash.ir.markers import bare_names, marker_call, parse_expr
+from checkwash.ir.markers import (
+    GUARDED_SKIP_CALLS,
+    bare_names,
+    marker_call,
+    parse_expr,
+    skip_condition,
+)
 from checkwash.ir.model import Unit
 
 _COMPAT_TOKENS = ("sys.version_info", "sys.platform", "platform.", "os.name")
@@ -288,6 +294,35 @@ def guard_always_skips(guard: str, constants: dict[str, str] | None) -> bool:
         (v := _eval_condition(condition, env, consts)) is not MAYBE and bool(v)
         for env in _ENV_MATRIX
     )
+
+
+def removed_skip_guard(name: str, unit, constants_before: dict[str, str] | None) -> str | None:
+    """The condition a body skip ran under at base, when the diff removed it.
+
+    THREATMODEL 54's other half (#196 183.2): `if sys.version_info < (3, 9):
+    pytest.skip()` becoming a bare `pytest.skip()` keeps the call's name, so
+    no marker is added, and the guard is gone rather than always true, so
+    `guard_always_skips` has nothing to read. Every base instance of the call
+    must have run under a condition that does not always fire, and some head
+    instance must run under none (`skip_condition`). The first base condition
+    comes back for the message; None otherwise, and for any call outside
+    GUARDED_SKIP_CALLS.
+    """
+    if name not in GUARDED_SKIP_CALLS or unit.before is None or unit.after is None:
+        return None
+    conditions = []
+    for m in unit.before.markers:
+        if m.name != name:
+            continue
+        condition = skip_condition(m, unit.before)
+        if condition is None or (m.guard and guard_always_skips(m.guard, constants_before)):
+            return None
+        conditions.append(condition)
+    if conditions and any(
+        m.name == name and skip_condition(m, unit.after) is None for m in unit.after.markers
+    ):
+        return conditions[0]
+    return None
 
 
 def unit_is_live(side, constants: dict[str, str] | None) -> bool:
