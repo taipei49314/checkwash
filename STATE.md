@@ -1,6 +1,52 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-01 (v0.5.0 published; the grant's remaining scope is the authorized downstream re-pins)
+Updated: 2026-10-04 (`main` carries 36 merged pull requests since v0.5.0, none released; see the first section)
+
+## 2026-10-04: unreleased on main since v0.5.0
+
+`main` is `8175a15`. v0.5.0 (`24b60a2`) is still the published engine, and
+the recommended Action still pins v0.4.2; D-065 moves it to v0.5.0 at the
+next release. No release is authorized: AGENTS rule 5 needs a one-time
+maintainer authorization recorded in `docs/RELEASING.md`.
+
+Since the v0.5.0 tag, 36 pull requests have been merged, all with merge
+commits:
+
+- **Post-release records and the release gate** (#194, #195, #200, #202,
+  #203, #204, #206): the previous-release verdict gate (#201), D-064 and
+  D-065.
+- **#205:** a suite control's escalator is a fact about the diff (#207,
+  D-066).
+- **The 2026-10-03 maintainer rulings on #196 to #199 and #201**, posted as
+  issue comments. Their doc-only items came first (#211), then one round each:
+  - #197, JS/TS test paths and their test obligations: #210, #227, #228
+    (D-067);
+  - #199, only collection controls withhold the inventory: #229 (D-068);
+  - #198, JS predicate identity and operand evidence: #230, #231 (D-069,
+    D-070);
+  - runner evidence, focus and test-support roles: #232, #234, #236, #237,
+    #238 (D-071 to D-074);
+  - JS stand-ins, binding writes and bounds: #239, #241, #242, #243 (D-075,
+    D-076);
+  - #196's follow-ups 189.2 to 183.2: #244 to #253, #255, #256 (D-077 to
+    D-087). #252 carries the doc-only rulings (D-085), and #244 closed #225.
+
+What a successor needs to know:
+
+- **CI on the merged heads** was red only where `main` is red: `qualify`
+  fails its legacy v0.3.3 byte comparison (#201), and
+  `test_pinned_tag_ships_the_current_source` fails on every test leg until
+  the next authorized release.
+- **Allowlist entries added since v0.5.0**, each approved by the owner:
+  #227's FAMILIES pin (expires 2026-10-17), #243's three entries for ruling
+  189.1 (2026-10-31) and #255's entry for 183.2's second stage (2026-11-03).
+- **For the next release guide** (X.release-and-fingerprints): D-070, D-071,
+  D-073, D-074, D-077, D-081, D-083 and D-087 record fingerprints that move.
+  D-084 names two verdicts that move from block to pass.
+- **Rulings that wait for their rounds:** the 2026-10-04 rulings on #208
+  with #209's first question (one round), #219, #220, #221, #222, #223, #226
+  and #254. #196 keeps the other follow-ups, among them 190.3, 188.6 and
+  183.2's conftest half after #223.
 
 ## 2026-10-01: v0.5.0 published
 
