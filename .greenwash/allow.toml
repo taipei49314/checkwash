@@ -222,3 +222,19 @@ reason = "Issue #196, ruling 183.2 (second stage, branch fix/183-2-setup-guards)
 author = "taipei49314"
 created = "2026-10-04"
 expires = "2026-11-03"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue196_guard_removal.py/test_an_honest_gate_beside_it_lends_it_nothing/36e5929204f6"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "Issues #208/#209, ruling 208.Q1 (branch fix/208-209-per-marker-gates): this test pinned the per-unit COMPAT_GATE hold as #208's residual; the ruling closes it, so a removed guard beside an honest gate now blocks, and the expected verdict changes from pass to block; owner-approved 2026-10-04"
+author = "taipei49314"
+created = "2026-10-04"
+expires = "2026-11-03"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue196_guard_removal.py/test_an_honest_gate_beside_it_lends_it_nothing/41b18438d3d7"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "Issues #208/#209, ruling 208.Q1 (branch fix/208-209-per-marker-gates): this test pinned the per-unit COMPAT_GATE hold as #208's residual; the ruling closes it, so the removed guard's finding is now high with no de-escalator instead of warn with COMPAT_GATE; owner-approved 2026-10-04"
+author = "taipei49314"
+created = "2026-10-04"
+expires = "2026-11-03"
