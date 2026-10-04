@@ -190,3 +190,27 @@ reason = "PR #227 (issue #197): FAMILIES i197 goes 36 -> 41 for the five verdict
 author = "taipei49314"
 created = "2026-10-03"
 expires = "2026-10-17"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_js_binding_writes.py/test_capture_time_and_distinct_bindings_preserve_the_original_oracle/4c83f3da9481"
+rule = "TEST_DISABLED"
+reason = "PR #242 (issue #196, ruling 189.1): the two cases with a write in an uncalled function move out of this list into test_writes_and_method_parameter_shadows_remove_the_old_oracle, because the ruling counts writes from any function; maintainer ruling 2026-10-03"
+author = "taipei49314"
+created = "2026-10-03"
+expires = "2026-10-31"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_js_predicate.py/test_documented_residuals/4bf3242021af"
+rule = "TEST_DISABLED"
+reason = "PR #242 (issue #196, ruling 189.1): the unreadable hand-rolled bound (< 0.01 -> < tolerance()) moves out of the documented residuals into test_residuals_the_evidence_closes, because the round reports a known bound replaced by an unknown one (SPEC §4); maintainer ruling 2026-10-03"
+author = "taipei49314"
+created = "2026-10-03"
+expires = "2026-10-31"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_js_handrolled_tolerance.py/test_a_bound_past_the_decimal_range_is_unknown_not_a_crash/7445d5bcc1f4"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #242 (issue #196, ruling 189.1): a bound past Decimal's range is unknown, and a known bound replaced by an unknown one now reports ASSERT_WEAKENED (SPEC §4), so this pin's expected verdict moves from pass to block; its no-crash half stands; maintainer ruling 2026-10-03"
+author = "taipei49314"
+created = "2026-10-04"
+expires = "2026-10-31"
