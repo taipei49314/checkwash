@@ -10,6 +10,9 @@ Assertion pairing inside a matched unit:
 1. exact normalized-text multiset matches
 2. (form, normalized left operand) key, in span order
 3. leftovers: span-order fallback
+
+A fallback pair whose two halves record different subjects and different
+expected literals does not compare its tolerances (#196 189.2).
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from collections import Counter
 from decimal import Decimal, InvalidOperation
 
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
+from checkwash.ir.astutil import same_expr
 from checkwash.ir.model import (
     AssertionPair,
     FileIR,
@@ -134,6 +138,30 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
                 before_id=b.id, after_id=a.id, strength_change=change, fallback=fallback
             )
         )
+        # A fallback pair is paired by position, not identity. When both
+        # halves moved, the subject and the expected literal alike, the old
+        # check is gone and another holds its slot: EXPECTED_VALUE_CHANGED
+        # reports this pair on the same conditions, usually beside
+        # ASSERT_SUBSTITUTED, and the slack of the new check is no widening
+        # of the old one's. `abs(a - 1) < 0.01` deleted beside an added
+        # `abs(b - 2) < 1` is such a pair, and `abs(x - c) < eps` read as
+        # `abs=eps` makes them commoner (#196 189.2). A subject that moved
+        # alone is still compared: `t = total()` hoisted above
+        # `assertAlmostEqual(t, 78.75, delta=1e12)` is the old check
+        # widened, and so is any rename. A side with no recorded subject (a
+        # bare `pytest.approx` comparison) or no literal is compared too.
+        if (
+            fallback
+            and change is not None
+            and change >= 0
+            and b.left is not None
+            and a.left is not None
+            and not same_expr(b.left, a.left)
+            and b.right_value is not None
+            and a.right_value is not None
+            and b.right_value != a.right_value
+        ):
+            continue
         if b.epsilon is not None and a.epsilon is not None and b.epsilon != a.epsilon:
             kind = a.epsilon_kind or b.epsilon_kind or "abs"
             try:

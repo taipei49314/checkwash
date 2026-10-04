@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 import bisect
 import hashlib
+import math
 import operator
 import re
 from dataclasses import dataclass, field
@@ -182,6 +183,10 @@ class _Offsets:
         self._len = len(text)
         self.text = text
         self._bytecols: dict[int, list[int]] = {}
+        # The parsed module, when the parser attaches it, for the rare
+        # question about the whole file (`_shadows_abs`); asked lazily.
+        self.tree: ast.AST | None = None
+        self.abs_shadowed: bool | None = None
 
     def _char_col(self, lineno: int, col: int) -> int:
         """Translate CPython's UTF-8 *byte* column into a character column.
@@ -468,6 +473,96 @@ def _classify_assert(node: ast.Assert, text: str) -> _Classified:
     return _classify_assert_expr(node.test, text)
 
 
+def _binds_abs(node: ast.AST) -> bool:
+    """Does this node bind the name `abs`: a def, class, import, parameter or target?"""
+    if isinstance(node, ast.Name):
+        return node.id == "abs" and not isinstance(node.ctx, ast.Load)
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        return node.name == "abs"
+    if isinstance(node, ast.alias):
+        return (node.asname or node.name.split(".")[0]) == "abs"
+    if isinstance(node, ast.arg):
+        return node.arg == "abs"
+    if isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)):
+        return node.name == "abs"
+    return False
+
+
+def _shadows_abs(text) -> bool:
+    """Does the module bind `abs` anywhere, so that `abs(...)` may not be the builtin?
+
+    Module-wide on purpose, like the JS frontend's unshadowed-`Math` check:
+    a file that defines, imports or assigns its own `abs` gets no
+    hand-rolled reading at all (#196 189.2). Without a parsed module (an
+    oracle helper's own offsets) the builtin is assumed.
+    """
+    if text.abs_shadowed is None:
+        text.abs_shadowed = text.tree is not None and any(_binds_abs(node) for node in ast.walk(text.tree))
+    return text.abs_shadowed
+
+
+def _finite_number(node: ast.AST | None) -> bool:
+    """A finite int or float literal, signed or not: `78.75`, `-1.5`, `75`."""
+    if node is None or not _is_literal(node):
+        return False
+    try:
+        value = ast.literal_eval(node)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return False
+    return type(value) in (int, float) and math.isfinite(value)
+
+
+def _hand_rolled(magnitude: ast.AST, bound: ast.AST, text, form: str, strength: int | None) -> _Classified | None:
+    """`abs(total() - 78.75) < 0.01`, read as the tolerance it states (#196 189.2).
+
+    It checks `total()` against 78.75 within 0.01, as `pytest.approx(78.75,
+    abs=0.01)` does, and the JS frontend reads `Math.abs` the same way: what
+    the builtin `abs` measures is `left`, a numeric literal centre on either
+    side of its one subtraction is the expected value, and the bound is an
+    `abs=` tolerance, recorded as written like an approx tolerance. With no
+    literal centre (`abs(total() - expected)`, `abs(d)`) or two, the whole
+    argument is `left` and there is no expected value. The caller passes the
+    magnitude's side of an upper bound only: `abs(d) > eps` asserts that two
+    values differ and stays a plain comparison.
+    """
+    if not (isinstance(magnitude, ast.Call) and isinstance(magnitude.func, ast.Name)
+            and magnitude.func.id == "abs" and len(magnitude.args) == 1 and not magnitude.keywords
+            and not isinstance(magnitude.args[0], ast.Starred)) or _shadows_abs(text):
+        return None
+    measured = magnitude.args[0]
+    subject, centre = measured, None
+    if isinstance(measured, ast.BinOp) and isinstance(measured.op, ast.Sub):
+        first, second = measured.left, measured.right
+        if _finite_number(first) != _finite_number(second):
+            centre, subject = (first, second) if _finite_number(first) else (second, first)
+    tolerance = text.seg(bound)
+    return _Classified(
+        form,
+        strength,
+        text.seg(subject),
+        _literal_repr(centre, text) if centre is not None else None,
+        _literal_value(centre) if centre is not None else None,
+        f"abs={tolerance}" if tolerance else None,
+        "abs" if tolerance else None,
+        True,
+        _referenced_names(subject),
+        _referenced_names(centre),
+        _is_trivial_subject(magnitude) and _is_trivial_subject(bound),
+    )
+
+
+def _hand_rolled_comparison(test: ast.AST, text, form: str, strength: int | None) -> _Classified | None:
+    """A single comparison bounding a builtin `abs(...)` above, either way round."""
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1:
+        return None
+    op, left, right = test.ops[0], test.left, test.comparators[0]
+    if isinstance(op, (ast.Lt, ast.LtE)):
+        return _hand_rolled(left, right, text, form, strength)
+    if isinstance(op, (ast.Gt, ast.GtE)):
+        return _hand_rolled(right, left, text, form, strength)
+    return None
+
+
 def _is_unfalsifiable(test: ast.AST, text) -> bool:
     """Assertions that are structurally incapable of failing.
 
@@ -531,6 +626,9 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             epsilon=eps,
             epsilon_kind=kind,
         )
+    hand = _hand_rolled_comparison(test, text, "compare_ord", S.BOUND)
+    if hand is not None:
+        return hand
     if isinstance(test, ast.Compare) and test.ops:
         left = test.left
         comparators = test.comparators
@@ -1119,6 +1217,17 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
                 form, level = _UNITTEST_MAP[method]
                 break
     positive = method not in _NEGATED_UNITTEST
+    # The hand-rolled tolerance in the unittest dialect: `assertLess(abs(d), eps)`,
+    # `assertGreater(eps, abs(d))` and `assertTrue(abs(d) < eps)` (#196 189.2).
+    hand = None
+    if method in ("assertLess", "assertLessEqual") and len(node.args) > 1:
+        hand = _hand_rolled(node.args[0], node.args[1], text, form, level)
+    elif method in ("assertGreater", "assertGreaterEqual") and len(node.args) > 1:
+        hand = _hand_rolled(node.args[1], node.args[0], text, form, level)
+    elif method == "assertTrue" and node.args:
+        hand = _hand_rolled_comparison(node.args[0], text, form, level)
+    if hand is not None:
+        return hand
     left_text = None
     right_lit = None
     right_val = None
@@ -2910,6 +3019,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # no repair evidence. Test files never fingerprint symbols, so they skip
     # the pass entirely — collection semantics never see a mutated tree.
     text = off = _Offsets(raw)
+    off.tree = tree
     doctests = module_examples(tree, off) if collect_tests and ">>>" in raw and "doctest" in raw else []
     _strip_docstrings(tree)
     if not collect_tests:

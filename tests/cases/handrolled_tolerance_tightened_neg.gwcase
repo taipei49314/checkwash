@@ -1,0 +1,23 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: tightening a hand-rolled Python tolerance (0.01 -> 0.001) strengthens the oracle and stays silent
+origin: #196 189.2 negative control — v0.5.0 blocked this as EXPECTED_VALUE_CHANGED 0.01 -> 0.001
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert abs(total() - 78.75) < 0.01
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert abs(total() - 78.75) < 0.001
+=== expect ===
+[]

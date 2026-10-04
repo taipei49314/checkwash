@@ -168,6 +168,10 @@ def _keyed(key, positive=True, literal=None, form=None, operand=None):
         assertion.right_literal, assertion.right_value = literal, literal
         if key not in P.BOUNDS:
             assertion.form = "compare_eq"
+        elif operand is None:
+            # The frontend records a literal bound's text with its value, and
+            # a literal is bound evidence only when it is the bound (189.2).
+            assertion.operand_source = literal
     return assertion
 
 

@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: Math.abs(total - 78.75) -> Math.abs(78.750 - total) states the same centre and stays silent
+origin: issue 225 negative control — the centre is compared by value on either side of the subtraction
+=== before: tests/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(Math.abs(invoiceTotal(items) - 78.75) < 0.01);
+});
+=== after: tests/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(Math.abs(78.750 - invoiceTotal(items)) < 0.01);
+});
+=== expect ===
+[]

@@ -3168,3 +3168,160 @@ before assertion, and no assertion text changes.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-077 (2026-10-04): a hand-rolled tolerance is a subject, a centre and a bound, in both frontends (#196 189.2)
+
+A hand-rolled tolerance, `Math.abs(total - 78.75) < 0.01` in JavaScript or
+`abs(total() - 78.75) < 0.01` in Python, checks `total` against 78.75 within
+0.01, as `pytest.approx(78.75, abs=0.01)` does. Neither frontend recorded it
+that way:
+
+- **JavaScript** read the bound as an `abs=` tolerance (#179) and left the
+  subject alone: the whole comparison in the truthy spelling, `Math.abs(...)`
+  in the matcher spelling. The centre was part of that text, so
+  `- 78.75` -> `- 75` changed the subject, the pair fell to the span-order
+  fallback and nothing compared the centre.
+- **Python** read it as a plain comparison: `abs(total() - 78.75)` was the
+  subject and the bound the expected value. A rewritten centre passed
+  silently, a widened bound was EXPECTED_VALUE_CHANGED and a tightened one
+  blocked as the same (#225).
+
+Ruling 196.189.2 (a), extended to both frontends, as implemented:
+
+- **One representation.** What the magnitude measures is `left`. A numeric
+  literal centre, on either side of the argument's one subtraction, is the
+  expected value. The bound is an `abs=` tolerance. With no literal centre
+  (`abs(total - expected)`, `abs(d)`) or two, the whole argument is `left`
+  and there is no expected value.
+- **Rules, unchanged, read it.** A rewritten centre is EXPECTED_VALUE_CHANGED,
+  a widened bound TOLERANCE_LOOSENED, and an edited check pairs with itself
+  on its subject instead of by position.
+- **Fallback pairs.** "A fallback pair whose subjects differ never compares
+  tolerances." The hunk is in `ir/diffalign.py`, which Python shares, so
+  the ruling asks for the maintainer's sign-off; it is a commit of its own
+  in the fix PR, and reading 4 narrows it.
+- **196.followup.abs-expected-centre** (#225) closes in the same round.
+
+Readings the ruling leaves to the implementation:
+
+1. **JavaScript reads both directions of the bound.** A lower bound
+   (`Math.abs(d) > eps`) records its subject and centre too, but no
+   tolerance, so the two halves of a `<` -> `>` flip share a subject and the
+   flip is still a bound direction reversed (189.3). The matcher spelling
+   of a lower bound (`expect(Math.abs(d)).toBeGreaterThan(eps)`) is read as
+   the truthy one is. Its bound is therefore no longer an expected value:
+   its value is not compared, in either spelling, which row 110 already
+   listed as a residual for the truthy one.
+2. **Python reads the upper bound only.** Python records no bound direction
+   (#224), so a lower bound stays a plain comparison with its bound as the
+   expected value. A `<` -> `>` flip, which passed silently, now blocks, as
+   the centre rewritten into the bound rather than as a reversed direction.
+3. **A centre is never a bound.** A literal is bound evidence for the
+   predicate relation (#198) only when it is the bound operand's own value,
+   so the centre a hand-rolled matcher records is never compared as its
+   bound. The synthetic relation helper in `tests/test_js_predicate.py`
+   now gives a literal bound its operand text, as the frontend does.
+4. **A fallback pair skips the comparison only when it is a
+   substitution.** Taken literally, the ruling let any renamed or hoisted
+   subject widen any tolerance: `t = total()` above
+   `assertAlmostEqual(t, 78.75, delta=1e12)` passed, and so did the same
+   edit to `places`, to `toBeCloseTo` and to both hand-rolled spellings.
+   A subject replaced while its expected literal stayed, or a check with
+   no literal on either side, passed too. Ten probed shapes that block on
+   main passed. So a fallback pair skips the comparison only when both of
+   its expected literals are recorded and differ as well as its subjects,
+   and its strength did not drop. Those are the conditions on which
+   EXPECTED_VALUE_CHANGED reports the pair, usually beside
+   ASSERT_SUBSTITUTED, the outcome the ruling's costs foresee ("Python
+   approx fallback pairs may become ASSERT_SUBSTITUTED"). Every other
+   fallback pair is compared as before: one side with no recorded
+   subject (a bare `pytest.approx` comparison) or no literal, a subject
+   that moved alone, a pair whose strength dropped. The narrowing is the
+   agent's, and the maintainer approves or overrules it with the
+   diffalign commit.
+5. **Python's `abs` is the builtin unless the file binds `abs`.** Any
+   binding of the name anywhere in the file (a definition, an import, an
+   assignment target, a parameter) turns the reading off for the whole
+   file, as an unshadowed `Math` is required in JavaScript. A star import is
+   not a binding of the name. `math.fabs` and `numpy.abs` are not read.
+6. **Python records the bound as written,** as `pytest.approx` records its
+   tolerances, so a name or an expression it cannot read as a Decimal is
+   unjudged. A bound rewritten into another tolerance kind (`approx`'s
+   default `rel`, `assertAlmostEqual`'s `delta` or `places`) is compared as
+   new slack until 190.3 compares the kinds as one absolute bound; before
+   this round the same rewrite blocked as EXPECTED_VALUE_CHANGED.
+
+**Pins.** Two move, each a direct consequence of the representation.
+- `tests/test_js_operand_evidence.py::test_a_hand_rolled_bound_states_its_direction`:
+  the matcher spelling's `right_value` was None, so that the bound was never
+  the expected value (198.Q2). The bound still is not; the expected value is
+  now the centre, and the test pins `left` and `right_value` for every row.
+- `tests/test_js_predicate.py`: `_keyed` gives a literal bound its operand
+  text (reading 3). No row of `test_relation` changes.
+
+**Tests and fixtures.**
+- New tests: `tests/test_abs_decomposition.py` (the readings) and
+  `tests/test_fallback_tolerance.py` (reading 4).
+- New fixtures, `bypass: 110`: `js_handrolled_tolerance_centre_pos`,
+  `js_handrolled_tolerance_matcher_centre_pos`; control
+  `js_handrolled_tolerance_centre_respelled_neg`.
+- New fixtures, `bypass: 113`: `handrolled_tolerance_centre_pos`,
+  `handrolled_tolerance_unittest_centre_pos`; with
+  `handrolled_tolerance_widened_pos` and control
+  `handrolled_tolerance_tightened_neg`.
+- New fixtures for reading 4, each a hoisted subject with its tolerance
+  widened, which block on main and pass under the literal reading:
+  `tolerance_hoisted_subject_widened_pos` and
+  `js_handrolled_tolerance_hoisted_subject_pos` (`bypass: 110`).
+- No existing fixture changes its expectation.
+
+**Fingerprints.** Two changes, both for the X.release-and-fingerprints
+batch:
+- A widened Python hand-rolled bound moves from EXPECTED_VALUE_CHANGED to
+  TOLERANCE_LOOSENED, so an allowlist entry for the old finding stops
+  matching.
+- Six rules key a JS assertion by its legacy matcher identity only while
+  the matcher's subject is the recorded `left`: ASSERT_REMOVED,
+  ASSERT_WEAKENED, ASSERT_SUBSTITUTED, SUBJECT_NORMALIZED,
+  SUBJECT_INPUT_CHANGED and TEST_DISABLED. A hand-rolled check spelled
+  through `expect(...)` now records what the magnitude measures, so these
+  rules key it by its complete text instead:
+  `expect(Math.abs(d - c) < eps).toBe(true)`,
+  `expect(Math.abs(d - c)).toBeLessThan(eps)`. In the corpus, three
+  ASSERT_WEAKENED fingerprints change:
+  `js_handrolled_tolerance_compound_write_pos`, `_hook_write_pos` and
+  `_unreadable_bound_pos`.
+
+TOLERANCE_LOOSENED (`kind:before_eps`), EXPECTED_VALUE_CHANGED and
+EXPECTED_VALUE_DERIVED (the before assertion's text) keep every other
+fingerprint.
+
+**Cost.**
+- **Sweep:** the last 300 non-merge commits of attrs, click, flask, httpx,
+  rich and starlette (1,800 commits) give 48 blocked commits on both
+  engines and no verdict or finding change. No commit in the sweep edits a
+  hand-rolled tolerance, so the sweep shows the absence of collateral change
+  on Python, not the new findings.
+- **New findings** (high without repair evidence):
+  - EXPECTED_VALUE_CHANGED on a rewritten centre, in both frontends;
+  - TOLERANCE_LOOSENED on a widened Python bound, which was
+    EXPECTED_VALUE_CHANGED;
+  - EXPECTED_VALUE_CHANGED on a Python `<` -> `>` flip (reading 2).
+- **Fewer findings:**
+  - a tightened Python bound, which was EXPECTED_VALUE_CHANGED;
+  - TOLERANCE_LOOSENED on a fallback pair whose subjects and expected
+    literals both moved, which EXPECTED_VALUE_CHANGED reports instead;
+  - EXPECTED_VALUE_CHANGED on the value of a JS matcher lower bound
+    (reading 1).
+- **Credits:** beside a dependency manifest change, such a substitution
+  earns the dependency-drift credit that both of its rules take and
+  TOLERANCE_LOOSENED does not, so it stops blocking: an `assertAlmostEqual`
+  replaced by one on another subject with a wider `delta`, beside a
+  `requirements.txt` bump, blocked on main and passes (THREATMODEL 84c
+  names the credit's residual).
+- **Kept:** two unrelated checks paired by position whose expected literal
+  is the same or absent still compare their tolerances, as on main.
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

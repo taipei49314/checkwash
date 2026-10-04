@@ -100,6 +100,20 @@ positive ordering matchers read the same shape from their two operands, as in
 `expect(Math.abs(d)).toBeLessThan(eps)` or
 `expect(eps).toBeGreaterThan(Math.abs(d))`.
 
+What the magnitude measures is the assertion's subject, and a Number literal
+centre is its expected value
+([#225](https://github.com/taipei49314/checkwash/issues/225), #196 189.2):
+`Math.abs(total - 78.75) < 0.01` checks `total` against 78.75 within 0.01, as
+`pytest.approx(78.75, abs=0.01)` does, so rewriting 78.75 is reported as
+`EXPECTED_VALUE_CHANGED`. The centre may stand on either side of the one
+subtraction, and is read like any expected value, through parentheses and
+TypeScript wrappers; either signed zero is the same centre. With no literal
+centre (`Math.abs(total - expected)`, `Math.abs(d)`), or two, the whole
+argument is the subject and there is no expected value. A subtraction inside
+anything larger (a second additive operator, `||`, `in`, `as`) is not split.
+Pairing keys on the subject, so an edited check pairs with itself, not with
+whatever check happens to stand in its place.
+
 The bound is recorded the way `pytest.approx(..., abs=eps)` records its
 tolerance, and `TOLERANCE_LOOSENED` compares it as an exact decimal. It may be
 a Number literal (read exactly from its digits, not as a binary float),
@@ -129,12 +143,16 @@ are compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
 `abs=` form (see the chai section below).
 
 A lower bound such as `Math.abs(d) > eps` asserts that two values differ, so
-it is no tolerance. Its truthy spellings still record the bound's direction,
-so a comparison flipped from `<` to `>` is reported as a bound direction
-reversed, `(< 0.01 -> > 0.01)`, and as an unverifiable replacement when either
-bound cannot be read (#196 189.3). The two spellings are compared on the
-`Math.abs(...)` side, not on the whole comparison, and `expect(cmp).toBe(true)`
--> `assert.ok(cmp)` states the same bound.
+it is no tolerance. Its spellings still record the bound's direction, so a
+comparison flipped from `<` to `>` is reported as a bound direction reversed,
+`(< 0.01 -> > 0.01)`, and as an unverifiable replacement when either bound
+cannot be read (#196 189.3). Both directions record what the magnitude
+measures, so the two halves of a flip share a subject, and
+`expect(cmp).toBe(true)` -> `assert.ok(cmp)` states the same bound. Since
+189.2 the matcher spelling of a lower bound,
+`expect(Math.abs(d)).toBeGreaterThan(eps)`, is read the same way, so its bound
+is no longer an expected value; a lower bound's value is not compared in
+either spelling.
 
 A bound read on the base side that the head side cannot read is not the same
 bound: rewritten into a call (`< 0.01` -> `< tolerance()`), past what an exact
@@ -149,14 +167,37 @@ magnitudes, `**`, a literal whose exponent is past what an exact decimal holds
 behind an angle-bracket cast (`<number>0.01`). A later write in straight-line
 code is taken to run after the read, so a function that runs twice (a helper
 called again, `test.each`) and reads a bound its own later statement rewrote
-is not followed. A rewritten expected value inside
-`Math.abs(...)` is not reported by this reading (#196 189.2). As with `toBeCloseTo`, bounds are compared on the pairs alignment
-forms: when one edit changes a hand-rolled check and inserts another tolerance
-check ahead of it in the same test, the position fallback can compare the
-bounds of two different checks. Replacing a hand-rolled tolerance with
-`toBeCloseTo` also changes the asserted subject; that change keeps its
-existing handling. The source tests are in
-[`tests/test_js_handrolled_tolerance.py`](../tests/test_js_handrolled_tolerance.py).
+is not followed. Two checks on one subject pair in order, so a check
+inserted ahead of an edited one is paired with it, which can hide a widening
+or report one. Two leftover checks that alignment pairs by position alone
+are not compared when both moved, the subject and the literal centre alike:
+a deleted check on one value and an added, looser check on another are a
+substitution, which `EXPECTED_VALUE_CHANGED` and `ASSERT_SUBSTITUTED` report,
+not one tolerance loosened (#196 189.2). A subject that moved alone, hoisted
+into a local (`const t = total()`) or renamed, is the same check, and its
+bounds are compared, as they are for every tolerance kind in both frontends.
+Replacing a hand-rolled tolerance with `toBeCloseTo` or a chai `closeTo` on
+the same subject compares the two bounds, in one unit. The source tests are in
+[`tests/test_js_handrolled_tolerance.py`](../tests/test_js_handrolled_tolerance.py),
+[`tests/test_abs_decomposition.py`](../tests/test_abs_decomposition.py) and
+[`tests/test_fallback_tolerance.py`](../tests/test_fallback_tolerance.py).
+
+Python reads the same shape with the builtin `abs`: `assert abs(total() -
+78.75) < 0.01`, its reversed and `<=` forms, `self.assertLess(abs(...), eps)`,
+`assertLessEqual`, `assertGreater(eps, abs(...))`, `assertGreaterEqual` and
+`assertTrue(abs(...) < eps)`. The subject and centre are read as in
+JavaScript, a numeric literal centre being the expected value, and the bound
+is recorded as written, as an `abs=` tolerance, the way `pytest.approx`
+records its own. A widened bound is `TOLERANCE_LOOSENED` and a tightened one
+is no finding; before 189.2 the bound was the comparison's expected value, so
+both were `EXPECTED_VALUE_CHANGED`. A file that binds `abs` itself (an import,
+a definition, an assignment or a parameter) gets no such reading, and neither
+does a lower bound, `abs(d) > eps`, which stays a plain comparison: Python
+records no bound direction, so a flip from `<` to `>` blocks as the centre
+rewritten into the bound rather than as a reversed direction (#224). A bound
+rewritten into another tolerance kind (`pytest.approx`'s default `rel`, or
+`assertAlmostEqual`'s `delta` or `places`) is compared as new slack until the
+kinds are compared as one absolute bound (#196 190.3).
 
 ### chai expect chains and the assert interface
 
@@ -358,8 +399,9 @@ What each JS assertion records:
 
 - **Expected values.** Every equality records its scalar operand, the
   coercive ones included (chai's `assert.equal`, Node's legacy `equal` and
-  `deepEqual`); `toBeCloseTo` and `closeTo` record their center. The literal
-  reader reads through parentheses and TypeScript wrappers (T4, T5).
+  `deepEqual`); `toBeCloseTo` and `closeTo` record their center, and a
+  hand-rolled `Math.abs(x - 78.75) < bound` its literal centre (189.2). The
+  literal reader reads through parentheses and TypeScript wrappers (T4, T5).
 - **Bounds.** The ordering matchers, chai's bound words and
   `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` record their bound as a
   Python bound is recorded (198.Q2, Q4). A bound read as a hand-rolled

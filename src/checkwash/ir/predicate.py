@@ -38,6 +38,7 @@ from __future__ import annotations
 import ast
 from decimal import Decimal
 
+from checkwash.frontends.javascript.literals import operand_text
 from checkwash.ir.model import Assertion, normalize_text
 
 # The relation of a new assertion to the old one on the same subject.
@@ -114,22 +115,29 @@ def describe(assertion: Assertion) -> str:
 def compared_inside(assertion: Assertion) -> bool:
     """A bound key on a truthy spelling: `assert.ok(Math.abs(d) < bound)`.
 
-    Its subject is the whole comparison, while the key bounds the magnitude
-    inside it, so rules compare the magnitudes of two such spellings rather
-    than their subjects (#196 189.3).
+    The key and its bound come from the comparison inside the asserted
+    value, not from a matcher (#196 189.3); `left` is what the magnitude
+    measures (189.2).
     """
     return assertion.predicate in BOUNDS and assertion.form != "compare_ord"
 
 
 def _bound_evidence(assertion: Assertion) -> tuple[str, object] | None:
-    """What says which bound an assertion names: its value, else its text."""
+    """What says which bound an assertion names: its value, else its text.
+
+    The literal value counts only when it is the bound's own: a hand-rolled
+    `Math.abs(total - 78.75) < eps` records its centre, 78.75, as the
+    expected value (#196 189.2), and that is not the bound.
+    """
     epsilon = assertion.epsilon or ""
     if assertion.epsilon_kind == "abs" and epsilon.startswith("abs="):
         try:
             return "value", Decimal(epsilon[len("abs="):])  # a hand-rolled bound that was read
         except ArithmeticError:
             pass
-    if not compared_inside(assertion) and assertion.right_value is not None:
+    if (not compared_inside(assertion) and assertion.right_value is not None
+            and assertion.right_literal is not None and assertion.operand_source is not None
+            and operand_text(assertion.right_literal) == assertion.operand_source):
         return "literal", assertion.right_value
     if assertion.operand_source is not None:
         return "source", normalize_text(assertion.operand_source)

@@ -153,8 +153,8 @@ def test_a_hand_rolled_bound_states_its_direction(body, key, operand, epsilon):
     assertion = _assertion(body, NODE)
     assert (assertion.predicate, assertion.positive) == (key, True)
     assert (assertion.operand_source, assertion.epsilon) == (operand, epsilon)
-    if assertion.form == "compare_ord":
-        assert assertion.right_value is None
+    # Never the bound: what the magnitude measures, and its centre (189.2).
+    assert (assertion.left, assertion.right_value) == ("value", "78.75")
 
 
 @pytest.mark.parametrize("body,form,key,positive", [

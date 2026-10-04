@@ -297,6 +297,22 @@ def populate_expectation(assertion: Assertion, expression: str) -> None:
     assertion.right_value = repr(value)
 
 
+def number_operand(expression: str) -> float | None:
+    """The Number an operand writes when it is a Number literal, else None.
+
+    Read the way `populate_expectation` reads one: through comments,
+    parentheses and the TypeScript wrappers. The centre of a hand-rolled
+    `Math.abs(total - 78.75) < 0.01` is such an operand (#196 189.2).
+    """
+    original = expression.strip(_WHITESPACE)
+    if not original or len(original) > 4096:
+        return None
+    source = _without_comments(original)
+    if source is None:
+        return None
+    return _number(_peel(source))
+
+
 def keyword_operand(expression: str) -> str | None:
     """`null`, `undefined`, `true` or `false` when the operand is exactly that word.
 
