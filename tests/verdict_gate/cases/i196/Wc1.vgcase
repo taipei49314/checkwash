@@ -1,0 +1,51 @@
+=== meta ===
+issue: 196
+row: Wc1
+probe: none; the two-invocation counter-case the ruling names
+source: #196 ruling 196.184.3; #201 ruling 196.followup.new-gate-cases
+# as W1, beside a second job whose pytest never carried the selector:
+# the addopts it moved into now deselect the marked test there
+=== options ===
+today = "2026-10-02"
+=== base: app/__init__.py ===
+=== base: app/billing.py ===
+def total():
+    return 78.75
+=== base: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.slow
+def test_total():
+    assert total() == 78.75
+=== base: .github/workflows/ci.yml ===
+name: ci
+on: [pull_request]
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest -m "not slow"
+  full:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest
+=== head: .github/workflows/ci.yml ===
+name: ci
+on: [pull_request]
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest
+  full:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest
+=== head: pytest.ini ===
+[pytest]
+addopts = -m "not slow"
+markers =
+    slow: slow

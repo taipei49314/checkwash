@@ -48,6 +48,8 @@ schema_version = 1
 "i196/Sp2" = "block"  # 196.186.8: src/lib/test-utils.ts declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
 "i196/Sp3" = "block"  # 196.186.8: src/api/Test.ts declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
 "i196/Sp4" = "block"  # 196.186.8: src/test/fixtures.ts declares no test, so E7 reads its table role (prod) and the out-of-scope edit is OUT_OF_SCOPE_PROD_TOUCH; was undecided
+"i196/W1" = "pass"  # 196.184.3: the selector moved out of the only run's pytest command into a first addopts, so every run passes it before and after (SPEC 2b: moving a filtering addopts between files is not a weakened test command); v0.5.0 blocks, fp-fix entry
+"i196/Wc1" = "block"  # 196.184.3: the full job's pytest never carried the selector, and the addopts it moved into now deselect the marked test there; matches v0.5.0, no entry needed
 
 # --- i197: #197 role precedence drops JS test obligations
 "i197/A1" = "block"  # #201 Labels (block): #197 members table; #197 Acceptance: "Must block on a test-only diff: every row of the members table"

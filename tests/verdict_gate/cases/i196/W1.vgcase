@@ -1,0 +1,43 @@
+=== meta ===
+issue: 196
+row: W1
+probe: W1_move_selector_workflow_to_addopts (the 184.x rulings probe, 2026-10-03)
+source: #196 ruling 196.184.3; #201 ruling 196.followup.new-gate-cases
+# the selector moves from the only run's pytest command into a first
+# pytest.ini addopts; every run passes it before and after
+=== options ===
+today = "2026-10-02"
+=== base: app/__init__.py ===
+=== base: app/billing.py ===
+def total():
+    return 78.75
+=== base: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.slow
+def test_total():
+    assert total() == 78.75
+=== base: .github/workflows/ci.yml ===
+name: ci
+on: [pull_request]
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest -m "not slow"
+=== head: .github/workflows/ci.yml ===
+name: ci
+on: [pull_request]
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest
+=== head: pytest.ini ===
+[pytest]
+addopts = -m "not slow"
+markers =
+    slow: slow
