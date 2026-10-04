@@ -168,7 +168,7 @@ def test_editing_live_and_already_dead_runners_alike_moves_nothing():
 
 def test_precommit_hook_inventory_is_two_sided():
     path = ".pre-commit-config.yaml"
-    assert _weakenings(PRECOMMIT, "repos: []\n", path) == ["pytest is no longer run by any pre-commit hook"]
+    assert _weakenings(PRECOMMIT, "repos: []\n", path) == ["no pre-commit hook entry invokes a recognised test runner any more (was: pytest)"]
     assert _weakenings(PRECOMMIT, PRECOMMIT.replace("entry: pytest", "entry: tox -e py"), path) == []
     assert _weakenings(PRECOMMIT, PRECOMMIT + "        stages: [manual]\n", path) == [
         "pytest is disabled (stages: [manual])"
@@ -219,7 +219,7 @@ def test_the_runner_that_stopped_must_be_the_runner_that_was_parked():
     assert _weakenings(PRECOMMIT, hooks, ".pre-commit-config.yaml") == []
     # Rewording a runner as it is disabled still moves a site from live to dead.
     disabled = WORKFLOW.replace("- run: pytest\n", "- run: python -m pytest\n        if: false\n")
-    assert _weakenings(WORKFLOW, disabled) == ["python -m pytest is disabled (if: false)"]
+    assert _weakenings(WORKFLOW, disabled) == ["pytest no longer runs, and python -m pytest is disabled (if: false)"]
     # Re-homing the live runner while rewording an already-dead one moves none.
     e2e = WORKFLOW + "  e2e:\n    if: false\n    steps:\n      - run: pytest tests/e2e\n"
     rehomed = e2e.replace("      - run: pytest\n", "").replace("tests/e2e", "tests/e2e -q")
@@ -316,7 +316,7 @@ def test_an_echo_no_longer_hides_a_runner_reworded_and_disabled():
     # 191.8: the decoy names the runner without running it.
     disabled = WORKFLOW.replace("- run: pytest\n", "- run: python -m pytest\n        if: false\n")
     assert _weakenings(WORKFLOW, disabled + "      - run: echo pytest\n") == [
-        "python -m pytest is disabled (if: false)"
+        "pytest no longer runs, and python -m pytest is disabled (if: false)"
     ]
     # A decoy that does run the runner still hides it: row 112's residual.
     assert _weakenings(WORKFLOW, disabled + "      - run: pytest --version\n") == []
@@ -325,9 +325,9 @@ def test_an_echo_no_longer_hides_a_runner_reworded_and_disabled():
 def test_an_echo_entry_is_not_a_test_hook():
     path = ".pre-commit-config.yaml"
     decoy = PRECOMMIT.replace("entry: pytest", "entry: echo pytest")
-    assert _weakenings(PRECOMMIT, decoy, path) == ["pytest is no longer run by any pre-commit hook"]
+    assert _weakenings(PRECOMMIT, decoy, path) == ["no pre-commit hook entry invokes a recognised test runner any more (was: pytest)"]
     installer = PRECOMMIT.replace("entry: pytest", "entry: pip install pytest")
-    assert _weakenings(PRECOMMIT, installer, path) == ["pytest is no longer run by any pre-commit hook"]
+    assert _weakenings(PRECOMMIT, installer, path) == ["no pre-commit hook entry invokes a recognised test runner any more (was: pytest)"]
 
 
 # --- #196 191.9 and 191.2(d): events that never fire for a pull request ------------------
@@ -380,3 +380,36 @@ def test_a_pull_request_trigger_that_never_fires_disables_the_suite(filters, cau
 def test_a_pull_request_trigger_that_still_fires_keeps_the_suite(filters):
     after = WORKFLOW.replace("  pull_request:\n", "  pull_request:\n" + filters)
     assert _weakenings(WORKFLOW, after) == []
+
+
+# --- #196 191.7 and 191.8: what the reasons claim ---------------------------------------
+
+def test_a_reworded_and_disabled_runner_names_both_commands():
+    # Text alone cannot prove the two are one site, so the reason names the
+    # runner that stopped and the one that was parked; with several stopped,
+    # the first in sort order, not in file order, as for the disabled command.
+    before = WORKFLOW.replace("      - run: pytest\n", "      - run: tox -e py\n      - run: pytest\n")
+    after = WORKFLOW.replace("- run: pytest\n", "- run: python -m pytest\n        if: false\n")
+    assert _weakenings(before, after) == ["pytest no longer runs, and python -m pytest is disabled (if: false)"]
+    # A runner disabled as written keeps the one-command reason.
+    assert _weakenings(WORKFLOW, WORKFLOW + "        if: false\n") == ["pytest is disabled (if: false)"]
+
+
+def test_a_hook_that_keeps_its_id_but_runs_no_runner_is_a_removal():
+    # The id and the name are the author's to choose: only the entry counts,
+    # and the reason claims only that no entry invokes a recognised runner.
+    path = ".pre-commit-config.yaml"
+    after = PRECOMMIT.replace("entry: pytest", "entry: ./scripts/check.sh")
+    assert _weakenings(PRECOMMIT, after, path) == [
+        "no pre-commit hook entry invokes a recognised test runner any more (was: pytest)"
+    ]
+    remote = "repos:\n  - repo: https://github.com/example/hooks\n    rev: v1.0.0\n    hooks:\n      - id: pytest\n"
+    assert _weakenings(PRECOMMIT, remote, path) == [
+        "no pre-commit hook entry invokes a recognised test runner any more (was: pytest)"
+    ]
+    # With several runner entries, the first in sort order, not in file order.
+    tox = "      - id: tox\n        entry: tox -e py\n        language: system\n"
+    tox_first = PRECOMMIT.replace("      - id: pytest\n", tox + "      - id: pytest\n")
+    assert _weakenings(tox_first, "repos: []\n", path) == [
+        "no pre-commit hook entry invokes a recognised test runner any more (was: pytest)"
+    ]
