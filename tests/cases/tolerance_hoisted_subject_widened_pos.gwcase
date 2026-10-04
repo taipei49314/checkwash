@@ -1,0 +1,25 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: assertAlmostEqual(energy(2.0), 19.62, delta=0.01) -> e = energy(2.0); assertAlmostEqual(e, 19.62, delta=1e12) is the same check widened
+origin: #196 189.2 — a hoisted subject moves the pair to the span-order fallback; only a pair whose expected literal moved too is a different check
+=== before: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, delta=0.01)
+=== after: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        e = energy(2.0)
+        self.assertAlmostEqual(e, 19.62, delta=1e12)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

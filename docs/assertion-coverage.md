@@ -169,12 +169,18 @@ code is taken to run after the read, so a function that runs twice (a helper
 called again, `test.each`) and reads a bound its own later statement rewrote
 is not followed. Two checks on one subject pair in order, so a check
 inserted ahead of an edited one is paired with it, which can hide a widening
-or report one, and checks left over on both sides are paired by position, so
-the bounds of two different checks can be compared. Replacing a hand-rolled
-tolerance with `toBeCloseTo` or a chai `closeTo` on the same subject compares
-the two bounds, in one unit. The source tests are in
-[`tests/test_js_handrolled_tolerance.py`](../tests/test_js_handrolled_tolerance.py)
-and [`tests/test_abs_decomposition.py`](../tests/test_abs_decomposition.py).
+or report one. Two leftover checks that alignment pairs by position alone
+are not compared when both moved, the subject and the literal centre alike:
+a deleted check on one value and an added, looser check on another are a
+substitution, which `EXPECTED_VALUE_CHANGED` and `ASSERT_SUBSTITUTED` report,
+not one tolerance loosened (#196 189.2). A subject that moved alone, hoisted
+into a local (`const t = total()`) or renamed, is the same check, and its
+bounds are compared, as they are for every tolerance kind in both frontends.
+Replacing a hand-rolled tolerance with `toBeCloseTo` or a chai `closeTo` on
+the same subject compares the two bounds, in one unit. The source tests are in
+[`tests/test_js_handrolled_tolerance.py`](../tests/test_js_handrolled_tolerance.py),
+[`tests/test_abs_decomposition.py`](../tests/test_abs_decomposition.py) and
+[`tests/test_fallback_tolerance.py`](../tests/test_fallback_tolerance.py).
 
 Python reads the same shape with the builtin `abs`: `assert abs(total() -
 78.75) < 0.01`, its reversed and `<=` forms, `self.assertLess(abs(...), eps)`,
