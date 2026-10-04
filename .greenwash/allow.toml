@@ -214,3 +214,11 @@ reason = "PR #242 (issue #196, ruling 189.1): a bound past Decimal's range is un
 author = "taipei49314"
 created = "2026-10-04"
 expires = "2026-10-31"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_setup_phase_skips.py/test_guarded_teardown_or_environment_skips_mark_nothing/f37853ec70a3"
+rule = "TEST_DISABLED"
+reason = "Issue #196, ruling 183.2 (second stage, branch fix/183-2-setup-guards): the guarded-environment case moves out of this negative list into test_a_guarded_setup_skip_marks_the_unit_with_its_guard, because the ruling records a guarded skip in a unit's setup with its guard and judges it as a body skip; owner-approved 2026-10-04"
+author = "taipei49314"
+created = "2026-10-04"
+expires = "2026-11-03"
