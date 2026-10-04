@@ -1,0 +1,34 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: a pull_request trigger narrowed to opened still tests a pull request's first commit
+origin: issue #196 ruling 191.9 — opened alone is a disclosed residual: it skips later pushes but still
+origin2: runs once on the pull request's commits, so the trigger is not dead (row 112).
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

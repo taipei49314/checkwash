@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: a pull_request trigger whose paths are all negations never fires
+origin: issue #196 ruling 191.2(d) — a paths list of negations alone names no file to fire on, so
+origin2: the workflow never runs on a pull request. v0.5.0 passed this diff at warn.
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ['!docs/**', '!*.md']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

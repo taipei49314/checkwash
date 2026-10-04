@@ -31,7 +31,12 @@ suite. A site is dead only for a reason that holds statically:
   job reports success;
 - a trigger set with no event that runs on a pull request's commits. An
   unfiltered `push` still runs on the PR's own branch, so dropping
-  `pull_request` beside it keeps the suite;
+  `pull_request` beside it keeps the suite. An event that can never fire for
+  a pull request's commits is dead (#196 191.9, 191.2(d)): a `pull_request`
+  or `pull_request_target` whose explicit activity `types` hold none of
+  `opened`, `synchronize` and `reopened`, and a `push`, `pull_request` or
+  `pull_request_target` whose `paths-ignore` holds `**` or whose `paths`
+  holds only negations;
 - a pre-commit hook parked on the `manual` stage.
 
 Two predicates read the inventory. *Disabled*: a runner command lost a live
@@ -44,10 +49,11 @@ and runs none at head. Removal is not judged for workflows: a step that
 leaves one may have moved to a reusable workflow, a composite action or a
 script, and one file's head side cannot tell that from deletion.
 
-Not evaluated: path filters, `pull_request` branch filters and activity
-`types`, matrix legs, GitLab `rules:`. YAML outside the reader's subset
-(tags, complex keys, directives, tab indentation) leaves the file at the
-existing warn.
+Not evaluated: path filters that leave any path, `pull_request` branch
+filters, activity `types` that keep one of the three (`[opened]` runs on a
+pull request's first commit only), matrix legs, GitLab `rules:`. YAML
+outside the reader's subset (tags, complex keys, directives, tab
+indentation) leaves the file at the existing warn.
 """
 from __future__ import annotations
 
@@ -679,6 +685,52 @@ def _push_reaches_pr_branches(filters) -> bool:
     return "tags" not in filters and "tags-ignore" not in filters
 
 
+# The activities that run a pull_request workflow on a pull request's commits,
+# and GitHub's default when `types` is not given.
+_PR_COMMIT_TYPES = frozenset({"opened", "synchronize", "reopened"})
+# Events whose `paths` and `paths-ignore` filters decide whether they fire.
+_PATH_FILTERED = frozenset({"push", "pull_request", "pull_request_target"})
+
+
+def _filters_every_path(filters) -> bool:
+    """Does this path filter leave no changed file to fire on (#196 191.2(d))?
+
+    `paths-ignore: ['**']` ignores every file, and a `paths` list of
+    negations alone names no file to fire on. Any other filter leaves some
+    path, and which paths a pull request will touch is not known here.
+    """
+    if not isinstance(filters, dict):
+        return False
+    if "**" in _patterns(filters.get("paths-ignore")):
+        return True
+    paths = _patterns(filters.get("paths"))
+    return bool(paths) and all(pattern.startswith("!") for pattern in paths)
+
+
+def _runs_on_pr_commits(filters) -> bool:
+    """Do this pull_request trigger's activity `types` reach a PR's commits (191.9)?
+
+    Without `types`, GitHub runs it on opened, synchronize and reopened. An
+    explicit list with none of the three (`[closed]`, `[labeled]`) never
+    runs on the commits a pull request pushes. An empty list, or a shape
+    the reader does not take, keeps the trigger live.
+    """
+    if not isinstance(filters, dict) or "types" not in filters:
+        return True
+    types = _patterns(filters["types"])
+    return not types or any(kind in _PR_COMMIT_TYPES for kind in types)
+
+
+def _event_runs_for_prs(event: str, filters) -> bool:
+    if event in _NON_PR_EVENTS:
+        return False
+    if event == "push" and not _push_reaches_pr_branches(filters):
+        return False
+    if event in _PATH_FILTERED and _filters_every_path(filters):
+        return False
+    return event not in ("pull_request", "pull_request_target") or _runs_on_pr_commits(filters)
+
+
 def _pr_events(on) -> list[str] | None:
     """Events that can run the workflow for a pull request's commits.
 
@@ -693,10 +745,7 @@ def _pr_events(on) -> list[str] | None:
         spec = on
     else:
         return None
-    return sorted(
-        str(event) for event, filters in spec.items()
-        if (_push_reaches_pr_branches(filters) if event == "push" else event not in _NON_PR_EVENTS)
-    )
+    return sorted(str(event) for event, filters in spec.items() if _event_runs_for_prs(str(event), filters))
 
 
 def _strings(value):
