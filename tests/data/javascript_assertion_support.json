@@ -56,7 +56,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.doesNotMatch(subject(), /error/);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.doesNotReject",
@@ -64,7 +70,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.doesNotReject(subject);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject"
+        }
+      ]
     },
     {
       "id": "node.doesNotThrow",
@@ -72,7 +84,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.doesNotThrow(subject);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject"
+        }
+      ]
     },
     {
       "id": "node.equal",
@@ -94,7 +112,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.fail(\"failure\");\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "\"failure\""
+        }
+      ]
     },
     {
       "id": "node.ifError",
@@ -102,7 +126,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.ifError(subject());\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.match",
@@ -110,7 +140,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.match(subject(), /ready/);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.notDeepEqual",
@@ -118,7 +154,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.notDeepEqual(subject(), [5]);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.notDeepStrictEqual",
@@ -126,7 +168,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.notDeepStrictEqual(subject(), [5]);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.notEqual",
@@ -134,7 +182,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.notEqual(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.notStrictEqual",
@@ -142,7 +196,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.notStrictEqual(subject(), 5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.ok",
@@ -164,7 +224,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.rejects(subject);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "raises",
+          "strength": null,
+          "left": "subject"
+        }
+      ]
     },
     {
       "id": "node.strictEqual",
@@ -186,7 +252,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.throws(subject);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "raises",
+          "strength": null,
+          "left": "subject"
+        }
+      ]
     },
     {
       "id": "node.partialDeepStrictEqual",
@@ -194,7 +266,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import assert from \"node:assert/strict\";\nimport { test } from \"node:test\";\ntest(\"contract\", (t) => {\n  assert.partialDeepStrictEqual(subject(), {ready: true});\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "node.context.equal",
@@ -927,7 +1005,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeInstanceOf(Widget);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toBeNaN",
@@ -935,7 +1019,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeNaN();\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toContainEqual",
@@ -943,7 +1033,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toContainEqual({ready: true});\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toHaveLength",
@@ -951,7 +1047,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveLength(3);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toHaveProperty",
@@ -959,7 +1061,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveProperty(\"ready\", true);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toMatchObject",
@@ -967,7 +1075,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatchObject({ready: true});\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toThrow",
@@ -975,7 +1089,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toThrow(Error);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "raises",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toThrowError",
@@ -983,7 +1103,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toThrowError(Error);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "raises",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toMatchSnapshot",
@@ -991,7 +1117,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatchSnapshot();\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toMatchInlineSnapshot",
@@ -999,7 +1131,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toMatchInlineSnapshot();\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toHaveBeenCalled",
@@ -1007,7 +1145,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveBeenCalled();\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toHaveBeenCalledTimes",
@@ -1015,7 +1159,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveBeenCalledTimes(1);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toHaveBeenCalledWith",
@@ -1023,7 +1173,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveBeenCalledWith(5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toHaveReturned",
@@ -1031,7 +1187,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveReturned();\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toHaveReturnedTimes",
@@ -1039,7 +1201,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveReturnedTimes(1);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.toHaveReturnedWith",
@@ -1047,7 +1215,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toHaveReturnedWith(5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.import.expect-alias",
@@ -1069,7 +1243,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).resolves.toBe(5);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.rejects",
@@ -1077,7 +1257,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).rejects.toThrow(Error);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "raises",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.custom-matcher",
@@ -1085,7 +1271,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect(subject()).toBeReady();\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "subject()"
+        }
+      ]
     },
     {
       "id": "jest.unsupported.assertion-count",
@@ -1093,7 +1285,13 @@
       "status": "unsupported",
       "path": "tests/contract.test.js",
       "source": "import { expect, test } from \"@jest/globals\";\ntest(\"contract\", (t) => {\n  expect.assertions(1);\n});\n",
-      "assertions": []
+      "assertions": [
+        {
+          "form": "unknown",
+          "strength": null,
+          "left": "1"
+        }
+      ]
     },
     {
       "id": "vitest.direct",

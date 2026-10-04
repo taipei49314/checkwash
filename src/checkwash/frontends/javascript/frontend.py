@@ -1531,6 +1531,174 @@ def _conditional_arm(text: str, code: bytearray, end: int) -> bool:
     return False
 
 
+# A call that may be an assertion the scans above do not represent: a member
+# or an indexed member (`assert['match']`), reached with `.` or `?.`. This is
+# the frontend's own recognizer; the coverage inventory keeps its own, so
+# that a call this one misses stays visible there (#196 190.5).
+_CANDIDATE_CALL = re.compile(
+    r"(?<![\w$.#])" + NAME
+    + r"(?:\s*(?:\?\.|\.)\s*" + NAME + r"|\s*\[[^]\n]*\])*"
+    r"\s*(?:\?\.)?\s*\("
+)
+_CANDIDATE_STEP = re.compile(r"\s*(?:\?\.|\.)\s*(?P<word>" + NAME + r")")
+_CANDIDATE_INDEX = re.compile(r"\[\s*(['\"])(?P<word>" + NAME + r")\1\s*\]")
+# The throw family: the subject throws, or its promise rejects.
+_THROW_WORDS = frozenset({
+    "throws", "rejects", "isRejected", "throw", "Throw", "rejected", "rejectedWith",
+    "toThrow", "toThrowError", "toThrowErrorMatchingSnapshot", "toThrowErrorMatchingInlineSnapshot",
+})
+# Words that assert the opposite: no throw, no rejection.
+_NEGATING_WORDS = frozenset({"not", "doesNotThrow", "doesNotReject"})
+# The resolved bindings whose calls are assertion APIs. A lookalike, a
+# shadowed name or a written member is not: recording it would let the
+# stand-in pair with the oracle it replaced (#196 190.5).
+_CANDIDATE_ASSERT_KINDS = frozenset({"node", "node_method", "chai_assert", "chai_assert_method"})
+_CANDIDATE_EXPECT_KINDS = frozenset({"expect", "chai_expect", "jest_expect"})
+# node:assert methods the scan does not read. The ones it reads (`ok`,
+# `equal`, `strictEqual`, `deepEqual`, `deepStrictEqual` and `assert()`
+# itself) stay unrepresented when their arguments are malformed, as before,
+# and a name node:assert does not export is no assertion at all.
+_CANDIDATE_NODE_METHODS = frozenset({
+    "notEqual", "notStrictEqual", "notDeepEqual", "notDeepStrictEqual", "partialDeepStrictEqual",
+    "throws", "doesNotThrow", "rejects", "doesNotReject", "ifError", "match", "doesNotMatch",
+    "fail", "snapshot", "fileSnapshot",
+})
+# A Jest-style expect chain: `.not`, `.resolves`, `.rejects` or a `toX` matcher.
+_JEST_CHAIN_WORDS = frozenset({"not", "resolves", "rejects"})
+_JEST_MATCHER_WORD = re.compile(r"to[A-Z]")
+# Members of `expect` that build a value or configure the runner rather than
+# assert: asymmetric matchers and registration.
+_EXPECT_UTILITIES = frozenset({
+    "any", "anything", "objectContaining", "arrayContaining", "stringContaining",
+    "stringMatching", "closeTo", "not", "extend", "addSnapshotSerializer",
+    "addEqualityTesters", "getState", "setState",
+})
+
+
+def _candidate_declares(text: str, code: bytearray, masked: str, start: int, opening: int, end: int) -> bool:
+    """A bare `name(...)` that declares a function or a method rather than calling one."""
+    previous = start - 1
+    while previous >= 0 and masked[previous].isspace():
+        previous -= 1
+    if previous >= 0 and masked[previous] == "*":
+        previous -= 1
+        while previous >= 0 and masked[previous].isspace():
+            previous -= 1
+    if re.search(r"\bfunction$", masked[:previous + 1]):
+        return True
+    call = _call_argument_spans(text, code, opening, end)
+    if call is None:
+        return False
+    following = call[1]
+    while following < end and masked[following].isspace():
+        following += 1
+    if following >= end:
+        return False
+    if masked[following] == ":" and not _conditional_arm(text, code, start):
+        return True
+    return masked[following] == "{" and "\n" not in text[call[1]:following]
+
+
+def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start: int, end: int,
+                          covered: list[tuple[int, int]], owned: Callable[[int], bool]) -> list[Assertion]:
+    """Assertion calls the scans do not represent, recorded with no strength (#196 190.5).
+
+    `assert.throws(fn)`, `expect(spy).toHaveBeenCalledWith(1)` and
+    `expect(value).to.have.property("a")` are assertions whose predicate
+    checkwash does not read. SPEC §3 records such a form with strength null,
+    as Python records `assertRaises`: its removal is ASSERT_REMOVED, and a
+    rewrite is not judged. The throw family is `raises`; the rest, and a
+    negated throw check, are `unknown`. A call inside another assertion's
+    arguments (`expect.any(Number)`), a bare `expect(value)` with no matcher,
+    and an `expect` member that builds a value are not assertions.
+    `covered` holds the spans already represented; recorded calls join it.
+    `owned` says whether a position is this unit's own, not a nested
+    function's.
+    """
+    masked = bindings.masked
+    recorded: list[Assertion] = []
+    for match in _CANDIDATE_CALL.finditer(masked, start, end):
+        position = match.start()
+        if (not code[position] or not owned(position)
+                or any(first <= position < last for first, last in covered)):
+            continue
+        previous = position - 1
+        while previous >= 0 and (not code[previous] or text[previous].isspace()):
+            previous -= 1
+        if previous >= 0 and text[previous] in ".#":
+            continue
+        if re.search(r"\bnew$", masked[:previous + 1]):
+            continue
+        callee = text[position:match.end() - 1].strip()
+        spelling = _CANDIDATE_INDEX.sub(lambda index: "." + index.group("word"), callee)
+        path = tuple(re.split(r"\s*(?:\?\.|\.)\s*", spelling.rstrip("?. \t\n")))
+        if bindings._written(path, position):
+            continue
+        kind = bindings.callee(".".join(path), position).kind
+        bare = len(path) == 1
+        expect_call = bare and kind in _CANDIDATE_EXPECT_KINDS
+        expect_member = not bare and bindings.callee(path[0], position).kind in _CANDIDATE_EXPECT_KINDS
+        if not (kind in _CANDIDATE_ASSERT_KINDS or expect_call or expect_member):
+            continue
+        opening = match.end() - 1
+        if bare and _candidate_declares(text, code, masked, position, opening, end):
+            continue
+        call = _call_argument_spans(text, code, opening, end)
+        if call is None:
+            continue
+        argument_spans, cursor = call
+        words: list[str] = []
+        while True:
+            step = _CANDIDATE_STEP.match(masked, cursor, end)
+            if step is None:
+                break
+            words.append(step.group("word"))
+            cursor = step.end()
+            following = cursor
+            while following < end and masked[following].isspace():
+                following += 1
+            if following < end and masked[following] == "(":
+                chained = _call_argument_spans(text, code, following, end)
+                if chained is None:
+                    break
+                cursor = chained[1]
+        if kind == "node_method" and path[-1] not in _CANDIDATE_NODE_METHODS:
+            continue
+        if kind == "node" or kind == "chai_assert":
+            continue  # `assert(...)` itself is the scan's.
+        if kind == "chai_assert_method" and path[-1] in _CHAI_ASSERT:
+            continue
+        if expect_call:
+            if not words:
+                continue  # `expect(value)` alone asserts nothing.
+            jest_style = words[0] in _JEST_CHAIN_WORDS or bool(_JEST_MATCHER_WORD.match(words[0]))
+            if kind == "jest_expect" and not jest_style:
+                continue  # Jest's own expect has no chai chain (#198 Q5).
+            if kind == "chai_expect" and any(_JEST_MATCHER_WORD.match(word) for word in words):
+                continue  # chai's expect has no Jest matcher.
+            if (jest_style and not {"resolves", "rejects"} & set(words)
+                    and words[-1] in _MATCHER_STRENGTH):
+                continue  # A matcher the scan reads, left out for its arguments.
+        if expect_member and path[-1] in _EXPECT_UTILITIES:
+            continue
+        members = list(path[1:])
+        said = members + words
+        negated = any(word in _NEGATING_WORDS for word in said)
+        throws = not negated and any(word in _THROW_WORDS for word in said)
+        first = argument_spans[0] if argument_spans else None
+        subject = text[first[0]:first[1]].strip() if first is not None else ""
+        recorded.append(Assertion(
+            id="",
+            form="raises" if throws else "unknown",
+            strength=None,
+            text=text[position:cursor],
+            span=(position, cursor),
+            left=subject or None,
+        ))
+        covered.append((position, cursor))
+    return recorded
+
+
 def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = None) -> ParsedFile:
     """One JS/TS test file's units.
 
@@ -1725,6 +1893,8 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             assertions.append(assertion)
         assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
                           if owned(assertion.span[0]))
+        covered = [assertion.span for assertion in assertions]
+        assertions.extend(_candidate_assertions(text, code, bindings, start, end, covered, owned))
         assertions.sort(key=lambda assertion: assertion.span)
         for assertion_index, assertion in enumerate(assertions):
             assertion.id = f"a{assertion_index}"

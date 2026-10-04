@@ -3,6 +3,9 @@
 This is reporting evidence, not a tampering detector or proof of complete
 JavaScript coverage. Candidate names are deliberately independent of the
 frontend's supported-method tables, so an omitted API can remain visible.
+The frontend records a candidate it recognizes with no strength (#196
+190.5): its removal is reported, but a rewrite is not judged, so it stays
+visible here with a reason that says so.
 """
 
 from __future__ import annotations
@@ -70,7 +73,10 @@ def javascript_coverage_gaps(
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
     masked = bindings.masked
-    represented = {a.span[0] for unit in parsed.units for a in unit.side.assertions}
+    represented = {a.span[0] for unit in parsed.units for a in unit.side.assertions
+                   if a.strength is not None}
+    unjudged = {a.span[0] for unit in parsed.units for a in unit.side.assertions
+                if a.strength is None}
     candidates: dict[int, tuple[str, str]] = {}
 
     calls = re.compile(
@@ -101,7 +107,12 @@ def javascript_coverage_gaps(
                 chain = re.match(r"(?:\s*\.\s*" + _NAME + r")+", masked[call[1]:])
                 if chain:
                     callee += re.sub(r"\s+", "", chain.group())
-        candidates[start] = (callee, f"{family} assertion candidate is not represented in the assertion scan")
+        if start in unjudged:
+            reason = (f"{family} assertion candidate is recorded with no strength: its predicate "
+                      "is not represented in the assertion scan, so a rewrite is not judged")
+        else:
+            reason = f"{family} assertion candidate is not represented in the assertion scan"
+        candidates[start] = (callee, reason)
 
     return [
         CoverageGap(

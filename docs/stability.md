@@ -106,7 +106,11 @@ existing output format. This uses its own `checkwash_coverage_version: 1`
 envelope; it does not add keys to findings JSON or emitted IR. Bounded coverage
 gaps appear on stderr and as SARIF tool execution warnings, without changing
 findings or verdicts. `no_known_gaps` is not a completeness claim. See the
-[report schema and limits](assertion-coverage.md).
+[report schema and limits](assertion-coverage.md). A JS assertion call whose
+predicate checkwash does not read (a throw or spy check, an unread matcher) is
+recorded with no strength and stays in the report; deleting it is
+`ASSERT_REMOVED` because the frontend records it
+([#196](https://github.com/taipei49314/checkwash/issues/196) 190.5).
 
 ## Not frozen: this will change, on purpose
 

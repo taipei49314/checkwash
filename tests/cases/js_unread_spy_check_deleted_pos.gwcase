@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: expect(save).toHaveBeenCalledWith(78.75) deleted is a removed assertion, not a coverage notice
+origin: #196 190.5 — v0.5.0 passed this diff with zero findings; the spy check was a coverage notice only
+=== before: tests/checkout.test.ts ===
+import { expect, test, vi } from "vitest";
+import { checkout } from "../src/checkout";
+
+test("checkout saves the invoice total", () => {
+  const save = vi.fn();
+  checkout([{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }], save);
+  expect(save).toHaveBeenCalledWith(78.75);
+});
+=== after: tests/checkout.test.ts ===
+import { expect, test, vi } from "vitest";
+import { checkout } from "../src/checkout";
+
+test("checkout saves the invoice total", () => {
+  const save = vi.fn();
+  checkout([{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }], save);
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -12,7 +12,11 @@ tree; they do not update an already-published wheel, zipapp or Action pin.
 records concrete spellings, documented API sources, support status and literal
 expected IR forms, strengths and subjects. Its expectations are not generated
 from the frontend's matcher table or strength constants. Unsupported syntax,
-methods and lookalikes are recorded alongside supported APIs.
+methods and lookalikes are recorded alongside supported APIs. An unsupported
+API whose call the frontend records with no strength (see [Assertions
+checkwash does not read](#assertions-checkwash-does-not-read)) declares that
+recording; its predicate is still not read, and only a supported entry states a
+strength.
 
 The inventory has 136 API/context cases and 248 concrete changes:
 weakening, removal, preserving edits and strengthening controls. Every supported
@@ -237,13 +241,15 @@ takes an existing rung; the strength lattice is unchanged.
 | `within` | `compare_ord`, BOUND | none |
 | `lengthOf`/`length(n)`; `assert.lengthOf` | `type_shape`, TYPE_SHAPE | none |
 
-Everything else stays unrepresented and visible as a coverage gap: type checks
-(`a(...)`, `instanceof`), `property`, `keys`, `members`, `oneOf`, `throw`,
-`satisfy`, `empty`, `NaN`, change assertions, the `own`, `nested`, `any`,
-`all`, `ordered` and `length` flags, plugin words such as chai-as-promised's
-`eventually`, a chain that continues after its terminal, and negated assert
-methods (`notEqual`, `isNotOk`, `notExists`, ...). Replacing a represented
-assertion with one of these reports its removal. Plugins that overwrite a
+Everything else is recorded with no strength
+([below](#assertions-checkwash-does-not-read), #196 190.5) and stays visible
+as a coverage gap: type checks (`a(...)`, `instanceof`), `property`, `keys`,
+`members`, `oneOf`, `throw`, `satisfy`, `empty`, `NaN`, change assertions, the
+`own`, `nested`, `any`, `all`, `ordered` and `length` flags, plugin words such
+as chai-as-promised's `eventually`, a chain that continues after its terminal,
+and negated assert methods (`notEqual`, `isNotOk`, `notExists`, ...). Deleting
+one reports its removal, and so does replacing a represented assertion with
+one; rewriting one is not judged. Plugins that overwrite a
 core assertion word are not modeled. Should-style assertions
 (`value.should.equal(...)`) are not scanned and produce no diagnostic.
 
@@ -450,6 +456,40 @@ Residuals of this reading:
 - The JS false-positive cost of these reports is not measured; the JS/TS
   replay corpus measures it before the release that ships them.
 
+### Assertions checkwash does not read
+
+A call to a resolved assertion API whose predicate the scans above do not read
+is recorded with no strength, as Python records `assertRaises` (SPEC §3,
+[#196](https://github.com/taipei49314/checkwash/issues/196) 190.5). A throw
+check is `raises`: `expect(fn).toThrow(RangeError)`,
+`expect(promise).rejects.toThrow()`, `assert.throws`, `assert.rejects`, and
+chai's `.to.throw()`, `assert.throws` and `assert.isRejected`. Anything else
+is `unknown`: `expect(save).toHaveBeenCalledWith(78.75)`, `toHaveLength`,
+`toMatchObject`, `toMatchSnapshot`, `.resolves`, `expect.assertions(n)`,
+`assert.match`, `assert.notStrictEqual`, `assert.fail`, the chai words above,
+and a negated throw check (`.not.toThrow()`, `assert.doesNotThrow`).
+
+Deleting one is `ASSERT_REMOVED`, high without repair evidence. Rewriting one
+is not judged, because its predicate is not read. A check rewritten into a
+newly written strong one (`toHaveBeenCalledWith(78.75)` ->
+`expect(save.mock.calls[0][0]).toBe(78.75)`) is a compensated removal, at warn.
+
+What is not recorded:
+
+- a lookalike: an assertion name imported from another module, shadowed, or
+  written over (`assert.throws = () => {}`). Recorded, it would pair by text
+  with the oracle it replaced.
+- a call the scans read but left out for its arguments (`expect(x).toBe()`),
+  a name node:assert does not export (`assert.okay`), a Jest matcher on chai's
+  `expect`, and a chai chain on the `expect` of `@jest/globals`.
+- a bare `expect(value)`, asymmetric matchers and registration (`expect.any`,
+  `expect.extend`), a call inside another assertion's arguments, and a call in
+  a nested function or outside a test unit.
+
+Each recorded call stays visible as a coverage diagnostic (below), with a
+reason that says its rewrite is not judged. The source tests are in
+[`tests/test_js_unjudged_assertions.py`](../tests/test_js_unjudged_assertions.py).
+
 ## Make unrepresented assertion candidates visible
 
 `checkwash check` scans both sides of changed JS/TS test files for bounded Node,
@@ -462,7 +502,11 @@ Diagnostics appear on stderr in every output format and in terminal output.
 SARIF includes them as tool execution warnings, separate from findings. A base
 location is labeled `before`; it is not projected onto the current checkout.
 Zero assertions alone do not produce a warning. Coverage warnings do not change
-the tampering verdict, severity policy or exit codes.
+the tampering verdict, severity policy or exit codes. A candidate the frontend
+records with no strength ([Assertions checkwash does not
+read](#assertions-checkwash-does-not-read)) stays a warning whose reason says
+its rewrite is not judged; deleting it is a finding because the frontend
+recorded it, not because of the warning.
 
 For a machine-readable report alongside the existing findings JSON:
 

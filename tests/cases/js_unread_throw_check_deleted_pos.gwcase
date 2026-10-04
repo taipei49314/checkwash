@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: expect(() => invoiceTotal(items, -1)).toThrow(RangeError) deleted is a removed assertion, not a coverage notice
+origin: #196 190.5 — v0.5.0 passed this diff with zero findings; the throw check was a coverage notice only
+=== before: tests/billing.test.ts ===
+import { expect, test } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+test("rejects a negative tax rate", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items, 0.05)).toBe(78.75);
+  expect(() => invoiceTotal(items, -1)).toThrow(RangeError);
+});
+=== after: tests/billing.test.ts ===
+import { expect, test } from "vitest";
+import { invoiceTotal } from "../src/billing";
+
+test("rejects a negative tax rate", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items, 0.05)).toBe(78.75);
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
