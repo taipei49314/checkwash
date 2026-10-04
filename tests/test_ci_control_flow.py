@@ -456,10 +456,19 @@ _DEEP = "".join(" " * level + f"k{level}:\n" for level in range(60)) + " " * 60 
     (b"a: 'x\n", "an unclosed quoted scalar"),
     (b"a: @x\n", "a reserved indicator"),
     (b"a: |x\n", "a block scalar indicator the reader does not take"),
-    (b"a: " + b"x" * 1_000_000 + b"\n", "over 1000000 bytes"),
 ])
 def test_reader_names_what_it_declines(data, cause):
     assert _read_document(data) == (None, cause)
+    assert _read_yaml(data) is None
+
+
+def test_reader_names_its_byte_limit():
+    # Built here rather than in the list above: pytest names a parametrized
+    # test after its arguments and writes the name to PYTEST_CURRENT_TEST, and
+    # a 1 MB name is past the 32,767 characters a Windows environment variable
+    # holds. The Windows legs hung with it in the list.
+    data = b"a: " + b"x" * 1_000_000 + b"\n"
+    assert _read_document(data) == (None, "over 1000000 bytes")
     assert _read_yaml(data) is None
 
 
