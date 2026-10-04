@@ -3649,3 +3649,74 @@ the spec.4-ci-runner-sites round, after the 191.x rounds.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-081 (2026-10-04): a control-flow reason claims only what is known (#196 191.7, 191.8)
+
+Two reasons that #181's control-flow findings give said more than the
+inventory shows:
+
+- **A moved site.** A runner reworded as it is disabled (`pytest` ->
+  `python -m pytest` under `if: false`) is found by the moved-site fallback:
+  one live site fewer, one dead site more. The reason named only the parked
+  command, "python -m pytest is disabled (if: false)". Text alone cannot
+  prove the two are one site.
+- **A removed hook.** When no hook entry ran a suite any more, the reason
+  read "pytest is no longer run by any pre-commit hook". That is false when
+  the entry was rewritten into a runner the vocabulary does not know yet
+  (`hatch test`). A hook's id and name were never part of the decision, and
+  stay out of it.
+
+Rulings 196.191.7 (d) and 196.191.8 (d), as implemented. Both change only
+what the reason of the same finding says, in the same function, and both
+move its fingerprint, so they share one round:
+
+- **191.8: identity stays text.** When the fallback fires, the reason names
+  both commands: "pytest no longer runs, and python -m pytest is disabled
+  (if: false)". With several commands stopped, it names the first in sort
+  order, as it already did for the disabled one. A runner disabled as
+  written keeps the one-command reason.
+- **191.7: removal stays high, and ids and names are never evidence.** The
+  reason is the ruling's own, "no pre-commit hook entry invokes a recognised
+  test runner any more (was: pytest)", naming the first base-side entry in
+  sort order. Closing the false-reason cases themselves (`hatch test`, `just
+  test`, `poe test`, `pdm test`) belongs to the shared runner vocabulary
+  (#216).
+
+**Pins.** Five reason strings, in four tests of
+`tests/test_ci_control_flow.py`, move, each a direct consequence of the
+rulings:
+- `test_precommit_hook_inventory_is_two_sided`;
+- `test_the_runner_that_stopped_must_be_the_runner_that_was_parked`;
+- two tests added by the 191.5 round (D-079), the echo decoy in a workflow
+  and in a pre-commit config.
+
+**Tests and fixtures.**
+- New tests: two in `tests/test_ci_control_flow.py`, one with a reworded
+  runner among several stopped commands and one with a hook that keeps its
+  id while its entry runs no runner or moves to a remote repository. Both
+  pin that the reason names the first command in sort order, not in file
+  order.
+- No fixture changes its expectation, and none is added: fixtures pin
+  verdicts, and no verdict changes.
+
+**Fingerprints** (for the X.release-and-fingerprints batch).
+`CI_WORKFLOW_TOUCHED` keys a weakened file by its reasons, so both reworded
+reasons change the fingerprint of every finding that carries one. In the
+corpus there are three: `precommit_test_hook_removed_pos`,
+`precommit_test_hook_echo_decoy_pos` and
+`ci_reworded_runner_beside_echo_decoy_pos`. An allowlist entry for one of
+these findings stops matching.
+
+**Cost.**
+- **Verdicts:** none change.
+- **Sweep:** the 821 commits that touch CI files in the full history of
+  attrs, click, flask, httpx, rich and starlette give no control-flow
+  reason, so no fingerprint there changes.
+- **Verdict gate:** every one of its 180 cases keeps its verdict and its
+  findings' rules, severities and files against the candidate built from
+  #247, so no case is relabelled.
+- **Corpus:** the three fixtures above change their message, fingerprint
+  and recorded reason, and nothing else.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
