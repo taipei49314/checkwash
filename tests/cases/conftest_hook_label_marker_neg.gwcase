@@ -1,0 +1,42 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a collection hook that only adds a mark that is neither skip nor xfail is not a control
+origin: #209 Q2: `pytest.mark.timeout(30)` labels an item and disables nothing,
+origin2: so the hook reports nothing; it blocked at high as a suite-level control.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+=== after: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        if "network" in item.keywords:
+            item.add_marker(pytest.mark.timeout(30))
+=== after: tests/test_network.py ===
+import pytest
+
+
+@pytest.mark.network
+def test_fetch():
+    assert 1 + 1 == 2
+=== expect ===
+[]

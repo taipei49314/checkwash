@@ -281,3 +281,59 @@ def test_the_fingerprint_is_the_marker_name_s():
     assert finding.fingerprint == make_fingerprint(
         "TEST_DISABLED", TEST_PATH, "test_add", 'pytest.mark.skipif(sys.platform=="win32")')
     assert finding.after.text == 'pytest.mark.skipif(sys.platform == "win32")'
+
+
+# --- 209.Q3: a conftest's `pytestmark` is reported at info ----------------------
+
+INERT = "pytestmark added to conftest.py, which pytest does not collect as a test module: it disables nothing"
+
+
+def inert(found):
+    return [(f.unit, f.severity, f.escalators, f.deescalators, f.shape) for f in found]
+
+
+@pytest.mark.parametrize("assignment, names", [
+    # B3: the guard does not matter, since the line does nothing
+    ('pytestmark = pytest.mark.skipif(not os.environ.get("NETWORK"), reason="set NETWORK=1 to run")',
+     ['pytest.mark.skipif(notos.environ.get("NETWORK"))']),
+    ('pytestmark = pytest.mark.skipif(sys.platform == "win32")', ['pytest.mark.skipif(sys.platform=="win32")']),
+    ("pytestmark = pytest.mark.skip(reason='later')", ["pytest.mark.skip"]),
+    ("pytestmark = [pytest.mark.slow, pytest.mark.skip, pytest.mark.xfail(strict=True)]",
+     ["pytest.mark.skip", "pytest.mark.xfail"]),
+])
+def test_a_conftest_pytestmark_is_reported_at_info(assignment, names):
+    found, verdict = conftest_added(HEAD + assignment + "\n")
+    assert inert(found) == [("<suite>", "info", [], [], "inert_mark")] * len(names)
+    assert [f.message for f in found] == [f"<suite>: {INERT} ({name})" for name in names]
+    assert [f.fingerprint for f in found] == [make_fingerprint("TEST_DISABLED", CONFTEST, "<suite>", n) for n in names]
+    assert verdict == "pass"
+
+
+def test_nothing_escalates_it():
+    # Not refused repair evidence as a suite control, and not escalated by an
+    # oracle freeze: the line disables nothing.
+    after = HEAD + "pytestmark = pytest.mark.skip\n"
+    changes = [
+        FileChange(CONFTEST, "modified", HEAD.encode(), after.encode()),
+        FileChange("scripts/deploy.sh", "modified", b"rsync -a build/ prod:/srv/app/\n",
+                   b"rsync -a --delete build/ prod:/srv/app/\n"),
+    ]
+    for contract in (Contract(), Contract(present=True, oracle_freeze=True)):
+        _ir, findings, verdict = analyze(changes, Config(), contract, [], datetime.date(2026, 10, 5))
+        found = [f for f in findings if f.rule == "TEST_DISABLED"]
+        assert inert(found) == [("<suite>", "info", [], [], "inert_mark")]
+        assert verdict == "pass"
+
+
+def test_beside_a_control_it_stays_at_info():
+    after = HEAD + "pytestmark = pytest.mark.skip\n\n\ndef pytest_collection_modifyitems(config, items):\n    items[:] = []\n"
+    found, verdict = conftest_added(after)
+    assert sorted((f.severity, f.shape) for f in found) == [("high", "collection_control"), ("info", "inert_mark")]
+    assert verdict == "block"
+
+
+def test_a_test_module_pytestmark_still_disables():
+    found, verdict = analyze_change(FileChange(TEST_PATH, "modified", BEFORE.encode(),
+                                               with_pytestmark("pytestmark = pytest.mark.skip").encode()))
+    assert [(f.severity, f.shape) for f in found] == [("high", "marker_added")]
+    assert verdict == "block"

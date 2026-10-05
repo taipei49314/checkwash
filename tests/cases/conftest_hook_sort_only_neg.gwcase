@@ -1,0 +1,33 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a collection hook that only sorts the items is not a control
+origin: #209 Q2: it neither drops nor disables an item, so it reports nothing;
+origin2: it blocked at high as a suite-level control.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+=== after: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    items.sort(key=lambda item: item.nodeid)
+=== expect ===
+[]

@@ -6,6 +6,7 @@ from checkwash.compat import removed_skip_guard
 from checkwash.findings import (
     SHAPE_COLLECTION_CONTROL,
     SHAPE_GUARD_WEAKENED,
+    SHAPE_INERT_MARK,
     SHAPE_MARKER_ADDED,
     SHAPE_PARAM_CASES_REMOVED,
     SHAPE_UNIT_REMOVED,
@@ -18,6 +19,7 @@ from checkwash.frontends.python.conftest_controls import (
     FIXTURE_SETUP,
     RUNTIME,
     SETUP,
+    SKIP_MARK,
     SUITE_KINDS,
     marker_kind,
 )
@@ -34,6 +36,9 @@ _WHAT = {
     COLLECTION: "suite-level collection control added",
     SETUP: "skip/xfail added to the setup this test runs",
 }
+# A skip mark on a conftest's `<suite>` unit comes from its `pytestmark`,
+# which pytest never reads there (#209 Q3).
+_INERT = "pytestmark added to conftest.py, which pytest does not collect as a test module: it disables nothing"
 # A runner decides whether focus stops anything: node:test honours it only
 # under a flag set outside the file (#196 187.1).
 _UNFOCUSED = (
@@ -91,7 +96,11 @@ def detect(ir: IR) -> list[Finding]:
                 for name in unit.delta.markers_added:
                     m = marker_by_name.get(name)
                     kind = marker_kind(name)
-                    what = _UNFOCUSED if name == "test.unfocused" else _WHAT.get(kind, "disabling marker added")
+                    if file.role == "conftest" and kind == SKIP_MARK:
+                        what, shape = _INERT, SHAPE_INERT_MARK
+                    else:
+                        what = _UNFOCUSED if name == "test.unfocused" else _WHAT.get(kind, "disabling marker added")
+                        shape = SHAPE_COLLECTION_CONTROL if kind in SUITE_KINDS else SHAPE_MARKER_ADDED
                     findings.append(
                         Finding(
                             rule="TEST_DISABLED",
@@ -102,11 +111,7 @@ def detect(ir: IR) -> list[Finding]:
                             before=None,
                             after=Evidence(text=m.text, span=m.span) if m else None,
                             fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, name),
-                            shape=(
-                                SHAPE_COLLECTION_CONTROL
-                                if kind in SUITE_KINDS
-                                else SHAPE_MARKER_ADDED
-                            ),
+                            shape=shape,
                         )
                     )
             for name in unit.delta.guards_weakened:
