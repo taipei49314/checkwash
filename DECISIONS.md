@@ -4888,6 +4888,33 @@ verdicts unchanged.
       is a name bound to `skipif("sys.version_info < (2,6)")`, a string
       condition again (#263). The moved tests count as disabled, so the old
       units' disappearance is no restructure.
+- **Sweep, D-088's sets**, measured in #261's round against #262's engine:
+  the 895 commits of ten full histories that change a `conftest.py` or a
+  `skip`/`xfail` line in a test file (855 readable), and the 368 of pytest's
+  history that touch a collection control or a skip or xfail decorator (364
+  readable). Besides uvicorn `4a5f3ddf39` and rich `f15dc3ea0b` above, one
+  verdict moves:
+  - **pass to block:** uvicorn `7d274ed389` respells its optional-dependency
+    skip, `@pytest.mark.skipif(HttpToolsProtocol is None)`, as
+    `skip_if_no_httptools`: bound to `skipif(False)` in a `try` and to
+    `skipif(True)` in its `except ModuleNotFoundError:`, and applied by name.
+    The name holds both marks (reading 2), each a new identity, and D6
+    credits no dependency check, as for a `pytestmark` under
+    `except ImportError` (A3).
+
+  On 21 more commits findings move and verdicts do not:
+  - uvicorn `8239373ec6`, already blocked: a test renamed into the same
+    spelling (`@skip_if_no_wsproto`) is no live copy, so the old unit's
+    disappearance goes from info to high.
+  - pytest `6ba3475448`: a renamed test class sits in a module that binds
+    `needsosdup = pytest.mark.xfail(...)`. M2 made every test there look
+    disabled, so the renamed test was no live copy; it is now, and the old
+    unit's disappearance goes from warn to info.
+  - flask `1232d69860`, werkzeug `c5cce98338` and fourteen rich commits
+    (`655b5210cb` among them) gain findings at warn: marks applied by
+    name, whose condition the commit changes or adds.
+  - rich `d388b83954` and `e037e587e3` (at warn) and werkzeug
+    `8720873853` (at high), which already blocked, gain one finding each.
 
 **Verdict gate.** It passes, with 0 failures. Every one of its 182 cases
 (156 T1, 26 T3) keeps the verdict and the findings' rules, severities and
