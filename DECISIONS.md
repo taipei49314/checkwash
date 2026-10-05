@@ -4712,3 +4712,213 @@ files of the candidate built from #259's head, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-090 (2026-10-05): every `pytestmark` binding is read, with its path condition as its guard, and a mark bound to a name is no module-level skip (#260)
+
+checkwash read a `pytestmark` in one spelling only: a top-level
+`pytestmark = <mark>` or `pytestmark = [<mark>, ...]` in a test module. Every
+other spelling pytest honours skipped the tests with no finding: a class
+body's `pytestmark`, one under an `if`, `try` or `with`, an annotated `=`,
+`+=`, `.append`, a tuple target, and a name bound to a mark or to a list of
+marks (#260 A1-A12). The one that blocked, `SKIP = pytest.mark.skip(...)` /
+`pytestmark = SKIP` (A11), blocked by accident: `_module_skip_markers` read
+any module-level call whose last name is `skip` or `xfail` as a module-level
+skip call, so it named the finding `module.skip`. The same accident blocked a
+mark that is bound to a name and never applied (M1, M2), which pytest runs.
+
+Rulings, 2026-10-05:
+- **260.Q1:** read all twelve rows, in modules and class bodies alike. Every
+  binding of `pytestmark` counts: `=` and an annotated `=`; `+=`, and
+  `.append`, `.extend` or `.insert` on it; a tuple target; a name bound once
+  to a mark or to a list of marks; inside any compound statement at module or
+  class level. A class's marks apply to that class's units only.
+- **260.Q2:** the binding's path condition is the marker's guard, and D6
+  judges it as it judges an imperative skip under recorded guards: each
+  enclosing `if` test, `not (...)` for an `else` branch and after a branch
+  that always ends, and an `except` block's condition. A `skipif` mark's own
+  condition is conjoined with that guard. A `with` body has no guard.
+- **260.Q3:** a mark keeps the name a decorator would mint, so moving it
+  between spellings keeps its identity.
+- **M1, M2** have no question of their own. The issue's comment records the
+  consequence of 260.Q1 and Q3 as ruled: a `pytest.mark.*` call is a mark,
+  never a module-level skip call.
+
+**As implemented:**
+- `frontend._pytestmark_markers` reads one scope, a module body or a class
+  body, and records each skip or xfail mark as a decorator is: its own
+  call's text and span, under the name a decorator would mint (#209 X1), and
+  with the binding's path condition as its guard.
+- `visit` gives a class's units its decorators and its body's marks, and a
+  nested class's units its enclosing classes' too, as pytest does. A test a
+  subclass inherits carries its defining class's marks and the subclass's.
+- `_module_skip_markers` skips a call whose callee is a mark
+  (`<...>.mark.<name>(...)`).
+- `_decorator_markers` reads a decorator that names a bound mark as that
+  mark, so `skip_slow = pytest.mark.skip(...)` / `@skip_slow`, which blocked
+  only through M1's accident, still blocks, now on the test it skips.
+- `compat._marker_is_compat_gate` judges a mark with a guard on the
+  conjunction of the guard and the mark's own condition.
+  `compat.removed_skip_guard` reads a mark's guard as it reads a body skip's.
+
+Readings the rulings leave to the implementation:
+
+1. **What puts a mark into `pytestmark`:** the six statements 260.Q1 names,
+   and a subscript (`pytestmark[0] = ...`). A value is a mark, a list or
+   tuple of marks, a `+` of those, a starred element, or a name bound to one.
+   A tuple target unpacks a literal tuple or list of its length, element by
+   element.
+2. **A name bound more than once** holds every value a plain `=` binds it to,
+   in its scope. The ruling names a name bound once; a name bound twice may
+   hold either value, and both count, so the reading fails toward flagging. A
+   class body's names are read with its module's, which Python falls back to.
+   Before #260, `SKIP = pytest.mark.slow` / `SKIP = pytest.mark.skip(...)` /
+   `pytestmark = SKIP` blocked through M1's accident, and it still blocks.
+3. **Every binding counts**, so a later `pytestmark = []` does not unrecord a
+   mark bound before it, although pytest then runs the test.
+4. **The path condition** is D-087's reading 1, as a conftest's
+   `collect_ignore` records it. Not followed: the code after a branch that
+   always ends, which a module or class body rarely has. A loop, `match` or
+   `try` body adds no guard, as a `with` body does not, so a binding there
+   reads as unconditional.
+5. **D6** credits a mark with a guard when the conjunction of the guard and
+   the mark's own condition passes its tests (`pytest.mark.skip` has no
+   condition of its own). A strict `xfail` earns nothing under any guard. A
+   guard that does not parse as an expression (an `except` other than an
+   `ImportError` around plain imports) earns nothing.
+6. **A guard made always true or removed** is reported, as a body skip's is
+   (THREATMODEL 54): the evidence pass compares the guard of each mark of a
+   name across the diff, and `removed_skip_guard` now reads a mark's guard.
+   Without it, removing the `if` around a guarded `pytestmark` would pass,
+   since the mark keeps its name; before #260 it blocked, because the base
+   side's guarded binding was never read. In conftest.py, which pytest does
+   not collect as a test module, the mark disables nothing and neither does
+   its guard: the same event is reported at info, in the `inert_mark` shape
+   a conftest's mark has (209.Q3). This round's first cut gave it a test
+   module's event, which blocked at high.
+7. **A decorator that names a bound mark** is read as that mark, recorded as
+   the mark's own call. A called name (`skip_if = pytest.mark.skipif` /
+   `@skip_if(cond)`) is the decorator's own call. A name a decorator already
+   reads as a mark (`skip = pytest.mark.skip` / `@skip`) keeps that reading.
+8. **Not in this round (residuals):**
+   - a subclass's own tests, which pytest marks with a base class's
+     `pytestmark` and decorators;
+   - a name bound by an import (`from tests.marks import SKIP`), and a list
+     grown through another name (`MARKS.append(...)`);
+   - a tuple target that does not unpack a literal, and a `pytestmark` bound
+     by `global` in a function, a walrus or a loop target;
+   - a decorator that names a mark through an attribute other than `mark`
+     (`m = pytest.mark` / `m.skip(...)`).
+
+**Tests and fixtures.**
+- **Tests:** 102 in `tests/test_issue260_pytestmark_spellings.py`. All 51
+  mutants of the round's code fail them or the fixtures.
+- **Fixtures:**
+  - positives, each of which pytest 9.1.1 skips, and which checkwash passed
+    with no finding unless noted:
+    - `pytestmark_class_body_skip_pos` (A9);
+    - `pytestmark_if_true_skip_pos` (A1);
+    - `pytestmark_except_importerror_skip_pos` (A3);
+    - `pytestmark_else_branch_skip_pos` (A4);
+    - `pytestmark_annotated_skip_pos` (A5);
+    - `pytestmark_augmented_skip_pos` (A6);
+    - `pytestmark_append_skip_pos` (A7);
+    - `pytestmark_tuple_target_skip_pos` (A8);
+    - `pytestmark_with_body_skip_pos` (A10);
+    - `pytestmark_bound_mark_skip_pos` (A11; blocked as `module.skip`);
+    - `pytestmark_bound_list_skip_pos` (A12);
+    - `pytestmark_guard_made_true_pos`;
+    - `pytestmark_guard_removed_pos` (blocked as a mark added);
+    - `mark_bound_and_applied_skip_pos` (blocked as `module.skip`).
+  - negatives: `pytestmark_platform_guard_neg` (warn `COMPAT_GATE`),
+    `mark_bound_never_applied_neg` (M1) and
+    `xfail_mark_bound_never_applied_neg` (M2), which blocked at high; and
+    `conftest_pytestmark_guard_made_true_neg` and
+    `conftest_pytestmark_guard_removed_neg` (info, reading 6), which pytest
+    9.1.1 runs.
+
+Every existing fixture keeps its expectation, and its corpus record does not
+change.
+
+**Fingerprints.** A mark read in a new spelling mints the name a decorator
+would. One kind of existing finding moves: a mark bound to a name and
+applied by it (as `pytestmark`, A11, or as a decorator) was reported as
+`module.skip` or `module.xfail` on every test of the module, and is now
+reported under the mark's own name on the tests it marks. The release guide
+names it (X.release-and-fingerprints). In the targeted sweep, three pytest
+commits show it (`221ac3e466`, `8360c1e687`, `fe34a8a15a`), with their
+verdicts unchanged.
+
+**Cost.**
+- **Newly blocking:**
+  - a skip or xfail mark bound to `pytestmark` in a spelling checkwash did
+    not read, unless its guard and its condition qualify for D6;
+  - a decorator that names a bound mark D6 does not credit, as the
+    decorator spelling of the same mark already blocked;
+  - a guard made always true, or removed, around a `pytestmark` binding.
+- **Newly passing:** a mark bound to a name and never applied (M1, M2).
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) keep every verdict. One
+  rich commit (`655b5210cb`) gains five findings at warn: tests marked by
+  names bound to `skipif(sys.version_info ...)` marks, which D6 holds.
+- **Sweep, targeted:** the commits of D-088's ten full histories and of
+  pytest's that touch `pytestmark` or bind a name to a `pytest.mark` call
+  (httpx and requests have none): 186 commits, 179 readable. aiohttp's are
+  left out, since a git submodule makes 21 of its 22 unreadable. Nine
+  verdicts move, and one commit becomes readable:
+  - **block to pass:** pytest `7c6e47f715` binds
+    `needsosdup = py.test.mark.xfail(...)` and never applies it (M2).
+  - **unreadable to pass:** pytest `9295f9ffff` exceeded the stand-in
+    proof's step budget. Tests marked by a bound name now count as
+    disabled, so that proof no longer traces them.
+  - **pass to block:**
+    - uvicorn `4a5f3ddf39` moves its `pytestmark` skip into an
+      `except ImportError:` block, which D6 does not credit (260.Q2's A3:
+      ruled behaviour).
+    - rich `f15dc3ea0b` applies
+      `skip_pypy3 = pytest.mark.skipif(hasattr(sys, "pypy_version_info"))`
+      by name. D6 credits no PyPy check, as for the decorator spelling.
+    - pytest `0be961a0f3`, `4337702a6a` and `8e4501ee29` apply
+      `needsosdup = ...("not hasattr(os, 'dup')")` by name, a condition that
+      names no interpreter or OS.
+    - pytest `536252cb2e` and `5715bbd6f5` apply platform marks by name
+      whose condition is a string. D6 reads a string condition as one that
+      always holds (#263), so they block, as their decorator spellings
+      already did.
+    - pytest `1ff173baee` moves two tests into a class whose `pytestmark`
+      is a name bound to `skipif("sys.version_info < (2,6)")`, a string
+      condition again (#263). The moved tests count as disabled, so the old
+      units' disappearance is no restructure.
+- **Sweep, D-088's sets**, measured in #261's round against #262's engine:
+  the 895 commits of ten full histories that change a `conftest.py` or a
+  `skip`/`xfail` line in a test file (855 readable), and the 368 of pytest's
+  history that touch a collection control or a skip or xfail decorator (364
+  readable). Besides uvicorn `4a5f3ddf39` and rich `f15dc3ea0b` above, one
+  verdict moves:
+  - **pass to block:** uvicorn `7d274ed389` respells its optional-dependency
+    skip, `@pytest.mark.skipif(HttpToolsProtocol is None)`, as
+    `skip_if_no_httptools`: bound to `skipif(False)` in a `try` and to
+    `skipif(True)` in its `except ModuleNotFoundError:`, and applied by name.
+    The name holds both marks (reading 2), each a new identity, and D6
+    credits no dependency check, as for a `pytestmark` under
+    `except ImportError` (A3).
+
+  On 21 more commits findings move and verdicts do not:
+  - uvicorn `8239373ec6`, already blocked: a test renamed into the same
+    spelling (`@skip_if_no_wsproto`) is no live copy, so the old unit's
+    disappearance goes from info to high.
+  - pytest `6ba3475448`: a renamed test class sits in a module that binds
+    `needsosdup = pytest.mark.xfail(...)`. M2 made every test there look
+    disabled, so the renamed test was no live copy; it is now, and the old
+    unit's disappearance goes from warn to info.
+  - flask `1232d69860`, werkzeug `c5cce98338` and fourteen rich commits
+    (`655b5210cb` among them) gain findings at warn: marks applied by
+    name, whose condition the commit changes or adds.
+  - rich `d388b83954` and `e037e587e3` (at warn) and werkzeug
+    `8720873853` (at high), which already blocked, gain one finding each.
+
+**Verdict gate.** It passes, with 0 failures. Every one of its 182 cases
+(156 T1, 26 T3) keeps the verdict and the findings' rules, severities and
+files of the candidate built from #262's head, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

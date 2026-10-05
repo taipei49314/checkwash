@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 117
+rule: TEST_DISABLED
+title: a pytestmark bound to a name that holds a mark skips the module
+origin: #260 A11 and ruling 260.Q1: pytest 9.1.1 skips the test, and checkwash
+origin2: reported nothing: it blocked only by accident, as `module.skip`; it is now the mark's own name (260.Q3).
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+SKIP = pytest.mark.skip(reason="later")
+pytestmark = SKIP
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

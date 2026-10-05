@@ -1,0 +1,25 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a skip mark bound to a name and never applied disables nothing
+origin: #260 M1: `skip_slow = pytest.mark.skip(...)` was read as a module-level skip call and blocked
+origin2: the module at high; pytest runs the test (1 passed).
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+skip_slow = pytest.mark.skip(reason="slow")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[]

@@ -25,7 +25,7 @@ from checkwash.frontends.python.conftest_controls import (
 )
 from checkwash.frontends.python.hook_guards import HOOK_MARKERS
 from checkwash.ir.assertion_identity import fingerprint_text
-from checkwash.ir.markers import is_setup_skip, skip_condition
+from checkwash.ir.markers import is_guarded_mark, is_setup_skip, skip_condition
 from checkwash.ir.model import IR, judged_as_test
 
 # What an added marker of each kind did. Any other kind, or none, is a plain
@@ -39,6 +39,9 @@ _WHAT = {
 # A skip mark on a conftest's `<suite>` unit comes from its `pytestmark`,
 # which pytest never reads there (#209 Q3).
 _INERT = "pytestmark added to conftest.py, which pytest does not collect as a test module: it disables nothing"
+# Its guard guards nothing either, so a guard made always true or removed
+# there is reported in the same shape (#260).
+_INERT_GUARD = "pytest does not collect conftest.py as a test module, so this pytestmark disables nothing"
 # A runner decides whether focus stops anything: node:test honours it only
 # under a flag set outside the file (#196 187.1).
 _UNFOCUSED = (
@@ -118,11 +121,14 @@ def detect(ir: IR) -> list[Finding]:
                 # A skip in the setup this test runs says so, and names its
                 # provider: its evidence is the fixture's or callback's line.
                 # A collection hook names itself too: its guard is the
-                # condition its effects fire under (#209 Q1).
+                # condition its effects fire under (#209 Q1). So does a mark:
+                # only a `pytestmark` binding gives one a guard (#260 Q2).
                 if is_setup_skip(name):
                     where, which = " in the setup this test runs", f" ({name})"
                 elif name in HOOK_MARKERS:
                     where, which = " of the suite-level control", f" ({name})"
+                elif is_guarded_mark(name):
+                    where, which = "", f" (pytestmark: {name})"
                 else:
                     where, which = "", ""
                 was = removed_skip_guard(name, unit, file.constants_before)
@@ -142,6 +148,11 @@ def detect(ir: IR) -> list[Finding]:
                         f"{unit.qualname}: skip guard{where} now always fires "
                         f"({(m.guard if m else name)!r}){which}"
                     )
+                # A conftest's `pytestmark` disables nothing whatever its
+                # guard says, so this is reported as the mark is (#209 Q3).
+                inert = file.role == "conftest" and marker_kind(name) == SKIP_MARK
+                if inert:
+                    message = f"{message}: {_INERT_GUARD}"
                 findings.append(
                     Finding(
                         rule="TEST_DISABLED",
@@ -154,7 +165,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_fingerprint(
                             "TEST_DISABLED", file.path, unit.qualname, f"guard:{name}"
                         ),
-                        shape=SHAPE_GUARD_WEAKENED,
+                        shape=SHAPE_INERT_MARK if inert else SHAPE_GUARD_WEAKENED,
                     )
                 )
             if unit.delta.param_cases_removed:

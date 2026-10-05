@@ -7,6 +7,7 @@ import operator
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import (
     bare_names,
+    is_guarded_mark,
     is_guarded_skip,
     is_setup_skip,
     marker_call,
@@ -238,13 +239,24 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     """
     canonical = m.name.split("(", 1)[0]
     condition: ast.AST | None = None
-    if canonical in _GATE_DECORATORS:
+    if canonical in _GATE_DECORATORS or (m.guard and is_guarded_mark(canonical)):
+        # A mark's condition, and the guard of the `pytestmark` binding that
+        # carries it: both must hold for the mark to apply, so the condition
+        # is their conjunction (#260 Q2).
         call = marker_call(m.text)
-        if call is None or not call.args:
+        if canonical == "pytest.mark.xfail" and call is not None and _xfail_strict(call):
             return False
-        if canonical == "pytest.mark.xfail" and _xfail_strict(call):
+        parts = []
+        if m.guard:
+            guard = parse_expr(m.guard)
+            if guard is None:
+                return False
+            parts.append(guard)
+        if canonical in _GATE_DECORATORS and call is not None and call.args:
+            parts.append(call.args[0])
+        if not parts:
             return False
-        condition = call.args[0]
+        condition = parts[0] if len(parts) == 1 else ast.BoolOp(op=ast.And(), values=parts)
     elif (canonical in _GATE_CALLS or is_setup_skip(canonical)) and m.guard:
         # A skip in the setup the unit runs is judged as one in its body is
         # (#196 183.2): its guard is the condition its setup reaches it under.
@@ -279,8 +291,10 @@ def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: s
     non-strict `xfail(cond)` (strict inverts the oracle instead of skipping
     it, which is not a gate), and an imperative `pytest.skip()`/`pytest.xfail()`
     /`self.skipTest()` under recorded `if` guards, in the test's body or in the
-    setup it runs (#196 183.2). A conftest's suite-level collection control
-    earns it on its own guard (D-028, #209 Q1).
+    setup it runs (#196 183.2). A mark a `pytestmark` binding carries is judged
+    on its own condition and the binding's guard together (#260 Q2). A
+    conftest's suite-level collection control earns it on its own guard
+    (D-028, #209 Q1).
 
     D6 judges the added skip, so the hold is a fact about the finding's own
     marker, not about the unit. Every after-side marker with that name must
@@ -345,9 +359,11 @@ def removed_skip_guard(name: str, unit, constants_before: dict[str, str] | None)
     instance must run under none (`skip_condition`). The first base condition
     comes back for the message; None otherwise, and for any marker whose
     guard does not say when it fires. A skip in the setup the unit runs is
-    read the same way, by its own guard (183.2's second stage).
+    read the same way, by its own guard (183.2's second stage), and so is a
+    mark a `pytestmark` binding carries, by the binding's guard (#260 Q2). A
+    decorator's mark has no guard, so it never answers.
     """
-    if not is_guarded_skip(name) or unit.before is None or unit.after is None:
+    if not (is_guarded_skip(name) or is_guarded_mark(name)) or unit.before is None or unit.after is None:
         return None
     conditions = []
     for m in unit.before.markers:

@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 117
+rule: TEST_DISABLED
+title: a pytestmark in a class body skips every test in the class
+origin: #260 A9 and ruling 260.Q1: a class body was never read for pytestmark, so this skipped
+origin2: the class's tests with no finding (1 skipped on pytest 9.1.1).
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+class TestCalc:
+    def test_add(self):
+        assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+class TestCalc:
+    pytestmark = pytest.mark.skip(reason="later")
+
+    def test_add(self):
+        assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
