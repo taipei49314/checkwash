@@ -24,6 +24,7 @@ from checkwash.ci import (
     _runs_tests,
     _scan_ci_weakening,
 )
+from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
 from checkwash.collection_inventory import collection_inventory_changes
 from checkwash.conftest_context import ConftestContext
@@ -1185,7 +1186,8 @@ def build_ir(
             g.ci_files_changed.append(path)
         elif role == "ci":
             g.ci_files_changed.append(path)
-            if change.status == "deleted" and _is_ci_workflow(path) and _runs_tests(change.before):
+            if change.status == "deleted" and _is_ci_workflow(path) and (
+                    _runs_tests(change.before) or holds_runner_site(path, change.before)):
                 # Deleting or relocating a workflow removes the gate outright,
                 # which is at least as strong a signal as weakening a command
                 # inside it — but only if that workflow ran the tests. Firing
