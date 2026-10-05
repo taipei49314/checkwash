@@ -1,14 +1,14 @@
 # Enterprise checklist
 
-One page for a security or platform team evaluating checkwash v0.5.0
+One page for a security or platform team evaluating checkwash v0.6.0
 (alpha; bounded JS/TS assertion evidence) as a required gate, with a reviewed exemption path.
 Start with a review of its
 [coverage and adoption cost](stability.md#coverage-and-adoption-cost), then
 protect the deployed check and its policy files.
 
 **v0.3.0 notice:** v0.3.0 (2026-09-07) changes five exemption namespaces and
-local installation behavior. The recommended Action pin is v0.4.2 (advanced
-by v0.5.0 under the one-release trust lag) and carries
+local installation behavior. The recommended Action pin is v0.5.0 (advanced
+by v0.6.0 under the one-release trust lag) and carries
 these changes. Follow
 the [migration notes](remediation-upgrade.md); a CLI upgrade alone still does
 not update a deployed Action or an existing hook.
@@ -27,9 +27,10 @@ the [README](../README.md):
 
 3. `checkwash doctor` — it cannot see branch protection; confirm step 2.
 
-The README's Action is hash-pinned to **v0.4.2** under the one-release
-trust-lag policy. Installing the v0.5.0 CLI does not update that Action;
-the fixes for the #172–#181 reports are only in the newer package. Always
+The README's Action is hash-pinned to **v0.5.0** under the one-release
+trust-lag policy. Installing the v0.6.0 CLI does not update that Action;
+the work on the reports and rulings that followed #172–#181 is only in the
+newer package. Always
 record both deployed versions. A required check enforces that version's
 configured verdict, not a guarantee that the change is correct.
 

@@ -1,10 +1,10 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.5.0 is alpha** (bounded JS/TS assertion evidence). Its versioned interfaces and
+checkwash **v0.6.0 is alpha** (bounded JS/TS assertion evidence). Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
-[public-launch brief](releases/v0.5.0-public-launch.md) records this release's
+[public-launch brief](releases/v0.6.0-public-launch.md) records this release's
 evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
@@ -171,14 +171,14 @@ the subject is what the magnitude measures and a literal centre is the
 expected value, so a rewritten centre is reported
 ([#225](https://github.com/taipei49314/checkwash/issues/225), 189.2). Dynamic aliases and semantic equivalence of arbitrary predicates
 inside `assert(value)` / `assert.ok(value)` remain outside this model.
-v0.5.0 (not in the published v0.4.2 package) also reports
+Since v0.5.0, checkwash also reports
 `TEST_PATCHES_SUBJECT` when an existing JS unit's own assertion reads a newly
 installed stand-in for a first-party module or member: `vi.mock`, `jest.mock`,
 their ordered forms, node:test `mock.module`, or a replacing spy (issue #177).
 Only `./` and `../` specifiers count as first-party; setup files, hooks and
 bundler aliases stay outside
 ([installation contract](subject-integrity.md#javascript-module-mocks-and-replacing-spies)).
-Since v0.5.0, a `vi.mock` takes effect for the whole file wherever it is
+Since v0.6.0, a `vi.mock` takes effect for the whole file wherever it is
 written, as Vitest hoists it. A stand-in is new for each test that did not
 already have it, so one copied in from another test is reported. A spy
 replaced in a second statement is read. A module object passed whole names
@@ -267,7 +267,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.5.0 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.6.0 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
@@ -310,10 +310,10 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.5.0 documentation pins the Action to v0.4.2 under the one-release
-trust-lag policy. That Action includes the callback/scalar/precision evidence,
-but lacks the fixes for the #172–#181 reports. See the
-[v0.5.0 evidence and limits](releases/v0.5.0-public-launch.md#evidence-and-limits).
+The v0.6.0 documentation pins the Action to v0.5.0 under the one-release
+trust-lag policy. That Action includes the fixes for the #172–#181 reports,
+but lacks the work on the reports and rulings that followed them. See the
+[v0.6.0 evidence and limits](releases/v0.6.0-public-launch.md#evidence-and-limits).
 Treat each installed surface as its own versioned dependency; see the
 [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 

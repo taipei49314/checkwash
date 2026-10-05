@@ -30,8 +30,8 @@ _PINS = {
     "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
     "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
     # The one-release trust lag: the newest stable tag's peeled commit, moved
-    # forward with every release (v0.4.2 here, per the v0.5.0 round).
-    "taipei49314/checkwash/action": "23ef5929896187e4aac5889735c792e65af3e721",
+    # forward with every release (v0.5.0 here, per the v0.6.0 round).
+    "taipei49314/checkwash/action": "24b60a2019a5900291ecb35ab8290f34af2d5438",
 }
 
 

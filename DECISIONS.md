@@ -5039,3 +5039,47 @@ files of the candidate built from #264's head, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-092 (2026-10-05): v0.6.0 — fingerprint changes since v0.5.0
+
+The rounds merged since v0.5.0 (PRs #194–#265) keep the finding JSON shape,
+the rule IDs, the severity model and the exit codes. The findings gain one
+escalator, `CI_BECAME_UNANALYSABLE` (D-082), and one `shape` value,
+`inert_mark` (D-089). The IR gains optional fields and stays at IR_VERSION 2
+(D-067).
+
+They change the fingerprint of some existing findings. Each round recorded
+its own for this release (X.release-and-fingerprints):
+- D-070: a chai delta is spelled as an exact decimal in TOLERANCE_LOOSENED;
+- D-071: the file-level JS focus finding is keyed by the path, `<file>` and
+  `test.focused`;
+- D-073 and D-074: SCOPE_DRIFT, and SNAPSHOT_CODE_COCHANGE, where a file's
+  role changed;
+- D-077: a widened Python hand-rolled bound moves from
+  EXPECTED_VALUE_CHANGED to TOLERANCE_LOOSENED, and a JS hand-rolled check
+  spelled through `expect(...)` is keyed by its full text;
+- D-081: CI_WORKFLOW_TOUCHED's reworded reasons;
+- D-083: an existing config's new selector under explicit pytest targets;
+- D-087: a guard removed from a unit's setup joins the guard family;
+- D-090: a mark bound to a name and applied by it is reported under its own
+  name, not as `module.skip` or `module.xfail`.
+
+Fingerprints are a frozen contract, so the release is minor: v0.6.0, chosen
+by the maintainer on 2026-10-05. Allowlist entries recorded on v0.5.0 for
+these shapes must be re-recorded; the
+[release guide](docs/releases/v0.6.0-public-launch.md) lists them.
+
+Cost against v0.5.0 itself, on the fixed 1,800-commit sweep (the last 300
+non-merge commits of attrs, click, flask, httpx, rich and starlette), v0.5.0's
+engine against this release's: both block the same 48 commits, no verdict
+moves, and neither errors. One passing commit's findings differ: rich
+`655b521` binds a Python 3.14 `skipif` to a name and applies it to five tests,
+which v0.5.0 did not read and this release reports as five TEST_DISABLED warns
+that D6 qualifies (D-090, decorator reading). Each round's targeted sets are
+recorded in its own entry.
+
+THREATMODEL: the rows fixed since v0.5.0 said "unreleased"; they now name
+v0.6.0. Their text and pins are the merged PRs'.
+
+The agent wrote this entry in the release PR; the maintainer approves it
+there.
