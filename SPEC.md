@@ -50,8 +50,11 @@ own names (`*_spec`, `*_test.tsx`) are JS/TS test paths only for a file whose
 source names that runner, by a `bun:test` import or a `Deno.test` call (#196
 186.4). A rename is an edit of the test, not its disappearance, when the
 runner that ran it still collects the new path (§2b), whatever roles the two
-paths hold. Python paths still resolve to one role:
-`tests/golden/test_x.py` is a snapshot (#219).
+paths hold. A Python file carries test obligations exactly when pytest's
+default collection runs it (§2b), whatever role it resolves to (#219):
+`tests/golden/test_x.py` keeps the `snapshot` role and its rules, and every
+test rule judges it beside them, while `tests/golden/data.py` stays a
+snapshot only. Moving `tests/test_x.py` there removes no test.
 
 **A file beneath a test-support directory is a test whatever its extension.**
 A path that would be `prod` and has a `__tests__`, `__mocks__` or `test`
