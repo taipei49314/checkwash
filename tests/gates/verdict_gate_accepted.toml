@@ -49,77 +49,14 @@
 # that #201 ruling 196.followup.new-gate-cases adds in that PR, which v0.5.0
 # blocks and the fix passes with a `pass` label. 9 entries remain, all
 # fp-fix. Approved by the maintainer in that fix PR (X.gate-bookkeeping).
+#
+# 2026-10-05: rotated to v0.6.0 (docs/RELEASING.md step 8c, D-094). The
+# baseline is now v0.6.0, which passes the nine fp-fix cases this file
+# accepted against v0.5.0 (i196/W1, i197/R1, R2, Q5a and Q5b, i198/FP1,
+# FP2, FPJ1 and FPJ2): none is a block -> pass transition any more, and each
+# is labelled pass. The gate run on the rotation PR's pins commit (#270, run
+# 37344879525) names all nine stale, and the rotation removes them. No entry
+# remains. The agent wrote this change in the rotation PR; the maintainer
+# approves it there.
 
-baseline = "v0.5.0"
-
-[[accept]]
-case         = "i196/W1"
-input_sha256 = "5cd50b4bcbccb53f8585068c8aaf6644f8270f347c922ff06cbdd916e67e431a"
-kind         = "fp-fix"
-issue        = 196
-reason       = "v0.5.0 blocks, the fix passes: ruling 196.184.3; the selector moved out of the only run's pytest command into a first pytest.ini addopts, so every run passes it before and after"
-reviewed_in  = 251
-
-[[accept]]
-case         = "i197/R1"
-input_sha256 = "61d64c7366fa03916f19a4ad9f4ffb9b685bf221d7e8bb99c6fd443952bc1de7"
-kind         = "fp-fix"
-issue        = 197
-reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q2 relabelled #197 row R1 pass; the destination under .github/workflows/ is still collected and is judged there as a test"
-reviewed_in  = 227
-
-[[accept]]
-case         = "i197/R2"
-input_sha256 = "619defb78d513be51857cd8ea1380c8ed96b44d32fbf4ff80d18e8ee93ec3a5d"
-kind         = "fp-fix"
-issue        = 197
-reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q2 relabelled #197 row R2 pass; the destination under test/expected/ is still collected and is judged there as a test"
-reviewed_in  = 227
-
-[[accept]]
-case         = "i197/Q5a"
-input_sha256 = "7560d475c122ba00b61ba6179eb209da5b49c4116fc888fbc0390618bae5af05"
-kind         = "fp-fix"
-issue        = 197
-reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q5 makes only YAML under .github/workflows/ a workflow, and the moved test is still collected at src/a.test.ts"
-reviewed_in  = 227
-
-[[accept]]
-case         = "i197/Q5b"
-input_sha256 = "3ff87c696784ed7872cf2d2304a515bfc03d87ee2eb2fe20318e627f7c4cd379"
-kind         = "fp-fix"
-issue        = 197
-reason       = "v0.5.0 blocks, the fix passes: ruling 197.Q5 makes only YAML under .github/workflows/ a workflow, so deleting a README there removes no gate"
-reviewed_in  = 227
-
-[[accept]]
-case         = "i198/FP1"
-input_sha256 = "865d8e0c6a0c13958f675338f515677df7a484ea8f91136b7cea25c4eb4a6bd4"
-kind         = "fp-fix"
-issue        = 198
-reason       = "v0.5.0 blocks, the fix passes: #198 row FP1, .not.toBeNull() -> .to.exist is a proven strengthening (196.190.1), not an inversion"
-reviewed_in  = 230
-
-[[accept]]
-case         = "i198/FP2"
-input_sha256 = "b3c3bb85f435157b9291def377fdef211eded86633e8d4fd9c83063be07026c4"
-kind         = "fp-fix"
-issue        = 198
-reason       = "v0.5.0 blocks, the fix passes: #198 row FP2, toBeFalsy() -> .to.not.be.ok states one predicate (196.190.1)"
-reviewed_in  = 230
-
-[[accept]]
-case         = "i198/FPJ1"
-input_sha256 = "ca5282eab0407ecfc4c051b2755eb901bde4ccf59f2110f37ca86c4fce50c0f7"
-kind         = "fp-fix"
-issue        = 198
-reason       = "v0.5.0 blocks, the fix passes: #198 row FPJ1, .not.toBeTruthy() -> toBeFalsy() states one predicate; relabelled pass by 198.Q3"
-reviewed_in  = 230
-
-[[accept]]
-case         = "i198/FPJ2"
-input_sha256 = "67cc3f2703fd7aea5e4283d96ab274b7f7dbd8d109ad4c06e7be45bc8f4e4e43"
-kind         = "fp-fix"
-issue        = 198
-reason       = "v0.5.0 blocks, the fix passes: #198 row FPJ2, .not.toBeUndefined() -> toBeDefined() states one predicate; relabelled pass by 198.Q3"
-reviewed_in  = 230
+baseline = "v0.6.0"
