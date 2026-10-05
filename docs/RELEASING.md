@@ -226,6 +226,21 @@ it. The [v0.5.0 guide](releases/v0.5.0-public-launch.md) records the limits. The
 recommended Action advances to prior stable v0.4.2. Publication and artifact
 verification consume this grant; another version requires a new scope.
 
+On 2026-10-05 the maintainer stopped the next fix round ("與main差距太大了 先發在修":
+`main` was too far ahead, so ship first and fix after) and, asked in the agent
+session, chose to approve and merge the stacked fix PRs in order and to
+release version 0.6.0 ("發 v0.6.0"). This one-time scope covers the merges of
+#258, #259, #262, #264 and #265 with their maintainer commits approved, the
+version bump, the THREATMODEL statuses that name the release (a maintainer
+commit in the release PR, with the DECISIONS entry for its fingerprint
+changes), one tag `v0.6.0`, the GitHub Release with its PyPI publication, the
+publication checks and the verdict gate's rotation PR (step 8c). It does not
+authorize the downstream re-pins of checkwash-corpus and smallestlie; each
+needs its own instruction. The [v0.6.0 guide](releases/v0.6.0-public-launch.md)
+records the limits. The recommended Action advances to prior stable v0.5.0.
+Publication and artifact verification consume this grant; another version
+requires a new scope.
+
 What the slot changes in the README, and what already guards it:
 
 - `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
@@ -303,8 +318,8 @@ for the Action in the README and runs the same suite. This is explicitly an
 **Action-pinned engine** check, not qualification of the composite Action's
 wiring. Its receipt names that engine's own source commit and version. It is
 a separate job because the one-release trust lag can expose real capability
-gaps: the v0.4.2 pin includes the JS/TS callback and scalar-evidence
-foundation but lacks the v0.5.0 fixes for #172–#181. Its actual result is
+gaps: the v0.5.0 pin includes the fixes for #172–#181 but lacks the v0.6.0
+work on the reports and rulings that followed them. Its actual result is
 measured independently. The job
 remains visibly failed when cases fail; no expected-failure
 or `continue-on-error` waiver turns those gaps green. The recommended pin

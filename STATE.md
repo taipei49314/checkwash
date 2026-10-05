@@ -1,12 +1,33 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-05 (`main` carries 41 merged pull requests since v0.5.0, none released; the owner authorized v0.6.0 that day; see the first section)
+Updated: 2026-10-05 (v0.6.0 release prepared on the release branch, not yet published; see the first section)
+
+## 2026-10-05: v0.6.0 release
+
+The maintainer authorized this release on 2026-10-05 ("發 v0.6.0"), after
+asking for `main` to ship before the next fix round ("與main差距太大了
+先發在修"). The stacked fix PRs #258, #259, #262, #264 and #265 merged in
+order first, with their maintainer commits approved, and #257 updated this
+file; `main` was then `d12cfb8`. The minor bump follows the existing rule: the
+JSON shape is unchanged, but some existing findings now carry different
+fingerprints, so allowlist entries for those shapes stop matching (D-092
+lists them).
+
+The THREATMODEL rows fixed since v0.5.0 name v0.6.0 where they said
+"unreleased"; their text and pins are the merged PRs'. Package metadata is
+0.6.0; the recommended Action advances to v0.5.0 (`24b60a2`) under the
+one-release trust lag, as D-065 set. On the fixed 1,800-commit sweep, v0.5.0
+and the release engine block the same 48 commits with no verdict move; one
+passing rich commit gains five warn findings (D-092). The verdict gate (#201)
+compares v0.5.0 and the candidate on its 182 cases. The
+[release guide](docs/releases/v0.6.0-public-launch.md) defines the scope and
+limits. The downstream re-pins are not part of this grant.
 
 ## 2026-10-05: unreleased on main since v0.5.0
 
-`main` is `81f69ab`. v0.5.0 (`24b60a2`) is still the published engine, and
-the recommended Action still pins v0.4.2; D-065 moves it to v0.5.0 at the
-next release. On 2026-10-05 the owner authorized v0.6.0 (AGENTS rule 5). The
+`main` was `81f69ab`. v0.5.0 (`24b60a2`) was then the published engine, and
+the recommended Action still pinned v0.4.2; D-065 moves it to v0.5.0 at the
+next release, which the section above does. On 2026-10-05 the owner authorized v0.6.0 (AGENTS rule 5). The
 release PR records that one-time scope in `docs/RELEASING.md`.
 
 Since the v0.5.0 tag, 41 pull requests have been merged, all with merge
@@ -2133,7 +2154,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.5.0 |
+| version | v0.6.0 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |
