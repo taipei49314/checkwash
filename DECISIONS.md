@@ -4790,7 +4790,11 @@ Readings the rulings leave to the implementation:
    name across the diff, and `removed_skip_guard` now reads a mark's guard.
    Without it, removing the `if` around a guarded `pytestmark` would pass,
    since the mark keeps its name; before #260 it blocked, because the base
-   side's guarded binding was never read.
+   side's guarded binding was never read. In conftest.py, which pytest does
+   not collect as a test module, the mark disables nothing and neither does
+   its guard: the same event is reported at info, in the `inert_mark` shape
+   a conftest's mark has (209.Q3). This round's first cut gave it a test
+   module's event, which blocked at high.
 7. **A decorator that names a bound mark** is read as that mark, recorded as
    the mark's own call. A called name (`skip_if = pytest.mark.skipif` /
    `@skip_if(cond)`) is the decorator's own call. A name a decorator already
@@ -4806,7 +4810,7 @@ Readings the rulings leave to the implementation:
      (`m = pytest.mark` / `m.skip(...)`).
 
 **Tests and fixtures.**
-- **Tests:** 100 in `tests/test_issue260_pytestmark_spellings.py`. All 46
+- **Tests:** 102 in `tests/test_issue260_pytestmark_spellings.py`. All 51
   mutants of the round's code fail them or the fixtures.
 - **Fixtures:**
   - positives, each of which pytest 9.1.1 skips, and which checkwash passed
@@ -4827,7 +4831,10 @@ Readings the rulings leave to the implementation:
     - `mark_bound_and_applied_skip_pos` (blocked as `module.skip`).
   - negatives: `pytestmark_platform_guard_neg` (warn `COMPAT_GATE`),
     `mark_bound_never_applied_neg` (M1) and
-    `xfail_mark_bound_never_applied_neg` (M2), which blocked at high.
+    `xfail_mark_bound_never_applied_neg` (M2), which blocked at high; and
+    `conftest_pytestmark_guard_made_true_neg` and
+    `conftest_pytestmark_guard_removed_neg` (info, reading 6), which pytest
+    9.1.1 runs.
 
 Every existing fixture keeps its expectation, and its corpus record does not
 change.
