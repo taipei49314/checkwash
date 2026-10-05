@@ -4922,3 +4922,120 @@ files of the candidate built from #262's head, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-091 (2026-10-05): a guard removed from an existing suite-level control is reported (#261)
+
+A later diff could take the guard off a suite-level control that already
+existed, and checkwash reported nothing. The ignored paths or the skipped
+items then applied everywhere. The same held when an unguarded drop was added
+to a hook whose existing effects were guarded. #209 Q1 made this a two-commit
+bypass: the first commit adds an honest guarded hook, which passes at warn
+(`COMPAT_GATE`), and the second removes the guard with no finding
+(THREATMODEL row 116's residual).
+- A suite-level control is reported when its marker is added. An existing
+  control keeps its marker's name, so removing its guard adds none.
+- `guards_weakened` compares a marker's guard on both sides with D6's
+  evaluator. A removed guard leaves nothing to evaluate at head. Body and
+  setup skips report that case as "skip guard removed" (THREATMODEL 54,
+  D-086, D-087); suite-level controls did not.
+- For `collect_ignore`, the ignored paths stay the same, so no path is added
+  either (row 81).
+
+Rulings, 2026-10-05:
+- **261.Q1:** report it. A suite-level control is `collect_ignore`,
+  `collect_ignore_glob`, either collection hook, or an `add_marker` skip in
+  one. When its guard could be false at base and it has none at head,
+  TEST_DISABLED reports "skip guard removed of the suite-level control (was
+  '<guard>') (<marker>)". The finding has the guard family's identity
+  (`guard:<marker>`) and is judged as an unguarded control: no `COMPAT_GATE`,
+  and no repair evidence (D-028, #209 Q4).
+- **261.Q2:** an unguarded effect added beside guarded ones is the same
+  event. At head, the control has no guard that can be false.
+- **261.Q3:** a guard that is a dropped constant is treated as removed.
+
+**As implemented:**
+- `compat.removed_skip_guard` reads a suite-level collection control
+  (`conftest_controls.is_collection_control`) as it reads a body skip. The
+  base control must have run under a guard that does not always hold, and
+  the head control must run under none. The evidence pass then records the
+  event in `guards_weakened`, as it does for a body skip.
+- TEST_DISABLED names the control, as a hook's guard event already did:
+  "skip guard removed of the suite-level control (was '<guard>')
+  (<marker>)".
+- Gating is unchanged. A guard event has no marker of its own, so D6 gives
+  it no `COMPAT_GATE`. On a conftest's `<suite>` unit it is an unguarded
+  control, which refuses repair evidence.
+
+Readings the rulings leave to the implementation:
+
+1. **The controls** are the four names `_conftest_unit` mints for collection
+   controls. `conftest.collect_ignore` covers both lists. A runtime control
+   carries no guard, so it has none to remove.
+2. **A guard that could be false at base** is one `guard_can_be_false`
+   accepts: present, and not true in every environment D6 evaluates. An
+   `except` block's condition that is not an expression counts, as it does
+   for repair evidence (row 83).
+3. **No guard at head** means the head control's recorded guard is none.
+   This covers 261.Q2 and Q3 with no reading of their own. The weakest guard
+   of a hook with an unguarded effect is none, and so is that of a
+   `collect_ignore` with an unguarded statement. The hook reading drops a
+   constant `True`. `collect_ignore` records `if True:` as its guard, so that
+   edit stays "skip guard now always fires", as before.
+4. **One event.** A guard removed and a path gained (row 81) are reported
+   once, as the guard removed.
+5. **An `add_marker` skip in a hook** is a control of its own. A hook whose
+   loop calls `item.add_marker(pytest.mark.skip(...))` reports both the hook
+   and the call, as a guard made always true already did.
+6. **Wording.** `collect_ignore`'s message names the control only when its
+   guard is removed. "skip guard now always fires" keeps its wording (#261's
+   G6).
+7. **The head guard is #209's reading.** A hook defined under a module-level
+   `if` carries no guard from it. A condition that calls a function the
+   conftest defines is an effect (209.Q2). So moving a hook's guard to
+   either place reads as removed. A hook added in either form already
+   blocks.
+8. **Not in this round (residual):** a guard rewritten into a weaker one that
+   can still be false, such as `if A and B:` to `if A:`, or a second effect
+   under another condition. A body skip's is not judged either (row 54).
+
+**Tests and fixtures.**
+- **Tests:** 26 in `tests/test_issue261_suite_guard_removed.py`. All 4
+  mutants of the round's code fail them or the fixtures.
+- **Fixtures:** row 116's new pins. Each passed with no finding. On pytest
+  9.1.1 with `NETWORK=1`, each runs both tests at base and one at head:
+  - `conftest_collect_ignore_guard_removed_pos` (G1);
+  - `conftest_hook_guard_removed_pos` (G2);
+  - `conftest_hook_unguarded_drop_beside_guarded_pos` (G3);
+  - `conftest_hook_guard_constant_true_pos` (G4).
+
+Every existing fixture keeps its expectation, and its corpus record does not
+change.
+
+**Fingerprints.** None move. The new finding has the guard family's
+identity, `guard:<marker>`, which a guard made always true already had. An
+exemption recorded for one edit covers the other.
+
+**Cost.**
+- **Newly blocking:** a diff that leaves an existing suite-level collection
+  control with no guard that can be false, when its guard could be false at
+  base.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same verdicts
+  and findings as #264's engine.
+- **Sweep, targeted:** D-088's sets, which are:
+  - the 895 commits of ten full histories that change a `conftest.py` or
+    a `skip`/`xfail` line in a test file (855 readable);
+  - the 368 of pytest's own history that touch a collection control in a
+    conftest or a skip or xfail decorator in `testing/` (364 readable).
+
+  No record moves. The 24 that differ from #262's engine are #260's
+  (D-090), and #264's engine gives each of them. So no commit in these
+  sets removes a guard that could be false from an existing suite-level
+  control.
+
+**Verdict gate.** It passes, with 0 failures. Every one of its 182 cases
+(156 T1, 26 T3) keeps the verdict and the findings' rules, severities and
+files of the candidate built from #264's head, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

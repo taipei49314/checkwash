@@ -436,7 +436,13 @@ reaches it under: each enclosing `if` test, `not (...)` for an `else`
 branch and for the code after a branch that always ends, and an `except`
 block's condition, with several outcomes joined by `or`. It is judged as a
 body skip is, so a setup guard that now always holds, or was removed, is
-reported too (183.2's second stage). Rule-specific notes:
+reported too (183.2's second stage). A suite-level collection control in a
+`conftest.py` (§2b) is judged by its guard as well: when that guard could be
+false at base and the control has none at head, TEST_DISABLED reports "skip
+guard removed of the suite-level control", and the control is unguarded
+(#261). A control has none when its guard is removed, when an unguarded
+effect or statement joins its guarded ones, or when its guard is a constant
+`True` the hook reading drops. Rule-specific notes:
 
 - `TOLERANCE_LOOSENED` direction depends on the tolerance kind: `rel`/`abs`/
   `delta` loosen as they grow; unittest's `places` loosens as it *shrinks*.
