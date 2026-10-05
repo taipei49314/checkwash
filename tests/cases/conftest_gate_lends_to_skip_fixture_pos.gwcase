@@ -1,0 +1,41 @@
+=== meta ===
+bypass: 115
+rule: TEST_DISABLED
+title: an honest gate lends nothing to an autouse fixture that always skips
+origin: #208 S5: the #183 marker for a conftest fixture's setup borrowed the
+origin2: gate's hold on v0.5.0.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== head: tests/test_legacy.py ===
+def test_legacy():
+    assert True
+=== before: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info < (3, 9):
+    collect_ignore.append("test_legacy.py")
+=== after: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info < (3, 9):
+    collect_ignore.append("test_legacy.py")
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _offline():
+    pytest.skip("offline")
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

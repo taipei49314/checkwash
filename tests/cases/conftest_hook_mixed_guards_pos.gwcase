@@ -1,0 +1,43 @@
+=== meta ===
+bypass: 116
+rule: TEST_DISABLED
+title: a guarded drop does not cover an unguarded skip in the same hook
+origin: #209: the weakest guard across a hook's effects is its guard.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+=== after: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    if not os.environ.get("NETWORK"):
+        items[:] = [item for item in items if "network" not in item.keywords]
+    for item in items:
+        item.add_marker(pytest.mark.skip(reason="off"))
+=== after: tests/test_network.py ===
+import pytest
+
+
+@pytest.mark.network
+def test_fetch():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

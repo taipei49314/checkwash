@@ -40,6 +40,16 @@ def bare_names(node: ast.AST) -> set[str]:
 GUARDED_SKIP_CALLS = frozenset({"pytest.skip", "pytest.xfail", "self.skipTest"})
 
 
+# The pytest marks a `pytestmark` binding can carry a guard for: its path
+# condition, which D6 reads as it reads a body skip's (#260 Q2).
+GUARDED_MARKS = frozenset({"pytest.mark.skip", "pytest.mark.skipif", "pytest.mark.xfail"})
+
+
+def is_guarded_mark(name: str) -> bool:
+    """Is this a pytest skip or xfail mark, whose `pytestmark` binding may carry a guard?"""
+    return name.split("(", 1)[0] in GUARDED_MARKS
+
+
 def is_setup_skip(name: str) -> bool:
     """A skip or xfail in the setup a unit runs: a same-file fixture or xunit setup (#172)."""
     return name.startswith("setup.")

@@ -1,0 +1,59 @@
+=== meta ===
+rule: TEST_DISABLED
+title: the D-028 pull request, gated by a hook on find_spec, holds at warn
+origin: #209 B7: a backend, its own tests, and a hook that skips them without
+origin2: redis. Gated with collect_ignore it held at warn (B8).
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+=== after: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    if importlib.util.find_spec("redis") is None:
+        skip_redis = pytest.mark.skip(reason="redis not installed")
+        for item in items:
+            if "redis_backend" in item.nodeid:
+                item.add_marker(skip_redis)
+=== before: app/cache/__init__.py ===
+def get(key):
+    return None
+=== after: app/cache/__init__.py ===
+def get(key):
+    return None
+
+
+def backend_name():
+    return "memory"
+=== after: app/cache/redis_backend.py ===
+def connect(url):
+    raise NotImplementedError
+=== after: tests/test_redis_backend.py ===
+import pytest
+
+from app.cache.redis_backend import connect
+
+
+def test_connect_raises():
+    with pytest.raises(NotImplementedError):
+        connect("redis://localhost")
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

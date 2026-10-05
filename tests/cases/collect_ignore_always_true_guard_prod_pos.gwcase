@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 116
+rule: TEST_DISABLED
+title: a collect_ignore guard that always holds earns no repair evidence
+origin: #209 N1 (ruling 209.Q4): `if sys.version_info >= (3, 0):` around the
+origin2: drop, beside an opaque production edit, passed at warn.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import sys
+=== after: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info >= (3, 0):
+    collect_ignore.append("test_billing.py")
+=== before: scripts/deploy.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+rsync -a build/ prod:/srv/app/
+=== after: scripts/deploy.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+rsync -a --delete build/ prod:/srv/app/
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["COLLECTION_CONTROL_UNEXPLAINED"]}]

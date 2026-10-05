@@ -1,0 +1,38 @@
+=== meta ===
+bypass: 115
+rule: TEST_DISABLED
+title: a test's platform gate does not hold a body guard edited to always fire
+origin: #208 U7 (ruling 208.Q1): a guard weakened is a finding with no marker
+origin2: of its own.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import sys
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+def test_total():
+    if sys.version_info < (3, 9):
+        pytest.skip("old")
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import sys
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+def test_total():
+    if sys.version_info >= (3, 0):
+        pytest.skip("old")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

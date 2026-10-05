@@ -545,6 +545,67 @@ def test_worktree_mode_resolves_compat_constant_from_disk(repo):
     assert "COMPAT_GATE" in finding["deescalators"]
 
 
+_RUNSLOW_CONFTEST = """\
+import pytest
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--runslow", action="store_true", default=False, help="run slow tests"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--runslow"):
+        return
+    skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+    for item in items:
+        if "slow" in item.keywords:
+            item.add_marker(skip_slow)
+"""
+
+
+def test_runslow_recipe_holds_at_warn_on_its_guard(repo):
+    # #209 B1: pytest's own recipe blocked at high on every build since M0.
+    # Its early return is the hook's guard, which qualifies as D6 (209.Q1).
+    (repo / "tests" / "conftest.py").write_text(_RUNSLOW_CONFTEST, encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "skip slow tests unless --runslow")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["verdict"] == "pass"
+    [finding] = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
+    assert finding["severity"] == "warn"
+    assert finding["deescalators"] == ["COMPAT_GATE"]
+
+
+def test_a_gate_lends_nothing_to_a_drop_hook_beside_it(repo):
+    # #208 S1: the hook's finding borrowed the version gate's hold.
+    conftest = repo / "tests" / "conftest.py"
+    conftest.write_text(
+        'import sys\n\ncollect_ignore = []\nif sys.version_info < (3, 9):\n'
+        '    collect_ignore.append("test_legacy.py")\n',
+        encoding="utf-8",
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "gate legacy tests")
+    conftest.write_text(
+        conftest.read_text(encoding="utf-8")
+        + "\n\ndef pytest_collection_modifyitems(config, items):\n"
+        '    items[:] = [item for item in items if item.name != "test_invoice_total"]\n',
+        encoding="utf-8",
+    )
+    _git(repo, "commit", "-am", "drop a test")
+    result = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 1, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["verdict"] == "block"
+    [finding] = [f for f in payload["findings"] if f["rule"] == "TEST_DISABLED"]
+    assert finding["severity"] == "high"
+    assert "COMPAT_GATE" not in finding["deescalators"]
+
+
 def test_rename_into_prod_earns_no_opaque_exemption(repo):
     """THREATMODEL 79 — a rename cannot invent pre-existing production.
 

@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a conftest pytestmark guard made always true is reported at info, since pytest never reads it there
+origin: #260 and ruling 209.Q3: reading a guarded conftest pytestmark gave its guard edit the test
+origin2: module's event, at high; pytest does not collect conftest.py, so it disables nothing (1 passed on pytest 9.1.1).
+=== head: tests/test_calc.py ===
+def test_add():
+    assert 1 + 1 == 2
+=== before: tests/conftest.py ===
+import sys
+
+import pytest
+
+if sys.platform == "win32":
+    pytestmark = pytest.mark.skip(reason="posix only")
+=== after: tests/conftest.py ===
+import sys
+
+import pytest
+
+if True:
+    pytestmark = pytest.mark.skip(reason="posix only")
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info"}]

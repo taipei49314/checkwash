@@ -4,9 +4,11 @@ from __future__ import annotations
 import ast
 import operator
 
+from checkwash.frontends.python.conftest_controls import is_collection_control
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import (
     bare_names,
+    is_guarded_mark,
     is_guarded_skip,
     is_setup_skip,
     marker_call,
@@ -204,16 +206,20 @@ def _discriminates(condition: ast.AST, consts: dict[str, ast.AST] | None) -> boo
 # them. unittest.skipIf is deliberately absent for now: unmeasured, and the
 # credit should not outrun the corpus.
 _GATE_DECORATORS = ("pytest.mark.skipif", "pytest.mark.xfail")
-# Imperative skips whose recorded guard plays the role of the condition.
-_GATE_CALLS = (
-    "pytest.skip",
-    "pytest.xfail",
-    "self.skipTest",
-    # Same shape one level up: `if not PY_3_14_PLUS: collect_ignore.extend(...)`
-    # is a compatibility gate over a whole file, and its recorded guard is the
-    # condition (attrs 61e8179545). Unguarded, it earns nothing.
+# The suite-level collection controls of a conftest: `collect_ignore`, the
+# collection hooks, and an `add_marker` skip in one. Same shape one level up:
+# `if not PY_3_14_PLUS: collect_ignore.extend(...)` is a compatibility gate
+# over a whole file, and its recorded guard is the condition (attrs
+# 61e8179545). A hook's guard is the condition its effects fire under (#209
+# Q1). Unguarded, each earns nothing.
+_SUITE_GATES = (
     "conftest.collect_ignore",
+    "conftest.pytest_collection_modifyitems",
+    "conftest.pytest_ignore_collect",
+    "conftest.add_marker_skip",
 )
+# Imperative skips whose recorded guard plays the role of the condition.
+_GATE_CALLS = ("pytest.skip", "pytest.xfail", "self.skipTest", *_SUITE_GATES)
 
 
 def _parse_constants(raw: dict[str, str]) -> dict[str, ast.AST]:
@@ -234,13 +240,24 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     """
     canonical = m.name.split("(", 1)[0]
     condition: ast.AST | None = None
-    if canonical in _GATE_DECORATORS:
+    if canonical in _GATE_DECORATORS or (m.guard and is_guarded_mark(canonical)):
+        # A mark's condition, and the guard of the `pytestmark` binding that
+        # carries it: both must hold for the mark to apply, so the condition
+        # is their conjunction (#260 Q2).
         call = marker_call(m.text)
-        if call is None or not call.args:
+        if canonical == "pytest.mark.xfail" and call is not None and _xfail_strict(call):
             return False
-        if canonical == "pytest.mark.xfail" and _xfail_strict(call):
+        parts = []
+        if m.guard:
+            guard = parse_expr(m.guard)
+            if guard is None:
+                return False
+            parts.append(guard)
+        if canonical in _GATE_DECORATORS and call is not None and call.args:
+            parts.append(call.args[0])
+        if not parts:
             return False
-        condition = call.args[0]
+        condition = parts[0] if len(parts) == 1 else ast.BoolOp(op=ast.And(), values=parts)
     elif (canonical in _GATE_CALLS or is_setup_skip(canonical)) and m.guard:
         # A skip in the setup the unit runs is judged as one in its body is
         # (#196 183.2): its guard is the condition its setup reaches it under.
@@ -256,8 +273,10 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     # None: collect_ignore.append(...)` names no interpreter and no OS, and an
     # adversarial audit caught this build blocking exactly that, on a PR that
     # *added* the tests it was guarding. Still has to discriminate: an
-    # always-true guard is a disable wearing a condition.
-    if canonical != "conftest.collect_ignore" and not any(
+    # always-true guard is a disable wearing a condition. A collection hook
+    # is judged the same way, so pytest's `--runslow` recipe holds as its
+    # `collect_ignore` spelling does (D-028, #209 Q1).
+    if canonical not in _SUITE_GATES and not any(
         tok in searched for tok in _COMPAT_TOKENS
     ):
         return False
@@ -265,20 +284,35 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     return _discriminates(condition, consts)
 
 
-def _compat_gate(unit: Unit | None, constants: dict[str, str] | None = None) -> bool:
-    """A skip keyed on interpreter/OS version is a compat gate, not a kill.
+def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: str | None) -> bool:
+    """Is the disabling marker this finding reports a qualified gate? (#208)
 
+    A skip keyed on interpreter/OS version is a compat gate, not a kill.
     Three spellings earn the credit, all evaluated the same way: `skipif(cond)`,
     non-strict `xfail(cond)` (strict inverts the oracle instead of skipping
     it, which is not a gate), and an imperative `pytest.skip()`/`pytest.xfail()`
     /`self.skipTest()` under recorded `if` guards, in the test's body or in the
-    setup it runs (#196 183.2).
+    setup it runs (#196 183.2). A mark a `pytestmark` binding carries is judged
+    on its own condition and the binding's guard together (#260 Q2). A
+    conftest's suite-level collection control earns it on its own guard
+    (D-028, #209 Q1).
+
+    D6 judges the added skip, so the hold is a fact about the finding's own
+    marker, not about the unit. Every after-side marker with that name must
+    qualify on its own guard, as row 71's weakest guard does for
+    `collect_ignore`: an unguarded `pytest.skip` beside a guarded one is not
+    held. A gate elsewhere on the unit lends nothing, and a finding with no
+    marker of its own (`name` None: a unit gone, rows removed, a guard
+    weakened or removed) gets no hold.
     """
-    if unit is None or unit.after is None:
+    if name is None or unit is None or unit.after is None:
+        return False
+    markers = [m for m in unit.after.markers if m.name == name]
+    if not markers:
         return False
     raw = constants or {}
     consts = _parse_constants(raw)
-    return any(_marker_is_compat_gate(m, raw, consts) for m in unit.after.markers)
+    return all(_marker_is_compat_gate(m, raw, consts) for m in markers)
 
 
 def guard_always_skips(guard: str, constants: dict[str, str] | None) -> bool:
@@ -300,6 +334,21 @@ def guard_always_skips(guard: str, constants: dict[str, str] | None) -> bool:
     )
 
 
+def guard_can_be_false(guard: str | None, constants: dict[str, str] | None) -> bool:
+    """Is this a guard at all: a condition that does not hold everywhere? (#209 Q4)
+
+    A suite-level control with no guard that can be false is unguarded:
+    `if True:` or `if sys.version_info >= (3, 0):` wrapped around a drop
+    guards nothing. Judged by the evaluator D6 uses, so the parts checkwash
+    cannot see stay unknown and only a guard true under every assignment of
+    them guards nothing. An `except` block's condition that is not an
+    expression still counts, as it always has.
+    """
+    if not guard:
+        return False
+    return not guard_always_skips(guard, constants)
+
+
 def removed_skip_guard(name: str, unit, constants_before: dict[str, str] | None) -> str | None:
     """The condition a body skip ran under at base, when the diff removed it.
 
@@ -311,9 +360,22 @@ def removed_skip_guard(name: str, unit, constants_before: dict[str, str] | None)
     instance must run under none (`skip_condition`). The first base condition
     comes back for the message; None otherwise, and for any marker whose
     guard does not say when it fires. A skip in the setup the unit runs is
-    read the same way, by its own guard (183.2's second stage).
+    read the same way, by its own guard (183.2's second stage), and so is a
+    mark a `pytestmark` binding carries, by the binding's guard (#260 Q2). A
+    decorator's mark has no guard, so it never answers.
+
+    A suite-level collection control is read by its guard too: removing the
+    `if` around a `collect_ignore.append(...)` keeps the ignored paths, and a
+    hook keeps its marker, so nothing else reports that the control now acts
+    everywhere (#261 Q1). An unguarded effect added beside guarded ones
+    leaves the hook no guard, and so does a constant `True` its reading
+    drops: the same event (#261 Q2, Q3).
     """
-    if not is_guarded_skip(name) or unit.before is None or unit.after is None:
+    if (
+        not (is_guarded_skip(name) or is_guarded_mark(name) or is_collection_control(name))
+        or unit.before is None
+        or unit.after is None
+    ):
         return None
     conditions = []
     for m in unit.before.markers:

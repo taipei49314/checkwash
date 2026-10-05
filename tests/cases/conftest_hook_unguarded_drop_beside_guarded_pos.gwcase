@@ -1,0 +1,54 @@
+=== meta ===
+bypass: 116
+rule: TEST_DISABLED
+title: an unguarded drop added beside a hook's guarded effects is reported as its guard removed
+origin: #261 G3, ruling 261.Q2: the hook's weakest guard goes from the NETWORK check to none; with
+origin2: NETWORK=1, pytest 9.1.1 runs both tests at base and drops test_total at head.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== head: tests/test_network.py ===
+import pytest
+
+
+@pytest.mark.network
+def test_fetch():
+    assert 1 + 1 == 2
+=== before: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    if not os.environ.get("NETWORK"):
+        skip_network = pytest.mark.skip(reason="set NETWORK=1 to run")
+        for item in items:
+            if "network" in item.keywords:
+                item.add_marker(skip_network)
+=== after: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    if not os.environ.get("NETWORK"):
+        skip_network = pytest.mark.skip(reason="set NETWORK=1 to run")
+        for item in items:
+            if "network" in item.keywords:
+                item.add_marker(skip_network)
+    items[:] = [item for item in items if "billing" not in item.nodeid]
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

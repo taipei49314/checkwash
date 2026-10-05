@@ -1,0 +1,25 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an xfail mark bound to a name and never applied disables nothing
+origin: #260 M2: `xfail_on_ci = pytest.mark.xfail(...)` was read as a module-level xfail call and
+origin2: blocked the module at high; pytest runs the test (1 passed).
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+xfail_on_ci = pytest.mark.xfail(reason="flaky on CI")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[]

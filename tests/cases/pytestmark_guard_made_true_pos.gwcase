@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 117
+rule: TEST_DISABLED
+title: a pytestmark guard rewritten to `if True:` is reported
+origin: #260, ruling 260.Q2: the guard is read, so a guard that now always holds is weakened,
+origin2: as a body skip's is (THREATMODEL 54).
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+if sys.platform == "win32":
+    pytestmark = pytest.mark.skip(reason="posix only")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+if True:
+    pytestmark = pytest.mark.skip(reason="posix only")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

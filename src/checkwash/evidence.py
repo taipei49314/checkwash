@@ -27,7 +27,8 @@ def _mark_weakened_guards(file) -> None:
     skips everywhere" counts, so honest version-gate bumps stay silent.
     Removing the guard outright is the same event with nothing left to
     evaluate (#196 183.2, `compat.removed_skip_guard`). A skip in the setup a
-    unit runs carries its guard too, and is read the same way.
+    unit runs carries its guard too, and is read the same way, and so does a
+    suite-level collection control in a conftest (#261).
     """
     from checkwash.gating import guard_always_skips
 
@@ -67,7 +68,8 @@ def _mark_weakened_guards(file) -> None:
         # already reported, and reporting it twice is noise), and the control
         # must be unguarded — a growing optional-dependency gate is still a
         # gate, which is the whole reason `except ImportError` is recorded as
-        # a condition rather than dropped.
+        # a condition rather than dropped. A control whose guard the diff
+        # removed is already reported above, and once is enough (#261).
         control = next(
             (m for m in unit.after.markers if m.name == "conftest.collect_ignore"), None
         )
@@ -77,6 +79,7 @@ def _mark_weakened_guards(file) -> None:
             and control is not None
             and control.guard is None
             and control.name not in unit.delta.markers_added
+            and control.name not in unit.delta.guards_weakened
         ):
             unit.delta.guards_weakened.append("conftest.collect_ignore")
         unit.delta.guards_weakened.sort()

@@ -1,0 +1,43 @@
+=== meta ===
+bypass: 115
+rule: TEST_DISABLED
+title: an honest gate lends nothing to a hook that reports every test as passed
+origin: #208 S11: a runtime control (pytest_runtest_makereport setting the
+origin2: outcome) borrowed the gate's hold.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== head: tests/test_legacy.py ===
+def test_legacy():
+    assert True
+=== before: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info < (3, 9):
+    collect_ignore.append("test_legacy.py")
+=== after: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info < (3, 9):
+    collect_ignore.append("test_legacy.py")
+
+
+import pytest
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+    report.outcome = "passed"
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,37 @@
+=== meta ===
+bypass: 115
+rule: TEST_DISABLED
+title: an optional-dependency gate lends nothing to a hook that empties the run
+origin: #208 S7: an except ImportError gate qualifies as a lender on its own
+origin2: guard, so it lent as a version gate did.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== head: tests/test_legacy.py ===
+def test_legacy():
+    assert True
+=== before: tests/conftest.py ===
+collect_ignore = []
+try:
+    import redis  # noqa: F401
+except ImportError:
+    collect_ignore.append("test_legacy.py")
+=== after: tests/conftest.py ===
+collect_ignore = []
+try:
+    import redis  # noqa: F401
+except ImportError:
+    collect_ignore.append("test_legacy.py")
+
+
+def pytest_collection_modifyitems(config, items):
+    items[:] = []
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

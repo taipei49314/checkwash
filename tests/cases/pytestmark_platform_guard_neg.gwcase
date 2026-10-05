@@ -1,0 +1,26 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a pytestmark under a platform test holds at warn, as its skipif spelling does
+origin: ruling 260.Q2: the binding's guard is the mark's condition, so this compat gate holds as
+origin2: pytest.mark.skipif(sys.platform == "win32") does.
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+if sys.platform == "win32":
+    pytestmark = pytest.mark.skip(reason="posix only")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

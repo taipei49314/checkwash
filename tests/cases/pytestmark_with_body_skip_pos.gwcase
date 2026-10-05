@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 117
+rule: TEST_DISABLED
+title: a pytestmark in a `with` body skips the module
+origin: #260 A10 and ruling 260.Q1: pytest 9.1.1 skips the test, and checkwash
+origin2: reported nothing: a `with` body was not read; it adds no guard (260.Q2).
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+import contextlib
+
+with contextlib.suppress(Exception):
+    pytestmark = pytest.mark.skip(reason="later")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
