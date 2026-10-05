@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 115
+rule: TEST_DISABLED
+title: a test's platform gate lends nothing to a skip added above it
+origin: #208 U1: D6 held the new skip at warn because the unit already carried
+origin2: a qualified skipif.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import sys
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import sys
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.skip(reason="flaky")
+@pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

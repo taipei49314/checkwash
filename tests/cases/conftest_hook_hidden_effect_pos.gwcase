@@ -1,0 +1,47 @@
+=== meta ===
+bypass: 116
+rule: TEST_DISABLED
+title: an effect the hook reading cannot read still counts
+origin: #209 (ruling 209.Q2): items.clear() in an if test runs whatever
+origin2: NETWORK is, beside an honest guarded effect.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+=== after: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    if not os.environ.get("NETWORK"):
+        skip_network = pytest.mark.skip(reason="set NETWORK=1 to run")
+        for item in items:
+            if "network" in item.keywords:
+                item.add_marker(skip_network)
+    if items.clear() or os.environ.get("VERBOSE"):
+        print("collected")
+=== after: tests/test_network.py ===
+import pytest
+
+
+@pytest.mark.network
+def test_fetch():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

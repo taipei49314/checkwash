@@ -1,0 +1,34 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a second honest gate added beside one holds on its own guard
+origin: #208 H2: the per-marker hold keeps what the per-unit hold granted when
+origin2: the new marker qualifies itself.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import sys
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import sys
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="3.12 API")
+@pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

@@ -1,0 +1,38 @@
+=== meta ===
+bypass: 115
+rule: TEST_DISABLED
+title: an honest collect_ignore gate lends nothing to a hook that drops a test
+origin: #208 S1 (headline). On main and v0.4.2 the hook's finding was held at
+origin2: warn by COMPAT_GATE because the unit carried a qualified marker under
+origin3: another name; the same hook alone blocks.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== head: tests/test_legacy.py ===
+def test_legacy():
+    assert True
+=== before: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info < (3, 9):
+    collect_ignore.append("test_legacy.py")
+=== after: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info < (3, 9):
+    collect_ignore.append("test_legacy.py")
+
+
+def pytest_collection_modifyitems(config, items):
+    items[:] = [item for item in items if item.name != "test_total"]
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

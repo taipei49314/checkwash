@@ -136,12 +136,26 @@ between the two is a laundering route (all confirmed by reproduction):
   assignment, `+=`, `extend`/`append`/`insert` — because only the assignment
   form used to count and the idiomatic spelling therefore dropped whole files
   in silence (row 70). An assignment of an **empty** list is an initialiser,
-  not a control. Each control carries its enclosing `if` as a guard, so
+  not a control. Each control carries a guard, the condition it acts under, so
   `if not PY_3_14_PLUS: collect_ignore.extend([...])` is judged as the compat
-  gate it is; the recorded guard is the **weakest** across all controls in the
-  file, so one unguarded drop cannot hide behind an honest gate beside it
-- a suite-level collection control is **not** de-escalated by repair evidence.
-  A production change explains a rewritten expectation; nothing about it makes
+  gate it is. A `collect_ignore` statement's guard is its enclosing `if`,
+  `else` or `except`. A collection hook's is the path condition to each of its
+  effects (#209 Q1): every enclosing `if` test, `not (...)` for an `else` and
+  for the code after a branch that always ends (the `--runslow` recipe's early
+  `return`), and an `except` block's condition, through loop bodies. An effect
+  is anything in the hook that checkwash cannot show to be a read, so an
+  effect it cannot read still counts, and a condition that names an item
+  selects items and is no part of the guard. An `add_marker(...skip)` call
+  takes the guard of the hook path it sits on, and has none outside a
+  collection hook. The recorded guard is the **weakest** across every control
+  of one name in the file, so one unguarded drop cannot hide behind an honest
+  gate beside it, and a gate under another name lends it nothing (§5 D6,
+  #208)
+- an **unguarded** suite-level collection control is **not** de-escalated by
+  repair evidence. Unguarded means it has no guard that can be false: none, or
+  one that holds in every environment checkwash evaluates, and a guard edited
+  to one that always holds leaves its control unguarded (#209 Q4). A production
+  change explains a rewritten expectation; nothing about it makes
   it correct to stop *collecting* tests. A qualified compatibility gate (§D6)
   does explain it and still de-escalates. When an unguarded suite-level
   control in a `conftest.py` blocks (a collection control above, or a runtime
@@ -492,7 +506,7 @@ Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
 | D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units (liveness as in D2) ≥ the mass lost to disappeared units | hold at warn |
-| D6 `COMPAT_GATE` | the added skip is a `skipif`, a non-strict `xfail`, or an imperative skip call (`pytest.skip` / `pytest.xfail` / `self.skipTest`) under recorded `if` guards, in the test body or in the setup the unit runs (#196 183.2). Its condition — with module constants resolved from the test file, from files in the diff, or from the head snapshot — must reference the interpreter/OS environment (`sys.version_info` / `sys.platform` / `platform.` / `os.name`, in the condition text or in a resolved constant), and, **evaluated** over a matrix of supported Python versions and platforms, must not be provably true everywhere. "True" means truthy: a condition that is always truthy is an unconditional kill in a compat costume. Sub-expressions that cannot be resolved stay unknown, and credit is denied only when the condition is true under every assignment of the unknowns; `strict=True` xfail earns nothing (it inverts the oracle instead of skipping it) | hold at warn |
+| D6 `COMPAT_GATE` | the added skip is a `skipif`, a non-strict `xfail`, or an imperative skip call (`pytest.skip` / `pytest.xfail` / `self.skipTest`) under recorded `if` guards, in the test body or in the setup the unit runs (#196 183.2). Its condition — with module constants resolved from the test file, from files in the diff, or from the head snapshot — must reference the interpreter/OS environment (`sys.version_info` / `sys.platform` / `platform.` / `os.name`, in the condition text or in a resolved constant), and, **evaluated** over a matrix of supported Python versions and platforms, must not be provably true everywhere. "True" means truthy: a condition that is always truthy is an unconditional kill in a compat costume. Sub-expressions that cannot be resolved stay unknown, and credit is denied only when the condition is true under every assignment of the unknowns; `strict=True` xfail earns nothing (it inverts the oracle instead of skipping it). A suite-level collection control in a `conftest.py` (`collect_ignore`, a collection hook, an `add_marker(...skip)` in one; §2b) is judged on its own guard, which need not name the interpreter or OS but must be able to be false (D-028, #209 Q1). The hold is a fact about the marker the finding reports: every after-side marker of that name must qualify, and a finding with no marker of its own (a unit gone, parametrize rows deleted, a guard weakened or removed) gets none, so a gate lends nothing to another disable on its unit (#208) | hold at warn |
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ EXACT_VALUE — still inside the exact family; landing at APPROX or below is material (THREATMODEL 13), so 90→70 and 70→60 are not mild | hold at warn |
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
 | D5 `SAME_UNIT_REWRITE` (extended) | an `ASSERT_SUBSTITUTED` in a unit that also **deleted** an assertion and **wrote a new strong one** — the private-API-to-public-API rewrite cluster. Crediting the removal at warn while blocking the substitution at high described one edit two ways. A pure substitution removes nothing, so the shape this rule exists for is untouched | hold at warn |

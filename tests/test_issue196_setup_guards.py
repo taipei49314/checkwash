@@ -312,10 +312,10 @@ def test_liveness_reads_a_setup_guard_as_it_reads_a_body_guard(body, live):
     assert unit_is_live(parsed.units[0].side, {}) is live
 
 
-def test_residual_an_os_gate_in_setup_lends_its_credit_to_the_unit():
-    # D6 still grants COMPAT_GATE per unit, not per marker (#208): the setup
-    # gate holds a new unconditional skip on the same test at warn.
+def test_an_os_gate_in_setup_lends_nothing_to_another_disable():
+    # D6 judges the marker a finding reports (#208): the setup gate holds only
+    # its own finding, so a new unconditional skip on the same test blocks.
     after = module(PLATFORM).replace("def test_total", "@pytest.mark.skip(reason='flaky')\ndef test_total")
     finding, verdict = one(module(PLATFORM), after)
     assert (finding.message, finding.deescalators, verdict) == (
-        "test_total: disabling marker added (pytest.mark.skip)", ["COMPAT_GATE"], "pass")
+        "test_total: disabling marker added (pytest.mark.skip)", [], "block")

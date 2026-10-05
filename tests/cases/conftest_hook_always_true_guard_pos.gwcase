@@ -1,0 +1,50 @@
+=== meta ===
+bypass: 116
+rule: TEST_DISABLED
+title: a hook guard that always holds guards nothing
+origin: #209 B5, and its `if True:` spelling on pytest_ignore_collect: neither
+origin2: earns COMPAT_GATE.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+=== after: tests/conftest.py ===
+import importlib.util
+import os
+import sys
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    if sys.version_info >= (3, 0):
+        skip_network = pytest.mark.skip(reason="set NETWORK=1 to run")
+        for item in items:
+            if "network" in item.keywords:
+                item.add_marker(skip_network)
+
+
+def pytest_ignore_collect(collection_path, config):
+    if True:
+        return True
+=== after: tests/test_network.py ===
+import pytest
+
+
+@pytest.mark.network
+def test_fetch():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

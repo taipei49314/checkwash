@@ -4331,3 +4331,212 @@ shape, for body and setup skips alike.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-088 (2026-10-04): D6 judges the marker a finding reports, and a conftest collection hook carries the condition it acts under (#208, #209 Q1, Q4)
+
+THREATMODEL 115 and 116, and the `--runslow` false positive. Two defects of
+one family, ruled to land together.
+- **#208.** D6 judged the unit, not the finding: one qualified marker on a
+  unit held every `TEST_DISABLED` finding on it at warn. A version gate on
+  `collect_ignore` therefore lent its hold to a hook added beside it that
+  dropped tests, and a test's `skipif(sys.platform == "win32")` lent it to a
+  `@pytest.mark.skip` added above it. All twenty members (S1-S12, U1-U8)
+  pass on v0.4.2 and v0.5.0.
+- **#209.** A `pytest_collection_modifyitems` or `pytest_ignore_collect`
+  hook, and an `add_marker(<skip>)` call, carried no guard, so pytest's own
+  `--runslow` recipe blocked at high on every build since M0, while the same
+  condition on `collect_ignore` held at warn. The suite-control rule also
+  read only whether a guard was recorded, so `if sys.version_info >= (3, 0):`
+  around a `collect_ignore` drop bought repair evidence from an opaque
+  production edit (N1).
+
+Rulings, 2026-10-04:
+- **208.Q1:** a finding with no marker of its own never gets `COMPAT_GATE`;
+  it is granted only when every after-side marker with the finding's name
+  qualifies on its own guard.
+- **208.Q2:** a new THREATMODEL row (115); row 71 stays closed for its shape.
+- **209.Q1:** a suite-level control earns `COMPAT_GATE` on its own guard,
+  whatever its spelling, when that guard can be false, landing with #208's
+  rule and never before. The guard is the path condition 183.2 reads (D-087,
+  reading 1); the weakest guard across a hook's effects counts.
+- **209.Q4:** an **unguarded** suite-level control is not de-escalated by
+  repair evidence, and unguarded means no guard that can be false.
+
+**This amends D-028.** Its second fix skipped the compat-token filter "for
+`conftest.collect_ignore` specifically". The filter is now skipped for every
+suite-level collection control a conftest mints: `collect_ignore`, the two
+collection hooks, and an `add_marker` skip in one. Its first fix refused
+repair evidence to an unguarded control; unguarded now means a control with
+no guard that can be false.
+
+**As implemented:**
+- `compat.compat_gate_for` judges the markers with the finding's name,
+  `test_disabled.finding_marker` reads that name back from the finding's
+  fingerprint, and gating asks it in place of the unit.
+- `frontends/python/hook_guards.py` reads each collection hook and records
+  its guard on the hook's marker and on each `add_marker` skip in it.
+- `compat.guard_can_be_false` is D6's evaluator turned around. Gating's
+  suite-control rule asks it of the finding's own control.
+- `compat._SUITE_GATES` lists the controls that qualify on their own guard. A
+  test keeps it equal to the names the frontend mints.
+
+Readings the rulings leave to the implementation:
+
+1. **A hook's guard.** D-087's path condition: every enclosing `if` test,
+   `not (...)` for an `else` and for the code after a branch that always
+   ends, and an `except` block's condition. Two readings are particular to
+   hooks.
+   - Loop bodies are read, because a hook's effects sit in
+     `for item in items:`. `continue` and `break` end an iteration.
+   - A conjunct is kept only when it names nothing but module-level names,
+     reading builtins, `config` or `session` (unless the hook rebinds them),
+     and locals bound exactly once, by one plain assignment from those. Such
+     a local is replaced by its value, so `GATE = True` / `if GATE:` reads
+     as `True`. A condition that names an item selects items and is dropped.
+     `and` is split first, so the environment half of
+     `not os.environ.get("NETWORK") and collection_path.name == ...`
+     survives.
+2. **What an effect is.** Ruling 209.Q2 waits for its own round, but its
+   rule that an effect checkwash cannot read still counts decides this one:
+   an effect is anything the reading cannot show to be inert.
+   - Inert: binding or deleting a plain local name, `pass`, `break`,
+     `continue`, an import, a `return`, `raise` or `assert` of inert
+     expressions, and an expression whose every call only reads. A call
+     reads when it is a reading builtin, an environment or mark call named
+     by its import (`os.environ.get`, `importlib.util.find_spec`,
+     `pytest.mark.skip`, ...), or a reading method (`getoption`,
+     `get_closest_marker`, `startswith`, `get`, ...).
+   - The test of an `if` or `while`, a loop's iterable and a `match` subject
+     are read where they are evaluated. A `with` is always an effect,
+     because its context manager runs code, and its body never ends the
+     path, because that code can swallow an exception.
+   - In `pytest_ignore_collect`, a `return` of anything but `None` or
+     `False` is an effect whose value is part of its condition.
+
+   The first cut listed effects instead (a write to `items`, a call on it,
+   `add_marker`, ...). A review before it was committed found spellings it
+   missed beside an honest guarded effect, each of which would have given a
+   dropping hook the honest effect's guard. Among them: `items.clear()` in
+   an `if` test or a loop's iterable, `session.items.clear()`,
+   `getattr(items, "clear")()`, `map(items.remove, ...)`, a name bound to
+   the list by unpacking, `return items.clear()`, a nested definition's
+   default or decorator, a `with` that swallows a `raise`, a local rebound
+   by a loop or a walrus, and a rebound `config`. All are pinned in
+   `tests/test_issue208_209_suite_guards.py`.
+3. **The weakest guard, per name.** `_conftest_unit` combines the guards of
+   every control of one name: none if any has none, else their disjunction.
+   Two definitions of one hook, or `add_marker` skips in two hooks, are
+   judged together, as row 71 judges `collect_ignore`. An `add_marker` skip
+   outside a collection hook has no guard.
+4. **Can be false.** `guard_can_be_false` is `not guard_always_skips`, so the
+   parts checkwash cannot evaluate stay unknown, as in D6. An `except`
+   block's condition that is not an expression (`except ValueError`) still
+   counts as a guard for repair evidence, as it always has for
+   `collect_ignore` (row 83). It earns no `COMPAT_GATE`, which needs it
+   parsed.
+5. **Unguarded, per finding.** The suite-control rule asks about the
+   finding's own control, not every control the diff added on the unit. A
+   finding with no marker of its own reports a guard that now always
+   fires, or a path added to an unguarded `collect_ignore` (row 81).
+   Either way its control acts everywhere, so it is unguarded. A `<suite>`
+   unit that disappeared is no control, as before. Removing the guard of
+   an existing suite-level control is no event at all (row 116's
+   residual): the ignored paths stay the same.
+6. **Not in this round.** These form the next #209 round:
+   - 209.Q2: a hook with no effect is not a control. Until then, such a
+     hook reads as unguarded and blocks, as before.
+   - 209.Q3: a conftest `pytestmark`, reported at info.
+   - X1: `pytestmark = skipif(...)` read as its call.
+   - Reporting a guard removed from a suite-level control, or an
+     unguarded effect added to a guarded hook (row 116's residual).
+
+**Tests and fixtures.**
+- **Tests:** 83 in `tests/test_issue208_209_suite_guards.py`. All 44
+  mutants of the new code fail them or the fixtures. Two CLI tests in
+  `tests/e2e/test_cli.py`: the `--runslow` recipe holds at warn (B1), and a
+  gate lends nothing to a drop hook (S1). Both fail on `main`.
+- **Fixtures, #208 (row 115):** S1, S3 (two findings), S5, S7, S10 (the
+  gate's own finding stays warn `COMPAT_GATE`; the hook's is high), S11, U1,
+  U3, U6, U7 and U8, all high, and the control H2 (warn `COMPAT_GATE`). All
+  eleven pins pass on `main`.
+- **Fixtures, #209:**
+  - negatives: B1 (the recipe verbatim), B2, B6, B7 and the environment
+    guard on `pytest_ignore_collect`, all warn `COMPAT_GATE`; and B9, warn
+    `REPAIR_EVIDENCE`. All six block on `main`.
+  - pins of row 116, all high: an always-true guard (B5, and `if True:` on
+    `pytest_ignore_collect`), mixed guards, an early return that never
+    happens, an effect in an `if` test, and N1. N1 passes on `main`.
+
+Every existing fixture keeps its expectation, including the eleven that
+earn `COMPAT_GATE` today, and so do the two CLI tests that assert it.
+
+**Two residual pins move.** Two tests pinned the per-unit hold as #208's
+residual (D-087, reading 4). Ruling 208.Q1 closes it, as its costs foresaw,
+so each now pins the closure under a name that says so:
+- `test_issue196_guard_removal.py`: `test_an_honest_gate_beside_it_holds_it_at_warn`
+  becomes `test_an_honest_gate_beside_it_lends_it_nothing`. The verdict goes
+  from pass to block, and the removed guard's finding from warn
+  (COMPAT_GATE) to high.
+- `test_issue196_setup_guards.py`:
+  `test_residual_an_os_gate_in_setup_lends_its_credit_to_the_unit` becomes
+  `test_an_os_gate_in_setup_lends_nothing_to_another_disable`. The new skip
+  blocks.
+
+This project's own check reports both edits: the first as two
+EXPECTED_VALUE_CHANGED findings at high, which ride on two base-side
+exemptions in their own pull request, approved by the owner on
+2026-10-04; the second at warn.
+
+**Fingerprints.** None move. A marker's name is its identity, and its guard
+is not part of it. The findings this round changes keep their fingerprints
+and change only their severity and de-escalators.
+
+**Cost.**
+- **New blocks:** a disable that borrowed a gate's hold from another
+  marker on its unit (#208), and a suite-level control whose guard always
+  holds beside an opaque production edit (#209 N1).
+- **New passes, at warn:** a collection hook or `pytest_ignore_collect`
+  whose effects run only under a guard that can be false.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same verdicts
+  and findings as `main`'s engine.
+- **Sweep, targeted:** every commit in the full histories of those six
+  repositories, and of uvicorn, werkzeug, scrapy and requests, that
+  changes a `conftest.py` or a line with `skip` or `xfail` in a test file:
+  895 commits, 855 of them readable by both engines. Neither engine reads
+  aiohttp (a git submodule). pytest's own history has 1,559 such commits,
+  at about 20 seconds each; its sweep takes the 368 that touch a
+  collection control in a conftest or a skip or xfail decorator in
+  `testing/`, 364 of them readable. Three verdicts move:
+  - **block to pass:** scrapy `e8b1e46e85` adds pytest-flake8, with a hook
+    that keeps only the flake8 items when `--flake8` is given. Its effect
+    runs only under that option, so it holds at warn (COMPAT_GATE). A normal
+    run disables nothing.
+  - **pass to block:** scrapy `308a58aa27` adds
+    `skipif(twisted_version == Version('twisted', 21, 2, 0))`, for a linked
+    Twisted bug, to three tests that already carried `skipif` gates on PyPy
+    and on Windows. Those gates lent it their hold. On its own the new
+    marker names a dependency's version, which D6's interpreter/OS filter
+    has never credited, so its three findings are high. This is the ruled
+    behaviour (208.Q1).
+  - **pass to block:** pytest `642cd86dd1` adds an unconditional
+    `@pytest.mark.skip(reason="creates random tmpdirs as part of a system
+    level test")` above two tests that carry
+    `skipif(sys.platform.startswith("win"))`. That is #208's U1 shape: the
+    two tests stop running everywhere, and the platform gate no longer lends
+    them its hold.
+- **Already-blocked commits:** these keep their verdict, and findings that
+  a gate on the same unit held at warn are now high:
+  - attrs `3843452516`: two parametrize rows deleted, as a `parametrize`
+    moves into a fixture;
+  - flask `61fbae8664`: three units under a new module `importorskip`;
+  - scrapy `d825133284`: a body `pytest.skip`, the lending D-087 named;
+  - werkzeug `5944de46ad` (a body `importorskip`) and `3638d0ec59` (a
+    parametrize row deleted).
+
+**Verdict gate.** It passes, with 0 failures. Every one of its 182 cases
+(156 T1, 26 T3) keeps the verdict and the findings' rules, severities and
+files of the candidate built from `main`, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

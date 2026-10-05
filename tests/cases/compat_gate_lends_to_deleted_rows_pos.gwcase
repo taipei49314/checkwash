@@ -1,0 +1,42 @@
+=== meta ===
+bypass: 115
+rule: TEST_DISABLED
+title: a test's platform gate does not explain deleted parametrize rows
+origin: #208 U6 (ruling 208.Q1): a finding with no marker of its own gets no
+origin2: COMPAT_GATE.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import sys
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+@pytest.mark.parametrize("items, expected", [
+    ([50.0, 28.75], 78.75),
+    ([1.0, 2.0], 3.0),
+    ([0.1, 0.2], 0.3),
+])
+def test_total(items, expected):
+    assert total(items) == expected
+=== after: tests/test_billing.py ===
+import sys
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+@pytest.mark.parametrize("items, expected", [
+    ([50.0, 28.75], 78.75),
+])
+def test_total(items, expected):
+    assert total(items) == expected
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

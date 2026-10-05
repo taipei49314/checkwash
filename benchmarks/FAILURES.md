@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **132 bypasses** are documented, of which **32 are not closed**.
+- **134 bypasses** are documented, of which **32 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -62,7 +62,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (97)
+## Closed — each pinned by something that runs (99)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -169,6 +169,8 @@ behind it* unshippable.
 | 110 | Widen a hand-rolled JS tolerance: `assert.ok(Math.abs(total - 78.75) < 0.01)` -> `< 1e12`, or the `const EPS` it reads, or `expect(Math.abs(d)).toBeLessThan(eps)` | `js_handrolled_tolerance_asi_pos.gwcase`, `js_handrolled_tolerance_centre_pos.gwcase`, `js_handrolled_tolerance_compound_write_pos.gwcase`, `js_handrolled_tolerance_const_pos.gwcase`, `js_handrolled_tolerance_flip_pos.gwcase`, `js_handrolled_tolerance_hoisted_subject_pos.gwcase`, `js_handrolled_tolerance_hook_write_pos.gwcase`, `js_handrolled_tolerance_matcher_centre_pos.gwcase`, `js_handrolled_tolerance_matcher_pos.gwcase`, `js_handrolled_tolerance_pos.gwcase`, `js_handrolled_tolerance_ts_annotated_pos.gwcase`, `js_handrolled_tolerance_unreadable_bound_pos.gwcase` |
 | 113 | Rewrite the expected centre of a hand-rolled Python tolerance: `assert abs(total() - 78.75) < 0.01` -> `abs(total() - 75) < 0.01`, or its `self.assertLess(abs(...), eps)` spelling | `handrolled_tolerance_centre_pos.gwcase`, `handrolled_tolerance_unittest_centre_pos.gwcase` |
 | 114 | Delete a JS/TS assertion checkwash does not read, instead of fixing code: a throw check (`expect(fn).toThrow(RangeError)`, `expect(promise).rejects.toThrow()`, `assert.throws`, `assert.rejects`, chai's `.to.throw()`), a spy check (`expect(save).toHaveBeenCalledWith(78.75)`), `assert.match`, `assert.notStrictEqual`, `assert.fail`, an unread Jest matcher (`toHaveLength`, `toMatchObject`, `toMatchSnapshot`, `.resolves`) or `expect.assertions(n)` | `js_node_assert_throws_deleted_pos.gwcase`, `js_unread_spy_check_deleted_pos.gwcase`, `js_unread_throw_check_deleted_pos.gwcase` |
+| 115 | Lend a qualified compatibility gate's D6 hold to a new disable beside it: append a `pytest_collection_modifyitems` that drops tests to a conftest that already gates `collect_ignore` on a version, or add `@pytest.mark.skip` above a test's `skipif(sys.platform == "win32")`; or, beside such a gate, add a runtime or setup control, delete parametrize rows, or weaken a guard (#208) | `compat_gate_lends_to_body_skip_pos.gwcase`, `compat_gate_lends_to_deleted_rows_pos.gwcase`, `compat_gate_lends_to_setup_skip_pos.gwcase`, `compat_gate_lends_to_skip_marker_pos.gwcase`, `compat_gate_lends_to_weakened_guard_pos.gwcase`, `conftest_gate_added_beside_drop_hook_pos.gwcase`, `conftest_gate_lends_to_drop_hook_pos.gwcase`, `conftest_gate_lends_to_report_hook_pos.gwcase`, `conftest_gate_lends_to_skip_fixture_pos.gwcase`, `conftest_gate_lends_to_skip_marker_hook_pos.gwcase`, `conftest_import_gate_lends_to_drop_hook_pos.gwcase` |
+| 116 | Wrap a suite-level control in a guard that never matters, now that a guarded collection hook is held as a guarded `collect_ignore` is: `if sys.version_info >= (3, 0):` or `if True:` around the drop, an early `return` under `if sys.version_info < (3, 0):`, an honest guarded effect beside an unguarded one, or an unguarded effect the hook reading cannot read (`items.clear()` inside an `if` test, `session.items.clear()`, `map(items.remove, ...)`) (#209) | `collect_ignore_always_true_guard_prod_pos.gwcase`, `conftest_hook_always_true_guard_pos.gwcase`, `conftest_hook_early_return_always_true_pos.gwcase`, `conftest_hook_hidden_effect_pos.gwcase`, `conftest_hook_mixed_guards_pos.gwcase` |
 
 ## Unclassified (11)
 

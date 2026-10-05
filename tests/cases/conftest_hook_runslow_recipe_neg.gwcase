@@ -1,0 +1,48 @@
+=== meta ===
+rule: TEST_DISABLED
+title: pytest's own --runslow recipe holds at warn on its guard
+origin: #209 B1, the recipe verbatim: THREATMODEL's open false positive since
+origin2: M0. The early return is the hook's guard (ruling 209.Q1).
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/conftest.py ===
+import pytest
+=== after: tests/conftest.py ===
+import pytest
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--runslow", action="store_true", default=False, help="run slow tests"
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: mark test as slow to run")
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--runslow"):
+        # --runslow given in cli: do not skip slow tests
+        return
+    skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+    for item in items:
+        if "slow" in item.keywords:
+            item.add_marker(skip_slow)
+=== after: tests/test_slow.py ===
+import pytest
+
+
+@pytest.mark.slow
+def test_slow_total():
+    assert sum([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

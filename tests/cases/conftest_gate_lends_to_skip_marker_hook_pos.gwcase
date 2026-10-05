@@ -1,0 +1,41 @@
+=== meta ===
+bypass: 115
+rule: TEST_DISABLED
+title: an honest gate lends nothing to a hook that skips every item
+origin: #208 S3: the hook and its add_marker(skip) are two findings, and the gate
+origin2: holds neither.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== head: tests/test_legacy.py ===
+def test_legacy():
+    assert True
+=== before: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info < (3, 9):
+    collect_ignore.append("test_legacy.py")
+=== after: tests/conftest.py ===
+import sys
+
+collect_ignore = []
+if sys.version_info < (3, 9):
+    collect_ignore.append("test_legacy.py")
+
+
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        item.add_marker(pytest.mark.skip(reason="off"))
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
