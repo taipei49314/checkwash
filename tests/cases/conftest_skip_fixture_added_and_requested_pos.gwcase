@@ -1,0 +1,50 @@
+=== meta ===
+bypass: 104
+rule: TEST_DISABLED
+title: one diff that adds an always-skip conftest fixture and makes a test request it reports both
+origin: #223, ruling 223.Q1: the conftest's <suite> control and the unit's setup marker each have their
+origin2: own identity and remedy; pytest 9.1.1 runs test_total at base and skips it at head.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+=== after: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+
+
+@pytest.fixture
+def needs_network():
+    pytest.skip("network tests are disabled")
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total(needs_network):
+    assert total() == 78.75
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/conftest.py", "unit": "<suite>"},
+  {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_total"}
+]

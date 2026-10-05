@@ -7,8 +7,8 @@ its justification, so the shipped default read nothing. It is now a
 reaches it under, and it is judged as a guarded skip in a test body is. D6
 qualifies an interpreter or OS gate, a guard edited to one that always holds
 or removed is reported, and any other new disable is a marker added. Conftest
-fixtures still read only the unconditional outcome
-(196.followup.conftest-request-side).
+fixtures still read only the unconditional outcome, on the `<suite>` unit and
+on the units of a changed test module that reach them (#223).
 """
 import ast
 import datetime

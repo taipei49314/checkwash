@@ -23,7 +23,8 @@ RUNTIME = "runtime"
 # A conftest fixture whose setup always ends in skip or xfail. A runtime
 # control too, but it fires only for the tests that request it.
 FIXTURE_SETUP = "fixture_setup"
-# Skip or xfail in the setup a test runs: a same-file fixture or xunit setup.
+# Skip or xfail in the setup a test runs: a fixture it reaches, in its module or
+# in a conftest above it (#223), or xunit setup.
 SETUP = "setup"
 # A whole module disabled: `__test__ = False`, or a module-level `pytest.skip`,
 # `pytest.xfail` or `pytest.importorskip`.

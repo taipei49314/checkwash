@@ -1,0 +1,42 @@
+=== meta ===
+bypass: 104
+rule: TEST_DISABLED
+title: a module pytestmark that requests an always-skip conftest fixture is reported on each test
+origin: #223 S4, ruling 223.Q2: pytest 9.1.1 runs test_total at base and skips it at head.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def db():
+    return {}
+
+
+@pytest.fixture
+def needs_network():
+    pytest.skip("network tests are disabled")
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+pytestmark = pytest.mark.usefixtures("needs_network")
+
+def test_total():
+    assert total() == 78.75
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_total"}
+]

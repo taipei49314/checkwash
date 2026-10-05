@@ -54,6 +54,7 @@ from checkwash.frontends.python.frontend import (
     ParsedFile,
     conftest_patch_targets,
     normalize_source,
+    parse_conftest_level,
     parse_python,
 )
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
@@ -125,6 +126,12 @@ _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"
 # so a weakened `.github/workflows/x.test.ts` passed at warn (#197). Python
 # paths still resolve to one role: `tests/golden/test_x.py` is a snapshot.
 _ROLES_BEFORE_TEST = frozenset({"guardrail", "ci", "snapshot", "lockfile", "conftest"})
+
+# The conftest files a diff's test modules sit below, read from the head
+# snapshot (#223). The stand-in context's limits: past them the run is an
+# engine error, never a chain cut short.
+_MAX_CHAIN_READS = 4096
+_MAX_CHAIN_BYTES = 64_000_000
 
 
 def _js_test(path: str, role: str, *sides: bytes | None) -> bool:
@@ -524,6 +531,68 @@ def build_ir(
         c.path.replace("\\", "/"): (c.before, c.after) for c in changes
     }
     conftest_context = ConftestContext(changes, root_reader)
+
+    # The conftest files above each changed test module, per side (#223):
+    # every `conftest.py` from the module's directory up to the repository
+    # root, nearest first. A file the diff changes is read on its own side;
+    # any other is the same on both, read once from the head snapshot. A
+    # level that cannot be read or parsed ends the chain: what it defines is
+    # unknown, and it could override any name beyond it.
+    chain_sides: dict[str, tuple[bytes | None, bytes | None]] = {}
+    for c in changes:
+        cpath = c.path.replace("\\", "/")
+        old = (c.old_path or cpath).replace("\\", "/")
+        if old != cpath:
+            chain_sides[old] = (c.before, None)
+            chain_sides[cpath] = (None, c.after)
+        else:
+            chain_sides[cpath] = (c.before, c.after)
+    chain_levels: dict[tuple[str, int], object] = {}
+    chain_reads = [0, 0]
+    unknown = object()
+
+    def _chain_level(cpath: str, side: int):
+        """`cpath`'s level on `side`: a ConftestLevel, None when absent, `unknown` when unknowable."""
+        key = (cpath, side if cpath in chain_sides else -1)
+        if key in chain_levels:
+            return chain_levels[key]
+        if cpath in chain_sides:
+            data = chain_sides[cpath][side]
+        elif root_reader is None:
+            chain_levels[key] = unknown
+            return unknown
+        else:
+            if chain_reads[0] >= _MAX_CHAIN_READS:
+                raise EngineError("conftest chain exceeds the source read limit")
+            chain_reads[0] += 1
+            data = root_reader(cpath)
+            if data is not None and not isinstance(data, bytes):
+                raise EngineError("conftest chain strict snapshot returned invalid source bytes")
+            if data is not None:
+                chain_reads[1] += len(data)
+                if chain_reads[1] > _MAX_CHAIN_BYTES:
+                    raise EngineError("conftest chain exceeds the source byte limit")
+                if report_context is not None:
+                    report_context.snapshot(cpath, 0, data)
+                    report_context.snapshot(cpath, 1, data)
+        level = None if data is None else parse_conftest_level(data, cpath)
+        chain_levels[key] = unknown if data is not None and level is None else level
+        return chain_levels[key]
+
+    def _conftest_chain(tpath: str, side: int) -> tuple:
+        levels = []
+        directory = tpath.rpartition("/")[0]
+        while True:
+            level = _chain_level(f"{directory}/conftest.py" if directory else "conftest.py", side)
+            if level is unknown:
+                break
+            if level is not None:
+                levels.append(level)
+            if not directory:
+                break
+            directory = directory.rpartition("/")[0]
+        return tuple(levels)
+
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
     oracle_sources: dict[tuple[str, int], bytes | None] = {}
     strict_oracle_sources: set[tuple[str, int]] = set()
@@ -756,13 +825,21 @@ def build_ir(
         if is_python:
             is_conftest = role == "conftest"
             collect = is_conftest or (judged_test and collectable(path))
+            # A test module the diff changes also reaches the conftest
+            # fixtures above it, each side from where the module sat on that
+            # side (#223). An importer the engine adds unchanged, a root
+            # helper's or an expected value's, is not one (D-093 7).
+            reaches_chain = collect and not is_conftest and change.synthetic not in (
+                "root_helper_importer", "expected_provenance_importer")
             if change.before is not None:
                 before_parsed = parse_python(
-                    change.before, collect_tests=collect, conftest=is_conftest
+                    change.before, collect_tests=collect, conftest=is_conftest,
+                    chain=_conftest_chain((change.old_path or path).replace("\\", "/"), 0) if reaches_chain else (),
                 )
             if change.after is not None:
                 after_parsed = parse_python(
-                    change.after, collect_tests=collect, conftest=is_conftest
+                    change.after, collect_tests=collect, conftest=is_conftest,
+                    chain=_conftest_chain(path, 1) if reaches_chain else (),
                 )
         elif is_js_test:
             # Each side is judged under its own runner's focus rule.

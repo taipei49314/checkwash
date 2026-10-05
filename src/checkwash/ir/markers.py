@@ -51,7 +51,7 @@ def is_guarded_mark(name: str) -> bool:
 
 
 def is_setup_skip(name: str) -> bool:
-    """A skip or xfail in the setup a unit runs: a same-file fixture or xunit setup (#172)."""
+    """A skip or xfail in the setup a unit runs: a fixture it reaches or xunit setup (#172, #223)."""
     return name.startswith("setup.")
 
 
