@@ -1362,7 +1362,14 @@ def _decorator_markers(
 
 
 def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Marker]:
-    """Module-level `pytestmark = pytest.mark.skip(...)` (single or list)."""
+    """Module-level `pytestmark = pytest.mark.skip(...)` (single or list).
+
+    Each mark is recorded as a decorator is: its own call's text and span.
+    D6 reads a `skipif` condition by parsing the marker's text as a call, and
+    the whole `pytestmark = ...` statement never parsed as one, so
+    `pytestmark = pytest.mark.skipif(sys.platform == "win32")` blocked at high
+    while the same decorator held at warn (#209 X1).
+    """
     markers: list[Marker] = []
     for stmt in tree.body:
         if not isinstance(stmt, ast.Assign):
@@ -1374,12 +1381,12 @@ def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Mark
             target = value.func if isinstance(value, ast.Call) else value
             canonical = _canonical_marker(_dotted(target))
             if canonical:
-                seg = text.seg(stmt) or canonical
+                seg = text.seg(value) or canonical
                 markers.append(
                     Marker(
                         name=_marker_identity(canonical, value, text),
                         text=seg,
-                        span=off.span(stmt),
+                        span=off.span(value),
                     )
                 )
     return markers
@@ -2771,7 +2778,8 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
     # A collection hook, and an `add_marker` skip in one, carries the condition
     # its effects fire under (#209 Q1, `hook_guards`). Several controls under
     # one name keep the weakest guard, as `collect_ignore` does above: the
-    # markers deduplicate by name.
+    # markers deduplicate by name. A hook with no effect that can drop or
+    # disable an item is not a control (#209 Q2).
     hook_guards, marker_guards = collection_hook_guards(
         tree, lambda node: text.seg(node) or ast.unparse(node)
     )
@@ -2779,8 +2787,9 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
     for node in ast.walk(tree):
         name = guard = None
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in _CONFTEST_HOOKS:
-            name = f"conftest.{node.name}"
-            guard = hook_guards.get(id(node))
+            if id(node) in hook_guards:
+                name = f"conftest.{node.name}"
+                guard = hook_guards[id(node)]
         elif isinstance(node, ast.Call) and (_dotted(node.func) or "").endswith("add_marker"):
             arg = _dotted(node.args[0].func) if node.args and isinstance(node.args[0], ast.Call) else (
                 _dotted(node.args[0]) if node.args else None
