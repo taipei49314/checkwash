@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 117
+rule: TEST_DISABLED
+title: a skip mark bound to a name and applied by it still blocks
+origin: #260 M1: the binding is no longer a module-level skip call, so the decorator that names it
+origin2: is read as the mark it holds (pytest.mark.skip), on the test it skips.
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+skip_slow = pytest.mark.skip(reason="slow")
+
+
+@skip_slow
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

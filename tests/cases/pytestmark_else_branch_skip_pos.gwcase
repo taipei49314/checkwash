@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 117
+rule: TEST_DISABLED
+title: a pytestmark in the else branch of an always-false test skips everywhere
+origin: #260 A4 and ruling 260.Q1: pytest 9.1.1 skips the test, and checkwash
+origin2: reported nothing: an `else` branch was not read; its guard is `not (...)` of a test that never holds.
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+if sys.version_info < (3, 0):
+    pass
+else:
+    pytestmark = pytest.mark.skip(reason="later")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
