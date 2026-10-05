@@ -1,15 +1,15 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-04 (`main` carries 36 merged pull requests since v0.5.0, none released; see the first section)
+Updated: 2026-10-05 (`main` carries 41 merged pull requests since v0.5.0, none released; the owner authorized v0.6.0 that day; see the first section)
 
-## 2026-10-04: unreleased on main since v0.5.0
+## 2026-10-05: unreleased on main since v0.5.0
 
-`main` is `8175a15`. v0.5.0 (`24b60a2`) is still the published engine, and
+`main` is `81f69ab`. v0.5.0 (`24b60a2`) is still the published engine, and
 the recommended Action still pins v0.4.2; D-065 moves it to v0.5.0 at the
-next release. No release is authorized: AGENTS rule 5 needs a one-time
-maintainer authorization recorded in `docs/RELEASING.md`.
+next release. On 2026-10-05 the owner authorized v0.6.0 (AGENTS rule 5). The
+release PR records that one-time scope in `docs/RELEASING.md`.
 
-Since the v0.5.0 tag, 36 pull requests have been merged, all with merge
+Since the v0.5.0 tag, 41 pull requests have been merged, all with merge
 commits:
 
 - **Post-release records and the release gate** (#194, #195, #200, #202,
@@ -30,6 +30,13 @@ commits:
     D-076);
   - #196's follow-ups 189.2 to 183.2: #244 to #253, #255, #256 (D-077 to
     D-087). #252 carries the doc-only rulings (D-085), and #244 closed #225.
+- **The 2026-10-04 rulings on #208 and #209, and the 2026-10-05 rulings on
+  #260 and #261**, one round each, merged in order on 2026-10-05:
+  - #208 with #209 Q1 and Q4, D6 per marker: #258 (two exemptions), #259
+    (D-088);
+  - #209 Q2, Q3 and X1, only an effect makes a hook a control: #262 (D-089);
+  - #260, every `pytestmark` spelling read: #264 (D-090);
+  - #261, a guard removed from an existing suite-level control: #265 (D-091).
 
 What a successor needs to know:
 
@@ -39,14 +46,18 @@ What a successor needs to know:
   the next authorized release.
 - **Allowlist entries added since v0.5.0**, each approved by the owner:
   #227's FAMILIES pin (expires 2026-10-17), #243's three entries for ruling
-  189.1 (2026-10-31) and #255's entry for 183.2's second stage (2026-11-03).
+  189.1 (2026-10-31), #255's entry for 183.2's second stage (2026-11-03) and
+  #258's two entries for ruling 208.Q1 (2026-11-03).
 - **For the next release guide** (X.release-and-fingerprints): D-070, D-071,
-  D-073, D-074, D-077, D-081, D-083 and D-087 record fingerprints that move.
-  D-084 names two verdicts that move from block to pass.
-- **Rulings that wait for their rounds:** the 2026-10-04 rulings on #208
-  with #209's first question (one round), #219, #220, #221, #222, #223, #226
-  and #254. #196 keeps the other follow-ups, among them 190.3, 188.6 and
-  183.2's conftest half after #223.
+  D-073, D-074, D-077, D-081, D-083, D-087 and D-090 record fingerprints that
+  move. In D-090's (#260), a mark bound to a name and applied by it, once
+  reported as `module.skip` or `module.xfail` on every test of the module, is
+  reported under the mark's own name on the tests it marks. D-084 names two
+  verdicts that move from block to pass.
+- **Rulings that wait for their rounds:** #219, #220, #221, #222, #223, #226
+  and #254. #223's round was under way and is paused for the release. #196
+  keeps the other follow-ups, among them 190.3, 188.6 and 183.2's conftest
+  half after #223. #263 and #266 wait for rulings.
 
 ## 2026-10-01: v0.5.0 published
 
