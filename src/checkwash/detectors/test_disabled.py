@@ -25,7 +25,7 @@ from checkwash.frontends.python.conftest_controls import (
 )
 from checkwash.frontends.python.hook_guards import HOOK_MARKERS
 from checkwash.ir.assertion_identity import fingerprint_text
-from checkwash.ir.markers import is_setup_skip, skip_condition
+from checkwash.ir.markers import is_guarded_mark, is_setup_skip, skip_condition
 from checkwash.ir.model import IR, judged_as_test
 
 # What an added marker of each kind did. Any other kind, or none, is a plain
@@ -118,11 +118,14 @@ def detect(ir: IR) -> list[Finding]:
                 # A skip in the setup this test runs says so, and names its
                 # provider: its evidence is the fixture's or callback's line.
                 # A collection hook names itself too: its guard is the
-                # condition its effects fire under (#209 Q1).
+                # condition its effects fire under (#209 Q1). So does a mark:
+                # only a `pytestmark` binding gives one a guard (#260 Q2).
                 if is_setup_skip(name):
                     where, which = " in the setup this test runs", f" ({name})"
                 elif name in HOOK_MARKERS:
                     where, which = " of the suite-level control", f" ({name})"
+                elif is_guarded_mark(name):
+                    where, which = "", f" (pytestmark: {name})"
                 else:
                     where, which = "", ""
                 was = removed_skip_guard(name, unit, file.constants_before)

@@ -18,7 +18,12 @@ from dataclasses import dataclass, field
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.runtime_controls import runtime_controls
-from checkwash.frontends.python.setup_skip_controls import SetupScope, module_bindings, setup_outcomes
+from checkwash.frontends.python.setup_skip_controls import (
+    SetupScope,
+    _conjunction,
+    module_bindings,
+    setup_outcomes,
+)
 from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
@@ -1346,49 +1351,225 @@ def _marker_identity(canonical: str, node: ast.AST, text) -> str:
     return canonical
 
 
+def _held_marks(
+    name: str, aliases: dict[str, list[ast.expr]], resolving: frozenset[str] = frozenset()
+) -> list[ast.AST]:
+    """The marks a name may hold as a decorator: each value it is bound to that is one mark."""
+    if name in resolving or len(resolving) >= 8:
+        return []
+    held: list[ast.AST] = []
+    for value in aliases.get(name, []):
+        if isinstance(value, ast.Name) and not _canonical_marker(value.id):
+            held += _held_marks(value.id, aliases, resolving | {name})
+        elif isinstance(value, (ast.Call, ast.Attribute, ast.Name)):
+            if _canonical_marker(_dotted(value.func if isinstance(value, ast.Call) else value)):
+                held.append(value)
+    return held
+
+
 def _decorator_markers(
-    node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef, text: str, off: _Offsets
+    node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+    text: str,
+    off: _Offsets,
+    aliases: dict[str, list[ast.expr]] | None = None,
 ) -> list[Marker]:
+    """The skip and xfail marks a definition's decorators apply.
+
+    A decorator that names a bound mark (`skip_slow = pytest.mark.skip(...)`
+    / `@skip_slow`) applies that mark, and is recorded as the mark's own
+    call. Until #260 that binding was read as a module-level skip call, which
+    caught this spelling and also blocked a mark that was never applied
+    (#260 M1). A called name (`skip_if = pytest.mark.skipif` /
+    `@skip_if(cond)`) is the decorator's own call.
+    """
     markers: list[Marker] = []
     for dec in node.decorator_list:
         target = dec.func if isinstance(dec, ast.Call) else dec
         canonical = _canonical_marker(_dotted(target))
-        if canonical:
-            seg = text.seg(dec) or canonical
+        found: list[tuple[str, ast.AST]] = [(canonical, dec)] if canonical else []
+        if not canonical and aliases and isinstance(target, ast.Name):
+            for held in _held_marks(target.id, aliases):
+                name = _canonical_marker(_dotted(held.func if isinstance(held, ast.Call) else held))
+                # `@skip_if(cond)` calls a mark the name holds uncalled: the
+                # call is the decorator's own.
+                called = isinstance(dec, ast.Call) and not isinstance(held, ast.Call)
+                found.append((name, dec if called else held))
+        for name, mark in found:
             markers.append(
-                Marker(name=_marker_identity(canonical, dec, text), text=seg, span=off.span(dec))
+                Marker(name=_marker_identity(name, mark, text), text=text.seg(mark) or name, span=off.span(mark))
             )
     return markers
 
 
-def _pytestmark_markers(tree: ast.Module, text: str, off: _Offsets) -> list[Marker]:
-    """Module-level `pytestmark = pytest.mark.skip(...)` (single or list).
+# `pytestmark.append(m)`, `.insert(i, m)` and `.extend([...])`: which argument
+# holds the mark, or the list of them (#260 Q1).
+_PYTESTMARK_METHODS = {"append": 0, "extend": 0, "insert": 1}
+
+
+def _plain_values(body: list[ast.stmt]) -> dict[str, list[ast.expr]]:
+    """Every value one scope binds each name to by a plain `=`, in any compound statement.
+
+    Only the scope's own statements are read, never the body of a function
+    or class it defines: this runs on every test module.
+    """
+    values: dict[str, list[ast.expr]] = {}
+    stack = list(reversed(body))
+    while stack:
+        stmt = stack.pop()
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        if isinstance(stmt, ast.Assign):
+            for target in stmt.targets:
+                if isinstance(target, ast.Name):
+                    values.setdefault(target.id, []).append(stmt.value)
+        elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None and isinstance(stmt.target, ast.Name):
+            values.setdefault(stmt.target.id, []).append(stmt.value)
+        nested = [s for name in _STMT_BODY_FIELDS for s in getattr(stmt, name, None) or []]
+        nested += [s for handler in getattr(stmt, "handlers", None) or [] for s in handler.body]
+        nested += [s for case in getattr(stmt, "cases", None) or [] for s in case.body]
+        stack.extend(reversed([s for s in nested if isinstance(s, ast.stmt)]))
+    return values
+
+
+def _mark_aliases(
+    body: list[ast.stmt], outer: dict[str, list[ast.expr]] | None = None
+) -> dict[str, list[ast.expr]]:
+    """Every value one scope binds each name to by a plain `=`.
+
+    A class body's names are read with its module's, which Python falls back
+    to there.
+    """
+    own = _plain_values(body)
+    if not outer:
+        return own
+    if not own:
+        return outer
+    return {name: own.get(name, []) + outer.get(name, []) for name in {*own, *outer}}
+
+
+def _marks_in(
+    value: ast.AST, aliases: dict[str, list[ast.expr]], resolving: frozenset[str] = frozenset()
+) -> list[ast.AST]:
+    """The skip and xfail marks a value holds, as the nodes that spell them.
+
+    A mark, a list or tuple of marks, a `+` of those, or a name bound to any
+    of them (#260 Q1). The ruling names a name bound once; one bound more
+    than once holds the marks of every value it is bound to, so the reading
+    fails toward flagging. A name a decorator would read as a mark is one,
+    as before, whatever it is bound to.
+    """
+    if isinstance(value, ast.Starred):
+        value = value.value
+    if isinstance(value, (ast.Call, ast.Attribute, ast.Name)):
+        if _canonical_marker(_dotted(value.func if isinstance(value, ast.Call) else value)):
+            return [value]
+    if isinstance(value, (ast.List, ast.Tuple)):
+        return [mark for element in value.elts for mark in _marks_in(element, aliases, resolving)]
+    if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Add):
+        return _marks_in(value.left, aliases, resolving) + _marks_in(value.right, aliases, resolving)
+    if isinstance(value, ast.Name) and value.id not in resolving and len(resolving) < 8:
+        inner = resolving | {value.id}
+        return [mark for bound in aliases.get(value.id, []) for mark in _marks_in(bound, aliases, inner)]
+    return []
+
+
+def _is_pytestmark(node: ast.AST) -> bool:
+    if isinstance(node, ast.Subscript):
+        node = node.value
+    return isinstance(node, ast.Name) and node.id == "pytestmark"
+
+
+def _paired(target: ast.AST, value: ast.AST):
+    """Each target with the value it receives, through the unpacking of a literal tuple or list.
+
+    A literal of the target's length unpacks element by element, so a starred
+    target receives a list of the one element beside it.
+    """
+    if isinstance(target, ast.Starred):
+        target = target.value
+    if isinstance(target, (ast.Tuple, ast.List)):
+        if (
+            isinstance(value, (ast.Tuple, ast.List))
+            and len(value.elts) == len(target.elts)
+            and not any(isinstance(e, ast.Starred) for e in value.elts)
+        ):
+            for t, v in zip(target.elts, value.elts):
+                yield from _paired(t, v)
+        return
+    yield target, value
+
+
+def _pytestmark_values(stmt: ast.stmt) -> list[ast.AST]:
+    """What one statement puts into `pytestmark`: each value it binds, adds or appends."""
+    if isinstance(stmt, ast.Assign):
+        return [v for target in stmt.targets for t, v in _paired(target, stmt.value) if _is_pytestmark(t)]
+    if isinstance(stmt, ast.AnnAssign):
+        return [stmt.value] if stmt.value is not None and _is_pytestmark(stmt.target) else []
+    if isinstance(stmt, ast.AugAssign):
+        return [stmt.value] if _is_pytestmark(stmt.target) else []
+    if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+        call = stmt.value
+        func = call.func
+        if isinstance(func, ast.Attribute) and func.attr in _PYTESTMARK_METHODS and _is_pytestmark(func.value):
+            index = _PYTESTMARK_METHODS[func.attr]
+            return [call.args[index]] if len(call.args) > index else []
+    return []
+
+
+def _pytestmark_markers(
+    body: list[ast.stmt], text: str, off: _Offsets, aliases: dict[str, list[ast.expr]]
+) -> list[Marker]:
+    """Every skip or xfail mark `pytestmark` gets in one scope: a module or a class body.
+
+    pytest reads the name once the scope has run, so every binding counts
+    (#260 Q1): `=` and an annotated `=`, one target of a tuple, `+=`, a
+    subscript, and `.append`, `.extend` or `.insert` on it, inside any
+    compound statement. A value is read by `_marks_in`.
 
     Each mark is recorded as a decorator is: its own call's text and span.
     D6 reads a `skipif` condition by parsing the marker's text as a call, and
-    the whole `pytestmark = ...` statement never parsed as one, so
-    `pytestmark = pytest.mark.skipif(sys.platform == "win32")` blocked at high
-    while the same decorator held at warn (#209 X1).
+    the whole `pytestmark = ...` statement never parsed as one (#209 X1). Its
+    name is the one a decorator would mint, so a mark keeps its identity when
+    it moves between spellings (#260 Q3).
+
+    The binding's path condition is the mark's guard (#260 Q2): each
+    enclosing `if` test, `not (...)` for an `else`, and an `except` block's
+    condition (`_handler_guard`), as a conftest's `collect_ignore` records
+    its own. A `with`, loop or `match` body and a `try` body add none, so a
+    binding there reads as unconditional.
     """
+    found: list[tuple[ast.AST, tuple[str, ...]]] = []
+
+    def record(statements: list[ast.stmt], conds: tuple[str, ...]) -> None:
+        for stmt in statements:
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            if isinstance(stmt, ast.If):
+                test = text.seg(stmt.test) or ast.unparse(stmt.test)
+                record(stmt.body, (*conds, test))
+                record(stmt.orelse, (*conds, f"not ({test})"))
+                continue
+            for value in _pytestmark_values(stmt):
+                found.extend((mark, conds) for mark in _marks_in(value, aliases))
+            for field_name in _STMT_BODY_FIELDS:
+                record([s for s in getattr(stmt, field_name, None) or [] if isinstance(s, ast.stmt)], conds)
+            for handler in getattr(stmt, "handlers", None) or []:
+                record(handler.body, (*conds, _handler_guard(stmt, handler)))
+            for case in getattr(stmt, "cases", None) or []:
+                record(case.body, conds)
+
+    record(body, ())
     markers: list[Marker] = []
-    for stmt in tree.body:
-        if not isinstance(stmt, ast.Assign):
-            continue
-        if not any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in stmt.targets):
-            continue
-        values = stmt.value.elts if isinstance(stmt.value, ast.List) else [stmt.value]
-        for value in values:
-            target = value.func if isinstance(value, ast.Call) else value
-            canonical = _canonical_marker(_dotted(target))
-            if canonical:
-                seg = text.seg(value) or canonical
-                markers.append(
-                    Marker(
-                        name=_marker_identity(canonical, value, text),
-                        text=seg,
-                        span=off.span(value),
-                    )
-                )
+    for mark, conds in found:
+        canonical = _canonical_marker(_dotted(mark.func if isinstance(mark, ast.Call) else mark))
+        markers.append(
+            Marker(
+                name=_marker_identity(canonical, mark, text),
+                text=text.seg(mark) or canonical,
+                span=off.span(mark),
+                guard=_conjunction(conds),
+            )
+        )
     return markers
 
 
@@ -1434,7 +1615,14 @@ def _module_skip_markers(tree: ast.Module, text, off: _Offsets) -> list[Marker]:
         name = _dotted(call.func)
         if not name:
             continue
-        leaf = name.rsplit(".", 1)[-1]
+        parts = name.split(".")
+        if len(parts) >= 2 and parts[-2] == "mark":
+            # `skip_slow = pytest.mark.skip(...)` builds a mark and disables
+            # nothing until a decorator or `pytestmark` applies it, and those
+            # read it. Its leaf name made it a module-level skip call, which
+            # blocked a mark that was never applied (#260 M1, M2).
+            continue
+        leaf = parts[-1]
         if leaf in ("skip", "xfail", "importorskip"):
             seg = (text.seg(stmt) or leaf).split("\n")[0]
             markers.append(Marker(name=f"module.{leaf}", text=seg, span=off.span(stmt)))
@@ -2342,11 +2530,12 @@ def _collect_unit(
     caches: tuple[dict, dict] | None = None,
     fixtures: dict[str, ast.Constant] | None = None,
     doctests: list[Assertion] | None = None,
+    aliases: dict[str, list[ast.expr]] | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
     patches: set[tuple[str, str]] = set()
-    markers = _decorator_markers(func, text, off) + list(inherited_markers or [])
+    markers = _decorator_markers(func, text, off, aliases) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
     dead = _unreachable_ids(func, fixtures)
@@ -2751,7 +2940,7 @@ def _ignored_paths(controls) -> tuple[str, ...]:
 def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
     """Suite-level controls in a conftest, collection and runtime alike, as one
     synthetic unit. `conftest_controls` tells their kinds apart."""
-    markers: list[Marker] = _pytestmark_markers(tree, text, off)
+    markers: list[Marker] = _pytestmark_markers(tree.body, text, off, _mark_aliases(tree.body))
 
     for name, node in runtime_controls(tree):
         markers.append(Marker(name=name, text=text.seg(node) or name, span=off.span(node)))
@@ -3057,8 +3246,9 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # Symbol fingerprints exist to answer "did prod behaviour change?"; test
     # files never need them, and computing them dominated parse time.
     want_symbols = not collect_tests
+    module_aliases = _mark_aliases(tree.body) if collect_tests else {}
     module_markers = (
-        _pytestmark_markers(tree, text, off) + _module_skip_markers(tree, text, off)
+        _pytestmark_markers(tree.body, text, off, module_aliases) + _module_skip_markers(tree, text, off)
         if collect_tests
         else []
     )
@@ -3118,12 +3308,26 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
             for provider, effect, node, guard in setup_outcomes(scopes, func, method=len(scopes) > 1)
         ]
 
+    class_aliases: dict[int, dict[str, list[ast.expr]]] = {}
+
+    def aliases_of(cls: ast.ClassDef) -> dict[str, list[ast.expr]]:
+        if id(cls) not in class_aliases:
+            class_aliases[id(cls)] = _mark_aliases(cls.body, module_aliases)
+        return class_aliases[id(cls)]
+
+    def class_marks(cls: ast.ClassDef) -> list[Marker]:
+        """A class's decorators and its body's `pytestmark` (#260 Q1)."""
+        return _decorator_markers(cls, text, off, module_aliases) + _pytestmark_markers(
+            cls.body, text, off, aliases_of(cls)
+        )
+
     def visit(
         node: ast.AST,
         prefix: str,
         inherited: list[Marker],
         collectible: bool,
         scopes: tuple[SetupScope, ...] = (),
+        aliases: dict[str, list[ast.expr]] | None = None,
     ) -> None:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -3135,7 +3339,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     units.append(
                         _collect_unit(
                             child, qual, text, off, inherited + setup_markers(child, scopes),
-                            module_scopes, file_caches, branch_fixtures, doctests,
+                            module_scopes, file_caches, branch_fixtures, doctests, aliases,
                         )
                     )
                 # Nested defs are never collected as pytest items.
@@ -3146,7 +3350,9 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     symbols[qual] = _fingerprint(child)
                 # Class-level skip decorators disable every test inside the
                 # class — they must reach each unit (confirmed red-team FN).
-                class_markers = _decorator_markers(child, text, off) if collect_tests else []
+                # So does a `pytestmark` in the class body, and only those
+                # (#260 Q1).
+                class_markers = class_marks(child) if collect_tests else []
                 class_collectible = (
                     collectible
                     and (_is_test_class(child) or child.name in test_class_names)
@@ -3158,6 +3364,7 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     inherited + class_markers,
                     class_collectible,
                     nested_setup(scopes, child) if class_collectible else (),
+                    aliases_of(child) if collect_tests else None,
                 )
             elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):
                 # Module- and class-level constants are behaviour too. They
@@ -3169,17 +3376,16 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
                     if isinstance(target, ast.Name):
                         symbols[f"{prefix}{target.id}"] = _fingerprint(child)
             else:
-                visit(child, prefix, inherited, collectible, scopes)
+                visit(child, prefix, inherited, collectible, scopes, aliases)
 
-    visit(tree, "", module_markers, True, setup_scopes)
+    visit(tree, "", module_markers, True, setup_scopes, module_aliases)
     if collect_tests:
         for cls, owner, method in inherited_test_methods(tree):
             units.append(_collect_unit(
                 method, f"{cls.name}.{method.name}", text, off,
-                module_markers + _decorator_markers(owner, text, off)
-                + _decorator_markers(cls, text, off)
+                module_markers + class_marks(owner) + class_marks(cls)
                 + setup_markers(method, nested_setup(setup_scopes, owner, cls)),
-                module_scopes, file_caches, branch_fixtures, doctests,
+                module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
