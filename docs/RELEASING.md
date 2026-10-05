@@ -242,7 +242,8 @@ Publication and artifact verification consume this grant; another version
 requires a new scope. The verdict gate's runs on the release commit
 `8c70efb` concluded success: the `main` push run 37324377879 (attempt 1,
 step 5b) and the tag-push run 37337702973 (attempt 1, step 8a). The tag
-`v0.6.0` and the GitHub Release were published on 2026-10-05.
+`v0.6.0` and the GitHub Release were published on 2026-10-05, and the
+rotation PR (#270, D-094) merged the same day: the grant is consumed.
 
 What the slot changes in the README, and what already guards it:
 
