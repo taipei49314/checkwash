@@ -417,3 +417,22 @@ def test_a_conftest_pytestmark_in_any_spelling_is_reported_at_info(lines):
     found, verdict = analyze_change(HEAD, HEAD + "\n" + lines + "\n", path=CONFTEST)
     assert [(f.unit, f.severity, f.shape) for f in found] == [("<suite>", "info", "inert_mark")]
     assert verdict == "pass"
+
+
+CONFTEST_GUARDED = HEAD + '\nif sys.platform == "win32":\n    pytestmark = pytest.mark.skip(reason="posix only")\n'
+
+
+@pytest.mark.parametrize("after, said", [
+    (CONFTEST_GUARDED.replace('if sys.platform == "win32":', "if True:"), "skip guard now always fires ('True')"),
+    (HEAD + '\npytestmark = pytest.mark.skip(reason="posix only")\n',
+     "skip guard removed (was 'sys.platform == \"win32\"')"),
+])
+def test_a_conftest_pytestmark_s_guard_guards_nothing_either(after, said):
+    found, verdict = analyze_change(CONFTEST_GUARDED, after, path=CONFTEST)
+    assert [(f.message, f.severity, f.shape) for f in found] == [(
+        f"<suite>: {said} (pytestmark: pytest.mark.skip): pytest does not collect conftest.py "
+        "as a test module, so this pytestmark disables nothing",
+        "info", "inert_mark",
+    )]
+    assert found[0].fingerprint == make_fingerprint("TEST_DISABLED", CONFTEST, "<suite>", "guard:pytest.mark.skip")
+    assert verdict == "pass"
