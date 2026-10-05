@@ -16,7 +16,7 @@ from checkwash.allowlist import AllowEntry, active_fingerprints
 from checkwash.ci_control_flow import became_unanalysable
 from checkwash.config import SEVERITY_ORDER, Config
 from checkwash.contract import Contract
-from checkwash.findings import SHAPE_GUARD_WEAKENED, SHAPE_MARKER_ADDED, Finding
+from checkwash.findings import SHAPE_GUARD_WEAKENED, SHAPE_INERT_MARK, SHAPE_MARKER_ADDED, Finding
 from checkwash.compat import compat_gate_for, guard_always_skips, guard_can_be_false, unit_is_live
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import bare_names, marker_call, parse_expr
@@ -552,6 +552,14 @@ def apply_gates(
             continue
 
         unit = units.get((f.path, f.unit or ""))
+
+        # A `pytestmark` in conftest.py disables nothing: pytest does not
+        # collect conftest.py as a test module, so it never reads the mark.
+        # The finding tells the reader so, at info, and nothing escalates it
+        # (#209 Q3).
+        if f.rule == "TEST_DISABLED" and f.shape == SHAPE_INERT_MARK:
+            f.severity = "info"
+            continue
 
         # D2 ASSERTION_MOVED: conclusively benign, skips escalation. Each
         # de-escalation *spends* a credit from the multiset.
