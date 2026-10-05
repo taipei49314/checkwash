@@ -25,7 +25,7 @@ Paths are normalized to forward slashes before matching. Default role globs
 | conftest  | `**/conftest.py` |
 | test      | `tests/**`, `**/test_*.py`, `**/*_test.py` |
 | guardrail | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.claude/**`, `.greenwash/**`, `.checkwash/**` |
-| ci        | `.github/workflows/**`, `.gitlab-ci.yml`, `.pre-commit-config.yaml`, `pytest.ini`, `tox.ini`, `setup.cfg`, `**/pyproject.toml`, `.circleci/**`, `.buildkite/**`, `**/Jenkinsfile`, `.travis.yml`, `.drone.yml`, `appveyor.yml`, `azure-pipelines.yml`, `bitbucket-pipelines.yml`, `noxfile.py`, `**/justfile`, `**/Justfile`, `**/.justfile`, `**/JUSTFILE` |
+| ci        | `.github/workflows/**`, `.github/actions/**/action.yml`, `.github/actions/**/action.yaml`, `.gitlab-ci.yml`, `.pre-commit-config.yaml`, `pytest.ini`, `tox.ini`, `setup.cfg`, `**/pyproject.toml`, `.circleci/**`, `.buildkite/**`, `**/Jenkinsfile`, `.travis.yml`, `.drone.yml`, `appveyor.yml`, `azure-pipelines.yml`, `bitbucket-pipelines.yml`, `noxfile.py`, `**/justfile`, `**/Justfile`, `**/.justfile`, `**/JUSTFILE` |
 | snapshot  | `**/__snapshots__/**`, `**/golden/**`, `**/*.golden`, `**/*.snap`, `**/expected/**`, `**/*.expected` |
 | lockfile  | `poetry.lock`, `uv.lock`, `package-lock.json`, `pnpm-lock.yaml`, `requirements*.txt`, `requirements*.in` |
 | docs      | `**/*.md`, `**/*.rst`, `**/README` |
