@@ -17,12 +17,14 @@ A guarded skip is not this evidence: its guard is its justification, and an
 environment condition is not something a source reading can settle. A unit's
 own setup still records it, with that guard (`setup_outcome`, #196 183.2), so
 it is judged as a guarded skip in a test body is. The conftest paths read only
-the unconditional outcome until their requests are resolved
-(196.followup.conftest-request-side).
+the unconditional outcome: the `<suite>` control, and the conftest fixtures a
+unit reaches (`ConftestLevel`, #223). A guarded conftest skip waits for 183.2's
+conftest half.
 """
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 
 from checkwash.ir.astutil import dotted_name
 
@@ -445,6 +447,19 @@ def _fixture(function, bindings):
     return name, autouse
 
 
+def _plain_binding(statement, bindings):
+    """Does this final binding of a name show every fixture it holds?
+
+    A class or an undecorated def holds none, and a plain native fixture is
+    read. An import, an assignment, a decorated def read as no plain fixture,
+    or a def under an `if` or `try` may hold one this reading does not see.
+    """
+    if isinstance(statement, ast.ClassDef):
+        return True
+    return isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)) and (
+        not statement.decorator_list or _fixture(statement, bindings) is not None)
+
+
 def _requests(function, *, receiver):
     """Fixture names a callback or a test asks pytest for: arguments without defaults."""
     args = function.args
@@ -510,6 +525,9 @@ class SetupScope:
     Only a name's final binding provides anything: pytest reads the finished
     namespace. `bases` is the class's base list, None when unknown.
     `condition` gives a guard's source text.
+    `opaque`: names whose final binding may hold a fixture this reading does
+    not see (`_plain_binding`). `star`: a star import, which may bring any
+    name. Either keeps a request from falling through to a conftest (#223).
     """
 
     def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None, condition=ast.unparse):
@@ -523,6 +541,9 @@ class SetupScope:
         for statement in body:
             for name in _names([statement]):
                 last[name] = statement
+        self.opaque = frozenset(name for name, statement in last.items() if not _plain_binding(statement, bindings))
+        self.star = any(isinstance(statement, ast.ImportFrom) and any(alias.name == '*' for alias in statement.names)
+                        for statement in body)
         callbacks = _CLASS_SETUP if in_class else _MODULE_SETUP
         if (in_class and bases is not None and 'object' not in bindings
                 and all(isinstance(base, ast.Name) and base.id == 'object' for base in bases)):
@@ -558,49 +579,108 @@ class SetupScope:
             self.implicit.pop('setup_module', None)
 
 
-def setup_outcomes(scopes, function, *, method):
-    """(provider, effect, evidence, guard) for every outcome this unit's setup reaches.
+@dataclass(frozen=True)
+class ConftestLevel:
+    """One `conftest.py` as a test module below its directory sees it (#223).
 
-    `scopes` runs from the module to the innermost enclosing class. The unit
-    reaches what its arguments name, what `usefixtures` names, the autouse
-    fixtures in scope, what those request in turn, and the xunit setup pytest
-    runs for it; a name that `parametrize` on the unit, its class or its
-    module supplies directly runs no fixture anywhere in that closure.
-    Conftest fixtures are not resolved here: they are judged once,
-    suite-wide, as runtime controls (`fixture_setup_controls`).
+    `fixtures`, `opaque` and `star` are its module `SetupScope`'s, except
+    that an outcome's evidence is a (source text, span) pair in this file,
+    and only an unconditional outcome is kept: a guarded conftest skip waits
+    for 183.2's conftest half. `path` is the conftest's own.
+    """
+    path: str
+    fixtures: dict
+    opaque: frozenset
+    star: bool
+
+
+def conftest_level(path, tree, text_of, span_of):
+    """`path`'s `ConftestLevel`, read from its parsed module `tree`.
+
+    `text_of` and `span_of` give a node's source text and span in that file.
+    """
+    scope = SetupScope(tree.body, module_bindings(tree))
+    fixtures = {}
+    for name, (requested, autouse, outcome) in scope.fixtures.items():
+        if outcome is not None and outcome[2] is None:
+            outcome = (outcome[0], (text_of(outcome[1]), span_of(outcome[1])), None)
+        else:
+            outcome = None
+        fixtures[name] = (requested, autouse, outcome)
+    return ConftestLevel(path, fixtures, scope.opaque, scope.star)
+
+
+def setup_outcomes(scopes, function, *, method, chain=()):
+    """(provider, effect, evidence, guard, origin) for every outcome this unit's setup reaches.
+
+    `scopes` runs from the module to the innermost enclosing class, and
+    `chain` holds the conftest files above the module, nearest first. The
+    unit reaches what its arguments name, what `usefixtures` names, the
+    autouse fixtures in scope, what those request in turn, and the xunit
+    setup pytest runs for it; a name that `parametrize` on the unit, its
+    class or its module supplies directly runs no fixture anywhere in that
+    closure.
+
+    A request resolves as pytest resolves it for this test (#223): the
+    nearest scope that defines the name wins, the test module's own
+    definitions before every conftest, and a fixture that requests its own
+    name reaches the next definition outward. A name bound in a way this
+    reading does not follow may hold a fixture there (`SetupScope.opaque`,
+    `star`), so the request stops before any conftest beyond it.
+    `origin` is the conftest's path for an outcome found there, None for
+    one in the test module, whose evidence is a node.
     """
     bindings = scopes[0].bindings
     static = any(isinstance(mark, ast.Name) and mark.id == 'staticmethod' for mark in function.decorator_list)
     wanted = set(_requests(function, receiver=method and not static))
     wanted |= _usefixtures(function.decorator_list, bindings)
     direct = _direct_arguments(function.decorator_list, bindings)
-    fixtures, implicit = {}, {}
+    implicit = {}
     for scope in scopes:
-        fixtures.update(scope.fixtures)
         implicit.update(scope.implicit)
         wanted |= scope.usefixtures
-        wanted |= {name for name, fixture in scope.fixtures.items() if fixture[1]}
         direct |= scope.direct
+    # Nearest first: the innermost class to the module, then each conftest.
+    levels = [*reversed(scopes), *chain]
+    own = len(scopes)
+    for level in levels:
+        wanted |= {name for name, fixture in level.fixtures.items() if fixture[1]}
     wanted -= direct
     found = {}
     for name in sorted(implicit):
         applies, outcome = implicit[name]
         if outcome is not None and (applies == 'all' or (applies == 'methods') == method):
-            found[name] = outcome
-    queue = sorted(wanted)
-    # A directly parametrized name replaces its fixture for every request in
-    # the closure, not only the unit's own.
-    seen = set(queue) | direct
+            found[name] = (*outcome, None)
+
+    def resolve(name, start):
+        for index in range(start, len(levels)):
+            if name in levels[index].fixtures:
+                return index
+            if index == own - 1 and any(name in level.opaque or level.star for level in levels[start:own]):
+                return None
+            if index >= own and (name in levels[index].opaque or levels[index].star):
+                return None
+        return None
+
+    queue, seen = [], set()
+
+    def request(name, start):
+        index = resolve(name, start) if name not in direct else None
+        # A directly parametrized name replaces its fixture for every request
+        # in the closure, not only the unit's own.
+        if index is not None and (name, index) not in seen:
+            seen.add((name, index))
+            queue.append((name, index))
+
+    for name in sorted(wanted):
+        request(name, 0)
     while queue:
-        name = queue.pop(0)
-        if name not in fixtures:
-            continue
-        requested, _autouse, outcome = fixtures[name]
+        name, index = queue.pop(0)
+        requested, _autouse, outcome = levels[index].fixtures[name]
         if outcome is not None:
-            found.setdefault(name, outcome)
-        for request in sorted(requested - seen):
-            seen.add(request)
-            queue.append(request)
+            found.setdefault(name, (*outcome, levels[index].path if index >= own else None))
+        for other in sorted(requested):
+            request(other, index + 1 if other == name else 0)
     return [(name, *found[name]) for name in sorted(found)]
 
 
@@ -610,9 +690,11 @@ def fixture_setup_controls(tree):
     Any test under the conftest's directory can request them, so each one is
     a suite-level runtime control, named per fixture: another such fixture in
     a conftest that already had one is still an event (THREATMODEL 81's
-    lesson). Which tests request it is not resolved: they may live anywhere
-    under the directory, outside the diff. A guarded one is not read until
-    they are (196.followup.conftest-request-side).
+    lesson). A test module the diff changes resolves its own requests to it
+    (`setup_outcomes`, #223), but the others may live anywhere under the
+    directory, outside the diff, so the fixture is reported here whoever
+    requests it (ruling 196.183.1). A guarded one waits for 183.2's conftest
+    half.
     """
     fixtures = SetupScope(tree.body, module_bindings(tree)).fixtures
     for name in sorted(fixtures):

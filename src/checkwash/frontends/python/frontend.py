@@ -19,8 +19,10 @@ from checkwash.frontends.python.conditional_oracles import conditional_oracle_ca
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.frontends.python.setup_skip_controls import (
+    ConftestLevel,
     SetupScope,
     _conjunction,
+    conftest_level,
     module_bindings,
     setup_outcomes,
 )
@@ -163,6 +165,10 @@ class ParsedFile:
     # `.each` table or a computed title with an inline callback counts, a
     # `pattern.test(value)` call does not (#196 186.8).
     declares_tests: bool = False
+    # A setup marker whose outcome lies in a conftest fixture (#223), keyed by
+    # (name, span, text) -> that conftest's path. Its text and span are in
+    # that file, so a report locates it there, not in this one.
+    marker_origins: dict[tuple[str, tuple[int, int], str], str] = field(default_factory=dict)
 
 
 def normalize_source(data: bytes) -> str:
@@ -3211,7 +3217,11 @@ def _callees(node: ast.AST) -> tuple[str, ...]:
     return tuple(sorted(names))
 
 
-def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> ParsedFile:
+def parse_python(
+    data: bytes, collect_tests: bool, conftest: bool = False, chain: tuple[ConftestLevel, ...] = ()
+) -> ParsedFile:
+    """`chain`: the conftest files above a test module, nearest first, whose
+    fixtures its units can request (#223). Only a test module reads it."""
     raw = normalize_source(data)
     try:
         tree = ast.parse(raw)
@@ -3270,18 +3280,23 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     # shared by every unit so a helper reached by many tests is walked once.
     file_caches: tuple[dict, dict] = ({}, {})
     branch_fixtures = literal_fixtures(tree) if collect_tests else {}
-    # A unit's setup runs before its body: the same-file fixtures it reaches
-    # and the xunit setup pytest calls for it. An unconditional skip there
-    # disables the unit as surely as a marker does, so it is recorded as one
-    # (issue #172), and a guarded one is recorded with its guard, like a skip
-    # in the body (#196 183.2). Conftest fixtures are judged suite-wide in
-    # `_conftest_unit`.
+    # A unit's setup runs before its body: the fixtures it reaches and the
+    # xunit setup pytest calls for it. An unconditional skip there disables
+    # the unit as surely as a marker does, so it is recorded as one (issue
+    # #172), and a guarded one in the test module is recorded with its guard,
+    # like a skip in the body (#196 183.2). A conftest fixture the unit
+    # reaches records its unconditional skip on the unit too (#223); the
+    # fixture itself is judged suite-wide in `_conftest_unit`.
     setup_scopes: tuple[SetupScope, ...] = ()
+    marker_origins: dict[tuple[str, tuple[int, int], str], str] = {}
 
     def condition(node: ast.AST) -> str:
         return text.seg(node) or ast.unparse(node)
 
-    if collect_tests and not conftest and any(token in raw for token in _SETUP_OUTCOME_TOKENS):
+    if collect_tests and not conftest and (
+        any(token in raw for token in _SETUP_OUTCOME_TOKENS)
+        or any(fixture[2] is not None for level in chain for fixture in level.fixtures.values())
+    ):
         setup_scopes = (SetupScope(tree.body, module_bindings(tree), condition=condition),)
     class_setup: dict[int, SetupScope] = {}
 
@@ -3301,12 +3316,17 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
     def setup_markers(func, scopes: tuple[SetupScope, ...]) -> list[Marker]:
         if not scopes:
             return []
-        return [
-            Marker(
-                name=f"setup.{provider}.{effect}", text=text.seg(node) or provider, span=off.span(node), guard=guard
-            )
-            for provider, effect, node, guard in setup_outcomes(scopes, func, method=len(scopes) > 1)
-        ]
+        markers = []
+        for provider, effect, evidence, guard, origin in setup_outcomes(
+            scopes, func, method=len(scopes) > 1, chain=chain
+        ):
+            # A conftest's outcome carries its text and span in that file.
+            seg, span = evidence if origin is not None else (text.seg(evidence), off.span(evidence))
+            marker = Marker(name=f"setup.{provider}.{effect}", text=seg or provider, span=span, guard=guard)
+            if origin is not None:
+                marker_origins[(marker.name, marker.span, marker.text)] = origin
+            markers.append(marker)
+        return markers
 
     class_aliases: dict[int, dict[str, list[ast.expr]]] = {}
 
@@ -3491,7 +3511,23 @@ def parse_python(data: bytes, collect_tests: bool, conftest: bool = False) -> Pa
         helper_calls=helper_calls,
         fixture_asserts=fixture_asserts,
         autouse_fixtures=autouse,
+        marker_origins=marker_origins,
     )
+
+
+def parse_conftest_level(data: bytes, path: str) -> ConftestLevel | None:
+    """A conftest's fixtures as a test module below its directory sees them (#223).
+
+    None when it does not parse: pytest cannot import it either, and what it
+    would define is unknown.
+    """
+    raw = normalize_source(data)
+    try:
+        tree = ast.parse(raw)
+    except (SyntaxError, RecursionError, ValueError, MemoryError):
+        return None
+    off = _Offsets(raw)
+    return conftest_level(path, tree, off.seg, off.span)
 
 
 def _module_helper_calls(tree: ast.Module) -> dict[str, tuple[str, ...]]:

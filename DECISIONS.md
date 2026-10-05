@@ -5084,6 +5084,139 @@ v0.6.0. Their text and pins are the merged PRs'.
 The agent wrote this entry in the release PR; the maintainer approves it
 there.
 
+## D-093 (2026-10-05): a test that starts requesting an always-skip conftest fixture is reported (#223)
+
+An existing test that started requesting an existing conftest fixture whose
+setup always skips passed with no finding. It could ask by parameter, by
+`@pytest.mark.usefixtures`, through a module `pytestmark`, or through a
+same-file fixture that requests it, and pytest then skipped it. The same
+request of a same-file skip fixture blocked with `TEST_DISABLED` high.
+- A unit reached only the fixtures of its own module and classes
+  (`setup_outcomes`, #172).
+- A conftest skip fixture was judged once, as a `<suite>` control, when the
+  diff added it (ruling 196.183.1 (a)). An unchanged conftest adds no
+  marker, so nothing was reported.
+
+Rulings:
+- **2026-10-03** (#196, item `196.followup.conftest-request-side`, 183.1
+  option (c)): resolve the conftest chain for the test files a diff
+  changes, so that a newly requested always-skip conftest fixture mints a
+  `setup.*` marker on the unit.
+- **223.Q1** (2026-10-04): when one diff both adds the conftest fixture and
+  makes an existing test request it, both findings are reported. The
+  `<suite>` finding is about the conftest that now holds an always-skip
+  fixture, and the unit's `setup.*` finding is about the test that now runs
+  it. Each has its own identity and its own remedy.
+- **223.Q2** (2026-10-04): the chain is every `conftest.py` from the test
+  file's directory up to the repository root, on each side. The nearest
+  definition of a fixture name wins, as in pytest, and a fixture in the test
+  module wins over all of them. `pytest_plugins` fixtures stay a row 104
+  residual.
+
+**As implemented:**
+- The engine reads the chain of each test module the diff changes, on each
+  side (`engine._conftest_chain`), and hands it to the frontend
+  (`parse_python(..., chain=...)`). Each `conftest.py` is read as a
+  `ConftestLevel`: its fixtures, of whose outcomes only an unconditional
+  one is kept, and the names it binds some other way.
+- `setup_outcomes` resolves each request through the module's classes, then
+  the module, then the chain, nearest first. A conftest fixture's outcome
+  becomes the same `setup.<fixture>.<effect>` marker that a same-file
+  fixture's does, so TEST_DISABLED, D6 and repair evidence judge it as they
+  judge that one.
+- The marker keeps the conftest's text and span. The report locates the
+  finding at the conftest's skip line, as it locates an assertion inherited
+  from a conftest fixture.
+
+Readings the rulings leave to the implementation:
+
+1. **Reads.** A conftest the diff changes is read on its own side. Any
+   other is the same on both sides, and is read once from the strict head
+   snapshot. A renamed module's base side reads the chain above its old
+   path. A level that cannot be read (no snapshot) or parsed ends the chain:
+   what it defines is unknown, and it could override any name beyond it.
+   Reads past 4,096 files or 64 MB are an engine error, as they are for the
+   stand-in context.
+2. **Resolution.** Every name in the closure resolves as the test sees it,
+   as pytest resolves it, including a name a conftest fixture requests. So
+   a conftest fixture's request reaches the test module's fixture of that
+   name. A fixture that requests its own name reaches the next definition
+   outward (pytest's override-and-extend), in the module as in a conftest.
+3. **Names bound some other way.** An import, an assignment, a decorated def
+   that is no plain fixture, a def under an `if` or a `try`, or a star
+   import may hold a fixture this reading does not see. A request is not
+   followed past such a name into a conftest beyond it. Within the test
+   module, these do not change which same-file fixture a request reaches.
+4. **Autouse.** The chain's autouse fixtures are in every unit's setup, as
+   the module's own are. A test moved below an always-skip autouse conftest
+   fixture is not live there, so its old unit's disappearance is reported.
+5. **Only an unconditional outcome.** A guarded conftest skip records nothing
+   on the unit, and waits for 183.2's conftest half. The fixture still
+   resolves its own requests.
+6. **Identity.** The marker is `setup.<fixture>.<effect>` whichever file holds
+   the fixture, so one exemption covers both. Moving a skip fixture from the
+   module into a conftest is no unit event. The conftest's `<suite>` finding
+   still reports the fixture added there (183.1 (a)).
+7. **Not in this round (residual):** a test in a file the diff does not
+   change. An importer the engine adds unchanged, to judge a root helper
+   or an expected value, is one and reads no chain. D10's duplicate
+   survivor is another: a survivor that a conftest fixture it requests
+   skips is read as live (#266, row 58).
+
+**Tests and fixtures.**
+- **Tests:** 46 in `tests/test_issue223_conftest_request_side.py`. All 17
+  mutants of the round's code fail them or the fixtures.
+- **Fixtures:** row 104's new pins, each run on pytest 9.1.1 first.
+  - Positives: each passed with no finding, and pytest runs `test_total`
+    at base and skips it at head:
+    - `conftest_skip_fixture_requested_by_parameter_pos` (S1);
+    - `conftest_skip_fixture_requested_by_usefixtures_pos` (S2);
+    - `conftest_skip_fixture_requested_by_pytestmark_pos` (S4);
+    - `conftest_skip_fixture_requested_through_fixture_pos` (S5);
+    - `conftest_skip_fixture_requested_from_root_conftest_pos` (S6).
+  - `conftest_skip_fixture_added_and_requested_pos` (223.Q1): the `<suite>`
+    finding it had, and now the unit's.
+  - Negatives:
+    - `conftest_plain_fixture_requested_neg` (S7);
+    - `conftest_guarded_skip_fixture_requested_neg`;
+    - `conftest_skip_fixture_overridden_in_module_neg`;
+    - `conftest_skip_fixture_request_removed_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does not
+change.
+
+**Fingerprints.** None move. The unit's finding has the `setup.*` marker's
+identity, which a same-file skip fixture's finding already had.
+
+**Cost.**
+- **Newly blocking:**
+  - a diff in which a unit of a changed test module starts reaching an
+    always-skip conftest fixture;
+  - a test module that moves below an always-skip autouse one.
+- **Where it can occur:** twelve full histories hold 61,048 non-merge
+  commits, 17,337 of which change a collectable test module. The histories
+  are attrs, click, flask, httpx, rich, starlette, requests, scrapy,
+  uvicorn, werkzeug, pytest and aiohttp. In none of them does a commit
+  change a test module below a conftest fixture that always skips or xfails,
+  on either side, so the request side moves no commit there.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same verdicts
+  and findings as #265's engine.
+- **Sweep, targeted:** D-088's sets give the same records as #265's
+  engine:
+  - the 895 commits of ten full histories that change a `conftest.py` or
+    a `skip`/`xfail` line in a test file (855 readable);
+  - the 368 of pytest's own history that touch a collection control in a
+    conftest or a skip or xfail decorator in `testing/` (364 readable).
+
+**Verdict gate.** It passes, with 0 failures. Every one of its 182 cases
+(156 T1, 26 T3) keeps the verdict, the exit code and the findings' rules,
+severities and files of the candidate built from #265's head, so no case
+is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
 ## D-094 (2026-10-05): the verdict gate's baseline rotates to v0.6.0
 
 After v0.6.0's publication, the rotation PR (#270, `docs/RELEASING.md`
