@@ -223,7 +223,9 @@ def test_helper_only_assertion_removal_discovers_unchanged_importer():
     assert removed.path == "tests/test_calc.py" and removed.severity == "high"
     assert removed.before.text == "assert_equal(add(2, 3), 5)"
     assert searches == [["test_helpers"]]
-    assert reads == ["tests/test_calc.py", "tests/calc.py", "tests/test_helpers.py",
+    # `test_helpers.py` is itself a test module the diff changes, so the
+    # conftest above it is read (#223); the unchanged importer reads none.
+    assert reads == ["tests/test_calc.py", "conftest.py", "tests/calc.py", "tests/test_helpers.py",
                      "test_helpers/__init__.py", "tests/test_helpers/__init__.py"]
     assert {f.path for f in ir.files} == {"test_helpers.py", "tests/test_calc.py"}
 

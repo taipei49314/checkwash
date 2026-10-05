@@ -37,9 +37,14 @@ class ReportContext:
     def parsed(self, path: str, side: int, parsed) -> None:
         if not self.collect_locations or parsed is None:
             return
+        # A setup marker whose outcome lies in a conftest fixture keeps that
+        # file's text and span, so it is located there (#223).
+        origins = getattr(parsed, "marker_origins", {})
         for unit in parsed.units:
-            for item in (*unit.side.assertions, *unit.side.markers, *unit.side.handlers):
+            for item in (*unit.side.assertions, *unit.side.handlers):
                 self.bind(path, side, item, path)
+            for marker in unit.side.markers:
+                self.bind(path, side, marker, origins.get((marker.name, marker.span, marker.text), path))
 
     def javascript_coverage(self, path: str, side: int, data: bytes | None, parsed) -> None:
         if data is not None and parsed is not None:
