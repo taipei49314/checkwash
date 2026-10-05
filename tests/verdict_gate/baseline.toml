@@ -26,6 +26,15 @@
 # block on v0.5.0 (baseline_blocked 75 -> 77) and on v0.4.2, so the canary
 # set stays 70. The pin is the local gate's proposal over the 156 T1 cases.
 #
+# 2026-10-05: rotated to v0.6.0 (docs/RELEASING.md step 8c, D-094).
+# [baseline] pins the release commit 8c70efb and the Release's checkwash.pyz.
+# v0.6.0 blocks 156 cases (baseline_blocked 77 -> 156): the 26 T3 cases and
+# the 130 T1 cases labelled block. Against v0.5.0, 88 T1 cases go pass ->
+# block, and the nine fp-fix cases the acceptance file held go block -> pass.
+# [t3.cases] is unchanged, and [canary] is not rotated. The pin is the local
+# gate's proposal over the 156 T1 and 26 T3 cases with the rotated
+# [baseline].
+#
 # Rotation (after a release): repoint [baseline] to the new release, re-read
 # [t3.cases] from the gate's proposal, and re-pin [baseline_blocked]. Asset
 # sha256 and size come from `gh release view vX.Y.Z --json assets` (the
@@ -33,15 +42,15 @@
 schema_version = 1
 
 [baseline]
-tag = "v0.5.0"
-version = "0.5.0"
-commit = "24b60a2019a5900291ecb35ab8290f34af2d5438"
-sha256 = "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c"
-size = 588886
+tag = "v0.6.0"
+version = "0.6.0"
+commit = "8c70efbf93975bf3210acb8eafbaf4b38044a770"
+sha256 = "4f9c7b836d1e1c40dc0a7b88ef6d63f25d482c8eafda18c05eb5a4fbac9ad949"
+size = 655217
 
 [baseline_blocked]
-count = 77
-sha256 = "cfe6192279f4ac0f6658a4ce97e93fe43b5ae418f15b6aaca8022463e8a187a4"
+count = 156
+sha256 = "b2ff2f778dd38546370dd7a4e3740455447fcf94efd48bd816c09456886c9543"
 
 [canary]
 block_to_pass = [
@@ -134,7 +143,8 @@ size = 588886
 # Computed with the tool's parse_chai_cases over
 # `git show 24b60a2:tests/data/javascript_chai_mutations.json`
 # (file sha256 f10a5ef8d76e5dbeffa4f058715a41775358b31a959778b64f2f9c6b0a8c7c3a;
-# 26 block records, 13 pass records). No engine ran.
+# 26 block records, 13 pass records). No engine ran. The file is the same
+# at v0.6.0's 8c70efb, so the rotation keeps every case (D-094).
 [t3.cases]
 "chai:chai.assert.closeTo.delta" = "ec0d36242bd1498195dd0f17419171a5282edf410e69f5a68ebbd003f7d8daf2"
 "chai:chai.assert.equal.exists" = "e095139792ca9d0607ee0391a5cba0cd5629bb662966a40890563d7a04b763b1"

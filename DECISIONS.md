@@ -5216,3 +5216,42 @@ is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-094 (2026-10-05): the verdict gate's baseline rotates to v0.6.0
+
+After v0.6.0's publication, the rotation PR (#270, `docs/RELEASING.md`
+step 8c) points the previous-release verdict gate (#201) at v0.6.0. Pull
+requests, `main` and the next tag are compared with v0.6.0 instead of
+v0.5.0.
+
+- **`[baseline]`** in `tests/verdict_gate/baseline.toml` pins tag v0.6.0,
+  commit `8c70efb` (the merge commit of #267) and the Release's
+  `checkwash.pyz`: sha256 `4f9c7b83…`, 655,217 bytes, as GitHub reports the
+  asset. The gate re-checks both on every run, and checks that the archive's
+  `checkwash/*` members equal `src/checkwash` at `8c70efb`.
+- **`baseline_blocked`** goes from 77 to 156, the rotation run's proposal.
+  v0.6.0 blocks the 26 T3 cases and the 130 T1 cases labelled `block`. It
+  passes the 25 labelled `pass`, and `i198/T6`, labelled `undecided`, which
+  the gate reports. Every T1 verdict of v0.6.0 agrees with its label.
+  Against v0.5.0, 88 T1 cases go from pass to block and nine from block to
+  pass: the nine fp-fix entries below.
+- **`[t3.cases]`** is unchanged. `tests/data/javascript_chai_mutations.json`
+  is the same file at `8c70efb` as at v0.5.0 (sha256 `f10a5ef8…`), and the
+  run names no added, dropped or re-hashed case.
+- **`[canary]`** is not rotated (step 8c). The v0.4.2 -> v0.5.0 pair and its
+  70-case `block_to_pass` set stay.
+- **The acceptance file**, `tests/gates/verdict_gate_accepted.toml`:
+  `baseline` becomes `v0.6.0`, and its nine fp-fix entries are removed
+  (i196/W1, i197/R1, R2, Q5a and Q5b, i198/FP1, FP2, FPJ1 and FPJ2). v0.6.0
+  passes each, so none is a block -> pass transition any more, and each is
+  labelled `pass`. The gate run on the rotation PR's pins commit (#270, run
+  37344879525) names all nine stale, and the gate fails on a stale entry.
+  No entry remains: no known-regression or pending-ruling entry was open.
+
+From this rotation on, a candidate that turns any of v0.6.0's 156 blocks
+into a pass needs an accepted entry. No engine code changes: the candidate
+built from this tree is v0.6.0's own source, so each case's baseline and
+candidate runs are equal.
+
+The agent wrote this entry in the rotation PR; the maintainer approves it
+there.

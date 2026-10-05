@@ -34,7 +34,9 @@ The five cases added on 2026-10-03 (#201 ruling 196.followup.new-gate-cases)
 raise the canary set to 70 (`i197/O1`-`O3`) and `baseline_blocked` to 75
 (`i197/Q5a`, `Q5b`). The two cases added on 2026-10-04 (`i196/W1` and `Wc1`,
 ruling 196.184.3) raise `baseline_blocked` to 77; v0.4.2 blocks both too, so
-the canary set stays 70.
+the canary set stays 70. The rotation to v0.6.0 on 2026-10-05 (D-094)
+re-pins `baseline_blocked` to 156: v0.6.0 blocks the 130 T1 cases labelled
+`block` and the 26 T3 cases. The canary pair stays v0.4.2 -> v0.5.0.
 `options` sets `today` (every case: `2026-10-02`) and, for the #196 S rows,
 `task = "TASK.md"`.
 
