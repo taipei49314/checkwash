@@ -239,7 +239,10 @@ authorize the downstream re-pins of checkwash-corpus and smallestlie; each
 needs its own instruction. The [v0.6.0 guide](releases/v0.6.0-public-launch.md)
 records the limits. The recommended Action advances to prior stable v0.5.0.
 Publication and artifact verification consume this grant; another version
-requires a new scope.
+requires a new scope. The verdict gate's runs on the release commit
+`8c70efb` concluded success: the `main` push run 37324377879 (attempt 1,
+step 5b) and the tag-push run 37337702973 (attempt 1, step 8a). The tag
+`v0.6.0` and the GitHub Release were published on 2026-10-05.
 
 What the slot changes in the README, and what already guards it:
 
