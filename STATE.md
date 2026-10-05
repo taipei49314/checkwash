@@ -1,6 +1,63 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-01 (v0.5.0 published; the grant's remaining scope is the authorized downstream re-pins)
+Updated: 2026-10-05 (`main` carries 41 merged pull requests since v0.5.0, none released; the owner authorized v0.6.0 that day; see the first section)
+
+## 2026-10-05: unreleased on main since v0.5.0
+
+`main` is `81f69ab`. v0.5.0 (`24b60a2`) is still the published engine, and
+the recommended Action still pins v0.4.2; D-065 moves it to v0.5.0 at the
+next release. On 2026-10-05 the owner authorized v0.6.0 (AGENTS rule 5). The
+release PR records that one-time scope in `docs/RELEASING.md`.
+
+Since the v0.5.0 tag, 41 pull requests have been merged, all with merge
+commits:
+
+- **Post-release records and the release gate** (#194, #195, #200, #202,
+  #203, #204, #206): the previous-release verdict gate (#201), D-064 and
+  D-065.
+- **#205:** a suite control's escalator is a fact about the diff (#207,
+  D-066).
+- **The 2026-10-03 maintainer rulings on #196 to #199 and #201**, posted as
+  issue comments. Their doc-only items came first (#211), then one round each:
+  - #197, JS/TS test paths and their test obligations: #210, #227, #228
+    (D-067);
+  - #199, only collection controls withhold the inventory: #229 (D-068);
+  - #198, JS predicate identity and operand evidence: #230, #231 (D-069,
+    D-070);
+  - runner evidence, focus and test-support roles: #232, #234, #236, #237,
+    #238 (D-071 to D-074);
+  - JS stand-ins, binding writes and bounds: #239, #241, #242, #243 (D-075,
+    D-076);
+  - #196's follow-ups 189.2 to 183.2: #244 to #253, #255, #256 (D-077 to
+    D-087). #252 carries the doc-only rulings (D-085), and #244 closed #225.
+- **The 2026-10-04 rulings on #208 and #209, and the 2026-10-05 rulings on
+  #260 and #261**, one round each, merged in order on 2026-10-05:
+  - #208 with #209 Q1 and Q4, D6 per marker: #258 (two exemptions), #259
+    (D-088);
+  - #209 Q2, Q3 and X1, only an effect makes a hook a control: #262 (D-089);
+  - #260, every `pytestmark` spelling read: #264 (D-090);
+  - #261, a guard removed from an existing suite-level control: #265 (D-091).
+
+What a successor needs to know:
+
+- **CI on the merged heads** was red only where `main` is red: `qualify`
+  fails its legacy v0.3.3 byte comparison (#201), and
+  `test_pinned_tag_ships_the_current_source` fails on every test leg until
+  the next authorized release.
+- **Allowlist entries added since v0.5.0**, each approved by the owner:
+  #227's FAMILIES pin (expires 2026-10-17), #243's three entries for ruling
+  189.1 (2026-10-31), #255's entry for 183.2's second stage (2026-11-03) and
+  #258's two entries for ruling 208.Q1 (2026-11-03).
+- **For the next release guide** (X.release-and-fingerprints): D-070, D-071,
+  D-073, D-074, D-077, D-081, D-083, D-087 and D-090 record fingerprints that
+  move. In D-090's (#260), a mark bound to a name and applied by it, once
+  reported as `module.skip` or `module.xfail` on every test of the module, is
+  reported under the mark's own name on the tests it marks. D-084 names two
+  verdicts that move from block to pass.
+- **Rulings that wait for their rounds:** #219, #220, #221, #222, #223, #226
+  and #254. #223's round was under way and is paused for the release. #196
+  keeps the other follow-ups, among them 190.3, 188.6 and 183.2's conftest
+  half after #223. #263 and #266 wait for rulings.
 
 ## 2026-10-01: v0.5.0 published
 
