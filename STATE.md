@@ -1,6 +1,47 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-05 (v0.6.0 release prepared on the release branch, not yet published; see the first section)
+Updated: 2026-10-05 (v0.6.0 published; next, the verdict gate's rotation PR and #223's round)
+
+## 2026-10-05: v0.6.0 published
+
+The maintainer cut the tag and published the release the same day
+("已發佈"). Tag `v0.6.0` is the annotated tag object
+`64f62061996eca1e0830113e02e34a9484ce000b` on
+`8c70efbf93975bf3210acb8eafbaf4b38044a770`, the merge commit of #267. The
+tag ruleset (22162219) rejects `v*` creation at every other moment; the
+maintainer opened it for this tag push.
+
+The [GitHub Release](https://github.com/taipei49314/checkwash/releases/tag/v0.6.0)
+was published at 2026-10-05T16:14:38Z. Release workflow run 37339312806
+(build and pypi green) did the following:
+
+- built the wheel, the sdist and `checkwash.pyz` from `8c70efb`, and
+  qualified the source, the zipapp and a fresh-venv install of the wheel
+  against the assertion contract;
+- attached the three artifacts;
+- published the wheel and the sdist to PyPI at 16:23Z.
+
+The SHA256 digests and sizes PyPI reports for 0.6.0 equal the GitHub assets
+(wheel 672,611 bytes, `aa9cb79b…`; sdist 2,936,710 bytes, `72efa022…`). They
+were compared through the GitHub and PyPI APIs; the published artifacts were
+not downloaded or executed for this record. `checkwash.pyz` is 655,217 bytes,
+`4f9c7b83…`.
+
+On the release commit and its tag:
+
+- the verdict gate (#201) passed on the release PR's head (run 37322393159),
+  on `main` (run 37324377879) and on the tag (run 37337702973), each on
+  attempt 1, against the v0.5.0 baseline;
+- public CI on the tag (run 37337702989) passed every job. The legs read for
+  this record give 14,097 passed on ubuntu 3.12 and 14,095 passed with 2
+  skipped (the paused perf checks) on macOS 3.12; the tag-parity test passes
+  now that the tag exists;
+- assertion qualification on the tag (run 37337702953) passed for the source,
+  the wheel and the pyz, and the recommended Action's pinned v0.5.0 engine
+  passed 283/283.
+
+What remains of the grant is the verdict gate's rotation PR (step 8c). The
+downstream re-pins of checkwash-corpus and smallestlie are not part of it.
 
 ## 2026-10-05: v0.6.0 release
 
