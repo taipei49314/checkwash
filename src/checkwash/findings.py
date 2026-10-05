@@ -78,6 +78,9 @@ SHAPE_MARKER_ADDED = "marker_added"
 SHAPE_COLLECTION_CONTROL = "collection_control"
 SHAPE_GUARD_WEAKENED = "guard_weakened"
 SHAPE_PARAM_CASES_REMOVED = "param_cases_removed"
+# A mark pytest never reads: a `pytestmark` in conftest.py, which pytest does
+# not collect as a test module. It disables nothing (#209 Q3).
+SHAPE_INERT_MARK = "inert_mark"
 
 
 @dataclass

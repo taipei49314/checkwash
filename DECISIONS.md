@@ -4540,3 +4540,175 @@ files of the candidate built from `main`, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-089 (2026-10-05): only an effect makes a collection hook a control, a conftest `pytestmark` is reported at info, and a module `pytestmark` is read as its call (#209 Q2, Q3, X1)
+
+The rest of #209, after D-088 (Q1, Q4). Three false positives, each the
+same mistake: a line was judged by where it sat, not by what it did.
+- **Q2.** D-088's hook reading counted every statement that changes
+  something as an effect. So a `pytest_collection_modifyitems` that only
+  sorted its items, or only marked them `pytest.mark.timeout(30)`, was a
+  suite-level control and blocked at high, and withheld the collection
+  inventory (#199).
+- **Q3.** A `pytestmark` in `conftest.py` was listed as a suite-level
+  collection control. pytest does not collect `conftest.py` as a test module,
+  so it never reads the mark there: on pytest 9.1.1 the line disables nothing.
+  It blocked at high (#209 B3) and withheld the inventory.
+- **X1.** A module `pytestmark` mark was recorded with the whole assignment as
+  its text. D6 reads a `skipif` condition by parsing the marker's text as a
+  call, and `pytestmark = ...` never parses as one. So
+  `pytestmark = pytest.mark.skipif(sys.platform == "win32")` blocked at high,
+  while the same `skipif` as a decorator held at warn (#209 X2).
+
+Rulings, 2026-10-04:
+- **209.Q2:** only a hook's effects count. An effect is anything that can drop
+  or disable an item: a write to `items` that is not a pure reorder, a call
+  to `config.hook.pytest_deselected`, an `add_marker` of a skip or xfail, and
+  `return True` from `pytest_ignore_collect`. A hook whose only effects are a
+  reorder or a mark that is neither skip nor xfail is not a control. An
+  effect checkwash cannot read still counts.
+- **209.Q3:** report a conftest `pytestmark` at info. SPEC §2b's list of
+  collection controls drops it and says so.
+- **X1** has no question of its own. The issue's direction, step 2, brings the
+  frontend in line with SPEC §4, which counts the module's `pytestmark` as a
+  skip marker, and with §5 D6, which holds an added interpreter or OS
+  `skipif` at warn.
+
+**As implemented:**
+- `hook_guards._Hook.benign` recognises the two kinds of statement that
+  change something and can neither drop nor disable an item.
+  `collection_hook_guards` leaves out a hook that has no other effect, and
+  `_conftest_unit` mints no marker for it.
+- `conftest_controls.is_collection_control` answers for the collection
+  family alone, so a conftest's skip mark no longer withholds the inventory.
+- TEST_DISABLED reports a skip mark on a conftest's `<suite>` unit with the
+  shape `inert_mark`. Gating sets it to info and nothing escalates it.
+- `_pytestmark_markers` records each mark with its own call's text and span,
+  as `_decorator_markers` does.
+
+Readings the rulings leave to the implementation:
+
+1. **A reorder** is `items.sort(...)` or `items.reverse()` on the list pytest
+   passes, `items[:] = sorted(items, ...)`, `items[:] = reversed(items)`, or
+   either inside `list(...)`. The list is the hook's `items` parameter, and a
+   hook that binds the name itself anywhere reorders something else. A `key`
+   must be a function that only reads (a lambda whose body only reads, or a
+   reading builtin), because `sort` calls it on every item, and `reverse=`
+   must only read. Any other rewrite of the list is an effect, including
+   `random.shuffle(items)`, which checkwash cannot read as a reorder, and a
+   slice of part of the list.
+2. **A mark that only labels an item** is the one argument of an
+   `add_marker` call: a mark built from pytest's `mark` by its import
+   (`pytest.mark.timeout(30)`, `from pytest import mark`), a mark name as a
+   string, or a local bound once to either. Its arguments, the receiver and
+   an `append=` keyword must only read. A mark whose name contains `skip` or
+   `xfail`, in upper or lower case, disables an item, so a plugin's
+   `skip_on_windows` does too. So does `usefixtures`, which runs a fixture
+   at setup, and pytest-dependency's `dependency`, which skips on another
+   test's outcome.
+   *Residual:* a label can still be read by code that acts on it, such as a
+   plugin or a runtime hook the conftest already has. Such a hook is a
+   control of its own when a diff adds it.
+3. **A hook with no effect** is not a control: no marker, no finding, and no
+   withheld inventory. A hook's guard is still the weakest across its
+   effects, and a reorder or a label beside them changes nothing.
+4. **A conftest `pytestmark`.** Each skip or xfail mark in it gets an info
+   finding:
+   - rule TEST_DISABLED, message "pytestmark added to conftest.py, which
+     pytest does not collect as a test module: it disables nothing";
+   - its fingerprint is unchanged;
+   - nothing escalates it: not an oracle freeze, and not the suite-control
+     rule that refuses repair evidence.
+
+   A mark that is neither skip nor xfail is not read, as before.
+5. **A module `pytestmark` mark.** It records its own call's text and span. D6
+   resolves the module constants its condition names, as for a decorator
+   (`evidence._gate_condition_names` now finds them).
+6. **Not in this round:**
+   - the `pytestmark` spellings checkwash does not read at all: in a class
+     body, under an `if`, `try` or `with`, annotated, `+=`, `.append`,
+     unpacked or bound by name (#260);
+   - a guard removed from an existing suite-level control (#261, row 116's
+     residual).
+
+**Tests and fixtures.**
+- **Tests:** 89 in `tests/test_issue209_effects_pytestmark.py`. All 37
+  mutants of the round's code fail them or the fixtures. 12 in
+  `tests/test_issue199_collection_controls.py`: a conftest `pytestmark`, an
+  ignore-collect hook that returns `False`, a sort-only hook and a labelling
+  hook no longer withhold the inventory.
+- **Three existing tests change**, as the rulings foresaw:
+  - `test_collection_controls_are_the_spec_list`: the expected controls lose
+    the skip marks (Q3).
+  - `test_collection_controls_still_withhold`:
+    - its `pytest_ignore_collect` returned `False`, which is no longer a
+      control (Q2), so it now returns
+      `collection_path.name == "test_legacy.py"`;
+    - its conftest `pytestmark` case moves to the new
+      `test_what_disables_nothing_never_withholds` (Q3).
+  - `test_an_ignore_collect_hook_acts_by_returning_true`: its
+    `"return False"` row pinned that hook as an unguarded control, and now
+    expects none.
+
+  checkwash on this branch reports one of them, the spec-list test, with two
+  findings at warn: EXPECTED_VALUE_CHANGED and
+  EXPECTATION_DEFINITION_CHANGED, both held by repair evidence. None needs
+  an exemption.
+- **Fixtures:**
+  - negatives: `conftest_hook_sort_only_neg` and
+    `conftest_hook_label_marker_neg` (no finding);
+    `conftest_pytestmark_env_guard_neg` (#209 B3, one info finding); and
+    `pytestmark_skipif_platform_neg` (X1, warn `COMPAT_GATE`). All four block
+    on #259's head.
+  - positive: `pytestmark_skipif_always_true_pos`, high, as on #259's head.
+
+Every existing fixture keeps its expectation.
+
+**Fingerprints.** None move. A marker's name is its identity, and none
+changes. A `pytestmark` finding's evidence now shows the mark's call, not the
+whole assignment. So the corpus record of `pytestmark_skip_pos`, the one
+existing fixture with a `pytestmark`, changes in that text and in its span's
+start, and in nothing else.
+
+**Cost.**
+- **Newly passing, at warn:** a module `pytestmark` whose `skipif` or
+  non-strict `xfail` condition D6 qualifies (X1).
+- **Newly passing, with no finding:** a collection hook whose only effects
+  are a reorder or a labelling mark, and a `pytest_ignore_collect` that never
+  returns true (Q2).
+- **Newly passing, with an info finding:** a conftest `pytestmark` (Q3).
+- **Newly blocking:** a collection hook that only labelled its items, and so
+  was no control, when a diff gives it an effect checkwash cannot read. On
+  #259's head the label already made the hook a control, so the new effect
+  was no event at all.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same verdicts
+  and findings as #259's head.
+- **Sweep, targeted:** D-088's sets, which are:
+  - the 895 commits of ten full histories that change a `conftest.py` or a
+    `skip`/`xfail` line in a test file (855 readable);
+  - the 368 of pytest's own history that touch a collection control in a
+    conftest or a skip or xfail decorator in `testing/` (364 readable).
+
+  Three verdicts move:
+  - **block to pass:** scrapy `be514d8c5d` adds a hook that only marks the
+    `requires_internet` tests `flaky(reruns=2, reruns_delay=5)` (Q2).
+  - **block to pass:** pytest `dcafb8c48c` adds an example conftest whose
+    `pytest_ignore_collect` returns `False` (Q2).
+  - **pass to block:** scrapy `4ab7cf3df8` adds
+    `items[:] = _interleave_evenly(items, _is_subprocess_heavy)` to that
+    same hook. The conftest helper interleaves subprocess-heavy tests among
+    the others: an honest reorder, but checkwash cannot read the helper as
+    one, so it counts as an effect (209.Q2). The hook, which only labelled
+    items before, becomes a control. This is the ruled behaviour.
+- **A finding moves, verdict unchanged:** attrs `49ec7317c8` adds
+  `pytestmark = pytest.mark.skipif(sys.version_info < (3, 7))` to
+  `tests/test_pyright.py`. That finding goes from high to warn (X1), and the
+  commit still blocks on its other findings.
+
+**Verdict gate.** It passes, with 0 failures. Every one of its 182 cases
+(156 T1, 26 T3) keeps the verdict and the findings' rules, severities and
+files of the candidate built from #259's head, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

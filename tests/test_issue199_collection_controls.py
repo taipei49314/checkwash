@@ -148,10 +148,10 @@ def test_runtime_hooks_no_longer_withhold(hook, narrowing):
 COLLECTION_CONTROLS = {
     "collect_ignore": b'collect_ignore = ["test_legacy.py"]\n',
     "collect_ignore_glob": b'collect_ignore_glob = ["legacy_*.py"]\n',
-    "pytest_ignore_collect": b"def pytest_ignore_collect(collection_path, config):\n    return False\n",
+    "pytest_ignore_collect": (b"def pytest_ignore_collect(collection_path, config):\n"
+                              b'    return collection_path.name == "test_legacy.py"\n'),
     "pytest_collection_modifyitems": b"def pytest_collection_modifyitems(config, items):\n    items[:] = items[:1]\n",
     "add_marker_skip": b"import pytest\n\n\ndef pytest_itemcollected(item):\n    item.add_marker(pytest.mark.skip)\n",
-    "pytestmark": b"import pytest\n\npytestmark = pytest.mark.skip\n",
 }
 
 
@@ -162,6 +162,26 @@ def test_collection_controls_still_withhold(control):
     findings, verdict = judge(tree(**{"tests/conftest.py": COLLECTION_CONTROLS[control]}), "V1_first_python_files")
     assert [(rule, severity) for rule, _, severity, _ in findings] == [("CI_WORKFLOW_TOUCHED", "warn")]
     assert verdict == "pass"
+
+
+# Disables nothing, so withholds nothing: pytest never reads a conftest's
+# `pytestmark` (#209 Q3), and a hook with no effect that can drop or disable an
+# item is not a control (#209 Q2).
+DISABLES_NOTHING = {
+    "pytestmark": b"import pytest\n\npytestmark = pytest.mark.skip\n",
+    "ignore_collect_returns_false": b"def pytest_ignore_collect(collection_path, config):\n    return False\n",
+    "sort_only_hook": b"def pytest_collection_modifyitems(config, items):\n    items.sort(key=lambda item: item.nodeid)\n",
+    "labelling_hook": (b"import pytest\n\n\ndef pytest_collection_modifyitems(config, items):\n"
+                       b"    for item in items:\n        item.add_marker(pytest.mark.timeout(30))\n"),
+}
+
+
+@pytest.mark.parametrize("narrowing", ["V1_first_python_files", "V2_changed_python_files", "V3_first_marker_selector"])
+@pytest.mark.parametrize("control", sorted(DISABLES_NOTHING))
+def test_what_disables_nothing_never_withholds(control, narrowing):
+    result = judge(tree(**{"tests/conftest.py": DISABLES_NOTHING[control]}), narrowing)
+    assert result == without_conftest(None, narrowing)
+    assert result[1] == "block"
 
 
 @pytest.mark.parametrize("source", [b'pytest_plugins = ["myplugin"]\n', b"def broken(:\n"],

@@ -191,12 +191,12 @@ def test_kinds_keep_the_test_disabled_shape():
 
 
 def test_collection_controls_are_the_spec_list():
-    """SPEC §2b's collection controls, and on a conftest's `<suite>` unit a `pytestmark` mark (#199 Q1)."""
+    """SPEC §2b's collection controls (#199 Q1). A conftest's `pytestmark` is not one (#209 Q3)."""
     controls = {name for kind, names in FAMILIES.values() for name in names if cc.is_collection_control(name)}
-    expected = {name for kind, names in FAMILIES.values() if kind in (cc.COLLECTION, cc.SKIP_MARK) for name in names}
+    expected = {name for kind, names in FAMILIES.values() if kind == cc.COLLECTION for name in names}
     assert controls == expected
     assert controls >= {"conftest.collect_ignore", "conftest.pytest_ignore_collect",
-                        "conftest.pytest_collection_modifyitems", "conftest.add_marker_skip", "pytest.mark.skip"}
+                        "conftest.pytest_collection_modifyitems", "conftest.add_marker_skip"}
 
 
 @pytest.mark.parametrize("name", ["conftest.something_new", "conftest", "fixture.needs_network.skip", "", *JS_NAMES])

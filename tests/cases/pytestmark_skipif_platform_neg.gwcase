@@ -1,0 +1,25 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a module pytestmark skipif on the platform holds at warn, as the decorator does
+origin: #209 X1: the mark was recorded as the whole assignment, which D6 could not
+origin2: read as a call, so it blocked at high while the same decorator held at warn (X2).
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="posix only")
+
+
+def test_add():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

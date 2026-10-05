@@ -55,6 +55,8 @@ def hook(body, name="pytest_collection_modifyitems", params="config, items"):
 MODIFYITEMS = "conftest.pytest_collection_modifyitems"
 IGNORE = "conftest.pytest_ignore_collect"
 ADD_MARKER = "conftest.add_marker_skip"
+# A hook with no effect that can drop or disable an item mints no marker (#209 Q2).
+NOT_A_CONTROL = "not a control"
 
 RUNSLOW = (
     'if config.getoption("--runslow"):\n'
@@ -164,11 +166,11 @@ def test_a_local_that_shadows_a_module_name_is_no_guard():
      'not os.environ.get("NETWORK")'),
     ('if os.environ.get("NETWORK"):\n    return None\nreturn collection_path.name == "test_network.py"',
      'not (os.environ.get("NETWORK"))'),
-    ("return False", None),
+    ("return False", NOT_A_CONTROL),
 ])
 def test_an_ignore_collect_hook_acts_by_returning_true(body, guard):
     markers = suite(hook(body, name="pytest_ignore_collect", params="collection_path, config"))
-    assert markers[IGNORE] == guard
+    assert markers.get(IGNORE, NOT_A_CONTROL) == guard
 
 
 def test_add_marker_skips_of_one_name_keep_the_weakest_guard():

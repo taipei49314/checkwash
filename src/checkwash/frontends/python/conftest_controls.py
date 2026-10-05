@@ -72,10 +72,11 @@ def is_collection_control(name: str) -> bool:
     """Does this marker on a conftest's `<suite>` unit change what pytest collects?
 
     The SPEC §2b list: `collect_ignore`/`collect_ignore_glob`, the
-    `pytest_ignore_collect` and `pytest_collection_modifyitems` hooks, an
-    `add_marker(...skip)` call and a `pytestmark` mark. On that unit a skip
-    mark can only come from `pytestmark`. A runtime control is not one: the
-    test is still collected, and the skip is reported where it is planted
-    (#199 Q1, Q2).
+    `pytest_ignore_collect` and `pytest_collection_modifyitems` hooks, and an
+    `add_marker(...skip)` call. A runtime control is not one: the test is
+    still collected, and the skip is reported where it is planted (#199 Q1,
+    Q2). Nor is a `pytestmark` mark, the only skip mark that unit carries:
+    pytest does not read `pytestmark` from conftest.py, which it does not
+    collect as a test module, so the mark disables nothing (#209 Q3).
     """
-    return marker_kind(name) in (COLLECTION, SKIP_MARK)
+    return marker_kind(name) == COLLECTION

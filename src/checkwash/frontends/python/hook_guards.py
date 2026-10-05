@@ -29,6 +29,16 @@ because that code can swallow an exception. In `pytest_ignore_collect`, a
 `return` of anything but `None` or `False` is an effect whose value is part
 of its condition.
 
+Only an effect that can drop or disable an item makes a hook a control
+(ruling 209.Q2). Two kinds of statement change something and still can do
+neither, so they are no effect: a reorder of the items list
+(`items.sort(...)`, `items.reverse()`, `items[:] = sorted(items, ...)`), and
+an `add_marker` of a mark that only labels an item (`pytest.mark.timeout(30)`,
+`"slow"`). A mark whose name says skip or xfail disables one, and so can
+`usefixtures`, which runs a fixture at setup, and pytest-dependency's
+`dependency`, which skips on another test's outcome. A hook with no effect is
+not a control at all, and mints no marker.
+
 Two readings are particular to hooks:
 - A loop body is read. A hook's effects sit in `for item in items:`, and they
   fire whenever the loop runs.
@@ -107,6 +117,17 @@ _READER_METHODS = frozenset({
 })
 # A binding that is not one plain `name = value`.
 _OTHER = object()
+# A mark whose name says one of these disables an item, and so can these two
+# marks, which run code or skip on another test's outcome. Any other mark only
+# labels an item (#209 Q2).
+_DISABLING_WORDS = ("skip", "xfail")
+_ACTING_MARKS = frozenset({"usefixtures", "dependency"})
+
+
+def _labelling(mark: str) -> bool:
+    """Can a mark of this name neither skip nor xfail an item? (#209 Q2)"""
+    lowered = mark.lower()
+    return not any(word in lowered for word in _DISABLING_WORDS) and lowered not in _ACTING_MARKS
 
 
 def _stored(target) -> set[str]:
@@ -207,6 +228,32 @@ def _bindings(statements) -> tuple[dict[str, list], dict[str, set[str]]]:
     return found, imports
 
 
+def _rebinds(function, name: str) -> bool:
+    """Does anything in this function bind `name` itself, not an item or an attribute of it?
+
+    `_bindings` counts every name in an assignment target, so it reads
+    `items[:] = ...` as binding `items`; that writes into the list instead.
+    Any binding in a nested scope counts too, which can only fail toward an
+    effect.
+    """
+    for node in ast.walk(function):
+        if node is function:
+            continue
+        if isinstance(node, ast.Name) and node.id == name and isinstance(node.ctx, (ast.Store, ast.Del)):
+            return True
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == name:
+            return True
+        if isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) == name:
+            return True
+        if isinstance(node, (ast.Global, ast.Nonlocal)) and name in node.names:
+            return True
+        if isinstance(node, ast.ExceptHandler) and node.name == name:
+            return True
+        if name in (getattr(node, "name", None), getattr(node, "rest", None)) and type(node).__name__.startswith("Match"):
+            return True
+    return False
+
+
 def _trusted_imports(found: dict[str, list], imports: dict[str, set[str]]) -> dict[str, str]:
     """The names bound only by imports of one absolute module, and that module."""
     return {
@@ -246,6 +293,9 @@ class _Hook:
         params = [a.arg for a in (*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs)]
         found, imports = _bindings(function.body)
         local = set(found) | set(params)
+        # pytest passes the list as `items`; a hook that rebinds the name may
+        # reorder something else.
+        self.items = "items" in params and not _rebinds(function, "items")
         # A name the hook binds shadows the module's. One it binds only by an
         # import is trusted, as the module's imports are.
         self.imports = {n: o for n, o in module_imports.items() if n not in local}
@@ -366,7 +416,90 @@ class _Hook:
             if isinstance(value, ast.Constant) and value.value in (None, False):
                 return None
             return value
-        return None if self._inert_statement(statement) else ast.Constant(True)
+        return None if self._inert_statement(statement) or self.benign(statement) else ast.Constant(True)
+
+    def benign(self, statement) -> bool:
+        """Does this statement change something but can drop or disable no item? (#209 Q2)
+
+        A reorder of the items list, or an `add_marker` of a mark that only
+        labels an item. A key function must be one that only reads, since
+        `items.sort(key=items.remove)` calls it on every item.
+        """
+        if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call):
+            call = statement.value
+            func = call.func
+            if not isinstance(func, ast.Attribute):
+                return False
+            if func.attr in ("sort", "reverse") and self._is_items(func.value):
+                return not call.args and self._sort_keywords(call.keywords, func.attr == "sort")
+            if func.attr == "add_marker" and len(call.args) == 1 and self.inert(func.value):
+                return all(k.arg == "append" and self.inert(k.value) for k in call.keywords) and self._labels(
+                    call.args[0]
+                )
+            return False
+        if isinstance(statement, ast.Assign) and len(statement.targets) == 1:
+            target = statement.targets[0]
+            whole = (
+                isinstance(target, ast.Subscript)
+                and isinstance(target.slice, ast.Slice)
+                and target.slice.lower is None
+                and target.slice.upper is None
+                and target.slice.step is None
+            )
+            return whole and self._is_items(target.value) and self._reordered(statement.value)
+        return False
+
+    def _is_items(self, node) -> bool:
+        return self.items and isinstance(node, ast.Name) and node.id == "items"
+
+    def _sort_keywords(self, keywords, allowed: bool) -> bool:
+        """Do these `sort` keywords only read? A key must be a function that only reads."""
+        if keywords and not allowed:
+            return False
+        return all(
+            (k.arg == "reverse" and self.inert(k.value))
+            or (k.arg == "key" and self._reading_function(k.value) and self.inert(k.value))
+            for k in keywords
+        )
+
+    def _reordered(self, value) -> bool:
+        """Is this the items list itself, reordered: `sorted(items, ...)` or `reversed(items)`?"""
+        if not isinstance(value, ast.Call) or not isinstance(value.func, ast.Name) or value.func.id in self.shadowed:
+            return False
+        name = value.func.id
+        if name == "list" and len(value.args) == 1 and not value.keywords:
+            return self._reordered(value.args[0])
+        if name == "sorted" and len(value.args) == 1:
+            return self._is_items(value.args[0]) and self._sort_keywords(value.keywords, True)
+        if name == "reversed" and len(value.args) == 1 and not value.keywords:
+            return self._is_items(value.args[0])
+        return False
+
+    def _labels(self, node, depth: int = 0) -> bool:
+        """Is this a mark that only labels an item: neither skip nor xfail? (#209 Q2)
+
+        A mark built from pytest's `mark` by its import, a mark name as a
+        string, or a local bound once to either.
+        """
+        if isinstance(node, ast.Name) and node.id in self.values and depth < 8:
+            return self._labels(self.values[node.id], depth + 1)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return _labelling(node.value)
+        arguments: list[ast.AST] = []
+        if isinstance(node, ast.Call):
+            arguments = [*node.args, *(k.value for k in node.keywords)]
+            node = node.func
+        name = dotted_name(node) if isinstance(node, ast.Attribute) else None
+        if not name:
+            return False
+        root, _, rest = name.partition(".")
+        origin = self.imports.get(root)
+        if origin is None:
+            return False
+        parts = f"{origin}.{rest}".split(".")
+        if len(parts) != 3 or parts[:2] != ["pytest", "mark"]:
+            return False
+        return _labelling(parts[2]) and all(self.inert(a) for a in arguments)
 
     def _inert_statement(self, statement) -> bool:
         if isinstance(statement, (ast.Pass, ast.Break, ast.Continue, ast.Import, ast.ImportFrom, ast.Global, ast.Nonlocal)):
@@ -481,12 +614,12 @@ def weakest(guards: list[str | None]) -> str | None:
 
 
 def collection_hook_guards(tree: ast.Module, condition) -> tuple[dict[int, str | None], dict[int, str | None]]:
-    """The guard of each collection hook definition, and of each `add_marker` call in one.
+    """The guard of each collection hook that is a control, and of each `add_marker` call in one.
 
     Both map `id(node)` to a guard, None when unguarded. A hook with no effect
-    is unguarded, as every hook was before (#209 Q2 decides which hooks are
-    controls at all). An `add_marker` call outside a collection hook is not in
-    the second map. `condition` gives an expression's source text.
+    that can drop or disable an item is not a control, and is not in the
+    first map (#209 Q2). An `add_marker` call outside a collection hook is not
+    in the second map. `condition` gives an expression's source text.
     """
     found, imports = _bindings(tree.body)
     star = any(
@@ -508,5 +641,6 @@ def collection_hook_guards(tree: ast.Module, condition) -> tuple[dict[int, str |
             for call in ast.walk(site):
                 if isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute) and call.func.attr == "add_marker":
                     calls[id(call)] = guard
-        hooks[id(node)] = weakest(guards)
+        if sites:
+            hooks[id(node)] = weakest(guards)
     return hooks, calls
