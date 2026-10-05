@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import operator
 
+from checkwash.frontends.python.conftest_controls import is_collection_control
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import (
     bare_names,
@@ -362,8 +363,19 @@ def removed_skip_guard(name: str, unit, constants_before: dict[str, str] | None)
     read the same way, by its own guard (183.2's second stage), and so is a
     mark a `pytestmark` binding carries, by the binding's guard (#260 Q2). A
     decorator's mark has no guard, so it never answers.
+
+    A suite-level collection control is read by its guard too: removing the
+    `if` around a `collect_ignore.append(...)` keeps the ignored paths, and a
+    hook keeps its marker, so nothing else reports that the control now acts
+    everywhere (#261 Q1). An unguarded effect added beside guarded ones
+    leaves the hook no guard, and so does a constant `True` its reading
+    drops: the same event (#261 Q2, Q3).
     """
-    if not (is_guarded_skip(name) or is_guarded_mark(name)) or unit.before is None or unit.after is None:
+    if (
+        not (is_guarded_skip(name) or is_guarded_mark(name) or is_collection_control(name))
+        or unit.before is None
+        or unit.after is None
+    ):
         return None
     conditions = []
     for m in unit.before.markers:

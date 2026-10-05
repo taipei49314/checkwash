@@ -21,6 +21,7 @@ from checkwash.frontends.python.conftest_controls import (
     SETUP,
     SKIP_MARK,
     SUITE_KINDS,
+    is_collection_control,
     marker_kind,
 )
 from checkwash.frontends.python.hook_guards import HOOK_MARKERS
@@ -122,16 +123,19 @@ def detect(ir: IR) -> list[Finding]:
                 # provider: its evidence is the fixture's or callback's line.
                 # A collection hook names itself too: its guard is the
                 # condition its effects fire under (#209 Q1). So does a mark:
-                # only a `pytestmark` binding gives one a guard (#260 Q2).
+                # only a `pytestmark` binding gives one a guard (#260 Q2). A
+                # `collect_ignore` whose guard was removed names itself as a
+                # hook does (#261 Q1); one whose guard now always fires keeps
+                # the wording it has always had.
+                was = removed_skip_guard(name, unit, file.constants_before)
                 if is_setup_skip(name):
                     where, which = " in the setup this test runs", f" ({name})"
-                elif name in HOOK_MARKERS:
+                elif name in HOOK_MARKERS or (was is not None and is_collection_control(name)):
                     where, which = " of the suite-level control", f" ({name})"
                 elif is_guarded_mark(name):
                     where, which = "", f" (pytestmark: {name})"
                 else:
                     where, which = "", ""
-                was = removed_skip_guard(name, unit, file.constants_before)
                 if was is not None:
                     m = next(
                         (
