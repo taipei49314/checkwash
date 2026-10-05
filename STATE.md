@@ -1,6 +1,42 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-05 (v0.6.0 published; next, the verdict gate's rotation PR and #223's round)
+Updated: 2026-10-05 (v0.6.0 published and rotated; next, the issues open on 2026-10-05, then stop)
+
+## 2026-10-05: after v0.6.0, the next scope
+
+The v0.6.0 grant is consumed. On 2026-10-05:
+
+- the maintainer confirmed that the tag ruleset (22162219) is Active again
+  ("確認已改回");
+- #268, the publication record below, merged as `dba73c0`;
+- #269 (#223, D-093) merged as `dbe00f0`. A unit of a changed test module
+  that starts reaching an always-skip conftest fixture is now reported;
+- #270, the verdict gate's rotation (RELEASING step 8c, D-094), merged as
+  `812cc20`. The gate now compares each candidate with v0.6.0, which blocks
+  156 of its 182 cases, and the acceptance file holds no entry.
+
+`main` now carries #223 beyond v0.6.0. So
+`test_pinned_tag_ships_the_current_source` is red on `main` and on every
+pull request until the next release, as its docstring says it must be.
+
+The maintainer set the next scope the same day ("修正一下 open
+issue關完之後 把這次途中發現的新問題另開 issue 然後修復完之後先停 可以了";
+"接下來專注於使用者體驗"; "你可以代合"):
+
+- resolve the issues open on 2026-10-05;
+- file each problem found along the way as its own issue, and fix it in the
+  same effort;
+- then stop. No release is part of this scope, and the focus after it is
+  the user experience;
+- the agent merges the PRs. A maintainer-owned commit still needs the
+  maintainer's approval in its PR.
+
+Of the 28 issues open that day, six were already fixed and are closed: #198,
+#208, #209, #260 and #261 shipped in v0.6.0, and #223 closed with #269. The
+other 22 are #173, #180, #181, #196, #201, #212, #213, #214, #215, #216,
+#218, #219, #220, #221, #222, #224, #226, #233, #235, #254, #263 and #266.
+Rulings for #212, #218, #263 and #266, and the open points of #215 and #233,
+went to the maintainer on 2026-10-05.
 
 ## 2026-10-05: v0.6.0 published
 
@@ -40,8 +76,9 @@ On the release commit and its tag:
   the wheel and the pyz, and the recommended Action's pinned v0.5.0 engine
   passed 283/283.
 
-What remains of the grant is the verdict gate's rotation PR (step 8c). The
-downstream re-pins of checkwash-corpus and smallestlie are not part of it.
+The verdict gate's rotation PR (step 8c) was the last part of the grant; it
+merged as #270 (see above). The downstream re-pins of checkwash-corpus and
+smallestlie are not part of it.
 
 ## 2026-10-05: v0.6.0 release
 
