@@ -6831,3 +6831,119 @@ its label since #226 (D-104) says. Every other case keeps v0.6.0's
 verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-110 (2026-10-06): an assertion is an approximate comparison only where it states one (#299)
+
+The approx branch of the Python frontend's assertion classifier found an
+`approx(...)` call anywhere in the test expression and read the whole
+assertion as that approximate comparison, at APPROX strength with the
+call's expected value and tolerance. A structure around the call that
+makes the assertion hold everywhere was therefore the same assertion on
+both sides, and passed with zero findings: `== pytest.approx(78.75)` ->
+`== pytest.approx(78.75) or True` (also `True or ...`, `or total() > 0`
+and `isinstance(...) or ...`), `all(...)` -> `any(...)` over the same
+comparison, a comparison of the comparison's result
+(`(total() == pytest.approx(78.75)) is not None`) and an unrelated call
+(`print(pytest.approx(78.75)) is None`). The plain spellings block.
+Found during #284's round, which fixed the negations at the same site.
+
+The issue proposed one round: the approx branch applies only where the
+call is an operand of the assertion's own comparison, or inside one, and
+every other structure, a boolean combination of approximate comparisons
+included, is read as the plain path reads it.
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_asserted_approx_comparison`: the
+  assertion states an approximate comparison when it is a single `==`,
+  `!=`, `in` or `not in` (approx answers equality and membership only)
+  with an `approx(...)` call as an operand, or inside one through list,
+  tuple, set and dict displays and starred items (`[total()] ==
+  pytest.approx([78.75])`, `{'t': total()} == {'t': pytest.approx(78.75)}`).
+- It also states one when such a comparison is a link of a chained
+  comparison (`0 < total() == pytest.approx(78.75)`), when it conjoins one
+  with `and` (the first, at any depth), or when it asserts one with
+  `all(...)` over a generator or list comprehension.
+- Anything else is read by the plain path: `or`, `any(...)`, `is` and
+  `is not`, an ordering, a comparison of a comparison's result, and a
+  call that only receives an approx object. `repr(pytest.approx(1.0)) ==
+  '1.0 ± 1.0e-06'`, as in pytest's own tests, is a string equality whose
+  expected value is the string.
+- The comparison read carries its own polarity (#284): the operator of
+  its link, inside a chain, `and` and `all(...)` too.
+
+Readings the issue leaves to the implementation:
+
+1. **A conjunction, a chained comparison and `all(...)` keep the
+   approximate reading.** The issue proposed reading a boolean
+   combination as the plain path reads it, TRUTHY. Main read
+   `total() == pytest.approx(78.75) and total() > 0` as the approximate
+   comparison it holds, so `approx(78.75)` -> `approx(75)` there blocked
+   as EXPECTED_VALUE_CHANGED; a TRUTHY reading would pass it with no
+   finding. Each part of a conjunction and each link of a chain must
+   hold, and `all(...)` asserts its element for every item, so each
+   states the comparison; the round keeps reading it. Joining approximate
+   comparisons with `and`, or splitting one, reads as it did on main.
+2. **The other parts of a conjunction or chain are not read**, as on
+   main: `... and total() > 0` -> `... and True`, or `0 < total() == ...`
+   -> `-1e9 < total() == ...`, is not seen. A conjunction whose
+   approximate comparison moves to another position is the same assertion
+   (`approx_conjunction_reordered_neg`).
+3. **A call that receives an approx object is the call.**
+   `isinstance(pytest.approx(78.75), object)` and `print(...) is None`
+   hold whatever the value, and checkwash cannot tell an operator from
+   any other function, so an operator call is read as the call too:
+   `operator.eq(total(), pytest.approx(78.75))`, or pytest's own
+   `op(a, approx(x))` with the operator passed in, as
+   `operator.eq(total(), 78.75)` is. The cost: its
+   expected value rewritten (`approx(78.75)` -> `approx(75)`) is no
+   longer reported; main blocked it as EXPECTED_VALUE_CHANGED, and the
+   plain `operator.eq(total(), 78.75)` -> `75` passes on main and v0.6.0
+   alike. A respelling from `==` into such a call is a strength drop
+   (APPROX -> TRUTHY) and blocks. The sweeps hold no such edit.
+
+**Tests and fixtures.**
+- **Tests:** 37 in `tests/test_issue299_approx_structure.py`. Thirteen
+  mutants of the round's code each fail them or the fixtures: a bare
+  `approx(...)` not recognized; a list, tuple or set display not
+  descended; a dict display's keys read for its values; a starred item
+  not descended; membership not an approximate comparison; a chain's
+  later link read against its first operands; only a chain's first link
+  read; a disjunction stating its comparison; a conjunction stating
+  none; `any(...)` stating its element; `all([...])` over a list
+  comprehension stating none; `not in` read as positive; every stated
+  comparison read as positive.
+- **Fixtures:**
+  - row 124's pins, each passing on v0.6.0 with zero findings:
+    `approx_or_true_pos`, `approx_all_to_any_pos` and
+    `approx_result_is_not_none_pos`;
+  - reading 1, each read the same way on v0.6.0 and kept:
+    `approx_conjunction_expected_rewrite_pos`,
+    `approx_chained_expected_rewrite_pos` and
+    `approx_conjunction_reordered_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's 781 records, byte for
+byte, and the six new ones.
+
+**Fingerprints.** None move: a wrapped approximate comparison reports a
+new finding where it reported none.
+
+**Cost.** Measured with the round's engine against the base branch's
+(`90c1da4`, #284's branch):
+- **Targeted set:** every non-merge commit in the checked-out history of
+  the twelve histories and PyWavelets whose Python adds or removes a line
+  matching `assertNotAlmostEqual` or `approx(`, as for D-109: 106
+  commits, 99 readable. No record changes; 6 commits block on both
+  engines.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` blocks (pass -> block), as
+its label since #226 (D-104) says. Every other case keeps v0.6.0's
+verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
