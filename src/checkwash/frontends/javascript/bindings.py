@@ -9,7 +9,9 @@ name.
 
 from __future__ import annotations
 
+from bisect import bisect_left
 from dataclasses import dataclass, field
+import heapq
 import re
 
 NAME = r"[A-Za-z_$][\w$]*"
@@ -63,8 +65,11 @@ class Bindings:
         self.masked = "".join(c if code[i] else " " for i, c in enumerate(text))
         imports = "".join(c if import_code[i] else " " for i, c in enumerate(text))
         self.tokens = [(m.group(), m.start(), m.end()) for m in _TOKEN.finditer(imports)]
+        # Each token's start, for bisecting a position into the tokens (#235).
+        self.token_starts = [start for _token, start, _end in self.tokens]
         self.pairs: dict[int, int] = {}
         self.scopes = [Scope(0, len(text), None, True)]
+        self._scope_index: tuple[int, list[int], list[int]] | None = None
         self.scope_at: list[int] = []
         self.body_scopes: dict[int, int] = {}
         self.enclosing: list[int | None] = []
@@ -733,9 +738,48 @@ class Bindings:
         return False
 
     def scope(self, position: int) -> int:
-        candidates = [(scope.end - scope.start, -index, index) for index, scope in enumerate(self.scopes)
-                      if scope.start <= position <= scope.end]
-        return min(candidates)[2] if candidates else 0
+        """The innermost scope at `position`: the shortest one holding it, the
+        latest of equal ones, and the module's outside every scope.
+
+        Answered from an index of the regions between the scopes' bounds,
+        built once the scope list is complete, instead of a scan of every
+        scope on each call (#235).
+        """
+        if self._scope_index is None or self._scope_index[0] != len(self.scopes):
+            self._scope_index = (len(self.scopes), *self._index_scopes())
+        _count, bounds, answers = self._scope_index
+        region = bisect_left(bounds, position)
+        if region < len(bounds) and bounds[region] == position:
+            return answers[2 * region + 1]
+        return answers[2 * region]
+
+    def _index_scopes(self) -> tuple[list[int], list[int]]:
+        """Every scope's bounds, sorted, and the innermost scope of each region
+        they make: the gap before each bound, the bound itself, and the gap
+        after the last one. A sweep keeps the scopes that hold the region in a
+        heap ordered as `scope` orders them; one that ends before the region
+        never holds a later one."""
+        bounds = sorted({bound for scope in self.scopes for bound in (scope.start, scope.end)})
+        order = sorted(range(len(self.scopes)), key=lambda index: self.scopes[index].start)
+        heap: list[tuple[int, int, int]] = []
+        answers: list[int] = []
+
+        def innermost(holds) -> int:
+            while heap and not holds(self.scopes[-heap[0][1]].end):
+                heapq.heappop(heap)
+            return -heap[0][1] if heap else 0
+
+        cursor, previous = 0, None
+        for bound in bounds:
+            answers.append(innermost(lambda end: previous is not None and end > previous))
+            while cursor < len(order) and self.scopes[order[cursor]].start == bound:
+                index = order[cursor]
+                heapq.heappush(heap, (self.scopes[index].end - bound, -index, index))
+                cursor += 1
+            answers.append(innermost(lambda end: end >= bound))
+            previous = bound
+        answers.append(0)
+        return bounds, answers
 
     def _contains(self, scope: int, position: int) -> bool:
         return self.scopes[scope].start <= position <= self.scopes[scope].end
