@@ -1,0 +1,33 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 213
+title: bumping a setup action inside a composite action is a CI edit, not a weakening
+origin: issue #213: every edit to a composite action definition is reported at warn, as a workflow edit is
+=== before: .github/actions/setup/action.yml ===
+name: test
+description: run the test suite
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - run: pip install -e .[test]
+      shell: bash
+    - run: pytest
+      shell: bash
+=== after: .github/actions/setup/action.yml ===
+name: test
+description: run the test suite
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+    - run: pip install -e .[test]
+      shell: bash
+    - run: pytest
+      shell: bash
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

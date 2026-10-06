@@ -1,0 +1,14 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 221
+title: A pytest.toml edit that does not touch collection stays at warn
+origin: issue #221: `pytest.toml` is test-runner config now, and an edit that selects nothing is a CI edit, as `pytest_ini_harmless_neg` is for `pytest.ini`
+=== before: pytest.toml ===
+[pytest]
+minversion = "9.0"
+=== after: pytest.toml ===
+[pytest]
+minversion = "9.0"
+xfail_strict = true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]
