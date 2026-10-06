@@ -6861,3 +6861,245 @@ No callee name is added or removed, and nothing else reads these calls.
 - **Not measured:** the JS false-positive cost, which waits on #212.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-115 (2026-10-06): chai's should-style and property assertions are read (#215)
+
+v0.5.0 (#190) read two chai forms: `expect(...)` chains that end in one
+terminal, and the `assert` interface. Should-style was not read at all:
+weakening, rewriting or deleting `total.should.equal(78.75)` gave zero
+findings and no coverage notice. A property assertion
+(`expect(order).to.have.property("total", 78.75)`,
+`assert.propertyVal(order, "total", 78.75)`) was recorded with no strength
+(#196 190.5), so dropping or rewriting its value passed with a coverage
+notice, and respelling `expect(order.total).to.equal(78.75)` as one
+blocked as a removal (N1). THREATMODEL row 111 listed both as open.
+
+Ruling ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+2026-10-03, and the [maintainer decision on #215](https://github.com/taipei49314/checkwash/issues/215#issuecomment-6016537935),
+2026-10-06): should-style is judged in full, mapped onto the lattice as
+`expect` chains are; `.property(name[, value])`, its nested and own forms
+and `assert.property`/`propertyVal`/`deepPropertyVal` retarget the
+assertion to `subject[name]` with the value as the expectation, and
+`.property(name)` alone asserts only that the property is there, on a rung
+of the existing lattice. The two pin flips the issue names are authorized:
+`test_should_style_is_outside_the_scan` and the `.own.property` row of
+`test_unsupported_chai_spellings_remain_coverage_gaps`.
+
+**As implemented:**
+- `frontends/javascript/frontend.py`:
+  - `.property(name)`, `.ownProperty(name)` and `.haveOwnProperty(name)`
+    move the subject of the rest of an `expect` chain to the property
+    (`property_subject`): with a value, the chain is an equality on the
+    property, deep under `deep`; without one, at the chain's end, it is
+    presence, `type_shape` on TYPE_SHAPE. `nested` reads the name as a
+    path and `own` as the plain property; as in chai, `deep`, `nested` and
+    `own` stay set for the rest of the chain.
+  - `assert.property`, `ownProperty`, `nestedProperty`, `propertyVal`,
+    `ownPropertyVal`, `deepPropertyVal`, `deepOwnPropertyVal`,
+    `nestedPropertyVal` and `deepNestedPropertyVal` read the same way,
+    subject first. One whose property cannot be followed is recorded with
+    no strength, as an unread assert method is.
+  - Should-style (`_should_assertions`): `value.should.<chain>` is read as
+    `expect(value).<chain>` by the same chain reader (the value is the
+    member chain before `.should`, with a `new` that precedes it, as
+    `new` binds first), and `should.equal`,
+    `should.exist` and their `should.not` forms, on the object
+    `chai.should()` (or `chai.Should()`) returns, take the subject first. A
+    should chain the reader declines is recorded with no strength.
+- `frontends/javascript/bindings.py`: `chai.should()` (or `chai.Should()`)
+  returns the should object, and so does an undeclared `should`, the global
+  `chai/register-should` sets to it; a call on it is a chai assertion
+  candidate.
+- `frontends/javascript/coverage.py`: a `.should` chain is a candidate in
+  the coverage inventory, so one the scan does not represent shows the
+  banner.
+
+Readings the ruling leaves to the implementation:
+
+1. **A `.should` chain is read wherever a test spells it, and an undeclared
+   `should` is chai's.** `chai.should()` adds the getter to every object,
+   and projects run it in a setup file the runner loads (mocha's
+   `--require`, `chai/register-should`, which also sets the global
+   `should` to the object `chai.should()` returns), which this file-local
+   scan cannot see. So the setup is not required, as an unimported global
+   `expect` is read too. should.js extends `Object.prototype` the same way
+   with mostly the same words: its chains read as chai's, its own words
+   (`exactly`, `containEql`) are recorded with no strength, and its global
+   `should.equal`, node's coercive `equal`, reads as chai's strict one. A
+   `should` declared in the file from another module is not chai's. A
+   `.should` that no chain continues (`options.should`,
+   `options.should = true`) and a call of it (`chai.should()`) assert
+   nothing.
+2. **Presence is TYPE_SHAPE.** A key's presence is a shape check on the
+   subject, the rung of `isinstance` and `len(x) == n`. It sits above
+   NON_NULL although neither check implies the other (presence passes a
+   null value; `.exist` passes an inherited key): `.exist` on the value ->
+   `.property(name)` reads as a strengthening, and the reverse as a
+   weakening.
+3. **`own` reads as the plain property**, so dropping `own` is not reported
+   (row 111, still open). `include` reads `own` and `nested` too, and stays
+   unread with either flag, as before.
+4. **The retargeted subject is spelled as source.** A literal name reads as
+   `order.total` (`order["unit price"]` when it is no identifier), a
+   computed one as `order[key]`, and a nested path as the member chain it
+   spells (`order.totals.gross`, `order.lines[0].price`), so a property
+   assertion pairs with the `expect(order.total)` spelling of the same
+   check. A nested path that is not a literal is not followed, and the
+   assertion is recorded with no strength.
+5. **A chain after a property reads its last check.**
+   `.property("total").that.equals(78.75)` reads as the equality, which
+   holds only for a present property unless the value is `undefined`. A
+   negated property with a chain after it is recorded with no strength.
+6. **The assert interface's own and nested forms** (`ownProperty`,
+   `ownPropertyVal`, `deepOwnPropertyVal`, `nestedProperty`,
+   `nestedPropertyVal`, `deepNestedPropertyVal`) read as their expect
+   counterparts do, beside the three methods the ruling names.
+7. **Four more pins in `tests/test_js_unjudged_assertions.py`**, flagged for
+   approval: 190.5's examples of an unread chai assertion used `property`
+   in three rows of `test_an_unread_assertion_is_recorded_with_no_strength`
+   and one of `test_deleting_an_unread_assertion_is_assert_removed`. They
+   keep what they pin (an unread chai assertion is recorded with no
+   strength, and deleting it is ASSERT_REMOVED) with spellings that stay
+   unread: `.to.have.keys`, `.to.be.an(...).that.has.keys` and
+   `assert.hasAllKeys`.
+
+**Tests and fixtures.**
+- **Tests:** 129 in `tests/test_issue215_chai_grammar.py`. Thirty-seven
+  mutants of the round's code each fail them: presence on another rung;
+  `propertyVal` comparing deeply, or `deepPropertyVal` strictly;
+  `nestedProperty` reading a plain key; the assert own forms unread; a
+  plain key read as an index; a computed key not followed; any nested path
+  followed; an expression subject not parenthesized; the `own` flag not
+  taken, or `nested` ignored; the rest of a chain after a property not
+  followed; a negated property with a chain after it followed; a deep
+  property value compared strictly; a negated presence read as positive;
+  `include` reading `own` and `nested` as absent; an expect chain not
+  retargeted; should-style not read; a `.should` no chain continues, or a
+  call of `.should`, taken for a site; a should chain the reader declines
+  not recorded; `should.exist` not read, or `should.not` not negated; a
+  should method the scan does not read not recorded; an assert property
+  call that cannot be followed not recorded; the assert property methods
+  not read; the name taken as the value; a call without a name read;
+  `chai.Should` no alias; `should.not`'s methods not negated;
+  `chai.should()` not returning the should object; an undeclared `should`
+  not chai's global; a call on the should object no candidate; should
+  chains not in the coverage inventory; a recorded should chain read as
+  unrepresented; a `new` before a chain left out of its subject, and the
+  coverage notice dropping the space after it.
+- **Fixtures** (18), each `_pos` passing on v0.6.0 with zero findings:
+  - should-style: `js_chai_should_equal_to_exist_pos` (SH1),
+    `js_chai_should_expected_rewrite_pos` (SH2),
+    `js_chai_should_deleted_pos` (SH3), `js_chai_should_true_to_ok_pos`
+    (SH4),
+    `js_chai_should_require_setup_pos` (SH5),
+    `js_chai_should_register_import_pos` (SH6),
+    `js_chai_should_object_exist_pos` (SH7);
+  - property: `js_chai_property_value_dropped_pos` (P1),
+    `js_chai_property_value_rewrite_pos` (P2),
+    `js_chai_nested_property_value_dropped_pos` (P3),
+    `js_chai_own_property_value_dropped_pos` (P4),
+    `js_chai_property_chain_tail_dropped_pos` (P5),
+    `js_chai_assert_property_val_dropped_pos` (P6),
+    `js_chai_assert_deep_property_val_dropped_pos` (P7),
+    `js_chai_assert_property_val_rewrite_pos` (P8);
+  - respellings that report nothing: `js_chai_property_respelled_neg`
+    (N1, which blocked on v0.6.0 as a removal),
+    `js_chai_property_assert_respelled_neg` and
+    `js_chai_should_respelled_as_expect_neg`.
+
+Every existing fixture keeps its expectation, and the chai mutation
+inventory (`tests/data/javascript_chai_mutations.json`, 39 records) keeps
+every verdict. `tools/emit_corpus.py` gives the base's 783 records and the
+18 new ones; one existing record changes, `js_chai_property_deleted_pos`:
+the same ASSERT_REMOVED high, fingerprint and verdict, with the strength it
+now reads in its message and IR (TYPE_SHAPE, presence on `order.total`,
+where it said UNKNOWN).
+
+**Fingerprints.** No corpus fingerprint moves. TEST_DISABLED's fingerprint
+for a removed unit keys on the unit's assertions, so a removed unit that
+holds a should-style or property assertion, now read, gets a new one, as
+190.5's newly recorded assertions did; an allowlist entry for such a
+finding needs renewing.
+
+**Cost.** Measured on four JavaScript histories whose tests use chai
+should-style or property assertions: chai, hexo, node-fetch and yargs.
+The set is every non-merge commit whose JS or TS diff adds or removes a
+line spelling `should.`, `Should(`, `propertyVal`, `.property(`,
+`ownProperty` or `nestedProperty`: 1,399 commits, all readable. The
+round's engine was run against the base branch's (`5fa3554`). 277 records
+change and 58 verdicts move, so blocked goes from 18 to 72: 56 commits
+start blocking and 2 stop.
+- **True positives: 24 of the 56.** Each commit's message or diff shows
+  the edit was meant:
+  - fifteen expected values follow a behaviour or fixture change in the
+    same commit (hexo `2cdecbfdec9e`, `fffafac27de8`, `d1c3098f0120` and
+    twelve more);
+  - two removals or flips come with a breaking change (yargs
+    `a93f5ff35d7c`, `6ee2c82df515`);
+  - seven are real loosenings or deletions: `=== undefined` -> `== null`
+    (hexo `c3d0367955c8`, `1936e68dc897`), timestamps cut to whole
+    seconds (`28ac0697c2aa`), event order no longer asserted
+    (`1c8cd09d823f`), `>` -> `>=` (yargs `c68127ac5e9a`,
+    `4e186e036193`), and a check in a callback deleted
+    (`86457538ef4e`).
+
+  Each is reported for a reviewer, as the same edit spelled with `expect`
+  already was.
+- **False positives: 31 of the 56.** Twenty-eight of them are classes of
+  the existing `expect` reader, and the base engine blocks the `expect`
+  twin of each the same way:
+  - an expected call respelled through a destructured import, such as
+    `pathFn.join` -> `join` (twelve hexo commits; filed as #312);
+  - a check moved onto a form the reader records with no strength. Most
+    are row 111's open words: `.keys`, `.string()`, `should.throw(fn,
+    msg)`, a `should.fail` sentinel, a mocha `done` callback. The others
+    are `sinon.assert` calls (hexo `f766caf592a3`, 69 findings; filed as
+    #314);
+  - two spellings of one check ranked apart: `x.length` equality ->
+    `lengthOf(n)` (hexo `70c5378525ef`, 30 findings; filed as #313),
+    per-field `eql` -> `deep.include`, and a value check -> a sinon
+    query asserted true;
+  - a renamed test paired with an unrelated new one;
+  - a private field read through the public API;
+  - an expected value respelled, such as one only requoted (hexo
+    `2d7937d3e8ff`). That one is a defect of D-104's JavaScript port,
+    fixed in its PR;
+  - a strengthening read as SUBJECT_NORMALIZED.
+- **Three false positives owe their block to this round:**
+  - chai `6ccbd0378053` stores the should object under another global
+    name (`globalShould = chai.should()`), which is not followed.
+  - hexo `03e1a1d067ed` spells own-property presence two ways:
+    `hasOwnProperty.call(o, k).should.eql(true)` (EXACT_STRUCT) ->
+    `o.should.have.own.property(k)` (presence, TYPE_SHAPE, reading 2).
+    The base blocks the `expect` twin of this edit as a removal.
+  - In node-fetch `c3a4e96a61b9`, a presence check, now read, takes the
+    position-order pairing from a renamed subject's `deep.equal`.
+- **One mixed commit:** hexo `f3d2c37ec3d4`. Twelve findings are #312's
+  class. One is real: an async rewrite dropped the check that the call
+  rejects.
+- **Two commits stop blocking:**
+  - hexo `3d59784da286`: a `contain` respelled as
+    `includes(...).should.eql(true)` is now paired. The commit still
+    loses a sentinel that neither engine reads.
+  - hexo `3e8473027739`: `assert.fail()` sentinels are replaced by
+    spy-count checks the round reads, and they are held at warn as a
+    rewrite.
+- **Twin check.** Each JS test file changed by the 1,186 commits that
+  touch one was rewritten with every `x.should.` as `expect(x).`. The
+  round judges 1,184 of them as it judges their twin (verdict and high
+  rules). The other two are in chai's own suite, whose
+  `var expect = chai.expect` reads a global `chai` the reader does not
+  take (filed as #311). The base engine gives 1,173 twins the verdict
+  the round gives the original. The other 13 involve what only the round
+  reads: property assertions, the should object's `equal` and `exist`,
+  and chai's own should chains.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file (D-106), and only such a file is
+  read this way.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases)
+on the round's engine: passed, 0 failures, 1 reported: `i198/T6`, which
+passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
+keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
