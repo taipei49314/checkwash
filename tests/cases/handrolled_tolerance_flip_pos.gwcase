@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: D6: assert abs(total() - 78.75) < 0.01 -> > 0.01 reverses the bound: the test now requires the values to differ
+origin: #224
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert abs(total() - 78.75) < 0.01
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert abs(total() - 78.75) > 0.01
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

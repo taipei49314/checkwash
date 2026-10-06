@@ -1,0 +1,29 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertLess(total(), 80) -> assert total() < 80 states the same predicate
+origin: #224
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertLess(total(), 80)
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        assert total() < 80
+=== expect ===
+[]
