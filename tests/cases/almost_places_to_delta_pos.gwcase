@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 119
+rule: TOLERANCE_LOOSENED
+title: assertAlmostEqual(energy(2.0), 19.62, places=2) -> delta=0.5 widens the bound from 0.005 to 0.5
+origin: #196 190.3 — the old places read as a delta of 2, against which 0.5 is tighter
+=== before: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, places=2)
+=== after: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, delta=0.5)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
