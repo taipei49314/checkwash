@@ -101,8 +101,8 @@ class SubjectShadow:
     # remains a stand-in and must still be excluded from repair evidence.
     related_evidence_paths: tuple[str, ...] = ()
     # A changed path that made this provider win is oracle plumbing, not a
-    # production repair. This matters for supported controls whose frozen role
-    # spelling is still `prod` (notably `.pytest.ini`).
+    # production repair. This matters for supported controls whose role is
+    # still `prod` (notably a nested config such as `sub/pytest.ini`).
     control_paths: tuple[str, ...] = ()
     reportable: bool = True
 
@@ -2382,7 +2382,7 @@ def find_runtime_subject_shadows(
             )
     if import_mode_changed or package_shape_paths:
         for path in sorted(before_paths | after_paths):
-            if config.role_of(path) == "test" and collectable(path):
+            if collectable(path):
                 changed_roots.add(_pytest_import_root(path, before_paths))
                 changed_roots.add(_pytest_import_root(path, after_paths))
     by_module: dict[str, set[str]] = {}
@@ -2438,10 +2438,12 @@ def find_runtime_subject_shadows(
     if presearched is not None and not presearched:
         return []
 
+    # A test module is one pytest collects, whatever role its path holds:
+    # `tests/golden/test_x.py` imports its subject like any other (#219).
     eligible_tests = {
         path
         for path in after_paths
-        if config.role_of(path) == "test" and collectable(path)
+        if collectable(path)
     }
     if presearched is None:
         # An untrusted/capped result can narrow nothing. This path is
@@ -2593,14 +2595,14 @@ def find_runtime_subject_shadows(
         sorted(
             path
             for path in before_paths
-            if config.role_of(path) == "test" and collectable(path)
+            if collectable(path)
         )
     )
     after_test_inventory = tuple(
         sorted(
             path
             for path in after_paths
-            if config.role_of(path) == "test" and collectable(path)
+            if collectable(path)
         )
     )
     for path in changed_runner_paths:

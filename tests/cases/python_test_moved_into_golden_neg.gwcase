@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a pytest file moved into tests/golden/ is still collected there, so its tests moved and none disappeared
+origin: issue #219 M1 (ruled 219.Q1, 2026-10-04) - v0.6.0 blocked with TEST_DISABLED high "test unit disappeared" on both units, although pytest 9.1.1 collects and passes both at the destination
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_x.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+
+
+def test_other():
+    assert total() == 78.75
+=== after: tests/golden/test_x.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+
+
+def test_other():
+    assert total() == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"], "path": "tests/test_x.py", "unit": "test_total"}, {"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"], "path": "tests/test_x.py", "unit": "test_other"}]

@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+issue: 216
+title: deleting the workflow whose suite is `node --test`
+origin: issue #216, the deletion rule. Whether a deleted workflow ran a suite was row 69's token scan alone, which finds no runner in `node --test`, so deleting the only test workflow passed at warn while disabling its step blocks. v0.6.0 passes it
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node --test
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

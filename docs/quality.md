@@ -114,6 +114,14 @@ configuration, coverage scope and mypy strict expansion. Packaged models include
 the qualification fixture and result hashes. Provenance and the remaining
 acceptance conditions are in [the qualification record](quality-qualification/README.md).
 
+On every pull request, the `quality qualification` workflow's `qualify` job
+runs that qualification, the quality tests and the package checks. The frozen
+comparison of the old oracle's corpus output with v0.3.3
+(`tools/compare_quality_legacy.py`) runs only when the workflow is dispatched
+by hand, in its own `legacy-comparison` job. Every engine change since v0.4.0
+fails it, so it stays red as recorded; it is neither changed nor waived
+(#295).
+
 To try the packaged preview, install `checkwash==0.6.0`. The recommended
 v0.5.0 Action also includes the quality preview; a CLI installation does
 not update that Action. The preview's native/package checks and retained

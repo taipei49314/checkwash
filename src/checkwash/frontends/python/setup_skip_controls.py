@@ -56,8 +56,9 @@ def _decorator(node, bindings, target, keywords):
 # Native calls that end setup in a skip or xfail outcome, and the exceptions
 # those calls raise. pytest's unittest plugin reports unittest's SkipTest as a
 # skip wherever it is raised, so raising it is the same act spelled through
-# the standard library. `importorskip` is deliberately absent: whether it
-# skips depends on what is installed, which no reading of the source decides.
+# the standard library. Twisted's trial exports that same class as its own
+# `SkipTest` (#220). `importorskip` is deliberately absent: whether it skips
+# depends on what is installed, which no reading of the source decides.
 _OUTCOME_CALLS = {
     'pytest.skip': 'skip', 'pytest.xfail': 'xfail', 'self.skipTest': 'skip',
     '_pytest.outcomes.skip': 'skip', '_pytest.outcomes.xfail': 'xfail',
@@ -66,9 +67,11 @@ _OUTCOME_RAISES = {
     'pytest.skip.Exception': 'skip', 'pytest.xfail.Exception': 'xfail',
     '_pytest.outcomes.Skipped': 'skip', '_pytest.outcomes.XFailed': 'xfail',
     'unittest.SkipTest': 'skip', 'unittest.case.SkipTest': 'skip',
+    'twisted.trial.unittest.SkipTest': 'skip',
 }
 _OUTCOME_KEYWORDS = frozenset({'reason', 'msg', 'allow_module_level'})
-_NATIVE_MODULES = frozenset({'pytest', '_pytest', '_pytest.outcomes', 'unittest', 'unittest.case'})
+_NATIVE_MODULES = frozenset({'pytest', '_pytest', '_pytest.outcomes', 'unittest', 'unittest.case',
+                             'twisted', 'twisted.trial', 'twisted.trial.unittest'})
 # An argument that calls, awaits, yields, binds or unpacks runs code before
 # the outcome, and that code could leave first.
 _IMPURE = (ast.Call, ast.Await, ast.Yield, ast.YieldFrom, ast.NamedExpr, ast.Lambda, ast.Starred)
@@ -90,6 +93,71 @@ def outcome_call(node, bindings):
     if not isinstance(node, ast.Call) or not _plain(node):
         return None
     return _OUTCOME_CALLS.get(_resolve(node.func, bindings))
+
+
+# A test body ends in the same outcomes, read through the same bindings, and
+# the frontend's literal spellings are retired (#220). The body keeps
+# `importorskip` (220.Q1): a test that starts calling it no longer runs
+# wherever the module is missing.
+_BODY_CALLS = {**_OUTCOME_CALLS, 'pytest.importorskip': 'skip'}
+BODY_OUTCOMES = frozenset(_BODY_CALLS) | frozenset(_OUTCOME_RAISES)
+# One object, one name. pytest's outcomes live in `_pytest.outcomes`, and
+# trial's SkipTest is unittest's, so a skip respelled through another module
+# that holds the same object is the skip the test already had, not a new one.
+_SAME_OBJECT = {
+    '_pytest.outcomes.skip': 'pytest.skip', '_pytest.outcomes.xfail': 'pytest.xfail',
+    '_pytest.outcomes.Skipped': 'pytest.skip.Exception', '_pytest.outcomes.XFailed': 'pytest.xfail.Exception',
+    'unittest.case.SkipTest': 'unittest.SkipTest', 'twisted.trial.unittest.SkipTest': 'unittest.SkipTest',
+}
+# The names a body skip's marker carries.
+BODY_MARKERS = frozenset(_SAME_OBJECT.get(name, name) for name in BODY_OUTCOMES)
+
+
+def _spelled(node, bindings):
+    """`node`'s dotted name read through `bindings`, or its own spelling when its root is unbound.
+
+    A bound root resolves to its binding, and to nothing when that is not a
+    native module. An unbound root keeps its spelling, as the literal set read
+    it: `pytest.skip` written without an import still names pytest's skip.
+    """
+    name = dotted_name(node)
+    if not name:
+        return None
+    first, dot, rest = name.partition('.')
+    if first not in bindings:
+        return name
+    target = bindings[first]
+    return target + dot + rest if target else None
+
+
+def body_outcome(node, bindings):
+    """The canonical name of the native outcome a test body's call or raise spells, or None.
+
+    Unlike setup's proof, any arguments count: a skip that computes its reason
+    still ends the test, or the test errors first.
+    """
+    if isinstance(node, ast.Call):
+        name = _spelled(node.func, bindings)
+        return _SAME_OBJECT.get(name, name) if name in _BODY_CALLS else None
+    if isinstance(node, ast.Raise) and node.exc is not None:
+        raised = node.exc.func if isinstance(node.exc, ast.Call) else node.exc
+        name = _spelled(raised, bindings)
+        return _SAME_OBJECT.get(name, name) if name in _OUTCOME_RAISES else None
+    return None
+
+
+def body_bindings(function, bindings, *, method):
+    """What a test function's names resolve to: the module's bindings, shadowed by its own.
+
+    In a method the first parameter is the instance, so `self.skipTest`
+    resolves. An import inside the test binds as one at module level does: a
+    local `import pytest` is still pytest, as the literal spelling read it.
+    """
+    local = _local(function, bindings, method)
+    for node in _executed(function.body):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            local.update(_import_pairs(node) or ())
+    return local
 
 
 def _outcome(statement, bindings):
@@ -130,10 +198,20 @@ def _generator(function):
     return any(isinstance(node, (ast.Yield, ast.YieldFrom)) for node in _executed(function.body))
 
 
-def _fold(test):
+def _fold(test, attrs=None):
+    """A branch test's truth, None for unknown.
+
+    `attrs` is a (class attribute lookup, receiver names) pair: a setup
+    callback's guard that reads `self.<attr>` is folded with the value its
+    class body sets (#254), as a test body's guard is.
+    """
     # Imported late: the frontend imports this module.
     from .frontend import _static_truth
 
+    if attrs is not None:
+        from .class_attributes import substitute
+
+        test = substitute(test, *attrs)
     return _static_truth(test)
 
 
@@ -223,7 +301,7 @@ def _handler_condition(try_statement, handler):
     return _handler_guard(try_statement, handler)
 
 
-def _guarded(statements, bindings, conds, sites, condition):
+def _guarded(statements, bindings, conds, sites, condition, attrs=None):
     """Walk `statements` under the path condition `conds`, a tuple of source texts.
 
     Appends (effect, evidence, conds) for each native outcome a run reaches
@@ -245,17 +323,18 @@ def _guarded(statements, bindings, conds, sites, condition):
             sites.append((*found, conds))
             return _ENDS, left
         if isinstance(statement, ast.If):
-            truth = _fold(statement.test)
+            truth = _fold(statement.test, attrs)
             if truth is not None:
                 state, leaves = _guarded(statement.body if truth else statement.orelse,
-                                         bindings, conds, sites, condition)
+                                         bindings, conds, sites, condition, attrs)
                 left |= leaves
                 if state != _FALLS or leaves:
                     return state if state != _FALLS else _STOPS, left
                 continue
             test = condition(statement.test)
-            body, body_left = _guarded(statement.body, bindings, (*conds, test), sites, condition)
-            orelse, orelse_left = _guarded(statement.orelse, bindings, (*conds, f'not ({test})'), sites, condition)
+            body, body_left = _guarded(statement.body, bindings, (*conds, test), sites, condition, attrs)
+            orelse, orelse_left = _guarded(statement.orelse, bindings, (*conds, f'not ({test})'), sites,
+                                           condition, attrs)
             left |= body_left or orelse_left
             if _STOPS in (body, orelse):
                 return _STOPS, left
@@ -269,7 +348,7 @@ def _guarded(statements, bindings, conds, sites, condition):
                 return _STOPS, left
             continue
         if isinstance(statement, ast.Try) and not statement.handlers and not _may_leave(statement.finalbody):
-            state, leaves = _guarded(statement.body + statement.finalbody, bindings, conds, sites, condition)
+            state, leaves = _guarded(statement.body + statement.finalbody, bindings, conds, sites, condition, attrs)
             left |= leaves
             if state != _FALLS or leaves:
                 return state if state != _FALLS else _STOPS, left
@@ -279,7 +358,7 @@ def _guarded(statements, bindings, conds, sites, condition):
                 return _STOPS, left
             for handler in statement.handlers:
                 state, leaves = _guarded(handler.body, bindings, (*conds, _handler_condition(statement, handler)),
-                                         sites, condition)
+                                         sites, condition, attrs)
                 if state == _STOPS or leaves:
                     return _STOPS, left or leaves
             continue
@@ -316,7 +395,7 @@ def _conjunction(conds):
     return ' and '.join(parts) or None
 
 
-def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse):
+def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse, attrs=None):
     """(effect, evidence, guard) for the outcome a unit's setup callback ends in, or None.
 
     guard None: every call reaches it, read exactly as `callback_outcome`
@@ -325,15 +404,21 @@ def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse):
     those conditions (#196 183.2), so two branches that between them cover
     every run read as the unconditional skip they are wherever the guard can
     be evaluated. The first such outcome names the effect and is the evidence.
-    `condition` gives an expression's source text.
+    `condition` gives an expression's source text. `attrs` resolves the
+    class attributes a method's guards read through its receiver (#254).
     """
     local = _local(function, bindings, receiver)
     body = _body(function.body)
+    if attrs is not None:
+        from .class_attributes import receivers
+
+        names = receivers(function)
+        attrs = (attrs, names) if names else None
     found = _reached(body, local)[0]
     if found is not None:
         return (*found, None)
     sites = []
-    _guarded(body, local, (), sites, condition)
+    _guarded(body, local, (), sites, condition, attrs)
     if not sites:
         return None
     effect, evidence, _conds = sites[0]
@@ -343,12 +428,14 @@ def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse):
     return effect, evidence, clauses[0] if len(clauses) == 1 else ' or '.join(f'({c})' for c in clauses)
 
 
-def module_bindings(tree):
+def module_bindings(tree, *, mutated=True):
     """Each module name's final top-level binding: a native dotted target, or None.
 
     Setup callbacks run after the module has executed, so the last binding is
-    the one they see. A name any other statement binds, or whose attributes
-    it assigns, resolves to nothing.
+    the one they see. A name any other statement binds, or with `mutated`
+    whose attributes it assigns, resolves to nothing. A test body's skip reads
+    the bindings without `mutated` (#220): `unittest.TestCase.maxDiff = None`
+    leaves `raise unittest.SkipTest` a skip, as the literal spelling was.
     """
     bindings = {}
     for statement in tree.body:
@@ -363,8 +450,23 @@ def module_bindings(tree):
                 if alias.name != '*':
                     bindings[alias.asname or alias.name] = f'{statement.module}.{alias.name}' if native else None
         else:
-            bindings.update(dict.fromkeys(sorted(_names([statement], mutated=True))))
+            bindings.update(dict.fromkeys(sorted(_names([statement], mutated=mutated))))
     return bindings
+
+
+def _import_pairs(node):
+    """(name, native dotted target or None) for each name an import binds; None for a star import."""
+    if isinstance(node, ast.Import):
+        pairs = []
+        for alias in node.names:
+            local = alias.asname or alias.name.split('.')[0]
+            target = alias.name if alias.asname else local
+            pairs.append((local, target if target in _NATIVE_MODULES else None))
+        return pairs
+    if any(alias.name == '*' for alias in node.names):
+        return None
+    native = not node.level and node.module in _NATIVE_MODULES
+    return [(alias.asname or alias.name, f'{node.module}.{alias.name}' if native else None) for alias in node.names]
 
 
 def setup_skip_controls(tree):
@@ -372,11 +474,14 @@ def setup_skip_controls(tree):
 
     bindings, functions = {}, []
     for node in _body(tree.body):
-        if isinstance(node, ast.Import) and len(node.names) == 1 and node.names[0].name == 'pytest':
-            pairs = [(node.names[0].asname or 'pytest', 'pytest')]
-        elif (isinstance(node, ast.ImportFrom) and node.module == 'pytest' and not node.level
-              and node.names and all(alias.name in {'skip', 'xfail', 'fixture', 'hookimpl'} for alias in node.names)):
-            pairs = [(alias.asname or alias.name, 'pytest.' + alias.name) for alias in node.names]
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            # Each name an import binds, to a native module or to nothing this
+            # proof reads: `import sys` or `import unittest` beside the hook no
+            # longer ends it (#220, #199 H2). A star import binds names it
+            # does not say.
+            pairs = _import_pairs(node)
+            if pairs is None:
+                return
         elif isinstance(node, ast.FunctionDef) and _parameters(node) is not None:
             if node.name in bindings or node.name.startswith('__'):
                 return
@@ -530,7 +635,8 @@ class SetupScope:
     name. Either keeps a request from falling through to a conftest (#223).
     """
 
-    def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None, condition=ast.unparse):
+    def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None, condition=ast.unparse,
+                 attrs=None):
         self.bindings = bindings
         self.fixtures = {}
         self.implicit = {}
@@ -560,7 +666,8 @@ class SetupScope:
             if fixture is not None:
                 name, autouse = fixture
                 self.fixtures[name] = (_requests(statement, receiver=in_class), autouse,
-                                       setup_outcome(statement, bindings, receiver=in_class, condition=condition))
+                                       setup_outcome(statement, bindings, receiver=in_class, condition=condition,
+                                                     attrs=attrs if in_class else None))
             elif statement.name in callbacks:
                 decorators = statement.decorator_list
                 plain = (isinstance(statement, ast.FunctionDef) and not _generator(statement)
@@ -568,7 +675,7 @@ class SetupScope:
                               and decorators[0].id in {'classmethod', 'staticmethod'}
                               and decorators[0].id not in bindings))
                 outcome = (setup_outcome(statement, bindings, receiver=in_class and not decorators,
-                                         condition=condition)
+                                         condition=condition, attrs=attrs if in_class else None)
                            if plain else None)
                 self.implicit[statement.name] = (callbacks[statement.name], outcome)
         module_setup = last.get('setUpModule')

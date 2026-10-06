@@ -1,0 +1,37 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+issue: 216
+title: `if: false` under the step that runs `node --test`
+origin: issue #216 W1. The step held no runner token, so it was no runner site, and the condition that stops the suite passed at warn. v0.6.0 passes it; the same diff on `npx jest` blocks
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node --test
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node --test
+        if: false
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
