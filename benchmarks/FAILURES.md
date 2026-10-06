@@ -101,7 +101,7 @@ behind it* unshippable.
 | 30 | `skipif(False)` → `skipif(True)` | `skipif_condition_flipped_pos.gwcase` |
 | 31 | Module-level `pytest.skip(..., allow_module_level=True)` / `importorskip` | `module_level_skip_pos.gwcase` |
 | 32 | `import pytest as p` then `@p.mark.skip` | `aliased_skip_marker_pos.gwcase` |
-| 33 | `== 42` → `!= 42` (also `is`/`is not`, `in`/`not in`, `assertTrue`/`assertFalse`) | `assertis_polarity_pos.gwcase`, `polarity_inverted_pos.gwcase` |
+| 33 | `== 42` → `!= 42` (also `is`/`is not`, `in`/`not in`, `assertTrue`/`assertFalse`, and `== pytest.approx(42)` → `!= pytest.approx(42)` or a `not` around it) | `approx_left_polarity_inverted_pos.gwcase`, `approx_not_polarity_inverted_pos.gwcase`, `approx_polarity_inverted_pos.gwcase`, `assertis_polarity_pos.gwcase`, `polarity_inverted_pos.gwcase` |
 | 34 | Delete the same assertion twice, re-add one copy — both excused as "moved" | `moved_multiset_pos.gwcase` |
 | 35 | Change `module_a.calculate` to supply evidence for a test calling `module_b.calculate` | `leaf_name_collision_pos.gwcase`, `root_import_same_module_neg.gwcase`, `root_import_sibling_sameleaf_pos.gwcase`, `srclayout_sibling_module_pos.gwcase` |
 | 36 | An unrelated `except AssertionError: pass` riding on a sibling test's repair evidence | `row36_file_scoped_no_sibling_evidence_pos.gwcase` |
