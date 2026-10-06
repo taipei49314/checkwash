@@ -41,6 +41,9 @@ DEFAULT_ROLES: dict[str, list[str]] = {
         ".gitlab-ci.yml",
         ".pre-commit-config.yaml",
         "pytest.ini",
+        ".pytest.ini",
+        "pytest.toml",
+        ".pytest.toml",
         "tox.ini",
         "setup.cfg",
         # Any pyproject, not just the root one: an example app's pyproject is

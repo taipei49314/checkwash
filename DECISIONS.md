@@ -5839,3 +5839,122 @@ version string aside, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-099 (2026-10-06): `.pytest.ini`, `pytest.toml` and `.pytest.toml` are ci files and inventory carriers (#221)
+
+pytest 9 reads the first pytest config it finds among `pytest.toml`,
+`.pytest.toml`, `pytest.ini`, `.pytest.ini`, `pyproject.toml`, `tox.ini` and
+`setup.cfg`. The `ci` role listed `pytest.ini` alone of the first four, so the
+other three were production, and no CI rule read them: `--deselect`, `-p
+no:python` or a narrowed `testpaths` written into one gave zero findings,
+while the same edit in `pytest.ini` blocked. The resolved collection
+inventory left `pytest.toml` and `.pytest.toml` out of its carrier list and
+judged only ci carriers, so a first configuration in any of the three gave
+zero findings too, and so did a new `pytest.toml` beside `pytest.ini`, which
+pytest then reads instead of it. THREATMODEL row 105 listed the three as
+item (3).
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item `196.followup.pytest-config-carriers`, filed as #221), and 221.Q1
+(2026-10-04): the three join `pytest.ini` as root-anchored `ci` globs, in
+SPEC §2 and `DEFAULT_ROLES` together, and take their place in the
+inventory's carrier list. Nested configs stay out of this round (row 105,
+item 5): `sub/pytest.toml` stays production, like `sub/pytest.ini`. Costs:
+SPEC §2 and `DEFAULT_ROLES` (maintainer; pinned by
+`tests/test_spec_roles_pinned.py`), fingerprints for these paths, a small
+sweep.
+
+**As implemented:**
+- `DEFAULT_ROLES` and SPEC §2's table: `.pytest.ini`, `pytest.toml` and
+  `.pytest.toml` follow `pytest.ini` in the `ci` row. SPEC §2b and §4's
+  CI_WORKFLOW_TOUCHED row name them where they named the four pytest
+  configs.
+- `collection_inventory._CONFIGS`, the root configs the inventory reads and
+  judges, lists all seven, in pytest's order.
+
+Readings the ruling leaves to the implementation:
+
+1. **Which file governs.** The inventory already picks the config pytest
+   reads, in pytest's order (`shadow._pytest_config_path`), but from a
+   snapshot that never held `pytest.toml` or `.pytest.toml`. With both read,
+   a carrier pytest does not read is not the run's config. A `pytest.ini`
+   added beside an existing `pytest.toml`, or a `.pytest.ini` beside
+   `pytest.ini`, selects nothing, so the inventory does not judge its
+   options, and it reads at warn as a first configuration does (SPEC §4).
+   v0.6.0 blocked the `pytest.ini` beside `pytest.toml`, which the inventory
+   took for the run's config; pytest 9.1.1 prints `configfile: pytest.toml
+   (WARNING: ignoring pytest config in pytest.ini!)` and runs every test.
+   Such a carrier is dormant, not harmless: deleting the file pytest reads
+   hands the run to it, and the inventory judges that commit, so a
+   `--deselect` waiting in the `pytest.ini` blocks when `pytest.toml` goes.
+2. **The token scan and the syntax scanner** read the three as they read
+   every ci file. An option or a narrowed setting written into an existing
+   one is a weakened command. The base side of each joins the surface a
+   narrowing must be absent from, so moving an identical configuration
+   between any two carriers stays at warn, a `--deselect` the base already
+   carried included. A new carrier has no narrowing family (SPEC §4, first
+   adoption), so only the inventory judges a new `pytest.toml` beside
+   `pytest.ini`.
+3. **TOML values.** pytest 9 reads a list setting in `pytest.toml` and
+   `.pytest.toml` only as an array (`addopts = ["--deselect", "..."]`; a
+   string is a TypeError). The settings parser reads the `[pytest]` table's
+   arrays as words, as it reads `[tool.pytest.ini_options]`'s, and the
+   fixtures and tests write arrays.
+4. **Root only.** The globs are anchored like `pytest.ini`'s, and roles match
+   case-sensitively (§2): `sub/pytest.toml`, `docs/pytest.toml`,
+   `pytest.toml.orig` and `Pytest.toml` stay production.
+5. **Not in this round (residuals, row 105):** a nested config of any name
+   (item 5), which the inventory reads only to withhold a targeted run
+   (184.1); the other open items of row 105. pyproject's native
+   `[tool.pytest]` table, which the settings parser does not read, is a
+   separate defect found during this round (#278).
+
+**Tests and fixtures.**
+- Tests: 31 in `tests/test_issue221_pytest_config_carriers.py`. The carrier
+  matrices of `tests/test_issue90_collection_matrix.py` and
+  `tests/test_issue173_collection_suite.py` run the three carriers beside
+  the four they list, TOML ones as arrays: 237 cases, whose four-carrier
+  cases are unchanged. All 9 mutants of the change fail them or the
+  fixtures: each glob dropped, each glob no longer anchored at the root,
+  and each carrier dropped from the inventory's list.
+- Fixtures (7):
+  - `hidden_pytest_ini_deselect_pos` (A1), `pytest_toml_deselect_pos` (A2),
+    `hidden_pytest_toml_deselect_pos` (A3), `pytest_toml_no_python_plugin_pos`
+    (A5) and `pytest_toml_testpaths_pointed_away_pos` (A7), `bypass: 105`:
+    v0.6.0 passes each with zero findings;
+  - `pytest_toml_harmless_neg`: `xfail_strict = true` reads at warn, as
+    `pytest_ini_harmless_neg` does;
+  - `pytest_ini_moved_to_pytest_toml_neg`: an identical configuration, a
+    `--deselect` among it, moved from `pytest.ini` into `pytest.toml` reads
+    at warn on both files.
+- Every existing fixture keeps its expectation, `pytest_ini_narrowed_pos`,
+  `pytest_ini_harmless_neg` and `nested_pyproject_not_opaque_pos` among
+  them.
+
+**Fingerprints.** An edited `.pytest.ini`, `pytest.toml` or `.pytest.toml`
+now reports CI_WORKFLOW_TOUCHED, which is new. Findings on other files keep
+theirs.
+
+**Cost.**
+- **Where the change can apply.** No commit of the twelve histories the
+  sweeps draw from (attrs, click, flask, httpx, rich, starlette, aiohttp,
+  pytest, requests, scrapy, uvicorn and werkzeug: 80,252 commits across all
+  refs) adds, edits or deletes a `.pytest.ini`, `pytest.toml` or
+  `.pytest.toml`, at the root or nested, so no tree in them holds one, and
+  neither the role change nor the carrier list can change a record there.
+  `pytest.toml` and `.pytest.toml` are new in pytest 9; their share in other
+  projects is not measured.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records as
+  main's engine (#223's).
+- **Sweep, targeted by D-088:** its sets give the same records too: 895
+  commits of ten full histories (855 readable) and 368 of pytest's (364
+  readable).
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.

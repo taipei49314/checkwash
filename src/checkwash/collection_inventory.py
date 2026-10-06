@@ -37,7 +37,8 @@ from checkwash.pytest_collection import (
 from checkwash.roles import _runs_tests, is_artifact
 from checkwash.runner_command import invokes_named_runner
 
-_CONFIGS = ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg")
+# The root configs pytest reads, in the order it looks for them (#221).
+_CONFIGS = ("pytest.toml", ".pytest.toml", "pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg")
 _DEFAULTS = {"python_files": ("test_*.py", "*_test.py"),
              "python_classes": ("Test",), "python_functions": ("test",),
              "norecursedirs": ("*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}")}
