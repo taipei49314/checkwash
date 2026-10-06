@@ -311,8 +311,13 @@ Issue [#180](https://github.com/taipei49314/checkwash/issues/180) found that
 chai assertions were unrepresented: `expect(total).to.equal(78.75)` weakened
 to `.to.exist` passed with only a coverage warning. chai's `expect` and
 `assert` now resolve from `chai` imports and requires (named, renamed,
-namespace and default), from Vitest's `expect` and `assert`, and for an
-unimported global `expect`. An unimported `assert` keeps its Node default:
+namespace and default), from Vitest's `expect` and `assert`, for an
+unimported global `expect`, and through an undeclared global `chai`, which
+karma-chai and chai's own suite set
+([#311](https://github.com/taipei49314/checkwash/issues/311)):
+`var expect = chai.expect` and `chai.expect(...)` read as through an
+imported chai, while a `chai` the file declares keeps its own binding. An
+unimported `assert` keeps its Node default:
 methods that both libraries spell the same cannot be told apart. Jest's own
 `expect`, imported from `@jest/globals`, reads Jest matchers only: Jest's
 `expect` has no `.to`, so a chai chain on it stays a coverage gap, and

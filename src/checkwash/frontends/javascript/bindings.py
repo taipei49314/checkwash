@@ -852,10 +852,12 @@ class Bindings:
                 break
             scope = parent
         # An undeclared `should` is the global `chai/register-should` sets to
-        # `chai.should()`'s object (#215).
+        # `chai.should()`'s object (#215), and an undeclared `chai` is chai's
+        # module: karma-chai's adapter and chai's own suite set the global
+        # (#311).
         return {"assert": Value("node"), "expect": Value("expect"), "t": Value("context"),
                 "test": Value("runner"), "it": Value("runner"), "require": Value("require"),
-                "should": Value("chai_should")}.get(name, UNKNOWN)
+                "should": Value("chai_should"), "chai": Value("chai")}.get(name, UNKNOWN)
 
     def _value(self, expression: tuple[str, ...], position: int, seen: frozenset[tuple[int, str]]) -> Value:
         if not expression:
