@@ -814,8 +814,17 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
     if _is_unfalsifiable(test, text):
         return _Classified("tautology", S.TAUTOLOGY)
     approx = _find_approx_call(test)
-    if approx is not None:
-        eps, kind = _approx_epsilon(approx, text)
+    # `assert not x == approx(y)` is read by the `not` branch below, which
+    # negates what its operand states (#284).
+    if approx is not None and not (isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not)):
+        # The comparison the call sits in states the polarity, as for a plain
+        # comparison: `x != approx(y)` asserts that the values differ. It read
+        # as positive, so `==` -> `!=` was no change at all (#284). A negated
+        # approximate comparison passes when the values are far apart, so its
+        # tolerance orders the other way and is not recorded, as in JavaScript.
+        positive = not (isinstance(test, ast.Compare) and len(test.ops) == 1
+                        and isinstance(test.ops[0], (ast.NotEq, ast.IsNot, ast.NotIn)))
+        eps, kind = _approx_epsilon(approx, text) if positive else (None, None)
         # The argument of the approx call is the expected value; recording it
         # puts `approx(105.0)` -> `approx(100.0)` in front of
         # EXPECTED_VALUE_CHANGED. Strength is APPROX on both sides, so the
@@ -829,6 +838,7 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             right_value=_literal_value(expected, conversions=_conversions(text)) if expected is not None else None,
             epsilon=eps,
             epsilon_kind=kind,
+            positive=positive,
             unevaluated_expected=_unevaluated(expected, text),
         )
     hand = _hand_rolled_comparison(test, text, "compare_ord", S.BOUND)
@@ -1505,7 +1515,10 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             and _dotted(subject_node.func) == "len"
         ):
             form, level = "type_shape", S.TYPE_SHAPE
-    if form == "approx":
+    # assertNotAlmostEqual passes when the values are far apart, so its
+    # tolerance orders the other way and is not recorded, as a negated
+    # `approx` is not (#284).
+    if form == "approx" and positive:
         for kw in node.keywords:
             if kw.arg in ("places", "delta"):
                 epsilon = text.seg(kw.value)

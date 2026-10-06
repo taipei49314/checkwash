@@ -217,12 +217,15 @@ digits, as in JavaScript (#196 190.3). unittest passes `places=p` when
 relative tolerance (`rel=`, `pytest.approx`'s default) states no absolute
 bound, so a bound rewritten into one is still compared as new slack, and so
 is a pair with several tolerances at once. A negated comparison
-(`assertNotAlmostEqual`, a negated `approx`) passes when the values are far
-apart, so its tolerance orders the other way, and checkwash still compares
-it in the positive direction
+(`assertNotAlmostEqual`, `!=` or `not` around `approx`) passes when the
+values are far apart, so its tolerance orders the other way: it records no
+tolerance, as in JavaScript, and a change of it is unknown rather than read
+backwards. `== approx(x)` -> `!= approx(x)` is the polarity inversion that
+`== 78.75` -> `!= 78.75` is
 ([#284](https://github.com/taipei49314/checkwash/issues/284)). The source tests
 are in
-[`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py).
+[`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py)
+and [`tests/test_issue284_negated_approx.py`](../tests/test_issue284_negated_approx.py).
 
 ### Python tolerance calls
 
@@ -284,14 +287,15 @@ subject by one that cannot be read, such as
 
 Not read: a negated call (`assert not math.isclose(...)`, `assertFalse(...)`),
 which passes when the values are far apart, so its tolerance orders the other
-way and is not recorded, as in JavaScript (#284 does the same for
-`pytest.approx`); other numpy and torch helpers (`assert_approx_equal`'s
-significant digits, `assert_array_less`, `assert_array_max_ulp`, torch's
-deprecated `assert_allclose`); a predicate inside a comparison or a boolean
-operator (`assert math.isclose(a, b) == True`,
-`assert isclose(a, b) and ok`); a name bound to numpy by anything but an
-import or `pytest.importorskip`; and an assertion call in a fixture or in a
-helper another file defines, which lend the test their bare `assert`s only
+way and is not recorded, as in JavaScript and, since #284, for a negated
+`pytest.approx` and `assertNotAlmostEqual`; other numpy and torch helpers
+(`assert_approx_equal`'s significant digits, `assert_array_less`,
+`assert_array_max_ulp`, torch's deprecated `assert_allclose`); a predicate
+inside a comparison or a boolean operator
+(`assert math.isclose(a, b) == True`, `assert isclose(a, b) and ok`); a name
+bound to numpy by anything but an import or `pytest.importorskip`; and an
+assertion call in a fixture or in a helper another file defines, which lend
+the test their bare `assert`s only
 ([#286](https://github.com/taipei49314/checkwash/issues/286)). A call inside
 `pytest.raises(AssertionError)` is read as positive, as unittest's assertion
 methods are. A `decimal` rewritten into `assert_allclose`'s `rtol` and `atol`,
