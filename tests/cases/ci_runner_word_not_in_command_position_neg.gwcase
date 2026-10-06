@@ -1,0 +1,34 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 216
+title: `if: false` on steps that print, install or add a runner disables no suite
+origin: issue #216, shared with #196 191.5: `echo "run mocha"`, `npm i -D mocha` and `bun add tap` run no runner, so none of these steps is a runner site and disabling them stays a warn
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "run mocha before merging" >> $GITHUB_STEP_SUMMARY
+      - run: npm i -D mocha
+      - run: bun add tap
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "run mocha before merging" >> $GITHUB_STEP_SUMMARY
+        if: false
+      - run: npm i -D mocha
+        if: false
+      - run: bun add tap
+        if: false
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

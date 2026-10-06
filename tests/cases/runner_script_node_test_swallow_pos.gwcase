@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 106
+rule: ASSERT_WEAKENED
+issue: 216
+title: a shell script whose only runner is `node --test` swallows it beside a weakened assertion
+origin: issue #216 R1, row 87's double effect. `node --test` held no runner token, so scripts/test.sh stayed production: its `|| true` went unread and it bought the opaque exemption that held the weakened assertion at warn. v0.6.0 passes it. tests/test_issue216_runner_vocabulary.py pins the other nine runners the same way
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+node --test
+=== after: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+node --test || true
+=== before: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

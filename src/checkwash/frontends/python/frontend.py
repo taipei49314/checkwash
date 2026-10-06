@@ -13,12 +13,13 @@ import hashlib
 import math
 import operator
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.frontends.python.setup_skip_controls import (
+    BODY_MARKERS,
     ConftestLevel,
     SetupScope,
     _conjunction,
@@ -30,12 +31,16 @@ from checkwash.frontends.python.setup_skip_controls import (
     setup_outcomes,
 )
 from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
+from checkwash.frontends.python.class_attributes import NONE as CLASS_NONE
+from checkwash.frontends.python.class_attributes import OBJECT as CLASS_OBJECT
+from checkwash.frontends.python.class_attributes import ClassAttributes, ClassValue, receivers, substitute
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
+from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import Assertion, Handler, Marker, ParamTable, UnitSide, normalize_text
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
@@ -1783,7 +1788,7 @@ def _swallows(handler: ast.ExceptHandler) -> bool:
 
 
 def _unreachable_ids(
-    func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None, outcome=None
+    func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None, outcome=None, attrs=None
 ) -> set[int]:
     """Node ids under statements that can never execute.
 
@@ -1793,9 +1798,21 @@ def _unreachable_ids(
     `outcome` reads as a native skip or xfail is not one: it skips the test as
     `pytest.skip()` does, its marker reports that, and the assertions after
     it are still the test's (#220).
+
+    `attrs` resolves the class attributes a method's guards read through its
+    receiver (`ClassAttributes.env`, #254): `if self.item_class is None:` is
+    dead code for a class whose body sets `item_class = list`.
     """
     dead: set[int] = set()
     resolved_guards = None
+    names: frozenset[str] | None = None if attrs is not None else frozenset()
+
+    def truth_of(test: ast.AST) -> bool | None:
+        # The receiver is found only once a guard needs it: most units have none.
+        nonlocal names
+        if names is None:
+            names = receivers(func)
+        return _static_truth(substitute(test, attrs, names))
 
     def kill(node: ast.AST) -> None:
         for sub in ast.walk(node):
@@ -1823,8 +1840,8 @@ def _unreachable_ids(
                 # Most tests have no branch. Resolve bindings only when the
                 # reachability walk needs a guard, using the same whole scope.
                 if resolved_guards is None:
-                    resolved_guards = guard_truths(func, fixtures or {}, _static_truth)
-                truth = resolved_guards.get(id(stmt), _static_truth(stmt.test))
+                    resolved_guards = guard_truths(func, fixtures or {}, truth_of)
+                truth = resolved_guards.get(id(stmt), truth_of(stmt.test))
                 if truth is False:
                     for inner in stmt.body:
                         kill(inner)
@@ -1887,7 +1904,26 @@ def _static_truth(node: ast.AST) -> bool | None:
     `if False and x:` were all treated as live code, so a one-word edit parked
     an assertion where checkwash still believed it ran — reopening bypass #29
     (reader audit 2026-08-02).
+
+    A class attribute the class bodies resolve (`ClassValue`, #254) is
+    compared with `None` by `is` and `is not`: `None` is one object in every
+    interpreter, so these answers do not depend on interning, as `is` between
+    other literals would. `None` itself and a class or a function
+    (`CLASS_OBJECT`) are also read as truth values and by `==` and `!=`; an
+    imported name is not, since what it holds is not in this file.
     """
+    if isinstance(node, ClassValue):
+        return {CLASS_NONE: False, CLASS_OBJECT: True}.get(node.kind)
+    if (isinstance(node, ast.Compare) and len(node.ops) == 1
+            and isinstance(node.ops[0], (ast.Is, ast.IsNot, ast.Eq, ast.NotEq))):
+        left, right = node.left, node.comparators[0]
+        value, other = (left, right) if isinstance(left, ClassValue) else (right, left)
+        if isinstance(value, ClassValue) and isinstance(other, ast.Constant) and other.value is None:
+            identity = isinstance(node.ops[0], (ast.Is, ast.IsNot))
+            if identity or value.kind in (CLASS_NONE, CLASS_OBJECT):
+                is_none = value.kind == CLASS_NONE
+                return is_none if isinstance(node.ops[0], (ast.Is, ast.Eq)) else not is_none
+            return None
     if _is_literal(node):
         return _truthy_literal(node)
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
@@ -2557,6 +2593,7 @@ def _collect_unit(
     outcome_bindings: dict[str, str | None] | None = None,
     method: bool = False,
     outcome_roots: frozenset[str] = frozenset(),
+    attrs=None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -2587,8 +2624,9 @@ def _collect_unit(
             local_names = body_bindings(func, module_names, method=method)
         return body_outcome(node, local_names)
 
-    dead = _unreachable_ids(func, fixtures, lambda stmt: outcome_of(stmt) is not None)
+    dead = _unreachable_ids(func, fixtures, lambda stmt: outcome_of(stmt) is not None, attrs)
     guards = _skip_call_guards(func, text)
+    receiver_names: frozenset[str] | None = None
     _unparse_memo: dict[int, str] = {}
     _refs_memo: dict[int, tuple[str, ...]] = {}
     _flags: dict[str, bool] = {}
@@ -2636,7 +2674,17 @@ def _collect_unit(
             skip = outcome_of(node)
             if skip is not None:
                 seg = text.seg(node) or skip
-                markers.append(Marker(name=skip, text=seg, span=off.span(node), guard=guards.get(id(node))))
+                guard = guards.get(id(node))
+                if guard is not None and attrs is not None:
+                    # A guard that holds under the class's attributes is
+                    # no condition: the skip reads as unconditional, as
+                    # a setup callback's does (#254).
+                    if receiver_names is None:
+                        receiver_names = receivers(func)
+                    parsed = parse_expr(guard)
+                    if parsed is not None and _static_truth(substitute(parsed, attrs, receiver_names)) is True:
+                        guard = None
+                markers.append(Marker(name=skip, text=seg, span=off.span(node), guard=guard))
         # An assert written inside a nested `def` that nothing calls is present
         # in the source and absent from the run. Counting it as live is what
         # let `verify()` be defined and never invoked (tamper 020) — and it is
@@ -3352,19 +3400,38 @@ def parse_python(
         or any(fixture[2] is not None for level in chain for fixture in level.fixtures.values())
     ):
         setup_scopes = (SetupScope(tree.body, module_bindings(tree), condition=condition),)
-    class_setup: dict[int, SetupScope] = {}
+    class_setup: dict[tuple[int, int], SetupScope] = {}
+    # The class attributes a guard reads through `self` (#254): only a test
+    # module with a class has any.
+    class_attrs = (
+        ClassAttributes(tree)
+        if collect_tests and not conftest and any(isinstance(node, ast.ClassDef) for node in tree.body)
+        else None
+    )
 
-    def nested_setup(scopes: tuple[SetupScope, ...], *classes: ast.ClassDef) -> tuple[SetupScope, ...]:
-        """`scopes` extended by these class bodies, innermost last."""
+    def attrs_of(cls: ast.ClassDef | None):
+        return class_attrs.env(cls) if class_attrs is not None and cls is not None else None
+
+    def nested_setup(
+        scopes: tuple[SetupScope, ...], *classes: ast.ClassDef, instance: ast.ClassDef | None = None
+    ) -> tuple[SetupScope, ...]:
+        """`scopes` extended by these class bodies, innermost last.
+
+        `instance` is the class whose instance runs the setup, when it is not
+        the class that defines it: its class attributes are the ones a
+        guard reads (#254).
+        """
         if not scopes:
             return scopes
         for cls in classes:
-            if id(cls) not in class_setup:
-                class_setup[id(cls)] = SetupScope(
+            owner = instance if instance is not None else cls
+            key = (id(cls), id(owner))
+            if key not in class_setup:
+                class_setup[key] = SetupScope(
                     cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list, bases=cls.bases,
-                    condition=condition,
+                    condition=condition, attrs=attrs_of(owner),
                 )
-            scopes = scopes + (class_setup[id(cls)],)
+            scopes = scopes + (class_setup[key],)
         return scopes
 
     def setup_markers(func, scopes: tuple[SetupScope, ...]) -> list[Marker]:
@@ -3395,6 +3462,47 @@ def parse_python(
             cls.body, text, off, aliases_of(cls)
         )
 
+    def credit_base(unit: ParsedUnit, func, cls: ast.ClassDef) -> ParsedUnit:
+        """Ruling 254.Q2: an abstract base's test that a same-file subclass runs.
+
+        The unit's only disabling markers are skips in its body or setup, and
+        each one's guard holds under the class's own attributes. A same-file
+        subclass that runs the test unchanged (`crediting_subclasses`), and
+        under whose attributes neither the body nor the setup skips, runs it,
+        so the base's unit keeps no marker and stays live. A marker that a
+        subclass would share (a decorator, a class or module mark) leaves
+        the unit as it is.
+        """
+        markers = unit.side.markers
+        # A skip whose guard holds under the class's attributes is recorded
+        # with no guard (`_collect_unit`, `setup_outcome`); one that still
+        # has a guard may not hold on the base, and a decorator, class or
+        # module mark (named for the mark, or `module.*`) is one a subclass
+        # shares.
+        if class_attrs is None or not markers or any(
+            not (m.name in BODY_MARKERS or m.name.startswith("setup.")) or m.guard is not None for m in markers
+        ):
+            return unit
+        # Every skip the body spells, called or raised, read as the unit
+        # reads it (#220): one dead under the base's attributes may still run
+        # under a subclass's.
+        local = body_bindings(func, body_names, method=True)
+        skips = {
+            id(node) for node in ast.walk(func)
+            if isinstance(node, (ast.Call, ast.Raise)) and body_outcome(node, local) is not None
+        }
+        for subclass in class_attrs.crediting_subclasses(cls, func.name):
+            dead = _unreachable_ids(func, branch_fixtures, lambda stmt: id(stmt) in skips, attrs_of(subclass))
+            if any(node not in dead for node in skips):
+                continue
+            if setup_markers(func, nested_setup(setup_scopes, cls, instance=subclass)):
+                continue
+            return ParsedUnit(
+                qualname=unit.qualname, span=unit.span,
+                side=replace(unit.side, markers=[]), shingles=unit.shingles,
+            )
+        return unit
+
     def visit(
         node: ast.AST,
         prefix: str,
@@ -3402,6 +3510,7 @@ def parse_python(
         collectible: bool,
         scopes: tuple[SetupScope, ...] = (),
         aliases: dict[str, list[ast.expr]] | None = None,
+        owner: ast.ClassDef | None = None,
     ) -> None:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -3410,13 +3519,13 @@ def parse_python(
                     symbols[qual] = _fingerprint(child)
                     symbol_calls[qual] = _callees(child)
                 if collect_tests and collectible and _is_test_name(child.name):
-                    units.append(
-                        _collect_unit(
-                            child, qual, text, off, inherited + setup_markers(child, scopes),
-                            module_scopes, file_caches, branch_fixtures, doctests, aliases,
-                            outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
-                        )
+                    unit = _collect_unit(
+                        child, qual, text, off, inherited + setup_markers(child, scopes),
+                        module_scopes, file_caches, branch_fixtures, doctests, aliases,
+                        outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
+                        attrs=attrs_of(owner),
                     )
+                    units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
                 visit(child, qual + ".", inherited, False)
             elif isinstance(child, ast.ClassDef):
@@ -3440,6 +3549,7 @@ def parse_python(
                     class_collectible,
                     nested_setup(scopes, child) if class_collectible else (),
                     aliases_of(child) if collect_tests else None,
+                    child,
                 )
             elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):
                 # Module- and class-level constants are behaviour too. They
@@ -3459,9 +3569,9 @@ def parse_python(
             units.append(_collect_unit(
                 method, f"{cls.name}.{method.name}", text, off,
                 module_markers + class_marks(owner) + class_marks(cls)
-                + setup_markers(method, nested_setup(setup_scopes, owner, cls)),
+                + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls)),
                 module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
-                outcome_bindings=body_names, method=True, outcome_roots=body_roots,
+                outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]

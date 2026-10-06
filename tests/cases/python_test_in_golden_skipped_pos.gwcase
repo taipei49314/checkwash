@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+title: a skip added to a pytest file kept under tests/golden/ is judged as a test beside its snapshot role
+origin: issue #219 E2 (ruled 219.Q1 and 219.Q2, 2026-10-04) - v0.6.0 reported only the snapshot rule's EXPECTED_VALUE_CHANGED high; the same edit in tests/test_x.py reports TEST_DISABLED high
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/golden/test_x.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+
+
+def test_other():
+    assert total() == 78.75
+=== after: tests/golden/test_x.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+
+
+@pytest.mark.skip(reason="flaky")
+def test_other():
+    assert total() == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_other"}, {"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/golden/test_x.py"}]

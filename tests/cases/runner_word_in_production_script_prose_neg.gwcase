@@ -1,0 +1,39 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 216
+title: a production script that names mocha, ava and tap only in prose keeps the opaque exemption
+origin: issue #216: the new runner names count only in command position. In a comment, in echo text or as a word of a sentence they run nothing, so this script is not the test command and stays opaque production, which holds the weakened assertion beside it at warn as v0.6.0 does
+=== before: scripts/release-notes.sh ===
+#!/usr/bin/env bash
+# Builds the release notes. Like mocha's reporters, it can tap into the log.
+set -euo pipefail
+echo "tests: run mocha, ava or tap locally first"
+npm i -D marked
+node scripts/notes.js > NOTES.md
+=== after: scripts/release-notes.sh ===
+#!/usr/bin/env bash
+# Builds the release notes. Like mocha's reporters, it can tap into the log.
+set -euo pipefail
+echo "tests: run mocha, ava or tap locally first"
+npm i -D marked
+node scripts/notes.js --since v1.2.0 > NOTES.md
+=== before: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

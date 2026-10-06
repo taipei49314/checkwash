@@ -222,6 +222,9 @@ _CI_NARROWING_TOKENS = (
     "norecursedirs",
     "collect_ignore",
     "-p no:",
+    # node's test runner runs only the tests marked `only` under this flag,
+    # and every other test in every file stops (#196 187.1, ruled with #216).
+    "--test-only",
 )
 
 _CI_WEAKENING_TOKENS = _CI_SWALLOW_TOKENS + _CI_NARROWING_TOKENS
@@ -241,6 +244,28 @@ def _added_lines(before: bytes | None, after: bytes | None) -> list[str]:
         else:
             lines.append(line)
     return lines
+
+def _runs_test_command(data: bytes | None) -> bool:
+    """Does this command content run a test suite? (#216)
+
+    The content of a runner-shaped script, one manifest script value, or a
+    script one hop away. Every runner token counts anywhere in it, as
+    `_runs_tests` reads a CI file; the runners #216 adds (`node --test`,
+    `mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch test`, `just
+    test`, `poe test`, `pdm test`) count only in command position
+    (`runner_command.invokes_positional_runner`), never as words over
+    arbitrary content. The opaque-exemption denial (`_mentions_test_runner`)
+    keeps reading `_runs_tests` alone, as the ruling has it.
+    """
+    if _runs_tests(data):
+        return True
+    if not data:
+        return False
+    # Imported locally: runner_command imports this module's tokens.
+    from checkwash.runner_command import invokes_positional_runner
+
+    return invokes_positional_runner(data.decode("utf-8", errors="replace"))
+
 
 def _runs_tests(data: bytes | None) -> bool:
     """Did this CI file actually run a test suite?
@@ -422,7 +447,7 @@ def _test_commands(path: str, data: bytes | None) -> dict[str, str] | None:
         for name, cmd in commands.items()
         if name == "test"
         or name.startswith("test:")
-        or _runs_tests(cmd.encode("utf-8", errors="replace"))
+        or _runs_test_command(cmd.encode("utf-8", errors="replace"))
     }
     hops: set[str] = set()
     for name in members:
@@ -562,11 +587,11 @@ def _one_hop_runners(
             continue
         if not _runner_shape(path, change.before, change.after):
             continue
-        if _runs_tests(change.before) or _runs_tests(change.after):
+        if _runs_test_command(change.before) or _runs_test_command(change.after):
             continue  # already a runner script on its own content
         for side in (change.after, change.before):
             for ref in _referenced_scripts(side):
-                if _runs_tests(content(ref)):
+                if _runs_test_command(content(ref)):
                     promoted.add(path)
                     break
             if path in promoted:
@@ -590,5 +615,5 @@ def _is_runner_script(path: str, before: bytes | None, after: bytes | None) -> b
     """
     # `before` too: a script that stops running the suite in this very diff
     # is the interesting case, not an excluded one.
-    return _runner_shape(path, before, after) and (_runs_tests(before) or _runs_tests(after))
+    return _runner_shape(path, before, after) and (_runs_test_command(before) or _runs_test_command(after))
 

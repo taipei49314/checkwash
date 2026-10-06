@@ -67,7 +67,7 @@ def test_recognised_runners_and_one_hop_join_in_sorted_order():
 
 def test_the_hop_is_exactly_one_and_needs_a_script_runner():
     assert _test_commands("package.json", _pkg({
-        "test": "npm run a", "a": "npm run b", "b": "node --test",
+        "test": "npm run a", "a": "npm run b", "b": "node scripts/report.js",
     })) == {"a": "npm run b", "test": "npm run a"}
     assert _test_commands("package.json", _pkg({
         "test": "node --test build", "build": "tsc",

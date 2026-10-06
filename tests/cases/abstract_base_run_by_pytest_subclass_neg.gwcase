@@ -1,0 +1,30 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a pytest abstract test base skips itself in the test body, and a same-file Test* subclass that only sets the attribute runs the test
+origin: #254, ruling 254.Q2 - the pytest spelling of abstract_base_run_by_subclass_neg; the subclass's inherited unit and the base's both stay live; v0.6.0 blocks it at high ("disabling marker added (pytest.skip)")
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+class TestTotal:
+    def test_total(self):
+        assert total([30, 48.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+class TestTotal:
+    total_fn = None
+
+    def test_total(self):
+        if self.total_fn is None:
+            pytest.skip("abstract base")
+        assert self.total_fn([30, 48.75]) == 78.75
+
+
+class TestBillingTotal(TestTotal):
+    total_fn = staticmethod(total)
+=== expect ===
+[]
