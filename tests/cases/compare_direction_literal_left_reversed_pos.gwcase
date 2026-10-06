@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 121
+rule: ASSERT_WEAKENED
+title: D3: assert 80 > total() -> 80 < total(), the literal on the left, reverses the bound
+origin: #224
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert 80 > total()
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert 80 < total()
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

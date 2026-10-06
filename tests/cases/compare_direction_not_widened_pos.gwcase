@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: E2: assert total() < 80 -> not total() >= 80 also admits NaN: a widened predicate, not the opposite proven
+origin: #224
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() < 80
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert not total() >= 80
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -29,8 +29,8 @@ A bound whose direction reversed contradicts the old one, except where the
 hand-rolled truthy spelling `assert.ok(Math.abs(d) > bound)` left a bound
 unread: that replacement cannot be verified (#196 189.3).
 
-Only the JavaScript frontend records keys in this round. The Python
-direction key is its own round (196.followup.python-compare-direction).
+The JavaScript frontend records every key; the Python frontend records the
+bound keys (#224, 196.followup.python-compare-direction).
 """
 
 from __future__ import annotations
