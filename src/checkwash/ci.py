@@ -20,6 +20,7 @@ from checkwash.roles import (
     _is_runner_script,
     _manifest_unreadable,
     _runner_shape,
+    _runs_test_command,
     _runs_tests,
     _test_command_manifest,
     _test_commands_changed,
@@ -237,13 +238,13 @@ def _scan_ci_weakening(
             any(token in lowered for token in dialect)
         ) or (
             bool(_NOOP_BRANCH.search(lowered))
-            and any(tok in lowered for tok in _TEST_RUNNER_TOKENS)
+            and _runs_test_command(line.encode("utf-8", errors="replace"))
         )
         narrowed = existed and any(
             token in lowered and token not in ci_base.lower() for token in _CI_NARROWING_TOKENS
         )
         if swallowed or narrowed or (
-            _make_ignores_error(line) and any(t in lowered for t in _TEST_RUNNER_TOKENS)
+            _make_ignores_error(line) and _runs_test_command(line.encode("utf-8", errors="replace"))
         ):
             g.ci_weakening_lines.append((path, line.strip()[:200]))
     # Keep the established evidence/fingerprint when the legacy scanner
@@ -288,9 +289,10 @@ def _scan_ci_weakening(
         g.ci_weakening_lines.append(
             (path, "errorlevel is no longer checked: a failing command no longer fails the script")
         )
-    if _runs_tests(before) and not _runs_tests(after):
+    if _runs_test_command(before) and not _runs_test_command(after):
         # Deleting the invocation is the same gate removal as weakening it,
         # and quieter: the pipeline still calls a script that still exits 0.
-        # Swapping one runner for another (pytest -> nox) keeps the token and
-        # earns nothing, which is the consolidation this must not punish.
+        # Swapping one runner for another (pytest -> nox, or to `node
+        # --test`, which runs only in command position: #216) keeps a runner
+        # and earns nothing, which is the consolidation this must not punish.
         g.ci_weakening_lines.append((path, "the test suite is no longer invoked by this script"))

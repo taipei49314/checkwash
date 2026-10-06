@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 118
+rule: TEST_DISABLED
+issue: 220
+title: `raise unittest.SkipTest(...)` in a test body is a skip, not removed assertions
+origin: issue #220 B5. v0.6.0 blocks this as ASSERT_REMOVED "assertion removed", a false reason: the assertion is still there and pytest 9.1.1 reports `1 skipped`
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+def test_total():
+    raise unittest.SkipTest("flaky")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
