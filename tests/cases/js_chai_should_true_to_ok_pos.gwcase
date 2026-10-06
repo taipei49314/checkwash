@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 111
+rule: ASSERT_WEAKENED
+title: chai should-style .should.be.true -> .should.be.ok widens the assertion
+origin: issue #215 SH4 — v0.6.0 passed this diff with zero findings and no coverage notice
+=== before: test/billing.spec.js ===
+import { should } from "chai";
+should();
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    order.paid.should.be.true;
+  });
+});
+=== after: test/billing.spec.js ===
+import { should } from "chai";
+should();
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    order.paid.should.be.ok;
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
