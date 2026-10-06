@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 220
+title: a raised SkipTest under a platform guard is held by its compat gate, as `pytest.skip()` is
+origin: issue #220 D2. v0.6.0 passes this with zero findings; now TEST_DISABLED at warn with COMPAT_GATE, the same as D1
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import sys
+import unittest
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import sys
+import unittest
+
+from app.billing import total
+
+
+def test_total():
+    if sys.platform == "win32":
+        raise unittest.SkipTest("posix only")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

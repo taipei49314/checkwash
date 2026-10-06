@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 220
+title: a `skip` name the test rebinds is not pytest's skip
+origin: issue #220 negative. the test's own binding shadows the import, as for a setup callback (tests/test_setup_phase_skips.py)
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+from pytest import skip
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from pytest import skip
+
+from app.billing import total
+
+
+def test_total():
+    skip = print; skip("flaky")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[]
