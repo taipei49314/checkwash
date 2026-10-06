@@ -238,3 +238,11 @@ reason = "Issues #208/#209, ruling 208.Q1 (branch fix/208-209-per-marker-gates):
 author = "taipei49314"
 created = "2026-10-04"
 expires = "2026-11-03"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_abs_decomposition.py/test_python_other_shapes_are_not_decomposed/204df6185a8d"
+rule = "TEST_DISABLED"
+reason = "Issue #224 (ruling 196.followup.python-compare-direction, 2026-10-03; branch fix/224-python-compare-direction): the two hand-rolled lower-bound cases move out of this list of shapes that are not decomposed into test_python_a_lower_bound_is_read_for_its_direction, because the ruling gives Python's comparisons JavaScript's bound key and a lower bound is now read for its direction, as JavaScript reads one"
+author = "taipei49314"
+created = "2026-10-06"
+expires = "2026-11-05"
