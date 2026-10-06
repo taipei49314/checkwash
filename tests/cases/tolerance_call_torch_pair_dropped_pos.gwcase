@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 120
+rule: ASSERT_WEAKENED
+title: 222.Q3: an explicit torch pair dropped for the dtype default is a known tolerance replaced by one checkwash cannot read
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    torch.testing.assert_close(total(), 78.75, rtol=1e-5, atol=1e-8)
+=== after: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    torch.testing.assert_close(total(), 78.75)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

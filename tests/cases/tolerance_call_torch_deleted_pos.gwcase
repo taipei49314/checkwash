@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 120
+rule: ASSERT_REMOVED
+title: T2: deleting torch.testing.assert_close removes an assertion
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    torch.testing.assert_close(total(), 78.75)
+=== after: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    total()
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_DISABLED
+title: deleting one of two identical copies is dedup when pytest still collects the other in tests/golden/
+origin: issue #219 (ruled 219.Q1, 2026-10-04) - the head search for a surviving copy read only test-role paths, so a copy in tests/golden/ earned no DUPLICATE_REMAINS credit and v0.6.0 blocked with TEST_DISABLED high; pytest 9.1.1 collects and runs the copy
+=== head: tests/golden/test_confirm.py ===
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+=== before: tests/test_utils.py ===
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+
+
+def test_untouched():
+    assert confirm is not None
+=== after: tests/test_utils.py ===
+from app import confirm
+
+
+def test_untouched():
+    assert confirm is not None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["DUPLICATE_REMAINS"], "unit": "test_confirm_repeat"}]

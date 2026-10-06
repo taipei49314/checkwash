@@ -175,8 +175,8 @@ def test_earlier_roles_keep_their_paths_and_their_test_obligations(path, role, f
 def test_moving_a_test_into_a_stored_expectation_directory_keeps_it_a_test():
     # Jest still collects the destination, and there it is judged as a test
     # beside its snapshot role, so the move removes nothing (#197 Q2). A
-    # Python test moving into tests/golden/ is still judged as removal: that
-    # twin is a separate round (#197 Q4).
+    # Python test moving into tests/golden/ does the same since its twin
+    # round (#219).
     old, new = "src/billing.test.js", "src/__tests__/__snapshots__/billing.js"
     ir, findings, verdict = _analyze(FileChange(new, "renamed", EXACT, EXACT, old_path=old))
     assert (findings, verdict) == ([], "pass")

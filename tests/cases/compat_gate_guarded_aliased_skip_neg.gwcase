@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 220
+title: an aliased `pt.skip()` under a platform guard is held by its compat gate
+origin: issue #220 D3. v0.6.0 passes this with zero findings; now TEST_DISABLED at warn with COMPAT_GATE, the same as D1
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import sys
+import pytest as pt
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import sys
+import pytest as pt
+
+from app.billing import total
+
+
+def test_total():
+    if sys.platform == "win32":
+        pt.skip("posix only")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

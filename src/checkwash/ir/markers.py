@@ -36,8 +36,15 @@ def bare_names(node: ast.AST) -> set[str]:
 
 
 # Imperative body skips whose recorded `if` guard is their condition, as D6
-# reads them (compat._GATE_CALLS without the conftest control).
-GUARDED_SKIP_CALLS = frozenset({"pytest.skip", "pytest.xfail", "self.skipTest"})
+# reads them (compat._GATE_CALLS without the conftest control): each native
+# skip or xfail a test body calls or raises, by the one name the frontend
+# gives its object (`setup_skip_controls.BODY_MARKERS`, #220), save
+# `importorskip`, whose condition is what is installed.
+# tests/test_issue220_body_skip_aliases.py holds the two lists together.
+GUARDED_SKIP_CALLS = frozenset({
+    "pytest.skip", "pytest.xfail", "self.skipTest",
+    "pytest.skip.Exception", "pytest.xfail.Exception", "unittest.SkipTest",
+})
 
 
 # The pytest marks a `pytestmark` binding can carry a guard for: its path

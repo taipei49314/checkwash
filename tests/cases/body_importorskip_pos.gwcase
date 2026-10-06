@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 220
+title: a body that starts calling `pytest.importorskip` no longer runs where the module is missing
+origin: issue #220 B9. 220.Q1 keeps it TEST_DISABLED, as v0.6.0 reports it: the round pins it, as no fixture did
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    pytest.importorskip("redis")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

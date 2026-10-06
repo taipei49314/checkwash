@@ -1,0 +1,30 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: math.isclose's abs_tol 1e3 -> 1e-9 tightens the check: no finding
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    assert math.isclose(total(), 78.75, abs_tol=1e3)
+=== after: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    assert math.isclose(total(), 78.75, abs_tol=1e-9)
+=== expect ===
+[]

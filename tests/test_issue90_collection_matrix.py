@@ -1,6 +1,7 @@
 """Resolved collection configuration and override spellings from issue #90."""
 import datetime
 import json
+import shlex
 
 import pytest
 
@@ -10,13 +11,17 @@ from checkwash.contract import Contract
 from checkwash.engine import analyze
 
 
-CARRIERS = ["pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml"]
+CARRIERS = ["pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml", ".pytest.ini", "pytest.toml", ".pytest.toml"]
 TESTS = {"tests/test_add.py": b"def test_add():\n    assert 1 == 2\n",
          "tests/test_padding.py": b"def test_padding():\n    assert True\n",
          "checks/test_check.py": b"def test_check():\n    assert True\n"}
 
 
 def source(path, settings):
+    if path.endswith("pytest.toml"):
+        # pytest 9 reads a list setting here only as an array of words (#221).
+        return ("[pytest]\n" + "".join(f"{key} = {json.dumps(shlex.split(value))}\n"
+                                       for key, value in settings.items())).encode()
     section = "[tool.pytest.ini_options]" if path == "pyproject.toml" else "[tool:pytest]" if path == "setup.cfg" else "[pytest]"
     return (section + "\n" + "".join(f"{key} = {json.dumps(value) if path == 'pyproject.toml' else value}\n" for key, value in settings.items())).encode()
 

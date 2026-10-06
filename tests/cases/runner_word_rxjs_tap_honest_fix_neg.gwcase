@@ -1,0 +1,41 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 216
+title: an honest fix to a module that uses rxjs `tap`, with the expected value updated
+origin: issue #216's prototype counterexample: matching `tap` as a word over file content turned this diff's repair evidence into NO_PROD_CHANGE_IN_DIFF, a false reason, since the diff does change production. A runner #216 adds counts only in command position
+=== before: src/billing.js ===
+import { tap } from "rxjs/operators";
+
+export const audit = tap((total) => console.debug("total", total));
+
+export function invoiceTotal(items) {
+  return items.reduce((sum, item) => sum + item.price * item.qty, 0);
+}
+=== after: src/billing.js ===
+import { tap } from "rxjs/operators";
+
+export const audit = tap((total) => console.debug("total", total));
+
+export function invoiceTotal(items) {
+  return items.reduce((sum, item) => sum + item.price * item.qty, 0) * 1.05;
+}
+=== before: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 75);
+});
+=== after: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

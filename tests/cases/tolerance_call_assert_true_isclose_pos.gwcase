@@ -1,0 +1,26 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: I5 (222.Q2): assertTrue(math.isclose(...)) is read as the call it wraps
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+import unittest
+
+from billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertTrue(math.isclose(total(), 78.75, abs_tol=1e-9))
+=== after: tests/test_billing.py ===
+import math
+import unittest
+
+from billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertTrue(math.isclose(total(), 78.75, abs_tol=1e3))
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

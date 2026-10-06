@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 119
+rule: TOLERANCE_LOOSENED
+title: assertAlmostEqual(energy(2.0), 19.62, places=7) -> delta=7 widens the bound from 5e-8 to 7: the two sevens are not one value left alone
+origin: #196 190.3 — a tolerance change took the new side's kind, so the old places read as a delta
+=== before: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, places=7)
+=== after: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, delta=7)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

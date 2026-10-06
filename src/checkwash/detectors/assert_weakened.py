@@ -48,25 +48,28 @@ _UPPER_BOUNDS = frozenset({"lt", "le"})
 
 
 def _tolerance_lost(path: str, b: Assertion, a: Assertion) -> str | None:
-    """The old tolerance, when a JS tolerance check no longer has a readable one.
+    """The old tolerance, when a tolerance check no longer has a readable one.
 
     A `toBeCloseTo` precision or a chai `closeTo` delta that is present but
     unreadable (`closeTo(x, delta())`) is unknown, and a known tolerance
     replaced by an unknown one is not the same tolerance (#196 190.4, #198).
     A hand-rolled bound (`Math.abs(d) < eps`) is the same evidence: one the
     frontend could read and now cannot, rewritten into a call or reached by
-    a write it does not evaluate, is unknown too (#196 189.1).
+    a write it does not evaluate, is unknown too (#196 189.1). In Python, a
+    tolerance call whose pair is torch's dtype default (222.Q3) or comes
+    through `*args` or `**kwargs` records none (#222); every other Python
+    approximate comparison records one, its default if nothing else.
     TOLERANCE_LOOSENED compares two known ones. Negated comparisons record
     no tolerance and are judged by their polarity.
     """
-    if (not path.lower().endswith(_JS_SUFFIXES) or not (b.positive and a.positive)
-            or b.epsilon is None or a.epsilon is not None):
+    if not (b.positive and a.positive) or b.epsilon is None or a.epsilon is not None:
         return None
     approximate = b.form == "approx" and a.form == "approx"
-    bounded = b.predicate in _UPPER_BOUNDS and a.predicate in _UPPER_BOUNDS
+    bounded = (path.lower().endswith(_JS_SUFFIXES)
+               and b.predicate in _UPPER_BOUNDS and a.predicate in _UPPER_BOUNDS)
     if not (approximate or bounded):
         return None
-    return b.epsilon if "=" in b.epsilon else f"places={b.epsilon}"
+    return b.epsilon if "=" in b.epsilon else f"{b.epsilon_kind or 'places'}={b.epsilon}"
 
 
 def _keyed_message(qualname: str, relation: str, b: Assertion, a: Assertion) -> str:

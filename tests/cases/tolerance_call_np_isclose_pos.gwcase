@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 120
+rule: TOLERANCE_LOOSENED
+title: N3: numpy.isclose's atol 1e-8 -> 1e3 widens the check
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    assert np.isclose(total(), 78.75, atol=1e-8)
+=== after: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    assert np.isclose(total(), 78.75, atol=1e3)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
