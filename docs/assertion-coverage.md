@@ -196,10 +196,15 @@ is recorded as written, as an `abs=` tolerance, the way `pytest.approx`
 records its own. A widened bound is `TOLERANCE_LOOSENED` and a tightened one
 is no finding; before 189.2 the bound was the comparison's expected value, so
 both were `EXPECTED_VALUE_CHANGED`. A file that binds `abs` itself (an import,
-a definition, an assignment or a parameter) gets no such reading, and neither
-does a lower bound, `abs(d) > eps`, which stays a plain comparison: Python
-records no bound direction, so a flip from `<` to `>` blocks as the centre
-rewritten into the bound rather than as a reversed direction (#224).
+a definition, an assignment or a parameter) gets no such reading. A lower
+bound, `abs(d) > eps`, `assertGreater(abs(d), eps)` or `assertTrue(abs(d) >
+eps)`, is read for its direction, as in JavaScript (#224): what the magnitude
+measures is its subject and a literal centre its expected value, it records
+no tolerance, and its bound's value is not compared (#289). So a flip from
+`<` to `>` is a bound direction reversed, `(< 0.01 -> > 0.01)`; before #224
+the lower bound was a plain comparison, so the flip blocked as the centre
+rewritten into the bound, and every change of its value, a tightening too,
+as an expected value rewritten.
 
 `assertAlmostEqual`'s `places` and `delta`, `pytest.approx`'s `abs=` and a
 hand-rolled bound each state an absolute bound, and two of them in different
@@ -411,8 +416,19 @@ lattice. An asymmetric matcher as the whole expected value of `toEqual` or
 `toStrictEqual` is the predicate it states, not an equality:
 `expect.anything()` is `!= null` (`is_nullish` negated, on the NON_NULL rung)
 and `expect.any(Ctor)` a type check (TYPE_SHAPE, no key), so `toBe(78.75)` ->
-`toEqual(expect.anything())` is a predicate widened (198.Q3). The Python
-frontend records no key in this round.
+`toEqual(expect.anything())` is a predicate widened (198.Q3).
+
+The Python frontend records the bound keys (#224): `<`, `<=`, `>` and `>=`
+with one comparator, read from the subject's side, so `80 > total()` is
+`total() < 80`; unittest's `assertLess`, `assertLessEqual`, `assertGreater`
+and `assertGreaterEqual`, with the same literal-side flip; and a hand-rolled
+`abs(d) < bound` or `abs(d) > bound` in a bare `assert`, an ordering method
+or `assertTrue`. The bound is recorded as one line of its source. So
+`assert total() < 80` -> `assert total() > 80` is a bound direction
+reversed, `< 80` -> `<= 80` a predicate widened, and `assertLess(total(),
+80)` -> `assert 80 > total()` the same predicate. A chained range
+(`0 < x < 60`), a comparison inside `assertTrue(...)`, and the equality,
+identity and membership operators record no key and keep the lattice.
 
 When both assertions of a pair carry a key on the same subject, ASSERT_WEAKENED
 compares the two predicates instead of their rungs, from key and polarity
