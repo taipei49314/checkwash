@@ -5557,3 +5557,84 @@ version string aside, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-108 (2026-10-06): a D10 survivor is read with the conftest files above it (#266)
+
+D10 credits a disappeared unit when an identical live copy of its body runs
+at head in a collectable test file the diff does not touch (THREATMODEL row
+58: "a skipped or edited survivor earns nothing"). The copy's liveness was
+read from its own file only. A copy that an always-skip conftest fixture
+skips counted as live, so deleting the running copy passed at info, while
+the same copy with a skip marker blocked. #223 had added the conftest chain
+for the modules a diff changes, as ruling 223.Q2 scoped it, and a survivor
+lies in a file the diff does not change.
+
+Rulings, 2026-10-06 (#266, adopted as recommended, "全部核准"):
+- **266.Q1:** a candidate survivor's conftest chain is read at head, as
+  #223 reads a changed module's head side, and the survivor is parsed with
+  it. A survivor that an always-skip conftest fixture reaches is not live
+  and earns nothing. The chain's reads keep #223's bounds.
+- **266.Q2:** D10's survivors only. Other readers of files the diff does
+  not change (the stand-in context, runtime subject shadows) do not judge
+  liveness through markers, and are not in this item.
+
+**As implemented:** `engine.py`'s survivor search parses each candidate
+with `chain=_conftest_chain(path, 1)`. That is the chain #223 builds for a
+changed module's head side: each `conftest.py` from the survivor's
+directory up to the repository root, nearest first, a file the diff changes
+read on its head side and any other from the strict snapshot, under #223's
+read bounds. A fixture the survivor reaches (requested by `usefixtures`, or
+`autouse`; a parameter is part of the signature, which the body hash holds)
+that always skips gives its unit a setup marker, and D2's liveness rule
+(every marker a D6 compat gate) then reads the survivor as not live.
+
+Readings the rulings leave to the implementation:
+
+1. **Without a strict snapshot**, as #223 reads it, no conftest level is
+   known: the chain is empty and the survivor reads as before. The CLI and
+   the Action always pass one.
+2. **A level that cannot be read or parsed ends the chain**, as for a
+   changed module (#223): what it defines is unknown, and it could
+   override any name beyond it.
+3. **A skip the fixture runs only under a compatibility condition**
+   (`if sys.platform == "win32": pytest.skip(...)`) leaves the survivor
+   live, as a `skipif` marker on it would (D6).
+
+**Tests and fixtures.**
+- **Tests:** 8 in `tests/test_issue266_survivor_conftest_chain.py`. Both
+  mutants of the round's code (the chain left out; the base side read for
+  it) fail them or the fixtures.
+- **Fixtures:**
+  - `duplicate_remains_conftest_skipped_copy_pos` (#266 U1, row 58): the
+    surviving copy requests an always-skip conftest fixture. v0.6.0 passes
+    the deletion of the running copy at info; it now blocks with
+    TEST_DISABLED high.
+  - `duplicate_remains_conftest_live_copy_neg` (#266 U2): the same
+    conftest, and a copy that requests nothing from it, still earns
+    DUPLICATE_REMAINS at info.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change.
+
+**Fingerprints.** None move.
+
+**Cost.**
+- **Targeted set:** every commit of #224's sweeps (its targeted set, the
+  standard set and D-088's sets, twelve histories) where a test unit's
+  disappearance was held at info, the only findings this round can
+  change: 98 commits, all readable. The same records as the base, byte
+  for byte (32 blocked). No credited survivor there is one that a conftest
+  fixture skips.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records as the base, byte for byte
+  (237 and 107 blocked).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported (`i198/T6`, undecided, pass on both
+engines). Every case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
