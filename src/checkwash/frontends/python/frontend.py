@@ -30,6 +30,13 @@ from checkwash.frontends.python.branch_constants import guard_truths, literal_fi
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
+from checkwash.frontends.python.tolerance_calls import (
+    find_predicate as _find_tolerance_predicate,
+    import_names as _tolerance_import_names,
+    statement_call as _tolerance_statement,
+    tolerance as _call_tolerance,
+    values as _tolerance_values,
+)
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
@@ -199,6 +206,7 @@ class _Offsets:
         # question about the whole file (`_shadows_abs`); asked lazily.
         self.tree: ast.AST | None = None
         self.abs_shadowed: bool | None = None
+        self.tolerance_names: dict[str, str | None] | None = None
 
     def _char_col(self, lineno: int, col: int) -> int:
         """Translate CPython's UTF-8 *byte* column into a character column.
@@ -513,6 +521,51 @@ def _shadows_abs(text) -> bool:
     return text.abs_shadowed
 
 
+def _tolerance_names(text) -> dict[str, str | None]:
+    """The names the file binds to math, numpy or torch (#222), worked out once per file.
+
+    Without a parsed module (an oracle helper's own offsets) only the plain
+    spellings (`math.isclose`, `numpy.isclose`) are read.
+    """
+    if getattr(text, "tolerance_names", None) is None:
+        names = _tolerance_import_names(getattr(text, "tree", None))
+        try:
+            text.tolerance_names = names
+        except AttributeError:
+            return names
+    return text.tolerance_names
+
+
+def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True) -> _Classified:
+    """A tolerance call (#222) as the approximate comparison it states.
+
+    Its tolerances and their defaults are recorded as `pytest.approx` records
+    its own, and the value it compares against is the expected value (222.Q1):
+    the literal one when only one of the two is a literal, as in
+    `assertEqual`, else the second. A negated call passes when the values are
+    far apart, so its tolerance orders the other way and is not recorded, as
+    in JavaScript.
+    """
+    subject, expected = _tolerance_values(call, name)
+    if subject is not None and expected is not None and _is_literal(subject) and not _is_literal(expected):
+        subject, expected = expected, subject
+    epsilon, kind = _call_tolerance(call, name, text.seg) if positive else (None, None)
+    return _Classified(
+        "approx",
+        S.APPROX,
+        text.seg(subject) if subject is not None else None,
+        _literal_repr(expected, text) if expected is not None else None,
+        _literal_value(expected) if expected is not None else None,
+        epsilon,
+        kind,
+        positive,
+        _referenced_names(subject),
+        _referenced_names(expected),
+        subject is not None and _is_trivial_subject(subject)
+        and (expected is None or _is_trivial_subject(expected)),
+    )
+
+
 def _finite_number(node: ast.AST | None) -> bool:
     """A finite int or float literal, signed or not: `78.75`, `-1.5`, `75`."""
     if node is None or not _is_literal(node):
@@ -697,11 +750,15 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         c.right_names = _referenced_names(expect_node)
         return c
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
-        # `assert not x` is the negated form of `assert x`.
+        # `assert not x` is the negated form of `assert x`. A negated tolerance
+        # call (#222) passes when the values are far apart, so its tolerance
+        # orders the other way and is not recorded, as in JavaScript.
         inner = _classify_assert_expr(test.operand, text)
+        approximate = inner.form == "approx"
         return _Classified(
             inner.form, inner.strength, inner.left, inner.right_literal,
-            inner.right_value, inner.epsilon, inner.epsilon_kind, not inner.positive,
+            inner.right_value, None if approximate else inner.epsilon,
+            None if approximate else inner.epsilon_kind, not inner.positive,
             inner.left_names, inner.right_names,
         )
     if isinstance(test, ast.Call):
@@ -711,6 +768,11 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             if len(test.args) == 2 and _dotted(test.args[1]) == "object":
                 return _Classified("tautology", S.TAUTOLOGY)
             return _Classified("type_shape", S.TYPE_SHAPE)
+        # `math.isclose(...)`, `numpy.isclose(...).all()`, `numpy.allclose(...)`
+        # state a tolerance (#222).
+        found = _find_tolerance_predicate(test, _tolerance_names(text))
+        if found is not None:
+            return _tolerance_classified(*found, text)
         return _Classified("truthy", S.TRUTHY)
     if _is_literal(test):
         return _Classified("tautology", S.TAUTOLOGY)
@@ -1210,6 +1272,12 @@ def _classify_compare_op(
     return _Classified("unknown", None, left_text)
 
 
+def _tolerance_statement_classified(node: ast.Call, text) -> _Classified | None:
+    """numpy's and torch's assertion calls, written as statements (#222)."""
+    name = _tolerance_statement(node, _tolerance_names(text))
+    return _tolerance_classified(node, name, text) if name is not None else None
+
+
 def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     if not (isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "self"):
         return None
@@ -1229,6 +1297,16 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
                 form, level = _UNITTEST_MAP[method]
                 break
     positive = method not in _NEGATED_UNITTEST
+    # `assertTrue(math.isclose(...))` is read as the call it wraps (222.Q2), and
+    # `assertFalse(...)` as its negation.
+    if method in ("assertTrue", "assertFalse") and node.args:
+        wrapped, holds = node.args[0], positive
+        while isinstance(wrapped, ast.UnaryOp) and isinstance(wrapped.op, ast.Not):
+            wrapped, holds = wrapped.operand, not holds
+        found = (_find_tolerance_predicate(wrapped, _tolerance_names(text))
+                 if isinstance(wrapped, ast.Call) else None)
+        if found is not None:
+            return _tolerance_classified(*found, text, positive=holds)
     # The hand-rolled tolerance in the unittest dialect: `assertLess(abs(d), eps)`,
     # `assertGreater(eps, abs(d))` and `assertTrue(abs(d) < eps)` (#196 189.2).
     hand = None
@@ -2616,7 +2694,9 @@ def _collect_unit(
                     right_value=c.right_value,
                     epsilon=c.epsilon,
                     epsilon_kind=c.epsilon_kind,
-                    trivial=_is_trivial_subject(node.test) or id(node) in vacuous,
+                    # A tolerance call (#222) judges its two values, as
+                    # `assertTrue(<call>)` and `assertAlmostEqual` do.
+                    trivial=_is_trivial_subject(node.test) or c.trivial or id(node) in vacuous,
                     positive=c.positive,
                     left_names=c.left_names,
                     right_depends_on=depends,
@@ -2662,7 +2742,7 @@ def _collect_unit(
                         )
                     )
                     counter += 1
-            c = _classify_unittest_call(node, text)
+            c = _classify_unittest_call(node, text) or _tolerance_statement_classified(node, text)
             if c is not None:
                 seg = text.seg(node) or ""
                 depends = _resolve_through(c.right_names, bindings)
@@ -2739,9 +2819,9 @@ def _collect_unit(
                         if id(node) in own_assert_ids:
                             continue
                         c = _classify_assert(node, text)
-                        trivial = _is_trivial_subject(node.test) or id(node) in vacuous
+                        trivial = _is_trivial_subject(node.test) or c.trivial or id(node) in vacuous
                     elif isinstance(node, ast.Call):
-                        c = _classify_unittest_call(node, text)
+                        c = _classify_unittest_call(node, text) or _tolerance_statement_classified(node, text)
                         if c is None:
                             continue
                         trivial = c.trivial
@@ -3574,7 +3654,7 @@ def _classified_asserts(nodes, text, off) -> tuple:
                 right_value=c.right_value,
                 epsilon=c.epsilon,
                 epsilon_kind=c.epsilon_kind,
-                trivial=_is_trivial_subject(node.test),
+                trivial=_is_trivial_subject(node.test) or c.trivial,
                 positive=c.positive,
                 left_names=c.left_names,
                 right_depends_on=c.right_names,
