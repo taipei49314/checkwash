@@ -204,6 +204,9 @@ _CHAI: dict[str, _ChaiMeaning] = {
     "within": _ChaiMeaning("compare_ord", S.BOUND, 3),
     # A length check is the len(x) == n shape.
     "length": _ChaiMeaning("type_shape", S.TYPE_SHAPE, 2),
+    # `.property(name)` with no value asserts that the subject has the key:
+    # a shape check, on the property it names (#215).
+    "property": _ChaiMeaning("type_shape", S.TYPE_SHAPE),
 }
 # Readability getters. Uncalled a/an are chains too; called, they are type
 # assertions, which stay unrepresented.
@@ -244,6 +247,49 @@ _CHAI_ASSERT: dict[str, str] = {
     "isAbove": "above", "isAtLeast": "least", "isBelow": "below", "isAtMost": "most",
     "lengthOf": "length",
 }
+# assert.<method>(object, name[, value]): the assertion is on object[name]
+# (#215), with the value, where the meaning takes one, as its expectation.
+# The meaning, and whether the name is a nested path. The own forms read as
+# `.own.property` does. The negated methods stay unrepresented, as the other
+# negated assert methods do, and so does a call whose property cannot be
+# followed.
+_CHAI_ASSERT_PROPERTY: dict[str, tuple[str, bool]] = {
+    "property": ("property", False),
+    "ownProperty": ("property", False),
+    "nestedProperty": ("property", True),
+    "propertyVal": ("strict_equal", False),
+    "ownPropertyVal": ("strict_equal", False),
+    "deepPropertyVal": ("deep_equal", False),
+    "deepOwnPropertyVal": ("deep_equal", False),
+    "nestedPropertyVal": ("strict_equal", True),
+    "deepNestedPropertyVal": ("deep_equal", True),
+}
+# expect(...).<chain>.property(name[, value]) and its own-property methods.
+_CHAI_PROPERTY_METHODS = frozenset({"property", "ownProperty", "haveOwnProperty"})
+_PLAIN_KEY = re.compile(NAME + r"\Z")
+# A nested property path chai's `.nested` reads: names with dots and array indices.
+_NESTED_PATH = re.compile(NAME + r"(?:\." + NAME + r"|\[\d+\])*\Z")
+_STRING_KEY = re.compile(r"""(?P<quote>["'])(?P<body>(?:(?!(?P=quote))[^\\\n])*)(?P=quote)\Z""")
+
+
+def property_subject(subject: str, name: str, nested: bool = False) -> str | None:
+    """The subject `.property(name)` retargets an assertion to, as source text (#215).
+
+    `order` and "total" give `order.total`, a key that is no name
+    `order["unit price"]`, a computed key `order[key]`, and a nested path
+    `order.totals.gross`. A subject that is not one member chain is
+    parenthesized. A nested path that is not a literal is not followed.
+    """
+    subject = subject.strip()
+    if not re.fullmatch(NAME + r"(?:\s*\??\.\s*" + NAME + r"|\[[^\[\]]*\]|\([^()]*\))*", subject):
+        subject = f"({subject})"
+    literal = _STRING_KEY.fullmatch(name.strip())
+    if literal is None:
+        return None if nested else f"{subject}[{name.strip()}]"
+    key = literal.group("body")
+    if nested:
+        return f"{subject}.{key}" if _NESTED_PATH.fullmatch(key) else None
+    return f"{subject}.{key}" if _PLAIN_KEY.fullmatch(key) else f'{subject}["{key}"]'
 
 
 def is_js_test_path(path: str) -> bool:
@@ -413,16 +459,26 @@ def _skip_space(masked: str, position: int, end: int) -> int:
 
 def _chai_chain(
     text: str, code: bytearray, masked: str, position: int, end: int,
-) -> tuple[str, bool, list[str], int] | None:
-    """Read the chai chain after expect(...): (meaning, positive, operands, end).
+) -> tuple[str, bool, list[str], int, list[tuple[str, bool]]] | None:
+    """Read the chai chain after expect(...): (meaning, positive, operands, end, properties).
 
     Language chains are inert getters, `not` sets chai's negate flag (a second
-    `not` leaves it set) and `deep` makes equal deep. Any other flag or plugin
-    word, an unknown or malformed terminal, or a chain that continues after its
-    terminal yields None: the call stays a visible coverage gap instead of a
-    partial oracle whose dropped tail nothing would report.
+    `not` leaves it set) and `deep` makes equal deep. `.property(name)` and
+    its own-property methods move the subject to subject[name] for the rest
+    of the chain, and `properties` lists each (name operand, nested) in
+    order (#215): with a value, `.property(name, value)` is an equality on
+    the property, `deep` making it deep; without one, at the end of the
+    chain, it asserts that the key is there. `nested` reads the name as a
+    path, and `own` asks for an own property, the same assertion here. As
+    in chai, the flags stay set for the rest of the chain; `include` reads
+    them too, so a chain that reaches it with either set stays unread. Any
+    other flag or plugin word, an unknown or malformed terminal, or a chain
+    that continues after its terminal yields None: the call stays a visible
+    coverage gap instead of a partial oracle whose dropped tail nothing
+    would report.
     """
-    negated = deep = False
+    negated = deep = nested = own = False
+    properties: list[tuple[str, bool]] = []
     while True:
         step = _CHAI_STEP.match(masked, position, end)
         if step is None:
@@ -436,10 +492,27 @@ def _chai_chain(
         position = opening if called else step.end()
         if not called and word in _CHAI_CHAINS:
             continue
-        if not called and word in {"not", "deep"}:
+        if not called and word in {"not", "deep", "nested", "own"}:
             negated = negated or word == "not"
             deep = deep or word == "deep"
+            nested = nested or word == "nested"
+            own = own or word == "own"
             continue
+        if called and word in _CHAI_PROPERTY_METHODS:
+            call = _call_arguments(text, code, position, end)
+            if call is None or not 1 <= len(call[0]) <= 3:
+                return None
+            arguments, position = call
+            properties.append((arguments[0], nested and word == "property"))
+            following = _skip_space(masked, position, end)
+            continues = following < end and masked.startswith((".", "[", "(", "?."), following)
+            if len(arguments) == 1 and continues and not negated:
+                continue  # The rest of the chain asserts on the property's value.
+            if continues:
+                return None
+            if len(arguments) == 1:
+                return "property", not negated, [], position, properties
+            return ("deep_equal" if deep else "strict_equal"), not negated, [arguments[1]], position, properties
         if word in _CHAI_PROPERTIES:
             meaning, operands = _CHAI_PROPERTIES[word], []
             if called:
@@ -457,12 +530,14 @@ def _chai_chain(
             operands, position = call
         else:
             return None
+        if (nested or own) and meaning == "include":
+            return None
         if deep and meaning == "strict_equal":
             meaning = "deep_equal"
         following = _skip_space(masked, position, end)
         if following < end and masked.startswith((".", "[", "(", "?."), following):
             return None
-        return meaning, not negated, operands, position
+        return meaning, not negated, operands, position, properties
 
 
 def _asymmetric_matcher(
@@ -603,6 +678,143 @@ def _chai_assertion(
         key = _equality_key(operands[1], strict=meaning == "strict_equal", undefined_global=undefined_global)
     _state_predicate(assertion, key, rule.asserts, not positive)
     return assertion
+
+
+# chai's should object (#215): `should.equal(actual, expected)` is
+# `expect(actual).to.equal(expected)`, `should.exist(value)` its `.exist`,
+# and `should.not.*` their negations.
+_SHOULD_METHODS: dict[str, str] = {"equal": "strict_equal", "exist": "exist"}
+_SHOULD_STEP = re.compile(r"\s*(?:\?\.|\.)\s*" + NAME)
+
+
+def _chain_start(bindings: Bindings, last: int) -> int | None:
+    """The first token of the member chain whose last token is `last`, or None.
+
+    Names joined by `.` or `?.`, with calls and indexes on them, back to the
+    chain's first name, string, parenthesized expression or array literal. A
+    `new` before the first name is part of the chain: `new Order().should`
+    reads the new instance, as `new` binds before the member access.
+    """
+    j = last
+    while j >= 0:
+        token = bindings.token(j)
+        if token in {")", "]"} and j in bindings.pairs:
+            opening = bindings.pairs[j]
+            if opening > 0 and bindings._operand_end(opening - 1):
+                j = opening - 1  # a call or an index on what comes before it
+                continue
+            return opening
+        if re.fullmatch(NAME, token) or token[:1] in {"'", '"'}:
+            if bindings.token(j - 1) in {".", "?."}:
+                j -= 2
+                continue
+            if bindings.token(j - 1) == "new" and bindings.token(j - 2) not in {".", "?."}:
+                return j - 1
+            return j
+        return None
+    return None
+
+
+def should_sites(text: str, code: bytearray, bindings: Bindings,
+                 start: int = 0, end: int | None = None) -> list[tuple[int, str, int]]:
+    """(subject start, subject, getter end) for each `.should` chain read off a value (#215).
+
+    `chai.should()` puts the `should` getter on every object, in the test
+    file or in a setup file the runner loads, so a `.should` chain is chai's
+    should interface wherever a test spells it. A `.should` no chain
+    continues from (`options.should`, `options.should = true`) asserts
+    nothing, and neither does a call of it (`chai.should()` installs the
+    getter).
+    """
+    end = len(text) if end is None else end
+    sites = []
+    for index in range(bisect_left(bindings.token_starts, start), len(bindings.tokens)):
+        token, position, token_end = bindings.tokens[index]
+        if position >= end:
+            break
+        if token != "should" or not code[position] or bindings.token(index - 1) not in {".", "?."}:
+            continue
+        if bindings.token(index + 1) not in {".", "?."} or not re.fullmatch(NAME, bindings.token(index + 2)):
+            continue
+        first = _chain_start(bindings, index - 2)
+        if first is None or bindings.tokens[first][1] < start:
+            continue
+        subject_start = bindings.tokens[first][1]
+        subject = text[subject_start:bindings.tokens[index - 1][1]].strip()
+        if subject:
+            sites.append((subject_start, subject, token_end))
+    return sites
+
+
+def _should_assertions(text: str, code: bytearray, bindings: Bindings, start: int, end: int,
+                       owned: Callable[[int], bool]) -> list[Assertion]:
+    """chai's should interface (#215), read as expect() chains are.
+
+    `value.should.<chain>` is `expect(value).<chain>`, and the should
+    object's `equal` and `exist`, with their `not` forms, take the subject
+    first. A should chain the chain reader does not take is recorded with no
+    strength, as an unread expect() call is (#196 190.5).
+    """
+    assertions: list[Assertion] = []
+    masked = bindings.masked
+    for subject_start, subject, getter_end in should_sites(text, code, bindings, start, end):
+        if not owned(subject_start):
+            continue
+        undefined_global = bindings.is_global(("undefined",), subject_start)
+        chain = _chai_chain(text, code, masked, getter_end, end)
+        if chain is not None:
+            meaning, positive, operands, span_end, properties = chain
+            target = _retargeted(subject, properties)
+            span = (subject_start, span_end)
+            assertion = target and _chai_assertion(meaning, [target, *operands], text[span[0]:span[1]],
+                                                   span, positive, undefined_global=undefined_global,
+                                                   bindings=bindings)
+            if assertion is not None:
+                assertions.append(assertion)
+                continue
+        # The chain reader declined it: an assertion whose predicate is not read.
+        cursor = getter_end
+        while True:
+            step = _SHOULD_STEP.match(masked, cursor, end)
+            if step is None:
+                break
+            cursor = step.end()
+            following = _skip_space(masked, cursor, end)
+            if following < end and masked[following] == "(":
+                call = _call_argument_spans(text, code, following, end)
+                if call is None:
+                    break
+                cursor = call[1]
+        assertions.append(Assertion(id="", form="unknown", strength=None, text=text[subject_start:cursor],
+                                    span=(subject_start, cursor), left=subject))
+    for match in CALL.finditer(masked, start, end):
+        position = match.start()
+        if not code[position] or not owned(position):
+            continue
+        value = bindings.callee(match.group("callee"), position)
+        if value.kind != "chai_should_method" or value.method not in _SHOULD_METHODS:
+            continue
+        call = _call_arguments(text, code, match.end() - 1, end)
+        if call is None:
+            continue
+        arguments, span_end = call
+        span = (position, span_end)
+        assertion = _chai_assertion(_SHOULD_METHODS[value.method], arguments, text[position:span_end], span,
+                                    not value.negated,
+                                    undefined_global=bindings.is_global(("undefined",), position),
+                                    bindings=bindings)
+        if assertion is not None:
+            assertions.append(assertion)
+    return assertions
+
+
+def _retargeted(subject: str, properties: list[tuple[str, bool]]) -> str | None:
+    """The subject after each `.property(name)` in a chain moved it (#215); None when one cannot be followed."""
+    for name, nested in properties:
+        subject = property_subject(subject, name, nested)
+        if subject is None:
+            return None
+    return subject
 
 
 _WORD_CHARACTER = re.compile(r"\w")
@@ -1478,7 +1690,8 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         is_chai = value.kind in {"chai_assert", "chai_assert_method"}
         if not is_chai and value.kind not in {"node", "node_method"}:
             continue
-        if method is not None and method not in (_CHAI_ASSERT if is_chai else _ASSERT_STRENGTH):
+        if method is not None and not (
+                method in _CHAI_ASSERT or method in _CHAI_ASSERT_PROPERTY if is_chai else method in _ASSERT_STRENGTH):
             continue
         if follows_new(bindings.masked, previous):
             continue
@@ -1510,7 +1723,15 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
                 continue  # A method signature, not a call followed by an ASI block.
         undefined_global = bindings.is_global(("undefined",), match.start())
         if is_chai:
-            chai_call = _chai_assertion(_CHAI_ASSERT[method or "ok"], arguments,
+            meaning = _CHAI_ASSERT.get(method or "ok")
+            if method in _CHAI_ASSERT_PROPERTY:
+                # assert.propertyVal(object, name, value) asserts on object[name].
+                meaning, nested = _CHAI_ASSERT_PROPERTY[method]
+                subject = property_subject(arguments[0], arguments[1], nested) if len(arguments) >= 2 else None
+                if subject is None:
+                    continue
+                arguments = [subject, *arguments[2:]]
+            chai_call = _chai_assertion(meaning, arguments,
                                         text[match.start():span_end], (match.start(), span_end),
                                         undefined_global=undefined_global, bindings=bindings)
             if chai_call is not None:
@@ -1605,7 +1826,8 @@ _NEGATING_WORDS = frozenset({"not", "doesNotThrow", "doesNotReject"})
 # The resolved bindings whose calls are assertion APIs. A lookalike, a
 # shadowed name or a written member is not: recording it would let the
 # stand-in pair with the oracle it replaced (#196 190.5).
-_CANDIDATE_ASSERT_KINDS = frozenset({"node", "node_method", "chai_assert", "chai_assert_method"})
+_CANDIDATE_ASSERT_KINDS = frozenset({"node", "node_method", "chai_assert", "chai_assert_method",
+                                     "chai_should_method"})
 _CANDIDATE_EXPECT_KINDS = frozenset({"expect", "chai_expect", "jest_expect"})
 # node:assert methods the scan does not read. The ones it reads (`ok`,
 # `equal`, `strictEqual`, `deepEqual`, `deepStrictEqual` and `assert()`
@@ -1657,7 +1879,7 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
     """Assertion calls the scans do not represent, recorded with no strength (#196 190.5).
 
     `assert.throws(fn)`, `expect(spy).toHaveBeenCalledWith(1)` and
-    `expect(value).to.have.property("a")` are assertions whose predicate
+    `expect(value).to.have.keys("a")` are assertions whose predicate
     checkwash does not read. SPEC §3 records such a form with strength null,
     as Python records `assertRaises`: its removal is ASSERT_REMOVED, and a
     rewrite is not judged. The throw family is `raises`; the rest, and a
@@ -1720,6 +1942,8 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
         if kind == "node" or kind == "chai_assert":
             continue  # `assert(...)` itself is the scan's.
         if kind == "chai_assert_method" and path[-1] in _CHAI_ASSERT:
+            continue
+        if kind == "chai_should_method" and path[-1] in _SHOULD_METHODS:
             continue
         if expect_call:
             if not words:
@@ -1894,12 +2118,13 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
                 chain = (_chai_chain(text, code, bindings.masked, subject_end, end)
                          if receiver != "jest_expect" else None)
                 if chain is not None:
-                    meaning, positive, operands, span_end = chain
+                    meaning, positive, operands, span_end, properties = chain
+                    subject = _retargeted(subject_arguments[0], properties)
                     span = (candidate.start(), span_end)
-                    chai_call = _chai_assertion(meaning, [subject_arguments[0], *operands],
-                                                text[span[0]:span[1]], span, positive,
-                                                undefined_global=undefined_global,
-                                                bindings=bindings)
+                    chai_call = subject and _chai_assertion(meaning, [subject, *operands],
+                                                            text[span[0]:span[1]], span, positive,
+                                                            undefined_global=undefined_global,
+                                                            bindings=bindings)
                     if chai_call is not None:
                         assertions.append(chai_call)
                 continue
@@ -1969,6 +2194,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             assertions.append(assertion)
         assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
                           if owned(assertion.span[0]))
+        assertions.extend(_should_assertions(text, code, bindings, start, end, owned))
         covered = [assertion.span for assertion in assertions]
         assertions.extend(_candidate_assertions(text, code, bindings, start, end, covered, owned))
         assertions.sort(key=lambda assertion: assertion.span)
