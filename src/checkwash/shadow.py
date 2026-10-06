@@ -101,8 +101,8 @@ class SubjectShadow:
     # remains a stand-in and must still be excluded from repair evidence.
     related_evidence_paths: tuple[str, ...] = ()
     # A changed path that made this provider win is oracle plumbing, not a
-    # production repair. This matters for supported controls whose frozen role
-    # spelling is still `prod` (notably `.pytest.ini`).
+    # production repair. This matters for supported controls whose role is
+    # still `prod` (notably a nested config such as `sub/pytest.ini`).
     control_paths: tuple[str, ...] = ()
     reportable: bool = True
 
