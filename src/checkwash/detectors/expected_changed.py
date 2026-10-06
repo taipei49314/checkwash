@@ -21,6 +21,7 @@ import re
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.frontends.javascript.literals import operand_names
 from checkwash.ir.astutil import same_expr
+from checkwash.ir.expected_values import literal_value, same_value
 from checkwash.ir.model import Assertion, FileIR, IR, judged_as_test
 from checkwash.detectors.snapshot_expectation import detect as detect_stored_expectations
 from checkwash.frontends.python.constant_renames import assertions_renamed
@@ -52,6 +53,11 @@ def _numeric_comparison(assertion: Assertion):
             return None
 
         left_value, right_value = number(left), number(right)
+        if left_value is None and right_value is None and assertion.right_value is not None:
+            # A folded conversion, `float('78.75')`, is the literal it folds to (#226).
+            folded = literal_value(assertion.right_value)
+            if type(folded) is int or (type(folded) is float and math.isfinite(folded)):
+                right_value = folded
         op = type(compare.ops[0])
         if left_value is None and right_value is not None:
             return ast.dump(left), op, right_value
@@ -119,6 +125,21 @@ def _js_operand_names(assertion: Assertion) -> tuple[str, ...] | None:
     return operand_names(assertion.operand_source)
 
 
+def _derived(assertion: Assertion) -> bool:
+    """Does the expectation read a name the subject reads? EXPECTED_VALUE_DERIVED's event."""
+    return bool(set(assertion.right_depends_on) & set(assertion.left_names))
+
+
+def _shown(source: str) -> str:
+    return source if len(source) <= 120 else source[:117] + "..."
+
+
+def _unevaluated(before: str, after: str, strength_description: str) -> str:
+    """An expected value replaced by a call checkwash neither folds nor resolves (#226)."""
+    return (f"expected value replaced by an expression checkwash does not evaluate "
+            f"({_shown(before)} -> {_shown(after)}) {strength_description}")
+
+
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = detect_stored_expectations(ir)
     for file in ir.files:
@@ -146,25 +167,36 @@ def detect(ir: IR) -> list[Finding]:
                     else "despite increased assertion strength"
                 )
                 b_lit, a_lit = b.right_value, a.right_value
+                b_call, a_call = b.unevaluated_expected, a.unevaluated_expected
                 js = file.path.lower().endswith(_JS_SUFFIXES)
-                if js and (b_lit is None) != (a_lit is None):
-                    # A JS literal replaced by an expression, or the reverse,
-                    # stays unreported in this round: the JS reader does not
-                    # resolve what a name or call yields, and a value it
-                    # cannot read (a template, an array) is no call. Both
-                    # directions wait for one definition across the two
-                    # frontends (#226, 198.IR amendment 2).
+                if js and (b_lit is None) != (a_lit is None) and a_call is None:
+                    # A JS literal replaced by a name or by a call the file
+                    # binds is the provenance channel's, as in Python
+                    # (EXPECTATION_DEFINITION_CHANGED, #226). A name or call
+                    # replaced by a literal, which Python reports (#60),
+                    # stays unreported in JS: no ruling decides it yet (#292).
                     continue
                 if b_lit is not None and a_lit is not None:
                     # Original literal→literal path. Subject is *not* required
                     # to match: overlap with ASSERT_SUBSTITUTED is recorded
-                    # (assert_substituted_literal_pos).
-                    if b_lit == a_lit:
+                    # (assert_substituted_literal_pos). A Python literal
+                    # compares as Python's == does, so a folded
+                    # `Decimal('78.75')` is the 78.75 it equals and `1` is
+                    # `1.0` (226.Q2); JS records one canonical Number.
+                    if b_lit == a_lit or (not js and same_value(b_lit, a_lit)):
                         continue
                     message = (
                         f"expected value rewritten {b_lit} -> {a_lit} "
                         f"{strength_description}"
                     )
+                elif b_lit is not None and a_call is not None:
+                    # #226: a literal replaced by a call checkwash neither
+                    # folds nor resolves (226.Q1). Subject must hold, as for
+                    # #60; an expression over the subject's own input is
+                    # EXPECTED_VALUE_DERIVED's.
+                    if not same_expr(b.left, a.left) or _derived(a):
+                        continue
+                    message = _unevaluated(b_lit, a_call, strength_description)
                 elif b_lit is None and a_lit is not None:
                     # Issue #60: independently derived call → literal of the
                     # current output. Subject must hold or this is substitution.
@@ -191,13 +223,19 @@ def detect(ir: IR) -> list[Finding]:
                     else:
                         before_names = _surface_expected_names(b)
                         after_names = _surface_expected_names(a)
-                    if not before_names or before_names == after_names:
+                    if before_names and before_names != after_names:
+                        message = (
+                            "expected call rewritten to a different call "
+                            f"{list(before_names)} -> {list(after_names)} "
+                            f"{strength_description}"
+                        )
+                    elif b_call is not None and a_call is not None and b_call != a_call:
+                        # #226: the same names, a call checkwash does not
+                        # evaluate rewritten into another (`make(1)` ->
+                        # `make(2)` with `make` bound nowhere, 226.Q3).
+                        message = _unevaluated(b_call, a_call, strength_description)
+                    else:
                         continue
-                    message = (
-                        "expected call rewritten to a different call "
-                        f"{list(before_names)} -> {list(after_names)} "
-                        f"{strength_description}"
-                    )
                 else:
                     # literal → expression is EXPECTED_VALUE_DERIVED, an
                     # honest named-constant extract, or a parametrize move.
