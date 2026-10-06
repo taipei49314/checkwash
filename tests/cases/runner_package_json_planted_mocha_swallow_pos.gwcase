@@ -1,0 +1,12 @@
+=== meta ===
+bypass: 106
+rule: CI_WORKFLOW_TOUCHED
+issue: 216
+title: planting `"unit": "mocha || true"` beside `"test": "jest"`
+origin: issue #216 P1, the planting commit of #196 185.3: a swallow pre-planted in a script `test` does not call yet, to be wired in later unedited. A script that runs mocha is part of the test command from the commit that writes it. v0.6.0 passes it with no finding
+=== before: package.json ===
+{ "name": "billing", "version": "1.0.0", "type": "module", "scripts": { "test": "jest" } }
+=== after: package.json ===
+{ "name": "billing", "version": "1.0.0", "type": "module", "scripts": { "test": "jest", "unit": "mocha || true" } }
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

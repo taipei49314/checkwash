@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 220
+title: `custom.skip()` from a module other than pytest disables nothing
+origin: issue #220 negative. a name is read through its import binding, and `custom` is not pytest
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import custom
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import custom
+
+from app.billing import total
+
+
+def test_total():
+    custom.skip("flaky")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[]

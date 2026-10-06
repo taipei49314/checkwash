@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_REMOVED
+title: gutting a root assertion helper removes the oracle of a pytest file under tests/golden/ that calls it
+origin: issue #219 (ruled 219.Q1, 2026-10-04) - the reverse search for a changed root helper's unchanged importers read only test-role paths, so v0.6.0 passed with zero findings when the only caller lived in tests/golden/; the same caller in tests/ blocks with ASSERT_REMOVED high
+=== before: test_helpers.py ===
+def assert_equal(actual, expected):
+    assert actual == expected
+=== after: test_helpers.py ===
+def assert_equal(actual, expected):
+    pass
+=== head: tests/golden/test_calc.py ===
+from calc import add
+from test_helpers import assert_equal
+
+
+def test_add():
+    assert_equal(add(2, 3), 5)
+=== head: calc.py ===
+def add(a, b):
+    return a + b
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/golden/test_calc.py", "unit": "test_add"}]

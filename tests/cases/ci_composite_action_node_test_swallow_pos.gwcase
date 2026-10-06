@@ -1,0 +1,52 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+issue: 213
+title: a composite action swallows `node --test` beside a weakened assertion
+origin: issue #213 A5. As production with no runner token, the action definition bought the opaque exemption, so v0.6.0 passes this with the weakened assertion at warn. Now it is ci: no exemption, and its swallow is read
+=== before: .github/actions/node-suite/action.yml ===
+name: node tests
+description: run the node:test suite
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - run: npm ci
+      shell: bash
+    - run: node --test
+      shell: bash
+=== after: .github/actions/node-suite/action.yml ===
+name: node tests
+description: run the node:test suite
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - run: npm ci
+      shell: bash
+    - run: node --test || true
+      shell: bash
+=== before: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}, {"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

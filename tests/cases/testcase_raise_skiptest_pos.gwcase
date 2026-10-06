@@ -1,0 +1,32 @@
+=== meta ===
+bypass: 118
+rule: TEST_DISABLED
+issue: 220
+title: `raise unittest.SkipTest(...)` in a TestCase method is a skip, as `self.skipTest()` is
+origin: issue #220 B8. v0.6.0 blocks this as ASSERT_REMOVED on `TestTotal.test_total`
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        raise unittest.SkipTest("flaky")
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
