@@ -112,7 +112,7 @@ behind it* unshippable.
 | 41 | `pytest.param(..., marks=pytest.mark.skip)` on every row: the row count never changes | `param_marks_skip_pos.gwcase` |
 | 42 | Narrow `python_files` / `testpaths`, or add `addopts = -k ...`, in `pytest.ini` / `tox.ini` / `setup.cfg` / `pyproject.toml` | `pytest_ini_narrowed_pos.gwcase` |
 | 43 | `git mv tests/test_x.py build/test_x.py` (or `.attic/`, `dist/`, `htmlcov/`, any dot-dir) | `moved_to_build_dir_pos.gwcase`, `moved_to_dot_dir_pos.gwcase` |
-| 44 | Any always-true `skipif` outside seven hardcoded spellings — `skipif(True or sys.platform == "win32")`, `skipif(sys.version_info >= (3, 8))`, `skipif(os.name != "java")` | `compat_gate_always_true_pos.gwcase`, `compat_gate_version_always_true_pos.gwcase` |
+| 44 | Any always-true `skipif` outside seven hardcoded spellings — `skipif(True or sys.platform == "win32")`, `skipif(sys.version_info >= (3, 8))`, `skipif(os.name != "java")` | `compat_gate_always_true_pos.gwcase`, `compat_gate_string_always_true_pos.gwcase`, `compat_gate_version_always_true_pos.gwcase` |
 | 45 | Delete 5 tests / 7 exact assertions, add 1 weak test with a similar name | `split_rename_mass_pos.gwcase` |
 | 46 | `assert "" in str(x)` / `assert len(x) >= 0` as compensation padding | `bare_literal_bound_pad_pos.gwcase`, `unfalsifiable_padding_pos.gwcase`, `unittest_trivial_pad_pos.gwcase` |
 | 47 | One non-ASCII character on the assertion line, reopening #10 | `unicode_offset_tautology_pos.gwcase` |
