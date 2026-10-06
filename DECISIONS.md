@@ -5256,6 +5256,308 @@ candidate runs are equal.
 The agent wrote this entry in the rotation PR; the maintainer approves it
 there.
 
+## D-095 (2026-10-05): a skip guard reads the class attribute its class body sets, and an abstract test base run by a same-file subclass stays live (#254)
+
+A skip guard that reads an attribute of the test's class, such as
+`if self.item_class is None: raise unittest.SkipTest(...)`, was never
+evaluated. Guards were evaluated against module constants only, so the skip
+counted as one under an unknown guard and blocked, even where the class body
+sets `item_class = list` and the guard never holds. The abstract test base
+blocked the same way: a base whose guard holds on itself, run by a same-file
+subclass that sets the attribute. 183.2's second stage added the setup form
+of both, and scrapy `526585393` (5 findings) and `f46a45008` (19) are its
+two measured cases.
+
+Rulings, 2026-10-04 (#254, adopted as recommended):
+- **254.Q1:** a guard that names `self.<attr>` or `cls.<attr>`, where the
+  unit's class or a same-file base assigns `<attr>` exactly once in its
+  class body, is evaluated with that value, as module constants are, for
+  body and setup skips alike. A class or a function that the file defines or
+  imports is not `None`.
+- **254.Q2 (a):** when the guard holds on the class that defines the test
+  but not on a same-file subclass that inherits the test unchanged and
+  carries no disabling marker, the base's unit gets no marker and stays
+  live. A subclass that redefines the test has its own unit, judged on its
+  own. A base whose guard holds and that no same-file subclass runs records
+  the marker with its resolved guard, so it reads as an unconditional skip.
+
+**As implemented:**
+- `frontends/python/class_attributes.py` reads the class bodies of a test
+  module's top-level classes (`ClassAttributes`). A guard's
+  `<receiver>.<attr>` is replaced by the value before the guard is folded:
+  in the test body (`_unreachable_ids`, and the guard a skip call records)
+  and in the setup callbacks and fixture methods a unit runs
+  (`setup_skip_controls`). The receiver is the method's first parameter,
+  unless it is a `staticmethod` or the body rebinds that name.
+- A guard that never holds leaves dead code, so no marker is minted. One
+  that holds is no condition: the skip is recorded with no guard and reads
+  as unconditional.
+- 254.Q2: a unit whose only markers are body or setup skips whose guards
+  hold under its class's values keeps none when a crediting subclass runs
+  it, and that subclass's own values satisfy neither the body nor the setup
+  guard (`frontend.parse_python`, `credit_base`).
+
+Readings the rulings leave to the implementation:
+
+1. **Values.** A literal is used as a module constant's is. A class or a
+   function the file defines, a builtin class or function, a lambda, and a
+   `staticmethod` or `classmethod` of one of those is not `None`, is true,
+   and equals nothing but itself. An imported name is not `None`, as the
+   ruling has it, and is read by `is None` and `is not None` only: whether
+   it is true, or what it equals, depends on an object this file does not
+   show. Anything else is unknown.
+2. **Exactly once.** An attribute the class body binds by anything but one
+   plain assignment (twice, under an `if` or a `try`, by a `def`) is
+   unknown. So is one that any code in the module assigns or deletes
+   through an attribute target (an instance's `self.item_class = None`,
+   `TotalTest.item_class = None`), and every attribute of a module that
+   uses `setattr`, `delattr`, `vars`, `globals`, `locals`, frame access or
+   a rebound `__dict__`, `__class__` or `__bases__`. Code that a string
+   literal hands to `eval` or `exec` is read with the module, and a literal
+   that is no code makes every attribute unknown. Code that a computed
+   string hands to them is not read, as code outside the file is not:
+   `526585393`'s module evaluates exported data
+   (`eval(self.output.getvalue())`). A private name (`_x`) is unknown:
+   unittest sets some on the instance.
+3. **The chain.** The lookup reads the unit's class and its same-file bases,
+   each with one base. A decorator, a class keyword or `__getattribute__`
+   anywhere in it makes every attribute unknown: a decorator or a metaclass
+   receives a class of the chain, and may rebind any attribute of it or of
+   a class derived from it. The chain must end in a class that derives from
+   nothing, from `object` or from unittest's `TestCase`. Any other base,
+   or a second one, may set the attribute on the instance from code the
+   file does not show: Django's `TestCase` sets `self.client`. A nested
+   class is not read.
+4. **Crediting subclasses (254.Q2).** A subclass credits the base when it
+   reaches the base through same-file single bases and is collected: a
+   subclass of unittest's `TestCase`, or a `Test*` class whose whole
+   hierarchy is in the file and defines no `__init__` or `__new__`. It, and
+   each class between it and the base, adds nothing but new values for
+   public attributes the base declares in a class body and undecorated
+   tests of its own that the base never reaches through an attribute. No
+   class of its chain binds `__test__`. A setup or teardown callback, a
+   framework entry point (`run`, a dunder), defined or assigned, a helper
+   the test calls, a decorator or a class keyword is something that may
+   change how the inherited test runs, so it credits nothing.
+5. **What a subclass shares.** A unit that also carries a decorator, class
+   or module mark keeps every marker: the subclass inherits that mark, so
+   it does not run the test either. So does a unit with a skip whose guard
+   is unknown on the base.
+6. **Identity.** No marker changes its name. A finding either goes or keeps
+   its marker (`self.skipTest`, `setup.<provider>.<effect>`).
+7. **Not in this round (residual):** what runs outside the file, as for
+   module constants: a conftest or a plugin that sets the attribute on the
+   instance, the module an imported name comes from binding it to `None`,
+   or code that a computed string hands to `eval` or `exec`. A skip reached
+   through code the test calls, a subclass's value included, is #272.
+
+**Tests and fixtures.**
+- **Tests:** 137 in `tests/test_issue254_class_attribute_guards.py`. All
+  54 mutants of the round's code fail them or the fixtures.
+- **Fixtures**, each run on pytest 9.1.1 first:
+  - Negatives, which v0.6.0 blocks at high and pytest runs:
+    - `class_attribute_setup_guard_never_holds_neg` (R1);
+    - `class_attribute_skiptest_guard_never_holds_neg` (R2);
+    - `abstract_base_run_by_subclass_neg` (R3, `f46a45008`'s shape);
+    - `abstract_base_run_by_pytest_subclass_neg`.
+  - Positives, row 104's pins, which v0.6.0 also blocks, and pytest skips
+    the test in every class:
+    - `abstract_base_no_subclass_pos`;
+    - `abstract_base_subclass_redefines_test_pos`;
+    - `abstract_base_subclass_skipped_pos`;
+    - `class_attribute_rebound_in_setup_pos`.
+  - `class_attribute_flipped_skiptest_guard_pos`, row 54's pin: a class
+    attribute flipped so that an unchanged guard holds. v0.6.0 passes it
+    with no finding.
+
+Every existing fixture keeps its expectation, and its corpus record does not
+change.
+
+**Fingerprints.** None move.
+
+**Cost.**
+- **Newly passing:** the issue's two measured cases, scrapy `526585393`
+  and `f46a45008`, go from block to pass, as 254.Q1 and 254.Q2 predicted.
+  - In `526585393`, the base's five setup skips go. A unit that
+    disappeared beside them falls from high to warn, now that the base's
+    units are live.
+  - In `f46a45008`, the 19 setup skips on the base's units go. Two units
+    that disappeared and the assertion removed beside them fall from high
+    to info: the liveness escalations the ruling named.
+- **Newly blocking:** a class attribute flipped so that an unchanged skip
+  guard holds (`class_attribute_flipped_skiptest_guard_pos`).
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records as
+  main's engine (#223's).
+- **Sweep, targeted:** D-088's sets.
+  - The 895 commits of ten full histories that change a `conftest.py` or a
+    `skip`/`xfail` line in a test file (855 readable): two records differ.
+    `f46a45008` goes from block to pass, as above. `380c2279b9` stays
+    block: one of its 233 findings, a unit that disappeared from
+    `tests/test_exporters.py`, falls from high to warn, now that the
+    module's base units are live.
+  - The 368 commits of pytest's own history that touch a collection
+    control in a conftest or a skip or xfail decorator in `testing/` (364
+    readable) give the same records.
+- `526585393` is in neither set, so it was run on its own, with both
+  engines.
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-096 (2026-10-05): a pytest file beneath a snapshot directory is judged as a test beside its snapshot role (#219)
+
+A pytest file beneath a snapshot directory (`**/golden/**`,
+`**/expected/**`, `**/__snapshots__/**`) resolves to the `snapshot` role, so
+it was never parsed or judged as a test. Moving `tests/test_x.py` to
+`tests/golden/test_x.py` blocked with TEST_DISABLED high "test unit
+disappeared" for every unit, although pytest still collects and runs the
+destination: a false reason in a blocking message. A test already living
+there was judged only by the snapshot rules: deleting it passed with zero
+findings, weakening it beside an unrelated production edit passed at warn,
+and weakening or skipping it blocked with a message about a stored
+expectation. #197 gave a JS/TS test there its test obligations (197.Q2,
+197.Q3); 197.Q4 left the Python twin to this round, and THREATMODEL row 107
+disclosed it until now.
+
+Rulings, 2026-10-04 (#219, adopted as recommended):
+- **219.Q1:** a Python file has test obligations exactly when
+  `collectable(path)` holds, whatever its published role. So
+  `tests/golden/test_x.py` gains them, and `tests/golden/data.py` and
+  `tests/golden/x_checks.py` do not. One predicate serves the obligations
+  and rename continuity, as 197.Q2 rules for JS.
+- **219.Q2:** both rule sets report, as 197.Q2 rules for JS: the earlier
+  role keeps its own rules, and the test obligations add theirs. A weakened
+  assertion reports ASSERT_WEAKENED and the snapshot rule's
+  EXPECTED_VALUE_CHANGED; an added skip reports TEST_DISABLED and the same
+  EXPECTED_VALUE_CHANGED.
+
+**As implemented:**
+- `engine.build_ir` sets `test_obligations` for a Python file that
+  `roles.collectable` accepts and whose role is not `test`, as it does for a
+  JS/TS test path (197.Q3's field). `role` stays the published role.
+- `engine._expand_renames` reads a Python path as a test, on either side of
+  a rename, when `collectable` accepts it, whatever its role.
+- Three searches for a Python test the diff does not change read the same
+  predicate (reading 2): D10's search for a surviving copy, the reverse
+  search for the unchanged importers of a changed root assertion helper
+  (`engine._root_importer_changes`), and the runtime-shadow test inventory
+  (`shadow.find_runtime_subject_shadows`).
+
+Readings the rulings leave to the implementation:
+
+1. **The predicate.** `collectable(path)` is pytest's default collection:
+   a `test_*.py` or `*_test.py` name, and no dot-directory, build-output or
+   virtualenv segment (SPEC §2b). `conftest.py` never matches it, and no
+   path that a default role glob resolves to `ci` or `guardrail` does, since
+   each of those Python paths sits beneath a dot-directory or has another
+   name. In the default table, a collectable path is either `test` or
+   `snapshot`.
+2. **Every place that asks.** The rulings name the obligations and rename
+   continuity. Three more places ask whether a Python file is a test pytest
+   collects, and each read `role == "test"` beside `collectable`, so a test
+   the obligations now judge stayed invisible to them:
+   - D10 (DUPLICATE_REMAINS): a surviving copy in `tests/golden/` earned no
+     credit, so deleting its duplicate from `tests/test_utils.py` blocked
+     with TEST_DISABLED high. It now holds at info, as a copy in
+     `tests/unit/` does. SPEC §5's D10 row already says "collectable".
+   - The root helper importer search: when a diff guts a root assertion
+     helper (`def assert_equal(actual, expected): assert actual ==
+     expected` becomes `pass`), an unchanged caller in `tests/golden/` was
+     never read, and the diff passed with zero findings. The caller now
+     reports ASSERT_REMOVED high, as one in `tests/` does.
+   - The runtime-shadow inventory: a stand-in module planted beside a test
+     in `tests/golden/` was not matched against that test's imports. It now
+     is, as beside a test in `tests/unit/`.
+3. **The published role** does not change, so no existing finding moves
+   its fingerprint: the snapshot rules' findings keep theirs, and the test
+   rules' findings on such a file are new. Role globs replace the defaults
+   (`[roles] test = ["tests/**"]`), so a project can leave a collectable
+   file such as `src/pkg/test_x.py` as production. That file keeps the
+   production role, which E7 reads, and every test rule judges it beside
+   it: 219.Q1's "whatever its published role".
+4. **Moves.** A move from `tests/` into a snapshot directory still changes
+   the supervised role (`test` to `snapshot`), so the rename is expanded
+   into a delete and an add, and the units are held as moved: TEST_DISABLED
+   at info with ASSERTION_MOVED, the same as the delete-plus-add form and
+   as a JS test moving from `tests/` into `tests/golden/`. The verdict is
+   pass. A rename between two collectable names inside a snapshot
+   directory is an edit. A move from there back into `tests/` is held as
+   moved. A move from there to a name pytest does not collect, or to
+   production code, reports the units as gone.
+5. **The snapshot rules (219.Q2).** EXPECTED_VALUE_CHANGED still reports
+   beside the test findings. SNAPSHOT_CODE_COCHANGE ("changed together with
+   prod code ... and no test logic changed") stands down once the file's
+   own test logic changed, which is its own condition. So a weakening
+   beside an unrelated production edit reports ASSERT_WEAKENED high alone,
+   as its JS twin `js_test_in_expected_dir_weakened_with_prod_edit_pos`
+   does.
+6. **Not in this round (residual):** pytest's configured collection is not
+   read for the predicate, as for every Python path (SPEC §2b). A project
+   that keeps a snapshot directory out of collection (`norecursedirs`,
+   `testpaths`, `python_files`, a conftest's `collect_ignore`) has a
+   test-named file there judged as a test, and a test moved into it is held
+   as moved.
+
+**Tests and fixtures.**
+- **Tests:** 42 in `tests/test_issue219_python_snapshot_tests.py`.
+  `tests/test_js_test_obligations.py` pinned the old one-role reading; its
+  test now reads the obligations from `collectable`. All 10
+  mutants of the round's code fail them or the fixtures.
+- **Fixtures.** pytest 9.1.1 collects and passes the test-named files they
+  place in `tests/golden/`, and does not collect `tests/golden/x_checks.py`:
+  - `python_test_moved_into_golden_neg` (#219 M1): v0.6.0 blocks with
+    TEST_DISABLED high on both units; it now passes, with both held as
+    moved at info.
+  - `python_test_duplicate_in_golden_neg`: v0.6.0 blocks with
+    TEST_DISABLED high; the copy in `tests/golden/` now holds it at info.
+  - Row 107's new pins:
+    - `python_test_in_golden_deleted_pos` (E3), which v0.6.0 passes with
+      zero findings;
+    - `python_test_in_golden_weakened_with_prod_edit_pos` (E4), which
+      v0.6.0 passes at warn;
+    - `python_test_in_golden_weakened_pos` (E1) and
+      `python_test_in_golden_skipped_pos` (E2), which v0.6.0 blocks with
+      EXPECTED_VALUE_CHANGED alone;
+    - `python_test_in_golden_root_helper_oracle_removed_pos`, which v0.6.0
+      passes with zero findings.
+  - `python_test_moved_into_golden_uncollected_name_pos` (K4), the
+    predicate's boundary: v0.6.0 blocks it the same way.
+
+Every existing fixture keeps its expectation, and its corpus record does not
+change.
+
+**Fingerprints.** None move.
+
+**Cost.**
+- The twelve full histories the sweeps draw from (attrs, click, flask,
+  httpx, rich, starlette, aiohttp, pytest, requests, scrapy, uvicorn and
+  werkzeug: 80,252 commits) never hold a Python file beneath a `golden/`,
+  `expected/` or `__snapshots__/` directory. So neither the obligations
+  nor the three searches change anything there. The risk the ruling named,
+  a Python golden output shaped like a test, does not occur in them.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records
+  as main's engine (#223's).
+- **Sweep, targeted:** D-088's sets give the same records too: the 895
+  commits of ten full histories that change a `conftest.py` or a
+  `skip`/`xfail` line in a test file (855 readable), and the 368 commits of
+  pytest's own history that touch a collection control in a conftest or a
+  skip or xfail decorator in `testing/` (364 readable).
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
 ## D-097 (2026-10-05): the JS and task runners count where a command starts (#216)
 
 checkwash decided whether a command runs the tests from row 69's runner

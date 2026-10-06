@@ -50,8 +50,11 @@ own names (`*_spec`, `*_test.tsx`) are JS/TS test paths only for a file whose
 source names that runner, by a `bun:test` import or a `Deno.test` call (#196
 186.4). A rename is an edit of the test, not its disappearance, when the
 runner that ran it still collects the new path (§2b), whatever roles the two
-paths hold. Python paths still resolve to one role:
-`tests/golden/test_x.py` is a snapshot (#219).
+paths hold. A Python file carries test obligations exactly when pytest's
+default collection runs it (§2b), whatever role it resolves to (#219):
+`tests/golden/test_x.py` keeps the `snapshot` role and its rules, and every
+test rule judges it beside them, while `tests/golden/data.py` stays a
+snapshot only. Moving `tests/test_x.py` there removes no test.
 
 **A file beneath a test-support directory is a test whatever its extension.**
 A path that would be `prod` and has a `__tests__`, `__mocks__` or `test`
@@ -427,7 +430,12 @@ additionally fires when a skip guard's condition, evaluated with each
 side's resolved constants, goes from "false somewhere" to "true
 everywhere" — the one-line `STRICT = True` → `False` flip that silences a
 guarded test without any marker event (probe arm, same day), or an edit of
-the guard's own text to one that always holds (THREATMODEL 54). It also
+the guard's own text to one that always holds (THREATMODEL 54). A guard
+that reads an attribute through the method's receiver (`self.item_class`)
+is evaluated with the value the unit's class body, or a same-file base's,
+assigns it (#254 254.Q1). An abstract test base whose skip holds under its
+own values keeps no marker when a same-file subclass runs the test
+unchanged (254.Q2). It also
 fires when a body skip (`pytest.skip`, `pytest.xfail`, `self.skipTest`)
 that ran only under an `if` guard or inside an `except` block runs under
 neither: the guard was removed, and nothing is left to evaluate (#196

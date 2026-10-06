@@ -124,8 +124,9 @@ _SUPERVISED_ROLES = frozenset({"guardrail", "ci", "test", "conftest", "snapshot"
 # tests switched off EXPECTED_VALUE_CHANGED and GUARDRAIL_TOUCHED (#175
 # review). Such a file keeps that public role and carries test obligations
 # beside it: making it only that role switched off every test rule instead,
-# so a weakened `.github/workflows/x.test.ts` passed at warn (#197). Python
-# paths still resolve to one role: `tests/golden/test_x.py` is a snapshot.
+# so a weakened `.github/workflows/x.test.ts` passed at warn (#197). A
+# collectable Python path does the same: `tests/golden/test_x.py` is a
+# snapshot and is judged as a test beside it (#219).
 _ROLES_BEFORE_TEST = frozenset({"guardrail", "ci", "snapshot", "lockfile", "conftest"})
 
 # The conftest files a diff's test modules sit below, read from the head
@@ -230,8 +231,10 @@ def _expand_renames(changes: list[FileChange], config: Config,
                 old_test = True
                 new_test = collection_continues(old, new, runner_evidence(change.before, manifest))
             else:
-                old_test = old_role == "test" and collectable(old)
-                new_test = is_js_test_file(new, change.after) or (new_role == "test" and collectable(new))
+                # A Python test file is a collectable one, whatever its role
+                # (219.Q1): pytest still collects `tests/golden/test_x.py`.
+                old_test = collectable(old)
+                new_test = is_js_test_file(new, change.after) or collectable(new)
             # Moving a file out of a supervised role is a way of escaping
             # supervision: `git mv AGENTS.md docs/AGENTS.old` or a workflow
             # out of .github/workflows/ silenced the guardrail and CI rules
@@ -430,8 +433,10 @@ def _root_importer_changes(changes, config, head_reader, head_searcher):
     reads = 0
     for candidate in candidates:
         path = candidate.replace("\\", "/")
+        # An importer is a test module pytest collects, whatever role its path
+        # holds: `tests/golden/test_x.py` is one (#219, ruling 219.Q1).
         if (path in real_paths or not path.endswith(".py") or is_artifact(path)
-                or config.role_of(path) not in ("test", "conftest") or not collectable(path)):
+                or not collectable(path)):
             continue
         if path.startswith("/") or ":" in path or any(p in ("", ".", "..") for p in path.split("/")):
             raise EngineError("root assertion helper search returned an invalid repository path")
@@ -818,7 +823,11 @@ def build_ir(
             # tests: never production evidence, never the opaque exemption
             # (#217). E7 still reads their table role (_scope_role).
             role = "test"
-        test_obligations = is_js_test and role != "test"
+        # So is a Python file pytest's default collection runs: one predicate,
+        # `collectable`, for its obligations and its rename continuity, so
+        # `tests/golden/test_x.py` keeps the snapshot role and is judged as a
+        # test beside it (#219, ruling 219.Q1).
+        test_obligations = (is_js_test or (is_python and collectable(path))) and role != "test"
         judged_test = role == "test" or test_obligations
 
         before_parsed: ParsedFile | None = None
@@ -1358,7 +1367,8 @@ def build_ir(
                 for p in head_searcher(sorted(needles))
                 if p.replace("\\", "/") not in diff_paths
                 and p.endswith(".py")
-                and config.role_of(p.replace("\\", "/")) == "test"
+                # A copy pytest still collects keeps running, whatever role
+                # its path holds (#219, ruling 219.Q1).
                 and collectable(p.replace("\\", "/"))
             )
             found: set[str] = set()
