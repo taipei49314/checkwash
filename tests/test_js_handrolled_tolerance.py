@@ -14,7 +14,7 @@ import pytest
 
 from checkwash.config import Config
 from checkwash.contract import Contract
-from checkwash.detectors.tolerance_loosened import _js_mixed
+from checkwash.detectors.tolerance_loosened import _mixed
 from checkwash.engine import FileChange, analyze
 from checkwash.frontends.javascript.frontend import parse_javascript
 
@@ -202,13 +202,15 @@ def test_wider_bounds_across_units_are_reported_in_their_own_units(before, after
     assert shown in loosened[0].message
 
 
-def test_the_cross_unit_reading_is_javascript_only():
-    assert _js_mixed("tests/test_calc.py", "abs=0.5", "2") is None
-    assert _js_mixed("tests/calc.test.ts", "abs=0.01", "abs=1E+12") is None
-    assert _js_mixed("tests/calc.test.ts", "2", "5") is None
-    assert _js_mixed("tests/calc.test.ts", "abs=0.5", "0") == (False, "abs=0.5", "places=0")
-    assert _js_mixed("tests/calc.test.ts", "abs=0.4", "0") == (True, "abs=0.4", "places=0")
-    assert _js_mixed("tests/calc.test.ts", "abs=0.5", "1.5") == (False, "abs=0.5", "1.5")
+def test_the_cross_unit_reading_is_one_rule_for_both_languages():
+    # #196 190.3: Python's places, delta and abs share this reading, so the
+    # pair is read by its kinds, not by the file's language.
+    assert _mixed("places", "abs=0.5", "2") == (False, "abs=0.5", "places=2")
+    assert _mixed("abs", "abs=0.01", "abs=1E+12") is None
+    assert _mixed("places", "2", "5") is None
+    assert _mixed("places", "abs=0.5", "0") == (False, "abs=0.5", "places=0")
+    assert _mixed("places", "abs=0.4", "0") == (True, "abs=0.4", "places=0")
+    assert _mixed("places", "abs=0.5", "1.5") == (False, "abs=0.5", "1.5")
 
 
 @pytest.mark.parametrize("bound", ["1e99999999999999999999", "-1e1000000"])

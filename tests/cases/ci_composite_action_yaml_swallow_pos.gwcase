@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+issue: 213
+title: `|| true` on the pytest step of a composite action spelled action.yaml
+origin: issue #213 A1y: GitHub reads `action.yaml` as it reads `action.yml`. v0.6.0 passes it with zero findings
+=== before: .github/actions/test/action.yaml ===
+name: test
+description: run the test suite
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - run: pip install -e .[test]
+      shell: bash
+    - run: pytest
+      shell: bash
+=== after: .github/actions/test/action.yaml ===
+name: test
+description: run the test suite
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - run: pip install -e .[test]
+      shell: bash
+    - run: pytest || true
+      shell: bash
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

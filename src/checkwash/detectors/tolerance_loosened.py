@@ -1,14 +1,18 @@
 """TOLERANCE_LOOSENED: an approximate comparison got a wider tolerance.
 
-Direction depends on the tolerance kind: rel/abs/delta grow looser as they
-grow bigger; unittest's `places` grows looser as it SHRINKS. Comparison uses
-decimal.Decimal on the literal source text — floats never touch a verdict
-(SPEC §3/§8).
+Tolerances are compared as absolute bounds where a conversion is defined,
+otherwise per kind, via decimal.Decimal on the literal source text — floats
+never touch a verdict (SPEC §3/§8). Per kind, rel/abs/delta grow looser as
+they grow bigger; unittest's `places` and numpy's `decimal` grow looser as
+they SHRINK.
 
-A JS file records two spellings of one absolute bound: `toBeCloseTo` places
-and the keyed `abs=` bound of a hand-rolled `Math.abs(a - b) < bound` (issue
-#179) or a chai `closeTo` delta (issue #180). A pair of the two is compared
-in one unit rather than as unrelated kinds.
+Three kinds state an absolute bound on |actual - expected|: `abs`
+(`pytest.approx`'s `abs=`, a hand-rolled `abs(a - b) < bound` in either
+language, a chai `closeTo` delta), unittest's `delta`, and decimal places
+(`assertAlmostEqual`'s `places`, Jest's `toBeCloseTo` precision), and
+numpy's `decimal` states one too, by its own conversion (#222). A pair of
+two of them in different kinds is compared in one unit rather than as
+unrelated kinds (issue #179, #196 190.3).
 """
 
 from __future__ import annotations
@@ -17,6 +21,12 @@ from decimal import Decimal, InvalidOperation
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.model import IR, judged_as_test
+
+# The kinds that state an absolute bound (#196 190.3).
+_ABSOLUTE = frozenset({"abs", "decimal", "delta", "places"})
+# The kinds a frontend records bare. Alignment keys one with its own kind in
+# a change of another kind (`places=7` -> `7` read as a delta).
+_BARE = frozenset({"delta", "places"})
 
 
 def _parse_multi(spec: str) -> dict[str, str]:
@@ -41,8 +51,8 @@ def _one_loosened(kind: str, before: str, after: str) -> bool:
         # a two-token test edit (audit 2026-08-19). Same contract: no guess,
         # no noise.
         return False
-    if kind == "places":
-        return a < b  # more places = stricter
+    if kind in ("places", "decimal"):
+        return a < b  # more places or decimals = stricter
     return a > b
 
 
@@ -63,52 +73,76 @@ def _loosened(kind: str, before: str, after: str) -> bool:
     return False
 
 
-_JS_SUFFIXES = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts")
+def _own_kind(kind: str, value: str) -> tuple[str, str] | None:
+    """A recorded tolerance's own kind and number; None for several kinds at once.
+
+    A bare value is the change's kind, a keyed one its key's:
+    `("places", "2")`, `("abs", "0.01")` from `abs=0.01`.
+    """
+    if "=" not in value:
+        return kind, value
+    if "|" in value:
+        return None
+    key, _, number = value.partition("=")
+    return key, number
 
 
-def _js_absolute(value: str) -> tuple[Decimal, str] | None:
-    """A JS tolerance as the absolute bound it enforces, and its label.
+def _absolute_bound(kind: str, number: str) -> tuple[Decimal, str] | None:
+    """A tolerance as the absolute bound it enforces, and its label.
 
-    The JS frontend records two spellings: `toBeCloseTo` decimal places,
-    bare (`"2"`), and an absolute bound keyed like pytest.approx
-    (`"abs=0.01"`): a hand-rolled `Math.abs(a - b) < bound` or a chai
-    `closeTo` delta. Jest and Vitest pass
-    `toBeCloseTo(x, p)` when |x - expected| < 10**-p / 2, so places `p` is
-    the bound 5 * 10**-(p + 1), written from its digits rather than computed.
+    `abs` and `delta` are the bound itself. unittest passes
+    `assertAlmostEqual(a, b, places=p)` when round(a - b, p) == 0, and Jest
+    and Vitest pass `toBeCloseTo(x, p)` when |x - expected| < 10**-p / 2: both
+    bound |a - b| by 5 * 10**-(p + 1), written from its digits rather than
+    computed (#196 190.3). numpy's `assert_array_almost_equal` and
+    `assert_almost_equal` pass while |desired - actual| < 1.5 * 10**-decimal,
+    their own conversion (#222). Places and decimals must be integral, from
+    -308 through 307: past that a double cannot hold the bound, so no
+    ordering is claimed. None for any other kind and for a number that
+    cannot be read.
     """
     try:
-        if value.startswith("abs=") and "|" not in value:
-            bound, label = Decimal(value[4:]), value
-        elif "=" not in value:
-            places = Decimal(value)
-            if (not places.is_finite() or not -308 <= places <= 307
-                    or places != places.to_integral_value()):
+        value = Decimal(number)
+        if kind in ("places", "decimal"):
+            if (not value.is_finite() or not -308 <= value <= 307
+                    or value != value.to_integral_value()):
                 return None
-            bound, label = Decimal((0, (5,), -int(places) - 1)), f"places={value}"
-        else:
+            digits = (5,) if kind == "places" else (1, 5)
+            return Decimal((0, digits, -int(value) - 1)), f"{kind}={number}"
+        if kind not in ("abs", "delta") or value.is_nan():
             return None
     except (ArithmeticError, ValueError):
         return None
-    return None if bound.is_nan() else (bound, label)
+    return value, f"{kind}={number}"
 
 
-def _js_mixed(path: str, before: str, after: str) -> tuple[bool, str, str] | None:
-    """Compare a JS `toBeCloseTo` precision with an `abs=` bound (issue #179).
+def _mixed(kind: str, before: str, after: str) -> tuple[bool, str, str] | None:
+    """Compare two absolute kinds in one unit (issue #179, #196 190.3).
 
-    The keyed side is a hand-rolled bound or a chai `closeTo` delta.
-
-    Read as unrelated kinds, the pair misleads both ways: `< 0.5` ->
+    Read as unrelated kinds, a pair misleads both ways: `< 0.5` ->
     `toBeCloseTo(x, 0)` is the same bound, yet a keyed bound against a bare
-    one read as brand-new slack, and raw numbers as places shrinking from
-    0.5 to 0. None when the pair is not one of each (the per-kind comparison
+    one read as brand-new slack, `places=7` -> `delta=7` as one value left
+    alone, and raw numbers as places shrinking from 0.5 to 0. None when the
+    pair is not two different absolute kinds (the per-kind comparison
     applies); a side that cannot be read is no finding — no guess, no noise.
     """
-    if not path.lower().endswith(_JS_SUFFIXES) or ("=" in before) == ("=" in after):
+    old, new = _own_kind(kind, before), _own_kind(kind, after)
+    if old is None or new is None or old[0] == new[0] or not {old[0], new[0]} <= _ABSOLUTE:
         return None
-    old, new = _js_absolute(before), _js_absolute(after)
-    if old is None or new is None:
+    old_bound, new_bound = _absolute_bound(*old), _absolute_bound(*new)
+    if old_bound is None or new_bound is None:
         return False, before, after
-    return new[0] > old[0], old[1], new[1]
+    return new_bound[0] > old_bound[0], old_bound[1], new_bound[1]
+
+
+def _recorded(value: str) -> str:
+    """The tolerance as its frontend recorded it, for the fingerprint.
+
+    Alignment keys a bare value read in a change of another kind (#196
+    190.3); fingerprints keep the bare spelling they have always had.
+    """
+    key, sep, number = value.partition("=")
+    return number if sep and key in _BARE else value
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -120,7 +154,7 @@ def detect(ir: IR) -> list[Finding]:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
             for kind, before_eps, after_eps in unit.delta.tolerance_changes:
-                mixed = _js_mixed(file.path, before_eps, after_eps)
+                mixed = _mixed(kind, before_eps, after_eps)
                 if mixed is not None:
                     loosened, b_show, a_show = mixed
                     if not loosened:
@@ -149,7 +183,8 @@ def detect(ir: IR) -> list[Finding]:
                         before=Evidence(text=b_show, span=unit.before.span),
                         after=Evidence(text=a_show, span=unit.after.span),
                         fingerprint=make_fingerprint(
-                            "TOLERANCE_LOOSENED", file.path, unit.qualname, f"{kind}:{before_eps}"
+                            "TOLERANCE_LOOSENED", file.path, unit.qualname,
+                            f"{kind}:{_recorded(before_eps)}",
                         ),
                     )
                 )

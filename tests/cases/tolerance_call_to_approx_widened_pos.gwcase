@@ -1,0 +1,30 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: X3: math.isclose(abs_tol=1e-9) replaced by pytest.approx(abs=1e3) widens the absolute tolerance
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    assert math.isclose(total(), 78.75, abs_tol=1e-9)
+=== after: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    assert total() == pytest.approx(78.75, abs=1e3)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
