@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 106
+rule: CI_WORKFLOW_TOUCHED
+issue: 216
+title: a package.json script that runs mocha gains `|| true` beside a weakened assertion
+origin: issue #216 M1. `ci` is part of the test command because it runs a runner, and mocha was not one, so the swallow went unread: v0.6.0 blocks on the assertion alone, and its manifest stays production
+=== before: package.json ===
+{ "name": "billing", "version": "1.0.0", "type": "module", "scripts": { "test": "jest", "ci": "mocha" } }
+=== after: package.json ===
+{ "name": "billing", "version": "1.0.0", "type": "module", "scripts": { "test": "jest", "ci": "mocha || true" } }
+=== before: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.strictEqual(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { invoiceTotal } from "../src/billing.js";
+
+test("computes invoice total with tax", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  assert.ok(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

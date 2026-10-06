@@ -1,0 +1,13 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 213
+title: a JavaScript action's source beside its definition stays production
+origin: issue #213 A3: only the definitions are ci. Read as ci, `a.flag || true` in a JavaScript action's index.js blocked as a weakened test command, a false reason, under a whole-directory glob
+=== before: .github/actions/notify/index.js ===
+const enabled = a.flag;
+module.exports = enabled;
+=== after: .github/actions/notify/index.js ===
+const enabled = a.flag || true;
+module.exports = enabled;
+=== expect ===
+[]

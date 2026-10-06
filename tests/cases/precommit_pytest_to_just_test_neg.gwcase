@@ -1,0 +1,35 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 216
+title: a pre-commit hook moving from pytest to `just test` is a runner swap
+origin: issue #216 H2. v0.6.0 blocks with "no pre-commit hook entry invokes a recognised test runner any more (was: pytest)". The recipe `just test` runs is not read, as a `make test` target is not
+=== before: .pre-commit-config.yaml ===
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.2
+    hooks:
+      - id: ruff
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+=== after: .pre-commit-config.yaml ===
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.2
+    hooks:
+      - id: ruff
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: just test
+        language: system
+        pass_filenames: false
+        always_run: true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]
