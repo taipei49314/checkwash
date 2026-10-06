@@ -166,27 +166,33 @@ def _innermost_focus(data: bytes, manifest):
     return lambda: focus_is_innermost(runner_evidence(data, manifest))
 
 
-def _base_manifest(changes: list[FileChange], root_reader):
-    """A reader of the base side's root package.json, for runner evidence.
+def _base_root_file(changes: list[FileChange], root_reader, name: str):
+    """A reader of one root file as the base side holds it.
 
     In the diff, its before side. Otherwise the head snapshot holds it
     unchanged, so that is the base side too (#196 186.7). Read once, and only
-    when a JS test file names no runner itself.
+    when asked.
     """
     read: list[bytes | None] = []
 
-    def manifest() -> bytes | None:
+    def base() -> bytes | None:
         if not read:
             for change in changes:
                 paths = (change.path.replace("\\", "/"), (change.old_path or "").replace("\\", "/"))
-                if "package.json" in paths:
+                if name in paths:
                     read.append(change.before)
                     break
             else:
-                read.append(root_reader("package.json") if root_reader is not None else None)
+                read.append(root_reader(name) if root_reader is not None else None)
         return read[0]
 
-    return manifest
+    return base
+
+
+def _base_manifest(changes: list[FileChange], root_reader):
+    """A reader of the base side's root package.json, for runner evidence,
+    read only when a JS test file names no runner itself."""
+    return _base_root_file(changes, root_reader, "package.json")
 
 
 def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
@@ -1399,7 +1405,8 @@ def build_ir(
             g.subject_installations.append(event)
     # The JavaScript spelling: a newly installed first-party module mock or
     # replacing spy that an existing JS unit's own assertions read (#177).
-    for event in module_mock_events(ir, changes):
+    # An alias resolves through the base side's root tsconfig.json (#196 188.6).
+    for event in module_mock_events(ir, changes, _base_root_file(changes, root_reader, "tsconfig.json")):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
