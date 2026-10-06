@@ -1,0 +1,38 @@
+=== meta ===
+bypass: 107
+rule: ASSERT_WEAKENED
+title: an unrelated production edit does not explain weakening a pytest file kept under tests/golden/
+origin: issue #219 E4 (ruled 219.Q1 and 219.Q2, 2026-10-04) - v0.6.0 judged the file only as a snapshot and passed with SNAPSHOT_CODE_COCHANGE warn; the file's test logic changed, so that rule's own condition no longer holds, and the weakening blocks as it does in tests/test_x.py
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/golden/test_x.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+
+
+def test_other():
+    assert total() == 78.75
+=== after: tests/golden/test_x.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total()
+
+
+def test_other():
+    assert total() == 78.75
+=== before: app/util.py ===
+def f():
+    return 1
+=== after: app/util.py ===
+def f():
+    return 2
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_total"}]

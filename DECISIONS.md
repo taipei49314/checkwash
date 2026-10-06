@@ -5409,3 +5409,151 @@ version string aside, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-096 (2026-10-05): a pytest file beneath a snapshot directory is judged as a test beside its snapshot role (#219)
+
+A pytest file beneath a snapshot directory (`**/golden/**`,
+`**/expected/**`, `**/__snapshots__/**`) resolves to the `snapshot` role, so
+it was never parsed or judged as a test. Moving `tests/test_x.py` to
+`tests/golden/test_x.py` blocked with TEST_DISABLED high "test unit
+disappeared" for every unit, although pytest still collects and runs the
+destination: a false reason in a blocking message. A test already living
+there was judged only by the snapshot rules: deleting it passed with zero
+findings, weakening it beside an unrelated production edit passed at warn,
+and weakening or skipping it blocked with a message about a stored
+expectation. #197 gave a JS/TS test there its test obligations (197.Q2,
+197.Q3); 197.Q4 left the Python twin to this round, and THREATMODEL row 107
+disclosed it until now.
+
+Rulings, 2026-10-04 (#219, adopted as recommended):
+- **219.Q1:** a Python file has test obligations exactly when
+  `collectable(path)` holds, whatever its published role. So
+  `tests/golden/test_x.py` gains them, and `tests/golden/data.py` and
+  `tests/golden/x_checks.py` do not. One predicate serves the obligations
+  and rename continuity, as 197.Q2 rules for JS.
+- **219.Q2:** both rule sets report, as 197.Q2 rules for JS: the earlier
+  role keeps its own rules, and the test obligations add theirs. A weakened
+  assertion reports ASSERT_WEAKENED and the snapshot rule's
+  EXPECTED_VALUE_CHANGED; an added skip reports TEST_DISABLED and the same
+  EXPECTED_VALUE_CHANGED.
+
+**As implemented:**
+- `engine.build_ir` sets `test_obligations` for a Python file that
+  `roles.collectable` accepts and whose role is not `test`, as it does for a
+  JS/TS test path (197.Q3's field). `role` stays the published role.
+- `engine._expand_renames` reads a Python path as a test, on either side of
+  a rename, when `collectable` accepts it, whatever its role.
+- Three searches for a Python test the diff does not change read the same
+  predicate (reading 2): D10's search for a surviving copy, the reverse
+  search for the unchanged importers of a changed root assertion helper
+  (`engine._root_importer_changes`), and the runtime-shadow test inventory
+  (`shadow.find_runtime_subject_shadows`).
+
+Readings the rulings leave to the implementation:
+
+1. **The predicate.** `collectable(path)` is pytest's default collection:
+   a `test_*.py` or `*_test.py` name, and no dot-directory, build-output or
+   virtualenv segment (SPEC §2b). `conftest.py` never matches it, and no
+   path that a default role glob resolves to `ci` or `guardrail` does, since
+   each of those Python paths sits beneath a dot-directory or has another
+   name. In the default table, a collectable path is either `test` or
+   `snapshot`.
+2. **Every place that asks.** The rulings name the obligations and rename
+   continuity. Three more places ask whether a Python file is a test pytest
+   collects, and each read `role == "test"` beside `collectable`, so a test
+   the obligations now judge stayed invisible to them:
+   - D10 (DUPLICATE_REMAINS): a surviving copy in `tests/golden/` earned no
+     credit, so deleting its duplicate from `tests/test_utils.py` blocked
+     with TEST_DISABLED high. It now holds at info, as a copy in
+     `tests/unit/` does. SPEC §5's D10 row already says "collectable".
+   - The root helper importer search: when a diff guts a root assertion
+     helper (`def assert_equal(actual, expected): assert actual ==
+     expected` becomes `pass`), an unchanged caller in `tests/golden/` was
+     never read, and the diff passed with zero findings. The caller now
+     reports ASSERT_REMOVED high, as one in `tests/` does.
+   - The runtime-shadow inventory: a stand-in module planted beside a test
+     in `tests/golden/` was not matched against that test's imports. It now
+     is, as beside a test in `tests/unit/`.
+3. **The published role** does not change, so no existing finding moves
+   its fingerprint: the snapshot rules' findings keep theirs, and the test
+   rules' findings on such a file are new. Role globs replace the defaults
+   (`[roles] test = ["tests/**"]`), so a project can leave a collectable
+   file such as `src/pkg/test_x.py` as production. That file keeps the
+   production role, which E7 reads, and every test rule judges it beside
+   it: 219.Q1's "whatever its published role".
+4. **Moves.** A move from `tests/` into a snapshot directory still changes
+   the supervised role (`test` to `snapshot`), so the rename is expanded
+   into a delete and an add, and the units are held as moved: TEST_DISABLED
+   at info with ASSERTION_MOVED, the same as the delete-plus-add form and
+   as a JS test moving from `tests/` into `tests/golden/`. The verdict is
+   pass. A rename between two collectable names inside a snapshot
+   directory is an edit. A move from there back into `tests/` is held as
+   moved. A move from there to a name pytest does not collect, or to
+   production code, reports the units as gone.
+5. **The snapshot rules (219.Q2).** EXPECTED_VALUE_CHANGED still reports
+   beside the test findings. SNAPSHOT_CODE_COCHANGE ("changed together with
+   prod code ... and no test logic changed") stands down once the file's
+   own test logic changed, which is its own condition. So a weakening
+   beside an unrelated production edit reports ASSERT_WEAKENED high alone,
+   as its JS twin `js_test_in_expected_dir_weakened_with_prod_edit_pos`
+   does.
+6. **Not in this round (residual):** pytest's configured collection is not
+   read for the predicate, as for every Python path (SPEC §2b). A project
+   that keeps a snapshot directory out of collection (`norecursedirs`,
+   `testpaths`, `python_files`, a conftest's `collect_ignore`) has a
+   test-named file there judged as a test, and a test moved into it is held
+   as moved.
+
+**Tests and fixtures.**
+- **Tests:** 42 in `tests/test_issue219_python_snapshot_tests.py`.
+  `tests/test_js_test_obligations.py` pinned the old one-role reading; its
+  test now reads the obligations from `collectable`. All 10
+  mutants of the round's code fail them or the fixtures.
+- **Fixtures.** pytest 9.1.1 collects and passes the test-named files they
+  place in `tests/golden/`, and does not collect `tests/golden/x_checks.py`:
+  - `python_test_moved_into_golden_neg` (#219 M1): v0.6.0 blocks with
+    TEST_DISABLED high on both units; it now passes, with both held as
+    moved at info.
+  - `python_test_duplicate_in_golden_neg`: v0.6.0 blocks with
+    TEST_DISABLED high; the copy in `tests/golden/` now holds it at info.
+  - Row 107's new pins:
+    - `python_test_in_golden_deleted_pos` (E3), which v0.6.0 passes with
+      zero findings;
+    - `python_test_in_golden_weakened_with_prod_edit_pos` (E4), which
+      v0.6.0 passes at warn;
+    - `python_test_in_golden_weakened_pos` (E1) and
+      `python_test_in_golden_skipped_pos` (E2), which v0.6.0 blocks with
+      EXPECTED_VALUE_CHANGED alone;
+    - `python_test_in_golden_root_helper_oracle_removed_pos`, which v0.6.0
+      passes with zero findings.
+  - `python_test_moved_into_golden_uncollected_name_pos` (K4), the
+    predicate's boundary: v0.6.0 blocks it the same way.
+
+Every existing fixture keeps its expectation, and its corpus record does not
+change.
+
+**Fingerprints.** None move.
+
+**Cost.**
+- The twelve full histories the sweeps draw from (attrs, click, flask,
+  httpx, rich, starlette, aiohttp, pytest, requests, scrapy, uvicorn and
+  werkzeug: 80,252 commits) never hold a Python file beneath a `golden/`,
+  `expected/` or `__snapshots__/` directory. So neither the obligations
+  nor the three searches change anything there. The risk the ruling named,
+  a Python golden output shaped like a test, does not occur in them.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records
+  as main's engine (#223's).
+- **Sweep, targeted:** D-088's sets give the same records too: the 895
+  commits of ten full histories that change a `conftest.py` or a
+  `skip`/`xfail` line in a test file (855 readable), and the 368 commits of
+  pytest's own history that touch a collection control in a conftest or a
+  skip or xfail decorator in `testing/` (364 readable).
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
