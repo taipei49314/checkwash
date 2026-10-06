@@ -1,0 +1,12 @@
+=== meta ===
+bypass: 106
+rule: CI_WORKFLOW_TOUCHED
+issue: 216
+title: `--test-only` added to `node --test`
+origin: issue #216 T1 (#196 187.1). Node's runner then runs only the tests marked `only`, and every other test in every file stops. v0.6.0 passes it at warn; `jest --ignore=src` blocks
+=== before: package.json ===
+{ "name": "billing", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test" } }
+=== after: package.json ===
+{ "name": "billing", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test --test-only" } }
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

@@ -35,7 +35,7 @@ from checkwash.pytest_collection import (
     resolved_collection_settings,
 )
 from checkwash.roles import _runs_tests, is_artifact
-from checkwash.runner_command import invokes_test_runner
+from checkwash.runner_command import invokes_named_runner
 
 _CONFIGS = ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg")
 _DEFAULTS = {"python_files": ("test_*.py", "*_test.py"),
@@ -69,7 +69,7 @@ def _calls(path, data):
 
     None means the file may run a test runner in a way this reader cannot
     parse, so what its runs pass is not known: a command that may run one
-    (`invokes_test_runner`) and is not a pytest command the option reader
+    (`invokes_named_runner`) and is not a pytest command the option reader
     parses (`coverage run -m pytest`, `tox`, `make test`, a nox session), a
     line that does not lex, a step that runs a runner action, a `tox.ini`
     environment's commands, pytest settings the file writes itself,
@@ -104,11 +104,11 @@ def _calls(path, data):
             return None
         for command, words in _commands(text):
             if words is None:
-                if invokes_test_runner(command):
+                if invokes_named_runner(command):
                     return None
             elif _pytest_arguments(words) is not None:
                 calls.append(tuple(words))
-            elif words and invokes_test_runner(shlex.join(words)):
+            elif words and invokes_named_runner(shlex.join(words)):
                 return None
     return calls
 

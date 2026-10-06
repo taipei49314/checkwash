@@ -5557,3 +5557,197 @@ version string aside, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-097 (2026-10-05): the JS and task runners count where a command starts (#216)
+
+checkwash decided whether a command runs the tests from row 69's runner
+names (`roles._TEST_RUNNER_TOKENS`), which hold none of `node --test`,
+`mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch test`, `just test`,
+`poe test` or `pdm test`. A shell script whose only runner was one of them
+stayed production, so `node --test` becoming `node --test || true` hid its
+own swallow and bought the opaque exemption that held an assertion weakened
+beside it at warn: row 87's double effect, which row 106 listed as a
+residual. The same gap reached workflow steps (`if: false` under `- run: node
+--test` passed at warn), pre-commit hooks (removing the only `node --test`
+hook passed at warn), manifest scripts (a `ci` script running `mocha` gained
+`|| true` unread) and the planting commit of #196 185.3. It also gave a false
+reason: a pre-commit hook moving from `pytest` to `hatch test` blocked with
+"no pre-commit hook entry invokes a recognised test runner any more (was:
+pytest)".
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751), filed as #216):
+one shared "invokes a test runner" predicate with 191.5's. The new names
+match only in command content (runner-shaped scripts, workflow `run:`,
+manifest script values, hook entries) and only in command position, never
+as words over arbitrary file content. The opaque-exemption denial keeps
+today's tokens. The round closes 185.3 and 191.7's false reason, and adds
+`--test-only` (187.1) as a narrowing token. A sweep is mandatory; the
+maintainer edits are THREATMODEL rows 87 and 106 and SPEC §4. No IR change.
+
+**As implemented:**
+- `runner_command.invokes_positional_runner` reads one text as bash, with
+  191.5's lexer, and asks whether a simple command in it starts one of the
+  new runners. `invokes_test_runner`, which runner sites read (a workflow
+  step's `run:`, a `uses:` step's inputs, a hook's `entry`), asks it beside
+  191.5's whole-word reading of row 69's names, now `invokes_named_runner`.
+- `roles._runs_test_command` is row 69's token scan or the positional
+  reading. It decides a runner-shaped script (§2's content gate), the
+  script one hop away and whether the hop's own script runs a runner
+  already, a manifest's members by command, ci.py's no-op branch
+  (`if ! mocha; then :; fi`) and `-`-prefixed make recipe checks, and "the
+  test suite is no longer invoked by this script".
+- The deletion rule: a deleted workflow or pre-commit config ran a suite
+  when row 69's token scan finds a runner in it or it holds a runner site
+  (`ci_control_flow.holds_runner_site`).
+- `--test-only` joins `_CI_NARROWING_TOKENS`.
+- Unchanged, as ruled or as unrelated: the opaque-exemption denial
+  (`_mentions_test_runner`); the collection inventory's own reading of
+  commands (#173, `invokes_named_runner`); and the two Python-only readers
+  that gate on row 69's scan, the pytest collection-settings scan of a ci
+  file and the runtime-shadow reading of pytest invocations.
+
+Readings the ruling leaves to the implementation:
+
+1. **Command position.** The first word of a simple command, past reserved
+   words (`if`, `!`, `do`), assignments (`NODE_ENV=test mocha`) and a make
+   recipe's `@`, `-` and `+` prefixes. The reader follows:
+   - wrappers that run the words after their options: `env`, `sudo`,
+     `time`, `timeout`, `nice`, `nohup`, `exec`, `command`, `cross-env`,
+     `nyc`, `c8`, `xvfb-run`. An option takes the next word as its value
+     unless that word starts a command the reader follows, so `nice -n 10
+     mocha` reaches mocha and `sudo -E apt-get install tap` reaches
+     `install`. `timeout` takes its duration first. `command -v mocha` looks
+     the name up and runs nothing;
+   - package launchers that run the binary they name: `npx`, `pnpx`,
+     `bunx`, `npm exec`/`x`, `pnpm exec`/`dlx`, `yarn exec`/`dlx`, `bun x`,
+     and `yarn` or `pnpm` followed by `mocha`, `ava` or `tap`;
+   - `sh`, `bash`, `zsh` and `dash` with `-c` (options such as `-o
+     pipefail` read with their values), and `eval`;
+   - the text of a command substitution, and a heredoc body a shell reads
+     (`bash <<EOF`).
+   Nesting of `sh -c`, `eval` and substitutions past four levels keeps every
+   name it holds, as text the lexer cannot follow does under 191.5.
+2. **The names.** `mocha`, `ava` and `tap` are binaries. `bun`, `deno`,
+   `hatch`, `just`, `poe` and `pdm` count with a first argument that starts
+   with `test`, past the tool's options, so the subcommand may go on (`just
+   test-unit`, `poe test:fast`), as `make tests` does for `make test`.
+   `pdm run test`, `hatch run test`, `deno task test` and `bun run test` run
+   a named script whose content is not read; they are not in the ruled list.
+   `node` runs its test runner when `--test` comes before a script argument
+   (`.js`, `.cjs`, `.mjs`, `.ts`, `.cts`, `.mts`): `node app.js --test` hands
+   the flag to the script, and `node --test-only` alone runs no runner.
+3. **What runs nothing,** shared with 191.5: the words of `echo` and
+   `printf`, comments, a heredoc body `cat` writes out, the packages an
+   install command names (`npm i -D mocha`, `bun add tap`), and a word in
+   any position but the first (`import { tap } from "rxjs"`, `x-node
+   --test`).
+4. **Text the lexer cannot follow** is split on its command separators and
+   each piece is read from its first word. 191.5 counts every one of row
+   69's names in such text; a new name counts only at a piece's start, or
+   one unbalanced quote in a runner-shaped file would read every `tap` and
+   `just` in its prose as a runner.
+5. **The deletion rule** reads runner sites as well as row 69's scan.
+   Removing the only `node --test` hook blocks (H4), and deleting the file
+   it lives in would otherwise pass at warn. A dead site counts, as row
+   69's scan counts `pytest` in a disabled step. A `.gitlab-ci.yml` is not
+   read for sites, so a deleted GitLab pipeline whose only runner is a new
+   name is reported at warn (residual). An emptied workflow, as against a
+   deleted one, stays the residual row 112 already names ("deleting the
+   step from a surviving workflow").
+6. **The opaque-exemption denial keeps row 69's names**, as ruled. A
+   runner-shaped script that runs a new runner is `ci` and grants no
+   exemption; a changed file of no runner shape whose only runner is a new
+   name still buys it (residual, row 87).
+7. **The collection inventory** keeps row 69's names for the commands it
+   reads: no new name runs a pytest command it could parse. A `uses:` step
+   named for one of row 69's runners whose input runs a new name is now a
+   runner site, and the inventory withholds for it, as for any step that
+   runs a runner action.
+8. **185.3** closes for a planted script that runs a recognised runner: the
+   commit that writes `"unit": "mocha || true"` beside `"test": "jest"` now
+   blocks. A planted script that runs none (`node scripts/run.js || true`)
+   still costs only the CI finding when it is wired in.
+9. **Indirection** is not read: a runner reached through a variable
+   (`$RUNNER || true`), a computed `eval`, piped text (`echo mocha | sh`) or
+   a heredoc body `cat` expands a substitution in. Row 69's names in the
+   same places still count wherever the token scan reads them. A name the
+   shell joins from quoted pieces (`m'o'cha`) is read here, since each word
+   is dequoted, but not among row 69's names (`'py'test`): that gap is
+   older than this round and is filed as #275.
+
+**A pin changes (its own commit, for approval).**
+`tests/test_manifest_test_commands.py::test_the_hop_is_exactly_one_and_needs_a_script_runner`
+used `"b": "node --test"` as the script two hops from `test`. Under the
+ruling `b` is a member by its own command, as M1 and P1 require of `"ci":
+"mocha"` and `"unit": "mocha || true"`, so the pin's input becomes `node
+scripts/report.js`, which runs no runner, and its assertion stays. The issue
+lists this file under "Must not change"; that line and M1/P1 cannot both
+hold.
+
+**Tests and fixtures.**
+- Tests: 118 in `tests/test_issue216_runner_vocabulary.py`: the
+  reading of each runner and context, R1 to R6 and the four task runners as
+  one parametrized pin, the swaps, the deletion rule, `--test-only` and the
+  inventory's reading. All 34 mutants of the round's code fail them
+  or the fixtures.
+- Fixtures (12). Each `_pos` passes on v0.6.0 or, for M1, blocks on the
+  assertion alone; each H `_neg` blocks there with the false reason:
+  - `runner_script_node_test_swallow_pos` (R1, `bypass: 106`);
+  - `ci_step_if_false_node_test_pos` (W1), `precommit_node_test_hook_removed_pos`
+    (H4) and `ci_node_test_workflow_removed_pos` (`bypass: 112`);
+  - `runner_package_json_mocha_script_swallow_pos` (M1),
+    `runner_package_json_planted_mocha_swallow_pos` (P1, 185.3) and
+    `runner_package_json_test_only_pos` (T1, 187.1) (`bypass: 106`);
+  - `precommit_pytest_to_hatch_test_neg` (H1) and
+    `precommit_pytest_to_just_test_neg` (H2);
+  - `runner_word_rxjs_tap_honest_fix_neg`,
+    `runner_word_in_production_script_prose_neg` and
+    `ci_runner_word_not_in_command_position_neg`, which v0.6.0 passes too.
+- Every fixture the issue lists under "Must not change" keeps its
+  expectation, and so does every other existing fixture.
+
+**Fingerprints.** CI_WORKFLOW_TOUCHED's fingerprint includes its reasons, so
+a CI finding that gains or loses a reason moves: W1, H4, M1, P1, T1 and the
+deletion gain one, and the H1/H2 swaps lose one. A runner script promoted to
+`ci` (R1) gains a CI_WORKFLOW_TOUCHED finding. Every other finding keeps its
+fingerprint: an ASSERT_WEAKENED that moves from warn to high keeps its own.
+
+**Cost.**
+- **Where the change can apply.** The twelve histories the sweeps draw
+  from (attrs, click, flask, httpx, rich, starlette, aiohttp, pytest,
+  requests, scrapy, uvicorn and werkzeug: 61,048 non-merge commits on their
+  default branches) hold 6,941 commits that change a ci-role file, a
+  `package.json` or `Pipfile`, a runner-shaped script or a file with a shell
+  shebang. Both sides of every such file were read: 7,519 workflow and
+  pre-commit config sides, 1,939 runner-shaped sides and 38 manifest sides.
+  The new reading counts no command in them that row 69's names do not:
+  none of these projects runs one of the ten runners in a workflow step, a
+  hook, a manifest script or a runner-shaped script.
+- **Sweep, targeted:** those 6,941 commits give the same records under
+  main's engine and this tree's. 6,598 are readable; neither engine reads
+  the rest, 307 of them aiohttp's submodule commits.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records as
+  main's engine (#223's).
+- **Sweep, targeted by D-088:** its sets give the same records too: 895
+  commits of ten full histories (855 readable) and 368 of pytest's (364
+  readable).
+- **Not measured:** the false-positive cost on JS projects, where the new
+  names live. No JS/TS history replay exists yet (#212).
+- **Time:** linear in the text, and bounded by the reader's 1 MB. A 1 MB
+  runner-shaped script of 30,000 commands reads in about 0.6 s per call,
+  and 1 MB of command substitutions in about 0.9 s. Real scripts are a few
+  kilobytes.
+- After the sweeps, `_dequote` gained a fast path: a word with no quote,
+  escape or whitespace is returned as it is, which is what shlex returned
+  for it. All 3,820 distinct words of the 32,595 CI texts in the targeted
+  commits dequote the same both ways, and the fixture corpus is
+  byte-identical before and after.
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
