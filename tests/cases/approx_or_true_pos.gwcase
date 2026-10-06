@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 124
+rule: ASSERT_WEAKENED
+title: `totals()[0] == pytest.approx(78.75)` -> `... or True` holds everywhere
+origin: #299 — an approx call anywhere made the whole assertion the approximate comparison
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def totals():
+    return [78.75, 80.0]
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import totals
+
+
+def test_totals():
+    assert totals()[0] == pytest.approx(78.75)
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import totals
+
+
+def test_totals():
+    assert totals()[0] == pytest.approx(78.75) or True
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
