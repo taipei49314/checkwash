@@ -185,10 +185,23 @@ def test_python_records_what_the_magnitude_measures(body, source, reading):
 
 
 @pytest.mark.parametrize("body,source", [
-    # A lower bound asserts that the values differ: a plain comparison, as before.
     ("assert abs(total() - 78.75) > 0.01", _py_source),
+    ("assert 0.01 < abs(total() - 78.75)", _py_source),
     ("self.assertGreater(abs(total() - 78.75), 0.01)", _py_unittest_source),
-    # So is anything but one bound on the builtin `abs`.
+    ("self.assertLess(0.01, abs(total() - 78.75))", _py_unittest_source),
+    ("self.assertTrue(abs(total() - 78.75) > 0.01)", _py_unittest_source),
+])
+def test_python_a_lower_bound_is_read_for_its_direction(body, source):
+    # It asserts that the values differ, so it records no tolerance; what the
+    # magnitude measures is still the subject, so both directions of one
+    # check share it, as in JavaScript (#224).
+    assertion = _py_assertion(body, source)
+    assert _reading(assertion) == ("total()", "78.75", None)
+    assert (assertion.predicate, assertion.operand_source) == ("gt", "0.01")
+
+
+@pytest.mark.parametrize("body,source", [
+    # Anything but one bound on the builtin `abs` is not decomposed.
     ("assert abs(total() - 78.75) == 0", _py_source),
     ("assert 0 < abs(total() - 78.75) < 0.01", _py_source),
     ("assert math.fabs(total() - 78.75) < 0.01", _py_source),
@@ -231,10 +244,9 @@ def test_python_a_rewritten_centre_is_an_expected_value_rewritten(before, after,
     # A plain ordering bound is still the expected value.
     ("assert total() < 80", "assert total() < 1e12", BLOCK,
      [("EXPECTED_VALUE_CHANGED", "expected value rewritten 80 -> 1000000000000.0")]),
-    # Python states no bound direction (#224): a flipped check blocks as the
-    # centre rewritten into the lower bound, not as a reversed direction.
+    # A flipped check reverses the bound's direction, as in JavaScript (#224).
     ("assert abs(total() - 78.75) < 0.01", "assert abs(total() - 78.75) > 0.01", BLOCK,
-     [("EXPECTED_VALUE_CHANGED", "expected value rewritten 78.75 -> 0.01")]),
+     [("ASSERT_WEAKENED", "bound direction reversed (< 0.01 -> > 0.01)")]),
     # An exact equality replacing the check keeps its value: no rewrite.
     ("assert abs(total() - 78.75) < 0.01", "assert total() == 78.75", PASS, None),
 ])

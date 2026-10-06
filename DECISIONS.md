@@ -6486,6 +6486,104 @@ The 19 verdicts that move, read one by one:
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
 
+## D-103 (2026-10-06): Python comparisons carry a direction (#224)
+
+The Python frontend recorded `<`, `<=`, `>` and `>=` as one form,
+`compare_ord`, with no direction. `assert total() < 80` -> `assert total()
+> 80` changed what the test proves and passed with zero findings, and so did
+`<=` -> `>=`, the flip with the literal on the left, `assertLess` ->
+`assertGreater` and a hand-rolled `abs(d) < 0.01` -> `> 0.01`, which blocked
+only as the centre rewritten into the bound. `< 80` -> `not >= 80` was
+reported as "the test now proves the opposite", which it does not prove:
+`not x >= 80` also passes NaN.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.followup.python-compare-direction, filed as #224): "The Python
+frontend fills the same lt/le/gt/ge key, reversing the operator when the
+literal is on the left, so `<` -> `>` reports 'contradicts' in Python too.
+Costs: Python sweep, new fixtures, and a THREATMODEL row edit (maintainer)."
+Related rulings: 196.189.3 (the flip is ASSERT_WEAKENED "contradicts" with
+strength_drop 999) and 198.Q4 (a direction swap is "contradicts"; "proves
+the opposite" stays reserved for a flipped negation on the same key).
+
+**As implemented:**
+- `frontends/python/frontend.py`: a single `<`, `<=`, `>` or `>=` records
+  the bound key of `ir/predicate.py` (lt, le, gt, ge), read from the
+  subject's side, so `80 > total()` is `total() < 80`, with the bound as
+  `operand_source`, one line of its source. `assert not x >= 80` keeps the
+  key, negated. unittest's `assertLess`, `assertLessEqual`, `assertGreater`
+  and `assertGreaterEqual` record it, reversed when the subject is the
+  second argument. A hand-rolled `abs(d) <op> bound` records it in every
+  spelling it is read in (#196 189.2): with `abs` on the smaller side it is
+  the upper bound it was, an `abs=` tolerance; with `abs` on the larger
+  side it is a lower bound, read for its direction as JavaScript reads one:
+  its centre is the expected value, and it records no tolerance.
+- The key reaches every assertion the frontend records: a test's own, a
+  same-file helper's it inherits, and a fixture's the engine lends.
+- `ir/predicate.py` is unchanged; it now compares Python's keys too. A
+  reversed direction is ASSERT_WEAKENED "bound direction reversed" (the new
+  assertion contradicts the old one); `<` -> `<=` and `< 80` -> `not >= 80`
+  are a predicate widened, graded by the lattice drop; `x < 80` respelled
+  `80 > x` or `assertLess(x, 80)` is the same predicate.
+- No strength value, gating row or alignment parameter changes.
+
+**Readings:**
+1. **The subject's side.** A literal on the left is the expectation, as
+   `assertEqual`'s flip has it, so `80 > total()` states `total() < 80`.
+   With two expressions the left one is the subject.
+2. **What keeps no key.** A chained range keeps its bound-tuple reading; a
+   comparison inside `assertTrue(...)` records none, as `assert.ok(x < 80)`
+   records none in JavaScript (#288 asks whether both should); equality,
+   identity and membership stay on the lattice.
+3. **A lower bound's value is not compared**, in either language:
+   `abs(d) > 0.5` -> `> 0.01`, a loosening, passes. Before this round
+   Python blocked every change of that value, a tightening too, as an
+   expected value rewritten, because the bound was the comparison's
+   expected value. Reading the lower bound as JavaScript does is what lets
+   both halves of the flip share a subject; #289 asks how to compare the
+   value in both languages.
+4. **A plain bound's value is still an expected value.** `x < 80` -> `x <
+   1e12` keeps EXPECTED_VALUE_CHANGED (C2); the key decides only the
+   direction.
+
+**Measured cost**, with the round's engine against the base branch's
+(`fix/222-tolerance-calls` at `9a8e262`, the same engine bytes as the
+sweeps' copy):
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories whose test-side Python adds or removes a line with an ordering
+  comparison in an `assert`, or a unittest ordering method: 821 commits,
+  605 readable on both engines. Two records change, and one verdict moves
+  (149 -> 150 blocked):
+  - scrapy `47970e91bc5a` ("Invert request priority meaning, a higher
+    request.priority value means more priority") newly blocks: the commit
+    inverts the scheduler's priority order in production code and flips
+    two tests' `req2.priority < req.priority` to `>` and back, each now
+    "bound direction reversed" at high. The reversal is real; that it is
+    intended shows only in the production diff, which a reversal does not
+    weigh, as in JavaScript.
+  - pytest `22a50a5b88c3` stays pass with two more warn findings: `assert
+    len(l[0]) > 2` -> `>= 2`, a predicate widened, in a commit that also
+    changes production code.
+- **Standard set** (the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette: 1,800 commits, all readable): the same
+  records as the base, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records as the base, byte for
+  byte.
+
+**Fingerprints, messages and IR:**
+- New findings only: no existing finding changes rule, message or
+  fingerprint in the fixtures or in the sweeps, apart from the
+  hand-rolled flip, which changes rule (EXPECTED_VALUE_CHANGED ->
+  ASSERT_WEAKENED) and so fingerprint, and `< 80` -> `not >= 80`, whose
+  message changes from the opposite proven to a predicate widened.
+- IR: a Python ordering comparison records `predicate` and
+  `operand_source`, which were null; no field is added, and IR_VERSION
+  stays 2. In the corpus, 43 existing fixtures' records gain the two
+  values and every finding is byte for byte the same.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
 ## D-108 (2026-10-06): a D10 survivor is read with the conftest files above it (#266)
 
 D10 credits a disappeared unit when an identical live copy of its body runs

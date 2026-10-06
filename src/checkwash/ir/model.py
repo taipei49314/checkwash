@@ -46,7 +46,8 @@ class Assertion:
     # and which names a rewritten one reads; `right_value` stays the
     # literal evidence. A hand-rolled `Math.abs(d) < bound` records its
     # bound here only when the bound was read, because that bound is
-    # tolerance evidence only. JS only for now (#198).
+    # tolerance evidence only. The Python frontend records the bound of a
+    # bound key, as written (#224).
     operand_source: str | None = None
     # Names appearing in the asserted subject's own expression, and the names
     # the expectation transitively depends on after in-body assignments are

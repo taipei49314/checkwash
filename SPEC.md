@@ -344,7 +344,8 @@ assertion API whose predicate it does not read the same way: `raises` for a
 throw check, `unknown` otherwise (#196 190.5).
 
 A frontend may also record the predicate an assertion states, as one key of
-`ir/predicate.py` (the JavaScript frontend does, since #198): presence
+`ir/predicate.py` (the JavaScript frontend does, since #198, and the Python
+frontend records the bound keys, since #224): presence
 (`=== null`, `=== undefined`, `== null`, truthiness, `=== true`,
 `=== false`), equality (`===`, `==`) and bounds (`<`, `<=`, `>`, `>=`). Two
 keyed assertions on the same subject are compared by predicate before the
