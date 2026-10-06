@@ -7,6 +7,7 @@ import operator
 from checkwash.frontends.python.conftest_controls import is_collection_control
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import (
+    GUARDED_SKIP_CALLS,
     bare_names,
     is_guarded_mark,
     is_guarded_skip,
@@ -218,8 +219,9 @@ _SUITE_GATES = (
     "conftest.pytest_ignore_collect",
     "conftest.add_marker_skip",
 )
-# Imperative skips whose recorded guard plays the role of the condition.
-_GATE_CALLS = ("pytest.skip", "pytest.xfail", "self.skipTest", *_SUITE_GATES)
+# Imperative skips whose recorded guard plays the role of the condition: every
+# native body skip or xfail, called or raised (#220), and the suite gates.
+_GATE_CALLS = (*sorted(GUARDED_SKIP_CALLS), *_SUITE_GATES)
 
 
 def _parse_constants(raw: dict[str, str]) -> dict[str, ast.AST]:

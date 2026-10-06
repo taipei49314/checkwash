@@ -56,8 +56,9 @@ def _decorator(node, bindings, target, keywords):
 # Native calls that end setup in a skip or xfail outcome, and the exceptions
 # those calls raise. pytest's unittest plugin reports unittest's SkipTest as a
 # skip wherever it is raised, so raising it is the same act spelled through
-# the standard library. `importorskip` is deliberately absent: whether it
-# skips depends on what is installed, which no reading of the source decides.
+# the standard library. Twisted's trial exports that same class as its own
+# `SkipTest` (#220). `importorskip` is deliberately absent: whether it skips
+# depends on what is installed, which no reading of the source decides.
 _OUTCOME_CALLS = {
     'pytest.skip': 'skip', 'pytest.xfail': 'xfail', 'self.skipTest': 'skip',
     '_pytest.outcomes.skip': 'skip', '_pytest.outcomes.xfail': 'xfail',
@@ -66,9 +67,11 @@ _OUTCOME_RAISES = {
     'pytest.skip.Exception': 'skip', 'pytest.xfail.Exception': 'xfail',
     '_pytest.outcomes.Skipped': 'skip', '_pytest.outcomes.XFailed': 'xfail',
     'unittest.SkipTest': 'skip', 'unittest.case.SkipTest': 'skip',
+    'twisted.trial.unittest.SkipTest': 'skip',
 }
 _OUTCOME_KEYWORDS = frozenset({'reason', 'msg', 'allow_module_level'})
-_NATIVE_MODULES = frozenset({'pytest', '_pytest', '_pytest.outcomes', 'unittest', 'unittest.case'})
+_NATIVE_MODULES = frozenset({'pytest', '_pytest', '_pytest.outcomes', 'unittest', 'unittest.case',
+                             'twisted', 'twisted.trial', 'twisted.trial.unittest'})
 # An argument that calls, awaits, yields, binds or unpacks runs code before
 # the outcome, and that code could leave first.
 _IMPURE = (ast.Call, ast.Await, ast.Yield, ast.YieldFrom, ast.NamedExpr, ast.Lambda, ast.Starred)
@@ -90,6 +93,71 @@ def outcome_call(node, bindings):
     if not isinstance(node, ast.Call) or not _plain(node):
         return None
     return _OUTCOME_CALLS.get(_resolve(node.func, bindings))
+
+
+# A test body ends in the same outcomes, read through the same bindings, and
+# the frontend's literal spellings are retired (#220). The body keeps
+# `importorskip` (220.Q1): a test that starts calling it no longer runs
+# wherever the module is missing.
+_BODY_CALLS = {**_OUTCOME_CALLS, 'pytest.importorskip': 'skip'}
+BODY_OUTCOMES = frozenset(_BODY_CALLS) | frozenset(_OUTCOME_RAISES)
+# One object, one name. pytest's outcomes live in `_pytest.outcomes`, and
+# trial's SkipTest is unittest's, so a skip respelled through another module
+# that holds the same object is the skip the test already had, not a new one.
+_SAME_OBJECT = {
+    '_pytest.outcomes.skip': 'pytest.skip', '_pytest.outcomes.xfail': 'pytest.xfail',
+    '_pytest.outcomes.Skipped': 'pytest.skip.Exception', '_pytest.outcomes.XFailed': 'pytest.xfail.Exception',
+    'unittest.case.SkipTest': 'unittest.SkipTest', 'twisted.trial.unittest.SkipTest': 'unittest.SkipTest',
+}
+# The names a body skip's marker carries.
+BODY_MARKERS = frozenset(_SAME_OBJECT.get(name, name) for name in BODY_OUTCOMES)
+
+
+def _spelled(node, bindings):
+    """`node`'s dotted name read through `bindings`, or its own spelling when its root is unbound.
+
+    A bound root resolves to its binding, and to nothing when that is not a
+    native module. An unbound root keeps its spelling, as the literal set read
+    it: `pytest.skip` written without an import still names pytest's skip.
+    """
+    name = dotted_name(node)
+    if not name:
+        return None
+    first, dot, rest = name.partition('.')
+    if first not in bindings:
+        return name
+    target = bindings[first]
+    return target + dot + rest if target else None
+
+
+def body_outcome(node, bindings):
+    """The canonical name of the native outcome a test body's call or raise spells, or None.
+
+    Unlike setup's proof, any arguments count: a skip that computes its reason
+    still ends the test, or the test errors first.
+    """
+    if isinstance(node, ast.Call):
+        name = _spelled(node.func, bindings)
+        return _SAME_OBJECT.get(name, name) if name in _BODY_CALLS else None
+    if isinstance(node, ast.Raise) and node.exc is not None:
+        raised = node.exc.func if isinstance(node.exc, ast.Call) else node.exc
+        name = _spelled(raised, bindings)
+        return _SAME_OBJECT.get(name, name) if name in _OUTCOME_RAISES else None
+    return None
+
+
+def body_bindings(function, bindings, *, method):
+    """What a test function's names resolve to: the module's bindings, shadowed by its own.
+
+    In a method the first parameter is the instance, so `self.skipTest`
+    resolves. An import inside the test binds as one at module level does: a
+    local `import pytest` is still pytest, as the literal spelling read it.
+    """
+    local = _local(function, bindings, method)
+    for node in _executed(function.body):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            local.update(_import_pairs(node) or ())
+    return local
 
 
 def _outcome(statement, bindings):
@@ -343,12 +411,14 @@ def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse):
     return effect, evidence, clauses[0] if len(clauses) == 1 else ' or '.join(f'({c})' for c in clauses)
 
 
-def module_bindings(tree):
+def module_bindings(tree, *, mutated=True):
     """Each module name's final top-level binding: a native dotted target, or None.
 
     Setup callbacks run after the module has executed, so the last binding is
-    the one they see. A name any other statement binds, or whose attributes
-    it assigns, resolves to nothing.
+    the one they see. A name any other statement binds, or with `mutated`
+    whose attributes it assigns, resolves to nothing. A test body's skip reads
+    the bindings without `mutated` (#220): `unittest.TestCase.maxDiff = None`
+    leaves `raise unittest.SkipTest` a skip, as the literal spelling was.
     """
     bindings = {}
     for statement in tree.body:
@@ -363,8 +433,23 @@ def module_bindings(tree):
                 if alias.name != '*':
                     bindings[alias.asname or alias.name] = f'{statement.module}.{alias.name}' if native else None
         else:
-            bindings.update(dict.fromkeys(sorted(_names([statement], mutated=True))))
+            bindings.update(dict.fromkeys(sorted(_names([statement], mutated=mutated))))
     return bindings
+
+
+def _import_pairs(node):
+    """(name, native dotted target or None) for each name an import binds; None for a star import."""
+    if isinstance(node, ast.Import):
+        pairs = []
+        for alias in node.names:
+            local = alias.asname or alias.name.split('.')[0]
+            target = alias.name if alias.asname else local
+            pairs.append((local, target if target in _NATIVE_MODULES else None))
+        return pairs
+    if any(alias.name == '*' for alias in node.names):
+        return None
+    native = not node.level and node.module in _NATIVE_MODULES
+    return [(alias.asname or alias.name, f'{node.module}.{alias.name}' if native else None) for alias in node.names]
 
 
 def setup_skip_controls(tree):
@@ -372,11 +457,14 @@ def setup_skip_controls(tree):
 
     bindings, functions = {}, []
     for node in _body(tree.body):
-        if isinstance(node, ast.Import) and len(node.names) == 1 and node.names[0].name == 'pytest':
-            pairs = [(node.names[0].asname or 'pytest', 'pytest')]
-        elif (isinstance(node, ast.ImportFrom) and node.module == 'pytest' and not node.level
-              and node.names and all(alias.name in {'skip', 'xfail', 'fixture', 'hookimpl'} for alias in node.names)):
-            pairs = [(alias.asname or alias.name, 'pytest.' + alias.name) for alias in node.names]
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            # Each name an import binds, to a native module or to nothing this
+            # proof reads: `import sys` or `import unittest` beside the hook no
+            # longer ends it (#220, #199 H2). A star import binds names it
+            # does not say.
+            pairs = _import_pairs(node)
+            if pairs is None:
+                return
         elif isinstance(node, ast.FunctionDef) and _parameters(node) is not None:
             if node.name in bindings or node.name.startswith('__'):
                 return

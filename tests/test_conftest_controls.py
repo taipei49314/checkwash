@@ -20,7 +20,8 @@ import pytest
 
 from checkwash.cases import parse_case
 from checkwash.frontends.python import conftest_controls as cc
-from checkwash.frontends.python.frontend import _CONFTEST_HOOKS, _SKIP_CALLS, _SKIP_DECORATORS, parse_python
+from checkwash.frontends.python.frontend import _CONFTEST_HOOKS, _SKIP_DECORATORS, parse_python
+from checkwash.frontends.python.setup_skip_controls import BODY_MARKERS
 from checkwash.frontends.python.runtime_controls import _HOOKS as RUNTIME_HOOKS
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -121,8 +122,8 @@ def _scan():
 # the literal start of an f-string) is a family; the rest is plumbing that
 # carries a name from where it is built to a `Marker`.
 SITES = sorted([
-    ("frontend", "_collect_unit", "name = call _dotted"),
-    ("frontend", "_collect_unit", "name name"),
+    ("frontend", "_collect_unit", "name skip"),
+    ("frontend", "_collect_unit", "skip = call outcome_of"),
     ("frontend", "_conftest_unit", "conftest.collect_ignore"),
     ("frontend", "_conftest_unit", "name = None"),
     ("frontend", "_conftest_unit", "name = conftest.add_marker_skip"),
@@ -145,7 +146,7 @@ SITES = sorted([
 ])
 
 PLUMBING = {"name name", "name result", "name = None", "result = None", "name in runtime_controls",
-            "from fixture_setup_controls", "from setup_skip_controls"}
+            "from fixture_setup_controls", "from setup_skip_controls", "name skip"}
 
 # Each family, the kind it has, and names it mints.
 FAMILIES = {
@@ -153,8 +154,9 @@ FAMILIES = {
                                                                          "pytest.mark.xfail(reason='flaky')"]),
     "module.__test__": (cc.MODULE, ["module.__test__"]),
     "module.{}": (cc.MODULE, ["module.skip", "module.xfail", "module.importorskip"]),
-    # `_collect_unit` mints a called name only when it is in `_SKIP_CALLS`.
-    "name = call _dotted": (cc.SKIP_CALL, sorted(_SKIP_CALLS)),
+    # `_collect_unit` mints a native outcome its body calls or raises, by the
+    # name the import bindings resolve it to (#220).
+    "skip = call outcome_of": (cc.SKIP_CALL, sorted(BODY_MARKERS)),
     "conftest.collect_ignore": (cc.COLLECTION, ["conftest.collect_ignore"]),
     "name = conftest.{}": (cc.COLLECTION, [f"conftest.{hook}" for hook in sorted(_CONFTEST_HOOKS)]),
     "name = conftest.add_marker_skip": (cc.COLLECTION, ["conftest.add_marker_skip"]),
