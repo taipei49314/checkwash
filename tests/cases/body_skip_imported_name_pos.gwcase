@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 118
+rule: TEST_DISABLED
+issue: 220
+title: a bare `skip()` imported from pytest skips the test
+origin: issue #220 B2. v0.6.0 passes this with zero findings. pytest 9.1.1 reports `1 skipped`
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+from pytest import skip
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from pytest import skip
+
+from app.billing import total
+
+
+def test_total():
+    skip("flaky")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

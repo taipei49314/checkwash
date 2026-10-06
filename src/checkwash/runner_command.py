@@ -1,4 +1,4 @@
-"""Does one command invoke a test runner? The runner-site predicate (#196 191.5).
+"""Does one command invoke a test runner? The runner-site predicate (#196 191.5, #216).
 
 Row 69's `_runs_tests` asks whether a CI *file* ran a suite, and answers
 generously: a runner token anywhere in its text. Deleting a file that ran a
@@ -33,11 +33,23 @@ name unless the command is known not to run it:
 The lexer reads bash. Other shells are read with bash's rules: PowerShell
 spells `;`, `&&`, `|`, `#` and `echo` the same way, and where it differs (a
 backtick escape) the text usually fails to lex and keeps its names.
+
+#216 adds runners that count only where a command starts
+(`invokes_positional_runner`): `node --test`, `mocha`, `ava`, `tap`, `bun
+test`, `deno test`, `hatch test`, `just test`, `poe test` and `pdm test`.
+`tap` is also an rxjs operator and `just` an English word, so one of these
+counts as the first word of a simple command, past assignments, wrappers,
+package launchers, `sh -c` and `eval`, or inside a command substitution or a
+heredoc a shell reads, and never as a word elsewhere in the text.
+`invokes_test_runner` asks both questions. Row 69's `_runs_tests`, the
+opaque-exemption denial and the collection inventory keep the names above
+alone.
 """
 from __future__ import annotations
 
 import bisect
 import re
+import shlex
 
 from checkwash.roles import _TEST_RUNNER_TOKENS
 
@@ -93,7 +105,17 @@ def names_test_runner(text: str) -> bool:
 
 
 def invokes_test_runner(command: str) -> bool:
-    """Does this command run a test runner, as far as its text can say?"""
+    """Does this command run a test runner, as far as its text can say?
+
+    A name of `_TEST_RUNNER_TOKENS` counts as a whole word outside the
+    contexts known not to run it (`invokes_named_runner`); a name #216 adds
+    counts only where a command starts (`invokes_positional_runner`).
+    """
+    return invokes_named_runner(command) or invokes_positional_runner(command)
+
+
+def invokes_named_runner(command: str) -> bool:
+    """Does this command run a runner of `_TEST_RUNNER_TOKENS`? (#196 191.5)"""
     hits = [match.start() for match in _RUNNER.finditer(command)]
     if not hits:
         return False
@@ -104,6 +126,205 @@ def invokes_test_runner(command: str) -> bool:
         return True
     quiet, runs = _Spans(lexer.quiet()), _Spans(lexer.runs)
     return any(runs.holds(hit) or not quiet.holds(hit) for hit in hits)
+
+
+# The runners #216 adds, ruled with 191.5's predicate. Each counts only in
+# command position: the first word of a simple command, after its
+# assignments and reserved words and after the wrappers and package
+# launchers below, never as a word anywhere in a file. `tap` is an rxjs
+# operator and `mocha` a colour, so prose and identifiers must not run them.
+_POSITION_NAMES = frozenset({"mocha", "ava", "tap"})
+# Tools whose first argument is their test command (`bun test`, `just
+# test`). The subcommand may go on (`just test-unit`, `poe test:fast`), as
+# `make tests` does for `make test`.
+_POSITION_TOOLS = frozenset({"bun", "deno", "hatch", "just", "poe", "pdm"})
+# Commands that run their remaining words as a command.
+_WRAPPERS = frozenset({
+    "env", "sudo", "time", "timeout", "nice", "nohup", "exec", "command", "cross-env", "nyc", "c8", "xvfb-run",
+})
+# Package launchers that run the binary their first argument names, and the
+# subcommand that makes one of them a launcher (none: it always is one).
+# `yarn mocha` and `pnpm mocha` run the binary too.
+_LAUNCHERS = {
+    "npx": None, "pnpx": None, "bunx": None,
+    "npm": frozenset({"exec", "x"}), "pnpm": frozenset({"exec", "dlx"}),
+    "yarn": frozenset({"exec", "dlx"}), "bun": frozenset({"x"}),
+}
+_BINARY_LAUNCHERS = frozenset({"yarn", "pnpm"})
+# Launcher options that take the next word as their value.
+_LAUNCHER_VALUES = frozenset({"-p", "--package", "-w", "--workspace", "--prefix", "-C", "--dir"})
+_SHELLS = frozenset({"sh", "bash", "zsh", "dash"})
+# Shell options that take the next word as their value (`bash -o pipefail`).
+_SHELL_VALUES = frozenset({"--rcfile", "--init-file"})
+# A script node runs: past it, `--test` is the script's argument, not node's.
+_NODE_SCRIPT = re.compile(r"\.(?:[cm]?js|[cm]?ts)$", re.IGNORECASE)
+# Every word a positional runner can start with; text holding none is skipped.
+_POSITION_HINT = re.compile(
+    r"(?<![\w.])(?:mocha|ava|tap|bun|deno|hatch|just|poe|pdm|node)(?![\w-])", re.IGNORECASE | re.ASCII)
+# The command words this reader follows. After a wrapper's option, a word
+# that is none of them is read as the option's value (`nice -n 10 mocha`).
+_STARTS = _POSITION_NAMES | _POSITION_TOOLS | _WRAPPERS | _SHELLS | frozenset(_LAUNCHERS) | {"node", "eval"}
+_QUOTING = re.compile(r"""['"\\\s]""")
+# Nesting of `sh -c '...'`, `eval` and substitutions the reader follows.
+# Text nested deeper keeps every name it holds, as text the lexer cannot
+# follow does.
+_MAX_SHELL_DEPTH = 4
+
+
+def invokes_positional_runner(command: str, depth: int = 0) -> bool:
+    """Does a command in this text run one of #216's runners from command position?
+
+    `node --test`, `mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch
+    test`, `just test`, `poe test` and `pdm test`, behind assignments,
+    wrappers (`env`, `cross-env`, `nyc`, `c8`, `sudo`, `time`, `timeout`),
+    package launchers (`npx`, `npm exec`, `pnpm dlx`, `yarn`, `bunx`), `sh -c`
+    and `eval`, and inside a command substitution or a heredoc a shell reads.
+    Words a printer or an installer takes are no command's first word, and
+    neither is a comment, `command -v` or the body of a heredoc `cat` writes
+    out. Text the lexer cannot follow is split on its command separators
+    instead, so a name in command position there still counts.
+    """
+    if not _POSITION_HINT.search(command):
+        return False
+    if depth > _MAX_SHELL_DEPTH:
+        return True
+    lexer = _Lexer(command)
+    try:
+        lexer.lex()
+    except _Unread:
+        segments = re.split(r"[;&|()\n`]+|\$\(", command)
+        return any(_runs_from_position([_dequote(word) for word in segment.split()], depth)
+                   for segment in segments if segment.split())
+    for item in lexer.commands:
+        words = [_dequote(command[start:end]) for start, end in item.words]
+        if words and _runs_from_position(words, depth):
+            return True
+        # `bash <<EOF` runs its body; `cat <<EOF` writes it out.
+        if item.heredocs and any(_basename(word) in _SHELLS for word in words) and any(
+                invokes_positional_runner(command[start:end], depth + 1) for start, end, _ in item.heredocs):
+            return True
+    # A substitution's text runs wherever it sits: `out=$(mocha)`, `echo `tap``.
+    return any(invokes_positional_runner(_substituted(command[start:end]), depth + 1)
+               for start, end in lexer.runs)
+
+
+def _substituted(text: str) -> str:
+    """The command list inside `$(...)`, `<(...)`, `>(...)` or backticks."""
+    return text[1:-1] if text.startswith("`") else text[2:-1]
+
+
+def _dequote(word: str) -> str:
+    # A word with no quote or escape is its own value, and shlex costs most
+    # of the time a large script takes to read.
+    if not _QUOTING.search(word):
+        return word
+    try:
+        parts = shlex.split(word)
+    except ValueError:
+        return word
+    return " ".join(parts) if parts else word
+
+
+def _runs_from_position(words: list[str], depth: int) -> bool:
+    """Does this simple command, as its words, start one of #216's runners?"""
+    index = 0
+    # `time` is a wrapper here, so that its options are read as options.
+    while index < len(words) and (
+            (words[index] in _RESERVED and words[index] != "time") or _ASSIGNMENT.match(words[index])):
+        index += 1
+    while index < len(words):
+        # A make recipe's `@`, `-` and `+` prefixes are not part of the name.
+        name = _basename(words[index].lstrip("@-+"))
+        rest = index + 1
+        if name in _WRAPPERS:
+            index = _wrapped(words, rest)
+            if index is None or (name == "command" and _prints_only(words[rest:index])):
+                return False  # `command -v mocha` looks the name up and runs nothing
+            if name == "timeout":
+                index += 1  # its duration
+            continue
+        if name == "eval":
+            return invokes_positional_runner(" ".join(words[rest:]), depth + 1)
+        if name in _SHELLS:
+            return _shell_command(words, rest, depth)
+        if name in _LAUNCHERS:
+            subcommands = _LAUNCHERS[name]
+            at = _skip_options(words, rest)
+            if subcommands is None:
+                index = at
+            elif at < len(words) and words[at] in subcommands:
+                index = at + 1
+            elif name in _BINARY_LAUNCHERS and at < len(words) and _basename(words[at]) in _POSITION_NAMES:
+                index = at
+            elif name in _POSITION_TOOLS:
+                return at < len(words) and words[at].lower().startswith("test")
+            else:
+                return False
+            while index < len(words) and words[index].startswith("-"):
+                index += 2 if words[index] in _LAUNCHER_VALUES else 1
+            continue
+        if name in _POSITION_NAMES:
+            return True
+        if name in _POSITION_TOOLS:
+            at = _skip_options(words, rest)
+            return at < len(words) and words[at].lower().startswith("test")
+        if name == "node":
+            for word in words[rest:]:
+                if word == "--test":
+                    return True
+                if _NODE_SCRIPT.search(word):
+                    return False
+            return False
+        return False
+    return False
+
+
+def _wrapped(words: list[str], index: int) -> int | None:
+    """Where the command a wrapper runs starts: past its options and assignments.
+
+    An option may take the next word as its value. That word is read as one
+    unless it starts a command this reader follows, so `nice -n 10 mocha` and
+    `sudo -u ci mocha` reach `mocha`, while `sudo -E apt-get install tap`
+    reaches `install`, which runs nothing.
+    """
+    while index < len(words):
+        word = words[index]
+        if _ASSIGNMENT.match(word):
+            index += 1
+        elif word.startswith("-") and word != "-":
+            index += 1
+            if ("=" not in word and word != "--" and index < len(words)
+                    and not words[index].startswith("-") and _basename(words[index]) not in _STARTS):
+                index += 1
+        else:
+            return index
+    return None
+
+
+def _prints_only(options: list[str]) -> bool:
+    return any(not option.startswith("--") and ("v" in option[1:] or "V" in option[1:]) for option in options)
+
+
+def _shell_command(words: list[str], index: int, depth: int) -> bool:
+    """Does `sh -c '...'` (any of `_SHELLS`) run a runner in its command string?
+
+    The string is the first word past the options, which `-c` must be among.
+    Without `-c` the shell runs a script file, which is not a command string.
+    """
+    reads_string = False
+    while index < len(words) and words[index][:1] in ("-", "+") and words[index] not in ("-", "+"):
+        option = words[index]
+        index += 1
+        if option == "--":
+            break
+        if option.startswith("--"):
+            index += option in _SHELL_VALUES
+            continue
+        flags = option[1:]
+        reads_string = reads_string or "c" in flags
+        # `-o pipefail`, `+O extglob`: each takes the next word.
+        index += flags.count("o") + flags.count("O")
+    return reads_string and index < len(words) and invokes_positional_runner(words[index], depth + 1)
 
 
 class _Unread(Exception):

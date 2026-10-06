@@ -1,0 +1,38 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 220
+title: a guarded skip respelled from trial's `unittest.SkipTest` to unittest's `SkipTest` is the skip the test had
+origin: issue #220, found by the round's sweep: scrapy bb15c93a2bbd. Trial's SkipTest is unittest's class, so the respelling adds no skip. v0.6.0 passes this with zero findings; reading only unittest's spelling would have blocked it as a new skip
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+from twisted.trial import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        try:
+            import brotli  # noqa: F401
+        except ImportError:
+            raise unittest.SkipTest("no brotli")
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+=== after: tests/test_billing.py ===
+from unittest import SkipTest, TestCase
+
+from app.billing import total
+
+
+class TestTotal(TestCase):
+    def test_total(self):
+        try:
+            import brotli  # noqa: F401
+        except ImportError:
+            raise SkipTest("no brotli")
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+=== expect ===
+[]
