@@ -1,0 +1,33 @@
+=== meta ===
+bypass: 54
+rule: TEST_DISABLED
+title: flipping the class attribute a self.skipTest guard reads makes the guard hold, so the skip now runs every time
+origin: #254, ruling 254.Q1 - the guard text is unchanged; at base it never holds and mints no marker, at head it holds and reads as unconditional; v0.6.0 passes it with no finding, as the marker is under the same unevaluable guard on both sides
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TotalTest(unittest.TestCase):
+    run_slow = True
+
+    def test_total(self):
+        if not self.run_slow:
+            self.skipTest("slow")
+        self.assertEqual(total([30, 48.75]), 78.75)
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TotalTest(unittest.TestCase):
+    run_slow = False
+
+    def test_total(self):
+        if not self.run_slow:
+            self.skipTest("slow")
+        self.assertEqual(total([30, 48.75]), 78.75)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "TotalTest.test_total"}]
