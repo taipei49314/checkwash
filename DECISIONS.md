@@ -5374,3 +5374,200 @@ it read `2`. Its findings are byte-identical.
   passes, or blocks for a false reason.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-102 (2026-10-06): Python tolerance calls are read as the approximate comparisons they are (#222)
+
+`assert math.isclose(total(), 78.75, abs_tol=1e-9)` was a truthy assertion
+with no tolerance, so widening `abs_tol` to `1e3` passed with zero findings
+while the same widening in `pytest.approx` blocked. numpy's and torch's
+assertion calls were no assertions at all: widening
+`numpy.testing.assert_allclose`'s `rtol` passed, and so did deleting the
+call.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.followup.python-isclose-tolerance, filed as #222): one
+tolerance-call table that maps to APPROX and feeds TOLERANCE_LOOSENED. It
+covers math.isclose, numpy.isclose/allclose/testing.assert_allclose (rtol,
+atol), assert_array_almost_equal (decimal) and torch.testing.assert_close,
+recording each absent keyword's default, and each call keeps its own
+conversion: numpy's decimal is 1.5x10^-d, not unittest's places. Costs:
+frontend only; findings on existing isclose lines change from TRUTHY to
+APPROX; a Python sweep; a THREATMODEL row. Rulings of 2026-10-04
+([#222](https://github.com/taipei49314/checkwash/issues/222#issuecomment-5981757771)):
+the table records the expected argument too (222.Q1); `assertTrue(<call>)`
+is read as the call it wraps (222.Q2); torch's omitted pair is unknown, not
+float32's default (222.Q3).
+
+**As implemented:**
+- `frontends/python/tolerance_calls.py` (new): the table. Each entry names
+  the call's tolerances (keyword, recorded key, position, default), the
+  keywords of its two values, and whether it is a predicate (`isclose`,
+  `allclose`) or an assertion written as a statement. It also reads the
+  file's bindings.
+- `frontends/python/frontend.py`: a predicate in an `assert` or in
+  `assertTrue`/`assertFalse`, and a statement call in a test or in a
+  same-file helper the test calls, are recorded as approx/APPROX with their
+  tolerances, subject and expected value, as `assertAlmostEqual` records
+  its own.
+- `detectors/tolerance_loosened.py`: `decimal` is a kind of its own. It
+  loosens as it shrinks, and against another absolute kind it is the bound
+  1.5x10^-d, beside D-101's places conversion.
+- `detectors/assert_weakened.py`: a known tolerance replaced on the same
+  subject by one that cannot be read is an unverifiable replacement in
+  Python too, which is 222.Q3's cost. It was JavaScript's alone, because
+  until now every Python approximate comparison recorded a tolerance.
+- The ruling's costs say "frontend only". numpy's own conversion and
+  222.Q3's unverifiable replacement are judged where tolerances are
+  compared, so the two detectors change too. No strength value, gating row
+  or alignment parameter changes.
+- SPEC §3's lattice row 70 and §4's TOLERANCE_LOOSENED and ASSERT_WEAKENED
+  rows name the calls. THREATMODEL row 120 (new, Closed) records the
+  bypass, and row 119's residual drops what row 120 reads.
+
+Readings the ruling leaves to the implementation:
+
+1. **The table.** `math.isclose(a, b, *, rel_tol=1e-09, abs_tol=0.0)`;
+   numpy's `isclose` and `allclose` (`rtol=1e-05, atol=1e-08`, also as the
+   third and fourth arguments); `numpy.testing.assert_allclose`
+   (`rtol=1e-07, atol=0`, the same positions);
+   `numpy.testing.assert_array_almost_equal` (`decimal=6`, also the third
+   argument); `numpy.testing.assert_almost_equal` (`decimal=7`), the scalar
+   spelling of the same comparison, which the ruling does not name; and
+   `torch.testing.assert_close(actual, expected, *, rtol=None,
+   atol=None)`. `abs_tol` and `atol` record as `abs=`, `rel_tol` and `rtol`
+   as `rel=`, sorted and joined as `pytest.approx` records several, and
+   `decimal` as `decimal=d`. The defaults are those numpy 2.3.3 and CPython
+   3.11 state, checked in a scratch environment along with the 1.5x10^-d
+   boundary; torch's are read from its v2.8.0 source.
+2. **Bindings.** Every import in the file, at any depth, and a name
+   assigned `pytest.importorskip("numpy")`, plainly, annotated or with
+   `:=`; `math`, `numpy` and `torch` by those names when nothing binds
+   them. A name bound to two different targets, or also bound by a
+   definition or another assignment, is not read: no guess.
+3. **The expected value (222.Q1).** The second value (`b`, `desired`,
+   `expected`), or the first when only it is a literal: the flip
+   `assertEqual` has. A test that writes `assert_allclose(reference,
+   computed)` has its computed value read as the expected one, as
+   `assertEqual(reference, computed)` does.
+4. **Where a call is read.** A predicate in an `assert`, also through a
+   call around it (`np.isclose(a, b).all()`, `np.all(np.isclose(a, b))`,
+   `all(math.isclose(x, y) for ...)`), and in `assertTrue` or
+   `assertFalse` (222.Q2). A statement call where it stands, in a test or
+   in a same-file helper the test calls. A fixture and a helper in another
+   file lend the test their bare `assert`s only, so their calls are not
+   lent (#286, found in this round). Whether a call can fail at all
+   (`trivial`, which keeps padding out of compensation) is judged on its
+   two values in every spelling, as `assertAlmostEqual`'s is.
+5. **Negation.** A negated predicate passes when the values are far
+   apart, so its tolerance orders the other way: it is recorded without
+   one, as JavaScript records a negated `toBeCloseTo` (#284 does the same
+   for `pytest.approx`).
+6. **What cannot be read.** A tolerance that may come through `*args` or
+   `**kwargs`, a value a starred argument may stand for, and torch's
+   omitted pair (222.Q3) are unknown. A known tolerance replaced by an
+   unknown one on the same subject is ASSERT_WEAKENED's unverifiable
+   replacement; unknown on both sides is silent. A keyword-only tolerance
+   is never read from a position, where it is a TypeError. A name or an
+   expression is recorded as written, as `pytest.approx`'s is.
+7. **The comparison.** As `pytest.approx`'s: `abs=` and `rel=` loosen as
+   they grow, several at once are compared kind by kind, and numpy's
+   `decimal` is compared with another absolute kind as 1.5x10^-d. So
+   `math.isclose(abs_tol=1e-9)` -> `pytest.approx(abs=1e-9)` keeps the
+   absolute bound and is no finding. A `decimal` rewritten into
+   `assert_allclose`'s pair, as numpy's documentation recommends, is
+   several tolerances against one: compared kind by kind, it reads as new
+   slack (row 119's residual) even where the new bound is tighter.
+
+**Tests and fixtures.**
+- Tests: 108 in `tests/test_tolerance_calls.py`. Of 53 mutants of the
+  round's code, 49 fail the tests or the fixtures. The 4 that survive
+  change nothing: the import reading's two checks that a target is math,
+  numpy or torch repeat the table lookup that follows them; the table
+  already lists each call's tolerances in key order, so dropping the sort
+  changes no record; and the Python frontend records no predicate, so
+  lifting the JavaScript-only guard on a lost hand-rolled bound reaches no
+  Python pair.
+- Fixtures (19): row 120's 14 pins, which v0.6.0 passes with zero
+  findings (#222's I1-I4, N1-N6, T1, T2, X1, and the dropped torch pair);
+  `tolerance_call_assert_true_isclose_pos` (I5) and
+  `tolerance_call_to_approx_widened_pos` (X3), which v0.6.0 blocks as
+  SUBJECT_INPUT_CHANGED and EXPECTED_VALUE_CHANGED; and the controls
+  `tolerance_call_isclose_tightened_neg` and
+  `tolerance_call_decimal_tightened_neg`, which v0.6.0 passes, and
+  `tolerance_call_to_approx_same_bound_neg`, which v0.6.0 blocks as
+  EXPECTED_VALUE_CHANGED.
+- Every existing fixture keeps its findings and its IR byte for byte,
+  among them the twelve #222 lists as must-not-change.
+
+**Fingerprints, messages and IR.**
+- I5's finding changes rule (SUBJECT_INPUT_CHANGED -> TOLERANCE_LOOSENED),
+  as 222.Q2 says, and so does X3's (EXPECTED_VALUE_CHANGED ->
+  TOLERANCE_LOOSENED): new fingerprints.
+- A finding on a predicate the frontend recorded before keeps its
+  fingerprint, which is the assertion's text; its message names strength
+  APPROX where it named TRUTHY.
+- TEST_DISABLED's identity is the removed unit's recorded assertions, so a
+  removed unit that held a numpy or torch assertion call, recorded now,
+  gets a new fingerprint.
+- IR: the new assertions appear in `--emit-ir` as approx records; no field
+  is added or renamed, and IR_VERSION stays 2.
+
+**Cost.** Measured with the round's engine against the base branch's
+(`ef17bd1`, #196 190.3), whose records on the standard and D-088 sets are
+main's (D-101):
+- **Standard set:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same
+  records.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and
+  368 of pytest's (364 readable) give the same records.
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories and of PyWavelets (`PyWavelets/pywt` at `c9b542b2d2c3`, a
+  numpy library whose tests use `numpy.testing` throughout) whose
+  test-side Python adds or removes a line naming `isclose`, `allclose`,
+  `assert_array_almost_equal`, `assert_almost_equal` or `assert_close`:
+  180 commits (aiohttp 6, pytest 7, PyWavelets 165, uvicorn 2), 171
+  readable, as on the base. Only PyWavelets' records change, 38 of its
+  165, and its blocked commits go from 10 to 26: 17 newly block and 1
+  newly passes.
+- **PyWavelets' last 300 non-merge commits:** one record changes, and
+  its commit newly blocks (5 -> 6 blocked).
+
+The 19 verdicts that move, read one by one:
+- **4 real loosenings**, the bypass this round closes: `rtol` and `atol`
+  1e-6 -> 1e-5 in `d1b49af3ec4b` and `486614cb19b0` ("relax tolerance"),
+  `atol` 0 -> 1e-14 in `40a34ebdc1a0` ("fix resulting test failures"),
+  and `atol` 0 -> 1e-13 in `4c2534cceda7` ("atol=0 doesn't work well").
+  The first three block on TOLERANCE_LOOSENED alone.
+- **15 move under rules that existed before**, which now read numpy's
+  assertion calls: EXPECTED_VALUE_CHANGED, EXPECTATION_DEFINITION_CHANGED,
+  SUBJECT_NORMALIZED, ASSERT_SUBSTITUTED, and TEST_DISABLED's grade. They
+  give exactly what those rules give the same assertions written
+  `self.assertAlmostEqual(A, B)` with the same two arguments: rewriting
+  each tolerance call of the 19 commits that way and running the base
+  engine reproduces every finding outside TOLERANCE_LOOSENED, 19 commits
+  of 19.
+  - 2 are changes the rules exist for: `57b21c42e21c`'s expected list
+    gains an element for a new mode, and `4c2534cceda7` rewrites what it
+    compares against.
+  - 12 are refactors those rules cannot tell from a rewrite: a literal
+    moved into a variable (`cd2615778141`, `f28ad2032110`,
+    `73f9a8d7daea`, `b9a9e820417d`, `ff32cc38f21d`); an expectation
+    renamed, restructured or extended with new cases (`7ef597740dab`,
+    `f75f9976b124`, `cd8f4f793a6b`, `08260ec52ebc`); a numpy deprecation
+    fix (`c81d78e32491`, list -> tuple indexing; `95e4d5fa4682`,
+    `np.float` -> `np.float64`); and `.data` added while a disabled test
+    was enabled (`f78120f7f290`).
+  - 1 is both: `ddda4dd3ae99` renames its variables (ASSERT_SUBSTITUTED)
+    and rewrites `decimal=6` into `assert_allclose`'s pair, which reads as
+    new slack (row 119's residual) though the new bound is tighter for
+    the values it compares.
+  - 1 newly passes: `28475325f2d5` replaces a test with a broader one in
+    the same file, and TEST_DISABLED grades the removal warn instead of
+    high now that the new test's assertion is read.
+- The 20 records that change without moving a verdict: 8 change only a
+  TEST_DISABLED fingerprint, and 12 gain or regrade findings on commits
+  that also change production code (warn) or already block.
+- Fingerprints: in the PyWavelets sets the only fingerprints that change
+  are TEST_DISABLED's, 24 findings, each reported again under a new one.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
