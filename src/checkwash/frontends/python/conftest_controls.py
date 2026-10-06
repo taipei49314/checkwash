@@ -12,7 +12,8 @@ fails until it is classified here.
 """
 from __future__ import annotations
 
-from checkwash.frontends.python.frontend import _SKIP_CALLS, _SKIP_DECORATORS
+from checkwash.frontends.python.frontend import _SKIP_DECORATORS
+from checkwash.frontends.python.setup_skip_controls import BODY_MARKERS
 
 # A conftest control that changes what pytest collects (SPEC §2b).
 COLLECTION = "collection"
@@ -61,7 +62,7 @@ def marker_kind(name: str) -> str | None:
         return SETUP
     if name.startswith("module."):
         return MODULE
-    if name in _SKIP_CALLS:
+    if name in BODY_MARKERS:
         return SKIP_CALL
     # `_marker_identity` appends a mark's condition: `pytest.mark.skipif(cond)`.
     if name.split("(", 1)[0] in _SKIP_DECORATORS:

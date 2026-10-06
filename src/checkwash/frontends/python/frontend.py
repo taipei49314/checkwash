@@ -19,9 +19,13 @@ from checkwash.frontends.python.conditional_oracles import conditional_oracle_ca
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.frontends.python.setup_skip_controls import (
+    BODY_MARKERS,
     ConftestLevel,
     SetupScope,
     _conjunction,
+    _import_pairs,
+    body_bindings,
+    body_outcome,
     conftest_level,
     module_bindings,
     setup_outcomes,
@@ -100,7 +104,14 @@ _SKIP_DECORATORS = {
     "expectedFailure",
 }
 
-_SKIP_CALLS = {"pytest.skip", "pytest.xfail", "pytest.importorskip", "self.skipTest"}
+# A body skip is any native outcome call or raise, read through the module's
+# import bindings (`setup_skip_controls.body_outcome`, #220). The literal set
+# of four dotted spellings it replaces missed `pt.skip()` and a bare `skip()`
+# imported from pytest, and read `raise unittest.SkipTest` as removed
+# assertions. Roots that can spell one when nothing rebinds them:
+_OUTCOME_ROOTS = frozenset({"pytest", "_pytest", "unittest", "self"})
+# An indented import line: only then can a test bind a skip under its own name.
+_NESTED_IMPORT = re.compile(r"^[ \t]+(?:import|from)[ \t]", re.MULTILINE)
 
 # Every native setup outcome (`setup_skip_controls`) is spelled with one of
 # these, if only on its import line; a module without them has none to find.
@@ -1776,12 +1787,17 @@ def _swallows(handler: ast.ExceptHandler) -> bool:
     return not _contains_oracle(handler.body)
 
 
-def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None, attrs=None) -> set[int]:
+def _unreachable_ids(
+    func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None, outcome=None, attrs=None
+) -> set[int]:
     """Node ids under statements that can never execute.
 
     `return` (or `raise`) parked at the top of a test body leaves every
     assertion in the AST while killing the test — a one-token cheat that was
-    completely silent before (confirmed red-team finding).
+    completely silent before (confirmed red-team finding). A raise that
+    `outcome` reads as a native skip or xfail is not one: it skips the test as
+    `pytest.skip()` does, its marker reports that, and the assertions after
+    it are still the test's (#220).
 
     `attrs` resolves the class attributes a method's guards read through its
     receiver (`ClassAttributes.env`, #254): `if self.item_class is None:` is
@@ -1808,6 +1824,8 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None
         for stmt in body:
             if stop:
                 kill(stmt)
+                continue
+            if isinstance(stmt, ast.Raise) and outcome is not None and outcome(stmt):
                 continue
             if isinstance(stmt, (ast.Return, ast.Raise)):
                 stop = True
@@ -2243,7 +2261,7 @@ _STMT_BODY_FIELDS = ("body", "orelse", "finalbody")
 
 
 def _skip_call_guards(func: ast.FunctionDef | ast.AsyncFunctionDef, text) -> dict[int, str]:
-    """id(call node) -> conjunction of enclosing `if` condition sources.
+    """id(call or raise node) -> conjunction of enclosing `if` condition sources.
 
     `if PY_3_14_PLUS and not slots: pytest.xfail(...)` is the imperative
     spelling of `skipif(PY_3_14_PLUS and not slots)`; without the guard, D6
@@ -2277,7 +2295,7 @@ def _skip_call_guards(func: ast.FunctionDef | ast.AsyncFunctionDef, text) -> dic
                 record(case.body, conds)
             if not compound and conds:
                 for node in ast.walk(stmt):
-                    if isinstance(node, ast.Call):
+                    if isinstance(node, (ast.Call, ast.Raise)):
                         out[id(node)] = " and ".join(conds)
 
     record(func.body, ())
@@ -2572,6 +2590,9 @@ def _collect_unit(
     fixtures: dict[str, ast.Constant] | None = None,
     doctests: list[Assertion] | None = None,
     aliases: dict[str, list[ast.expr]] | None = None,
+    outcome_bindings: dict[str, str | None] | None = None,
+    method: bool = False,
+    outcome_roots: frozenset[str] = frozenset(),
     attrs=None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
@@ -2580,7 +2601,30 @@ def _collect_unit(
     markers = _decorator_markers(func, text, off, aliases) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
-    dead = _unreachable_ids(func, fixtures, attrs)
+    # A body skip is read through the module's import bindings, shadowed by
+    # the function's own, which are worked out only for a call or raise whose
+    # root can spell one (#220).
+    module_names = outcome_bindings or {}
+    roots = _OUTCOME_ROOTS | outcome_roots | {name for name, target in module_names.items() if target}
+    positional = [*func.args.posonlyargs, *func.args.args]
+    if method and positional:
+        # The instance, whatever it is called, spells `self.skipTest`.
+        roots = roots | {positional[0].arg}
+    local_names: dict[str, str | None] | None = None
+
+    def outcome_of(node: ast.Call | ast.Raise) -> str | None:
+        nonlocal local_names
+        target = node.func if isinstance(node, ast.Call) else node.exc
+        if isinstance(target, ast.Call):
+            target = target.func
+        name = _dotted(target) if target is not None else None
+        if not name or name.partition(".")[0] not in roots:
+            return None
+        if local_names is None:
+            local_names = body_bindings(func, module_names, method=method)
+        return body_outcome(node, local_names)
+
+    dead = _unreachable_ids(func, fixtures, lambda stmt: outcome_of(stmt) is not None, attrs)
     guards = _skip_call_guards(func, text)
     receiver_names: frozenset[str] | None = None
     _unparse_memo: dict[int, str] = {}
@@ -2624,6 +2668,23 @@ def _collect_unit(
     for node in ast.walk(func):
         if id(node) in dead:
             continue
+        # A native skip or xfail, called or raised (`raise unittest.SkipTest`
+        # is the same act as `pytest.skip()`), read through the bindings (#220).
+        if isinstance(node, (ast.Call, ast.Raise)):
+            skip = outcome_of(node)
+            if skip is not None:
+                seg = text.seg(node) or skip
+                guard = guards.get(id(node))
+                if guard is not None and attrs is not None:
+                    # A guard that holds under the class's attributes is
+                    # no condition: the skip reads as unconditional, as
+                    # a setup callback's does (#254).
+                    if receiver_names is None:
+                        receiver_names = receivers(func)
+                    parsed = parse_expr(guard)
+                    if parsed is not None and _static_truth(substitute(parsed, attrs, receiver_names)) is True:
+                        guard = None
+                markers.append(Marker(name=skip, text=seg, span=off.span(node), guard=guard))
         # An assert written inside a nested `def` that nothing calls is present
         # in the source and absent from the run. Counting it as live is what
         # let `verify()` be defined and never invoked (tamper 020) — and it is
@@ -2675,19 +2736,6 @@ def _collect_unit(
                 pair = _patch_call_target(node, name)
                 if pair is not None:
                     patches.add(pair)
-                if name in _SKIP_CALLS:
-                    seg = text.seg(node) or name
-                    guard = guards.get(id(node))
-                    if guard is not None and attrs is not None:
-                        # A guard that holds under the class's attributes is
-                        # no condition: the skip reads as unconditional, as
-                        # a setup callback's does (#254).
-                        if receiver_names is None:
-                            receiver_names = receivers(func)
-                        parsed = parse_expr(guard)
-                        if parsed is not None and _static_truth(substitute(parsed, attrs, receiver_names)) is True:
-                            guard = None
-                    markers.append(Marker(name=name, text=seg, span=off.span(node), guard=guard))
                 if name in ("pytest.raises", "pytest.warns", "raises"):
                     # `pytest.raises(E, match=...)` IS an oracle: triage found
                     # human commits folding an excinfo substring assert into
@@ -3334,6 +3382,15 @@ def parse_python(
     # fixture itself is judged suite-wide in `_conftest_unit`.
     setup_scopes: tuple[SetupScope, ...] = ()
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = {}
+    # What a test body's names resolve to at module level, for its skips (#220).
+    body_names = module_bindings(tree, mutated=False) if collect_tests and not conftest else {}
+    # Names a test can import inside itself, read when an import is indented.
+    body_roots = frozenset(
+        name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+        for name, _target in (_import_pairs(node) or ())
+    ) if body_names and _NESTED_IMPORT.search(raw) else frozenset()
 
     def condition(node: ast.AST) -> str:
         return text.seg(node) or ast.unparse(node)
@@ -3423,15 +3480,20 @@ def parse_python(
         # module mark (named for the mark, or `module.*`) is one a subclass
         # shares.
         if class_attrs is None or not markers or any(
-            not (m.name in _SKIP_CALLS or m.name.startswith("setup.")) or m.guard is not None for m in markers
+            not (m.name in BODY_MARKERS or m.name.startswith("setup.")) or m.guard is not None for m in markers
         ):
             return unit
+        # Every skip the body spells, called or raised, read as the unit
+        # reads it (#220): one dead under the base's attributes may still run
+        # under a subclass's.
+        local = body_bindings(func, body_names, method=True)
+        skips = {
+            id(node) for node in ast.walk(func)
+            if isinstance(node, (ast.Call, ast.Raise)) and body_outcome(node, local) is not None
+        }
         for subclass in class_attrs.crediting_subclasses(cls, func.name):
-            dead = _unreachable_ids(func, branch_fixtures, attrs_of(subclass))
-            if any(
-                isinstance(node, ast.Call) and _dotted(node.func) in _SKIP_CALLS and id(node) not in dead
-                for node in ast.walk(func)
-            ):
+            dead = _unreachable_ids(func, branch_fixtures, lambda stmt: id(stmt) in skips, attrs_of(subclass))
+            if any(node not in dead for node in skips):
                 continue
             if setup_markers(func, nested_setup(setup_scopes, cls, instance=subclass)):
                 continue
@@ -3459,7 +3521,9 @@ def parse_python(
                 if collect_tests and collectible and _is_test_name(child.name):
                     unit = _collect_unit(
                         child, qual, text, off, inherited + setup_markers(child, scopes),
-                        module_scopes, file_caches, branch_fixtures, doctests, aliases, attrs_of(owner),
+                        module_scopes, file_caches, branch_fixtures, doctests, aliases,
+                        outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
+                        attrs=attrs_of(owner),
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -3506,7 +3570,8 @@ def parse_python(
                 method, f"{cls.name}.{method.name}", text, off,
                 module_markers + class_marks(owner) + class_marks(cls)
                 + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls)),
-                module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner), attrs_of(cls),
+                module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
+                outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]

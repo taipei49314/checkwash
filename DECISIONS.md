@@ -5958,3 +5958,214 @@ version string aside, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-100 (2026-10-06): a test body's skip is read through its imports, and a raised skip is a skip (#220)
+
+The frontend read a skip in a test body by four literal dotted spellings
+(`pytest.skip`, `pytest.xfail`, `pytest.importorskip`, `self.skipTest`). So
+`pt.skip()` after `import pytest as pt`, and a bare `skip()`, `xfail()` or
+`s()` imported from pytest, passed with zero findings. A raised skip
+(`raise unittest.SkipTest(...)`, `raise SkipTest(...)`,
+`raise pytest.skip.Exception(...)`) ended the body like a `return`, so it
+blocked as ASSERT_REMOVED "assertion removed", a false reason: the assertion
+is still there, and pytest reports the test skipped. The same calls and
+raises in a fixture the test requests were read (#172), so one act had two
+outcomes. And the closed `pytest_runtest_setup` proof ended at any top-level
+statement other than `import pytest`, a `from pytest import` of four names or
+a function, so an always-skipping hook beside `import sys`, or #199 H2's
+`import unittest` with `raise unittest.SkipTest`, passed with zero findings.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item `196.followup.body-skip-aliases`, filed as #220): the test body uses the
+setup path's outcome resolver (`_OUTCOME_CALLS`/`_OUTCOME_RAISES`, with import
+bindings), the literal `_SKIP_CALLS` set is retired, and #199 H2's hook
+spelling is covered. 220.Q1 (2026-10-04): a body `pytest.importorskip(...)`
+stays TEST_DISABLED, as a body-only entry of the shared resolver, and a
+fixture pins it. 220.Q2: J4 and J5, which come from #172's sibling-fixture
+narrowing, stay a named residual. Costs: frontend only; the raise forms move
+to TEST_DISABLED, so their fingerprints change; a Python sweep; a
+THREATMODEL row.
+
+**As implemented:**
+- `setup_skip_controls.body_outcome` names the native outcome a body's call
+  or raise spells: the calls and raises the setup path reads, plus
+  `pytest.importorskip` (`BODY_OUTCOMES`). The frontend mints the body's
+  skip marker under that object's one name (`BODY_MARKERS`), so `pt.skip()`
+  is `pytest.skip` and a raised one is `unittest.SkipTest` or
+  `pytest.skip.Exception`.
+- The shared table gains trial's `twisted.trial.unittest.SkipTest`, and
+  Twisted's trial modules bind as native ones.
+- `_unreachable_ids`: a raise read as such an outcome does not end the body.
+- `_skip_call_guards` records a raise's `if` guard as it records a call's.
+- `ir.markers.GUARDED_SKIP_CALLS` and D6's gate calls name every body
+  marker but `importorskip`; `conftest_controls.marker_kind` classes every
+  one as a body skip call.
+- The closed hook proof (`setup_skip_controls()`) reads every import's
+  bindings.
+
+Readings the ruling leaves to the implementation:
+
+1. **What a name resolves to.** The module's final top-level bindings,
+   shadowed by the test's own: its parameters, the names it assigns, and a
+   method's first parameter, which is the instance, so `self.skipTest`
+   resolves whatever the instance is called. An import inside the test binds
+   as one at module level does. Unlike the setup proof, a module-level
+   assignment to an attribute (`unittest.TestCase.maxDiff = None`) shadows
+   nothing for the body: the body errs toward reading a skip, as the literal
+   set did, while the setup proof must establish one.
+2. **An unbound root keeps its spelling.** `pytest.skip(...)` written with no
+   import still names pytest's skip, as the literal set read it, and so does
+   `self.skipTest` outside a class.
+3. **Any arguments, any cause.** The setup proof needs plain arguments to
+   show that every run ends in the outcome. A body skip that computes its
+   reason, or a raise `from` a cause, still ends the test skipped, or the
+   test errors first; it never passes.
+4. **A raised skip is a skip.** It no longer ends the body for the
+   assertions after it: they stay the test's, and the finding is
+   TEST_DISABLED where it was ASSERT_REMOVED, as for `pytest.skip()`.
+5. **Guards.** Every spelling records its guard and is judged as
+   `pytest.skip()` is: held by D6 under a platform guard (D2, D3), reported
+   when its `if` or `except` guard is removed (183.2) or made always true
+   (row 54).
+6. **The hook proof.** An import binds each name it names, to a native
+   module or to nothing the proof reads; a relative import too. A star
+   import still ends the proof, as does any other statement that runs code,
+   and a sibling fixture that is not yield-only or another hook (J4, J5,
+   220.Q2).
+7. **One object, one name.** pytest's outcomes live in `_pytest.outcomes`,
+   and Twisted's trial exports unittest's own `SkipTest` class under its
+   name (`SkipTest = pyunit.SkipTest` in Twisted 17.1,
+   `from unittest import SkipTest` in 25.5). A marker carries the object's
+   one name: `_pytest.outcomes.skip` is `pytest.skip`, `Skipped` is
+   `pytest.skip.Exception`, and `unittest.case.SkipTest` and trial's
+   `SkipTest` are `unittest.SkipTest`. So trial's spelling, the one scrapy
+   writes, is read, and a skip respelled from one name of its object to
+   another is the skip the test already had. The round's first sweep
+   measured the other choice: reading unittest's name alone made scrapy
+   bb15c93a2bbd, which respells a guarded `raise unittest.SkipTest` from
+   trial's `unittest` to unittest's `SkipTest`, block as a new skip.
+8. **Cost of reading.** A test's own bindings are worked out only for a call
+   or raise whose root can spell an outcome: a native module's name, a name
+   bound to one, the instance, or a name the module imports inside a
+   function, which is looked for only when an import line is indented.
+9. **Not in this round (residuals, row 118):** `pytest.importorskip` in a
+   fixture records nothing (220.Q1); a skip reached through a helper the
+   test calls (#272); trial's `skip` and `todo` attributes, which the
+   round's sweep brought up and which are neither calls nor raises (#280);
+   a module-level `pytest.skip(..., allow_module_level=True)`,
+   still matched by its last name (row 31); a `pytest` or `unittest` the
+   module or the test rebinds to something else.
+
+**Tests and fixtures.**
+- Tests: 52 in `tests/test_issue220_body_skip_aliases.py`.
+  `tests/test_conftest_controls.py` lists where the frontend mints marker
+  names, as its own failure message asks: the body's site is now
+  `skip = outcome_of(node)`, minting `BODY_MARKERS`, where it was
+  `name = _dotted(...)` filtered by `_SKIP_CALLS`. Its assertions do not
+  change. All 27 mutants of the round's code fail the tests or the
+  fixtures.
+- Fixtures (17):
+  - row 118's pins, each passing on v0.6.0 with zero findings unless noted:
+    `body_skip_module_alias_pos` (B1), `body_skip_imported_name_pos` (B2),
+    `body_xfail_imported_name_pos` (B3), `body_skip_imported_alias_pos` (B4),
+    `body_raise_unittest_skiptest_pos` (B5), `body_raise_imported_skiptest_pos`
+    (B6), `body_raise_pytest_skip_exception_pos` (B7),
+    `testcase_raise_skiptest_pos` (B8) and `testcase_raise_trial_skiptest_pos`
+    (B8 in trial's spelling), which v0.6.0 blocks as ASSERT_REMOVED,
+    `conftest_hook_skip_beside_other_import_pos` (J2) and
+    `conftest_hook_raise_skiptest_pos` (J3);
+  - `body_importorskip_pos` (B9, 220.Q1): TEST_DISABLED, as on v0.6.0;
+  - `compat_gate_guarded_raise_skiptest_neg` (D2) and
+    `compat_gate_guarded_aliased_skip_neg` (D3): TEST_DISABLED at warn with
+    COMPAT_GATE, as D1; v0.6.0 passes both with zero findings;
+  - `body_skip_unrelated_module_neg`, `body_skip_rebound_name_neg` and
+    `body_skip_respelled_from_trial_neg` (scrapy bb15c93a2bbd's respelling):
+    zero findings.
+- Every existing fixture keeps its expectation, among them the ones the
+  issue lists: `test_disabled_skip_pos`, `skiptest_call_pos`,
+  `aliased_skip_marker_pos`, `module_level_skip_pos`, `early_return_pos`,
+  `sacrificial_skip_pos`, `conftest_skip_hook_pos`,
+  `fixture_skip_conftest_pos`, `fixture_skip_module_usefixtures_pos`,
+  `fixture_skip_conftest_fallback_neg`, `compat_gate_guarded_call_neg` and
+  `compat_skipif_neg`.
+
+**Fingerprints.** A raised skip in a test body reports TEST_DISABLED where
+it reported ASSERT_REMOVED, so those findings move, as the ruling names. A
+unit that disappears with a raised skip in its body is fingerprinted with
+the assertions after the raise, which are now the test's (scrapy
+09ce0ef52681). A skip spelled through an alias is a new finding. A skip
+spelled literally keeps its marker name, and its finding keeps its
+fingerprint.
+
+**Cost.** Measured with the round's engine against main's (`6e4f5ef`):
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give the same records as main.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and 368
+  of pytest's (364 readable), as on main. 12 records differ, all in scrapy,
+  and 2 verdicts move (26c70318cb14 and 7a51d370f3a5). Eleven of the twelve
+  are commits of the targeted set, below. The twelfth, 5a605969bd
+  ("Converting tests to plain asserts, part 2"), changes two disappearances'
+  severity as 1843a4f75358 does, and main gives the same under the
+  respelling check.
+- **Targeted set:** every non-merge commit of the twelve histories whose
+  test-side Python changes a skip spelled through an alias or an imported
+  name, a raised skip, `_pytest.outcomes`, a `pytest_runtest_setup` or a
+  `twisted.trial` import: 317 commits (aiohttp 7, pytest 84, scrapy 223,
+  werkzeug 3), 308 readable, as on main.
+  - 29 records differ, all in scrapy, and 11 verdicts move: 10 from pass to
+    block, 1 from block to pass.
+  - Respelling check: main's engine was run on each of the 29 commits with
+    every raised skip respelled `pytest.skip(...)` (and `import pytest` on
+    top). It gives the round's verdict and findings, marker names aside, on
+    27. On the other two it reproduces the round's changes, and the
+    respelling itself moves findings that main and the round report alike:
+    on 380c2279b92f it makes six skip-only overrides identical across a
+    class rename; on d8251332845d it hides #281's findings (below).
+  - **Newly blocking, a skip added to an existing test (9):** a raised
+    `SkipTest` under an environment condition: `if NON_EXISTING_RESOLVABLE:`
+    (26c70318cb14, three tests), a Twisted version, a reactor or Python 2
+    (906626cf0bef, fea5a1189938, cd193827546d, 494643458270), a CI image
+    (ea8be627d15a), clock precision (eb9377425661), an optional import
+    (3daf473686aa), and in `setUp` (e995c5c7ff26). Each blocks as
+    `pytest.skip()` in the same place blocks on main: a new skip in an
+    existing test, which the reviewer allowlists when it is honest.
+  - **Newly blocking, a false positive (1):** af73f141b23a moves an http2
+    test class verbatim to a new file, six skip-only overrides among it. The
+    arrivals now carry their skip, so they earn no move credit, which asks
+    for a live arrival. main blocks the same move in `pytest.skip()`'s
+    spelling; filed as #282.
+  - **Newly passing (1):** 7a51d370f3a5 deletes a test whose first statement
+    was an unconditional `raise unittest.SkipTest`. Its assertion is now the
+    test's, and it calls `guess_scheme`, which the commit changes, so the
+    disappearance has repair evidence and holds at warn.
+  - **The rest move no verdict:** a raised skip blocks as TEST_DISABLED
+    where it blocked as ASSERT_REMOVED (81a90c3af65c), or as a removed guard
+    (b44bd6f82505, e18014d84d05); disappearances change severity as the
+    restructure and rename credits count a unit with a raised skip as
+    skipped (1843a4f75358, 380c2279b92f, a724541a715b, d161d1d47d44); a
+    disappearance is fingerprinted with the assertions after its raise
+    (09ce0ef52681); a commit that blocked already adds raised skips, now
+    reported at high (2f1d345e74d1, 98c060d0b2cc, d6bea3bf2eb4); new raised
+    skips are reported at warn, held by COMPAT_GATE under a platform guard
+    (397d21f1f511, ab5ea32ffd9c, c5ab58056c29, d7024dcd3373) or by repair
+    evidence (036f3e562716, 25e481fd14b2); and a `setUp` skip the base
+    raised in trial's spelling is no longer read as added when the head
+    spells it `pytest.skip()` (d8251332845d).
+- **Not changed by this round:** a skip respelled from one API to another
+  (`raise unittest.SkipTest` or `self.skipTest` to `pytest.skip`) still
+  reads as a new skip: scrapy d8251332845d (#6873, "Reduce deps on
+  unittest") gives 54 such findings, 51 high, on main and here alike; filed
+  as #281.
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled. `i199/H2`, whose base
+conftest holds #199 H2's hook (`import unittest`, then `raise
+unittest.SkipTest` in `pytest_runtest_setup`), now gives that hook its
+runtime marker. 199.Q1 keeps a runtime control out of the inventory's
+withhold, so the case's new `pytest.ini` still blocks, as the ruling's
+ordering note required.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
