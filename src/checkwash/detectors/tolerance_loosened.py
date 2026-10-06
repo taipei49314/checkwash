@@ -3,12 +3,14 @@
 Tolerances are compared as absolute bounds where a conversion is defined,
 otherwise per kind, via decimal.Decimal on the literal source text — floats
 never touch a verdict (SPEC §3/§8). Per kind, rel/abs/delta grow looser as
-they grow bigger; unittest's `places` grows looser as it SHRINKS.
+they grow bigger; unittest's `places` and numpy's `decimal` grow looser as
+they SHRINK.
 
 Three kinds state an absolute bound on |actual - expected|: `abs`
 (`pytest.approx`'s `abs=`, a hand-rolled `abs(a - b) < bound` in either
 language, a chai `closeTo` delta), unittest's `delta`, and decimal places
-(`assertAlmostEqual`'s `places`, Jest's `toBeCloseTo` precision). A pair of
+(`assertAlmostEqual`'s `places`, Jest's `toBeCloseTo` precision), and
+numpy's `decimal` states one too, by its own conversion (#222). A pair of
 two of them in different kinds is compared in one unit rather than as
 unrelated kinds (issue #179, #196 190.3).
 """
@@ -21,7 +23,7 @@ from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.model import IR, judged_as_test
 
 # The kinds that state an absolute bound (#196 190.3).
-_ABSOLUTE = frozenset({"abs", "delta", "places"})
+_ABSOLUTE = frozenset({"abs", "decimal", "delta", "places"})
 # The kinds a frontend records bare. Alignment keys one with its own kind in
 # a change of another kind (`places=7` -> `7` read as a delta).
 _BARE = frozenset({"delta", "places"})
@@ -49,8 +51,8 @@ def _one_loosened(kind: str, before: str, after: str) -> bool:
         # a two-token test edit (audit 2026-08-19). Same contract: no guess,
         # no noise.
         return False
-    if kind == "places":
-        return a < b  # more places = stricter
+    if kind in ("places", "decimal"):
+        return a < b  # more places or decimals = stricter
     return a > b
 
 
@@ -92,17 +94,21 @@ def _absolute_bound(kind: str, number: str) -> tuple[Decimal, str] | None:
     `assertAlmostEqual(a, b, places=p)` when round(a - b, p) == 0, and Jest
     and Vitest pass `toBeCloseTo(x, p)` when |x - expected| < 10**-p / 2: both
     bound |a - b| by 5 * 10**-(p + 1), written from its digits rather than
-    computed (#196 190.3). Places must be integral, from -308 through 307:
-    past that a double cannot hold the bound, so no ordering is claimed.
-    None for any other kind and for a number that cannot be read.
+    computed (#196 190.3). numpy's `assert_array_almost_equal` and
+    `assert_almost_equal` pass while |desired - actual| < 1.5 * 10**-decimal,
+    their own conversion (#222). Places and decimals must be integral, from
+    -308 through 307: past that a double cannot hold the bound, so no
+    ordering is claimed. None for any other kind and for a number that
+    cannot be read.
     """
     try:
         value = Decimal(number)
-        if kind == "places":
+        if kind in ("places", "decimal"):
             if (not value.is_finite() or not -308 <= value <= 307
                     or value != value.to_integral_value()):
                 return None
-            return Decimal((0, (5,), -int(value) - 1)), f"places={number}"
+            digits = (5,) if kind == "places" else (1, 5)
+            return Decimal((0, digits, -int(value) - 1)), f"{kind}={number}"
         if kind not in ("abs", "delta") or value.is_nan():
             return None
     except (ArithmeticError, ValueError):

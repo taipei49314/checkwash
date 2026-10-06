@@ -1,0 +1,30 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: assert_array_almost_equal's decimal 0 -> 6 tightens the check: no finding
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    np.testing.assert_array_almost_equal([total()], [78.75], decimal=0)
+=== after: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    np.testing.assert_array_almost_equal([total()], [78.75], decimal=6)
+=== expect ===
+[]

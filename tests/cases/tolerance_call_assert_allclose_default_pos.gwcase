@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 120
+rule: TOLERANCE_LOOSENED
+title: N2: assert_allclose's default atol=0 is recorded, so atol=1e3 appearing widens it
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    np.testing.assert_allclose(total(), 78.75)
+=== after: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    np.testing.assert_allclose(total(), 78.75, atol=1e3)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 120
+rule: TOLERANCE_LOOSENED
+title: N1: numpy.testing.assert_allclose's rtol 1e-7 -> 0.5 widens the check
+origin: #222
+=== before: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    np.testing.assert_allclose(total(), 78.75, rtol=1e-7)
+=== after: tests/test_billing.py ===
+import math
+
+import numpy as np
+import pytest
+import torch
+
+from billing import total
+
+
+def test_total():
+    np.testing.assert_allclose(total(), 78.75, rtol=0.5)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
