@@ -32,6 +32,12 @@ DEFAULT_ROLES: dict[str, list[str]] = {
     # 2026-08-02).
     "ci": [
         ".github/workflows/**",
+        # A composite action's steps run inside the job that calls it, so its
+        # definition can hold the project's test command. Only the definition:
+        # a JavaScript action's source kept beside it is production, and a
+        # script an action calls is promoted by its content (#213).
+        ".github/actions/**/action.yml",
+        ".github/actions/**/action.yaml",
         ".gitlab-ci.yml",
         ".pre-commit-config.yaml",
         "pytest.ini",

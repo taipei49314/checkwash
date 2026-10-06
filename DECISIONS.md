@@ -5751,3 +5751,91 @@ version string aside, so no case is relabelled.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-098 (2026-10-05): composite action definitions are ci (#213)
+
+A composite action's steps run inside the job that calls it, so
+`.github/actions/test/action.yml` can hold a project's real test command.
+The `ci` role covered `.github/workflows/**` and not the action definitions,
+so `pytest || true` in one gave zero findings, as the same line in a
+workflow does not. An action whose runner holds no runner token (`node
+--test`) was opaque production and bought the opaque exemption, so an
+assertion weakened beside it passed at warn. Row 112 listed composite
+actions as a residual.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751), filed as #213):
+scope the default ci glob to the action definitions,
+`.github/actions/**/action.yml` and `action.yaml`, not all of
+`.github/actions/**`. Scripts an action calls are already promoted by
+content. Later, feed composite `runs.steps` into the runner-site reader.
+Costs: SPEC §2 and `DEFAULT_ROLES` (maintainer; pinned by
+`tests/test_spec_roles_pinned.py`), composite edits warn, a sweep.
+
+**As implemented:** the two globs join the `ci` row of `DEFAULT_ROLES` and of
+SPEC §2's table, in one commit, as the pin requires. Nothing else changes:
+an action definition is read as every other ci file is.
+
+Readings the ruling leaves to the implementation:
+
+1. **What the globs reach.** `fnmatchcase` lets `**` cross directories, so
+   an action at any depth beneath `.github/actions/` matches
+   (`.github/actions/python/test/action.yml`), and one directly in
+   `.github/actions/` does not; GitHub resolves `uses: ./.github/actions/x`
+   to a directory. A JavaScript action's source, a Docker action's
+   `Dockerfile` and an action published from the repository root
+   (`action.yml`, `action/action.yml`) keep their role.
+2. **Beneath a test-support directory.** #217 gives a non-Python file
+   beneath `test/` the test role, so `.github/actions/test/action.yml` was a
+   test file on v0.6.0, read by no rule. A path the table resolves to a role
+   keeps it, so the definition is ci there too.
+3. **What reads it.** As a ci file, a definition loses the opaque exemption,
+   and the added-line scan reads its swallows and the narrowings it
+   introduces (`run: pytest --deselect …`). A Docker action's `action.yml`
+   is a definition too, and its edits warn.
+4. **Not in this round (residuals, row 112):** the runner-site reader does
+   not read composite `runs.steps`, so `if: false` on a composite step reads
+   at warn (A2); deleting an action definition is not a workflow deletion,
+   so it reads at warn; an action defined outside `.github/actions/` is not
+   a definition here.
+
+**Tests and fixtures.**
+- Tests: 15 in `tests/test_issue213_composite_actions.py`.
+- Fixtures (5):
+  - `ci_composite_action_swallow_pos` (A1) and
+    `ci_composite_action_yaml_swallow_pos` (A1y), `bypass: 112`: v0.6.0
+    passes both with zero findings;
+  - `ci_composite_action_node_test_swallow_pos` (A5), `bypass: 112`: v0.6.0
+    passes it with the weakened assertion at warn;
+  - `ci_action_javascript_source_neg` (A3): a JavaScript action's
+    `index.js` gaining `|| true` stays production, with zero findings;
+  - `ci_composite_action_version_bump_neg`: a setup action bumped inside a
+    definition reports CI_WORKFLOW_TOUCHED at warn.
+- Every existing fixture keeps its expectation, including every `ci_*` and
+  `runner_*` fixture and `circleci_weakened_pos`.
+
+**Fingerprints.** A changed action definition now reports
+CI_WORKFLOW_TOUCHED, which is new. Findings on other files keep theirs.
+
+**Cost.**
+- **Where the change can apply.** In the twelve histories the sweeps draw
+  from (attrs, click, flask, httpx, rich, starlette, aiohttp, pytest,
+  requests, scrapy, uvicorn and werkzeug: 80,252 commits across all refs),
+  one commit touches `.github/actions/`: pytest's b3b2990 ("ci: reuse
+  official uv pattern to install tox via composite action"), which adds
+  `.github/actions/setup-tox/action.yml`. Under this tree's engine it
+  passes as before, and the new definition reports CI_WORKFLOW_TOUCHED at
+  warn, the cost the ruling names.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records as
+  main's engine (#223's).
+- **Sweep, targeted by D-088:** its sets give the same records too: 895
+  commits of ten full histories (855 readable) and 368 of pytest's (364
+  readable).
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
