@@ -104,18 +104,20 @@ def test_moving_a_test_out_of_a_ci_directory_is_not_a_workflow_removal():
     assert all(finding.severity in ("warn", "info") for finding in findings)
 
 
-@pytest.mark.parametrize("path,role", [
-    ("tests/golden/test_value.py", "snapshot"),
-    (".github/workflows/test_value.py", "ci"),
+@pytest.mark.parametrize("path,role,obligations", [
+    # The Python twin (#219, ruling 219.Q1): a file pytest's default
+    # collection runs carries obligations beside its role, as a JS/TS test
+    # path does.
+    ("tests/golden/test_value.py", "snapshot", True),
+    # pytest never descends into a dot-directory, so nothing runs it there.
+    (".github/workflows/test_value.py", "ci", False),
 ])
-def test_python_tests_keep_one_role(path, role):
-    # The Python twin is a separate round (ruling 197.Q4): only JS/TS test
-    # paths carry obligations beside another role.
+def test_python_tests_carry_obligations_where_pytest_collects_them(path, role, obligations):
     before = b"def test_total():\n    assert total() == 78.75\n"
     after = b"def test_total():\n    assert total()\n"
     ir, _findings, _verdict = _analyze([FileChange(path, "modified", before, after)])
-    assert [(file.role, file.test_obligations) for file in ir.files] == [(role, False)]
-    assert not judged_as_test(ir.files[0])
+    assert [(file.role, file.test_obligations) for file in ir.files] == [(role, obligations)]
+    assert judged_as_test(ir.files[0]) is obligations
 
 
 @pytest.mark.parametrize("role,obligations,judged", [

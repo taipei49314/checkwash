@@ -242,7 +242,13 @@ calling, unedited, is not text the diff wrote. A manifest side the stdlib
 reader cannot open (over 1 MB, or refused by `json`/`tomllib`) cannot show
 its test command unchanged, so any edit to it counts as one and both sides
 are then scanned whole. Dependency and version edits that leave those
-commands unchanged are treated as before. A second-language checkbox does not establish broad
+commands unchanged are treated as before. The JS runners `node --test`,
+`mocha`, `ava`, `tap`, `bun test` and `deno test`, and the task runners
+`hatch test`, `just test`, `poe test` and `pdm test`, count only where a
+command starts, in a manifest script, a shell runner script, a workflow step
+or a pre-commit hook, and never as words elsewhere: an rxjs `tap` or a comment
+that names mocha runs nothing
+([#216](https://github.com/taipei49314/checkwash/issues/216)). A second-language checkbox does not establish broad
 coverage.
 
 The tracked six-repo sweep (engine 0.3.0, 2026-09-07) recorded **31 false

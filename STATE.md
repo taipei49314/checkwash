@@ -1,6 +1,57 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-05 (v0.6.0 published and rotated; next, the issues open on 2026-10-05, then stop)
+Updated: 2026-10-06 (the 2026-10-05 scope under way: ten pull requests merged, two in review; then stop)
+
+## 2026-10-06: the scope's first merges
+
+On 2026-10-06 the maintainer approved the rulings and the maintainer-owned
+commits put to them ("全部核准") and gave the agent the merge for the rest of
+the session ("授權代合 這個session永久生效"). These pull requests merged that
+day, each with a merge commit, once CI on its head showed only the expected
+reds:
+
+| PR | what it fixes | merge | record |
+|---|---|---|---|
+| #273 | #254: a skip guard reads the class attribute its class body sets | `1c8a351` | D-095 |
+| #274 | #219: a pytest file beneath a snapshot directory is a test | `bc78c4d` | D-096 |
+| #276 | #216: the JS and task runners count where a command starts | `b1eba79` | D-097 |
+| #277 | #213: composite action definitions are ci | `2ecb2cc` | D-098 |
+| #296 | #295: the frozen v0.3.3 byte comparison runs on dispatch only | `b96baa6` | — |
+| #279 | #221: `.pytest.ini`, `pytest.toml` and `.pytest.toml` are ci files | `b8968e2` | D-099 |
+| #283 | #220: a test body's skip is read through its imports | `c8d0395` | D-100 |
+| #285 | #196 190.3: places, delta and abs are one absolute bound | `a92b9f8` | D-101 |
+| #287 | #222: Python tolerance calls are approximate comparisons | `f8c4cde` | D-102 |
+| #290 | an allowlist entry for #224's ruled case move (expires 2026-11-05) | `eabe6eb` | — |
+
+Since #296, `qualify` no longer runs the v0.3.3 byte comparison on pull
+requests, so the one expected red on `main` and on a pull request is
+`test_pinned_tag_ships_the_current_source` on the nine test legs.
+
+In review:
+
+- #291 (#224, D-103): Python comparisons carry a direction. Its maintainer
+  commit is approved.
+- #298 (#226, D-104): one definition of a non-literal expected value, stacked
+  on #291. Its maintainer commit waits for the maintainer's approval.
+
+Of the 22 issues the scope started with, these are still open: #173, #180,
+#181, #196, #201, #212, #214, #215, #218, #224, #226, #233, #235, #263 and
+#266. #223 closed with #269 on 2026-10-05; its state was set on 2026-10-06,
+because the close had not taken. Filed along the way, as the scope asks:
+#272, #275, #278, #280, #281, #282, #284, #286, #288, #289, #292, #293, #294,
+#295 (fixed by #296), #297 and #299. Rulings for #275, #278, #280, #281,
+#282, #288, #289, #292, #293 and #297 went to the maintainer on 2026-10-06.
+
+What a successor needs to know:
+
+- **Retarget a stacked pull request before pushing `main` into it.** CI's
+  `checkwash`, `dogfood` and `install-from-tag` judge the diff against the
+  base the pull request had when the push happened. #291's head was pushed a
+  minute before its base moved to `main`, so those jobs read the allowlist
+  from the old base and blocked on the case move #290 exempts.
+- **A closing keyword in a merged pull request's description closes the
+  issue it names.** #290's "the round that fixes #224" closed #224 when #290
+  merged; #224 was reopened until #291 merges.
 
 ## 2026-10-05: after v0.6.0, the next scope
 
