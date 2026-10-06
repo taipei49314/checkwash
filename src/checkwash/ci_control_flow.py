@@ -10,13 +10,16 @@ those diffs passed at warn while `pytest || true` blocked (issue #181).
 The shared definition is the *runner site*: a workflow step or a pre-commit
 hook whose own command invokes a test runner, and whether it can execute for
 a pull request's commits. Whether a command invokes one is
-`runner_command.invokes_test_runner` (#196 191.5): a runner name as a whole
-word, outside the contexts known not to run it (`echo` and `printf` text,
-heredoc text that `cat` or `tee` writes out, install commands, comments). A
-`uses:` step is a site when the action's name and one of its `with:` inputs
-both name a runner, so a publisher action given a report path is not one.
-Row 69's broader `_runs_tests` still decides whether a deleted workflow ran a
-suite. A site is dead only for a reason that holds statically:
+`runner_command.invokes_test_runner` (#196 191.5, #216): a runner name as a
+whole word, outside the contexts known not to run it (`echo` and `printf`
+text, heredoc text that `cat` or `tee` writes out, install commands,
+comments), or one of the runners #216 adds (`node --test`, `mocha`, `bun
+test`, `hatch test` and the rest) where a command starts. A `uses:` step is a
+site when the action's name and one of its `with:` inputs both name a runner,
+so a publisher action given a report path is not one. A deleted workflow ran
+a suite when row 69's broader `_runs_tests` finds a runner in it or it holds
+a runner site (`holds_runner_site`). A site is dead only for a reason that
+holds statically:
 
 - a step or job `if:` that is false whatever the run looks like, or false for
   every event that can run the workflow on a pull request. `github.event_name`
@@ -935,6 +938,24 @@ _UNREADABLE_AT_HEAD = "runner sites can no longer be read at head"
 def became_unanalysable(reason: str) -> bool:
     """Is this `ci_weakening_lines` reason the unreadable-at-head one (#196 191.3)?"""
     return reason.startswith(_UNREADABLE_AT_HEAD + " (")
+
+
+def holds_runner_site(path: str, data: bytes | None) -> bool:
+    """Does this workflow or pre-commit config hold a runner site, live or dead?
+
+    Row 69's deletion rule asks whether a deleted pipeline ran a suite. A
+    step's `run:` and a hook's `entry` are commands, read as runner sites read
+    them, so a workflow whose only suite is `node --test` ran one although
+    `_runs_tests` finds no token in it (#216).
+    """
+    p = path.replace("\\", "/")
+    if is_github_workflow(p):
+        sites = _workflow_sites(_read_yaml(data))
+    elif p == ".pre-commit-config.yaml":
+        sites = _precommit_sites(_read_yaml(data))
+    else:
+        return False
+    return sites is not None and bool(sites[0] or sites[1])
 
 
 def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None) -> list[str]:
