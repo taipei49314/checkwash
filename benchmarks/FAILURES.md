@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **136 bypasses** are documented, of which **32 are not closed**.
+- **137 bypasses** are documented, of which **32 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -62,7 +62,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (101)
+## Closed — each pinned by something that runs (102)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -173,6 +173,7 @@ behind it* unshippable.
 | 116 | Wrap a suite-level control in a guard that never matters, now that a guarded collection hook is held as a guarded `collect_ignore` is: `if sys.version_info >= (3, 0):` or `if True:` around the drop, an early `return` under `if sys.version_info < (3, 0):`, an honest guarded effect beside an unguarded one, or an unguarded effect the hook reading cannot read (`items.clear()` inside an `if` test, `session.items.clear()`, `map(items.remove, ...)`) (#209); or, in a later diff, remove the guard of an existing suite-level control, add an unguarded effect beside its guarded ones, or edit a hook's guard to `if True:` (#261) | `collect_ignore_always_true_guard_prod_pos.gwcase`, `conftest_collect_ignore_guard_removed_pos.gwcase`, `conftest_hook_always_true_guard_pos.gwcase`, `conftest_hook_early_return_always_true_pos.gwcase`, `conftest_hook_guard_constant_true_pos.gwcase`, `conftest_hook_guard_removed_pos.gwcase`, `conftest_hook_hidden_effect_pos.gwcase`, `conftest_hook_mixed_guards_pos.gwcase`, `conftest_hook_unguarded_drop_beside_guarded_pos.gwcase` |
 | 117 | Skip tests through a `pytestmark` spelling checkwash does not read: a class body's `pytestmark`, one under an `if`, `try` or `with`, an annotated `=`, `+=`, `.append`, `.extend` or `.insert`, a tuple target, or a name bound to a mark or a list of marks (#260) | `mark_bound_and_applied_skip_pos.gwcase`, `pytestmark_annotated_skip_pos.gwcase`, `pytestmark_append_skip_pos.gwcase`, `pytestmark_augmented_skip_pos.gwcase`, `pytestmark_bound_list_skip_pos.gwcase`, `pytestmark_bound_mark_skip_pos.gwcase`, `pytestmark_class_body_skip_pos.gwcase`, `pytestmark_else_branch_skip_pos.gwcase`, `pytestmark_except_importerror_skip_pos.gwcase`, `pytestmark_guard_made_true_pos.gwcase`, `pytestmark_guard_removed_pos.gwcase`, `pytestmark_if_true_skip_pos.gwcase`, `pytestmark_tuple_target_skip_pos.gwcase`, `pytestmark_with_body_skip_pos.gwcase` |
 | 118 | Skip a test from its own body in a spelling the literal set did not read: `pt.skip()` after `import pytest as pt`, a bare `skip()`, `xfail()` or `s()` imported from pytest, or a raise of the exception a skip raises (`raise unittest.SkipTest(...)`, `raise SkipTest(...)`, `raise pytest.skip.Exception(...)`, in a test function or a `TestCase` method, with unittest's `unittest` or trial's); or put an always-skipping `pytest_runtest_setup` in a conftest that also imports another module (`import sys`, or #199 H2's `import unittest` with `raise unittest.SkipTest`) (#220) | `body_raise_imported_skiptest_pos.gwcase`, `body_raise_pytest_skip_exception_pos.gwcase`, `body_raise_unittest_skiptest_pos.gwcase`, `body_skip_imported_alias_pos.gwcase`, `body_skip_imported_name_pos.gwcase`, `body_skip_module_alias_pos.gwcase`, `body_xfail_imported_name_pos.gwcase`, `conftest_hook_raise_skiptest_pos.gwcase`, `conftest_hook_skip_beside_other_import_pos.gwcase`, `testcase_raise_skiptest_pos.gwcase`, `testcase_raise_trial_skiptest_pos.gwcase` |
+| 119 | Rewrite a unittest tolerance into another absolute kind: `assertAlmostEqual(x, y, places=7)` -> `delta=7`, `places=2` -> `delta=0.5`, or `delta=0.001` -> `places=1` (#196 190.3) | `almost_delta_to_places_pos.gwcase`, `almost_places_to_delta_pos.gwcase`, `almost_places_to_delta_same_digits_pos.gwcase` |
 
 ## Unclassified (11)
 

@@ -1,0 +1,24 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: assertAlmostEqual(energy(2.0), 19.62, delta=5) -> places=3 tightens the bound from 5 to 0.0005: no finding
+origin: #196 190.3 — blocked before as places shrinking from 5 to 3
+=== before: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, delta=5)
+=== after: tests/test_physics.py ===
+import unittest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, places=3)
+=== expect ===
+[]

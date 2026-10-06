@@ -141,10 +141,11 @@ in any other function counts wherever it is written, because a hook, a helper
 or a callback may run first; in the read's own function a write counts when it
 comes first, or when a loop in that function runs both. A destructuring
 declaration such as `const [eps] = [1e12]` shadows an outer `eps` with an
-unknown value. In JS files a `toBeCloseTo(x, p)` precision and a hand-rolled bound
-are compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
-`toBeCloseTo(x, 2)` are equal. A chai `closeTo` delta is recorded in the same
-`abs=` form (see the chai section below).
+unknown value. A `toBeCloseTo(x, p)` precision and a hand-rolled bound are
+compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
+`toBeCloseTo(x, 2)` are equal, as Python's `places` and `delta` are (#196
+190.3, below). A chai `closeTo` delta is recorded in the same `abs=` form (see
+the chai section below).
 
 A lower bound such as `Math.abs(d) > eps` asserts that two values differ, so
 it is no tolerance. Its spellings still record the bound's direction, so a
@@ -198,10 +199,25 @@ both were `EXPECTED_VALUE_CHANGED`. A file that binds `abs` itself (an import,
 a definition, an assignment or a parameter) gets no such reading, and neither
 does a lower bound, `abs(d) > eps`, which stays a plain comparison: Python
 records no bound direction, so a flip from `<` to `>` blocks as the centre
-rewritten into the bound rather than as a reversed direction (#224). A bound
-rewritten into another tolerance kind (`pytest.approx`'s default `rel`, or
-`assertAlmostEqual`'s `delta` or `places`) is compared as new slack until the
-kinds are compared as one absolute bound (#196 190.3).
+rewritten into the bound rather than as a reversed direction (#224).
+
+`assertAlmostEqual`'s `places` and `delta`, `pytest.approx`'s `abs=` and a
+hand-rolled bound each state an absolute bound, and two of them in different
+kinds are compared as that bound, places p as `10**-p / 2`, written from its
+digits, as in JavaScript (#196 190.3). unittest passes `places=p` when
+`round(a - b, p) == 0`, which is the bound `toBeCloseTo(x, p)` states. So
+`places=7` -> `delta=7` reports a loosening from 5e-8 to 7, and so does
+`delta=0.001` -> `places=1`; `delta=5` -> `places=3` is a tightening, and
+`abs(x - c) < 0.01` -> `delta=0.01` the same bound, so neither is reported. A
+relative tolerance (`rel=`, `pytest.approx`'s default) states no absolute
+bound, so a bound rewritten into one is still compared as new slack, and so
+is a pair with several tolerances at once. A negated comparison
+(`assertNotAlmostEqual`, a negated `approx`) passes when the values are far
+apart, so its tolerance orders the other way, and checkwash still compares
+it in the positive direction
+([#284](https://github.com/taipei49314/checkwash/issues/284)). The source tests
+are in
+[`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py).
 
 ### chai expect chains and the assert interface
 
