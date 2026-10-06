@@ -24,6 +24,7 @@ from decimal import Decimal, InvalidOperation
 
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir.astutil import same_expr
+from checkwash.ir.markers import is_helper_skip, is_setup_skip
 from checkwash.ir.model import (
     AssertionPair,
     FileIR,
@@ -37,6 +38,38 @@ from checkwash.ir.model import (
 
 JACCARD_THRESHOLD = 0.8  # frozen, SPEC §7
 MAX_UNPAIRED = 64  # frozen, SPEC §7
+
+
+# The effect of each body skip `GUARDED_SKIP_CALLS` names (#220's one name
+# per object), for a skip moved into a helper or out of one (#272).
+_BODY_SKIP_EFFECTS = {
+    "pytest.skip": "skip", "self.skipTest": "skip", "pytest.skip.Exception": "skip",
+    "unittest.SkipTest": "skip", "pytest.xfail": "xfail", "pytest.xfail.Exception": "xfail",
+}
+
+
+def _skip_effect(name: str) -> str | None:
+    if is_helper_skip(name) or is_setup_skip(name):
+        return name.rsplit(".", 1)[1]
+    return _BODY_SKIP_EFFECTS.get(name)
+
+
+def _moved_skip(old, new) -> bool:
+    """Is `new` the skip `old` was, moved into a helper the test calls or out of one (#272)?
+
+    A helper's marker is named for the helper, so a skip carried from the
+    test's body or the setup it runs into a helper it calls, out of one, or
+    into a renamed one, changes its name and nothing else. The effect must be
+    the same, and the old skip must have fired at least as often:
+    unconditionally (no guard), or under the same condition, whose meaning
+    `evidence._mark_weakened_guards` still compares across the diff. A skip
+    respelled in place, the body to the body, is not this (#281).
+    """
+    if not (is_helper_skip(old.name) or is_helper_skip(new.name)):
+        return False
+    if _skip_effect(old.name) != _skip_effect(new.name):
+        return False
+    return old.guard is None or same_expr(old.guard, new.guard)
 
 
 def _jaccard(a: frozenset, b: frozenset) -> float:
@@ -181,12 +214,21 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
                 if not respelled:
                     tolerance_changes.append((kind, old, a.epsilon))
 
-    b_marker_names = [m.name for m in before.side.markers]
-    markers_added = []
-    pool = list(b_marker_names)
+    pool = list(before.side.markers)
+    unmatched = []
     for m in after.side.markers:
-        if m.name in pool:
-            pool.remove(m.name)
+        kept = next((b for b in pool if b.name == m.name), None)
+        if kept is not None:
+            pool.remove(kept)
+        else:
+            unmatched.append(m)
+    markers_added = []
+    markers_moved = []
+    for m in unmatched:
+        moved_from = next((b for b in pool if _moved_skip(b, m)), None)
+        if moved_from is not None:
+            pool.remove(moved_from)
+            markers_moved.append((moved_from.name, m.name))
         else:
             markers_added.append(m.name)
 
@@ -218,6 +260,7 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
         assertions_removed=[b.id for b in sorted(removed, key=lambda x: x.span)],
         assertions_added=[a.id for a in sorted(added, key=lambda x: x.span)],
         markers_added=markers_added,
+        markers_moved=markers_moved,
         handlers_widened=handlers_widened,
         tolerance_changes=tolerance_changes,
         param_cases_removed=max(0, param_removed),

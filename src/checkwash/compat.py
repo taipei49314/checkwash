@@ -11,6 +11,7 @@ from checkwash.ir.markers import (
     bare_names,
     is_guarded_mark,
     is_guarded_skip,
+    is_helper_skip,
     is_setup_skip,
     marker_call,
     parse_expr,
@@ -260,9 +261,11 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
         if not parts:
             return False
         condition = parts[0] if len(parts) == 1 else ast.BoolOp(op=ast.And(), values=parts)
-    elif (canonical in _GATE_CALLS or is_setup_skip(canonical)) and m.guard:
+    elif (canonical in _GATE_CALLS or is_setup_skip(canonical) or is_helper_skip(canonical)) and m.guard:
         # A skip in the setup the unit runs is judged as one in its body is
         # (#196 183.2): its guard is the condition its setup reaches it under.
+        # So is one a helper ends in, under the condition its call reaches it
+        # (#272).
         condition = parse_expr(m.guard)
     if condition is None:
         return False

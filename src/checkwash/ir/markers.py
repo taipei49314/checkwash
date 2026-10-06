@@ -62,13 +62,20 @@ def is_setup_skip(name: str) -> bool:
     return name.startswith("setup.")
 
 
+def is_helper_skip(name: str) -> bool:
+    """A skip or xfail a same-file helper the unit or its setup calls ends in (#272)."""
+    return name.startswith("helper.")
+
+
 def is_guarded_skip(name: str) -> bool:
     """Does this marker's recorded guard say when it fires?
 
-    The body skips D6 reads, and a skip in the setup a unit runs, whose guard
-    is the condition its setup callback reaches it under (#196 183.2).
+    The body skips D6 reads, a skip in the setup a unit runs, whose guard
+    is the condition its setup callback reaches it under (#196 183.2), and
+    one a helper ends in, whose guard is the condition its call reaches it
+    under (#272).
     """
-    return name in GUARDED_SKIP_CALLS or is_setup_skip(name)
+    return name in GUARDED_SKIP_CALLS or is_setup_skip(name) or is_helper_skip(name)
 
 
 def skip_condition(marker, side) -> str | None:

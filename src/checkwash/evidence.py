@@ -36,10 +36,13 @@ def _mark_weakened_guards(file) -> None:
         if unit.before is None or unit.after is None or unit.delta is None:
             continue
         before_by_name = {m.name: m for m in unit.before.markers}
+        # A skip moved into a helper or out of one is read against the skip
+        # it was, under its old name (#272).
+        moved_from = {after: before for before, after in unit.delta.markers_moved}
         for m in unit.after.markers:
             if not m.guard or m.name in unit.delta.markers_added:
                 continue
-            old = before_by_name.get(m.name)
+            old = before_by_name.get(m.name) or before_by_name.get(moved_from.get(m.name, ""))
             if old is None or not old.guard:
                 continue
             # Same-text path is THREATMODEL 59 (constant behind the guard).
