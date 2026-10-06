@@ -1,0 +1,45 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: `when: on_failure` on the test job: it runs only once an earlier job has failed
+origin: issue #214, D-113 reading — read as `failure()` is on a GitHub step: false on the green
+origin2: pipeline, the only run in which the suite can turn a passing check red.
+=== before: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+=== after: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+  when: on_failure
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
