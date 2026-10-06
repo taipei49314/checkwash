@@ -5255,3 +5255,122 @@ candidate runs are equal.
 
 The agent wrote this entry in the rotation PR; the maintainer approves it
 there.
+
+## D-101 (2026-10-06): places, delta and abs are compared as one absolute bound (#196 190.3)
+
+A tolerance change took the new side's kind, and a bare value was read as
+that kind. Python records unittest's `places` and `delta` bare, so
+`assertAlmostEqual(x, y, places=7)` -> `delta=7`, which widens the check
+from 5e-8 to 7, passed with zero findings: the two sevens read as one delta
+left alone. `places=2` -> `delta=0.5` passed too, as a delta shrinking from
+2. `places=2` -> `delta=10` was reported as "delta=2 -> delta=10", a false
+statement, and `delta=5` -> `places=3`, a tightening, blocked as places
+shrinking from 5 to 3. A hand-rolled `abs(x - c) < 0.01` or
+`pytest.approx(c, abs=0.01)` rewritten into an equal `delta=0.01` blocked as
+new slack, and into `places=3` too. JavaScript compared `toBeCloseTo`
+precision with an `abs=` bound in one unit since #179, by a reading only
+JavaScript files took.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.190.3): one language-neutral helper converts places p to
+5x10^-(p+1) from digits and compares it with delta/abs as a Decimal, shared
+with 190.4. Costs: a SPEC edit, new Python blocks and message text, the
+1,800-commit sweep; fingerprints are unchanged; numpy's `decimal` (1.5x10^-d)
+must not reuse the helper unchanged. Ruling 196.spec.4-tolerance-loosened
+words the SPEC row after 190.3 and 190.4: "tolerances are compared as
+absolute bounds where a conversion is defined (places p -> 10^-p/2),
+otherwise per kind, via Decimal".
+
+**As implemented:**
+- `detectors/tolerance_loosened.py`: `_absolute_bound` is the helper,
+  JavaScript's `_js_absolute` made language-neutral. `_mixed`, which replaces
+  `_js_mixed`, compares a pair of two different absolute kinds through it in
+  any file.
+- `ir/diffalign.py` (maintainer-owned alignment, written by the agent for the
+  maintainer's sign-off): a change still takes the new side's kind, and an
+  old bare value of another kind is keyed with its own, `places=7` or
+  `delta=0.5`, the form an `abs=` bound already has. Such a change is
+  recorded even when its two numbers are equal.
+- SPEC §4's TOLERANCE_LOOSENED row takes the wording of ruling
+  196.spec.4-tolerance-loosened. THREATMODEL row 119 (new, Closed) records
+  the bypass; row 113's residual keeps only a bound rewritten into a
+  relative tolerance.
+
+Readings the ruling leaves to the implementation:
+
+1. **Which kinds state an absolute bound.** `abs` (a single `abs=`, from
+   `pytest.approx`, a hand-rolled `abs(a - b) < bound` in either language,
+   or chai's `closeTo`), unittest's `delta`, and decimal places (unittest's
+   `places`, `toBeCloseTo`'s precision). A relative tolerance, among them
+   `pytest.approx`'s default `rel=1e-06`, and several tolerances at once
+   state none, so a pair with one of them is compared per kind, as before: a
+   kind the old side did not have is new slack.
+2. **The conversion.** unittest passes `assertAlmostEqual(a, b, places=p)`
+   when `round(a - b, p) == 0`, which holds below 5x10^-(p+1), the bound
+   Jest's `toBeCloseTo(x, p)` states, so one helper serves both, written from
+   the digits. Places must be integral, from -308 through 307, as JavaScript
+   already required: past that a double holds no such bound, and the pair is
+   no finding. Bounds are compared as values: `delta` passes at the bound and
+   places only below it, an edge #179 already set aside (`< 0.005` and
+   `toBeCloseTo(x, 2)` are equal).
+3. **A side that cannot be read** (`places=N`, `delta=EPS`) is no finding,
+   as in JavaScript: no guess, no noise.
+4. **One rule for both languages.** The reading no longer asks which
+   language the file is in. JavaScript's results are unchanged: a JS bare
+   value is always `toBeCloseTo` precision, and alignment now says so. The
+   pin `tests/test_js_handrolled_tolerance.py::test_the_cross_unit_reading_is_javascript_only`
+   held that a Python file is not read this way, which the ruling reverses.
+   It becomes `test_the_cross_unit_reading_is_one_rule_for_both_languages`,
+   and its other five rows keep their results.
+5. **Negated comparisons** (#284, found in this round). `assertNotAlmostEqual`
+   passes when the values are far apart, so its tolerance orders the other
+   way, and the frontend reads a negated `approx` as positive. The per-kind
+   comparison already read both in the positive direction. This round reads
+   a negated pair of two kinds the same way, so
+   `assertNotAlmostEqual(..., places=2)` -> `delta=0.5`, a tightening for
+   that assertion, blocks. #284 fixes both.
+
+**Tests and fixtures.**
+- Tests: 109 in `tests/test_tolerance_absolute_bound.py`, one of them
+  holding the places bound to `unittest.TestCase.assertAlmostEqual` itself.
+  All 21 mutants of the round's code fail the tests or the fixtures.
+- Fixtures (6): row 119's pins `almost_places_to_delta_same_digits_pos`,
+  `almost_places_to_delta_pos` and `almost_delta_to_places_pos`, which
+  v0.6.0 passes with zero findings; the controls
+  `almost_delta_to_places_tightened_neg`,
+  `handrolled_bound_to_delta_same_bound_neg` and
+  `approx_abs_to_delta_same_bound_neg`, which v0.6.0 blocks as
+  TOLERANCE_LOOSENED.
+- Every existing fixture keeps its expectation.
+
+**Fingerprints.** A TOLERANCE_LOOSENED fingerprint is the change's kind and
+its old value as the frontend recorded it, so the detector reads a keyed
+old value back bare: every finding reported before keeps its fingerprint.
+Messages change where the old value was mislabelled: "delta=2 -> delta=10"
+reads "places=2 -> delta=10", and "rel=2 -> rel=1e-06" reads
+"places=2 -> rel=1e-06". New findings are new fingerprints; findings that go
+(a tightening or an equal bound across kinds) are FPs gone.
+
+**IR.** `--emit-ir` shows the keyed old value in `tolerance_changes`
+(`["delta", "places=7", "7"]`), the form `abs=` values already have. No
+field is added or renamed, and IR_VERSION stays 2. One corpus record
+changes: `js_evidence_closeto_infinity_pos`'s change reads `places=2` where
+it read `2`. Its findings are byte-identical.
+
+**Cost.** Measured with the round's engine against main's (`6e4f5ef`):
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give the same records as main.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and
+  368 of pytest's (364 readable) give the same records as main.
+- **Targeted set:** every non-merge commit of the twelve histories whose
+  test-side Python changes an `assertAlmostEqual` or
+  `assertNotAlmostEqual`, a `places=` or `delta=` keyword, a
+  `pytest.approx` or a builtin `abs(` call: 111 commits (aiohttp 16, httpx
+  4, pytest 79, requests 2, scrapy 10), 99 readable, as on main. They give
+  the same records as main. Their readable commits record 4 tolerance
+  changes, in 3 commits, each within one kind (2 `abs`, 2 `rel`): none of
+  the twelve histories rewrites a tolerance into another kind there. The
+  round's new findings are the shapes the fixtures pin, which v0.6.0
+  passes, or blocks for a false reason.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
