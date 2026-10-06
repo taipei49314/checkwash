@@ -427,7 +427,12 @@ additionally fires when a skip guard's condition, evaluated with each
 side's resolved constants, goes from "false somewhere" to "true
 everywhere" — the one-line `STRICT = True` → `False` flip that silences a
 guarded test without any marker event (probe arm, same day), or an edit of
-the guard's own text to one that always holds (THREATMODEL 54). It also
+the guard's own text to one that always holds (THREATMODEL 54). A guard
+that reads an attribute through the method's receiver (`self.item_class`)
+is evaluated with the value the unit's class body, or a same-file base's,
+assigns it (#254 254.Q1). An abstract test base whose skip holds under its
+own values keeps no marker when a same-file subclass runs the test
+unchanged (254.Q2). It also
 fires when a body skip (`pytest.skip`, `pytest.xfail`, `self.skipTest`)
 that ran only under an `if` guard or inside an `except` block runs under
 neither: the guard was removed, and nothing is left to evaluate (#196

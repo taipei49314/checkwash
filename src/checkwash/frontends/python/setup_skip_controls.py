@@ -130,10 +130,20 @@ def _generator(function):
     return any(isinstance(node, (ast.Yield, ast.YieldFrom)) for node in _executed(function.body))
 
 
-def _fold(test):
+def _fold(test, attrs=None):
+    """A branch test's truth, None for unknown.
+
+    `attrs` is a (class attribute lookup, receiver names) pair: a setup
+    callback's guard that reads `self.<attr>` is folded with the value its
+    class body sets (#254), as a test body's guard is.
+    """
     # Imported late: the frontend imports this module.
     from .frontend import _static_truth
 
+    if attrs is not None:
+        from .class_attributes import substitute
+
+        test = substitute(test, *attrs)
     return _static_truth(test)
 
 
@@ -223,7 +233,7 @@ def _handler_condition(try_statement, handler):
     return _handler_guard(try_statement, handler)
 
 
-def _guarded(statements, bindings, conds, sites, condition):
+def _guarded(statements, bindings, conds, sites, condition, attrs=None):
     """Walk `statements` under the path condition `conds`, a tuple of source texts.
 
     Appends (effect, evidence, conds) for each native outcome a run reaches
@@ -245,17 +255,18 @@ def _guarded(statements, bindings, conds, sites, condition):
             sites.append((*found, conds))
             return _ENDS, left
         if isinstance(statement, ast.If):
-            truth = _fold(statement.test)
+            truth = _fold(statement.test, attrs)
             if truth is not None:
                 state, leaves = _guarded(statement.body if truth else statement.orelse,
-                                         bindings, conds, sites, condition)
+                                         bindings, conds, sites, condition, attrs)
                 left |= leaves
                 if state != _FALLS or leaves:
                     return state if state != _FALLS else _STOPS, left
                 continue
             test = condition(statement.test)
-            body, body_left = _guarded(statement.body, bindings, (*conds, test), sites, condition)
-            orelse, orelse_left = _guarded(statement.orelse, bindings, (*conds, f'not ({test})'), sites, condition)
+            body, body_left = _guarded(statement.body, bindings, (*conds, test), sites, condition, attrs)
+            orelse, orelse_left = _guarded(statement.orelse, bindings, (*conds, f'not ({test})'), sites,
+                                           condition, attrs)
             left |= body_left or orelse_left
             if _STOPS in (body, orelse):
                 return _STOPS, left
@@ -269,7 +280,7 @@ def _guarded(statements, bindings, conds, sites, condition):
                 return _STOPS, left
             continue
         if isinstance(statement, ast.Try) and not statement.handlers and not _may_leave(statement.finalbody):
-            state, leaves = _guarded(statement.body + statement.finalbody, bindings, conds, sites, condition)
+            state, leaves = _guarded(statement.body + statement.finalbody, bindings, conds, sites, condition, attrs)
             left |= leaves
             if state != _FALLS or leaves:
                 return state if state != _FALLS else _STOPS, left
@@ -279,7 +290,7 @@ def _guarded(statements, bindings, conds, sites, condition):
                 return _STOPS, left
             for handler in statement.handlers:
                 state, leaves = _guarded(handler.body, bindings, (*conds, _handler_condition(statement, handler)),
-                                         sites, condition)
+                                         sites, condition, attrs)
                 if state == _STOPS or leaves:
                     return _STOPS, left or leaves
             continue
@@ -316,7 +327,7 @@ def _conjunction(conds):
     return ' and '.join(parts) or None
 
 
-def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse):
+def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse, attrs=None):
     """(effect, evidence, guard) for the outcome a unit's setup callback ends in, or None.
 
     guard None: every call reaches it, read exactly as `callback_outcome`
@@ -325,15 +336,21 @@ def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse):
     those conditions (#196 183.2), so two branches that between them cover
     every run read as the unconditional skip they are wherever the guard can
     be evaluated. The first such outcome names the effect and is the evidence.
-    `condition` gives an expression's source text.
+    `condition` gives an expression's source text. `attrs` resolves the
+    class attributes a method's guards read through its receiver (#254).
     """
     local = _local(function, bindings, receiver)
     body = _body(function.body)
+    if attrs is not None:
+        from .class_attributes import receivers
+
+        names = receivers(function)
+        attrs = (attrs, names) if names else None
     found = _reached(body, local)[0]
     if found is not None:
         return (*found, None)
     sites = []
-    _guarded(body, local, (), sites, condition)
+    _guarded(body, local, (), sites, condition, attrs)
     if not sites:
         return None
     effect, evidence, _conds = sites[0]
@@ -530,7 +547,8 @@ class SetupScope:
     name. Either keeps a request from falling through to a conftest (#223).
     """
 
-    def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None, condition=ast.unparse):
+    def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None, condition=ast.unparse,
+                 attrs=None):
         self.bindings = bindings
         self.fixtures = {}
         self.implicit = {}
@@ -560,7 +578,8 @@ class SetupScope:
             if fixture is not None:
                 name, autouse = fixture
                 self.fixtures[name] = (_requests(statement, receiver=in_class), autouse,
-                                       setup_outcome(statement, bindings, receiver=in_class, condition=condition))
+                                       setup_outcome(statement, bindings, receiver=in_class, condition=condition,
+                                                     attrs=attrs if in_class else None))
             elif statement.name in callbacks:
                 decorators = statement.decorator_list
                 plain = (isinstance(statement, ast.FunctionDef) and not _generator(statement)
@@ -568,7 +587,7 @@ class SetupScope:
                               and decorators[0].id in {'classmethod', 'staticmethod'}
                               and decorators[0].id not in bindings))
                 outcome = (setup_outcome(statement, bindings, receiver=in_class and not decorators,
-                                         condition=condition)
+                                         condition=condition, attrs=attrs if in_class else None)
                            if plain else None)
                 self.implicit[statement.name] = (callbacks[statement.name], outcome)
         module_setup = last.get('setUpModule')
