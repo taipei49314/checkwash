@@ -30,6 +30,32 @@ def parse_expr(text: str) -> ast.AST | None:
         return None
 
 
+def mark_condition(call: ast.Call) -> ast.AST | None:
+    """The condition a `skipif` or `xfail` mark's first argument holds (#263).
+
+    pytest compiles a string condition as an expression and evaluates that,
+    so `skipif("sys.platform == 'win32'")` holds the condition `sys.platform
+    == 'win32'`, not a string that is truthy everywhere. A string that does
+    not compile as one is None: pytest reports an error for it, and it earns
+    nothing. Any other argument is the condition itself, and a call with none
+    has none.
+    """
+    if not call.args:
+        return None
+    condition = call.args[0]
+    if isinstance(condition, ast.Constant) and isinstance(condition.value, str):
+        try:
+            return ast.parse(condition.value, mode="eval").body
+        except (SyntaxError, RecursionError, ValueError, MemoryError):
+            return None
+    return condition
+
+
+def is_string_condition(call: ast.Call) -> bool:
+    """Is the mark's condition a string, which pytest evaluates in its own namespace?"""
+    return bool(call.args) and isinstance(call.args[0], ast.Constant) and isinstance(call.args[0].value, str)
+
+
 def bare_names(node: ast.AST) -> set[str]:
     """Every ast.Name id in the expression (attribute roots included)."""
     return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
