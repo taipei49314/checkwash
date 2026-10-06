@@ -66,6 +66,25 @@ def _native(target: str) -> bool:
     return target.split(".")[0] in _MODULES
 
 
+# The last name of each entry: a call that resolves to one names it, as its
+# own attribute or in the import that binds the name it calls.
+_LAST_NAMES = tuple(sorted({name.rsplit(".", 1)[1] for name in TOLERANCE_CALLS}))
+
+
+def may_resolve(source: str) -> bool:
+    """Can a call in this module resolve to a table entry? False only when none can.
+
+    An entry is reached through its last name, which an ASCII source writes
+    out where the call names it or where an import binds it; only
+    `importorskip` binds a module through a string, which escapes or
+    concatenation can spell in pieces. A non-ASCII source may write an
+    identifier in another normal form, so it always may. A module for which
+    this is False needs no walk for its imports: no call in it resolves,
+    whatever it binds.
+    """
+    return not source.isascii() or "importorskip" in source or any(name in source for name in _LAST_NAMES)
+
+
 def import_names(tree: ast.AST | None) -> dict[str, str | None]:
     """Each name the file binds to math, numpy or torch, or to one of their members.
 

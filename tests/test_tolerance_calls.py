@@ -31,6 +31,7 @@ from checkwash.frontends.python.tolerance_calls import (
     callee,
     find_predicate,
     import_names,
+    may_resolve,
     statement_call,
     tolerance,
     values,
@@ -146,6 +147,51 @@ def test_a_predicate_is_found_inside_the_call_that_tests_it():
     assert find_predicate(_call("np.testing.assert_allclose(a, b)"), names) is None
     assert statement_call(_call("np.testing.assert_allclose(a, b)"), names) == "numpy.testing.assert_allclose"
     assert statement_call(_call("np.isclose(a, b)"), names) is None
+
+
+# --- Which modules are walked for their imports ----------------------------------------------
+
+@pytest.mark.parametrize("module,may", [
+    # A module that spells no entry's last name holds no call that resolves.
+    ("import numpy as np\n\ndef test_mean():\n    assert np.mean(xs) == 2\n", False),
+    ("from app.calc import compute\n\ndef test_case():\n    assert compute(1) == 2\n", False),
+    # Each entry's last name is enough.
+    *[(f"y.{name.rsplit('.', 1)[1]}\n", True) for name in TOLERANCE_CALLS],
+    # importorskip binds through a string, which can be spelled in pieces.
+    ("ic = pytest.importorskip('math.is' 'close')\n", True),
+    # A non-ASCII source may spell an identifier in another normal form.
+    ("x = 'é'\n", True),
+])
+def test_a_module_may_hold_a_call_only_when_its_source_can_spell_one(module, may):
+    assert may_resolve(module) is may
+
+
+def test_a_call_spelled_in_another_normal_form_is_still_read():
+    # Python normalizes the fullwidth spelling to the identifier `isclose`.
+    line = "assert np.ｉｓｃｌｏｓｅ(total(), 78.75)"
+    assert "isclose" not in _source(line)
+    a = _assertion(line)
+    assert (a.form, a.epsilon) == ("approx", "abs=1e-08|rel=1e-05")
+
+
+def test_an_importorskip_spelled_in_pieces_is_still_read():
+    imports = "ic = pytest.importorskip('math.is' 'close')"
+    assert "isclose" not in _source("assert ic(total(), 78.75)", imports)
+    a = _assertion("assert ic(total(), 78.75)", imports)
+    assert (a.form, a.epsilon) == ("approx", "abs=0.0|rel=1e-09")
+
+
+def test_a_module_that_cannot_spell_a_call_is_not_walked(monkeypatch):
+    import checkwash.frontends.python.frontend as frontend
+
+    walked, walk = [], frontend._tolerance_import_names
+    monkeypatch.setattr(frontend, "_tolerance_import_names",
+                        lambda tree: walked.append(tree) or walk(tree))
+    assert _assertion("assert total() == 78.75").form == "compare_eq"
+    assert walked == []
+    found = _assertions(_source("assert math.isclose(total(), 78.75)\nassert np.isclose(total(), 78.75)"))
+    assert [a.form for a in found] == ["approx", "approx"]
+    assert len(walked) == 1, "once per file"
 
 
 # --- What a call records ------------------------------------------------------------------

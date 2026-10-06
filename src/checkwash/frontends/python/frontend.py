@@ -33,6 +33,7 @@ from checkwash.frontends.python.literal_string_methods import literal_string_rep
 from checkwash.frontends.python.tolerance_calls import (
     find_predicate as _find_tolerance_predicate,
     import_names as _tolerance_import_names,
+    may_resolve as _tolerance_may_resolve,
     statement_call as _tolerance_statement,
     tolerance as _call_tolerance,
     values as _tolerance_values,
@@ -525,10 +526,16 @@ def _tolerance_names(text) -> dict[str, str | None]:
     """The names the file binds to math, numpy or torch (#222), worked out once per file.
 
     Without a parsed module (an oracle helper's own offsets) only the plain
-    spellings (`math.isclose`, `numpy.isclose`) are read.
+    spellings (`math.isclose`, `numpy.isclose`) are read. A module whose
+    source cannot spell a tolerance call, as most test modules cannot, is not
+    walked: the walk was most of what #222 added to the perf gate's 500 files.
     """
     if getattr(text, "tolerance_names", None) is None:
-        names = _tolerance_import_names(getattr(text, "tree", None))
+        source = getattr(text, "text", None)
+        if isinstance(source, str) and not _tolerance_may_resolve(source):
+            names: dict[str, str | None] = {}
+        else:
+            names = _tolerance_import_names(getattr(text, "tree", None))
         try:
             text.tolerance_names = names
         except AttributeError:
