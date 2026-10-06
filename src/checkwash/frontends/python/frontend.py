@@ -437,6 +437,23 @@ class _Classified:
     # compensation. Computed here so every construction site can pass it
     # through without re-deriving nodes it no longer holds.
     trivial: bool = False
+    # The bound key a comparison states (`ir/predicate.py`: lt, le, gt, ge)
+    # and its bound as one line (#224), as the JavaScript frontend records
+    # them (#198).
+    predicate: str | None = None
+    operand_source: str | None = None
+
+
+# A comparison's bound key, and the key it states read from the other side:
+# `80 > total()` is `total() < 80` (#224).
+_BOUND_KEYS = {ast.Lt: "lt", ast.LtE: "le", ast.Gt: "gt", ast.GtE: "ge"}
+_REVERSED_KEYS = {"lt": "gt", "le": "ge", "gt": "lt", "ge": "le"}
+
+
+def _operand_source(node: ast.AST | None, text) -> str | None:
+    """An operand's source as one line, as `operand_source` records it (#224)."""
+    seg = text.seg(node) if node is not None else None
+    return " ".join(seg.split()) if seg else None
 
 
 # The polarity of the None family follows the bare lattice: `is None` is the
@@ -599,22 +616,38 @@ def _finite_number(node: ast.AST | None) -> bool:
     return type(value) in (int, float) and math.isfinite(value)
 
 
-def _hand_rolled(magnitude: ast.AST, bound: ast.AST, text, form: str, strength: int | None) -> _Classified | None:
-    """`abs(total() - 78.75) < 0.01`, read as the tolerance it states (#196 189.2).
+def _is_abs_call(node: ast.AST) -> bool:
+    return (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "abs"
+            and len(node.args) == 1 and not node.keywords and not isinstance(node.args[0], ast.Starred))
 
-    It checks `total()` against 78.75 within 0.01, as `pytest.approx(78.75,
-    abs=0.01)` does, and the JS frontend reads `Math.abs` the same way: what
-    the builtin `abs` measures is `left`, a numeric literal centre on either
-    side of its one subtraction is the expected value, and the bound is an
-    `abs=` tolerance, recorded as written like an approx tolerance. With no
-    literal centre (`abs(total() - expected)`, `abs(d)`) or two, the whole
-    argument is `left` and there is no expected value. The caller passes the
-    magnitude's side of an upper bound only: `abs(d) > eps` asserts that two
-    values differ and stays a plain comparison.
+
+def _hand_rolled(smaller: ast.AST, larger: ast.AST, strict: bool, text, form: str,
+                 strength: int | None) -> _Classified | None:
+    """`abs(total() - 78.75) < 0.01`, read as the bound it states (#196 189.2, #224).
+
+    The caller passes the comparison as `smaller < larger` (`strict`) or
+    `smaller <= larger`. With the builtin `abs` on the smaller side it is an
+    upper bound: it checks `total()` against 78.75 within 0.01, as
+    `pytest.approx(78.75, abs=0.01)` does, and the JS frontend reads
+    `Math.abs` the same way. What the builtin `abs` measures is `left`, a
+    numeric literal centre on either side of its one subtraction is the
+    expected value, and the bound is an `abs=` tolerance, recorded as written
+    like an approx tolerance. With no literal centre (`abs(total() -
+    expected)`, `abs(d)`) or two, the whole argument is `left` and there is
+    no expected value. With `abs` on the larger side (`abs(d) > eps`) it
+    asserts that two values differ: a lower bound, read for its direction so
+    a `<` -> `>` flip is reported, which records no tolerance, as in
+    JavaScript (#224). Either way the bound key (lt, le, gt, ge) is
+    recorded, with the bound as the operand, so both directions of one
+    check share a subject.
     """
-    if not (isinstance(magnitude, ast.Call) and isinstance(magnitude.func, ast.Name)
-            and magnitude.func.id == "abs" and len(magnitude.args) == 1 and not magnitude.keywords
-            and not isinstance(magnitude.args[0], ast.Starred)) or _shadows_abs(text):
+    if _is_abs_call(smaller):
+        magnitude, bound, key = smaller, larger, "lt" if strict else "le"
+    elif _is_abs_call(larger):
+        magnitude, bound, key = larger, smaller, "gt" if strict else "ge"
+    else:
+        return None
+    if _shadows_abs(text):
         return None
     measured = magnitude.args[0]
     subject, centre = measured, None
@@ -622,7 +655,7 @@ def _hand_rolled(magnitude: ast.AST, bound: ast.AST, text, form: str, strength: 
         first, second = measured.left, measured.right
         if _finite_number(first) != _finite_number(second):
             centre, subject = (first, second) if _finite_number(first) else (second, first)
-    tolerance = text.seg(bound)
+    tolerance = text.seg(bound) if key in ("lt", "le") else None
     return _Classified(
         form,
         strength,
@@ -635,18 +668,20 @@ def _hand_rolled(magnitude: ast.AST, bound: ast.AST, text, form: str, strength: 
         _referenced_names(subject),
         _referenced_names(centre),
         _is_trivial_subject(magnitude) and _is_trivial_subject(bound),
+        key,
+        _operand_source(bound, text),
     )
 
 
 def _hand_rolled_comparison(test: ast.AST, text, form: str, strength: int | None) -> _Classified | None:
-    """A single comparison bounding a builtin `abs(...)` above, either way round."""
+    """A single comparison bounding a builtin `abs(...)`, above or below, either way round."""
     if not isinstance(test, ast.Compare) or len(test.ops) != 1:
         return None
     op, left, right = test.ops[0], test.left, test.comparators[0]
     if isinstance(op, (ast.Lt, ast.LtE)):
-        return _hand_rolled(left, right, text, form, strength)
+        return _hand_rolled(left, right, isinstance(op, ast.Lt), text, form, strength)
     if isinstance(op, (ast.Gt, ast.GtE)):
-        return _hand_rolled(right, left, text, form, strength)
+        return _hand_rolled(right, left, isinstance(op, ast.Gt), text, form, strength)
     return None
 
 
@@ -764,6 +799,12 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         c = _classify_compare_op(
             op, left, comparators, text, left_text, right_lit, right_val, pos, subject_node
         )
+        if single and c.form == "compare_ord" and type(op) in _BOUND_KEYS:
+            # The bound key, read from the subject's side: the flip above
+            # makes `80 > total()` the `total() < 80` it states (#224).
+            key = _BOUND_KEYS[type(op)]
+            c.predicate = key if subject_node is left else _REVERSED_KEYS[key]
+            c.operand_source = _operand_source(expect_node, text)
         # Which side is the subject and which the expectation was decided
         # above, including the `assert 3 == calc()` flip, so the name sets come
         # from those nodes rather than being re-derived. EXPECTED_VALUE_DERIVED
@@ -782,6 +823,7 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             inner.right_value, None if approximate else inner.epsilon,
             None if approximate else inner.epsilon_kind, not inner.positive,
             inner.left_names, inner.right_names,
+            predicate=inner.predicate, operand_source=inner.operand_source,
         )
     if isinstance(test, ast.Call):
         name = _dotted(test.func)
@@ -1329,13 +1371,14 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
                  if isinstance(wrapped, ast.Call) else None)
         if found is not None:
             return _tolerance_classified(*found, text, positive=holds)
-    # The hand-rolled tolerance in the unittest dialect: `assertLess(abs(d), eps)`,
-    # `assertGreater(eps, abs(d))` and `assertTrue(abs(d) < eps)` (#196 189.2).
+    # The hand-rolled bound in the unittest dialect: `assertLess(abs(d), eps)`,
+    # `assertGreater(eps, abs(d))` and `assertTrue(abs(d) < eps)` (#196 189.2),
+    # and each lower bound, `assertGreater(abs(d), eps)` (#224).
     hand = None
     if method in ("assertLess", "assertLessEqual") and len(node.args) > 1:
-        hand = _hand_rolled(node.args[0], node.args[1], text, form, level)
+        hand = _hand_rolled(node.args[0], node.args[1], method == "assertLess", text, form, level)
     elif method in ("assertGreater", "assertGreaterEqual") and len(node.args) > 1:
-        hand = _hand_rolled(node.args[1], node.args[0], text, form, level)
+        hand = _hand_rolled(node.args[1], node.args[0], method == "assertGreater", text, form, level)
     elif method == "assertTrue" and node.args:
         hand = _hand_rolled_comparison(node.args[0], text, form, level)
     if hand is not None:
@@ -1421,7 +1464,24 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         # unittest dialect (THREATMODEL 20/25/46, audit 2026-08-19).
         _is_trivial_subject(subject_node)
         and (expect_node is None or _is_trivial_subject(expect_node)),
+        *_unittest_bound(method, form, node, subject_node, expect_node, text),
     )
+
+
+# unittest's ordering methods, as the bound key each states (#224).
+_UNITTEST_BOUND_KEYS = {"assertLess": "lt", "assertLessEqual": "le", "assertGreater": "gt",
+                        "assertGreaterEqual": "ge"}
+
+
+def _unittest_bound(method, form, node, subject_node, expect_node, text) -> tuple[str | None, str | None]:
+    """(predicate, operand_source) of `assertLess(x, 80)` and its kin, read from the subject's side."""
+    key = _UNITTEST_BOUND_KEYS.get(method)
+    if key is None or form != "compare_ord" or subject_node is None or expect_node is None:
+        return None, None
+    if subject_node is not node.args[0]:
+        # `assertGreater(80, total())` states `total() < 80`.
+        key = _REVERSED_KEYS[key]
+    return key, _operand_source(expect_node, text)
 
 
 def _canonical_marker(name: str | None) -> str | None:
@@ -2799,6 +2859,8 @@ def _collect_unit(
                     right_value=c.right_value,
                     epsilon=c.epsilon,
                     epsilon_kind=c.epsilon_kind,
+                    predicate=c.predicate,
+                    operand_source=c.operand_source,
                     # A tolerance call (#222) judges its two values, as
                     # `assertTrue(<call>)` and `assertAlmostEqual` do.
                     trivial=_is_trivial_subject(node.test) or c.trivial or id(node) in vacuous,
@@ -2866,6 +2928,8 @@ def _collect_unit(
                         right_value=c.right_value,
                         epsilon=c.epsilon,
                         epsilon_kind=c.epsilon_kind,
+                        predicate=c.predicate,
+                        operand_source=c.operand_source,
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=depends,
@@ -2951,6 +3015,8 @@ def _collect_unit(
                         right_value=c.right_value,
                         epsilon=c.epsilon,
                         epsilon_kind=c.epsilon_kind,
+                        predicate=c.predicate,
+                        operand_source=c.operand_source,
                         trivial=trivial,
                         positive=c.positive,
                         left_names=c.left_names,
@@ -3827,6 +3893,8 @@ def _classified_asserts(nodes, text, off) -> tuple:
                 right_value=c.right_value,
                 epsilon=c.epsilon,
                 epsilon_kind=c.epsilon_kind,
+                predicate=c.predicate,
+                operand_source=c.operand_source,
                 trivial=_is_trivial_subject(node.test) or c.trivial,
                 positive=c.positive,
                 left_names=c.left_names,

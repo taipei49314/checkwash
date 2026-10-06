@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **138 bypasses** are documented, of which **32 are not closed**.
+- **139 bypasses** are documented, of which **32 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -62,7 +62,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (103)
+## Closed — each pinned by something that runs (104)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -175,6 +175,7 @@ behind it* unshippable.
 | 118 | Skip a test from its own body in a spelling the literal set did not read: `pt.skip()` after `import pytest as pt`, a bare `skip()`, `xfail()` or `s()` imported from pytest, or a raise of the exception a skip raises (`raise unittest.SkipTest(...)`, `raise SkipTest(...)`, `raise pytest.skip.Exception(...)`, in a test function or a `TestCase` method, with unittest's `unittest` or trial's); or put an always-skipping `pytest_runtest_setup` in a conftest that also imports another module (`import sys`, or #199 H2's `import unittest` with `raise unittest.SkipTest`) (#220) | `body_raise_imported_skiptest_pos.gwcase`, `body_raise_pytest_skip_exception_pos.gwcase`, `body_raise_unittest_skiptest_pos.gwcase`, `body_skip_imported_alias_pos.gwcase`, `body_skip_imported_name_pos.gwcase`, `body_skip_module_alias_pos.gwcase`, `body_xfail_imported_name_pos.gwcase`, `conftest_hook_raise_skiptest_pos.gwcase`, `conftest_hook_skip_beside_other_import_pos.gwcase`, `testcase_raise_skiptest_pos.gwcase`, `testcase_raise_trial_skiptest_pos.gwcase` |
 | 119 | Rewrite a unittest tolerance into another absolute kind: `assertAlmostEqual(x, y, places=7)` -> `delta=7`, `places=2` -> `delta=0.5`, or `delta=0.001` -> `places=1` (#196 190.3) | `almost_delta_to_places_pos.gwcase`, `almost_places_to_delta_pos.gwcase`, `almost_places_to_delta_same_digits_pos.gwcase` |
 | 120 | Widen or delete a Python tolerance call checkwash did not read: `assert math.isclose(total(), 78.75, abs_tol=1e-9)` -> `abs_tol=1e3`, the same through `from math import isclose` or with the default `abs_tol` widened, a widened tolerance of numpy's `isclose`, `allclose` or `testing.assert_allclose`, a smaller `decimal` of `testing.assert_array_almost_equal`, a widened `atol` of `torch.testing.assert_close` or its explicit pair dropped, an expected value rewritten inside one, or numpy's or torch's assertion call deleted (#222) | `tolerance_call_assert_allclose_default_pos.gwcase`, `tolerance_call_assert_allclose_deleted_pos.gwcase`, `tolerance_call_assert_allclose_rtol_pos.gwcase`, `tolerance_call_decimal_widened_pos.gwcase`, `tolerance_call_expected_rewrite_pos.gwcase`, `tolerance_call_isclose_abs_widened_pos.gwcase`, `tolerance_call_isclose_default_widened_pos.gwcase`, `tolerance_call_isclose_imported_pos.gwcase`, `tolerance_call_isclose_rel_widened_pos.gwcase`, `tolerance_call_np_allclose_pos.gwcase`, `tolerance_call_np_isclose_pos.gwcase`, `tolerance_call_torch_atol_pos.gwcase`, `tolerance_call_torch_deleted_pos.gwcase`, `tolerance_call_torch_pair_dropped_pos.gwcase` |
+| 121 | Reverse or widen a Python comparison instead of fixing code: `assert total() < 80` -> `assert total() > 80`, `<=` -> `>=`, the same with the literal on the left (`80 > total()` -> `80 < total()`) or with the sides swapped and the operator kept (`total() < 80` -> `80 < total()`), unittest's `assertLess` -> `assertGreater`, a hand-rolled `abs(total() - 78.75) < 0.01` -> `> 0.01`, or `< 80` -> `<= 80` (#224) | `compare_direction_edge_admitted_pos.gwcase`, `compare_direction_inclusive_reversed_pos.gwcase`, `compare_direction_literal_left_reversed_pos.gwcase`, `compare_direction_reversed_pos.gwcase`, `compare_direction_sides_swapped_pos.gwcase`, `compare_direction_unittest_reversed_pos.gwcase` |
 
 ## Unclassified (11)
 
