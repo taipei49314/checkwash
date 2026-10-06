@@ -1,0 +1,42 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: C: vi.mock("@/billing") stands in for ../src/billing, which the base side's root tsconfig.json maps @/* to
+origin: #196 188.6 (ruling 2026-10-03): C, the base-side root tsconfig's paths and baseUrl, routed through the one module_key
+=== head: tsconfig.json ===
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    // the project's own source root
+    "paths": {
+      "@/*": ["src/*"],
+    },
+  },
+}
+=== before: tests/billing.test.ts ===
+import { describe, it, expect } from "vitest";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.ts ===
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/billing", () => ({
+  invoiceTotal: () => 78.75,
+}));
+
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/billing.test.ts", "unit": "computes invoice total"}]

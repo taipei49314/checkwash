@@ -1,0 +1,46 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a module mock respelled from a relative specifier into the alias the tsconfig maps to it is not a new stand-in
+origin: #196 188.6: condition 2 compares the keys both spellings resolve to
+=== head: tsconfig.json ===
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    // the project's own source root
+    "paths": {
+      "@/*": ["src/*"],
+    },
+  },
+}
+=== before: tests/billing.test.ts ===
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("../src/billing.js", () => ({
+  invoiceTotal: () => 78.75,
+}));
+
+import { invoiceTotal } from "@/billing";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.ts ===
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/billing", () => ({
+  invoiceTotal: () => 78.75,
+}));
+
+import { invoiceTotal } from "@/billing";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[]
