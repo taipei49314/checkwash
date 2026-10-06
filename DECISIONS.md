@@ -6736,3 +6736,98 @@ The JavaScript false-positive cost is measured by the JS/TS replay (#212)
 before a release ships these findings.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-109 (2026-10-06): a negated approximate comparison is read as negated (#284)
+
+The approx branch of the Python frontend's assertion classifier ran first
+and found an `approx(...)` call anywhere in the test expression, so the
+comparison it sat in was never read: `== pytest.approx(78.75)` ->
+`!= pytest.approx(78.75)` passed with zero findings, as did a `not` around
+it, while the same flips without `approx` blocked as a polarity inversion
+(THREATMODEL row 33). A negated approximate comparison passes when the
+values are far apart, so its tolerance orders the other way: a bigger `abs`
+or `delta`, or fewer `places`, is stricter. The frontend recorded it as a
+positive one's, so `TOLERANCE_LOOSENED` blocked a tightening
+(`!= approx(x, abs=0.01)` -> `abs=0.5`,
+`assertNotAlmostEqual(..., delta=0.1)` -> `delta=0.5`, `places=3` ->
+`places=2`) and passed a loosening. The JavaScript frontend already records
+no tolerance for a negated matcher, and #222 did the same for a negated
+Python tolerance call.
+
+The issue proposed the fix as one round, with one choice: read a negated
+tolerance in the reversed direction, or record none. It recommended none,
+for one rule in both frontends, and the round takes that.
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_classify_assert_expr`: the approx
+  branch reads the comparison it sits in. A single `!=` (or `is not`,
+  `not in`, as the plain comparison path reads them) is negative; a `not`
+  around the comparison is left to the negation branch, which negates its
+  operand and drops an approximate comparison's tolerance (#222). A
+  negated approximate comparison records no tolerance. Its expected value
+  is still recorded, as a plain `!=` records its own.
+- `assertNotAlmostEqual` records no `places` or `delta`, its implicit
+  `places=7` included.
+
+Readings the issue leaves to the implementation:
+
+1. **One rule for every negation.** `!=`, `not`, a negated unittest call
+   and a negated tolerance call record no tolerance, whatever they wrap,
+   so a change of it is unknown: neither the tightening that blocked nor
+   the loosening that passed is reported. An approximate comparison whose
+   polarity flips is reported as the inversion (ASSERT_WEAKENED), whatever
+   its tolerance does.
+2. **A double negation** (`not x != approx(y)`) is positive, and records no
+   tolerance either: the negation branch drops the tolerance of the
+   negated comparison it wraps. A known tolerance replaced by it is the
+   unverifiable replacement the unknown-tolerance rule reports. The sweeps
+   hold no such spelling.
+3. **Only the comparison the call sits in is read.** An approx call inside
+   a boolean operator or another structure still makes the whole
+   assertion an approximate comparison (`== approx(x) or True` passes);
+   that is #299, filed during this round.
+
+**Tests and fixtures.**
+- **Tests:** 31 in `tests/test_issue284_negated_approx.py`. Seven
+  mutants of the round's code each fail them or the fixtures: every
+  approximate comparison read as positive; a `not` around one handed
+  back to the approx branch; a negated `approx` keeping its tolerance;
+  `assertNotAlmostEqual` keeping its `places` or `delta`; the polarity
+  left out of the record; `!=` read as positive; `not in` read as
+  positive.
+- **Fixtures:**
+  - row 33's pins for the approx spelling, each passing on v0.6.0 with
+    zero findings: `approx_polarity_inverted_pos`,
+    `approx_left_polarity_inverted_pos` and
+    `approx_not_polarity_inverted_pos`;
+  - the false positives, each blocked by v0.6.0 with TOLERANCE_LOOSENED
+    high and now quiet: `approx_negated_stricter_tolerance_neg`,
+    `almost_negated_stricter_delta_neg` and
+    `almost_negated_fewer_places_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's 775 records, byte for
+byte, and the six new ones.
+
+**Fingerprints.** None move: a flipped approx comparison reports a new
+finding, and a negated tolerance reports none where it reported
+TOLERANCE_LOOSENED.
+
+**Cost.** Measured with the round's engine against the base branch's
+(`2ece6f2`, #226's branch with #291 merged in):
+- **Targeted set:** every non-merge commit in the checked-out history of
+  the twelve histories and PyWavelets whose Python adds or removes a line
+  matching `assertNotAlmostEqual` or `approx(`: 106 commits, 99 readable.
+  No record changes; 6 commits block on both engines.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` blocks (pass -> block), as
+its label since #226 (D-104) says. Every other case keeps v0.6.0's
+verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
