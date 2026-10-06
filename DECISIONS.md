@@ -5669,3 +5669,156 @@ sweeps' copy):
   values and every finding is byte for byte the same.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-104 (2026-10-06): one definition of an expected value that is not a plain literal (#226)
+
+A literal expected value replaced by a call or a name passed in JavaScript
+and in part of Python. `toBe(78.75)` -> `toBe(Number(75))` (#198 T6),
+`toBe(make(1))` and `toBe(OTHER)` (an import) passed in JavaScript;
+`== float('75')`, `== int('75')`, `== round(75.0, 2)` and a call to a name the
+file never binds passed in Python, while the honest `78.75` ->
+`Decimal('78.75')` blocked as a changed provenance.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.followup.expected-provenance, filed as #226): "fold a fixed set of
+literal-only conversions (Number('75'), float('75'), Decimal('75')) to their
+value, so they compare as literals. Report any other literal -> unevaluated
+call as EXPECTED_VALUE_CHANGED 'expected value replaced by an expression
+checkwash does not evaluate'. Port Python's literal -> imported-name
+provenance (EXPECTATION_DEFINITION_CHANGED) to JS. This decides i198/T6."
+Rulings of 2026-10-04 ([#226](https://github.com/taipei49314/checkwash/issues/226#issuecomment-5981759826)):
+226.Q1, a literal replaced by a call whose callee Python resolves keeps
+EXPECTATION_DEFINITION_CHANGED, and the new message covers callees that
+neither resolve nor fold; 226.Q2, `Decimal(<literal>)` folds, and a folded
+value compares as Python's `==` does; 226.Q3, the JavaScript port covers a
+call rewritten with the same callee and a same-file constant, and Python's
+P5 (the same callee, bound nowhere) reports under 226.Q1.
+
+**As implemented:**
+- **Folds.** `float(<literal>)` and `Decimal(<literal>)` in Python and
+  `Number(<literal>)` in JavaScript are the assertion's literal: `right_value`
+  records the value they fold to. A spelling folds only where its name can be
+  nothing else: `float` while the module binds that name nowhere, `Decimal`
+  when a top-level import of the decimal module is the one binding of the
+  name it is spelled with, `Number` while no scope declares it and no write
+  reaches it. The argument is one bounded literal; `Number` folds a number or
+  a string holding a plain decimal numeral; a signalling NaN does not fold.
+  The provenance pass folds the same calls in an expected value it reads,
+  what a local holds included.
+- **Comparison.** Python literals compare as Python's `==` compares them,
+  in EXPECTED_VALUE_CHANGED and in the provenance channel's answers:
+  `78.75` -> `Decimal('78.75')` is no change, `0.1` -> `Decimal('0.1')` is
+  one. JavaScript keeps one canonical Number.
+- **Unevaluated calls.** Each frontend records, in the new optional
+  `Assertion.unevaluated_expected`, an expected value or bound that is a call
+  whose callee's root the file never binds (Python: no binding of the name
+  anywhere in the module, in any scope, and no star import; JavaScript: no
+  declaration in an enclosing scope and no write, nor an assertion library's
+  name) and that does not fold. EXPECTED_VALUE_CHANGED reports a literal
+  replaced by one, and one rewritten into another, on the same subject: "expected
+  value replaced by an expression checkwash does not evaluate (78.75 ->
+  int('75'))". An expression over the subject's own input stays
+  EXPECTED_VALUE_DERIVED's.
+- **The JavaScript port.** `frontends/javascript/expected_provenance.py`
+  resolves an equality's expected value and its subject by substitution: an
+  import becomes its module and export, a `const`, `let` or `var` the read
+  reaches its initializer, resolved in turn (eight levels), and a declared
+  function or class stays a call. A pair on one subject, a call after
+  substitution, whose values differ while either side read such a name, is
+  recorded as Python's channel records its events, and
+  EXPECTATION_DEFINITION_CHANGED reports it with Python's message.
+- The verdict gate labels `i198/T6` block.
+- IR: the new optional field; a folded conversion's `right_value`.
+  IR_VERSION stays 2 (D-067). No strength value, gating row or alignment
+  parameter changes.
+
+**Readings the rulings leave open:**
+1. **Every Python literal compares by `==`.** 226.Q2 names folded values;
+   one comparison for every literal keeps a folded and a written value on
+   one reading, so `1` -> `1.0` and `1` -> `True`, which reported as an
+   expected value rewritten, are now no change.
+2. **J3 follows 226.Q1.** The issue's acceptance list, written before the
+   rulings, puts `toBe(78.75)` -> `toBe(make(1))` (`make` imported) with the
+   unevaluated calls. 226.Q1 keeps a callee the file resolves on
+   EXPECTATION_DEFINITION_CHANGED and 226.Q3 ports that to JavaScript, so
+   J3 reads "expected provenance changed 78.75 -> ./total.make(1)".
+3. **A JavaScript global call rewritten** (`toBe(build(1))` ->
+   `toBe(build(2))`, `build` declared nowhere) is P5's JavaScript twin and
+   reports. The #198 round pinned it to pass "as in Python", which Python
+   no longer does.
+4. **What "never binds" means.** Any binding anywhere counts, so a
+   parameter named `float` in an unrelated helper keeps `float('75')` from
+   folding and from reading as unbound; a star import may bind any name.
+5. **The port's reach.** It reads equality operands, not bounds or
+   tolerances, and both directions of a pair it resolves: `toBe(OTHER)` ->
+   `toBe(75)` reports through it, where Python's #60 owns that pair (#292
+   asks whether JavaScript should read #60).
+6. **Messages show the folded value** as Python prints it: `75.0` for
+   `float('75')` and `Number(75)` (JavaScript's `75` has printed as `75.0`
+   since #198), `Decimal('75')` for a Decimal. The ruling's "78.75 -> 75" is
+   that value.
+7. **A folded value restores a bound.** `x < 80` -> `x == float('78.75')`
+   passes, as `x == 78.75` passes (numeric restoration).
+
+Found during this round and filed: #292 (a name or call replaced by a
+literal is read in Python only, and #60 reports an inlined local that still
+holds the value) and #293 (a JavaScript definition rewritten under an
+unchanged assertion is not read).
+
+**Measured cost**, with the round's engine against the base branch's
+(`fix/224-python-compare-direction` at `7c01de5`, the same engine bytes as
+the sweeps' copy):
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories whose test-side Python adds or removes an `assert` or a
+  unittest assertion whose expected side is a call, or a line that spells
+  `float(` or `Decimal(` in one: 2,605 commits, 2,147 readable on both
+  engines. Twelve records change, by 14 new EXPECTED_VALUE_CHANGED
+  findings, and no verdict moves (437 blocked on both):
+  - in eleven, an expected value that was already a call is rewritten
+    with the same callee, a builtin the file never binds (226.Q1's P5):
+    aiohttp `b025d570938b` and its revert `c8d6e019d38e`
+    (`bytes(stream._input)` <-> `bytes(stream._buffer)`); pytest
+    `0394ebffee0b` (`len(... SafeRepr().maxlist ...)` -> `SafeRepr(0)`),
+    `2ca6d9f039ef` (two `dict(x=1, ...)` gaining `unnamed=1`) and
+    `af39c9850e33` (two `str(testdir.tmpdir...)` gaining
+    `.realpath()`); scrapy `d5b6c236a90a`, its revert `99d8b05a0b19` and
+    `1a4a77d49fa5` (`list(range(3, 13))` <-> `list(range(2, 13))`),
+    `08232a3f824a` and `d42a98d3b590` (a `set` of str names becoming one
+    of bytes); werkzeug `64fb22fde232` (a `set('...'.split('&'))` with
+    other keys);
+  - in one, a literal is replaced by such a call: click `b64ea07128a6`,
+    `"not-none\n"` -> `repr("not-none")` (P2).
+  Each is a change to the value the test expects, which v0.6.0 left
+  unread. Eleven findings are warn. The three high ones, with no
+  production change that explains them (E1), are in pytest
+  `af39c9850e33` and scrapy `1a4a77d49fa5`, which already blocked on the
+  same rule.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records as the base, byte for
+  byte.
+
+**Fingerprints, messages and IR:**
+- New findings, and one rule moved: a literal replaced by
+  `Decimal(<literal>)` reported EXPECTATION_DEFINITION_CHANGED through the
+  provenance channel, and now reports EXPECTED_VALUE_CHANGED (P11), or
+  nothing when the values are equal (P12), so its rule and fingerprint
+  change. `1` -> `1.0` and `1` -> `True` no longer report (reading 1).
+  No other existing finding changes rule, message or fingerprint, in the
+  fixtures or in the sweeps.
+- Messages: the new "expected value replaced by an expression checkwash
+  does not evaluate (<old> -> <new>)", and a folded value printed as
+  Python prints it (reading 6).
+- IR: the new optional `Assertion.unevaluated_expected`, null unless
+  recorded, and a folded conversion's `right_value`; IR_VERSION stays 2.
+  In the corpus every assertion record gains the null field, six existing
+  fixtures record a value in it, and `js_evidence_name_rewrite_pos`
+  records its JavaScript provenance events; every existing finding and
+  verdict is byte for byte the same.
+
+The JavaScript false-positive cost is measured by the JS/TS replay (#212)
+before a release ships these findings.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
