@@ -12,7 +12,9 @@ Assertion pairing inside a matched unit:
 3. leftovers: span-order fallback
 
 A fallback pair whose two halves record different subjects and different
-expected literals does not compare its tolerances (#196 189.2).
+expected literals does not compare its tolerances (#196 189.2). A tolerance
+change takes the new side's kind; an old bare value of another kind is keyed
+with its own (#196 190.3).
 """
 
 from __future__ import annotations
@@ -162,13 +164,22 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
             and b.right_value != a.right_value
         ):
             continue
-        if b.epsilon is not None and a.epsilon is not None and b.epsilon != a.epsilon:
+        if b.epsilon is not None and a.epsilon is not None:
             kind = a.epsilon_kind or b.epsilon_kind or "abs"
-            try:
-                if Decimal(a.epsilon) != Decimal(b.epsilon):
-                    tolerance_changes.append((kind, b.epsilon, a.epsilon))
-            except InvalidOperation:
-                tolerance_changes.append((kind, b.epsilon, a.epsilon))
+            old = b.epsilon
+            # A change takes the new side's kind, and a bare value reads as
+            # that kind. A bare value of another kind is keyed with its own
+            # (#196 190.3): `places=2` -> `delta=10` is not "delta=2 ->
+            # delta=10", and `places=7` -> `delta=7` is no value left alone.
+            if "=" not in old and b.epsilon_kind not in (None, kind):
+                old = f"{b.epsilon_kind}={old}"
+            if old != a.epsilon:
+                try:
+                    respelled = old == b.epsilon and Decimal(a.epsilon) == Decimal(b.epsilon)
+                except InvalidOperation:
+                    respelled = False
+                if not respelled:
+                    tolerance_changes.append((kind, old, a.epsilon))
 
     b_marker_names = [m.name for m in before.side.markers]
     markers_added = []

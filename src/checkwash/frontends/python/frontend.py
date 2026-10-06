@@ -19,9 +19,13 @@ from checkwash.frontends.python.conditional_oracles import conditional_oracle_ca
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.frontends.python.setup_skip_controls import (
+    BODY_MARKERS,
     ConftestLevel,
     SetupScope,
     _conjunction,
+    _import_pairs,
+    body_bindings,
+    body_outcome,
     conftest_level,
     module_bindings,
     setup_outcomes,
@@ -33,6 +37,14 @@ from checkwash.frontends.python.class_attributes import ClassAttributes, ClassVa
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
+from checkwash.frontends.python.tolerance_calls import (
+    find_predicate as _find_tolerance_predicate,
+    import_names as _tolerance_import_names,
+    may_resolve as _tolerance_may_resolve,
+    statement_call as _tolerance_statement,
+    tolerance as _call_tolerance,
+    values as _tolerance_values,
+)
 from checkwash.ir import strength as S
 from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
@@ -100,7 +112,14 @@ _SKIP_DECORATORS = {
     "expectedFailure",
 }
 
-_SKIP_CALLS = {"pytest.skip", "pytest.xfail", "pytest.importorskip", "self.skipTest"}
+# A body skip is any native outcome call or raise, read through the module's
+# import bindings (`setup_skip_controls.body_outcome`, #220). The literal set
+# of four dotted spellings it replaces missed `pt.skip()` and a bare `skip()`
+# imported from pytest, and read `raise unittest.SkipTest` as removed
+# assertions. Roots that can spell one when nothing rebinds them:
+_OUTCOME_ROOTS = frozenset({"pytest", "_pytest", "unittest", "self"})
+# An indented import line: only then can a test bind a skip under its own name.
+_NESTED_IMPORT = re.compile(r"^[ \t]+(?:import|from)[ \t]", re.MULTILINE)
 
 # Every native setup outcome (`setup_skip_controls`) is spelled with one of
 # these, if only on its import line; a module without them has none to find.
@@ -203,6 +222,7 @@ class _Offsets:
         # question about the whole file (`_shadows_abs`); asked lazily.
         self.tree: ast.AST | None = None
         self.abs_shadowed: bool | None = None
+        self.tolerance_names: dict[str, str | None] | None = None
 
     def _char_col(self, lineno: int, col: int) -> int:
         """Translate CPython's UTF-8 *byte* column into a character column.
@@ -517,6 +537,57 @@ def _shadows_abs(text) -> bool:
     return text.abs_shadowed
 
 
+def _tolerance_names(text) -> dict[str, str | None]:
+    """The names the file binds to math, numpy or torch (#222), worked out once per file.
+
+    Without a parsed module (an oracle helper's own offsets) only the plain
+    spellings (`math.isclose`, `numpy.isclose`) are read. A module whose
+    source cannot spell a tolerance call, as most test modules cannot, is not
+    walked: the walk was most of what #222 added to the perf gate's 500 files.
+    """
+    if getattr(text, "tolerance_names", None) is None:
+        source = getattr(text, "text", None)
+        if isinstance(source, str) and not _tolerance_may_resolve(source):
+            names: dict[str, str | None] = {}
+        else:
+            names = _tolerance_import_names(getattr(text, "tree", None))
+        try:
+            text.tolerance_names = names
+        except AttributeError:
+            return names
+    return text.tolerance_names
+
+
+def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True) -> _Classified:
+    """A tolerance call (#222) as the approximate comparison it states.
+
+    Its tolerances and their defaults are recorded as `pytest.approx` records
+    its own, and the value it compares against is the expected value (222.Q1):
+    the literal one when only one of the two is a literal, as in
+    `assertEqual`, else the second. A negated call passes when the values are
+    far apart, so its tolerance orders the other way and is not recorded, as
+    in JavaScript.
+    """
+    subject, expected = _tolerance_values(call, name)
+    if subject is not None and expected is not None and _is_literal(subject) and not _is_literal(expected):
+        subject, expected = expected, subject
+    epsilon, kind = _call_tolerance(call, name, text.seg) if positive else (None, None)
+    return _Classified(
+        "approx",
+        S.APPROX,
+        text.seg(subject) if subject is not None else None,
+        _literal_repr(expected, text) if expected is not None else None,
+        _literal_value(expected) if expected is not None else None,
+        epsilon,
+        kind,
+        positive,
+        _referenced_names(subject),
+        _referenced_names(expected),
+        subject is not None and _is_trivial_subject(subject)
+        and (expected is None or _is_trivial_subject(expected)),
+    )
+
+
 def _finite_number(node: ast.AST | None) -> bool:
     """A finite int or float literal, signed or not: `78.75`, `-1.5`, `75`."""
     if node is None or not _is_literal(node):
@@ -701,11 +772,15 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         c.right_names = _referenced_names(expect_node)
         return c
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
-        # `assert not x` is the negated form of `assert x`.
+        # `assert not x` is the negated form of `assert x`. A negated tolerance
+        # call (#222) passes when the values are far apart, so its tolerance
+        # orders the other way and is not recorded, as in JavaScript.
         inner = _classify_assert_expr(test.operand, text)
+        approximate = inner.form == "approx"
         return _Classified(
             inner.form, inner.strength, inner.left, inner.right_literal,
-            inner.right_value, inner.epsilon, inner.epsilon_kind, not inner.positive,
+            inner.right_value, None if approximate else inner.epsilon,
+            None if approximate else inner.epsilon_kind, not inner.positive,
             inner.left_names, inner.right_names,
         )
     if isinstance(test, ast.Call):
@@ -715,6 +790,11 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             if len(test.args) == 2 and _dotted(test.args[1]) == "object":
                 return _Classified("tautology", S.TAUTOLOGY)
             return _Classified("type_shape", S.TYPE_SHAPE)
+        # `math.isclose(...)`, `numpy.isclose(...).all()`, `numpy.allclose(...)`
+        # state a tolerance (#222).
+        found = _find_tolerance_predicate(test, _tolerance_names(text))
+        if found is not None:
+            return _tolerance_classified(*found, text)
         return _Classified("truthy", S.TRUTHY)
     if _is_literal(test):
         return _Classified("tautology", S.TAUTOLOGY)
@@ -1214,6 +1294,12 @@ def _classify_compare_op(
     return _Classified("unknown", None, left_text)
 
 
+def _tolerance_statement_classified(node: ast.Call, text) -> _Classified | None:
+    """numpy's and torch's assertion calls, written as statements (#222)."""
+    name = _tolerance_statement(node, _tolerance_names(text))
+    return _tolerance_classified(node, name, text) if name is not None else None
+
+
 def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     if not (isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "self"):
         return None
@@ -1233,6 +1319,16 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
                 form, level = _UNITTEST_MAP[method]
                 break
     positive = method not in _NEGATED_UNITTEST
+    # `assertTrue(math.isclose(...))` is read as the call it wraps (222.Q2), and
+    # `assertFalse(...)` as its negation.
+    if method in ("assertTrue", "assertFalse") and node.args:
+        wrapped, holds = node.args[0], positive
+        while isinstance(wrapped, ast.UnaryOp) and isinstance(wrapped.op, ast.Not):
+            wrapped, holds = wrapped.operand, not holds
+        found = (_find_tolerance_predicate(wrapped, _tolerance_names(text))
+                 if isinstance(wrapped, ast.Call) else None)
+        if found is not None:
+            return _tolerance_classified(*found, text, positive=holds)
     # The hand-rolled tolerance in the unittest dialect: `assertLess(abs(d), eps)`,
     # `assertGreater(eps, abs(d))` and `assertTrue(abs(d) < eps)` (#196 189.2).
     hand = None
@@ -1776,12 +1872,17 @@ def _swallows(handler: ast.ExceptHandler) -> bool:
     return not _contains_oracle(handler.body)
 
 
-def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None, attrs=None) -> set[int]:
+def _unreachable_ids(
+    func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None, outcome=None, attrs=None
+) -> set[int]:
     """Node ids under statements that can never execute.
 
     `return` (or `raise`) parked at the top of a test body leaves every
     assertion in the AST while killing the test — a one-token cheat that was
-    completely silent before (confirmed red-team finding).
+    completely silent before (confirmed red-team finding). A raise that
+    `outcome` reads as a native skip or xfail is not one: it skips the test as
+    `pytest.skip()` does, its marker reports that, and the assertions after
+    it are still the test's (#220).
 
     `attrs` resolves the class attributes a method's guards read through its
     receiver (`ClassAttributes.env`, #254): `if self.item_class is None:` is
@@ -1808,6 +1909,8 @@ def _unreachable_ids(func: ast.FunctionDef | ast.AsyncFunctionDef, fixtures=None
         for stmt in body:
             if stop:
                 kill(stmt)
+                continue
+            if isinstance(stmt, ast.Raise) and outcome is not None and outcome(stmt):
                 continue
             if isinstance(stmt, (ast.Return, ast.Raise)):
                 stop = True
@@ -2243,7 +2346,7 @@ _STMT_BODY_FIELDS = ("body", "orelse", "finalbody")
 
 
 def _skip_call_guards(func: ast.FunctionDef | ast.AsyncFunctionDef, text) -> dict[int, str]:
-    """id(call node) -> conjunction of enclosing `if` condition sources.
+    """id(call or raise node) -> conjunction of enclosing `if` condition sources.
 
     `if PY_3_14_PLUS and not slots: pytest.xfail(...)` is the imperative
     spelling of `skipif(PY_3_14_PLUS and not slots)`; without the guard, D6
@@ -2277,7 +2380,7 @@ def _skip_call_guards(func: ast.FunctionDef | ast.AsyncFunctionDef, text) -> dic
                 record(case.body, conds)
             if not compound and conds:
                 for node in ast.walk(stmt):
-                    if isinstance(node, ast.Call):
+                    if isinstance(node, (ast.Call, ast.Raise)):
                         out[id(node)] = " and ".join(conds)
 
     record(func.body, ())
@@ -2572,6 +2675,9 @@ def _collect_unit(
     fixtures: dict[str, ast.Constant] | None = None,
     doctests: list[Assertion] | None = None,
     aliases: dict[str, list[ast.expr]] | None = None,
+    outcome_bindings: dict[str, str | None] | None = None,
+    method: bool = False,
+    outcome_roots: frozenset[str] = frozenset(),
     attrs=None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
@@ -2580,7 +2686,30 @@ def _collect_unit(
     markers = _decorator_markers(func, text, off, aliases) + list(inherited_markers or [])
     handlers: list[Handler] = []
     counter = 0
-    dead = _unreachable_ids(func, fixtures, attrs)
+    # A body skip is read through the module's import bindings, shadowed by
+    # the function's own, which are worked out only for a call or raise whose
+    # root can spell one (#220).
+    module_names = outcome_bindings or {}
+    roots = _OUTCOME_ROOTS | outcome_roots | {name for name, target in module_names.items() if target}
+    positional = [*func.args.posonlyargs, *func.args.args]
+    if method and positional:
+        # The instance, whatever it is called, spells `self.skipTest`.
+        roots = roots | {positional[0].arg}
+    local_names: dict[str, str | None] | None = None
+
+    def outcome_of(node: ast.Call | ast.Raise) -> str | None:
+        nonlocal local_names
+        target = node.func if isinstance(node, ast.Call) else node.exc
+        if isinstance(target, ast.Call):
+            target = target.func
+        name = _dotted(target) if target is not None else None
+        if not name or name.partition(".")[0] not in roots:
+            return None
+        if local_names is None:
+            local_names = body_bindings(func, module_names, method=method)
+        return body_outcome(node, local_names)
+
+    dead = _unreachable_ids(func, fixtures, lambda stmt: outcome_of(stmt) is not None, attrs)
     guards = _skip_call_guards(func, text)
     receiver_names: frozenset[str] | None = None
     _unparse_memo: dict[int, str] = {}
@@ -2624,6 +2753,23 @@ def _collect_unit(
     for node in ast.walk(func):
         if id(node) in dead:
             continue
+        # A native skip or xfail, called or raised (`raise unittest.SkipTest`
+        # is the same act as `pytest.skip()`), read through the bindings (#220).
+        if isinstance(node, (ast.Call, ast.Raise)):
+            skip = outcome_of(node)
+            if skip is not None:
+                seg = text.seg(node) or skip
+                guard = guards.get(id(node))
+                if guard is not None and attrs is not None:
+                    # A guard that holds under the class's attributes is
+                    # no condition: the skip reads as unconditional, as
+                    # a setup callback's does (#254).
+                    if receiver_names is None:
+                        receiver_names = receivers(func)
+                    parsed = parse_expr(guard)
+                    if parsed is not None and _static_truth(substitute(parsed, attrs, receiver_names)) is True:
+                        guard = None
+                markers.append(Marker(name=skip, text=seg, span=off.span(node), guard=guard))
         # An assert written inside a nested `def` that nothing calls is present
         # in the source and absent from the run. Counting it as live is what
         # let `verify()` be defined and never invoked (tamper 020) — and it is
@@ -2653,7 +2799,9 @@ def _collect_unit(
                     right_value=c.right_value,
                     epsilon=c.epsilon,
                     epsilon_kind=c.epsilon_kind,
-                    trivial=_is_trivial_subject(node.test) or id(node) in vacuous,
+                    # A tolerance call (#222) judges its two values, as
+                    # `assertTrue(<call>)` and `assertAlmostEqual` do.
+                    trivial=_is_trivial_subject(node.test) or c.trivial or id(node) in vacuous,
                     positive=c.positive,
                     left_names=c.left_names,
                     right_depends_on=depends,
@@ -2675,19 +2823,6 @@ def _collect_unit(
                 pair = _patch_call_target(node, name)
                 if pair is not None:
                     patches.add(pair)
-                if name in _SKIP_CALLS:
-                    seg = text.seg(node) or name
-                    guard = guards.get(id(node))
-                    if guard is not None and attrs is not None:
-                        # A guard that holds under the class's attributes is
-                        # no condition: the skip reads as unconditional, as
-                        # a setup callback's does (#254).
-                        if receiver_names is None:
-                            receiver_names = receivers(func)
-                        parsed = parse_expr(guard)
-                        if parsed is not None and _static_truth(substitute(parsed, attrs, receiver_names)) is True:
-                            guard = None
-                    markers.append(Marker(name=name, text=seg, span=off.span(node), guard=guard))
                 if name in ("pytest.raises", "pytest.warns", "raises"):
                     # `pytest.raises(E, match=...)` IS an oracle: triage found
                     # human commits folding an excinfo substring assert into
@@ -2707,7 +2842,7 @@ def _collect_unit(
                         )
                     )
                     counter += 1
-            c = _classify_unittest_call(node, text)
+            c = _classify_unittest_call(node, text) or _tolerance_statement_classified(node, text)
             if c is not None:
                 seg = text.seg(node) or ""
                 depends = _resolve_through(c.right_names, bindings)
@@ -2784,9 +2919,9 @@ def _collect_unit(
                         if id(node) in own_assert_ids:
                             continue
                         c = _classify_assert(node, text)
-                        trivial = _is_trivial_subject(node.test) or id(node) in vacuous
+                        trivial = _is_trivial_subject(node.test) or c.trivial or id(node) in vacuous
                     elif isinstance(node, ast.Call):
-                        c = _classify_unittest_call(node, text)
+                        c = _classify_unittest_call(node, text) or _tolerance_statement_classified(node, text)
                         if c is None:
                             continue
                         trivial = c.trivial
@@ -3334,6 +3469,15 @@ def parse_python(
     # fixture itself is judged suite-wide in `_conftest_unit`.
     setup_scopes: tuple[SetupScope, ...] = ()
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = {}
+    # What a test body's names resolve to at module level, for its skips (#220).
+    body_names = module_bindings(tree, mutated=False) if collect_tests and not conftest else {}
+    # Names a test can import inside itself, read when an import is indented.
+    body_roots = frozenset(
+        name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+        for name, _target in (_import_pairs(node) or ())
+    ) if body_names and _NESTED_IMPORT.search(raw) else frozenset()
 
     def condition(node: ast.AST) -> str:
         return text.seg(node) or ast.unparse(node)
@@ -3423,15 +3567,20 @@ def parse_python(
         # module mark (named for the mark, or `module.*`) is one a subclass
         # shares.
         if class_attrs is None or not markers or any(
-            not (m.name in _SKIP_CALLS or m.name.startswith("setup.")) or m.guard is not None for m in markers
+            not (m.name in BODY_MARKERS or m.name.startswith("setup.")) or m.guard is not None for m in markers
         ):
             return unit
+        # Every skip the body spells, called or raised, read as the unit
+        # reads it (#220): one dead under the base's attributes may still run
+        # under a subclass's.
+        local = body_bindings(func, body_names, method=True)
+        skips = {
+            id(node) for node in ast.walk(func)
+            if isinstance(node, (ast.Call, ast.Raise)) and body_outcome(node, local) is not None
+        }
         for subclass in class_attrs.crediting_subclasses(cls, func.name):
-            dead = _unreachable_ids(func, branch_fixtures, attrs_of(subclass))
-            if any(
-                isinstance(node, ast.Call) and _dotted(node.func) in _SKIP_CALLS and id(node) not in dead
-                for node in ast.walk(func)
-            ):
+            dead = _unreachable_ids(func, branch_fixtures, lambda stmt: id(stmt) in skips, attrs_of(subclass))
+            if any(node not in dead for node in skips):
                 continue
             if setup_markers(func, nested_setup(setup_scopes, cls, instance=subclass)):
                 continue
@@ -3459,7 +3608,9 @@ def parse_python(
                 if collect_tests and collectible and _is_test_name(child.name):
                     unit = _collect_unit(
                         child, qual, text, off, inherited + setup_markers(child, scopes),
-                        module_scopes, file_caches, branch_fixtures, doctests, aliases, attrs_of(owner),
+                        module_scopes, file_caches, branch_fixtures, doctests, aliases,
+                        outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
+                        attrs=attrs_of(owner),
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -3506,7 +3657,8 @@ def parse_python(
                 method, f"{cls.name}.{method.name}", text, off,
                 module_markers + class_marks(owner) + class_marks(cls)
                 + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls)),
-                module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner), attrs_of(cls),
+                module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
+                outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
@@ -3675,7 +3827,7 @@ def _classified_asserts(nodes, text, off) -> tuple:
                 right_value=c.right_value,
                 epsilon=c.epsilon,
                 epsilon_kind=c.epsilon_kind,
-                trivial=_is_trivial_subject(node.test),
+                trivial=_is_trivial_subject(node.test) or c.trivial,
                 positive=c.positive,
                 left_names=c.left_names,
                 right_depends_on=c.right_names,

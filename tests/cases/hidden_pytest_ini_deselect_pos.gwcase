@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 105
+rule: CI_WORKFLOW_TOUCHED
+issue: 221
+title: `--deselect` written into `.pytest.ini`, which pytest reads as it reads `pytest.ini`
+origin: issue #221 A1. `.pytest.ini` was production, so no CI rule read it: v0.6.0 passes this with zero findings, while the same line in `pytest.ini` blocks. pytest 9.1.1 runs `1 passed, 1 deselected`
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+def test_empty():
+    assert total([]) == 0
+=== before: .pytest.ini ===
+[pytest]
+minversion = 9.0
+=== after: .pytest.ini ===
+[pytest]
+minversion = 9.0
+addopts = --deselect tests/test_billing.py::test_total
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

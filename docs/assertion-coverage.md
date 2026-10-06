@@ -141,10 +141,11 @@ in any other function counts wherever it is written, because a hook, a helper
 or a callback may run first; in the read's own function a write counts when it
 comes first, or when a loop in that function runs both. A destructuring
 declaration such as `const [eps] = [1e12]` shadows an outer `eps` with an
-unknown value. In JS files a `toBeCloseTo(x, p)` precision and a hand-rolled bound
-are compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
-`toBeCloseTo(x, 2)` are equal. A chai `closeTo` delta is recorded in the same
-`abs=` form (see the chai section below).
+unknown value. A `toBeCloseTo(x, p)` precision and a hand-rolled bound are
+compared as the same absolute bound, `10**-p / 2`, so `< 0.005` and
+`toBeCloseTo(x, 2)` are equal, as Python's `places` and `delta` are (#196
+190.3, below). A chai `closeTo` delta is recorded in the same `abs=` form (see
+the chai section below).
 
 A lower bound such as `Math.abs(d) > eps` asserts that two values differ, so
 it is no tolerance. Its spellings still record the bound's direction, so a
@@ -198,10 +199,101 @@ both were `EXPECTED_VALUE_CHANGED`. A file that binds `abs` itself (an import,
 a definition, an assignment or a parameter) gets no such reading, and neither
 does a lower bound, `abs(d) > eps`, which stays a plain comparison: Python
 records no bound direction, so a flip from `<` to `>` blocks as the centre
-rewritten into the bound rather than as a reversed direction (#224). A bound
-rewritten into another tolerance kind (`pytest.approx`'s default `rel`, or
-`assertAlmostEqual`'s `delta` or `places`) is compared as new slack until the
-kinds are compared as one absolute bound (#196 190.3).
+rewritten into the bound rather than as a reversed direction (#224).
+
+`assertAlmostEqual`'s `places` and `delta`, `pytest.approx`'s `abs=` and a
+hand-rolled bound each state an absolute bound, and two of them in different
+kinds are compared as that bound, places p as `10**-p / 2`, written from its
+digits, as in JavaScript (#196 190.3). unittest passes `places=p` when
+`round(a - b, p) == 0`, which is the bound `toBeCloseTo(x, p)` states. So
+`places=7` -> `delta=7` reports a loosening from 5e-8 to 7, and so does
+`delta=0.001` -> `places=1`; `delta=5` -> `places=3` is a tightening, and
+`abs(x - c) < 0.01` -> `delta=0.01` the same bound, so neither is reported. A
+relative tolerance (`rel=`, `pytest.approx`'s default) states no absolute
+bound, so a bound rewritten into one is still compared as new slack, and so
+is a pair with several tolerances at once. A negated comparison
+(`assertNotAlmostEqual`, a negated `approx`) passes when the values are far
+apart, so its tolerance orders the other way, and checkwash still compares
+it in the positive direction
+([#284](https://github.com/taipei49314/checkwash/issues/284)). The source tests
+are in
+[`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py).
+
+### Python tolerance calls
+
+Issue [#222](https://github.com/taipei49314/checkwash/issues/222) showed that
+`assert math.isclose(total(), 78.75, abs_tol=1e-9)` was a truthy assertion
+with no tolerance, so widening `abs_tol` to `1e3` passed with zero findings,
+and numpy's and torch's assertion calls were no assertions at all. One table
+now reads these calls as the approximate comparisons they are, at the
+strength of `pytest.approx` and `assertAlmostEqual`:
+
+| Call | Tolerances read | Left out, recorded as |
+|---|---|---|
+| `math.isclose(a, b)` | `abs_tol` as `abs=`, `rel_tol` as `rel=` | `abs_tol=0.0`, `rel_tol=1e-09` |
+| numpy's `isclose(a, b)` and `allclose(a, b)` | `atol` as `abs=`, `rtol` as `rel=`, by keyword or as the fourth and third arguments | `atol=1e-08`, `rtol=1e-05` |
+| `numpy.testing.assert_allclose(actual, desired)` | the same | `atol=0`, `rtol=1e-07` |
+| `numpy.testing.assert_array_almost_equal(actual, desired)` | `decimal`, by keyword or as the third argument | `decimal=6` |
+| `numpy.testing.assert_almost_equal(actual, desired)` | the same | `decimal=7` |
+| `torch.testing.assert_close(actual, expected)` | `atol` as `abs=`, `rtol` as `rel=`, keyword only | unknown: the pair depends on the dtype (222.Q3) |
+
+A default is recorded as numpy 2.3 and CPython state it, so a tolerance that
+appears in the head is compared against the one the call had, as
+`pytest.approx`'s default is. A call is read through the file's imports
+(`import numpy as np`, `from numpy.testing import assert_allclose`,
+`from math import isclose`), through `np = pytest.importorskip("numpy")`,
+annotated or written with `:=`, and as `math`, `numpy` or `torch` when nothing
+in the file binds that name. A name the file binds to two different things,
+or also binds otherwise (a definition, an assignment), is not read.
+
+`math.isclose` and numpy's `isclose` and `allclose` are predicates. They are
+read in an `assert`, also through a call around them
+(`assert np.isclose(a, b).all()`, `assert np.all(np.isclose(a, b))`,
+`assert all(math.isclose(x, y) for x, y in pairs)`), and in `assertTrue`,
+which is read as the call it wraps (222.Q2). numpy's and torch's assertion
+functions are assertions written as statements, so deleting one is
+`ASSERT_REMOVED`. Each call records the value it compares against as its
+expected value (222.Q1): the literal one when only one of the two is a
+literal, as `assertEqual` does, and otherwise the second (`b`, `desired`,
+`expected`). So `math.isclose(total(), 78.75)` -> `math.isclose(total(), 75)`
+is `EXPECTED_VALUE_CHANGED`, and the rules that read an assertion's subject
+and expected value read these calls exactly as they read
+`assertAlmostEqual(actual, desired)`.
+
+`TOLERANCE_LOOSENED` compares the tolerances as it compares
+`pytest.approx`'s: `abs=` and `rel=` loosen as they grow, and two or more at
+once are compared kind by kind. numpy's `decimal` passes while
+`abs(desired - actual) < 1.5 * 10**-decimal`, so it loosens as it shrinks, and
+against another absolute bound it is compared as `1.5 * 10**-d`, its own
+conversion, not unittest's `10**-p / 2`. So `decimal=6` -> `decimal=0` is a
+loosening and `decimal=0` -> `decimal=6` is no finding, and
+`math.isclose(x, y, abs_tol=1e-9)` -> `x == pytest.approx(y, abs=1e-9)` keeps
+the absolute bound and drops the relative one, so it is no finding either. A
+tolerance written as a name or an expression is recorded as written, as
+`pytest.approx`'s is. A tolerance passed through `*args` or `**kwargs`, and
+torch's omitted pair, cannot be read; a known tolerance replaced on the same
+subject by one that cannot be read, such as
+`torch.testing.assert_close(a, b, rtol=1e-5, atol=1e-8)` ->
+`torch.testing.assert_close(a, b)`, is an unverifiable replacement
+(`ASSERT_WEAKENED`), as in JavaScript.
+
+Not read: a negated call (`assert not math.isclose(...)`, `assertFalse(...)`),
+which passes when the values are far apart, so its tolerance orders the other
+way and is not recorded, as in JavaScript (#284 does the same for
+`pytest.approx`); other numpy and torch helpers (`assert_approx_equal`'s
+significant digits, `assert_array_less`, `assert_array_max_ulp`, torch's
+deprecated `assert_allclose`); a predicate inside a comparison or a boolean
+operator (`assert math.isclose(a, b) == True`,
+`assert isclose(a, b) and ok`); a name bound to numpy by anything but an
+import or `pytest.importorskip`; and an assertion call in a fixture or in a
+helper another file defines, which lend the test their bare `assert`s only
+([#286](https://github.com/taipei49314/checkwash/issues/286)). A call inside
+`pytest.raises(AssertionError)` is read as positive, as unittest's assertion
+methods are. A `decimal` rewritten into `assert_allclose`'s `rtol` and `atol`,
+the migration numpy's documentation recommends, is a pair of several
+tolerances against one, so it is compared kind by kind and reads as new slack
+even where the new bound is tighter for the values compared. The source tests
+are in [`tests/test_tolerance_calls.py`](../tests/test_tolerance_calls.py).
 
 ### chai expect chains and the assert interface
 

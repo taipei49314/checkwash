@@ -1,0 +1,28 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: assert energy(2.0) == pytest.approx(19.62, abs=0.01) -> assertAlmostEqual(energy(2.0), 19.62, delta=0.01) states the same bound: no finding
+origin: #196 190.3 — blocked before as new slack
+=== before: tests/test_physics.py ===
+import unittest
+
+import pytest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        assert energy(2.0) == pytest.approx(19.62, abs=0.01)
+=== after: tests/test_physics.py ===
+import unittest
+
+import pytest
+
+from sim import energy
+
+
+class TestEnergy(unittest.TestCase):
+    def test_energy(self):
+        self.assertAlmostEqual(energy(2.0), 19.62, delta=0.01)
+=== expect ===
+[]

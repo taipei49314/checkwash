@@ -5558,6 +5558,934 @@ version string aside, so no case is relabelled.
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
 
+## D-097 (2026-10-05): the JS and task runners count where a command starts (#216)
+
+checkwash decided whether a command runs the tests from row 69's runner
+names (`roles._TEST_RUNNER_TOKENS`), which hold none of `node --test`,
+`mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch test`, `just test`,
+`poe test` or `pdm test`. A shell script whose only runner was one of them
+stayed production, so `node --test` becoming `node --test || true` hid its
+own swallow and bought the opaque exemption that held an assertion weakened
+beside it at warn: row 87's double effect, which row 106 listed as a
+residual. The same gap reached workflow steps (`if: false` under `- run: node
+--test` passed at warn), pre-commit hooks (removing the only `node --test`
+hook passed at warn), manifest scripts (a `ci` script running `mocha` gained
+`|| true` unread) and the planting commit of #196 185.3. It also gave a false
+reason: a pre-commit hook moving from `pytest` to `hatch test` blocked with
+"no pre-commit hook entry invokes a recognised test runner any more (was:
+pytest)".
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751), filed as #216):
+one shared "invokes a test runner" predicate with 191.5's. The new names
+match only in command content (runner-shaped scripts, workflow `run:`,
+manifest script values, hook entries) and only in command position, never
+as words over arbitrary file content. The opaque-exemption denial keeps
+today's tokens. The round closes 185.3 and 191.7's false reason, and adds
+`--test-only` (187.1) as a narrowing token. A sweep is mandatory; the
+maintainer edits are THREATMODEL rows 87 and 106 and SPEC §4. No IR change.
+
+**As implemented:**
+- `runner_command.invokes_positional_runner` reads one text as bash, with
+  191.5's lexer, and asks whether a simple command in it starts one of the
+  new runners. `invokes_test_runner`, which runner sites read (a workflow
+  step's `run:`, a `uses:` step's inputs, a hook's `entry`), asks it beside
+  191.5's whole-word reading of row 69's names, now `invokes_named_runner`.
+- `roles._runs_test_command` is row 69's token scan or the positional
+  reading. It decides a runner-shaped script (§2's content gate), the
+  script one hop away and whether the hop's own script runs a runner
+  already, a manifest's members by command, ci.py's no-op branch
+  (`if ! mocha; then :; fi`) and `-`-prefixed make recipe checks, and "the
+  test suite is no longer invoked by this script".
+- The deletion rule: a deleted workflow or pre-commit config ran a suite
+  when row 69's token scan finds a runner in it or it holds a runner site
+  (`ci_control_flow.holds_runner_site`).
+- `--test-only` joins `_CI_NARROWING_TOKENS`.
+- Unchanged, as ruled or as unrelated: the opaque-exemption denial
+  (`_mentions_test_runner`); the collection inventory's own reading of
+  commands (#173, `invokes_named_runner`); and the two Python-only readers
+  that gate on row 69's scan, the pytest collection-settings scan of a ci
+  file and the runtime-shadow reading of pytest invocations.
+
+Readings the ruling leaves to the implementation:
+
+1. **Command position.** The first word of a simple command, past reserved
+   words (`if`, `!`, `do`), assignments (`NODE_ENV=test mocha`) and a make
+   recipe's `@`, `-` and `+` prefixes. The reader follows:
+   - wrappers that run the words after their options: `env`, `sudo`,
+     `time`, `timeout`, `nice`, `nohup`, `exec`, `command`, `cross-env`,
+     `nyc`, `c8`, `xvfb-run`. An option takes the next word as its value
+     unless that word starts a command the reader follows, so `nice -n 10
+     mocha` reaches mocha and `sudo -E apt-get install tap` reaches
+     `install`. `timeout` takes its duration first. `command -v mocha` looks
+     the name up and runs nothing;
+   - package launchers that run the binary they name: `npx`, `pnpx`,
+     `bunx`, `npm exec`/`x`, `pnpm exec`/`dlx`, `yarn exec`/`dlx`, `bun x`,
+     and `yarn` or `pnpm` followed by `mocha`, `ava` or `tap`;
+   - `sh`, `bash`, `zsh` and `dash` with `-c` (options such as `-o
+     pipefail` read with their values), and `eval`;
+   - the text of a command substitution, and a heredoc body a shell reads
+     (`bash <<EOF`).
+   Nesting of `sh -c`, `eval` and substitutions past four levels keeps every
+   name it holds, as text the lexer cannot follow does under 191.5.
+2. **The names.** `mocha`, `ava` and `tap` are binaries. `bun`, `deno`,
+   `hatch`, `just`, `poe` and `pdm` count with a first argument that starts
+   with `test`, past the tool's options, so the subcommand may go on (`just
+   test-unit`, `poe test:fast`), as `make tests` does for `make test`.
+   `pdm run test`, `hatch run test`, `deno task test` and `bun run test` run
+   a named script whose content is not read; they are not in the ruled list.
+   `node` runs its test runner when `--test` comes before a script argument
+   (`.js`, `.cjs`, `.mjs`, `.ts`, `.cts`, `.mts`): `node app.js --test` hands
+   the flag to the script, and `node --test-only` alone runs no runner.
+3. **What runs nothing,** shared with 191.5: the words of `echo` and
+   `printf`, comments, a heredoc body `cat` writes out, the packages an
+   install command names (`npm i -D mocha`, `bun add tap`), and a word in
+   any position but the first (`import { tap } from "rxjs"`, `x-node
+   --test`).
+4. **Text the lexer cannot follow** is split on its command separators and
+   each piece is read from its first word. 191.5 counts every one of row
+   69's names in such text; a new name counts only at a piece's start, or
+   one unbalanced quote in a runner-shaped file would read every `tap` and
+   `just` in its prose as a runner.
+5. **The deletion rule** reads runner sites as well as row 69's scan.
+   Removing the only `node --test` hook blocks (H4), and deleting the file
+   it lives in would otherwise pass at warn. A dead site counts, as row
+   69's scan counts `pytest` in a disabled step. A `.gitlab-ci.yml` is not
+   read for sites, so a deleted GitLab pipeline whose only runner is a new
+   name is reported at warn (residual). An emptied workflow, as against a
+   deleted one, stays the residual row 112 already names ("deleting the
+   step from a surviving workflow").
+6. **The opaque-exemption denial keeps row 69's names**, as ruled. A
+   runner-shaped script that runs a new runner is `ci` and grants no
+   exemption; a changed file of no runner shape whose only runner is a new
+   name still buys it (residual, row 87).
+7. **The collection inventory** keeps row 69's names for the commands it
+   reads: no new name runs a pytest command it could parse. A `uses:` step
+   named for one of row 69's runners whose input runs a new name is now a
+   runner site, and the inventory withholds for it, as for any step that
+   runs a runner action.
+8. **185.3** closes for a planted script that runs a recognised runner: the
+   commit that writes `"unit": "mocha || true"` beside `"test": "jest"` now
+   blocks. A planted script that runs none (`node scripts/run.js || true`)
+   still costs only the CI finding when it is wired in.
+9. **Indirection** is not read: a runner reached through a variable
+   (`$RUNNER || true`), a computed `eval`, piped text (`echo mocha | sh`) or
+   a heredoc body `cat` expands a substitution in. Row 69's names in the
+   same places still count wherever the token scan reads them. A name the
+   shell joins from quoted pieces (`m'o'cha`) is read here, since each word
+   is dequoted, but not among row 69's names (`'py'test`): that gap is
+   older than this round and is filed as #275.
+
+**A pin changes (its own commit, for approval).**
+`tests/test_manifest_test_commands.py::test_the_hop_is_exactly_one_and_needs_a_script_runner`
+used `"b": "node --test"` as the script two hops from `test`. Under the
+ruling `b` is a member by its own command, as M1 and P1 require of `"ci":
+"mocha"` and `"unit": "mocha || true"`, so the pin's input becomes `node
+scripts/report.js`, which runs no runner, and its assertion stays. The issue
+lists this file under "Must not change"; that line and M1/P1 cannot both
+hold.
+
+**Tests and fixtures.**
+- Tests: 118 in `tests/test_issue216_runner_vocabulary.py`: the
+  reading of each runner and context, R1 to R6 and the four task runners as
+  one parametrized pin, the swaps, the deletion rule, `--test-only` and the
+  inventory's reading. All 34 mutants of the round's code fail them
+  or the fixtures.
+- Fixtures (12). Each `_pos` passes on v0.6.0 or, for M1, blocks on the
+  assertion alone; each H `_neg` blocks there with the false reason:
+  - `runner_script_node_test_swallow_pos` (R1, `bypass: 106`);
+  - `ci_step_if_false_node_test_pos` (W1), `precommit_node_test_hook_removed_pos`
+    (H4) and `ci_node_test_workflow_removed_pos` (`bypass: 112`);
+  - `runner_package_json_mocha_script_swallow_pos` (M1),
+    `runner_package_json_planted_mocha_swallow_pos` (P1, 185.3) and
+    `runner_package_json_test_only_pos` (T1, 187.1) (`bypass: 106`);
+  - `precommit_pytest_to_hatch_test_neg` (H1) and
+    `precommit_pytest_to_just_test_neg` (H2);
+  - `runner_word_rxjs_tap_honest_fix_neg`,
+    `runner_word_in_production_script_prose_neg` and
+    `ci_runner_word_not_in_command_position_neg`, which v0.6.0 passes too.
+- Every fixture the issue lists under "Must not change" keeps its
+  expectation, and so does every other existing fixture.
+
+**Fingerprints.** CI_WORKFLOW_TOUCHED's fingerprint includes its reasons, so
+a CI finding that gains or loses a reason moves: W1, H4, M1, P1, T1 and the
+deletion gain one, and the H1/H2 swaps lose one. A runner script promoted to
+`ci` (R1) gains a CI_WORKFLOW_TOUCHED finding. Every other finding keeps its
+fingerprint: an ASSERT_WEAKENED that moves from warn to high keeps its own.
+
+**Cost.**
+- **Where the change can apply.** The twelve histories the sweeps draw
+  from (attrs, click, flask, httpx, rich, starlette, aiohttp, pytest,
+  requests, scrapy, uvicorn and werkzeug: 61,048 non-merge commits on their
+  default branches) hold 6,941 commits that change a ci-role file, a
+  `package.json` or `Pipfile`, a runner-shaped script or a file with a shell
+  shebang. Both sides of every such file were read: 7,519 workflow and
+  pre-commit config sides, 1,939 runner-shaped sides and 38 manifest sides.
+  The new reading counts no command in them that row 69's names do not:
+  none of these projects runs one of the ten runners in a workflow step, a
+  hook, a manifest script or a runner-shaped script.
+- **Sweep, targeted:** those 6,941 commits give the same records under
+  main's engine and this tree's. 6,598 are readable; neither engine reads
+  the rest, 307 of them aiohttp's submodule commits.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records as
+  main's engine (#223's).
+- **Sweep, targeted by D-088:** its sets give the same records too: 895
+  commits of ten full histories (855 readable) and 368 of pytest's (364
+  readable).
+- **Not measured:** the false-positive cost on JS projects, where the new
+  names live. No JS/TS history replay exists yet (#212).
+- **Time:** linear in the text, and bounded by the reader's 1 MB. A 1 MB
+  runner-shaped script of 30,000 commands reads in about 0.6 s per call,
+  and 1 MB of command substitutions in about 0.9 s. Real scripts are a few
+  kilobytes.
+- After the sweeps, `_dequote` gained a fast path: a word with no quote,
+  escape or whitespace is returned as it is, which is what shlex returned
+  for it. All 3,820 distinct words of the 32,595 CI texts in the targeted
+  commits dequote the same both ways, and the fixture corpus is
+  byte-identical before and after.
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-098 (2026-10-05): composite action definitions are ci (#213)
+
+A composite action's steps run inside the job that calls it, so
+`.github/actions/test/action.yml` can hold a project's real test command.
+The `ci` role covered `.github/workflows/**` and not the action definitions,
+so `pytest || true` in one gave zero findings, as the same line in a
+workflow does not. An action whose runner holds no runner token (`node
+--test`) was opaque production and bought the opaque exemption, so an
+assertion weakened beside it passed at warn. Row 112 listed composite
+actions as a residual.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751), filed as #213):
+scope the default ci glob to the action definitions,
+`.github/actions/**/action.yml` and `action.yaml`, not all of
+`.github/actions/**`. Scripts an action calls are already promoted by
+content. Later, feed composite `runs.steps` into the runner-site reader.
+Costs: SPEC §2 and `DEFAULT_ROLES` (maintainer; pinned by
+`tests/test_spec_roles_pinned.py`), composite edits warn, a sweep.
+
+**As implemented:** the two globs join the `ci` row of `DEFAULT_ROLES` and of
+SPEC §2's table, in one commit, as the pin requires. Nothing else changes:
+an action definition is read as every other ci file is.
+
+Readings the ruling leaves to the implementation:
+
+1. **What the globs reach.** `fnmatchcase` lets `**` cross directories, so
+   an action at any depth beneath `.github/actions/` matches
+   (`.github/actions/python/test/action.yml`), and one directly in
+   `.github/actions/` does not; GitHub resolves `uses: ./.github/actions/x`
+   to a directory. A JavaScript action's source, a Docker action's
+   `Dockerfile` and an action published from the repository root
+   (`action.yml`, `action/action.yml`) keep their role.
+2. **Beneath a test-support directory.** #217 gives a non-Python file
+   beneath `test/` the test role, so `.github/actions/test/action.yml` was a
+   test file on v0.6.0, read by no rule. A path the table resolves to a role
+   keeps it, so the definition is ci there too.
+3. **What reads it.** As a ci file, a definition loses the opaque exemption,
+   and the added-line scan reads its swallows and the narrowings it
+   introduces (`run: pytest --deselect …`). A Docker action's `action.yml`
+   is a definition too, and its edits warn.
+4. **Not in this round (residuals, row 112):** the runner-site reader does
+   not read composite `runs.steps`, so `if: false` on a composite step reads
+   at warn (A2); deleting an action definition is not a workflow deletion,
+   so it reads at warn; an action defined outside `.github/actions/` is not
+   a definition here.
+
+**Tests and fixtures.**
+- Tests: 15 in `tests/test_issue213_composite_actions.py`.
+- Fixtures (5):
+  - `ci_composite_action_swallow_pos` (A1) and
+    `ci_composite_action_yaml_swallow_pos` (A1y), `bypass: 112`: v0.6.0
+    passes both with zero findings;
+  - `ci_composite_action_node_test_swallow_pos` (A5), `bypass: 112`: v0.6.0
+    passes it with the weakened assertion at warn;
+  - `ci_action_javascript_source_neg` (A3): a JavaScript action's
+    `index.js` gaining `|| true` stays production, with zero findings;
+  - `ci_composite_action_version_bump_neg`: a setup action bumped inside a
+    definition reports CI_WORKFLOW_TOUCHED at warn.
+- Every existing fixture keeps its expectation, including every `ci_*` and
+  `runner_*` fixture and `circleci_weakened_pos`.
+
+**Fingerprints.** A changed action definition now reports
+CI_WORKFLOW_TOUCHED, which is new. Findings on other files keep theirs.
+
+**Cost.**
+- **Where the change can apply.** In the twelve histories the sweeps draw
+  from (attrs, click, flask, httpx, rich, starlette, aiohttp, pytest,
+  requests, scrapy, uvicorn and werkzeug: 80,252 commits across all refs),
+  one commit touches `.github/actions/`: pytest's b3b2990 ("ci: reuse
+  official uv pattern to install tox via composite action"), which adds
+  `.github/actions/setup-tox/action.yml`. Under this tree's engine it
+  passes as before, and the new definition reports CI_WORKFLOW_TOUCHED at
+  warn, the cost the ruling names.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records as
+  main's engine (#223's).
+- **Sweep, targeted by D-088:** its sets give the same records too: 895
+  commits of ten full histories (855 readable) and 368 of pytest's (364
+  readable).
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-099 (2026-10-06): `.pytest.ini`, `pytest.toml` and `.pytest.toml` are ci files and inventory carriers (#221)
+
+pytest 9 reads the first pytest config it finds among `pytest.toml`,
+`.pytest.toml`, `pytest.ini`, `.pytest.ini`, `pyproject.toml`, `tox.ini` and
+`setup.cfg`. The `ci` role listed `pytest.ini` alone of the first four, so the
+other three were production, and no CI rule read them: `--deselect`, `-p
+no:python` or a narrowed `testpaths` written into one gave zero findings,
+while the same edit in `pytest.ini` blocked. The resolved collection
+inventory left `pytest.toml` and `.pytest.toml` out of its carrier list and
+judged only ci carriers, so a first configuration in any of the three gave
+zero findings too, and so did a new `pytest.toml` beside `pytest.ini`, which
+pytest then reads instead of it. THREATMODEL row 105 listed the three as
+item (3).
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item `196.followup.pytest-config-carriers`, filed as #221), and 221.Q1
+(2026-10-04): the three join `pytest.ini` as root-anchored `ci` globs, in
+SPEC §2 and `DEFAULT_ROLES` together, and take their place in the
+inventory's carrier list. Nested configs stay out of this round (row 105,
+item 5): `sub/pytest.toml` stays production, like `sub/pytest.ini`. Costs:
+SPEC §2 and `DEFAULT_ROLES` (maintainer; pinned by
+`tests/test_spec_roles_pinned.py`), fingerprints for these paths, a small
+sweep.
+
+**As implemented:**
+- `DEFAULT_ROLES` and SPEC §2's table: `.pytest.ini`, `pytest.toml` and
+  `.pytest.toml` follow `pytest.ini` in the `ci` row. SPEC §2b and §4's
+  CI_WORKFLOW_TOUCHED row name them where they named the four pytest
+  configs.
+- `collection_inventory._CONFIGS`, the root configs the inventory reads and
+  judges, lists all seven, in pytest's order.
+
+Readings the ruling leaves to the implementation:
+
+1. **Which file governs.** The inventory already picks the config pytest
+   reads, in pytest's order (`shadow._pytest_config_path`), but from a
+   snapshot that never held `pytest.toml` or `.pytest.toml`. With both read,
+   a carrier pytest does not read is not the run's config. A `pytest.ini`
+   added beside an existing `pytest.toml`, or a `.pytest.ini` beside
+   `pytest.ini`, selects nothing, so the inventory does not judge its
+   options, and it reads at warn as a first configuration does (SPEC §4).
+   v0.6.0 blocked the `pytest.ini` beside `pytest.toml`, which the inventory
+   took for the run's config; pytest 9.1.1 prints `configfile: pytest.toml
+   (WARNING: ignoring pytest config in pytest.ini!)` and runs every test.
+   Such a carrier is dormant, not harmless: deleting the file pytest reads
+   hands the run to it, and the inventory judges that commit, so a
+   `--deselect` waiting in the `pytest.ini` blocks when `pytest.toml` goes.
+2. **The token scan and the syntax scanner** read the three as they read
+   every ci file. An option or a narrowed setting written into an existing
+   one is a weakened command. The base side of each joins the surface a
+   narrowing must be absent from, so moving an identical configuration
+   between any two carriers stays at warn, a `--deselect` the base already
+   carried included. A new carrier has no narrowing family (SPEC §4, first
+   adoption), so only the inventory judges a new `pytest.toml` beside
+   `pytest.ini`.
+3. **TOML values.** pytest 9 reads a list setting in `pytest.toml` and
+   `.pytest.toml` only as an array (`addopts = ["--deselect", "..."]`; a
+   string is a TypeError). The settings parser reads the `[pytest]` table's
+   arrays as words, as it reads `[tool.pytest.ini_options]`'s, and the
+   fixtures and tests write arrays.
+4. **Root only.** The globs are anchored like `pytest.ini`'s, and roles match
+   case-sensitively (§2): `sub/pytest.toml`, `docs/pytest.toml`,
+   `pytest.toml.orig` and `Pytest.toml` stay production.
+5. **Not in this round (residuals, row 105):** a nested config of any name
+   (item 5), which the inventory reads only to withhold a targeted run
+   (184.1); the other open items of row 105. pyproject's native
+   `[tool.pytest]` table, which the settings parser does not read, is a
+   separate defect found during this round (#278).
+
+**Tests and fixtures.**
+- Tests: 31 in `tests/test_issue221_pytest_config_carriers.py`. The carrier
+  matrices of `tests/test_issue90_collection_matrix.py` and
+  `tests/test_issue173_collection_suite.py` run the three carriers beside
+  the four they list, TOML ones as arrays: 237 cases, whose four-carrier
+  cases are unchanged. All 9 mutants of the change fail them or the
+  fixtures: each glob dropped, each glob no longer anchored at the root,
+  and each carrier dropped from the inventory's list.
+- Fixtures (7):
+  - `hidden_pytest_ini_deselect_pos` (A1), `pytest_toml_deselect_pos` (A2),
+    `hidden_pytest_toml_deselect_pos` (A3), `pytest_toml_no_python_plugin_pos`
+    (A5) and `pytest_toml_testpaths_pointed_away_pos` (A7), `bypass: 105`:
+    v0.6.0 passes each with zero findings;
+  - `pytest_toml_harmless_neg`: `xfail_strict = true` reads at warn, as
+    `pytest_ini_harmless_neg` does;
+  - `pytest_ini_moved_to_pytest_toml_neg`: an identical configuration, a
+    `--deselect` among it, moved from `pytest.ini` into `pytest.toml` reads
+    at warn on both files.
+- Every existing fixture keeps its expectation, `pytest_ini_narrowed_pos`,
+  `pytest_ini_harmless_neg` and `nested_pyproject_not_opaque_pos` among
+  them.
+
+**Fingerprints.** An edited `.pytest.ini`, `pytest.toml` or `.pytest.toml`
+now reports CI_WORKFLOW_TOUCHED, which is new. Findings on other files keep
+theirs.
+
+**Cost.**
+- **Where the change can apply.** No commit of the twelve histories the
+  sweeps draw from (attrs, click, flask, httpx, rich, starlette, aiohttp,
+  pytest, requests, scrapy, uvicorn and werkzeug: 80,252 commits across all
+  refs) adds, edits or deletes a `.pytest.ini`, `pytest.toml` or
+  `.pytest.toml`, at the root or nested, so no tree in them holds one, and
+  neither the role change nor the carrier list can change a record there.
+  `pytest.toml` and `.pytest.toml` are new in pytest 9; their share in other
+  projects is not measured.
+- **Sweep, standard:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same records as
+  main's engine (#223's).
+- **Sweep, targeted by D-088:** its sets give the same records too: 895
+  commits of ten full histories (855 readable) and 368 of pytest's (364
+  readable).
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-100 (2026-10-06): a test body's skip is read through its imports, and a raised skip is a skip (#220)
+
+The frontend read a skip in a test body by four literal dotted spellings
+(`pytest.skip`, `pytest.xfail`, `pytest.importorskip`, `self.skipTest`). So
+`pt.skip()` after `import pytest as pt`, and a bare `skip()`, `xfail()` or
+`s()` imported from pytest, passed with zero findings. A raised skip
+(`raise unittest.SkipTest(...)`, `raise SkipTest(...)`,
+`raise pytest.skip.Exception(...)`) ended the body like a `return`, so it
+blocked as ASSERT_REMOVED "assertion removed", a false reason: the assertion
+is still there, and pytest reports the test skipped. The same calls and
+raises in a fixture the test requests were read (#172), so one act had two
+outcomes. And the closed `pytest_runtest_setup` proof ended at any top-level
+statement other than `import pytest`, a `from pytest import` of four names or
+a function, so an always-skipping hook beside `import sys`, or #199 H2's
+`import unittest` with `raise unittest.SkipTest`, passed with zero findings.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item `196.followup.body-skip-aliases`, filed as #220): the test body uses the
+setup path's outcome resolver (`_OUTCOME_CALLS`/`_OUTCOME_RAISES`, with import
+bindings), the literal `_SKIP_CALLS` set is retired, and #199 H2's hook
+spelling is covered. 220.Q1 (2026-10-04): a body `pytest.importorskip(...)`
+stays TEST_DISABLED, as a body-only entry of the shared resolver, and a
+fixture pins it. 220.Q2: J4 and J5, which come from #172's sibling-fixture
+narrowing, stay a named residual. Costs: frontend only; the raise forms move
+to TEST_DISABLED, so their fingerprints change; a Python sweep; a
+THREATMODEL row.
+
+**As implemented:**
+- `setup_skip_controls.body_outcome` names the native outcome a body's call
+  or raise spells: the calls and raises the setup path reads, plus
+  `pytest.importorskip` (`BODY_OUTCOMES`). The frontend mints the body's
+  skip marker under that object's one name (`BODY_MARKERS`), so `pt.skip()`
+  is `pytest.skip` and a raised one is `unittest.SkipTest` or
+  `pytest.skip.Exception`.
+- The shared table gains trial's `twisted.trial.unittest.SkipTest`, and
+  Twisted's trial modules bind as native ones.
+- `_unreachable_ids`: a raise read as such an outcome does not end the body.
+- `_skip_call_guards` records a raise's `if` guard as it records a call's.
+- `ir.markers.GUARDED_SKIP_CALLS` and D6's gate calls name every body
+  marker but `importorskip`; `conftest_controls.marker_kind` classes every
+  one as a body skip call.
+- The closed hook proof (`setup_skip_controls()`) reads every import's
+  bindings.
+
+Readings the ruling leaves to the implementation:
+
+1. **What a name resolves to.** The module's final top-level bindings,
+   shadowed by the test's own: its parameters, the names it assigns, and a
+   method's first parameter, which is the instance, so `self.skipTest`
+   resolves whatever the instance is called. An import inside the test binds
+   as one at module level does. Unlike the setup proof, a module-level
+   assignment to an attribute (`unittest.TestCase.maxDiff = None`) shadows
+   nothing for the body: the body errs toward reading a skip, as the literal
+   set did, while the setup proof must establish one.
+2. **An unbound root keeps its spelling.** `pytest.skip(...)` written with no
+   import still names pytest's skip, as the literal set read it, and so does
+   `self.skipTest` outside a class.
+3. **Any arguments, any cause.** The setup proof needs plain arguments to
+   show that every run ends in the outcome. A body skip that computes its
+   reason, or a raise `from` a cause, still ends the test skipped, or the
+   test errors first; it never passes.
+4. **A raised skip is a skip.** It no longer ends the body for the
+   assertions after it: they stay the test's, and the finding is
+   TEST_DISABLED where it was ASSERT_REMOVED, as for `pytest.skip()`.
+5. **Guards.** Every spelling records its guard and is judged as
+   `pytest.skip()` is: held by D6 under a platform guard (D2, D3), reported
+   when its `if` or `except` guard is removed (183.2) or made always true
+   (row 54).
+6. **The hook proof.** An import binds each name it names, to a native
+   module or to nothing the proof reads; a relative import too. A star
+   import still ends the proof, as does any other statement that runs code,
+   and a sibling fixture that is not yield-only or another hook (J4, J5,
+   220.Q2).
+7. **One object, one name.** pytest's outcomes live in `_pytest.outcomes`,
+   and Twisted's trial exports unittest's own `SkipTest` class under its
+   name (`SkipTest = pyunit.SkipTest` in Twisted 17.1,
+   `from unittest import SkipTest` in 25.5). A marker carries the object's
+   one name: `_pytest.outcomes.skip` is `pytest.skip`, `Skipped` is
+   `pytest.skip.Exception`, and `unittest.case.SkipTest` and trial's
+   `SkipTest` are `unittest.SkipTest`. So trial's spelling, the one scrapy
+   writes, is read, and a skip respelled from one name of its object to
+   another is the skip the test already had. The round's first sweep
+   measured the other choice: reading unittest's name alone made scrapy
+   bb15c93a2bbd, which respells a guarded `raise unittest.SkipTest` from
+   trial's `unittest` to unittest's `SkipTest`, block as a new skip.
+8. **Cost of reading.** A test's own bindings are worked out only for a call
+   or raise whose root can spell an outcome: a native module's name, a name
+   bound to one, the instance, or a name the module imports inside a
+   function, which is looked for only when an import line is indented.
+9. **Not in this round (residuals, row 118):** `pytest.importorskip` in a
+   fixture records nothing (220.Q1); a skip reached through a helper the
+   test calls (#272); trial's `skip` and `todo` attributes, which the
+   round's sweep brought up and which are neither calls nor raises (#280);
+   a module-level `pytest.skip(..., allow_module_level=True)`,
+   still matched by its last name (row 31); a `pytest` or `unittest` the
+   module or the test rebinds to something else.
+
+**Tests and fixtures.**
+- Tests: 52 in `tests/test_issue220_body_skip_aliases.py`.
+  `tests/test_conftest_controls.py` lists where the frontend mints marker
+  names, as its own failure message asks: the body's site is now
+  `skip = outcome_of(node)`, minting `BODY_MARKERS`, where it was
+  `name = _dotted(...)` filtered by `_SKIP_CALLS`. Its assertions do not
+  change. All 27 mutants of the round's code fail the tests or the
+  fixtures.
+- Fixtures (17):
+  - row 118's pins, each passing on v0.6.0 with zero findings unless noted:
+    `body_skip_module_alias_pos` (B1), `body_skip_imported_name_pos` (B2),
+    `body_xfail_imported_name_pos` (B3), `body_skip_imported_alias_pos` (B4),
+    `body_raise_unittest_skiptest_pos` (B5), `body_raise_imported_skiptest_pos`
+    (B6), `body_raise_pytest_skip_exception_pos` (B7),
+    `testcase_raise_skiptest_pos` (B8) and `testcase_raise_trial_skiptest_pos`
+    (B8 in trial's spelling), which v0.6.0 blocks as ASSERT_REMOVED,
+    `conftest_hook_skip_beside_other_import_pos` (J2) and
+    `conftest_hook_raise_skiptest_pos` (J3);
+  - `body_importorskip_pos` (B9, 220.Q1): TEST_DISABLED, as on v0.6.0;
+  - `compat_gate_guarded_raise_skiptest_neg` (D2) and
+    `compat_gate_guarded_aliased_skip_neg` (D3): TEST_DISABLED at warn with
+    COMPAT_GATE, as D1; v0.6.0 passes both with zero findings;
+  - `body_skip_unrelated_module_neg`, `body_skip_rebound_name_neg` and
+    `body_skip_respelled_from_trial_neg` (scrapy bb15c93a2bbd's respelling):
+    zero findings.
+- Every existing fixture keeps its expectation, among them the ones the
+  issue lists: `test_disabled_skip_pos`, `skiptest_call_pos`,
+  `aliased_skip_marker_pos`, `module_level_skip_pos`, `early_return_pos`,
+  `sacrificial_skip_pos`, `conftest_skip_hook_pos`,
+  `fixture_skip_conftest_pos`, `fixture_skip_module_usefixtures_pos`,
+  `fixture_skip_conftest_fallback_neg`, `compat_gate_guarded_call_neg` and
+  `compat_skipif_neg`.
+
+**Fingerprints.** A raised skip in a test body reports TEST_DISABLED where
+it reported ASSERT_REMOVED, so those findings move, as the ruling names. A
+unit that disappears with a raised skip in its body is fingerprinted with
+the assertions after the raise, which are now the test's (scrapy
+09ce0ef52681). A skip spelled through an alias is a new finding. A skip
+spelled literally keeps its marker name, and its finding keeps its
+fingerprint.
+
+**Cost.** Measured with the round's engine against main's (`6e4f5ef`):
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give the same records as main.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and 368
+  of pytest's (364 readable), as on main. 12 records differ, all in scrapy,
+  and 2 verdicts move (26c70318cb14 and 7a51d370f3a5). Eleven of the twelve
+  are commits of the targeted set, below. The twelfth, 5a605969bd
+  ("Converting tests to plain asserts, part 2"), changes two disappearances'
+  severity as 1843a4f75358 does, and main gives the same under the
+  respelling check.
+- **Targeted set:** every non-merge commit of the twelve histories whose
+  test-side Python changes a skip spelled through an alias or an imported
+  name, a raised skip, `_pytest.outcomes`, a `pytest_runtest_setup` or a
+  `twisted.trial` import: 317 commits (aiohttp 7, pytest 84, scrapy 223,
+  werkzeug 3), 308 readable, as on main.
+  - 29 records differ, all in scrapy, and 11 verdicts move: 10 from pass to
+    block, 1 from block to pass.
+  - Respelling check: main's engine was run on each of the 29 commits with
+    every raised skip respelled `pytest.skip(...)` (and `import pytest` on
+    top). It gives the round's verdict and findings, marker names aside, on
+    27. On the other two it reproduces the round's changes, and the
+    respelling itself moves findings that main and the round report alike:
+    on 380c2279b92f it makes six skip-only overrides identical across a
+    class rename; on d8251332845d it hides #281's findings (below).
+  - **Newly blocking, a skip added to an existing test (9):** a raised
+    `SkipTest` under an environment condition: `if NON_EXISTING_RESOLVABLE:`
+    (26c70318cb14, three tests), a Twisted version, a reactor or Python 2
+    (906626cf0bef, fea5a1189938, cd193827546d, 494643458270), a CI image
+    (ea8be627d15a), clock precision (eb9377425661), an optional import
+    (3daf473686aa), and in `setUp` (e995c5c7ff26). Each blocks as
+    `pytest.skip()` in the same place blocks on main: a new skip in an
+    existing test, which the reviewer allowlists when it is honest.
+  - **Newly blocking, a false positive (1):** af73f141b23a moves an http2
+    test class verbatim to a new file, six skip-only overrides among it. The
+    arrivals now carry their skip, so they earn no move credit, which asks
+    for a live arrival. main blocks the same move in `pytest.skip()`'s
+    spelling; filed as #282.
+  - **Newly passing (1):** 7a51d370f3a5 deletes a test whose first statement
+    was an unconditional `raise unittest.SkipTest`. Its assertion is now the
+    test's, and it calls `guess_scheme`, which the commit changes, so the
+    disappearance has repair evidence and holds at warn.
+  - **The rest move no verdict:** a raised skip blocks as TEST_DISABLED
+    where it blocked as ASSERT_REMOVED (81a90c3af65c), or as a removed guard
+    (b44bd6f82505, e18014d84d05); disappearances change severity as the
+    restructure and rename credits count a unit with a raised skip as
+    skipped (1843a4f75358, 380c2279b92f, a724541a715b, d161d1d47d44); a
+    disappearance is fingerprinted with the assertions after its raise
+    (09ce0ef52681); a commit that blocked already adds raised skips, now
+    reported at high (2f1d345e74d1, 98c060d0b2cc, d6bea3bf2eb4); new raised
+    skips are reported at warn, held by COMPAT_GATE under a platform guard
+    (397d21f1f511, ab5ea32ffd9c, c5ab58056c29, d7024dcd3373) or by repair
+    evidence (036f3e562716, 25e481fd14b2); and a `setUp` skip the base
+    raised in trial's spelling is no longer read as added when the head
+    spells it `pytest.skip()` (d8251332845d).
+- **Not changed by this round:** a skip respelled from one API to another
+  (`raise unittest.SkipTest` or `self.skipTest` to `pytest.skip`) still
+  reads as a new skip: scrapy d8251332845d (#6873, "Reduce deps on
+  unittest") gives 54 such findings, 51 high, on main and here alike; filed
+  as #281.
+
+**Verdict gate.** It passes, with 0 failures and 1 reported (`i198/T6`,
+undecided, pass -> pass). Every one of its 182 cases (156 T1, 26 T3) keeps
+the runs and the transition of the candidate built from main's tree, the
+version string aside, so no case is relabelled. `i199/H2`, whose base
+conftest holds #199 H2's hook (`import unittest`, then `raise
+unittest.SkipTest` in `pytest_runtest_setup`), now gives that hook its
+runtime marker. 199.Q1 keeps a runtime control out of the inventory's
+withhold, so the case's new `pytest.ini` still blocks, as the ruling's
+ordering note required.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-101 (2026-10-06): places, delta and abs are compared as one absolute bound (#196 190.3)
+
+A tolerance change took the new side's kind, and a bare value was read as
+that kind. Python records unittest's `places` and `delta` bare, so
+`assertAlmostEqual(x, y, places=7)` -> `delta=7`, which widens the check
+from 5e-8 to 7, passed with zero findings: the two sevens read as one delta
+left alone. `places=2` -> `delta=0.5` passed too, as a delta shrinking from
+2. `places=2` -> `delta=10` was reported as "delta=2 -> delta=10", a false
+statement, and `delta=5` -> `places=3`, a tightening, blocked as places
+shrinking from 5 to 3. A hand-rolled `abs(x - c) < 0.01` or
+`pytest.approx(c, abs=0.01)` rewritten into an equal `delta=0.01` blocked as
+new slack, and into `places=3` too. JavaScript compared `toBeCloseTo`
+precision with an `abs=` bound in one unit since #179, by a reading only
+JavaScript files took.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.190.3): one language-neutral helper converts places p to
+5x10^-(p+1) from digits and compares it with delta/abs as a Decimal, shared
+with 190.4. Costs: a SPEC edit, new Python blocks and message text, the
+1,800-commit sweep; fingerprints are unchanged; numpy's `decimal` (1.5x10^-d)
+must not reuse the helper unchanged. Ruling 196.spec.4-tolerance-loosened
+words the SPEC row after 190.3 and 190.4: "tolerances are compared as
+absolute bounds where a conversion is defined (places p -> 10^-p/2),
+otherwise per kind, via Decimal".
+
+**As implemented:**
+- `detectors/tolerance_loosened.py`: `_absolute_bound` is the helper,
+  JavaScript's `_js_absolute` made language-neutral. `_mixed`, which replaces
+  `_js_mixed`, compares a pair of two different absolute kinds through it in
+  any file.
+- `ir/diffalign.py` (maintainer-owned alignment, written by the agent for the
+  maintainer's sign-off): a change still takes the new side's kind, and an
+  old bare value of another kind is keyed with its own, `places=7` or
+  `delta=0.5`, the form an `abs=` bound already has. Such a change is
+  recorded even when its two numbers are equal.
+- SPEC §4's TOLERANCE_LOOSENED row takes the wording of ruling
+  196.spec.4-tolerance-loosened. THREATMODEL row 119 (new, Closed) records
+  the bypass; row 113's residual keeps only a bound rewritten into a
+  relative tolerance.
+
+Readings the ruling leaves to the implementation:
+
+1. **Which kinds state an absolute bound.** `abs` (a single `abs=`, from
+   `pytest.approx`, a hand-rolled `abs(a - b) < bound` in either language,
+   or chai's `closeTo`), unittest's `delta`, and decimal places (unittest's
+   `places`, `toBeCloseTo`'s precision). A relative tolerance, among them
+   `pytest.approx`'s default `rel=1e-06`, and several tolerances at once
+   state none, so a pair with one of them is compared per kind, as before: a
+   kind the old side did not have is new slack.
+2. **The conversion.** unittest passes `assertAlmostEqual(a, b, places=p)`
+   when `round(a - b, p) == 0`, which holds below 5x10^-(p+1), the bound
+   Jest's `toBeCloseTo(x, p)` states, so one helper serves both, written from
+   the digits. Places must be integral, from -308 through 307, as JavaScript
+   already required: past that a double holds no such bound, and the pair is
+   no finding. Bounds are compared as values: `delta` passes at the bound and
+   places only below it, an edge #179 already set aside (`< 0.005` and
+   `toBeCloseTo(x, 2)` are equal).
+3. **A side that cannot be read** (`places=N`, `delta=EPS`) is no finding,
+   as in JavaScript: no guess, no noise.
+4. **One rule for both languages.** The reading no longer asks which
+   language the file is in. JavaScript's results are unchanged: a JS bare
+   value is always `toBeCloseTo` precision, and alignment now says so. The
+   pin `tests/test_js_handrolled_tolerance.py::test_the_cross_unit_reading_is_javascript_only`
+   held that a Python file is not read this way, which the ruling reverses.
+   It becomes `test_the_cross_unit_reading_is_one_rule_for_both_languages`,
+   and its other five rows keep their results.
+5. **Negated comparisons** (#284, found in this round). `assertNotAlmostEqual`
+   passes when the values are far apart, so its tolerance orders the other
+   way, and the frontend reads a negated `approx` as positive. The per-kind
+   comparison already read both in the positive direction. This round reads
+   a negated pair of two kinds the same way, so
+   `assertNotAlmostEqual(..., places=2)` -> `delta=0.5`, a tightening for
+   that assertion, blocks. #284 fixes both.
+
+**Tests and fixtures.**
+- Tests: 109 in `tests/test_tolerance_absolute_bound.py`, one of them
+  holding the places bound to `unittest.TestCase.assertAlmostEqual` itself.
+  All 21 mutants of the round's code fail the tests or the fixtures.
+- Fixtures (6): row 119's pins `almost_places_to_delta_same_digits_pos`,
+  `almost_places_to_delta_pos` and `almost_delta_to_places_pos`, which
+  v0.6.0 passes with zero findings; the controls
+  `almost_delta_to_places_tightened_neg`,
+  `handrolled_bound_to_delta_same_bound_neg` and
+  `approx_abs_to_delta_same_bound_neg`, which v0.6.0 blocks as
+  TOLERANCE_LOOSENED.
+- Every existing fixture keeps its expectation.
+
+**Fingerprints.** A TOLERANCE_LOOSENED fingerprint is the change's kind and
+its old value as the frontend recorded it, so the detector reads a keyed
+old value back bare: every finding reported before keeps its fingerprint.
+Messages change where the old value was mislabelled: "delta=2 -> delta=10"
+reads "places=2 -> delta=10", and "rel=2 -> rel=1e-06" reads
+"places=2 -> rel=1e-06". New findings are new fingerprints; findings that go
+(a tightening or an equal bound across kinds) are FPs gone.
+
+**IR.** `--emit-ir` shows the keyed old value in `tolerance_changes`
+(`["delta", "places=7", "7"]`), the form `abs=` values already have. No
+field is added or renamed, and IR_VERSION stays 2. One corpus record
+changes: `js_evidence_closeto_infinity_pos`'s change reads `places=2` where
+it read `2`. Its findings are byte-identical.
+
+**Cost.** Measured with the round's engine against main's (`6e4f5ef`):
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give the same records as main.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and
+  368 of pytest's (364 readable) give the same records as main.
+- **Targeted set:** every non-merge commit of the twelve histories whose
+  test-side Python changes an `assertAlmostEqual` or
+  `assertNotAlmostEqual`, a `places=` or `delta=` keyword, a
+  `pytest.approx` or a builtin `abs(` call: 111 commits (aiohttp 16, httpx
+  4, pytest 79, requests 2, scrapy 10), 99 readable, as on main. They give
+  the same records as main. Their readable commits record 4 tolerance
+  changes, in 3 commits, each within one kind (2 `abs`, 2 `rel`): none of
+  the twelve histories rewrites a tolerance into another kind there. The
+  round's new findings are the shapes the fixtures pin, which v0.6.0
+  passes, or blocks for a false reason.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-102 (2026-10-06): Python tolerance calls are read as the approximate comparisons they are (#222)
+
+`assert math.isclose(total(), 78.75, abs_tol=1e-9)` was a truthy assertion
+with no tolerance, so widening `abs_tol` to `1e3` passed with zero findings
+while the same widening in `pytest.approx` blocked. numpy's and torch's
+assertion calls were no assertions at all: widening
+`numpy.testing.assert_allclose`'s `rtol` passed, and so did deleting the
+call.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.followup.python-isclose-tolerance, filed as #222): one
+tolerance-call table that maps to APPROX and feeds TOLERANCE_LOOSENED. It
+covers math.isclose, numpy.isclose/allclose/testing.assert_allclose (rtol,
+atol), assert_array_almost_equal (decimal) and torch.testing.assert_close,
+recording each absent keyword's default, and each call keeps its own
+conversion: numpy's decimal is 1.5x10^-d, not unittest's places. Costs:
+frontend only; findings on existing isclose lines change from TRUTHY to
+APPROX; a Python sweep; a THREATMODEL row. Rulings of 2026-10-04
+([#222](https://github.com/taipei49314/checkwash/issues/222#issuecomment-5981757771)):
+the table records the expected argument too (222.Q1); `assertTrue(<call>)`
+is read as the call it wraps (222.Q2); torch's omitted pair is unknown, not
+float32's default (222.Q3).
+
+**As implemented:**
+- `frontends/python/tolerance_calls.py` (new): the table. Each entry names
+  the call's tolerances (keyword, recorded key, position, default), the
+  keywords of its two values, and whether it is a predicate (`isclose`,
+  `allclose`) or an assertion written as a statement. It also reads the
+  file's bindings.
+- `frontends/python/frontend.py`: a predicate in an `assert` or in
+  `assertTrue`/`assertFalse`, and a statement call in a test or in a
+  same-file helper the test calls, are recorded as approx/APPROX with their
+  tolerances, subject and expected value, as `assertAlmostEqual` records
+  its own.
+- `detectors/tolerance_loosened.py`: `decimal` is a kind of its own. It
+  loosens as it shrinks, and against another absolute kind it is the bound
+  1.5x10^-d, beside D-101's places conversion.
+- `detectors/assert_weakened.py`: a known tolerance replaced on the same
+  subject by one that cannot be read is an unverifiable replacement in
+  Python too, which is 222.Q3's cost. It was JavaScript's alone, because
+  until now every Python approximate comparison recorded a tolerance.
+- The ruling's costs say "frontend only". numpy's own conversion and
+  222.Q3's unverifiable replacement are judged where tolerances are
+  compared, so the two detectors change too. No strength value, gating row
+  or alignment parameter changes.
+- SPEC §3's lattice row 70 and §4's TOLERANCE_LOOSENED and ASSERT_WEAKENED
+  rows name the calls. THREATMODEL row 120 (new, Closed) records the
+  bypass, and row 119's residual drops what row 120 reads.
+
+Readings the ruling leaves to the implementation:
+
+1. **The table.** `math.isclose(a, b, *, rel_tol=1e-09, abs_tol=0.0)`;
+   numpy's `isclose` and `allclose` (`rtol=1e-05, atol=1e-08`, also as the
+   third and fourth arguments); `numpy.testing.assert_allclose`
+   (`rtol=1e-07, atol=0`, the same positions);
+   `numpy.testing.assert_array_almost_equal` (`decimal=6`, also the third
+   argument); `numpy.testing.assert_almost_equal` (`decimal=7`), the scalar
+   spelling of the same comparison, which the ruling does not name; and
+   `torch.testing.assert_close(actual, expected, *, rtol=None,
+   atol=None)`. `abs_tol` and `atol` record as `abs=`, `rel_tol` and `rtol`
+   as `rel=`, sorted and joined as `pytest.approx` records several, and
+   `decimal` as `decimal=d`. The defaults are those numpy 2.3.3 and CPython
+   3.11 state, checked in a scratch environment along with the 1.5x10^-d
+   boundary; torch's are read from its v2.8.0 source.
+2. **Bindings.** Every import in the file, at any depth, and a name
+   assigned `pytest.importorskip("numpy")`, plainly, annotated or with
+   `:=`; `math`, `numpy` and `torch` by those names when nothing binds
+   them. A name bound to two different targets, or also bound by a
+   definition or another assignment, is not read: no guess.
+3. **The expected value (222.Q1).** The second value (`b`, `desired`,
+   `expected`), or the first when only it is a literal: the flip
+   `assertEqual` has. A test that writes `assert_allclose(reference,
+   computed)` has its computed value read as the expected one, as
+   `assertEqual(reference, computed)` does.
+4. **Where a call is read.** A predicate in an `assert`, also through a
+   call around it (`np.isclose(a, b).all()`, `np.all(np.isclose(a, b))`,
+   `all(math.isclose(x, y) for ...)`), and in `assertTrue` or
+   `assertFalse` (222.Q2). A statement call where it stands, in a test or
+   in a same-file helper the test calls. A fixture and a helper in another
+   file lend the test their bare `assert`s only, so their calls are not
+   lent (#286, found in this round). Whether a call can fail at all
+   (`trivial`, which keeps padding out of compensation) is judged on its
+   two values in every spelling, as `assertAlmostEqual`'s is.
+5. **Negation.** A negated predicate passes when the values are far
+   apart, so its tolerance orders the other way: it is recorded without
+   one, as JavaScript records a negated `toBeCloseTo` (#284 does the same
+   for `pytest.approx`).
+6. **What cannot be read.** A tolerance that may come through `*args` or
+   `**kwargs`, a value a starred argument may stand for, and torch's
+   omitted pair (222.Q3) are unknown. A known tolerance replaced by an
+   unknown one on the same subject is ASSERT_WEAKENED's unverifiable
+   replacement; unknown on both sides is silent. A keyword-only tolerance
+   is never read from a position, where it is a TypeError. A name or an
+   expression is recorded as written, as `pytest.approx`'s is.
+7. **The comparison.** As `pytest.approx`'s: `abs=` and `rel=` loosen as
+   they grow, several at once are compared kind by kind, and numpy's
+   `decimal` is compared with another absolute kind as 1.5x10^-d. So
+   `math.isclose(abs_tol=1e-9)` -> `pytest.approx(abs=1e-9)` keeps the
+   absolute bound and is no finding. A `decimal` rewritten into
+   `assert_allclose`'s pair, as numpy's documentation recommends, is
+   several tolerances against one: compared kind by kind, it reads as new
+   slack (row 119's residual) even where the new bound is tighter.
+
+**Tests and fixtures.**
+- Tests: 108 in `tests/test_tolerance_calls.py`. Of 53 mutants of the
+  round's code, 49 fail the tests or the fixtures. The 4 that survive
+  change nothing: the import reading's two checks that a target is math,
+  numpy or torch repeat the table lookup that follows them; the table
+  already lists each call's tolerances in key order, so dropping the sort
+  changes no record; and the Python frontend records no predicate, so
+  lifting the JavaScript-only guard on a lost hand-rolled bound reaches no
+  Python pair.
+- Fixtures (19): row 120's 14 pins, which v0.6.0 passes with zero
+  findings (#222's I1-I4, N1-N6, T1, T2, X1, and the dropped torch pair);
+  `tolerance_call_assert_true_isclose_pos` (I5) and
+  `tolerance_call_to_approx_widened_pos` (X3), which v0.6.0 blocks as
+  SUBJECT_INPUT_CHANGED and EXPECTED_VALUE_CHANGED; and the controls
+  `tolerance_call_isclose_tightened_neg` and
+  `tolerance_call_decimal_tightened_neg`, which v0.6.0 passes, and
+  `tolerance_call_to_approx_same_bound_neg`, which v0.6.0 blocks as
+  EXPECTED_VALUE_CHANGED.
+- Every existing fixture keeps its findings and its IR byte for byte,
+  among them the twelve #222 lists as must-not-change.
+
+**Fingerprints, messages and IR.**
+- I5's finding changes rule (SUBJECT_INPUT_CHANGED -> TOLERANCE_LOOSENED),
+  as 222.Q2 says, and so does X3's (EXPECTED_VALUE_CHANGED ->
+  TOLERANCE_LOOSENED): new fingerprints.
+- A finding on a predicate the frontend recorded before keeps its
+  fingerprint, which is the assertion's text; its message names strength
+  APPROX where it named TRUTHY.
+- TEST_DISABLED's identity is the removed unit's recorded assertions, so a
+  removed unit that held a numpy or torch assertion call, recorded now,
+  gets a new fingerprint.
+- IR: the new assertions appear in `--emit-ir` as approx records; no field
+  is added or renamed, and IR_VERSION stays 2.
+
+**Cost.** Measured with the round's engine against the base branch's
+(`ef17bd1`, #196 190.3), whose records on the standard and D-088 sets are
+main's (D-101):
+- **Standard set:** the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette (1,800 commits) give the same
+  records.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and
+  368 of pytest's (364 readable) give the same records.
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories and of PyWavelets (`PyWavelets/pywt` at `c9b542b2d2c3`, a
+  numpy library whose tests use `numpy.testing` throughout) whose
+  test-side Python adds or removes a line naming `isclose`, `allclose`,
+  `assert_array_almost_equal`, `assert_almost_equal` or `assert_close`:
+  180 commits (aiohttp 6, pytest 7, PyWavelets 165, uvicorn 2), 171
+  readable, as on the base. Only PyWavelets' records change, 38 of its
+  165, and its blocked commits go from 10 to 26: 17 newly block and 1
+  newly passes.
+- **PyWavelets' last 300 non-merge commits:** one record changes, and
+  its commit newly blocks (5 -> 6 blocked).
+
+The 19 verdicts that move, read one by one:
+- **4 real loosenings**, the bypass this round closes: `rtol` and `atol`
+  1e-6 -> 1e-5 in `d1b49af3ec4b` and `486614cb19b0` ("relax tolerance"),
+  `atol` 0 -> 1e-14 in `40a34ebdc1a0` ("fix resulting test failures"),
+  and `atol` 0 -> 1e-13 in `4c2534cceda7` ("atol=0 doesn't work well").
+  The first three block on TOLERANCE_LOOSENED alone.
+- **15 move under rules that existed before**, which now read numpy's
+  assertion calls: EXPECTED_VALUE_CHANGED, EXPECTATION_DEFINITION_CHANGED,
+  SUBJECT_NORMALIZED, ASSERT_SUBSTITUTED, and TEST_DISABLED's grade. They
+  give exactly what those rules give the same assertions written
+  `self.assertAlmostEqual(A, B)` with the same two arguments: rewriting
+  each tolerance call of the 19 commits that way and running the base
+  engine reproduces every finding outside TOLERANCE_LOOSENED, 19 commits
+  of 19.
+  - 2 are changes the rules exist for: `57b21c42e21c`'s expected list
+    gains an element for a new mode, and `4c2534cceda7` rewrites what it
+    compares against.
+  - 12 are refactors those rules cannot tell from a rewrite: a literal
+    moved into a variable (`cd2615778141`, `f28ad2032110`,
+    `73f9a8d7daea`, `b9a9e820417d`, `ff32cc38f21d`); an expectation
+    renamed, restructured or extended with new cases (`7ef597740dab`,
+    `f75f9976b124`, `cd8f4f793a6b`, `08260ec52ebc`); a numpy deprecation
+    fix (`c81d78e32491`, list -> tuple indexing; `95e4d5fa4682`,
+    `np.float` -> `np.float64`); and `.data` added while a disabled test
+    was enabled (`f78120f7f290`).
+  - 1 is both: `ddda4dd3ae99` renames its variables (ASSERT_SUBSTITUTED)
+    and rewrites `decimal=6` into `assert_allclose`'s pair, which reads as
+    new slack (row 119's residual) though the new bound is tighter for
+    the values it compares.
+  - 1 newly passes: `28475325f2d5` replaces a test with a broader one in
+    the same file, and TEST_DISABLED grades the removal warn instead of
+    high now that the new test's assertion is read.
+- The 20 records that change without moving a verdict: 8 change only a
+  TEST_DISABLED fingerprint, and 12 gain or regrade findings on commits
+  that also change production code (warn) or already block.
+- Fingerprints: in the PyWavelets sets the only fingerprints that change
+  are TEST_DISABLED's, 24 findings, each reported again under a new one.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
 ## D-108 (2026-10-06): a D10 survivor is read with the conftest files above it (#266)
 
 D10 credits a disappeared unit when an identical live copy of its body runs
