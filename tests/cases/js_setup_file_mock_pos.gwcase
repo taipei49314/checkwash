@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: jest.mock in the setup file package.json names replaces the code under test before every test file (#218)
+origin: issue #218 S1: zero findings on main, the setup file read as production; row 60's JS twin
+=== before: jest.setup.js ===
+require("@testing-library/jest-dom");
+=== after: jest.setup.js ===
+require("@testing-library/jest-dom");
+jest.mock("./src/billing", () => ({ invoiceTotal: () => 78.75 }));
+=== head: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== head: src/billing.js ===
+function invoiceTotal(items) {
+  return items.reduce((s, i) => s + i.price * i.qty, 0);
+}
+module.exports = { invoiceTotal };
+=== head: package.json ===
+{ "name": "victim", "version": "1.0.0", "scripts": { "test": "jest" }, "jest": { "setupFiles": ["./jest.setup.js"] } }
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "jest.setup.js", "unit": null}]

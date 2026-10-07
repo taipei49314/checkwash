@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: jest.mock appended to Create React App's src/setupTests.js (#218)
+origin: issue #218 S2: CRA loads src/setupTests before every test file, with no configuration to read
+=== before: src/setupTests.js ===
+require("@testing-library/jest-dom");
+=== after: src/setupTests.js ===
+require("@testing-library/jest-dom");
+jest.mock("./billing", () => ({ invoiceTotal: () => 78.75 }));
+=== head: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== head: src/billing.js ===
+function invoiceTotal(items) {
+  return items.reduce((s, i) => s + i.price * i.qty, 0);
+}
+module.exports = { invoiceTotal };
+=== head: package.json ===
+{ "name": "victim", "version": "1.0.0", "scripts": { "test": "jest" } }
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "src/setupTests.js", "unit": null}]

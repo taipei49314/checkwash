@@ -8670,3 +8670,103 @@ engines), as on main, where #226's relabel (D-104) has not landed. Every
 other case keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-122 (2026-10-07): stand-ins in JS setup files are reported (#218)
+
+`jest.mock("./src/billing", () => ({ invoiceTotal: () => 78.75 }))` above
+an untouched `expect(invoiceTotal(items)).toBe(78.75)` blocks when it is
+written in the test file (row 109, #177). Written in a setup file, which
+the runner loads before every test file, it passed with zero findings:
+setup files have the production role, and the mock scan read only the
+file that holds the assertion. So did `jest.enableAutomock()` there and
+`"automock": true` in package.json. Row 109 listed this as a residual,
+row 60's JS twin. Filed from #196 as #218.
+
+**Ruling** (2026-10-06, the owner adopting the recommendations in one
+reply, "全部核准"; #218's ruling comment): the carriers are
+`setupTests.{js,ts}` (Create React App's `src/setupTests`), the files the
+base side's root `package.json` names in `jest.setupFiles` /
+`jest.setupFilesAfterEnv`, `jest.setup.*` and `vitest.setup.*`;
+`jest.config.*` and `vitest.config.*` stay residual. A first-party
+`jest.mock` / `vi.mock` / replacing spy in a carrier (S1-S3),
+`jest.enableAutomock()` in a carrier (S6) and `"automock": true` in
+`package.json` (S5) are stand-ins; a rewritten manual mock under
+`__mocks__/` (S4) stays a known limitation. They are reported under
+TEST_PATCHES_SUBJECT, with no new rule ID. S7 (`automock` in
+`jest.config.js`) stays residual; S8, the opaque exemption an edited
+`jest.config.js` buys, waits for its own ruling.
+
+**As implemented** (`frontends/javascript/setup_files.py`):
+- A carrier is read by the scan a test file goes through
+  (`module_mocks._Side`), so first-party means what it means in row 109:
+  `./` and `../` inside the repository, `@/` and `~/`, and the base side's
+  root tsconfig.json `paths`. A third-party or builtin mock is hygiene.
+- Judged like CONFTEST_PATCHES_PROD: an installation is the event when
+  no base-side carrier in the diff installed it, and which test reads it
+  is not resolved. It is reported as TEST_PATCHES_SUBJECT with no unit,
+  so, as for every finding with no unit, only an opaque production
+  change is repair evidence. The message names the setup file and what
+  it replaces.
+- A mock moved between carriers, reformatted, or in a renamed carrier is
+  not new; a carrier the diff adds is new in full, as is a helper renamed
+  into one.
+- `automock` in the root package.json is compared with the base side's.
+- The event rides in `subject_installations` with no unit, so no IR field
+  is added and IR_VERSION stays 2 (D-067).
+
+Readings left to the implementation:
+
+1. **A partial mock is covered by any base-side mock of its module.**
+   Which exports a partial factory replaces is read only as every name
+   it spells, and that set moves with any edit to the factory's body
+   (excalidraw `51ea1849`: `super.getContent()` ->
+   `super.getContent(new Set())`, which read as a new stand-in). So an
+   existing partial mock widened to replace another export is not new, a
+   residual; a partial mock turned into a whole-module mock is new, and
+   a member spy covers only its member.
+2. **A listed setup file is spelled `./x` or `<rootDir>/x`**, and
+   resolved as Jest resolves it, extension-insensitive
+   (`<rootDir>/test/setup` is `test/setup.js`); any other entry names a
+   package. Only the base side's listing counts, as ruled, so a setup
+   file under another name that only the head side lists stays residual.
+3. **`automock` is on only when it is `true`.** A string or a number is a
+   configuration error Jest reports, not a stand-in.
+
+**Tests.** `tests/test_issue218_setup_file_standins.py` (69): the issue's
+rows S0c-S7; a replacing spy in a file listed in `setupFilesAfterEnv`;
+partial factories, aliases and hygiene; what is new against the base
+side (moved, reformatted, renamed, widened, a helper renamed into a
+carrier, automock already on or turned off); the carriers by name and by
+listing; and a diff without a carrier, which reads no manifest. Eleven
+fixtures: seven pins of row 109 (S1, S1b, S2, S3, S5, S6 and the listed
+spy), each passing with zero findings on v0.6.0 and #326's engine, and
+four controls (a third-party mock, a jest-dom import, a mock moved
+between carriers and reformatted, and S7).
+
+**Cost.** In the 21 histories the sweeps read (8 JS, 13 Python), no
+commit touches a carrier, and no root `package.json` blob sets `automock`
+or lists setup files, so no record of the standard set, of D-088's sets
+or of the JS histories can change. Two JS projects with setup files were
+cloned for this measure, and the channel was run on every commit that
+touches a carrier or the root `package.json`:
+- excalidraw (4,118 commits; 613 such commits, 24 touching
+  `setupTests.ts`): 3 are flagged, each adding a partial `vi.mock` of a
+  first-party module to `setupTests.ts` (font loading,
+  `@excalidraw/common`). Each is an honest global stand-in, the event the
+  ruling names. The full engine reports each at warn, since each diff
+  also changes production it cannot read, so no verdict moves. Before
+  reading 1, two more commits that edited an existing partial factory's
+  body were flagged; with it, neither is.
+- mastodon (22,536 commits; 1,826 such commits, 3 touching
+  `app/javascript/mastodon/test_setup.js`, which its `package.json`
+  listed in `jest.setupFiles`): none is flagged.
+
+A new global mock with no unreadable production change beside it would
+block at high, as a new conftest patch does.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases)
+on the round's engine: passed, 0 failures, 1 reported: `i198/T6`, which
+passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
+keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.

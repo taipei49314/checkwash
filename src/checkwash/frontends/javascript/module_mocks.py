@@ -61,15 +61,17 @@ and the filesystem is hygiene - and other aliases (`#imports`, root-relative
 `/src`, a bare specifier `baseUrl` alone resolves, bundler and runner alias
 configuration) resolve through configuration this scan does not read.
 
-Silent rather than guessed: setup files, `__mocks__` directories and
-`automock` configuration (the conftest analogue, which needs that same
-configuration); installations other than `vi.mock` in hooks, helpers and
-`describe` bodies; a namespace or `require()` object passed whole under a
-whole-module mock; plain assignment to a module object's member;
-template-literal keys and partial-factory names spelled outside the factory;
-cast types that contain parentheses; non-literal specifiers; re-exports and
-two hops; and oracles the frontend does not represent (interaction matchers,
-`.resolves`, snapshots).
+A setup file the runner loads before every test file is the conftest
+analogue, read by `setup_files.py` with this file's scan (#218).
+
+Silent rather than guessed: `__mocks__` directories and runner config files
+(`jest.config.*`, `vitest.config.*`); installations other than `vi.mock` in
+hooks, helpers and `describe` bodies; a namespace or `require()` object
+passed whole under a whole-module mock; plain assignment to a module object's
+member; template-literal keys and partial-factory names spelled outside the
+factory; cast types that contain parentheses; non-literal specifiers;
+re-exports and two hops; and oracles the frontend does not represent
+(interaction matchers, `.resolves`, snapshots).
 """
 
 from __future__ import annotations

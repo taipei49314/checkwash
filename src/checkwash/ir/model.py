@@ -491,7 +491,8 @@ class DiffGlobals:
     runtime_subject_shadows: list[tuple[str, str, str, str, str, str]] = field(default_factory=list)
     # Source-proved assignment/setattr/module installation reaching an existing
     # oracle: (source path, test unit, canonical target, source text, span).
-    subject_installations: list[tuple[str, str, str, str, tuple[int, int]]] = field(default_factory=list)
+    # No unit: a JS setup file installs it before every test file (#218).
+    subject_installations: list[tuple[str, str | None, str, str, tuple[int, int]]] = field(default_factory=list)
 
 
 @dataclass
