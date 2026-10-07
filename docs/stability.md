@@ -181,9 +181,13 @@ installed stand-in for a first-party module or member: `vi.mock`, `jest.mock`,
 their ordered forms, node:test `mock.module`, or a replacing spy (issue #177).
 Only `./` and `../` specifiers count as first-party, and since #196 188.6
 the `@/` and `~/` aliases and the patterns of the base side's root
-`tsconfig.json` `paths`; setup files, hooks and other bundler aliases stay
-outside
+`tsconfig.json` `paths`; hooks and other bundler aliases stay outside
 ([installation contract](subject-integrity.md#javascript-module-mocks-and-replacing-spies)).
+Since #218, a stand-in installed from a setup file the runner loads before
+every test file (`setupTests.{js,ts}`, `jest.setup.*`, `vitest.setup.*`, or
+one the root `package.json` names in `jest.setupFiles`), and Jest's
+`automock` turned on there or in `package.json`, is reported too, with no
+unit, as a conftest patch is.
 Since v0.6.0, a `vi.mock` takes effect for the whole file wherever it is
 written, as Vitest hoists it. A stand-in is new for each test that did not
 already have it, so one copied in from another test is reported. A spy

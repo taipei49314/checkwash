@@ -138,9 +138,17 @@ def detect(ir: IR) -> list[Finding]:
                     )
                 )
     for path, unit, target, text, span in ir.globals.subject_installations:
+        if unit is not None:
+            message = f"{unit}: this test installs a replacement for {target} that its existing oracle consumes"
+        elif target == "automock":
+            # Judged as a conftest patch is: which test reads it is not
+            # resolved, and no unit's repair evidence can explain it (#218).
+            message = (f"{path}: Jest's automock is turned on, so every module a test file imports "
+                       f"is replaced by an automatic mock")
+        else:
+            message = f"{path}: this setup file installs a replacement for {target} before every test file"
         findings.append(Finding(
-            rule="TEST_PATCHES_SUBJECT", severity="warn", path=path, unit=unit,
-            message=f"{unit}: this test installs a replacement for {target} that its existing oracle consumes",
+            rule="TEST_PATCHES_SUBJECT", severity="warn", path=path, unit=unit, message=message,
             after=Evidence(text=text, span=tuple(span)),
             fingerprint=make_fingerprint("TEST_PATCHES_SUBJECT", path, unit, target),
         ))
