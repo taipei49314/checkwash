@@ -10,7 +10,7 @@ only when its first line was empty.
 
 Now a TOML array runs to the line that closes it, and an INI value continues
 over every indented line, as iniconfig reads it. A value that opens with a
-quote is still read as a TOML string and never continued (#327).
+quote is read by the section it sits in (#327).
 """
 import datetime
 

@@ -61,6 +61,11 @@ def _comment_or_blank(line: str) -> bool:
     return not line.strip() or line.strip().startswith(("#", ";"))
 
 
+# A line that reads as a TOML setting: a bare or quoted key, then `=`. An
+# option (`-m`, `--deselect=x`) never starts one.
+_TOML_SETTING = re.compile(r"""\s*(?:[A-Za-z0-9_][A-Za-z0-9_.-]*|"[^"\n]*"|'[^'\n]*')\s*=""")
+
+
 def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
     """Literal INI/TOML values; ambiguous duplicate values remain distinct.
 
@@ -68,18 +73,25 @@ def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
     (`"--import-mode=importlib"`). A value that opens with neither a bracket
     nor a quote is an INI value, continued over every indented line, as
     iniconfig reads it, with or without `=` (#324). A quoted value is read
-    as a TOML string and never continued (#327). A line a value spans is
-    not read again as a setting or a section, and no value is evaluated.
+    by its section (#327): in `[tool:pytest]`, which only `setup.cfg`
+    holds, it is an INI value like any other; in `[tool.pytest.ini_options]`,
+    which only `pyproject.toml` holds, it is a TOML string and never
+    continued; in `[pytest]`, INI in `pytest.ini` and `tox.ini` but TOML in
+    `pytest.toml`, it continues up to a line that reads as a TOML setting.
+    A line a value spans is not read again as a setting or a section, and
+    no value is evaluated.
     """
     values: dict[str, set[tuple[str, ...]]] = {}
     lines = text.splitlines()
     active = False
+    section = ""
     index = 0
     while index < len(lines):
         line = lines[index]
         index += 1
         if line.strip().startswith("[") and line.strip().endswith("]"):
-            active = line.strip() in _PYTEST_SECTIONS
+            section = line.strip()
+            active = section in _PYTEST_SECTIONS
         if not active:
             continue
         match = _SETTING.match(line)
@@ -94,9 +106,17 @@ def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
                 depth = _bracket_depth(lines[index], depth)
                 index += 1
             value = "\n".join(block)
-        elif not value.lstrip().startswith(("'", '"')):
+        elif not value.lstrip().startswith(("'", '"')) or section != "[tool.pytest.ini_options]":
+            # In `[pytest]` a quoted value may be a TOML string, and an
+            # indented key after it is a setting of its own. In an INI file
+            # such a line hands pytest `name` and `=` as paths, and the run
+            # stops with a usage error, so stopping there hides no passing
+            # weakening.
+            toml_too = section == "[pytest]" and value.lstrip().startswith(("'", '"'))
             continued = [value.strip()]
             while index < len(lines) and (_comment_or_blank(lines[index]) or lines[index][:1].isspace()):
+                if toml_too and _TOML_SETTING.match(lines[index]):
+                    break
                 if not _comment_or_blank(lines[index]):
                     continued.append(lines[index].strip())
                 index += 1
