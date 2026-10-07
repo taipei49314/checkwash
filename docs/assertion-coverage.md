@@ -45,8 +45,13 @@ diagnostics; the supplement does not claim to analyze that top-level execution.
 Nested test callbacks own their own assertions. Declared or assigned helper
 functions and their default parameter expressions do not donate assertions to
 the surrounding test. Direct inline callback arguments to other calls retain
-the existing lexical coverage, including iterator callbacks; this does not
-prove that an arbitrary callee executes its callback. Vitest's optional second
+the existing lexical coverage, including iterator callbacks, whatever the
+call's receiver: `cases.forEach(cb)`, `[[1, 78.75]].forEach(cb)`,
+`Object.entries(cases).forEach(cb)`, `(cases).forEach(cb)` and
+`cases?.forEach(cb)` alike (#294); this does not prove that an arbitrary
+callee executes its callback. A call result called directly (`f()(cb)`) and an
+optional call (`fn?.(cb)`) are not member calls, and their callbacks stay
+nested functions. Vitest's optional second
 `expect(actual, message)` argument is diagnostic text, not the asserted subject.
 
 Preserving controls cover assertion messages, multiline formatting, equivalent
@@ -217,12 +222,30 @@ digits, as in JavaScript (#196 190.3). unittest passes `places=p` when
 relative tolerance (`rel=`, `pytest.approx`'s default) states no absolute
 bound, so a bound rewritten into one is still compared as new slack, and so
 is a pair with several tolerances at once. A negated comparison
-(`assertNotAlmostEqual`, a negated `approx`) passes when the values are far
-apart, so its tolerance orders the other way, and checkwash still compares
-it in the positive direction
+(`assertNotAlmostEqual`, `!=` or `not` around `approx`) passes when the
+values are far apart, so its tolerance orders the other way: it records no
+tolerance, as in JavaScript, and a change of it is unknown rather than read
+backwards. `== approx(x)` -> `!= approx(x)` is the polarity inversion that
+`== 78.75` -> `!= 78.75` is
 ([#284](https://github.com/taipei49314/checkwash/issues/284)). The source tests
 are in
-[`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py).
+[`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py)
+and [`tests/test_issue284_negated_approx.py`](../tests/test_issue284_negated_approx.py).
+
+An assertion is an approximate comparison only where it states one
+([#299](https://github.com/taipei49314/checkwash/issues/299)): `pytest.approx`
+is an operand of the assertion's own `==`, `!=`, `in` or `not in`, or sits
+inside one through a list, tuple, set or dict display; or that comparison is
+a link of a chained comparison (`0 < x == approx(y)`), is conjoined with
+`and`, or is asserted by `all(...)` over a comprehension, since each part
+must hold. Anything else is read as a plain assertion:
+`x == approx(y) or True` and `any(x == approx(y) for ...)` are truthy,
+`(x == approx(y)) is not None` compares with None, and
+`repr(approx(1.0)) == '1.0 ± 1.0e-06'` compares the string. A call that
+receives an approx object, such as `operator.eq(x, approx(y))`, is read as
+the call, as `operator.eq(x, 78.75)` is: checkwash cannot tell an operator
+from any other function. The source tests are in
+[`tests/test_issue299_approx_structure.py`](../tests/test_issue299_approx_structure.py).
 
 ### Python tolerance calls
 
@@ -280,19 +303,21 @@ torch's omitted pair, cannot be read; a known tolerance replaced on the same
 subject by one that cannot be read, such as
 `torch.testing.assert_close(a, b, rtol=1e-5, atol=1e-8)` ->
 `torch.testing.assert_close(a, b)`, is an unverifiable replacement
-(`ASSERT_WEAKENED`), as in JavaScript.
+(`ASSERT_WEAKENED`), as in JavaScript. numpy's and torch's assertion calls
+are lent to the test as a bare `assert` is: by a fixture it requests, its own
+or a conftest's, by an autouse fixture, and by a helper another file defines
+([#286](https://github.com/taipei49314/checkwash/issues/286)).
 
 Not read: a negated call (`assert not math.isclose(...)`, `assertFalse(...)`),
 which passes when the values are far apart, so its tolerance orders the other
-way and is not recorded, as in JavaScript (#284 does the same for
-`pytest.approx`); other numpy and torch helpers (`assert_approx_equal`'s
-significant digits, `assert_array_less`, `assert_array_max_ulp`, torch's
-deprecated `assert_allclose`); a predicate inside a comparison or a boolean
-operator (`assert math.isclose(a, b) == True`,
-`assert isclose(a, b) and ok`); a name bound to numpy by anything but an
-import or `pytest.importorskip`; and an assertion call in a fixture or in a
-helper another file defines, which lend the test their bare `assert`s only
-([#286](https://github.com/taipei49314/checkwash/issues/286)). A call inside
+way and is not recorded, as in JavaScript and, since #284, for a negated
+`pytest.approx` and `assertNotAlmostEqual`; other numpy and torch helpers
+(`assert_approx_equal`'s significant digits, `assert_array_less`,
+`assert_array_max_ulp`, torch's deprecated `assert_allclose`); a predicate
+inside a comparison or a boolean operator
+(`assert math.isclose(a, b) == True`, `assert isclose(a, b) and ok`); and a
+name bound to numpy by anything but an import or `pytest.importorskip`. A call
+inside
 `pytest.raises(AssertionError)` is read as positive, as unittest's assertion
 methods are. A `decimal` rewritten into `assert_allclose`'s `rtol` and `atol`,
 the migration numpy's documentation recommends, is a pair of several
@@ -477,10 +502,12 @@ An unkeyed pair whose polarity flipped is an inversion only on the same
 subject (SPEC §4). A bare Python `assert` records no subject, and neither
 does a `pytest.approx` comparison, so for such a pair what each statement
 checks decides: the tested expression with its `not`s peeled, or the side of
-the approx comparison that is not the approx call (#331). `assert
-result.okay` -> `assert not result.okay` is an inversion, and `assert
-result.okay` -> `assert not result.exception`, which checks another
-attribute, is a replacement; both block without repair evidence.
+the approx comparison that is not the approx call (#331). A negated
+comparison (`!=`, `not in`, `is not`) anywhere in the statement is read in
+its positive form, as a `not` is peeled, so `assert {'t': total()} == {'t':
+pytest.approx(78.75)}` -> `!=` is an inversion (#284). `assert result.okay` -> `assert not result.okay` is an inversion,
+and `assert result.okay` -> `assert not result.exception`, which checks
+another attribute, is a replacement; both block without repair evidence.
 
 Residuals of this reading:
 
@@ -524,7 +551,9 @@ What each JS assertion records:
   coercive ones included (chai's `assert.equal`, Node's legacy `equal` and
   `deepEqual`); `toBeCloseTo` and `closeTo` record their center, and a
   hand-rolled `Math.abs(x - 78.75) < bound` its literal centre (189.2). The
-  literal reader reads through parentheses and TypeScript wrappers (T4, T5).
+  literal reader reads through parentheses and TypeScript wrappers (T4, T5),
+  and `Number(<literal>)` folds to its value while `Number` names the global
+  (T6, #226).
 - **Bounds.** The ordering matchers, chai's bound words and
   `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` record their bound as a
   Python bound is recorded (198.Q2, Q4). A bound read as a hand-rolled
@@ -543,12 +572,22 @@ How the rules read them, as Python's do (198.IR amendment 2):
   `toBeLessThan(80)` -> `.below(1e12)` included, and a name or call replaced by
   a different one: `toBe(EXPECTED_A)` -> `toBe(EXPECTED_B)` reports
   "expected call rewritten to a different call ['EXPECTED_A'] -> ['EXPECTED_B']".
-  As in Python, the same names with a changed argument (`build(1)` ->
-  `build(2)`) or member (`config.total` -> `config.subtotal`) do not.
-- A literal and an expression, in either direction, stay unreported until
-  [#226](https://github.com/taipei49314/checkwash/issues/226) decides them for
-  both frontends: `toBe(78.75)` -> `toBe(Number(75))` (T6) and
-  `toBe(EXPECTED)` -> `toBe(75)` pass. Python reports the second (#60).
+  As in Python, the same names with a changed member (`config.total` ->
+  `config.subtotal`) do not.
+- A literal and a name or call follow one definition with Python since
+  [#226](https://github.com/taipei49314/checkwash/issues/226)
+  ([Expected provenance](expected-provenance.md#conversions-unevaluated-calls-and-javascript-226)).
+  A folded `Number(<literal>)` is a literal: `toBe(78.75)` -> `toBe(Number(75))`
+  (T6) reports "expected value rewritten 78.75 -> 75.0". A literal replaced by
+  a call to a global outside the fold set or to a name no scope declares
+  (`parseFloat('75')`), or such a call rewritten into another (`build(1)` ->
+  `build(2)`), reports "expected value replaced by an expression checkwash does
+  not evaluate". A literal replaced by what an import, a declaration or a
+  declared function gives reports EXPECTATION_DEFINITION_CHANGED with the
+  value resolved: `toBe(78.75)` -> `toBe(OTHER)` reads "78.75 -> ./total.OTHER".
+- A name or call replaced by a literal is not read in JS: `toBe(EXPECTED)` ->
+  `toBe(75)` passes, where Python reports it (#60).
+  [#292](https://github.com/taipei49314/checkwash/issues/292) asks for a ruling.
 - TOLERANCE_LOOSENED compares two known tolerances. A tolerance checkwash
   cannot read (`closeTo(v, delta())`, `toBeCloseTo(v, precision())`) is
   unknown, and a known tolerance replaced by an unknown one on the same subject

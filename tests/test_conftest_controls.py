@@ -122,6 +122,7 @@ def _scan():
 # the literal start of an f-string) is a family; the rest is plumbing that
 # carries a name from where it is built to a `Marker`.
 SITES = sorted([
+    ("frontend", "_collect_unit", "helper.{}"),
     ("frontend", "_collect_unit", "name skip"),
     ("frontend", "_collect_unit", "skip = call outcome_of"),
     ("frontend", "_conftest_unit", "conftest.collect_ignore"),
@@ -135,6 +136,7 @@ SITES = sorted([
     ("frontend", "_module_skip_markers", "module.__test__"),
     ("frontend", "_module_skip_markers", "module.{}"),
     ("frontend", "_pytestmark_markers", "call _marker_identity"),
+    ("frontend", "setup_markers", "helper.{}"),
     ("frontend", "setup_markers", "setup.{}"),
     ("runtime_controls", "runtime_controls", "conftest.runtime.{}"),
     ("runtime_controls", "runtime_controls", "from fixture_setup_controls"),
@@ -161,6 +163,8 @@ FAMILIES = {
     "name = conftest.{}": (cc.COLLECTION, [f"conftest.{hook}" for hook in sorted(_CONFTEST_HOOKS)]),
     "name = conftest.add_marker_skip": (cc.COLLECTION, ["conftest.add_marker_skip"]),
     "setup.{}": (cc.SETUP, ["setup.needs_network.skip", "setup.setup_method.xfail"]),
+    # A skip or xfail a same-file helper the unit or its setup calls ends in (#272).
+    "helper.{}": (cc.HELPER, ["helper._later.skip", "helper.offline.xfail"]),
     "conftest.runtime.{}": (cc.RUNTIME, [f"conftest.runtime.{hook}.report-passed.e3b0c44298fc1c14"
                                          for hook in sorted(RUNTIME_HOOKS)]),
     "result = conftest.runtime.pytest_runtest_setup.{}": (cc.RUNTIME, ["conftest.runtime.pytest_runtest_setup.skip",

@@ -1,0 +1,44 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: a test job already allowed to fail at base keeps it through an image bump
+origin: issue #214 acceptance — the job could not fail the pipeline on either side.
+=== before: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+  allow_failure: true
+=== after: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.13
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.13
+  script:
+    - pip install -e .[test]
+    - pytest
+  allow_failure: true
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]
