@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 120
+rule: ASSERT_REMOVED
+title: a test that stops calling another file's helper loses the numpy assertion call the helper makes
+origin: #286 H1 — a helper another file defines lent its bare asserts only; v0.6.0 passes this with zero findings
+=== head: tests/__init__.py ===
+
+=== head: tests/helpers.py ===
+import numpy as np
+
+
+def check(value):
+    np.testing.assert_allclose(value, 78.75, rtol=1e-7)
+=== before: tests/test_billing.py ===
+from app.billing import total
+from tests.helpers import check
+
+
+def test_total():
+    check(total())
+=== after: tests/test_billing.py ===
+from app.billing import total
+from tests.helpers import check
+
+
+def test_total():
+    total()
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "unit": "test_total"}]

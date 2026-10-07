@@ -5,7 +5,7 @@ from collections import Counter
 
 from checkwash.compat import removed_skip_guard
 from checkwash.frontends.python.frontend import ParsedFile, module_constants
-from checkwash.ir.markers import bare_names, marker_call, parse_expr
+from checkwash.ir.markers import bare_names, mark_condition, marker_call, parse_expr
 from checkwash.ir.model import DiffGlobals
 
 # Bounds for skip-condition constant resolution. Small on purpose: a real
@@ -36,10 +36,13 @@ def _mark_weakened_guards(file) -> None:
         if unit.before is None or unit.after is None or unit.delta is None:
             continue
         before_by_name = {m.name: m for m in unit.before.markers}
+        # A skip moved into a helper or out of one is read against the skip
+        # it was, under its old name (#272).
+        moved_from = {after: before for before, after in unit.delta.markers_moved}
         for m in unit.after.markers:
             if not m.guard or m.name in unit.delta.markers_added:
                 continue
-            old = before_by_name.get(m.name)
+            old = before_by_name.get(m.name) or before_by_name.get(moved_from.get(m.name, ""))
             if old is None or not old.guard:
                 continue
             # Same-text path is THREATMODEL 59 (constant behind the guard).
@@ -86,7 +89,13 @@ def _mark_weakened_guards(file) -> None:
 
 
 def _gate_condition_names(parsed: ParsedFile) -> set[str]:
-    """Bare names referenced by this file's skipif/xfail conditions and guards."""
+    """Bare names referenced by this file's skipif/xfail conditions and guards.
+
+    A mark's string condition is the expression pytest evaluates with the
+    module's globals, so the names inside it are read too (#263). The
+    argument of an imperative `pytest.xfail(...)` is its reason, read as
+    before.
+    """
     names: set[str] = set()
     for unit in parsed.units:
         for m in unit.side.markers:
@@ -94,7 +103,12 @@ def _gate_condition_names(parsed: ParsedFile) -> set[str]:
             if canonical.rsplit(".", 1)[-1] in ("skipif", "xfail"):
                 call = marker_call(m.text)
                 if call is not None and call.args:
-                    names |= bare_names(call.args[0])
+                    if canonical in ("pytest.mark.skipif", "pytest.mark.xfail"):
+                        condition = mark_condition(call)
+                    else:
+                        condition = call.args[0]
+                    if condition is not None:
+                        names |= bare_names(condition)
             if m.guard:
                 guard = parse_expr(m.guard)
                 if guard is not None:
