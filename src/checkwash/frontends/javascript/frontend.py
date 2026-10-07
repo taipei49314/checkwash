@@ -55,10 +55,11 @@ _DECLARATION_RE = re.compile(
 # Chained modifiers by the liveness effect they declare. `.todo` never runs
 # under Jest/Vitest and runs with its failure ignored under node:test, so it
 # is a skip; `.fails`/`.failing` invert the oracle, so a failing assertion
-# passes. The neutral ones are read through to the effect chained after them.
+# passes. The neutral ones are read through to the effect chained after them,
+# AVA's `serial` among them (#233).
 _MODIFIERS = {
     "skip": "skip", "todo": "skip", "only": "only", "fails": "fails", "failing": "fails",
-    "concurrent": "", "sequential": "", "shuffle": "",
+    "concurrent": "", "sequential": "", "shuffle": "", "serial": "",
 }
 # Modifiers with their own argument list before the declaration call:
 # `test.skipIf(cond)(name, fn)`, `describe.each(table)(name, fn)`.
@@ -815,6 +816,73 @@ def _retargeted(subject: str, properties: list[tuple[str, bool]]) -> str | None:
         if subject is None:
             return None
     return subject
+
+
+# AVA's and tap's `t` assertions (#233), by the chai meaning each states and
+# whether it asserts it (True) or its negation, operands subject first. AVA's
+# `is` and tap's `equal` compare with Object.is and ===, a strict equality;
+# `like` and `has` assert a subset of fields, as chai's deep `include` does;
+# tap's `same` is loose and `strictSame` strict, both structural, as Node's
+# deepEqual and deepStrictEqual are. The other assertions (`throws`,
+# `snapshot`, tap's `type`, `hasProp`, `matchOnly`, ...) are recorded with no
+# strength, as an unread expect() call is.
+_AVA_METHODS: dict[str, tuple[str, bool]] = {
+    "is": ("strict_equal", True), "not": ("strict_equal", False),
+    "deepEqual": ("deep_equal", True), "notDeepEqual": ("deep_equal", False),
+    "like": ("include", True),
+    "true": ("true", True), "false": ("false", True),
+    "truthy": ("ok", True), "assert": ("ok", True), "falsy": ("ok", False),
+    "regex": ("match", True), "notRegex": ("match", False),
+}
+_TAP_METHODS: dict[str, tuple[str, bool]] = {
+    "equal": ("strict_equal", True), "not": ("strict_equal", False),
+    "same": ("deep_equal", True), "strictSame": ("deep_equal", True),
+    "notSame": ("deep_equal", False), "strictNotSame": ("deep_equal", False),
+    "ok": ("ok", True), "notOk": ("ok", False),
+    "match": ("match", True), "notMatch": ("match", False),
+    "has": ("include", True), "hasStrict": ("include", True),
+    "notHas": ("include", False), "notHasStrict": ("include", False),
+}
+_CONTEXT_METHODS = {"ava_method": _AVA_METHODS, "tap_method": _TAP_METHODS}
+
+
+def _context_assertions(text: str, code: bytearray, bindings: Bindings, start: int, end: int,
+                        owned: Callable[[int], bool]) -> list[Assertion]:
+    """AVA's and tap's `t` assertions (#233), read with chai's meanings.
+
+    Only a method of a test callback's own `t`, of tap's root `t` or of a
+    name bound from one: an assertion called on any other object named `t`
+    is not one.
+    """
+    assertions: list[Assertion] = []
+    masked = bindings.masked
+    for match in CALL.finditer(masked, start, end):
+        position = match.start()
+        if not code[position] or not owned(position):
+            continue
+        # A member suffix, also across whitespace or comments, is another
+        # object's method, and `new t.is(...)` constructs.
+        previous = position - 1
+        while previous >= 0 and (not code[previous] or text[previous].isspace()):
+            previous -= 1
+        if (previous >= 0 and text[previous] in ".#") or follows_new(masked, previous):
+            continue
+        value = bindings.callee(match.group("callee"), position)
+        table = _CONTEXT_METHODS.get(value.kind)
+        if table is None or value.method not in table:
+            continue
+        call = _call_arguments(text, code, match.end() - 1, end)
+        if call is None:
+            continue
+        arguments, span_end = call
+        meaning, asserts = table[value.method]
+        span = (position, span_end)
+        assertion = _chai_assertion(meaning, arguments, text[position:span_end], span, asserts,
+                                    undefined_global=bindings.is_global(("undefined",), position),
+                                    bindings=bindings)
+        if assertion is not None:
+            assertions.append(assertion)
+    return assertions
 
 
 _WORD_CHARACTER = re.compile(r"\w")
@@ -1818,7 +1886,7 @@ _CANDIDATE_STEP = re.compile(r"\s*(?:\?\.|\.)\s*(?P<word>" + NAME + r")")
 _CANDIDATE_INDEX = re.compile(r"\[\s*(['\"])(?P<word>" + NAME + r")\1\s*\]")
 # The throw family: the subject throws, or its promise rejects.
 _THROW_WORDS = frozenset({
-    "throws", "rejects", "isRejected", "throw", "Throw", "rejected", "rejectedWith",
+    "throws", "throwsAsync", "rejects", "isRejected", "throw", "Throw", "rejected", "rejectedWith",
     "toThrow", "toThrowError", "toThrowErrorMatchingSnapshot", "toThrowErrorMatchingInlineSnapshot",
 })
 # Words that assert the opposite: no throw, no rejection.
@@ -1827,7 +1895,7 @@ _NEGATING_WORDS = frozenset({"not", "doesNotThrow", "doesNotReject"})
 # shadowed name or a written member is not: recording it would let the
 # stand-in pair with the oracle it replaced (#196 190.5).
 _CANDIDATE_ASSERT_KINDS = frozenset({"node", "node_method", "chai_assert", "chai_assert_method",
-                                     "chai_should_method"})
+                                     "chai_should_method", "ava_method", "tap_method"})
 _CANDIDATE_EXPECT_KINDS = frozenset({"expect", "chai_expect", "jest_expect"})
 # node:assert methods the scan does not read. The ones it reads (`ok`,
 # `equal`, `strictEqual`, `deepEqual`, `deepStrictEqual` and `assert()`
@@ -1909,7 +1977,8 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
         path = tuple(re.split(r"\s*(?:\?\.|\.)\s*", spelling.rstrip("?. \t\n")))
         if bindings._written(path, position):
             continue
-        kind = bindings.callee(".".join(path), position).kind
+        value = bindings.callee(".".join(path), position)
+        kind = value.kind
         bare = len(path) == 1
         expect_call = bare and kind in _CANDIDATE_EXPECT_KINDS
         expect_member = not bare and bindings.callee(path[0], position).kind in _CANDIDATE_EXPECT_KINDS
@@ -1945,6 +2014,8 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
             continue
         if kind == "chai_should_method" and path[-1] in _SHOULD_METHODS:
             continue
+        if kind in _CONTEXT_METHODS and value.method in _CONTEXT_METHODS[kind]:
+            continue  # AVA's and tap's assertions the scan reads (#233).
         if expect_call:
             if not words:
                 continue  # `expect(value)` alone asserts nothing.
@@ -1958,7 +2029,8 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
                 continue  # A matcher the scan reads, left out for its arguments.
         if expect_member and path[-1] in _EXPECT_UTILITIES:
             continue
-        members = list(path[1:])
+        # A method bound to a name of its own says what it is by its value.
+        members = [value.method] if kind in _CONTEXT_METHODS else list(path[1:])
         said = members + words
         negated = any(word in _NEGATING_WORDS for word in said)
         throws = not negated and any(word in _THROW_WORDS for word in said)
@@ -2195,6 +2267,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
         assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
                           if owned(assertion.span[0]))
         assertions.extend(_should_assertions(text, code, bindings, start, end, owned))
+        assertions.extend(_context_assertions(text, code, bindings, start, end, owned))
         covered = [assertion.span for assertion in assertions]
         assertions.extend(_candidate_assertions(text, code, bindings, start, end, covered, owned))
         assertions.sort(key=lambda assertion: assertion.span)

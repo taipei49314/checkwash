@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 126
+rule: ASSERT_WEAKENED
+issue: 233
+title: tap t.equal -> t.ok widens the assertion
+origin: issue #233 T2 — v0.6.0 parsed the subtest and passed this with zero findings: t.equal was no assertion
+=== before: test/billing.js ===
+import t from 'tap';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+t.test('invoice total', async t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.equal(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.js ===
+import t from 'tap';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+t.test('invoice total', async t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.ok(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "path": "test/billing.js", "unit": "invoice total"}]
