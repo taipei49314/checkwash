@@ -36,6 +36,7 @@ import re
 import shlex
 
 from checkwash.change import EngineError
+from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ci_control_flow import _read_yaml, _step_command, is_github_workflow
 from checkwash.pytest_collection import (
     _commands,
@@ -295,6 +296,106 @@ def _candidates(sources, settings):
     return result
 
 
+def collection_sources(paths):
+    """The files `opaque_reached` reads: the root configs and the runner files (#335)."""
+    return sorted(p for p in paths if p in _CONFIGS or _runner(p))
+
+
+def opaque_reached(opaque, head, changes):
+    """The first submodule a pytest run could collect from, on either side (#335).
+
+    `head` maps the root configs and runner files present at head to their
+    bytes (`collection_sources`); the diff's changes to them are applied for
+    each side. The runs are the runner files' pytest commands, or the bare
+    `pytest` a tree without one implies. A run reaches a directory when one
+    of its path arguments names the directory, a path inside it or one above
+    it. A run without one collects from the root config's testpaths, else
+    from the root, and recurses into every directory no norecursedirs
+    pattern stops. A setting read two ways counts both ways. An undecodable
+    config or a run's own config reaches every submodule, and a runner file
+    whose pytest command does not parse is a run without path arguments. A
+    path argument that expands a variable (`$1`, `{posargs}`) names no path.
+    """
+    if not opaque:
+        return None
+    from checkwash.shadow import _pytest_config_path, _runner_invocations
+
+    for side in ("before", "after"):
+        contents = dict(head)
+        for change in changes:
+            path = change.path.replace("\\", "/")
+            if side == "before":
+                # a renamed file held its bytes at its old path
+                contents.pop(path, None)
+                path = (change.old_path or path).replace("\\", "/")
+            data = change.before if side == "before" else change.after
+            if path not in _CONFIGS and not _runner(path):
+                continue
+            if data is None:
+                contents.pop(path, None)
+            else:
+                contents[path] = data
+        config_path = _pytest_config_path(contents, "", contents=contents, cwd="")
+        source = contents.get(config_path)
+        try:
+            readings = resolved_collection_settings(source.decode("utf-8-sig") if source else "")
+        except UnicodeError:
+            return opaque[0]
+        targets = []
+        runs = targetless = False
+        for path in sorted(contents):
+            if not _runner(path) or not _runs_tests(contents[path]):
+                continue
+            runs = True
+            found = _runner_invocations(path, contents[path])
+            targetless = targetless or not found or any(not item.targets for item in found)
+            if any(item.config_path for item in found):
+                return opaque[0]
+            targets.extend(target for item in found for target in item.targets)
+        targetless = targetless or not runs
+        # A setting the reader resolves two ways is read both ways; a config's
+        # norecursedirs replaces pytest's default list.
+        for testpaths in readings.get("testpaths", {()}):
+            roots = tuple(posixpath.normpath(root.replace("\\", "/")) for root in testpaths) or (".",)
+            for skipped in readings.get("norecursedirs", {_DEFAULTS["norecursedirs"]}):
+                for directory in opaque:
+                    if any(_reaches(target, directory, skipped) for target in targets):
+                        return directory
+                    if targetless and any(_reaches(root, directory, skipped) for root in roots):
+                        return directory
+    return None
+
+
+# A wildcard pytest or the shell expands: `*`, `?` or a bracket set such as
+# `[ab]`. tox's `[]` (its old spelling of `{posargs}`) is a literal name.
+_WILDCARD = re.compile(r"[*?]|\[[^\]]+\]")
+
+
+def _reaches(root, directory, skipped):
+    """Does collection from this root, a path argument or a testpath, enter the directory?
+
+    A root inside the directory, or the directory itself, enters it. A root
+    above it recurses into it unless a norecursedirs pattern stops one of the
+    directories between them. A root with a wildcard is read from its literal
+    prefix, and reaches whatever lies on either side of that prefix.
+    """
+    root = "" if root in (".", "") else root.rstrip("/")
+    parts = root.split("/") if root else []
+    literal = []
+    for part in parts:
+        if _WILDCARD.search(part):
+            prefix = "/".join(literal)
+            return (not prefix or directory == prefix or directory.startswith(prefix + "/")
+                    or prefix.startswith(directory + "/"))
+        literal.append(part)
+    if root == directory or root.startswith(directory + "/"):
+        return True
+    if root and not directory.startswith(root + "/"):
+        return False
+    below = directory[len(root) + 1:] if root else directory
+    return not any(_matches(part, skipped) for part in below.split("/"))
+
+
 def _invocations(files):
     """Every pytest invocation these runner files make, or None when one is out of this reader's reach.
 
@@ -340,8 +441,10 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     paths = path_lister()
     if not isinstance(paths, (list, tuple)) or len(paths) > 200_000 or any(not isinstance(p, str) for p in paths):
         raise EngineError("pytest collection snapshot has an invalid path inventory")
+    # A submodule is listed as a directory whose content is unknown (#335).
+    paths, opaque = split_inventory(paths)
     if any(not p or p.startswith("/") or ":" in p or "\\" in p
-           or any(part in {"", ".", ".."} for part in p.split("/")) for p in paths):
+           or any(part in {"", ".", ".."} for part in p.split("/")) for p in (*paths, *opaque)):
         raise EngineError("pytest collection snapshot has an unsafe inventory path")
     path_set = set(paths)
     runners = {p for p in path_set if _runner(p)}
@@ -418,6 +521,11 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     after_path, after, new, new_targets = sides[1]
     if before_path not in touched and after_path not in touched:
         return []
+    # The candidates below are the whole collection's; a submodule's tests
+    # are unknown, so a run that can reach one leaves them unproved (#335).
+    reached = opaque_reached(opaque, {p: snapshot[p] for p in collection_sources(path_set)}, changes)
+    if reached is not None:
+        raise opaque_error(reached, "pytest's collection can reach it")
     # One definition of the existing suite serves both proofs below: what the
     # base settings collected from the whole base tree. Reading it from
     # byte-identical files only hid every test in a file the diff also edits,

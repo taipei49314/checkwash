@@ -17,6 +17,7 @@ from dataclasses import replace
 
 from checkwash.allowlist import AllowEntry
 from checkwash.change import EngineError, FileChange
+from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ci import (
     _ci_base_surface,
     _deps_differ,
@@ -26,7 +27,7 @@ from checkwash.ci import (
 )
 from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
-from checkwash.collection_inventory import collection_inventory_changes
+from checkwash.collection_inventory import collection_inventory_changes, collection_sources, opaque_reached
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
@@ -406,7 +407,7 @@ def _native_assertion_context(
     return tuple(parts), tuple(assertions)
 
 
-def _root_importer_changes(changes, config, head_reader, head_searcher):
+def _root_importer_changes(changes, config, head_reader, head_searcher, path_lister=None):
     """Read unchanged callers of changed root helpers, once and within caps.
 
     A file absent from the real diff has the same bytes on both snapshots.
@@ -436,6 +437,16 @@ def _root_importer_changes(changes, config, head_reader, head_searcher):
         raise EngineError("changed root assertion helpers require snapshot importer search")
     if len(modules) > _MAX_ORACLE_READS:
         raise EngineError("root assertion helper search exceeds the module budget")
+    # The search reads no submodule; an importer inside one pytest can collect
+    # is unknown (#335).
+    if path_lister is not None:
+        paths, opaque = split_inventory(path_lister())
+        if opaque:
+            sources = {path: head_reader(path) for path in collection_sources(
+                path for path in paths if isinstance(path, str))}
+            reached = opaque_reached(opaque, {p: s for p, s in sources.items() if isinstance(s, bytes)}, changes)
+            if reached is not None:
+                raise opaque_error(reached, "pytest's collection can reach it")
     candidates = sorted({p.replace("\\", "/") for p in head_searcher(sorted(modules))})
     # The existing grep returns at most 64 hits. Exactly 64 can be a truncated
     # set; never call that a complete review of removed helper assertions.
@@ -484,7 +495,8 @@ def build_ir(
     root_path_lister=None,
     root_batch_reader=None,
 ) -> IR:
-    importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
+    importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(
+        changes, config, root_reader, root_searcher, root_path_lister)
     changes = [*changes, *importer_changes]
     changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher, reviewed_root_modules)]
     g = DiffGlobals()
