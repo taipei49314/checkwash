@@ -7538,3 +7538,171 @@ engines), as on main, where #226's relabel (D-104) has not landed. Every
 other case keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-113 (2026-10-06): a GitLab runner job that cannot fail the pipeline is a weakened command (#214)
+
+In `.gitlab-ci.yml` a test job stops failing the pipeline without any
+change to its `script:` lines. `allow_failure: true` (or `allow_failure:`
+with `exit_codes`) lets it fail and stay green; `when: manual` or a `rules:`
+entry `when: never` stops it from running on its own. GitHub's spelling of
+the first, `continue-on-error: true`, is a swallow token and blocks at high.
+The runner-site reader (#181, #196 191.x) read GitHub workflows and
+`.pre-commit-config.yaml` only, so all four GitLab spellings passed at warn
+(THREATMODEL row 112's residual "GitLab/Azure/CircleCI/Travis conditions").
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751), filed as #214):
+allow_failure (true or exit_codes), `when: manual` and `when: never` count
+only on jobs whose `script:` passes the runner-site predicate. No global
+token: a lint job allowed to fail stays at warn. GitHub's
+`continue-on-error: true` stays a global token (D-052). The maintainer edit
+is row 112's text.
+
+**As implemented:**
+- `ci_control_flow._gitlab_sites` reads `.gitlab-ci.yml` (the root file,
+  the path the `ci` role names) as an inventory of runner sites: each
+  command of a job's `script:` that invokes a test runner
+  (`runner_command.invokes_test_runner`, as for a workflow step's `run:`) is
+  a site, live when its job can fail a green pipeline. `before_script:`
+  and `after_script:` are not the job's test command. The inventory goes
+  through the predicates workflows use: a runner command that loses a live
+  site and gains a dead one is disabled, and a runner reworded as its job
+  dies names both commands (#196 191.8).
+- A job is dead when no way of adding it to a pipeline starts it by itself
+  with its failure counted (`_gitlab_idle`). Without `rules:`, its own
+  `when:` and `allow_failure:` decide. With `rules:`, each entry that may
+  match adds the job with its own `when:` and `allow_failure:`, the job's
+  where it sets none; an entry with no `if:`, `changes:` or `exists:`
+  always matches, so no later entry is reached; and a job no entry adds is
+  not in the pipeline. A shape the reader does not take (an empty list, a
+  rule that is no mapping) keeps the job live.
+- A job's `extends:` templates are merged in first, as GitLab merges them:
+  mappings key by key, arrays and scalars replaced, templates in the order
+  listed and the job's own keys last (`_gitlab_jobs`). A chain that loops
+  or runs deeper than GitLab's eleven levels leaves the job out, and the
+  entries merging copies are bounded as merge keys are (100,000).
+- The deletion rule reads the GitLab sites too (`holds_runner_site`): a
+  deleted `.gitlab-ci.yml` whose only runner is a site row 69's scan does
+  not name (`node --test`) ran a suite. That closes D-097's reading 5
+  residual.
+- The reason says what the job lost: "pytest can no longer fail the
+  pipeline (job test allow_failure: true)", "pytest is disabled (job test
+  when: manual)", "pytest is disabled (job test rules: when: never)".
+- Unchanged: the added-line scan (`pytest || true` in a job's script still
+  blocks as before), GitHub's `continue-on-error: true` token, and every
+  workflow and pre-commit reason, byte for byte.
+
+Readings the ruling leaves to the implementation:
+
+1. **`when: on_failure` is dead too.** It runs the job only once an
+   earlier job has failed, which is how the reader reads `failure()` on a
+   GitHub step: false on the otherwise green run, the only run in which the
+   suite can turn a passing check red
+   (`gitlab_when_on_failure_test_job_pos`).
+   `when: delayed` and `when: always` start the job by themselves and keep
+   it live.
+2. **A hidden job is a job set aside unless another job extends it.**
+   GitLab documents a leading `.` as the way to disable a job without
+   deleting it, and `test:` -> `.test:` passed at warn
+   (`gitlab_test_job_hidden_pos`). A hidden job that a job `extends:` is a
+   template: its commands are that job's, so templating a job disables
+   nothing (`gitlab_job_templated_neg`). A hidden job used only through a
+   YAML anchor and merge key is read as set aside, both sides alike: it
+   changes nothing until a diff both drops a live runner job and adds such
+   a template with the same command.
+3. **`workflow: rules:` that can only say `when: never`** keep every
+   pipeline from running, so every site is dead
+   (`gitlab_workflow_rules_never_pos`): the ruling's `when: never`, written
+   for the whole pipeline. When no workflow rule matches, the pipeline does
+   not run, so conditional `when: never` entries alone are dead too; any
+   entry that may match and says otherwise keeps the sites live.
+4. **A rule's condition is not evaluated.** An entry with `if:`, `changes:`
+   or `exists:` may match, so `rules: [{if: $CI_COMMIT_BRANCH == "main"}]`
+   keeps the job live although it no longer runs on a merge request's
+   branch. Reading those conditions is GitLab's counterpart of the GitHub
+   expression folding (#196 191.x) and is left out, with `only:` and
+   `except:`.
+5. **The ruled spellings, read literally.** `allow_failure` counts as a
+   YAML 1.1 boolean, as GitLab's parser reads one (`true`, `yes`, `on` in
+   their three cases); a quoted `"true"` is a string GitLab rejects, not a
+   swallow. Any non-empty `exit_codes` counts, as ruled, whether or not it
+   names the code the runner fails with.
+6. **#196 191.3 covers the GitLab pipeline.** A `.gitlab-ci.yml` whose base
+   side the reader takes with a live runner site and whose head side it
+   declines is out of reach (`CI_BECAME_UNANALYSABLE`), as a workflow is
+   (`gitlab_head_yaml_tag_pos`). GitLab's own `!reference` tag is a tag the
+   reader declines, so a pipeline that starts using it blocks once, on the
+   commit that introduces it; one that used it at base is not read at all.
+
+**Tests and fixtures.**
+- **Tests:** 80 in `tests/test_issue214_gitlab_jobs.py`. Twenty-four
+  mutants of the round's code each fail them or the fixtures: `manual`
+  or `on_failure` read as starting the job; `allow_failure: true` not
+  read; only the YAML 1.2 booleans read as true; a quoted `"true"` read
+  as one; `exit_codes` not read; an empty `exit_codes` read as one; a
+  rule with no condition not ending the list; a rule not taking the
+  job's `when:` and `allow_failure:`; an empty `rules:` read as rules; a
+  rule that may run the job skipped; `workflow: rules:` not read; an
+  unconditional workflow rule not ending the list; a template read as a
+  site of its own; a hidden job read as live; the templates winning over
+  the job's own keys; no depth limit on `extends:`; a job merged without
+  a parent that was left out; mappings replaced instead of merged;
+  merging unbounded; `.gitlab-ci.yml` not read for sites; an allowed
+  failure reading as disabled; `variables` read as a job;
+  `before_script:` read as the test command.
+- **Fixtures:**
+  - row 112's pins, each passing on v0.6.0 and main at warn:
+    `gitlab_allow_failure_test_job_pos` (G1),
+    `gitlab_allow_failure_exit_codes_pos` (G2),
+    `gitlab_when_manual_test_job_pos` (G3),
+    `gitlab_rules_when_never_test_job_pos` (G4),
+    `gitlab_when_on_failure_test_job_pos` (reading 1),
+    `gitlab_test_job_hidden_pos` (reading 2),
+    `gitlab_workflow_rules_never_pos` (reading 3),
+    `gitlab_template_when_manual_pos` (`extends:`) and
+    `gitlab_head_yaml_tag_pos` (reading 6);
+  - what stays at warn: `gitlab_allow_failure_lint_job_neg` (G7),
+    `gitlab_allow_failure_kept_neg` and `gitlab_when_manual_removed_neg`
+    (the issue's acceptance), `gitlab_rules_skip_tags_neg` and
+    `gitlab_job_templated_neg`.
+
+Every existing fixture keeps its expectation, `circleci_weakened_pos` and
+every `ci_*` and `precommit_*` fixture included, and its corpus record does
+not change: `tools/emit_corpus.py` gives main's 759 records, byte for
+byte, and the fourteen new ones.
+
+**Fingerprints.** None move: a GitLab job that can no longer fail the
+pipeline reports a reason where it reported none, and every other reason
+is the same text.
+
+**Cost.** Measured with the round's engine against main's (`4f0955b`):
+- **GitLab set** (recorded before any engine ran on it): every non-merge
+  commit touching `.gitlab-ci.yml` in the default-branch history of eight
+  GitLab-hosted projects, ase, fdroidserver, graphviz, hyperkitty,
+  inkscape-extensions, libvirt-python, mailman and postorius: 1,532
+  commits, 1,443 readable (89 hold a submodule the snapshot reader
+  declines on both engines). Six records change, each pass -> block:
+  - `allow_failure: true` added to a runner job: postorius `d1602e2c`
+    (`git-heads`) and `da891d9e` ("allow released to fail");
+  - an `allow_failure: true` rule for merge request pipelines on ase's
+    `bleeding-edge` job (`a252419c`, "allow bleeding-edge job to fail"),
+    whose only rule also keeps the job out of every other pipeline;
+  - `when: manual` on ase's `pytest` job (`f6eaab0e`);
+  - ase's `windows_test` hidden as `.windows_test` (`5f6460d2`, "cannot
+    currently run windows tests, disable for now"; reading 2);
+  - ase `1f8c6c20`, out of reach (reading 6): its head is YAML GitLab
+    itself rejects, a quoted scalar followed by `|| echo`.
+  Each is a ruled spelling or a reading above, and none misreads the
+  file. The projects meant them (a bleeding-edge or flaky job allowed to
+  fail, a job set aside): the ruling's accepted cost, where a reviewer
+  accepts the block, as for GitHub's `continue-on-error: true`.
+- **The standard set and D-088's sets cannot move:** no commit of the
+  thirteen sweep histories touches `.gitlab-ci.yml`, the only file the
+  round reads differently, and every workflow and pre-commit reason is
+  the same text.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
