@@ -41,7 +41,17 @@ def _resolve(node, bindings):
         return None
     first, dot, rest = name.partition('.')
     target = bindings.get(first)
-    return target + dot + rest if target else None
+    return _pytest_name(target + dot + rest) if target else None
+
+
+def _pytest_name(name):
+    """`name` with the py library's `py.test` read as the pytest module it is (#310).
+
+    py 1.11.0 maps its `test` attribute to `pytest` and binds
+    `sys.modules['py.test'] = pytest`, so `py.test.skip` is `pytest.skip`
+    itself, one object under one name as `_pytest.outcomes`' are (#220).
+    """
+    return 'pytest' + name[len('py.test'):] if name == 'py.test' or name.startswith('py.test.') else name
 
 
 def _decorator(node, bindings, target, keywords):
@@ -71,7 +81,7 @@ _OUTCOME_RAISES = {
 }
 _OUTCOME_KEYWORDS = frozenset({'reason', 'msg', 'allow_module_level'})
 _NATIVE_MODULES = frozenset({'pytest', '_pytest', '_pytest.outcomes', 'unittest', 'unittest.case',
-                             'twisted', 'twisted.trial', 'twisted.trial.unittest'})
+                             'twisted', 'twisted.trial', 'twisted.trial.unittest', 'py', 'py.test'})
 # An argument that calls, awaits, yields, binds or unpacks runs code before
 # the outcome, and that code could leave first.
 _IMPURE = (ast.Call, ast.Await, ast.Yield, ast.YieldFrom, ast.NamedExpr, ast.Lambda, ast.Starred)
@@ -127,7 +137,7 @@ def _spelled(node, bindings):
     if first not in bindings:
         return name
     target = bindings[first]
-    return target + dot + rest if target else None
+    return _pytest_name(target + dot + rest) if target else None
 
 
 def body_outcome(node, bindings):
