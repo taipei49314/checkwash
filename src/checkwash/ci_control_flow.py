@@ -7,9 +7,10 @@ or a hook inventory stops a runner without touching one: `if: false` under
 `.pre-commit-config.yaml`. Each added line is innocent on its own, so all of
 those diffs passed at warn while `pytest || true` blocked (issue #181).
 
-The shared definition is the *runner site*: a workflow step or a pre-commit
-hook whose own command invokes a test runner, and whether it can execute for
-a pull request's commits. Whether a command invokes one is
+The shared definition is the *runner site*: a workflow step, a pre-commit
+hook or a command in a GitLab job's `script:` (#214) that invokes a test
+runner itself, and whether it can execute for a pull request's commits and
+fail them. Whether a command invokes one is
 `runner_command.invokes_test_runner` (#196 191.5, #216): a runner name as a
 whole word, outside the contexts known not to run it (`echo` and `printf`
 text, heredoc text that `cat` or `tee` writes out, install commands,
@@ -40,7 +41,20 @@ holds statically:
   `opened`, `synchronize` and `reopened`, and a `push`, `pull_request` or
   `pull_request_target` whose `paths-ignore` holds `**` or whose `paths`
   holds only negations;
-- a pre-commit hook parked on the `manual` stage.
+- a pre-commit hook parked on the `manual` stage;
+- a GitLab job (#214) that never starts by itself on a green pipeline
+  (`when: manual`, `when: never`, or `when: on_failure`, which runs only
+  once an earlier job has failed, as `failure()` reads), or whose failure
+  is allowed (`allow_failure: true`, or `exit_codes`), so it cannot fail
+  the pipeline. With `rules:`, each rule that may match adds the job with
+  its own `when:` and `allow_failure:`, the job's where it sets none; a rule
+  with no `if:`, `changes:` or `exists:` always matches, so no later rule is
+  reached; a job no rule adds is not in the pipeline. A rule's condition is
+  not evaluated: any rule with one may match. The job is dead when no way
+  of adding it starts it by itself with its failure counted, and every job
+  is when `workflow: rules:` can only keep the pipeline from running. A
+  job's `extends:` templates are merged in first, as GitLab merges them; a
+  hidden job (`.name`) is a template, not a job.
 
 Two predicates read the inventory. *Disabled*: a runner command lost a live
 site and gained a dead one, so the suite is still written there and cannot
@@ -64,9 +78,10 @@ and is not a second one.
 
 Not evaluated: path filters that leave any path, `pull_request` branch
 filters, activity `types` that keep one of the three (`[opened]` runs on a
-pull request's first commit only), matrix legs, GitLab `rules:`. YAML the
-reader declines at base, or at head when the base side ran no live runner
-site, leaves the file at the existing warn.
+pull request's first commit only), matrix legs, GitLab rule conditions,
+`only:` and `except:`, `needs:`, and the templates a GitLab `include:`
+brings. YAML the reader declines at base, or at head when the base side ran
+no live runner site, leaves the file at the existing warn.
 """
 from __future__ import annotations
 
@@ -929,6 +944,185 @@ def _precommit_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
     return live, dead
 
 
+# Top-level keys of `.gitlab-ci.yml` that configure the pipeline instead of
+# defining a job, the global defaults GitLab still takes beside `default:`
+# included. A key beginning with `.` is a hidden job, which never runs itself.
+_GITLAB_GLOBAL_KEYS = frozenset({
+    "default", "include", "stages", "variables", "workflow", "spec",
+    "image", "services", "cache", "before_script", "after_script", "types",
+})
+# GitLab follows `extends:` at most eleven levels deep.
+_GITLAB_EXTENDS_DEPTH = 11
+# The clauses that make a rule conditional; a rule with none always matches.
+_GITLAB_RULE_CLAUSES = ("if", "changes", "exists")
+# A plain `true` as GitLab's YAML 1.1 parser reads one: `yes` and `on` too.
+_GITLAB_TRUE = frozenset({"true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON"})
+# The `when:` values with which a job does not start by itself on a green
+# pipeline: `manual` waits for a person, `never` keeps it out, and
+# `on_failure` runs only once an earlier job has failed.
+_GITLAB_IDLE = frozenset({"manual", "never", "on_failure"})
+
+
+def _gitlab_merge(base: dict, override: dict) -> dict:
+    """`extends:` as GitLab merges it: mappings key by key, the override winning; anything else replaced."""
+    out = dict(base)
+    for key, value in override.items():
+        out[key] = _gitlab_merge(out[key], value) if isinstance(out.get(key), dict) and isinstance(value, dict) else value
+    return out
+
+
+def _entries(value) -> int:
+    return len(value) + sum(_entries(item) for item in value.values() if isinstance(item, dict))
+
+
+def _gitlab_jobs(tree: dict) -> dict[str, dict] | None:
+    """Every job of a `.gitlab-ci.yml`, hidden ones included, with the templates it `extends:` merged in.
+
+    The templates merge in the order listed, then the job's own keys over
+    them. A template the file does not define (one an `include:` brings)
+    adds nothing the reader can see. A job on a chain that loops, or that
+    runs deeper than GitLab follows, is left out. Jobs are merged parents
+    first, each once, and the entries merging copies are bounded as merge
+    keys are: past the bound the file is a shape the reader does not take.
+    """
+    nodes = {name: node for name, node in tree.items() if isinstance(node, dict) and name not in _GITLAB_GLOBAL_KEYS}
+    parents = {name: _patterns(node.get("extends")) for name, node in nodes.items()}
+    children: dict[str, list[str]] = {}
+    waiting: dict[str, int] = {}
+    for name, names in parents.items():
+        known = {parent for parent in names if parent in nodes}
+        waiting[name] = len(known)
+        for parent in known:
+            children.setdefault(parent, []).append(name)
+    ready = [name for name, count in waiting.items() if count == 0]
+    merged: dict[str, dict] = {}
+    height: dict[str, int] = {}
+    budget = _MAX_MERGED
+    while ready:
+        name = ready.pop()
+        job: dict | None = {}
+        level = 0
+        for parent in parents[name]:
+            if parent not in nodes:
+                level = max(level, 1)
+            elif parent in merged:
+                job = _gitlab_merge(job, merged[parent])
+                level = max(level, height[parent] + 1)
+            else:
+                job = None  # its parent was left out
+                break
+        if job is not None and level <= _GITLAB_EXTENDS_DEPTH:
+            job = _gitlab_merge(job, {key: value for key, value in nodes[name].items() if key != "extends"})
+            budget -= _entries(job)
+            if budget < 0:
+                return None
+            merged[name] = job
+            height[name] = level
+        for child in children.get(name, ()):
+            waiting[child] -= 1
+            if not waiting[child]:
+                ready.append(child)
+    return {name: merged[name] for name in nodes if name in merged}
+
+
+def _gitlab_outcome(when, allow_failure) -> str | None:
+    """Why a job added with this `when:` and `allow_failure:` cannot fail a green pipeline, or None."""
+    if isinstance(when, str) and when in _GITLAB_IDLE:
+        return f"when: {when}"
+    if isinstance(allow_failure, str) and not isinstance(allow_failure, _Quoted) and allow_failure in _GITLAB_TRUE:
+        return "allow_failure: true"
+    if isinstance(allow_failure, dict) and allow_failure.get("exit_codes") not in (None, []):
+        return "allow_failure: exit_codes"
+    return None
+
+
+def _gitlab_idle(job: dict) -> str | None:
+    """Why this job cannot fail a green pipeline, or None when one way of adding it can.
+
+    Without `rules:`, the job's own `when:` and `allow_failure:` decide. With
+    `rules:`, each rule that may match adds the job with its own `when:` and
+    `allow_failure:`, the job's where it sets none; a rule with no condition
+    always matches, so no later rule is reached; and when no rule matches,
+    the job is not added. A condition is not evaluated. A shape the reader
+    does not take may add the job.
+    """
+    when, allow_failure = job.get("when"), job.get("allow_failure")
+    rules = job.get("rules")
+    if rules is None:
+        return _gitlab_outcome(when, allow_failure)
+    if not isinstance(rules, list) or not rules:
+        return None
+    first = None
+    for rule in rules:
+        if not isinstance(rule, dict):
+            return None
+        cause = _gitlab_outcome(rule.get("when", when), rule.get("allow_failure", allow_failure))
+        if cause is None:
+            return None
+        first = first or cause
+        if not any(clause in rule for clause in _GITLAB_RULE_CLAUSES):
+            break
+    return "rules: " + first
+
+
+def _gitlab_pipeline_idle(tree: dict) -> bool:
+    """Can `workflow: rules:` only keep the pipeline from running?
+
+    A rule that may match and does not say `when: never` may run it; when no
+    rule matches, the pipeline does not run.
+    """
+    workflow = tree.get("workflow")
+    rules = workflow.get("rules") if isinstance(workflow, dict) else None
+    if not isinstance(rules, list) or not rules:
+        return False
+    for rule in rules:
+        if not isinstance(rule, dict) or rule.get("when", "always") != "never":
+            return False
+        if not any(clause in rule for clause in _GITLAB_RULE_CLAUSES):
+            break
+    return True
+
+
+def _gitlab_sites(tree) -> tuple[list[str], list[tuple[str, str]]] | None:
+    """Live and dead runner sites of a `.gitlab-ci.yml`: the `script:` commands of its jobs (#214).
+
+    Each command a job's `script:` runs that invokes a test runner is a site,
+    live when the job can fail a green pipeline. A job's `before_script:`
+    and `after_script:` are not its test command. A hidden job (`.name`)
+    never runs: one that a job `extends:` is a template, whose commands are
+    that job's, and any other is a job set aside, the way GitLab documents
+    disabling one, so its commands are dead sites.
+    """
+    if not isinstance(tree, dict):
+        return None
+    pipeline_idle = _gitlab_pipeline_idle(tree)
+    extended = {parent for node in tree.values() if isinstance(node, dict) for parent in _patterns(node.get("extends"))}
+    live: list[str] = []
+    dead: list[tuple[str, str]] = []
+    jobs = _gitlab_jobs(tree)
+    if jobs is None:
+        return None
+    for name, job in jobs.items():
+        if name in extended and name.startswith("."):
+            continue
+        commands = [_brief(text) for text in _strings(job.get("script")) if invokes_test_runner(text)]
+        if not commands:
+            continue
+        if name.startswith("."):
+            cause = f"hidden job {name}"
+        elif pipeline_idle:
+            cause = "workflow rules: when: never"
+        else:
+            idle = _gitlab_idle(job)
+            cause = idle and f"job {name} {idle}"
+        for command in commands:
+            if cause is None:
+                live.append(command)
+            else:
+                dead.append((command, cause))
+    return live, dead
+
+
 # The reason a file gives when the reader takes its base side and declines its
 # head side (#196 191.3). It names no weakened command, so gating reads it as
 # its own escalator, CI_BECAME_UNANALYSABLE.
@@ -940,32 +1134,48 @@ def became_unanalysable(reason: str) -> bool:
     return reason.startswith(_UNREADABLE_AT_HEAD + " (")
 
 
-def holds_runner_site(path: str, data: bytes | None) -> bool:
-    """Does this workflow or pre-commit config hold a runner site, live or dead?
+def _site_reader(path: str):
+    """(reader, inventory) for a file the runner-site reader reads, else (None, False).
 
-    Row 69's deletion rule asks whether a deleted pipeline ran a suite. A
-    step's `run:` and a hook's `entry` are commands, read as runner sites read
-    them, so a workflow whose only suite is `node --test` ran one although
-    `_runs_tests` finds no token in it (#216).
+    `inventory` marks a hook inventory, where a runner that leaves every
+    entry was removed (#196 191.7).
     """
     p = path.replace("\\", "/")
     if is_github_workflow(p):
-        sites = _workflow_sites(_read_yaml(data))
-    elif p == ".pre-commit-config.yaml":
-        sites = _precommit_sites(_read_yaml(data))
-    else:
+        return _workflow_sites, False
+    if p == ".pre-commit-config.yaml":
+        return _precommit_sites, True
+    if p == ".gitlab-ci.yml":
+        return _gitlab_sites, False
+    return None, False
+
+
+def holds_runner_site(path: str, data: bytes | None) -> bool:
+    """Does this workflow, pre-commit config or GitLab pipeline hold a runner site, live or dead?
+
+    Row 69's deletion rule asks whether a deleted pipeline ran a suite. A
+    step's `run:`, a hook's `entry` and a GitLab job's `script:` are commands,
+    read as runner sites read them, so a workflow whose only suite is `node
+    --test` ran one although `_runs_tests` finds no token in it (#216).
+    """
+    read_sites, _inventory = _site_reader(path)
+    if read_sites is None:
         return False
+    sites = read_sites(_read_yaml(data))
     return sites is not None and bool(sites[0] or sites[1])
+
+
+def _disabled(command: str, cause: str) -> str:
+    """How a site that died for `cause` reads: disabled, or for a GitLab job whose failure is allowed, unable to fail."""
+    if "allow_failure: " in cause:
+        return f"{command} can no longer fail the pipeline ({cause})"
+    return f"{command} is disabled ({cause})"
 
 
 def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None) -> list[str]:
     """Why this CI file's runners stopped executing, as `ci_weakening_lines` reasons."""
-    p = path.replace("\\", "/")
-    if is_github_workflow(p):
-        read_sites, inventory = _workflow_sites, False
-    elif p == ".pre-commit-config.yaml":
-        read_sites, inventory = _precommit_sites, True
-    else:
+    read_sites, inventory = _site_reader(path)
+    if read_sites is None:
         return []
     old = read_sites(_read_yaml(before))
     if old is None:
@@ -992,7 +1202,7 @@ def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None
     disabled = stopped & parked if shifted else Counter()
     if disabled:
         command, cause = min(site for site in new_dead if site[0] in disabled)
-        return [f"{command} is disabled ({cause})"]
+        return [_disabled(command, cause)]
     if len(new_live) < len(old_live) and len(new_dead) > len(old_dead):
         # The inventory moved a site, one live fewer and one dead more: a
         # runner reworded as it was disabled (`pytest` -> `python -m pytest`
@@ -1000,7 +1210,7 @@ def control_flow_weakenings(path: str, before: bytes | None, after: bytes | None
         # cannot prove the two are one site, so the reason names both
         # (#196 191.8).
         command, cause = min(site for site in new_dead if site[0] in parked)
-        return [f"{min(stopped)} no longer runs, and {command} is disabled ({cause})"]
+        return [f"{min(stopped)} no longer runs, and {_disabled(command, cause)}"]
     if inventory and old_live and not new_live:
         # The hook's id and name are the author's to choose and prove
         # nothing: only its entry is evidence (#196 191.7).

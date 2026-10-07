@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 120
+rule: ASSERT_REMOVED
+title: a fixture's numpy assertion call deleted is an assertion removed from the test that requests it
+origin: #286 F2 — a fixture lent its bare asserts only; v0.6.0 passes this with zero findings
+=== before: tests/test_billing.py ===
+import numpy as np
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture
+def checked():
+    np.testing.assert_allclose(total(), 78.75, rtol=1e-7)
+
+
+def test_total(checked):
+    assert total() > 0
+=== after: tests/test_billing.py ===
+import numpy as np
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture
+def checked():
+    pass
+
+
+def test_total(checked):
+    assert total() > 0
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "unit": "test_total"}]

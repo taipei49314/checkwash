@@ -1,0 +1,44 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: `when: manual` on the test job: it runs only when someone starts it
+origin: issue #214 G3 — a manual job never runs by itself, and job-level manual jobs may fail.
+=== before: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+=== after: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+  when: manual
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

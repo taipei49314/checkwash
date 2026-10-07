@@ -1,0 +1,27 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: `0 < totals()[0] == pytest.approx(78.75)` -> `approx(75)`: a chained comparison states each link
+origin: #299 — a link that is an approximate comparison keeps the reading the call gave the whole chain
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def totals():
+    return [78.75, 80.0]
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import totals
+
+
+def test_totals():
+    assert 0 < totals()[0] == pytest.approx(78.75)
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import totals
+
+
+def test_totals():
+    assert 0 < totals()[0] == pytest.approx(75)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

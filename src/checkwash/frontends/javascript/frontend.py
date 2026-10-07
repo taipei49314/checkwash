@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -24,6 +24,7 @@ from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.literals import (
     keyword_operand,
     number_operand,
+    operand_callee,
     operand_text,
     populate_delta,
     populate_expectation,
@@ -203,6 +204,9 @@ _CHAI: dict[str, _ChaiMeaning] = {
     "within": _ChaiMeaning("compare_ord", S.BOUND, 3),
     # A length check is the len(x) == n shape.
     "length": _ChaiMeaning("type_shape", S.TYPE_SHAPE, 2),
+    # `.property(name)` with no value asserts that the subject has the key:
+    # a shape check, on the property it names (#215).
+    "property": _ChaiMeaning("type_shape", S.TYPE_SHAPE),
 }
 # Readability getters. Uncalled a/an are chains too; called, they are type
 # assertions, which stay unrepresented.
@@ -243,6 +247,49 @@ _CHAI_ASSERT: dict[str, str] = {
     "isAbove": "above", "isAtLeast": "least", "isBelow": "below", "isAtMost": "most",
     "lengthOf": "length",
 }
+# assert.<method>(object, name[, value]): the assertion is on object[name]
+# (#215), with the value, where the meaning takes one, as its expectation.
+# The meaning, and whether the name is a nested path. The own forms read as
+# `.own.property` does. The negated methods stay unrepresented, as the other
+# negated assert methods do, and so does a call whose property cannot be
+# followed.
+_CHAI_ASSERT_PROPERTY: dict[str, tuple[str, bool]] = {
+    "property": ("property", False),
+    "ownProperty": ("property", False),
+    "nestedProperty": ("property", True),
+    "propertyVal": ("strict_equal", False),
+    "ownPropertyVal": ("strict_equal", False),
+    "deepPropertyVal": ("deep_equal", False),
+    "deepOwnPropertyVal": ("deep_equal", False),
+    "nestedPropertyVal": ("strict_equal", True),
+    "deepNestedPropertyVal": ("deep_equal", True),
+}
+# expect(...).<chain>.property(name[, value]) and its own-property methods.
+_CHAI_PROPERTY_METHODS = frozenset({"property", "ownProperty", "haveOwnProperty"})
+_PLAIN_KEY = re.compile(NAME + r"\Z")
+# A nested property path chai's `.nested` reads: names with dots and array indices.
+_NESTED_PATH = re.compile(NAME + r"(?:\." + NAME + r"|\[\d+\])*\Z")
+_STRING_KEY = re.compile(r"""(?P<quote>["'])(?P<body>(?:(?!(?P=quote))[^\\\n])*)(?P=quote)\Z""")
+
+
+def property_subject(subject: str, name: str, nested: bool = False) -> str | None:
+    """The subject `.property(name)` retargets an assertion to, as source text (#215).
+
+    `order` and "total" give `order.total`, a key that is no name
+    `order["unit price"]`, a computed key `order[key]`, and a nested path
+    `order.totals.gross`. A subject that is not one member chain is
+    parenthesized. A nested path that is not a literal is not followed.
+    """
+    subject = subject.strip()
+    if not re.fullmatch(NAME + r"(?:\s*\??\.\s*" + NAME + r"|\[[^\[\]]*\]|\([^()]*\))*", subject):
+        subject = f"({subject})"
+    literal = _STRING_KEY.fullmatch(name.strip())
+    if literal is None:
+        return None if nested else f"{subject}[{name.strip()}]"
+    key = literal.group("body")
+    if nested:
+        return f"{subject}.{key}" if _NESTED_PATH.fullmatch(key) else None
+    return f"{subject}.{key}" if _PLAIN_KEY.fullmatch(key) else f'{subject}["{key}"]'
 
 
 def is_js_test_path(path: str) -> bool:
@@ -412,16 +459,26 @@ def _skip_space(masked: str, position: int, end: int) -> int:
 
 def _chai_chain(
     text: str, code: bytearray, masked: str, position: int, end: int,
-) -> tuple[str, bool, list[str], int] | None:
-    """Read the chai chain after expect(...): (meaning, positive, operands, end).
+) -> tuple[str, bool, list[str], int, list[tuple[str, bool]]] | None:
+    """Read the chai chain after expect(...): (meaning, positive, operands, end, properties).
 
     Language chains are inert getters, `not` sets chai's negate flag (a second
-    `not` leaves it set) and `deep` makes equal deep. Any other flag or plugin
-    word, an unknown or malformed terminal, or a chain that continues after its
-    terminal yields None: the call stays a visible coverage gap instead of a
-    partial oracle whose dropped tail nothing would report.
+    `not` leaves it set) and `deep` makes equal deep. `.property(name)` and
+    its own-property methods move the subject to subject[name] for the rest
+    of the chain, and `properties` lists each (name operand, nested) in
+    order (#215): with a value, `.property(name, value)` is an equality on
+    the property, `deep` making it deep; without one, at the end of the
+    chain, it asserts that the key is there. `nested` reads the name as a
+    path, and `own` asks for an own property, the same assertion here. As
+    in chai, the flags stay set for the rest of the chain; `include` reads
+    them too, so a chain that reaches it with either set stays unread. Any
+    other flag or plugin word, an unknown or malformed terminal, or a chain
+    that continues after its terminal yields None: the call stays a visible
+    coverage gap instead of a partial oracle whose dropped tail nothing
+    would report.
     """
-    negated = deep = False
+    negated = deep = nested = own = False
+    properties: list[tuple[str, bool]] = []
     while True:
         step = _CHAI_STEP.match(masked, position, end)
         if step is None:
@@ -435,10 +492,27 @@ def _chai_chain(
         position = opening if called else step.end()
         if not called and word in _CHAI_CHAINS:
             continue
-        if not called and word in {"not", "deep"}:
+        if not called and word in {"not", "deep", "nested", "own"}:
             negated = negated or word == "not"
             deep = deep or word == "deep"
+            nested = nested or word == "nested"
+            own = own or word == "own"
             continue
+        if called and word in _CHAI_PROPERTY_METHODS:
+            call = _call_arguments(text, code, position, end)
+            if call is None or not 1 <= len(call[0]) <= 3:
+                return None
+            arguments, position = call
+            properties.append((arguments[0], nested and word == "property"))
+            following = _skip_space(masked, position, end)
+            continues = following < end and masked.startswith((".", "[", "(", "?."), following)
+            if len(arguments) == 1 and continues and not negated:
+                continue  # The rest of the chain asserts on the property's value.
+            if continues:
+                return None
+            if len(arguments) == 1:
+                return "property", not negated, [], position, properties
+            return ("deep_equal" if deep else "strict_equal"), not negated, [arguments[1]], position, properties
         if word in _CHAI_PROPERTIES:
             meaning, operands = _CHAI_PROPERTIES[word], []
             if called:
@@ -456,12 +530,14 @@ def _chai_chain(
             operands, position = call
         else:
             return None
+        if (nested or own) and meaning == "include":
+            return None
         if deep and meaning == "strict_equal":
             meaning = "deep_equal"
         following = _skip_space(masked, position, end)
         if following < end and masked.startswith((".", "[", "(", "?."), following):
             return None
-        return meaning, not negated, operands, position
+        return meaning, not negated, operands, position, properties
 
 
 def _asymmetric_matcher(
@@ -530,6 +606,37 @@ def _bound_readers(
     return lookup, lambda path: bindings.is_global(path, position)
 
 
+def _number_global(bindings: Bindings | None, position: int) -> Callable[[], bool] | None:
+    """Does `Number` still name the global at `position`? Asked only when an operand spells it (#226)."""
+    if bindings is None:
+        return None
+    return lambda: bindings.is_global(("Number",), position)
+
+
+# The forms whose operand is an expected value or a bound.
+_EXPECTED_FORMS = frozenset({"compare_eq", "compare_ord", "approx"})
+
+
+def _unevaluated_call(assertion: Assertion, bindings: Bindings | None, position: int) -> str | None:
+    """The operand when it is a call checkwash neither folds nor resolves (#226).
+
+    Its callee's root names a global: a builtin outside the fold set
+    (`parseFloat('75')`) or a name no scope declares (226.Q1). A callee the
+    file imports or declares is the provenance channel's, and the assertion
+    libraries' own names (`expect.any(Number)`) are matchers, not values.
+    """
+    operand = assertion.operand_source
+    if bindings is None or operand is None or assertion.right_value is not None:
+        return None
+    callee = operand_callee(operand)
+    if callee is None:
+        return None
+    root = callee.split(".")[0]
+    if not bindings.is_global((root,), position) or bindings.resolve(root, position).kind != "unknown":
+        return None
+    return operand
+
+
 def _chai_assertion(
     meaning: str, operands: list[str], source: str, span: tuple[int, int], positive: bool = True,
     undefined_global: bool = True, bindings: Bindings | None = None,
@@ -555,9 +662,11 @@ def _chai_assertion(
     )
     expected = rule.implied if rule.expected is None else operands[rule.expected]
     if expected is not None:
-        populate_expectation(assertion, expected)
+        populate_expectation(assertion, expected, _number_global(bindings, span[0]))
     if rule.expected is not None:
         assertion.operand_source = operand_text(operands[rule.expected])
+        if rule.form in _EXPECTED_FORMS:
+            assertion.unevaluated_expected = _unevaluated_call(assertion, bindings, span[0])
     if rule.delta is not None:
         if bindings is None:
             lookup, builtin = (lambda _name: None), (lambda _path: False)
@@ -569,6 +678,162 @@ def _chai_assertion(
         key = _equality_key(operands[1], strict=meaning == "strict_equal", undefined_global=undefined_global)
     _state_predicate(assertion, key, rule.asserts, not positive)
     return assertion
+
+
+# chai's should object (#215): `should.equal(actual, expected)` is
+# `expect(actual).to.equal(expected)`, `should.exist(value)` its `.exist`,
+# and `should.not.*` their negations.
+_SHOULD_METHODS: dict[str, str] = {"equal": "strict_equal", "exist": "exist"}
+_SHOULD_STEP = re.compile(r"\s*(?:\?\.|\.)\s*" + NAME)
+
+
+def _chain_start(bindings: Bindings, last: int) -> int | None:
+    """The first token of the member chain whose last token is `last`, or None.
+
+    Names joined by `.` or `?.`, with calls and indexes on them, back to the
+    chain's first name, string, parenthesized expression or array literal. A
+    `new` before the first name is part of the chain: `new Order().should`
+    reads the new instance, as `new` binds before the member access.
+    """
+    j = last
+    while j >= 0:
+        token = bindings.token(j)
+        if token in {")", "]"} and j in bindings.pairs:
+            opening = bindings.pairs[j]
+            if opening > 0 and bindings._operand_end(opening - 1):
+                j = opening - 1  # a call or an index on what comes before it
+                continue
+            return opening
+        if re.fullmatch(NAME, token) or token[:1] in {"'", '"'}:
+            if bindings.token(j - 1) in {".", "?."}:
+                j -= 2
+                continue
+            if bindings.token(j - 1) == "new" and bindings.token(j - 2) not in {".", "?."}:
+                return j - 1
+            return j
+        return None
+    return None
+
+
+def should_sites(text: str, code: bytearray, bindings: Bindings,
+                 start: int = 0, end: int | None = None) -> list[tuple[int, str, int]]:
+    """(subject start, subject, getter end) for each `.should` chain read off a value (#215).
+
+    `chai.should()` puts the `should` getter on every object, in the test
+    file or in a setup file the runner loads, so a `.should` chain is chai's
+    should interface wherever a test spells it. A `.should` no chain
+    continues from (`options.should`, `options.should = true`) asserts
+    nothing, and neither does a call of it (`chai.should()` installs the
+    getter).
+    """
+    end = len(text) if end is None else end
+    sites = []
+    for index in range(bisect_left(bindings.token_starts, start), len(bindings.tokens)):
+        token, position, token_end = bindings.tokens[index]
+        if position >= end:
+            break
+        if token != "should" or not code[position] or bindings.token(index - 1) not in {".", "?."}:
+            continue
+        if bindings.token(index + 1) not in {".", "?."} or not re.fullmatch(NAME, bindings.token(index + 2)):
+            continue
+        first = _chain_start(bindings, index - 2)
+        if first is None or bindings.tokens[first][1] < start:
+            continue
+        subject_start = bindings.tokens[first][1]
+        subject = text[subject_start:bindings.tokens[index - 1][1]].strip()
+        if subject:
+            sites.append((subject_start, subject, token_end))
+    return sites
+
+
+def _should_assertions(text: str, code: bytearray, bindings: Bindings, start: int, end: int,
+                       owned: Callable[[int], bool]) -> list[Assertion]:
+    """chai's should interface (#215), read as expect() chains are.
+
+    `value.should.<chain>` is `expect(value).<chain>`, and the should
+    object's `equal` and `exist`, with their `not` forms, take the subject
+    first. A should chain the chain reader does not take is recorded with no
+    strength, as an unread expect() call is (#196 190.5).
+    """
+    assertions: list[Assertion] = []
+    masked = bindings.masked
+    for subject_start, subject, getter_end in should_sites(text, code, bindings, start, end):
+        if not owned(subject_start):
+            continue
+        undefined_global = bindings.is_global(("undefined",), subject_start)
+        chain = _chai_chain(text, code, masked, getter_end, end)
+        if chain is not None:
+            meaning, positive, operands, span_end, properties = chain
+            target = _retargeted(subject, properties)
+            span = (subject_start, span_end)
+            assertion = target and _chai_assertion(meaning, [target, *operands], text[span[0]:span[1]],
+                                                   span, positive, undefined_global=undefined_global,
+                                                   bindings=bindings)
+            if assertion is not None:
+                assertions.append(assertion)
+                continue
+        # The chain reader declined it: an assertion whose predicate is not read.
+        cursor = getter_end
+        while True:
+            step = _SHOULD_STEP.match(masked, cursor, end)
+            if step is None:
+                break
+            cursor = step.end()
+            following = _skip_space(masked, cursor, end)
+            if following < end and masked[following] == "(":
+                call = _call_argument_spans(text, code, following, end)
+                if call is None:
+                    break
+                cursor = call[1]
+        assertions.append(Assertion(id="", form="unknown", strength=None, text=text[subject_start:cursor],
+                                    span=(subject_start, cursor), left=subject))
+    for match in CALL.finditer(masked, start, end):
+        position = match.start()
+        if not code[position] or not owned(position):
+            continue
+        value = bindings.callee(match.group("callee"), position)
+        if value.kind != "chai_should_method" or value.method not in _SHOULD_METHODS:
+            continue
+        call = _call_arguments(text, code, match.end() - 1, end)
+        if call is None:
+            continue
+        arguments, span_end = call
+        span = (position, span_end)
+        assertion = _chai_assertion(_SHOULD_METHODS[value.method], arguments, text[position:span_end], span,
+                                    not value.negated,
+                                    undefined_global=bindings.is_global(("undefined",), position),
+                                    bindings=bindings)
+        if assertion is not None:
+            assertions.append(assertion)
+    return assertions
+
+
+def _retargeted(subject: str, properties: list[tuple[str, bool]]) -> str | None:
+    """The subject after each `.property(name)` in a chain moved it (#215); None when one cannot be followed."""
+    for name, nested in properties:
+        subject = property_subject(subject, name, nested)
+        if subject is None:
+            return None
+    return subject
+
+
+_WORD_CHARACTER = re.compile(r"\w")
+
+
+def follows_new(masked: str, previous: int) -> bool:
+    """Does the text up to `previous` end in the word `new`?
+
+    `re.search(r"\\bnew$", masked[:previous + 1])`, as each call scan asks
+    it, without copying or scanning the text before (#235): `$` also
+    matches before a final newline.
+    """
+    end = previous + 1
+    for stop in ((end, end - 1) if end >= 1 and masked[end - 1] == "\n" else (end,)):
+        start = stop - 3
+        if (start >= 0 and masked.startswith("new", start)
+                and (start == 0 or not _WORD_CHARACTER.match(masked, start - 1))):
+            return True
+    return False
 
 
 def _recover_block_end(masked: str, opening: int) -> int | None:
@@ -604,7 +869,7 @@ def _callback_body(bindings: Bindings, span: tuple[int, int], *,
     This bounded structural reader uses the binding scanner's balanced tokens.
     Named callbacks, generators and computed test factories remain unknown.
     """
-    starts = [token[1] for token in bindings.tokens]
+    starts = bindings.token_starts
     first, last = bisect_left(starts, span[0]), bisect_left(starts, span[1])
     while bindings.token(first) == "(" and bindings.pairs.get(first) == last - 1:
         first, last = first + 1, last - 1
@@ -885,8 +1150,7 @@ def _test_body(text: str, code: bytearray, bindings: Bindings,
         # calls; those must not hide a later valid assertion in the same body.
         if declaration.name_end is None:
             return None
-        starts = [token[1] for token in bindings.tokens]
-        cursor = bisect_left(starts, declaration.name_end)
+        cursor = bisect_left(bindings.token_starts, declaration.name_end)
         if bindings.token(cursor) != ",":
             return None
         cursor += 1
@@ -941,7 +1205,7 @@ def _callback_receivers(bindings: Bindings, span: tuple[int, int]) -> frozenset[
     `function` callback, Mocha's `this`. A destructured context is not
     followed.
     """
-    starts = [token[1] for token in bindings.tokens]
+    starts = bindings.token_starts
     first, last = bisect_left(starts, span[0]), bisect_left(starts, span[1])
     while bindings.token(first) == "(" and bindings.pairs.get(first) == last - 1:
         first, last = first + 1, last - 1
@@ -1426,9 +1690,10 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         is_chai = value.kind in {"chai_assert", "chai_assert_method"}
         if not is_chai and value.kind not in {"node", "node_method"}:
             continue
-        if method is not None and method not in (_CHAI_ASSERT if is_chai else _ASSERT_STRENGTH):
+        if method is not None and not (
+                method in _CHAI_ASSERT or method in _CHAI_ASSERT_PROPERTY if is_chai else method in _ASSERT_STRENGTH):
             continue
-        if re.search(r"\bnew$", bindings.masked[:previous + 1]):
+        if follows_new(bindings.masked, previous):
             continue
         if method is None:
             # Function declarations (including generators and TS return
@@ -1458,7 +1723,15 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
                 continue  # A method signature, not a call followed by an ASI block.
         undefined_global = bindings.is_global(("undefined",), match.start())
         if is_chai:
-            chai_call = _chai_assertion(_CHAI_ASSERT[method or "ok"], arguments,
+            meaning = _CHAI_ASSERT.get(method or "ok")
+            if method in _CHAI_ASSERT_PROPERTY:
+                # assert.propertyVal(object, name, value) asserts on object[name].
+                meaning, nested = _CHAI_ASSERT_PROPERTY[method]
+                subject = property_subject(arguments[0], arguments[1], nested) if len(arguments) >= 2 else None
+                if subject is None:
+                    continue
+                arguments = [subject, *arguments[2:]]
+            chai_call = _chai_assertion(meaning, arguments,
                                         text[match.start():span_end], (match.start(), span_end),
                                         undefined_global=undefined_global, bindings=bindings)
             if chai_call is not None:
@@ -1479,8 +1752,9 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         if form == "compare_eq":
             # Every equality records its scalar operand. The legacy methods
             # coerce, and their key says so: equal is eq_loose (#196 190.2).
-            populate_expectation(assertion, arguments[1])
+            populate_expectation(assertion, arguments[1], _number_global(bindings, match.start()))
             assertion.operand_source = operand_text(arguments[1])
+            assertion.unevaluated_expected = _unevaluated_call(assertion, bindings, match.start())
         key = None
         if form == "truthy":
             key = "truthy"
@@ -1552,7 +1826,8 @@ _NEGATING_WORDS = frozenset({"not", "doesNotThrow", "doesNotReject"})
 # The resolved bindings whose calls are assertion APIs. A lookalike, a
 # shadowed name or a written member is not: recording it would let the
 # stand-in pair with the oracle it replaced (#196 190.5).
-_CANDIDATE_ASSERT_KINDS = frozenset({"node", "node_method", "chai_assert", "chai_assert_method"})
+_CANDIDATE_ASSERT_KINDS = frozenset({"node", "node_method", "chai_assert", "chai_assert_method",
+                                     "chai_should_method"})
 _CANDIDATE_EXPECT_KINDS = frozenset({"expect", "chai_expect", "jest_expect"})
 # node:assert methods the scan does not read. The ones it reads (`ok`,
 # `equal`, `strictEqual`, `deepEqual`, `deepStrictEqual` and `assert()`
@@ -1604,7 +1879,7 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
     """Assertion calls the scans do not represent, recorded with no strength (#196 190.5).
 
     `assert.throws(fn)`, `expect(spy).toHaveBeenCalledWith(1)` and
-    `expect(value).to.have.property("a")` are assertions whose predicate
+    `expect(value).to.have.keys("a")` are assertions whose predicate
     checkwash does not read. SPEC §3 records such a form with strength null,
     as Python records `assertRaises`: its removal is ASSERT_REMOVED, and a
     rewrite is not judged. The throw family is `raises`; the rest, and a
@@ -1627,7 +1902,7 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
             previous -= 1
         if previous >= 0 and text[previous] in ".#":
             continue
-        if re.search(r"\bnew$", masked[:previous + 1]):
+        if follows_new(masked, previous):
             continue
         callee = text[position:match.end() - 1].strip()
         spelling = _CANDIDATE_INDEX.sub(lambda index: "." + index.group("word"), callee)
@@ -1668,6 +1943,8 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
             continue  # `assert(...)` itself is the scan's.
         if kind == "chai_assert_method" and path[-1] in _CHAI_ASSERT:
             continue
+        if kind == "chai_should_method" and path[-1] in _SHOULD_METHODS:
+            continue
         if expect_call:
             if not words:
                 continue  # `expect(value)` alone asserts nothing.
@@ -1699,6 +1976,16 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
     return recorded
 
 
+def _decoded(data: bytes) -> str:
+    return data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def file_bindings(data: bytes) -> Bindings:
+    """The bindings `parse_javascript` reads a file with, for a pass that resolves names (#226)."""
+    text = _decoded(data)
+    return Bindings(text, _code_positions(text), _code_positions(text, keep_strings=True))
+
+
 def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = None) -> ParsedFile:
     """One JS/TS test file's units.
 
@@ -1706,7 +1993,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     the innermost focus (#196 187.2). It is asked only when the file holds
     focus; without it, Jest's rule decides.
     """
-    text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+    text = _decoded(data)
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
     declarations = _declarations(text, code, bindings)
@@ -1722,16 +2009,70 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
         innermost = innermost_focus is not None and innermost_focus()
         stops = _focus_stops(text, code, bindings, declarations, innermost)
     inline_body_starts: set[int] = set()
-    for call in CALL.finditer(bindings.masked):
-        if call.group("callee") in {"if", "for", "while", "switch", "catch", "with"}:
-            continue
-        arguments = _call_argument_spans(text, code, call.end() - 1, len(text))
+    openings = {call.end() - 1 for call in CALL.finditer(bindings.masked)
+                if call.group("callee") not in {"if", "for", "while", "switch", "catch", "with"}}
+    # A member call passes its callbacks as directly whatever its receiver:
+    # `[[1, 78.75]].forEach(...)`, `Object.entries(cases).forEach(...)`,
+    # `(cases).forEach(...)` and `cases?.forEach(...)` as `cases.forEach(...)`
+    # (#294). `CALL` reads only a dotted name.
+    openings.update(start for index, (token, start, _end) in enumerate(bindings.tokens)
+                    if token == "(" and bindings.token(index - 2) in {".", "?."}
+                    and re.fullmatch(NAME, bindings.token(index - 1)))
+    for opening in sorted(openings):
+        arguments = _call_argument_spans(text, code, opening, len(text))
         if arguments is None:
             continue
         for argument in arguments[0]:
             callback = _callback_body(bindings, argument)
             if callback is not None and callback[0] not in test_body_starts:
                 inline_body_starts.add(callback[0])
+    # The file's nested functions, read once and kept by each unit whose body
+    # holds them (#235). Child test callbacks are scanned as their own units;
+    # declared helpers remain visible coverage gaps. Direct inline call
+    # arguments retain the established lexical callback coverage (such as
+    # forEach); this does not prove an arbitrary callee invokes them.
+    functions = sorted((scope.start, scope.end) for scope in bindings.scopes
+                       if scope.function and scope.start not in inline_body_starts)
+    # Default parameter expressions belong to invocation of the nested
+    # function too, even though they precede its body scope.
+    parameter_positions = {bindings.tokens[index][1] for index in bindings.parameter_tokens}
+    # A TypeScript return annotation can keep the binding scanner from
+    # recognizing an arrow's parameter scope. Its body is still a nested
+    # function, and cannot donate assertions to the surrounding test.
+    arrows: list[tuple[int, int]] = []
+    for index, (token, _, _) in enumerate(bindings.tokens):
+        if token != "=>" or index + 1 >= len(bindings.tokens):
+            continue
+        body_index = index + 1
+        if bindings.token(body_index) == "{" and body_index in bindings.pairs:
+            first = bindings.tokens[body_index][2]
+            last = bindings.tokens[bindings.pairs[body_index]][1]
+        else:
+            first = bindings.tokens[body_index][1]
+            last_index = bindings._expression_end(body_index)
+            last = bindings.tokens[last_index][1] if last_index < len(bindings.tokens) else len(text)
+        inline_body = first in inline_body_starts
+        parameter_end = index - 1
+        if bindings.token(parameter_end) != ")":
+            # The same simple return annotation supported on test
+            # callbacks may separate an arrow from its parameter list.
+            while parameter_end >= 0 and (
+                re.fullmatch(NAME, bindings.token(parameter_end))
+                or bindings.token(parameter_end) in {"<", ">", "[", "]", ",", "|", "."}
+            ):
+                parameter_end -= 1
+            if bindings.token(parameter_end) == ":":
+                parameter_end -= 1
+        if bindings.token(parameter_end) == ")" and parameter_end in bindings.pairs:
+            parameter_start = bindings.pairs[parameter_end]
+            parameter_positions.update(bindings.tokens[cursor][1]
+                                       for cursor in range(parameter_start + 1, parameter_end))
+            first = bindings.tokens[parameter_start][1]
+        if not inline_body:
+            arrows.append((first, last))
+    arrows.sort()
+    function_starts = [first for first, _last in functions]
+    arrow_starts = [first for first, _last in arrows]
     units: list[ParsedUnit] = []
     for declaration in scanned:
         name = declaration.name
@@ -1745,51 +2086,9 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             start, end, unit_end, _ = callback
         body = text[declaration.start:unit_end]
         # Assertions inside another function are not this callback's direct
-        # assertions. Child test callbacks are scanned as their own units;
-        # declared helpers remain visible coverage gaps. Direct inline call
-        # arguments retain the established lexical callback coverage (such as
-        # forEach); this does not prove an arbitrary callee invokes them.
-        nested = [(scope.start, scope.end) for scope in bindings.scopes
-                  if scope.function and start < scope.start < end
-                  and scope.start not in inline_body_starts]
-        # Default parameter expressions belong to invocation of the nested
-        # function too, even though they precede its body scope.
-        parameter_positions = {bindings.tokens[index][1] for index in bindings.parameter_tokens}
-        # A TypeScript return annotation can keep the binding scanner from
-        # recognizing an arrow's parameter scope. Its body is still a nested
-        # function, and cannot donate assertions to the surrounding test.
-        for index, (token, _, _) in enumerate(bindings.tokens):
-            if token != "=>" or index + 1 >= len(bindings.tokens):
-                continue
-            body_index = index + 1
-            if bindings.token(body_index) == "{" and body_index in bindings.pairs:
-                first = bindings.tokens[body_index][2]
-                last = bindings.tokens[bindings.pairs[body_index]][1]
-            else:
-                first = bindings.tokens[body_index][1]
-                last_index = bindings._expression_end(body_index)
-                last = bindings.tokens[last_index][1] if last_index < len(bindings.tokens) else len(text)
-            inline_body = first in inline_body_starts
-            parameter_end = index - 1
-            if bindings.token(parameter_end) != ")":
-                # The same simple return annotation supported on test
-                # callbacks may separate an arrow from its parameter list.
-                while parameter_end >= 0 and (
-                    re.fullmatch(NAME, bindings.token(parameter_end))
-                    or bindings.token(parameter_end) in {"<", ">", "[", "]", ",", "|", "."}
-                ):
-                    parameter_end -= 1
-                if bindings.token(parameter_end) == ":":
-                    parameter_end -= 1
-            if bindings.token(parameter_end) == ")" and parameter_end in bindings.pairs:
-                parameter_start = bindings.pairs[parameter_end]
-                parameter_positions.update(bindings.tokens[cursor][1]
-                                           for cursor in range(parameter_start + 1, parameter_end))
-                first = bindings.tokens[parameter_start][1]
-            if inline_body:
-                continue
-            if start < first < end:
-                nested.append((first, last))
+        # assertions: the file's nested functions inside this callback's body.
+        nested = (functions[bisect_right(function_starts, start):bisect_left(function_starts, end)]
+                  + arrows[bisect_right(arrow_starts, start):bisect_left(arrow_starts, end)])
 
         def owned(position: int) -> bool:
             return (position not in parameter_positions
@@ -1819,12 +2118,13 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
                 chain = (_chai_chain(text, code, bindings.masked, subject_end, end)
                          if receiver != "jest_expect" else None)
                 if chain is not None:
-                    meaning, positive, operands, span_end = chain
+                    meaning, positive, operands, span_end, properties = chain
+                    subject = _retargeted(subject_arguments[0], properties)
                     span = (candidate.start(), span_end)
-                    chai_call = _chai_assertion(meaning, [subject_arguments[0], *operands],
-                                                text[span[0]:span[1]], span, positive,
-                                                undefined_global=undefined_global,
-                                                bindings=bindings)
+                    chai_call = subject and _chai_assertion(meaning, [subject, *operands],
+                                                            text[span[0]:span[1]], span, positive,
+                                                            undefined_global=undefined_global,
+                                                            bindings=bindings)
                     if chai_call is not None:
                         assertions.append(chai_call)
                 continue
@@ -1863,8 +2163,9 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             )
             if form in {"compare_eq", "compare_ord", "approx"}:
                 # The expected value, or an ordering matcher's bound (#198 Q2).
-                populate_expectation(assertion, arguments[0])
+                populate_expectation(assertion, arguments[0], _number_global(bindings, span_start))
                 assertion.operand_source = operand_text(arguments[0])
+                assertion.unevaluated_expected = _unevaluated_call(assertion, bindings, span_start)
             if form == "approx" and assertion.positive:
                 populate_precision(assertion, arguments[1] if len(arguments) > 1 else None)
             if assertion.positive and (
@@ -1893,6 +2194,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             assertions.append(assertion)
         assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
                           if owned(assertion.span[0]))
+        assertions.extend(_should_assertions(text, code, bindings, start, end, owned))
         covered = [assertion.span for assertion in assertions]
         assertions.extend(_candidate_assertions(text, code, bindings, start, end, covered, owned))
         assertions.sort(key=lambda assertion: assertion.span)

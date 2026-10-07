@@ -1,0 +1,30 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: invoiceTotal(items).should.equal(78.75) respelled as expect(invoiceTotal(items)).to.equal(78.75)
+origin: issue #215 — the same check in chai's expect interface
+=== before: test/billing.spec.js ===
+import { expect, should } from "chai";
+should();
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    invoiceTotal(items).should.equal(78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+import { expect, should } from "chai";
+should();
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    expect(invoiceTotal(items)).to.equal(78.75);
+  });
+});
+=== expect ===
+[]

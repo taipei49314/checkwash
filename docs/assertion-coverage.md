@@ -45,8 +45,13 @@ diagnostics; the supplement does not claim to analyze that top-level execution.
 Nested test callbacks own their own assertions. Declared or assigned helper
 functions and their default parameter expressions do not donate assertions to
 the surrounding test. Direct inline callback arguments to other calls retain
-the existing lexical coverage, including iterator callbacks; this does not
-prove that an arbitrary callee executes its callback. Vitest's optional second
+the existing lexical coverage, including iterator callbacks, whatever the
+call's receiver: `cases.forEach(cb)`, `[[1, 78.75]].forEach(cb)`,
+`Object.entries(cases).forEach(cb)`, `(cases).forEach(cb)` and
+`cases?.forEach(cb)` alike (#294); this does not prove that an arbitrary
+callee executes its callback. A call result called directly (`f()(cb)`) and an
+optional call (`fn?.(cb)`) are not member calls, and their callbacks stay
+nested functions. Vitest's optional second
 `expect(actual, message)` argument is diagnostic text, not the asserted subject.
 
 Preserving controls cover assertion messages, multiline formatting, equivalent
@@ -217,12 +222,30 @@ digits, as in JavaScript (#196 190.3). unittest passes `places=p` when
 relative tolerance (`rel=`, `pytest.approx`'s default) states no absolute
 bound, so a bound rewritten into one is still compared as new slack, and so
 is a pair with several tolerances at once. A negated comparison
-(`assertNotAlmostEqual`, a negated `approx`) passes when the values are far
-apart, so its tolerance orders the other way, and checkwash still compares
-it in the positive direction
+(`assertNotAlmostEqual`, `!=` or `not` around `approx`) passes when the
+values are far apart, so its tolerance orders the other way: it records no
+tolerance, as in JavaScript, and a change of it is unknown rather than read
+backwards. `== approx(x)` -> `!= approx(x)` is the polarity inversion that
+`== 78.75` -> `!= 78.75` is
 ([#284](https://github.com/taipei49314/checkwash/issues/284)). The source tests
 are in
-[`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py).
+[`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py)
+and [`tests/test_issue284_negated_approx.py`](../tests/test_issue284_negated_approx.py).
+
+An assertion is an approximate comparison only where it states one
+([#299](https://github.com/taipei49314/checkwash/issues/299)): `pytest.approx`
+is an operand of the assertion's own `==`, `!=`, `in` or `not in`, or sits
+inside one through a list, tuple, set or dict display; or that comparison is
+a link of a chained comparison (`0 < x == approx(y)`), is conjoined with
+`and`, or is asserted by `all(...)` over a comprehension, since each part
+must hold. Anything else is read as a plain assertion:
+`x == approx(y) or True` and `any(x == approx(y) for ...)` are truthy,
+`(x == approx(y)) is not None` compares with None, and
+`repr(approx(1.0)) == '1.0 ± 1.0e-06'` compares the string. A call that
+receives an approx object, such as `operator.eq(x, approx(y))`, is read as
+the call, as `operator.eq(x, 78.75)` is: checkwash cannot tell an operator
+from any other function. The source tests are in
+[`tests/test_issue299_approx_structure.py`](../tests/test_issue299_approx_structure.py).
 
 ### Python tolerance calls
 
@@ -280,19 +303,21 @@ torch's omitted pair, cannot be read; a known tolerance replaced on the same
 subject by one that cannot be read, such as
 `torch.testing.assert_close(a, b, rtol=1e-5, atol=1e-8)` ->
 `torch.testing.assert_close(a, b)`, is an unverifiable replacement
-(`ASSERT_WEAKENED`), as in JavaScript.
+(`ASSERT_WEAKENED`), as in JavaScript. numpy's and torch's assertion calls
+are lent to the test as a bare `assert` is: by a fixture it requests, its own
+or a conftest's, by an autouse fixture, and by a helper another file defines
+([#286](https://github.com/taipei49314/checkwash/issues/286)).
 
 Not read: a negated call (`assert not math.isclose(...)`, `assertFalse(...)`),
 which passes when the values are far apart, so its tolerance orders the other
-way and is not recorded, as in JavaScript (#284 does the same for
-`pytest.approx`); other numpy and torch helpers (`assert_approx_equal`'s
-significant digits, `assert_array_less`, `assert_array_max_ulp`, torch's
-deprecated `assert_allclose`); a predicate inside a comparison or a boolean
-operator (`assert math.isclose(a, b) == True`,
-`assert isclose(a, b) and ok`); a name bound to numpy by anything but an
-import or `pytest.importorskip`; and an assertion call in a fixture or in a
-helper another file defines, which lend the test their bare `assert`s only
-([#286](https://github.com/taipei49314/checkwash/issues/286)). A call inside
+way and is not recorded, as in JavaScript and, since #284, for a negated
+`pytest.approx` and `assertNotAlmostEqual`; other numpy and torch helpers
+(`assert_approx_equal`'s significant digits, `assert_array_less`,
+`assert_array_max_ulp`, torch's deprecated `assert_allclose`); a predicate
+inside a comparison or a boolean operator
+(`assert math.isclose(a, b) == True`, `assert isclose(a, b) and ok`); and a
+name bound to numpy by anything but an import or `pytest.importorskip`. A call
+inside
 `pytest.raises(AssertionError)` is read as positive, as unittest's assertion
 methods are. A `decimal` rewritten into `assert_allclose`'s `rtol` and `atol`,
 the migration numpy's documentation recommends, is a pair of several
@@ -337,18 +362,55 @@ takes an existing rung; the strength lattice is unchanged.
 | `above`/`below`/`least`/`most` and their aliases; `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` | `compare_ord`, BOUND | the bound operand |
 | `within` | `compare_ord`, BOUND | none |
 | `lengthOf`/`length(n)`; `assert.lengthOf` | `type_shape`, TYPE_SHAPE | none |
+| `property(name)`, with `own`/`nested`, `ownProperty`/`haveOwnProperty`; `assert.property`/`ownProperty`/`nestedProperty` | `type_shape`, TYPE_SHAPE, on the property | none |
+| `property(name, value)`, with `own`/`nested`; `assert.propertyVal`/`ownPropertyVal`/`nestedPropertyVal` | `compare_eq`, EXACT_VALUE, on the property | the value |
+| `deep.property(name, value)`; `assert.deepPropertyVal`/`deepOwnPropertyVal`/`deepNestedPropertyVal` | `compare_eq`, EXACT_STRUCT, on the property | the value |
+
+A property assertion is an assertion on the property it names
+([#215](https://github.com/taipei49314/checkwash/issues/215)), as chai makes
+it the subject of the rest of the chain:
+`expect(order).to.have.property("total", 78.75)`,
+`.property("total").that.equals(78.75)` and
+`assert.propertyVal(order, "total", 78.75)` all compare `order.total` with
+78.75, so respelling one as another, or as
+`expect(order.total).to.equal(78.75)`, reports nothing, while dropping or
+rewriting the value is judged as for `equal`. A literal name reads as
+`order.total` (`order["unit price"]` when it is not an identifier), a computed
+one as `order[key]`, and a `nested` path as the member chain it spells; a
+nested path that is not a literal is not followed. As in chai, `deep`,
+`nested` and `own` stay set after the property, so
+`.nested.property("a.b").that.has.property("c.d", 1)` compares `order.a.b.c.d`.
+Without a value, `.property(name)` asserts only that the key is there: a shape
+check on the TYPE_SHAPE rung, so `.property("total", 78.75)` ->
+`.property("total")` reads EXACT_VALUE -> TYPE_SHAPE. Neither presence nor
+`.exist` implies the other, but their rungs are ordered: `.exist` on the
+property's value -> `.property(name)` reads as a strengthening, and the
+reverse as a weakening. `own` reads as the plain property, so dropping it is
+not reported.
+
+Should-style is read as the `expect` chain it is (#215):
+`value.should.<chain>` is `expect(value).<chain>`, with the same words, flags,
+forms and rungs, and the object `chai.should()` returns reads
+`should.equal(actual, expected)`, `should.exist(value)` and their
+`should.not` forms subject first, as does an undeclared `should`, the global
+`chai/register-should` sets to that object. `chai.should()` adds the getter to every
+object and often runs in a setup file the runner loads, so a `.should` chain
+is read wherever a test spells it, whether or not its file sets it up. A
+`.should` that no chain continues (`options.should`, `options.should = true`)
+and a call of it (`chai.should()`) assert nothing.
 
 Everything else is recorded with no strength
 ([below](#assertions-checkwash-does-not-read), #196 190.5) and stays visible
-as a coverage gap: type checks (`a(...)`, `instanceof`), `property`, `keys`,
-`members`, `oneOf`, `throw`, `satisfy`, `empty`, `NaN`, change assertions, the
-`own`, `nested`, `any`, `all`, `ordered` and `length` flags, plugin words such
-as chai-as-promised's `eventually`, a chain that continues after its terminal,
-and negated assert methods (`notEqual`, `isNotOk`, `notExists`, ...). Deleting
-one reports its removal, and so does replacing a represented assertion with
-one; rewriting one is not judged. Plugins that overwrite a
-core assertion word are not modeled. Should-style assertions
-(`value.should.equal(...)`) are not scanned and produce no diagnostic.
+as a coverage gap: type checks (`a(...)`, `instanceof`), `keys`, `members`,
+`oneOf`, `throw`, `satisfy`, `empty`, `NaN`, change assertions, `include` with
+the `own` or `nested` flag, the `any`, `all`, `ordered` and `length` flags,
+plugin words such as chai-as-promised's `eventually`, a chain that continues
+after its terminal, a negated property with a chain after it, and negated
+assert methods (`notEqual`, `isNotOk`, `notExists`, `notProperty`, ...),
+whether spelled with `expect`, `assert` or `.should`. Deleting one reports its
+removal, and so does replacing a represented assertion with one; rewriting
+one is not judged. Plugins that overwrite a core assertion word are not
+modeled.
 
 The `.null` spelling is chai's `=== null`, so it shares `equal(null)`'s
 EXACT_VALUE rung while Jest's `toBeNull()` keeps NON_NULL. The rungs differ,
@@ -477,10 +539,12 @@ An unkeyed pair whose polarity flipped is an inversion only on the same
 subject (SPEC §4). A bare Python `assert` records no subject, and neither
 does a `pytest.approx` comparison, so for such a pair what each statement
 checks decides: the tested expression with its `not`s peeled, or the side of
-the approx comparison that is not the approx call (#331). `assert
-result.okay` -> `assert not result.okay` is an inversion, and `assert
-result.okay` -> `assert not result.exception`, which checks another
-attribute, is a replacement; both block without repair evidence.
+the approx comparison that is not the approx call (#331). A negated
+comparison (`!=`, `not in`, `is not`) anywhere in the statement is read in
+its positive form, as a `not` is peeled, so `assert {'t': total()} == {'t':
+pytest.approx(78.75)}` -> `!=` is an inversion (#284). `assert result.okay` -> `assert not result.okay` is an inversion,
+and `assert result.okay` -> `assert not result.exception`, which checks
+another attribute, is a replacement; both block without repair evidence.
 
 Residuals of this reading:
 
@@ -524,7 +588,9 @@ What each JS assertion records:
   coercive ones included (chai's `assert.equal`, Node's legacy `equal` and
   `deepEqual`); `toBeCloseTo` and `closeTo` record their center, and a
   hand-rolled `Math.abs(x - 78.75) < bound` its literal centre (189.2). The
-  literal reader reads through parentheses and TypeScript wrappers (T4, T5).
+  literal reader reads through parentheses and TypeScript wrappers (T4, T5),
+  and `Number(<literal>)` folds to its value while `Number` names the global
+  (T6, #226).
 - **Bounds.** The ordering matchers, chai's bound words and
   `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` record their bound as a
   Python bound is recorded (198.Q2, Q4). A bound read as a hand-rolled
@@ -543,12 +609,22 @@ How the rules read them, as Python's do (198.IR amendment 2):
   `toBeLessThan(80)` -> `.below(1e12)` included, and a name or call replaced by
   a different one: `toBe(EXPECTED_A)` -> `toBe(EXPECTED_B)` reports
   "expected call rewritten to a different call ['EXPECTED_A'] -> ['EXPECTED_B']".
-  As in Python, the same names with a changed argument (`build(1)` ->
-  `build(2)`) or member (`config.total` -> `config.subtotal`) do not.
-- A literal and an expression, in either direction, stay unreported until
-  [#226](https://github.com/taipei49314/checkwash/issues/226) decides them for
-  both frontends: `toBe(78.75)` -> `toBe(Number(75))` (T6) and
-  `toBe(EXPECTED)` -> `toBe(75)` pass. Python reports the second (#60).
+  As in Python, the same names with a changed member (`config.total` ->
+  `config.subtotal`) do not.
+- A literal and a name or call follow one definition with Python since
+  [#226](https://github.com/taipei49314/checkwash/issues/226)
+  ([Expected provenance](expected-provenance.md#conversions-unevaluated-calls-and-javascript-226)).
+  A folded `Number(<literal>)` is a literal: `toBe(78.75)` -> `toBe(Number(75))`
+  (T6) reports "expected value rewritten 78.75 -> 75.0". A literal replaced by
+  a call to a global outside the fold set or to a name no scope declares
+  (`parseFloat('75')`), or such a call rewritten into another (`build(1)` ->
+  `build(2)`), reports "expected value replaced by an expression checkwash does
+  not evaluate". A literal replaced by what an import, a declaration or a
+  declared function gives reports EXPECTATION_DEFINITION_CHANGED with the
+  value resolved: `toBe(78.75)` -> `toBe(OTHER)` reads "78.75 -> ./total.OTHER".
+- A name or call replaced by a literal is not read in JS: `toBe(EXPECTED)` ->
+  `toBe(75)` passes, where Python reports it (#60).
+  [#292](https://github.com/taipei49314/checkwash/issues/292) asks for a ruling.
 - TOLERANCE_LOOSENED compares two known tolerances. A tolerance checkwash
   cannot read (`closeTo(v, delta())`, `toBeCloseTo(v, precision())`) is
   unknown, and a known tolerance replaced by an unknown one on the same subject
@@ -610,7 +686,7 @@ reason that says its rewrite is not judged. The source tests are in
 ## Make unrepresented assertion candidates visible
 
 `checkwash check` scans both sides of changed JS/TS test files for bounded Node,
-chai `assert` and `expect(...)` candidates. It compares their source positions
+chai `assert`, `expect(...)` and `.should` candidates. It compares their source positions
 with assertions represented by the frontend. A candidate in a file with no
 recognized test unit, or inside another assertion, can therefore still produce
 a diagnostic.
@@ -695,7 +771,8 @@ chai's `expect` and `assert` (including Vitest's `assert` re-export).
 Lexical declarations and function parameters can shadow those bindings, and
 a name that any write may have reached is unknown, as in the hand-rolled
 tolerance section above; a lookalike object cannot retain a real assertion's
-strength. Unresolved assertion
+strength. chai's should interface needs no binding: a `.should` chain is a
+candidate wherever it is spelled (#215). Unresolved assertion
 candidates still produce diagnostics. Dynamic module names, arbitrary wrapper
 functions, computed properties and template interpolations remain outside this
 evidence. This is a bounded static scan, not complete JavaScript scope or

@@ -1,0 +1,37 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a duplicate survivor that requests no skipping conftest fixture still earns DUPLICATE_REMAINS
+origin: issue #266 U2 (ruled 2026-10-06): the survivor's conftest chain is read, and a fixture it does not request leaves it live
+=== head: tests/conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def needs_network():
+    pytest.skip("network tests are disabled")
+=== head: tests/test_copy.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+
+
+def test_other():
+    assert total() > 0
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_other():
+    assert total() > 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["DUPLICATE_REMAINS"], "unit": "test_total"}]

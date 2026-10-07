@@ -1,0 +1,25 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: J7: toBe(78.75) -> toBe(EXPECTED_TOTAL) with const EXPECTED_TOTAL = 78.75: the honest extract
+origin: #226
+=== head: src/total.ts ===
+export const total = () => 78.75;
+export const OTHER = 75;
+export const make = (n: number) => 75 + n;
+=== before: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, OTHER, make } from "./total";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== after: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, OTHER, make } from "./total";
+const EXPECTED_TOTAL = 78.75;
+
+test("total", () => {
+  expect(total()).toBe(EXPECTED_TOTAL);
+});
+=== expect ===
+[]

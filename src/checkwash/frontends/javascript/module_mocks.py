@@ -52,10 +52,14 @@ keep the real code. An object-literal key in an assertion names a property;
 it does not read the binding of the same name.
 
 First-party means a `./` or `../` specifier that stays inside the repository
-and outside dependency/build output. Bare specifiers are packages and
-builtins - faking network, time and the filesystem is hygiene - and aliases
-(`@/`, tsconfig paths, `#imports`, root-relative `/src`) resolve through
-runner configuration this scan does not execute.
+and outside dependency/build output, or an alias of one (#196 188.6,
+`aliases.py`): an `@/` or `~/` specifier, the same alias string naming the
+same module, and a specifier the base side's root `tsconfig.json` maps
+through `compilerOptions.paths`, which names the module at the path it maps
+to. Other bare specifiers are packages and builtins - faking network, time
+and the filesystem is hygiene - and other aliases (`#imports`, root-relative
+`/src`, a bare specifier `baseUrl` alone resolves, bundler and runner alias
+configuration) resolve through configuration this scan does not read.
 
 Silent rather than guessed: setup files, `__mocks__` directories and
 `automock` configuration (the conftest analogue, which needs that same
@@ -74,6 +78,7 @@ import posixpath
 import re
 from dataclasses import dataclass
 
+from checkwash.frontends.javascript.aliases import ALIAS_PREFIXES, Aliases
 from checkwash.frontends.javascript.bindings import CALL, NAME, Bindings
 from checkwash.frontends.javascript.frontend import (
     _call_argument_spans,
@@ -123,27 +128,63 @@ _MEMBER_REPLACEMENTS = {
 }
 
 
-def module_key(test_path: str, specifier: str) -> str | None:
-    """The repository module a relative specifier names, extension-insensitive.
-
-    Only `./` and `../` specifiers are first-party by construction. A bare
-    name is a package or a builtin, and an alias resolves through runner
-    configuration this scan does not execute. A specifier that leaves the
-    repository root, or lands in dependency or build output, names nothing
-    the project owns. `./billing`, `./billing.js` and `./billing.ts` are one
-    module, as are `./src` and `./src/index.js`.
-    """
-    if not specifier.startswith(("./", "../")) or any(char in specifier for char in "?#\\"):
-        return None
-    directory = test_path.replace("\\", "/").rpartition("/")[0]
-    path = posixpath.normpath(posixpath.join(directory, specifier))
-    if path in {".", ".."} or path.startswith(("../", "/")) or is_artifact(path):
-        return None
+def _module_path(path: str) -> str | None:
+    """A module's key from its normalized path: extension-insensitive, `index` its directory."""
     for extension in _EXTENSIONS:
         if path.endswith(extension) and len(path) > len(extension):
             path = path[:-len(extension)]
             break
     return path[:-len("/index")] if path.endswith("/index") else path
+
+
+def module_key(test_path: str, specifier: str, aliases: Aliases | None = None) -> str | None:
+    """The first-party module a specifier names, extension-insensitive.
+
+    A `./` or `../` specifier names the repository module it reaches from the
+    test file. A specifier the base side's root tsconfig.json maps through
+    `paths` names the module at the path it maps to, and an `@/` or `~/`
+    specifier it does not map is a key of its own, so the same alias string
+    in a mock and an import is one module (#196 188.6). Any other bare name
+    is a package or a builtin, or an alias resolved through configuration
+    this scan does not read. A specifier that leaves the repository root, or
+    lands in dependency or build output, names nothing the project owns.
+    `./billing`, `./billing.js` and `./billing.ts` are one module, as are
+    `./src` and `./src/index.js`, and `@/billing` and `@/billing/index.ts`.
+    """
+    if any(char in specifier for char in "?#\\"):
+        return None
+    if specifier.startswith(("./", "../")):
+        directory = test_path.replace("\\", "/").rpartition("/")[0]
+        path = posixpath.normpath(posixpath.join(directory, specifier))
+    else:
+        target = aliases.target(specifier) if aliases is not None else None
+        if target is not None:
+            if "\\" in target:
+                return None
+            path = posixpath.normpath(target)
+        elif specifier.startswith(ALIAS_PREFIXES):
+            rest = posixpath.normpath(specifier[2:])
+            if rest in {".", ".."} or rest.startswith(("../", "/")) or is_artifact(rest):
+                return None
+            return specifier[:2] + _module_path(rest)
+        else:
+            return None
+    if path in {".", ".."} or path.startswith(("../", "/")) or is_artifact(path):
+        return None
+    return _module_path(path)
+
+
+def _possibly_one(module: str, other: str) -> bool:
+    """Can two keys name one module? Equal keys do. An alias the tsconfig
+    does not map names whatever runner configuration maps it to, so it may
+    be any key whose path ends with its own: `@/billing` may be
+    `src/billing` or `~/billing` (#196 188.6). Only the base side's
+    installations are asked, so a respelled mock stays silent rather than
+    guessed new; a consumed read still needs one key."""
+    if module == other:
+        return True
+    return any(alias.startswith(ALIAS_PREFIXES) and (key == alias[2:] or key.endswith("/" + alias[2:]))
+               for alias, key in ((module, other), (other, module)))
 
 
 @dataclass(frozen=True)
@@ -215,8 +256,9 @@ def _uses_original(factory: str) -> bool:
 class _Side:
     """One side of a JS test file: its static imports and its installations."""
 
-    def __init__(self, path: str, data: bytes):
+    def __init__(self, path: str, data: bytes, aliases: Aliases | None = None):
         self.path = path
+        self.aliases = aliases
         # The frontend's normalization, so assertion spans index this text.
         self.text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
         self.code = _code_positions(self.text)
@@ -281,7 +323,7 @@ class _Side:
         scope, value = found
         if scope == 0 and name in self.imports:
             specifier, export = self.imports[name]
-            module = module_key(self.path, specifier)
+            module = module_key(self.path, specifier, self.aliases)
             return _Binding(module, export, -1, 0) if module else None
         parsed = _module_expression(value)
         if parsed is None:
@@ -289,7 +331,7 @@ class _Side:
         specifier, export, loader = parsed
         if loader == "require" and bindings.resolve("require", position).kind != "require":
             return None
-        module = module_key(self.path, specifier)
+        module = module_key(self.path, specifier, self.aliases)
         if module is None:
             return None
         return _Binding(module, export, bindings.scopes[scope].declarations[name][0], scope)
@@ -457,7 +499,7 @@ class _Side:
         literal = _STRING.fullmatch(args[0]) if args else None
         if literal is None and runner == "vi" and args:
             literal = _IMPORT_CALL.fullmatch(args[0])
-        module = module_key(self.path, literal.group(2)) if literal is not None else None
+        module = module_key(self.path, literal.group(2), self.aliases) if literal is not None else None
         if module is None:
             return None
         names = None
@@ -578,7 +620,7 @@ class _Side:
         for this one (#196 188.2, as Python). A hoisted module mock runs for
         the whole file wherever it is written."""
         for install in self.installs:
-            if install.module != module:
+            if not _possibly_one(install.module, module):
                 continue
             if not install.hoisted and any(start <= install.position < end for start, end in other_tests):
                 continue
@@ -590,9 +632,15 @@ class _Side:
         return False
 
 
-def module_mock_events(ir, changes) -> list[tuple[str, str, str, str, tuple[int, int]]]:
-    """(path, unit, target, text, span) for each new stand-in an existing JS oracle reads."""
+def module_mock_events(ir, changes, read_tsconfig=None) -> list[tuple[str, str, str, str, tuple[int, int]]]:
+    """(path, unit, target, text, span) for each new stand-in an existing JS oracle reads.
+
+    `read_tsconfig` reads the base side's root tsconfig.json, whose `paths`
+    resolve alias specifiers on both sides (#196 188.6). It is called once,
+    and only when a mock or an import spells a specifier that is not relative.
+    """
     files = {file.path: file for file in ir.files if judged_as_test(file)}
+    aliases = Aliases(read_tsconfig)
     events: set[tuple[str, str, str, str, tuple[int, int]]] = set()
     for change in changes:
         path = change.path.replace("\\", "/")
@@ -608,10 +656,10 @@ def module_mock_events(ir, changes) -> list[tuple[str, str, str, str, tuple[int,
                  and not unit.before.markers and not unit.after.markers]
         if not units:
             continue
-        head = _Side(path, change.after)
+        head = _Side(path, change.after, aliases)
         if not head.installs:
             continue
-        base = (_Side((change.old_path or change.path).replace("\\", "/"), change.before)
+        base = (_Side((change.old_path or change.path).replace("\\", "/"), change.before, aliases)
                 if _TRIGGER.search(change.before) else None)
         base_tests = [unit.before.span for unit in file.units if unit.before is not None]
         for unit in units:

@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 124
+rule: ASSERT_WEAKENED
+title: `all(t == pytest.approx(78.75) for t in totals())` -> `any(...)` asks one item, not every one
+origin: #299 — both read as the same approximate comparison
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def totals():
+    return [78.75, 80.0]
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import totals
+
+
+def test_totals():
+    assert all(t == pytest.approx(78.75) for t in totals())
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import totals
+
+
+def test_totals():
+    assert any(t == pytest.approx(78.75) for t in totals())
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
