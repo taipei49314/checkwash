@@ -1785,10 +1785,17 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
         innermost = innermost_focus is not None and innermost_focus()
         stops = _focus_stops(text, code, bindings, declarations, innermost)
     inline_body_starts: set[int] = set()
-    for call in CALL.finditer(bindings.masked):
-        if call.group("callee") in {"if", "for", "while", "switch", "catch", "with"}:
-            continue
-        arguments = _call_argument_spans(text, code, call.end() - 1, len(text))
+    openings = {call.end() - 1 for call in CALL.finditer(bindings.masked)
+                if call.group("callee") not in {"if", "for", "while", "switch", "catch", "with"}}
+    # A member call passes its callbacks as directly whatever its receiver:
+    # `[[1, 78.75]].forEach(...)`, `Object.entries(cases).forEach(...)`,
+    # `(cases).forEach(...)` and `cases?.forEach(...)` as `cases.forEach(...)`
+    # (#294). `CALL` reads only a dotted name.
+    openings.update(start for index, (token, start, _end) in enumerate(bindings.tokens)
+                    if token == "(" and bindings.token(index - 2) in {".", "?."}
+                    and re.fullmatch(NAME, bindings.token(index - 1)))
+    for opening in sorted(openings):
+        arguments = _call_argument_spans(text, code, opening, len(text))
         if arguments is None:
             continue
         for argument in arguments[0]:

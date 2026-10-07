@@ -6820,3 +6820,44 @@ Found during this round: nothing new to file.
 - **Not measured:** the JS false-positive cost, which waits on #212.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-106 (2026-10-06): an iterator callback keeps its assertions whatever the call's receiver (#294)
+
+`docs/assertion-coverage.md` states the rule for a JS/TS test's inline
+callbacks: "Direct inline callback arguments to other calls retain the
+existing lexical coverage, including iterator callbacks; this does not
+prove that an arbitrary callee executes its callback." The frontend
+applied it only where `CALL` matched, a callee spelled as a dotted name.
+`cases.forEach(cb)` was read; `[[1, 78.75]].forEach(cb)`,
+`Object.entries(cases).forEach(cb)`, `(cases).forEach(cb)` and
+`cases?.forEach(cb)` were not, so their callbacks were nested functions and
+their assertions no unit's. Weakening or deleting the assertion in the
+table-driven spelling passed with zero findings and a coverage notice.
+Found during #235 and filed as #294, which proposed no new ruling: it
+applies the stated rule to spellings it missed.
+
+**As implemented:** besides `CALL`'s matches, every member call opens a
+call whose direct callback arguments are inline bodies: a `(` that follows
+a name that follows `.` or `?.`, whatever comes before the `.`. The tokens
+already tell a string or a comment apart, so `` `a,b`.split(",") `` is one.
+No callee name is added or removed, and nothing else reads these calls.
+
+**Readings flagged for approval:**
+1. **A member call, not any call.** A call result called directly
+   (`each(cases)(cb)`) and an optional call (`fn?.(cb)`) are not member
+   calls, and their callbacks stay nested functions, as before.
+2. **A named callback stays a helper.** A callback passed by name or
+   declared elsewhere is a declared helper, as before: its assertions remain
+   a coverage gap.
+
+**Cost.**
+- **New findings:** ASSERT_WEAKENED, ASSERT_REMOVED and the other
+  assertion rules, where an assertion in such a callback changes.
+- **The corpus is byte for byte the same**: no fixture before this round
+  spells the shape.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file, and only such a file is parsed this
+  way.
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
