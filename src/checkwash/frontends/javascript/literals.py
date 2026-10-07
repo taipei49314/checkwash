@@ -596,7 +596,52 @@ def operand_text(expression: str) -> str | None:
     return "".join(parts).strip() or None
 
 
-_CALLEE = re.compile(r"[A-Za-z_$][\w$]*(?:[ \t]*\.[ \t]*[A-Za-z_$][\w$]*)*")
+# One token of an operand: a quoted string, a run of word characters, a
+# punctuator of up to four characters, or any other single character.
+_OPERAND_TOKEN = re.compile(
+    r"""(['"])(?:\\.|(?!\1).)*\1|[\w$]+|>>>=|\.\.\.|===|!==|\*\*=|<<=|>>=|>>>|&&=|\|\|=|\?\?="""
+    r"""|=>|==|!=|<=|>=|&&|\|\||\?\?|\?\.|\*\*|\+\+|--|<<|>>|[+*%&|^-]=|\S""",
+    re.DOTALL,
+)
+
+
+def _double_quoted(literal: str) -> str:
+    """A quoted string in double quotes with its value unchanged: `'a"b'` reads `"a\\"b"`."""
+    out: list[str] = []
+    body = literal[1:-1]
+    i = 0
+    while i < len(body):
+        if body[i] == "\\" and i + 1 < len(body):
+            out.append("'" if body[i + 1] == "'" else body[i:i + 2])
+            i += 2
+            continue
+        out.append('\\"' if body[i] == '"' else body[i])
+        i += 1
+    return '"' + "".join(out) + '"'
+
+
+def comparable_operand(text: str) -> str:
+    """An operand with the formatting that changes no value taken out (#226).
+
+    Two spellings of one value read alike: a quoted string in double quotes,
+    tokens joined by one space, and no comma before a closing bracket. A
+    template literal or a slash, which may open a regular expression, keeps
+    the text as written.
+    """
+    tokens: list[str] = []
+    for match in _OPERAND_TOKEN.finditer(text):
+        token = match.group()
+        if token in ("`", "/"):
+            return text
+        if token[0] in "'\"":
+            token = _double_quoted(token)
+        elif token in (")", "]", "}") and len(tokens) > 1 and tokens[-1] == "," and tokens[-2] not in "([{,":
+            tokens.pop()
+        tokens.append(token)
+    return " ".join(tokens)
+
+
+_CALLEE =re.compile(r"[A-Za-z_$][\w$]*(?:[ \t]*\.[ \t]*[A-Za-z_$][\w$]*)*")
 
 
 def operand_callee(source: str) -> str | None:
