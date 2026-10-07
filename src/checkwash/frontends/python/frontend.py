@@ -362,12 +362,78 @@ def _literal_repr(node: ast.AST, text: str, *, fold_string_methods=True, convers
     return None
 
 
-def _find_approx_call(node: ast.AST) -> ast.Call | None:
-    for sub in ast.walk(node):
-        if isinstance(sub, ast.Call):
-            name = _dotted(sub.func)
-            if name in ("pytest.approx", "approx"):
-                return sub
+def _is_approx_call(node: ast.AST) -> bool:
+    return isinstance(node, ast.Call) and _dotted(node.func) in ("pytest.approx", "approx")
+
+
+def _operand_approx_call(node: ast.AST) -> ast.Call | None:
+    """The approx call an operand is, or holds through container displays."""
+    if _is_approx_call(node):
+        return node  # type: ignore[return-value]
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        children = list(node.elts)
+    elif isinstance(node, ast.Dict):
+        children = list(node.values)
+    elif isinstance(node, ast.Starred):
+        children = [node.value]
+    else:
+        return None
+    for child in children:
+        found = _operand_approx_call(child)
+        if found is not None:
+            return found
+    return None
+
+
+# The operators `pytest.approx` answers: equality, and membership, which tests
+# equality item by item.
+_APPROX_OPS = (ast.Eq, ast.NotEq, ast.In, ast.NotIn)
+
+
+def _comparison_approx_call(test: ast.AST) -> tuple[ast.cmpop, ast.Call] | None:
+    """The `==`, `!=`, `in` or `not in` that compares with an approx call, and the call.
+
+    The call is one of its operands, or sits inside one through container
+    displays (`[total()] == approx([78.75])`, `{"t": approx(78.75)} == d`). A
+    chained comparison holds each of its links, so a link that is such a
+    comparison is stated too (`0 < total() == approx(78.75)`): the first one.
+    """
+    if not isinstance(test, ast.Compare):
+        return None
+    operands = (test.left, *test.comparators)
+    for i, op in enumerate(test.ops):
+        if not isinstance(op, _APPROX_OPS):
+            continue
+        for operand in operands[i:i + 2]:
+            found = _operand_approx_call(operand)
+            if found is not None:
+                return op, found
+    return None
+
+
+def _asserted_approx_comparison(test: ast.AST) -> tuple[ast.cmpop, ast.Call] | None:
+    """The approximate comparison an assertion states: its operator and its approx call (#299).
+
+    The assertion's own comparison, or a link of it; or, since each part must
+    hold, a comparison it conjoins with `and`, or one `all(...)` asserts for
+    every item of a comprehension. Anywhere else (a disjunction, `any(...)`, a
+    call's arguments, a comparison of a comparison's result) the assertion is
+    not that comparison: `x == approx(y) or True` was read as it, so the
+    disjunction that makes it hold everywhere was no change at all. Such a
+    test is read as the plain path reads it.
+    """
+    found = _comparison_approx_call(test)
+    if found is not None:
+        return found
+    if isinstance(test, ast.BoolOp) and isinstance(test.op, ast.And):
+        for value in test.values:
+            found = _asserted_approx_comparison(value)
+            if found is not None:
+                return found
+        return None
+    if (isinstance(test, ast.Call) and _dotted(test.func) == "all" and len(test.args) == 1
+            and not test.keywords and isinstance(test.args[0], (ast.GeneratorExp, ast.ListComp))):
+        return _asserted_approx_comparison(test.args[0].elt)
     return None
 
 
@@ -830,17 +896,17 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         return _Classified("tautology", S.TAUTOLOGY)
     if _is_unfalsifiable(test, text):
         return _Classified("tautology", S.TAUTOLOGY)
-    approx = _find_approx_call(test)
     # `assert not x == approx(y)` is read by the `not` branch below, which
     # negates what its operand states (#284).
-    if approx is not None and not (isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not)):
+    stated = _asserted_approx_comparison(test)
+    if stated is not None:
+        op, approx = stated
         # The comparison the call sits in states the polarity, as for a plain
         # comparison: `x != approx(y)` asserts that the values differ. It read
         # as positive, so `==` -> `!=` was no change at all (#284). A negated
         # approximate comparison passes when the values are far apart, so its
         # tolerance orders the other way and is not recorded, as in JavaScript.
-        positive = not (isinstance(test, ast.Compare) and len(test.ops) == 1
-                        and isinstance(test.ops[0], (ast.NotEq, ast.IsNot, ast.NotIn)))
+        positive = not isinstance(op, (ast.NotEq, ast.NotIn))
         eps, kind = _approx_epsilon(approx, text) if positive else (None, None)
         # The argument of the approx call is the expected value; recording it
         # puts `approx(105.0)` -> `approx(100.0)` in front of

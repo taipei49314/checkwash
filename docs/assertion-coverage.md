@@ -232,6 +232,21 @@ are in
 [`tests/test_tolerance_absolute_bound.py`](../tests/test_tolerance_absolute_bound.py)
 and [`tests/test_issue284_negated_approx.py`](../tests/test_issue284_negated_approx.py).
 
+An assertion is an approximate comparison only where it states one
+([#299](https://github.com/taipei49314/checkwash/issues/299)): `pytest.approx`
+is an operand of the assertion's own `==`, `!=`, `in` or `not in`, or sits
+inside one through a list, tuple, set or dict display; or that comparison is
+a link of a chained comparison (`0 < x == approx(y)`), is conjoined with
+`and`, or is asserted by `all(...)` over a comprehension, since each part
+must hold. Anything else is read as a plain assertion:
+`x == approx(y) or True` and `any(x == approx(y) for ...)` are truthy,
+`(x == approx(y)) is not None` compares with None, and
+`repr(approx(1.0)) == '1.0 ± 1.0e-06'` compares the string. A call that
+receives an approx object, such as `operator.eq(x, approx(y))`, is read as
+the call, as `operator.eq(x, 78.75)` is: checkwash cannot tell an operator
+from any other function. The source tests are in
+[`tests/test_issue299_approx_structure.py`](../tests/test_issue299_approx_structure.py).
+
 ### Python tolerance calls
 
 Issue [#222](https://github.com/taipei49314/checkwash/issues/222) showed that
