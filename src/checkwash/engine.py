@@ -60,6 +60,7 @@ from checkwash.frontends.python.frontend import (
     parse_conftest_level,
     parse_python,
 )
+from checkwash.frontends.python.helper_skips import HelperModule
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
 from checkwash.frontends.python.param_input_identity import mark_param_input_identity
@@ -623,6 +624,53 @@ def build_ir(
             directory = directory.rpartition("/")[0]
         return tuple(levels)
 
+    # The modules a test module imports a helper from (#272, second stage),
+    # resolved as an imported assertion helper's module is
+    # (`_merge_crossfile_oracles`: a dotted module from the root, a dotless
+    # one beside the test) and read as the conftest chain is: a file the diff
+    # changes on its own side, any other once from the strict head snapshot,
+    # within the same limits. Only a test or conftest module is read.
+    helper_modules: dict[tuple[str, int], HelperModule | None] = {}
+
+    def _helper_module(mpath: str, side: int) -> HelperModule | None:
+        key = (mpath, side if mpath in chain_sides else -1)
+        if key in helper_modules:
+            return helper_modules[key]
+        data = None
+        if config.role_of(mpath) in ("test", "conftest"):
+            if mpath in chain_sides:
+                data = chain_sides[mpath][side]
+            elif root_reader is not None:
+                if chain_reads[0] >= _MAX_CHAIN_READS:
+                    raise EngineError("imported helper modules exceed the source read limit")
+                chain_reads[0] += 1
+                data = root_reader(mpath)
+                if data is not None and not isinstance(data, bytes):
+                    raise EngineError("imported helper strict snapshot returned invalid source bytes")
+                if data is not None:
+                    chain_reads[1] += len(data)
+                    if chain_reads[1] > _MAX_CHAIN_BYTES:
+                        raise EngineError("imported helper modules exceed the source byte limit")
+                    if report_context is not None:
+                        report_context.snapshot(mpath, 0, data)
+                        report_context.snapshot(mpath, 1, data)
+        helper_modules[key] = HelperModule(data, mpath) if data is not None else None
+        return helper_modules[key]
+
+    def _imported_helpers(tpath: str, side: int):
+        """`(module, original) -> outcomes` for the test module at `tpath` on `side`."""
+        tdir = tpath.rpartition("/")[0]
+
+        def resolve(module: str, original: str) -> tuple:
+            if "." in module:
+                mpath = module.replace(".", "/") + ".py"
+            else:
+                mpath = f"{tdir}/{module}.py" if tdir else f"{module}.py"
+            helper = _helper_module(mpath, side)
+            return helper.outcomes(original) if helper is not None else ()
+
+        return resolve
+
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
     oracle_sources: dict[tuple[str, int], bytes | None] = {}
     strict_oracle_sources: set[tuple[str, int]] = set()
@@ -866,14 +914,17 @@ def build_ir(
             reaches_chain = collect and not is_conftest and change.synthetic not in (
                 "root_helper_importer", "expected_provenance_importer")
             if change.before is not None:
+                before_path = (change.old_path or path).replace("\\", "/")
                 before_parsed = parse_python(
                     change.before, collect_tests=collect, conftest=is_conftest,
-                    chain=_conftest_chain((change.old_path or path).replace("\\", "/"), 0) if reaches_chain else (),
+                    chain=_conftest_chain(before_path, 0) if reaches_chain else (),
+                    imported=_imported_helpers(before_path, 0) if reaches_chain else None,
                 )
             if change.after is not None:
                 after_parsed = parse_python(
                     change.after, collect_tests=collect, conftest=is_conftest,
                     chain=_conftest_chain(path, 1) if reaches_chain else (),
+                    imported=_imported_helpers(path, 1) if reaches_chain else None,
                 )
         elif is_js_test:
             # Each side is judged under its own runner's focus rule.
@@ -1402,7 +1453,9 @@ def build_ir(
                 data = head_reader(path)
                 if data is None:
                     continue
-                parsed = parse_python(data, collect_tests=True, chain=_conftest_chain(path, 1))
+                parsed = parse_python(
+                    data, collect_tests=True, chain=_conftest_chain(path, 1), imported=_imported_helpers(path, 1)
+                )
                 if not parsed.parse_ok:
                     continue
                 consts = _gate_constants(parsed, after_by_path, head_reader)
