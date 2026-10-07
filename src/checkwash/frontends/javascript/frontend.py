@@ -24,6 +24,7 @@ from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.literals import (
     keyword_operand,
     number_operand,
+    operand_callee,
     operand_text,
     populate_delta,
     populate_expectation,
@@ -530,6 +531,37 @@ def _bound_readers(
     return lookup, lambda path: bindings.is_global(path, position)
 
 
+def _number_global(bindings: Bindings | None, position: int) -> Callable[[], bool] | None:
+    """Does `Number` still name the global at `position`? Asked only when an operand spells it (#226)."""
+    if bindings is None:
+        return None
+    return lambda: bindings.is_global(("Number",), position)
+
+
+# The forms whose operand is an expected value or a bound.
+_EXPECTED_FORMS = frozenset({"compare_eq", "compare_ord", "approx"})
+
+
+def _unevaluated_call(assertion: Assertion, bindings: Bindings | None, position: int) -> str | None:
+    """The operand when it is a call checkwash neither folds nor resolves (#226).
+
+    Its callee's root names a global: a builtin outside the fold set
+    (`parseFloat('75')`) or a name no scope declares (226.Q1). A callee the
+    file imports or declares is the provenance channel's, and the assertion
+    libraries' own names (`expect.any(Number)`) are matchers, not values.
+    """
+    operand = assertion.operand_source
+    if bindings is None or operand is None or assertion.right_value is not None:
+        return None
+    callee = operand_callee(operand)
+    if callee is None:
+        return None
+    root = callee.split(".")[0]
+    if not bindings.is_global((root,), position) or bindings.resolve(root, position).kind != "unknown":
+        return None
+    return operand
+
+
 def _chai_assertion(
     meaning: str, operands: list[str], source: str, span: tuple[int, int], positive: bool = True,
     undefined_global: bool = True, bindings: Bindings | None = None,
@@ -555,9 +587,11 @@ def _chai_assertion(
     )
     expected = rule.implied if rule.expected is None else operands[rule.expected]
     if expected is not None:
-        populate_expectation(assertion, expected)
+        populate_expectation(assertion, expected, _number_global(bindings, span[0]))
     if rule.expected is not None:
         assertion.operand_source = operand_text(operands[rule.expected])
+        if rule.form in _EXPECTED_FORMS:
+            assertion.unevaluated_expected = _unevaluated_call(assertion, bindings, span[0])
     if rule.delta is not None:
         if bindings is None:
             lookup, builtin = (lambda _name: None), (lambda _path: False)
@@ -1479,8 +1513,9 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         if form == "compare_eq":
             # Every equality records its scalar operand. The legacy methods
             # coerce, and their key says so: equal is eq_loose (#196 190.2).
-            populate_expectation(assertion, arguments[1])
+            populate_expectation(assertion, arguments[1], _number_global(bindings, match.start()))
             assertion.operand_source = operand_text(arguments[1])
+            assertion.unevaluated_expected = _unevaluated_call(assertion, bindings, match.start())
         key = None
         if form == "truthy":
             key = "truthy"
@@ -1699,6 +1734,16 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
     return recorded
 
 
+def _decoded(data: bytes) -> str:
+    return data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def file_bindings(data: bytes) -> Bindings:
+    """The bindings `parse_javascript` reads a file with, for a pass that resolves names (#226)."""
+    text = _decoded(data)
+    return Bindings(text, _code_positions(text), _code_positions(text, keep_strings=True))
+
+
 def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = None) -> ParsedFile:
     """One JS/TS test file's units.
 
@@ -1706,7 +1751,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     the innermost focus (#196 187.2). It is asked only when the file holds
     focus; without it, Jest's rule decides.
     """
-    text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+    text = _decoded(data)
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
     declarations = _declarations(text, code, bindings)
@@ -1863,8 +1908,9 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             )
             if form in {"compare_eq", "compare_ord", "approx"}:
                 # The expected value, or an ordering matcher's bound (#198 Q2).
-                populate_expectation(assertion, arguments[0])
+                populate_expectation(assertion, arguments[0], _number_global(bindings, span_start))
                 assertion.operand_source = operand_text(arguments[0])
+                assertion.unevaluated_expected = _unevaluated_call(assertion, bindings, span_start)
             if form == "approx" and assertion.positive:
                 populate_precision(assertion, arguments[1] if len(arguments) > 1 else None)
             if assertion.positive and (
