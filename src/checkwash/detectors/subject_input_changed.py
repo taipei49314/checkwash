@@ -47,6 +47,7 @@ from collections import Counter
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.expectation_identity import same_known_js_scalar
+from checkwash.ir.markers import parse_text
 from checkwash.ir.model import IR, judged_as_test, param_tables
 
 _MAX_CALL_ARGS = 32
@@ -68,10 +69,10 @@ def _parse_call(expr_text: str | None) -> ast.Call | None:
     """The subject expression as a plain call with readable arity, or None."""
     if not expr_text:
         return None
-    try:
-        node = ast.parse(expr_text, mode="eval").body
-    except (SyntaxError, MemoryError, RecursionError):
+    tree = parse_text(expr_text, mode="eval")
+    if tree is None:
         return None
+    node = tree.body
     if not isinstance(node, ast.Call):
         return None
     if len(node.args) > _MAX_CALL_ARGS or len(node.keywords) > _MAX_CALL_ARGS:
@@ -104,11 +105,10 @@ def _resolve_value(node: ast.expr, assertion, side, file, before: bool):
             text = constants[name]
     if not text:
         raise _Unresolved
-    try:
-        expr = ast.parse(text, mode="eval").body
-    except (SyntaxError, MemoryError, RecursionError):
+    tree = parse_text(text, mode="eval")
+    if tree is None:
         raise _Unresolved
-    return _literal(expr)
+    return _literal(tree.body)
 
 
 def _provider_stable(file, unit, func: ast.expr, b, a) -> bool:
@@ -219,9 +219,11 @@ def _changed_arguments(file, unit, b, a):
 def _literal_row(row) -> tuple | None:
     values = []
     for cell in row:
+        parsed = parse_text(cell, mode="eval")
+        if parsed is None:
+            return None
         try:
-            parsed = ast.parse(cell, mode="eval").body
-            values.append(ast.literal_eval(parsed))
+            values.append(ast.literal_eval(parsed.body))
         except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
             return None
     return tuple(values)

@@ -85,6 +85,7 @@ from checkwash.frontends.python.expected_provenance import importer_changes as e
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
+from checkwash.ir.markers import parse_text
 from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, Marker, judged_as_test, normalize_text
 from checkwash.pyenv import known_baseline
 from checkwash.report.context import ReportContext
@@ -342,9 +343,12 @@ def _canonical_constants(raw: dict[str, str]) -> dict[str, str]:
     """
     out: dict[str, str] = {}
     for name, seg in raw.items():
+        tree = parse_text(seg, mode="eval")
+        if tree is None:
+            continue
         try:
-            out[name] = ast.unparse(ast.parse(seg, mode="eval"))
-        except (SyntaxError, ValueError):
+            out[name] = ast.unparse(tree)
+        except ValueError:
             continue
     return out
 

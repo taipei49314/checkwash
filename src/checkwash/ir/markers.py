@@ -5,11 +5,14 @@ A Marker's `text` is the decorator or call source as written; its optional
 D6 need the same reading of them: the engine to decide which names it must
 resolve, gating to evaluate the condition. Every parse failure degrades to
 None — an unreadable condition stays unevaluable and earns nothing.
+
+`parse_text` is how shared code parses text that may not be Python (#319).
 """
 
 from __future__ import annotations
 
 import ast
+import warnings
 
 
 def marker_call(text: str) -> ast.Call | None:
@@ -21,13 +24,28 @@ def marker_call(text: str) -> ast.Call | None:
     return node if isinstance(node, ast.Call) else None
 
 
+def parse_text(text: str, mode: str = "exec") -> ast.AST | None:
+    """`ast.parse` of text that may not be Python, without its warnings; None if it fails.
+
+    Shared code reads assertion texts, subjects and whole sources with Python's
+    parser, and some of them are JavaScript or TypeScript. The tokenizer warns
+    on such text (`0.invalid` is an invalid decimal literal, `'\\d'` an
+    invalid escape) before the parse fails, and the warning reached stderr
+    naming no file and no line of the user's code (#319).
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            return ast.parse(text, mode=mode)
+        except (SyntaxError, RecursionError, ValueError, TypeError, MemoryError):
+            return None
+
+
 def parse_expr(text: str) -> ast.AST | None:
     # Wrapped in parens so multi-line sources (a guard recorded from a
     # multi-line `if`) parse without continuation errors.
-    try:
-        return ast.parse(f"({text})", mode="eval").body
-    except (SyntaxError, RecursionError, ValueError, MemoryError):
-        return None
+    tree = parse_text(f"({text})", mode="eval")
+    return tree.body if tree is not None else None
 
 
 def bare_names(node: ast.AST) -> set[str]:

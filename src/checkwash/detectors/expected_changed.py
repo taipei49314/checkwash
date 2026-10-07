@@ -21,6 +21,7 @@ import re
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.frontends.javascript.literals import operand_names
 from checkwash.ir.astutil import same_expr
+from checkwash.ir.markers import parse_text
 from checkwash.ir.model import Assertion, FileIR, IR, judged_as_test
 from checkwash.detectors.snapshot_expectation import detect as detect_stored_expectations
 from checkwash.frontends.python.constant_renames import assertions_renamed
@@ -33,8 +34,11 @@ def _numeric_comparison(assertion: Assertion):
     operand. Chained comparisons, bool/complex/infinite values and unittest
     method calls stay outside this narrow restoration check.
     """
+    tree = parse_text(assertion.text)
+    if tree is None:
+        return None
     try:
-        body = ast.parse(assertion.text).body
+        body = tree.body
         if len(body) != 1 or not isinstance(body[0], ast.Assert):
             return None
         compare = body[0].test
