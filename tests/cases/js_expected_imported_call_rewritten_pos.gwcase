@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 122
+rule: EXPECTATION_DEFINITION_CHANGED
+title: J5: toBe(make(1)) -> toBe(make(2)), make imported: ./total.make(1) -> ./total.make(2)
+origin: #226
+=== head: src/total.ts ===
+export const total = () => 78.75;
+export const OTHER = 75;
+export const make = (n: number) => 75 + n;
+=== before: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, OTHER, make } from "./total";
+
+test("total", () => {
+  expect(total()).toBe(make(1));
+});
+=== after: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, OTHER, make } from "./total";
+
+test("total", () => {
+  expect(total()).toBe(make(2));
+});
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

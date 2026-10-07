@@ -146,7 +146,7 @@ schema_version = 1
 "i198/T3" = "block"  # 198.Q3: node:assert/strict's equal is strictEqual, so 78.75 -> 75 is an expected-value change; was undecided
 "i198/T4" = "block"  # 198.Q3: the literal reader reads through parentheses; was undecided
 "i198/T5" = "block"  # 198.Q3: the literal reader reads through a TypeScript cast; was undecided
-"i198/T6" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T6" = "block"  # #226 (196.followup.expected-provenance, 2026-10-03): Number(<literal>) folds to its value; was undecided
 
 # --- i199: #199 setup-skip markers trip the collection-inventory withhold
 "i199/C1" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"
