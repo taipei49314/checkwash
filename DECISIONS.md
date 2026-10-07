@@ -7218,3 +7218,226 @@ passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
 keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-118 (2026-10-07): AVA's and tap's tests are read (#233)
+
+AVA's and tap's assertions are methods of the `t` each test callback
+receives, and neither was read. `t.is(total(), 78.75)` ->
+`t.truthy(total())` passed with zero findings wherever the file was parsed
+(#233 A3, T2). Their default layouts collect `tests/**`, a path that is no
+JS test path for Node's runner or Jest, so beneath `tests/` the file was
+never parsed and even a deleted test passed (A1, A2, T1). The ruling of
+2026-10-03 (196.followup.ava-tap-tests-dir) asked for runner evidence, a
+layout row and the dialect. The owner confirmed the issue's direction on
+2026-10-06 (the maintainer decision on #233): an `ava` or `tap` import, or a
+base root `package.json` naming one of them alone, names the runner, with
+evidence-only rows; layout rows from the runners' defaults; and AVA's and
+tap's `t` assertions mapped onto the existing lattice and predicate keys,
+read only on the callback's own `t` (and tap's top-level `t`).
+
+**As implemented:**
+- `frontends/javascript/runners.py`: `ava` and `tap` imports and requires
+  name the runner, and so does a base root `package.json` that names one of
+  them and no other runner. AVA 8's (`lib/globs.js`, `lib/extensions.js`)
+  and tap 21's (`@tapjs/config`'s `include` and `exclude`) defaults are
+  their rows, in `EVIDENCE_ONLY` beside Bun's and Deno's. Those rows
+  collect JS/TS extensions only, so any other file is answered without
+  reading them, and a Python-only diff does not pay for the new two.
+- `frontends/javascript/paths.py`: those rows give a file test obligations
+  only on its own evidence (`is_js_test_file`), either side's import being
+  enough.
+- `frontends/javascript/bindings.py`: AVA's test function (its default
+  export, with its modifiers and hooks, `test.serial`, `test.failing`,
+  `test.skipIf(cond)(...)`, `test.macro(fn)` and the rest) passes AVA's `t`
+  to the callback it declares. tap's module (its default export and named
+  `t`, its CommonJS export, which is `t` itself, and a `test` imported or
+  required from it) declares subtests whose callback gets tap's `t`, and
+  `t.test(...)` on any of them declares the next level. A method of either
+  `t` resolves by name, for the assertion scan and the coverage inventory:
+  AVA 8's methods, and tap 21's with tap 16's `expectUncaughtException`
+  and synonyms (reading 7).
+- `frontends/javascript/frontend.py`: the dialect (`_AVA_METHODS`,
+  `_TAP_METHODS`) is read with chai's meanings (`_chai_assertion`); the
+  other assertions are recorded with no strength (#196 190.5); AVA's
+  `serial` is a neutral modifier, so a serial test is a unit.
+
+Readings the decision leaves to the implementation:
+
+1. **The meanings**, subject first: AVA's `is` (Object.is) and tap's
+   `equal` (===) are a strict equality, and `not` its negation;
+   `deepEqual`, `same` and `strictSame` the structural equality, and their
+   negations; AVA's `like` and tap's `has`/`hasStrict` membership (PATTERN),
+   as chai's deep `include` is, since each asserts a subset of fields;
+   `true` and `false` the `=== true` and `=== false` keys; `truthy`, AVA's
+   `assert` and tap's `ok` truthiness, `falsy` and `notOk` its negation;
+   `regex` and tap's `match` a pattern, and their negations. A negation is
+   read as chai's `.not` is (D-115's `should.not`). The others are recorded
+   with no strength: AVA's `throws` and `throwsAsync` and tap's `throws` and
+   `rejects` as `raises`, and `notThrows`, `snapshot`, `fail`, tap's `type`,
+   `hasProp` and its forms, `matchOnly`, `matchStrict` and their negations,
+   `resolves`, `resolveMatch`, `emits`, `error`, `matchSnapshot`,
+   `resolveMatchSnapshot` and tap 16's `expectUncaughtException` as
+   `unknown`. `t.pass()`, `t.plan(n)` and an assertion AVA skips
+   (`t.is.skip(...)`) assert nothing.
+2. **tap's `same` is loose for scalars** (`==`), and it reads as the
+   structural equality, as Node's legacy `deepEqual` does. So
+   `t.equal(x, 5)` -> `t.same(x, 5)` is not reported, as
+   `assert.strictEqual(x, 5)` -> `assert.deepEqual(x, 5)` is not.
+3. **Whose `t`.** A `t` is read where it is the first parameter of a
+   callback passed to AVA's test function or to one of tap's declarers, and
+   where it is tap's root `t`, inside a test unit. tap's root test is no
+   unit: an assertion at a tap file's top level, outside every subtest, is a
+   coverage notice, as a call outside a test unit is for every runner. An
+   object named `t`, a `t` the file writes over, a `t` passed to a helper
+   and tape's `t` are not read.
+4. **tap's module exports by name what tap 16 or tap 21 exports.** tap 21's
+   ES module exports some assertions (`ok`, `same`, `match`, ...) and not
+   others; tap 16's exports `equal`, `strictSame`, `rejects` and a few more.
+   A name one of them does not export throws on import under it, before any
+   test runs, so reading the union hides nothing. A synonym or `hasProp` is
+   `t`'s only. tap's CommonJS export is `t`, which has every method.
+5. **The manifest counts AVA and tap among the runners**, as the decision
+   says, so a root `package.json` that names Jest and AVA, or Mocha and
+   tap, is now a mix and unknown, where it proved Jest or Mocha before.
+   Continuity then falls back to the union of the Jest and node:test
+   defaults, and focus to Jest's rule.
+6. **AVA's `.only` stays in its file.** AVA runs each test file in a worker
+   with a runner of its own (`lib/worker/base.js`), so its focus is read as
+   Jest's and Vitest's is: added to a file whose units it turns off none of,
+   it is not reported for the whole suite.
+7. **tap 16's synonyms are read; older names are not.** tap 16 deprecated
+   and tap 18 removed the synonyms its `lib/synonyms.js` defines
+   (`t.deepEqual`, `t.equals`, `t.isDeeply`, `t.isa`, `t.true`, ..., and
+   the all-lowercase and snake_case spelling of every camelCase name, 214
+   in all). Each reads as the method it names, as tap 16 runs it; under tap
+   18 or later a synonym throws, so reading one hides nothing. The sweep's
+   tap histories use them (yargs's `t.deepEqual`, node-lru-cache's
+   `t.similar` and `t.isa`). Not read: AVA's names before 1.0 (`t.ok`,
+   `t.same`, `t.regexTest`), AVA's macro objects
+   (`test.macro({exec(t) {}})`), tap's `t.skip(name, fn)`, `t.todo(...)`
+   and `t.only(...)`, which declare no unit, so a subtest respelled
+   `t.skip(...)` reads as removed, and a test whose callback is a function
+   the file names rather than writes inline, as AVA's macro form
+   `test(title, macro, ...args)` does: it lends the unit nothing, as a
+   declared function lends no other runner's test anything (#320). A test
+   that gets its runner through another module
+   (`import test from './helpers/test.js'`) is not one of their test paths.
+
+**Tests and fixtures.**
+- **Tests:** 209 in `tests/test_issue233_ava_tap.py`. Fifty-four mutants of
+  the round's code each fail them or the fixtures: an `ava` or `tap`
+  import, require, default import or manifest entry not read; a modifier,
+  a hook, the curried `skipIf` or a receiver path not followed; tap's
+  named exports read as `t`'s methods, or read as tap 21's alone; a meaning
+  or its polarity changed; the throw family, an unread method or a bound
+  method's name not recorded; a member of a call's result read as `t`; a
+  layout row or exclusion changed; AVA's rows or focus scope dropped; tap
+  16's synonyms not looked up, their lowercase or snake_case spellings
+  dropped, or an entry of the table lost; `resolveMatchSnapshot` or
+  `expectUncaughtException` not recorded; a synonym on a `t` the file
+  writes over not a coverage notice.
+- **Fixtures** (12), each `_pos` passing on v0.6.0 with zero findings:
+  - row 107: `js_ava_tests_dir_unit_deleted_pos` (A1);
+  - row 126: `js_ava_tests_dir_weakened_pos` (A2), `js_ava_is_to_truthy_pos`
+    (A3), `js_ava_expected_rewrite_pos`, `js_tap_tests_dir_weakened_pos`
+    (T1), `js_tap_equal_to_ok_pos` (T2), `js_tap_assertion_deleted_pos` and
+    `js_tap16_synonym_weakened_pos`;
+  - controls with no finding on either:
+    `js_tests_dir_helper_without_runner_neg` (a JS file under `tests/` that
+    names neither runner),
+    `js_ava_true_respelled_as_is_neg`, `js_tap_same_respelled_strict_neg`
+    and `js_tap16_synonym_respelled_neg`.
+
+Every existing fixture keeps its expectation, and `tools/emit_corpus.py`
+gives the base's 805 records byte for byte and the 12 new ones. The chai
+mutation inventory (`tests/data/javascript_chai_mutations.json`, 39
+records) keeps every verdict.
+
+**Fingerprints, messages and IR.** No corpus fingerprint moves. A coverage
+diagnostic for an AVA or tap call names its family (`AVA assertion
+candidate ...`, `tap assertion candidate ...`). The IR does not change
+shape.
+
+**Cost.** Measured on five JavaScript histories whose tests use AVA or
+tap: got and execa (AVA), node-semver and node-lru-cache (tap), and yargs
+(tap until 2014). The set is every non-merge commit whose JS or TS diff
+adds or removes a line calling a method of a `t` (`t.<name>(`): 1,766
+commits, 1,764 readable on both engines. The round's engine was run
+against the base branch's (`c704a0c`). 311 records change and 40 verdicts
+move, so blocked goes from 34 to 58: 32 commits start blocking and 8 stop.
+- **The 8 that stop were false blocks.** A test respelled `test.serial(...)`
+  read as one that disappeared (TEST_DISABLED high), because `serial` was
+  no modifier the reader knew: execa `7bf6ac26`, `9435a34a`, `45475e7d`,
+  `ff22803f`, `9a2b00f4`, `2ddec78c` and `f0715464`, and got `0863bcd5`.
+- **True positives: 15 of the 32.** Each commit's diff shows the edit was
+  meant:
+  - four loosen a check: an IP that may now also be `::1` (got
+    `8122d96e`), an error code that may be either of two (got
+    `891dcbea`), an exit-code name replaced by `t.true(failed)` (execa
+    `55337f79`), and a message cut to its first words (execa `5587ae1d`);
+  - eight replace or delete a check: got `81fc00aa` (tests named for
+    stripping a standard port now assert a non-standard one, and an
+    `instanceof` check is gone), `48b817ee`, `464515f1` and `2bc2b90f`;
+    execa `9a641b0c`, `e55dc8bd` and `0070738c`; and yargs `58798d8d`,
+    whose finding says the expected value stayed the same when the
+    expected object was rewritten too: a JS object or array is never
+    compared as an expected value (filed as #323);
+  - three rewrite an expected value with the behaviour or input it follows
+    (execa `68986b79`, node-lru-cache `ac2a7f49`, yargs `50451226`).
+
+  Each is reported for a reviewer, as the same edit spelled with
+  node:assert or chai already was.
+- **False positives: 16 of the 32, each a class of the existing reader.**
+  The base engine blocks the node:assert or chai twin of each class the
+  same way (probed one by one):
+  - eight move checks into a function the test names as its callback, an
+    AVA macro (execa `97c0a0bd`, `da7aec7a`, `81f0b2d4`, `282d1895`,
+    `6cf1c5e7` and `14485c75`), or into a helper the test calls with its
+    `t` (execa `c09bb188`, node-semver `cb71dbbd`). Filed as #320, and
+    named in row 126's residuals;
+  - two respell a `t.fail()` sentinel in `try`/`catch` as `t.throws(...)`
+    (got `21c5c78d`, `39bf8282`);
+  - one drops a `t.notThrows(...)` around a call the test awaits anyway
+    (execa `1861b5eb`);
+  - one moves a negation from the subject into the assertion,
+    `t.truthy(!x)` -> `t.false(x)` (got `f5e227ed`; filed as #322);
+  - one respells an expected string as a template literal (got
+    `a03201fb`; filed as #321);
+  - one splits a test in two, and destructuring makes the halves' subjects
+    the same names (execa `f5172cde`);
+  - one moves checks into nested subtests with their subjects respelled
+    (node-semver `18c21b24`);
+  - one migrates a file from tap to mocha and chai, renaming the tests and
+    the subject's variable (yargs `d1f082c3`).
+- **One mixed commit:** got `f7500d47` (tests rewritten with
+  `async`/`await`) drops a real check, the synchronous throw of the
+  callback API; the rest is a test split into five with one title and
+  `t.throws` respelled as `t.fail` sentinels.
+- **Two defects of the round, fixed before this measure.** A first run
+  blocked node-semver `24af4615`, because tap's `t.resolveMatchSnapshot`
+  was missing from the methods recorded with no strength, and yargs
+  `1ed92b97`, whose tap 0.x `t.deepEqual` was not yet read (reading 7).
+- **The other 271 records keep their verdict.** In 230 the round adds
+  findings, among them 1,071 ASSERT_REMOVED, 424 TEST_DISABLED and 205
+  ASSERT_WEAKENED at warn; every one is at warn or info except in five
+  commits that block on both engines. The largest two:
+  - execa `698a1b84` moves the suite from AVA to node:test. The base engine
+    read only the node side; the round reads both, and holds its 507
+    findings at warn.
+  - got `0a79ccbe` renames its tests to `.ts` under an AVA configuration
+    for TypeScript. AVA's default extensions are `js` and `mjs`, and a
+    configured extension is not read, as configured globs are not, so 313
+    tests read as leaving AVA's collection, at warn.
+
+  In 25 records TEST_DISABLED findings at warn or info are dropped or
+  change severity, and in 39 only a fingerprint or a message changes.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file (D-106), and only such a file is
+  read this way.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases)
+on the round's engine: passed, 0 failures, 1 reported: `i198/T6`, which
+passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
+keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
