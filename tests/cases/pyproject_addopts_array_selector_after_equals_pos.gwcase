@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 42
+rule: CI_WORKFLOW_TOUCHED
+title: A selector added after a multi-line addopts array's `=` element is read (#324)
+origin: issue #324 P2: the reader cut the array at `"--import-mode=importlib"` and read
+origin2: it as `[ -ra,` on both sides, so the added `-m "not slow"` passed at warn
+=== before: pyproject.toml ===
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    "--import-mode=importlib",
+]
+=== after: pyproject.toml ===
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    "--import-mode=importlib",
+    "-m",
+    "not slow",
+]
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
