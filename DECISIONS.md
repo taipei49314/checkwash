@@ -6736,3 +6736,87 @@ The JavaScript false-positive cost is measured by the JS/TS replay (#212)
 before a release ships these findings.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-105 (2026-10-06): JS alias specifiers name first-party modules (#196 188.6)
+
+A module mock or an import spelled through an alias was invisible to
+TEST_PATCHES_SUBJECT. `vi.mock("@/billing", () => ({ invoiceTotal: () =>
+78.75 }))` above an untouched `expect(invoiceTotal(items)).toBe(78.75)`
+that reads `import { invoiceTotal } from "@/billing"` passed with zero
+findings, and so did `vi.mock("@/billing")` standing in for
+`../src/billing`, which the project's `tsconfig.json` maps `@/*` to.
+`module_key` named a module only for a `./` or `../` specifier (THREATMODEL
+row 109 residual "aliases").
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.188.6): "Yes, in a later round. B first (the same alias string in a
+mock and an import is one module; `@/` and `~/` are first-party), then C as
+its bounded extension (the base-side root tsconfig only). Route both through
+the one module_key. This ruling authorizes flipping the pin at
+tests/test_js_module_mocks.py:58 (`@/billing` -> None today) and rewriting
+module_key's docstring."
+
+**As implemented** (`frontends/javascript/aliases.py`, `module_key`):
+- **B.** An `@/` or `~/` specifier is first-party, and its key is the alias
+  string itself, normalized as a relative specifier is: `@/billing`,
+  `@/billing.ts` and `@/billing/index.js` are one module, from any test
+  file. One that leaves its root (`@/../x`), lands in dependency or build
+  output, or carries a query is not. A scoped package (`@acme/billing`) is
+  a package.
+- **C.** The base side's root `tsconfig.json`, read once per analysis and
+  only when a mock or an import spells a specifier that is not relative:
+  its before side when the diff changes it, else the head snapshot, which
+  holds it unchanged. JSON with comments and trailing commas, at most 256
+  KiB and 256 patterns. `compilerOptions.paths` maps a specifier to a
+  repository path, joined to `baseUrl` or, without one, to the root:
+  an exact pattern first, then the longest prefix, the first target of the
+  pattern, as TypeScript resolves it. The mapped path is the key a relative
+  specifier of that file has, so under `"@/*": ["src/*"]`
+  `vi.mock("@/billing")` and `import ... from "../src/billing"` are one
+  module. A mapping wins over B, and one that leaves the repository or
+  lands in dependency output names nothing first-party.
+- The pin flips as authorized (`@/billing` -> `"@/billing"`), and the test
+  is renamed for what it now states; `module_key`'s docstring and the
+  module's are rewritten. No IR, strength, gating or alignment change.
+  Fingerprints of existing findings are unchanged; a new finding names the
+  alias key (`@/billing:invoiceTotal`) or the mapped path
+  (`src/billing:invoiceTotal`).
+
+**Readings the ruling leaves open:**
+1. **`baseUrl` alone is not read.** With `baseUrl` set, TypeScript resolves
+   `import x from "billing"` to `<baseUrl>/billing` when that file exists,
+   and to the package otherwise. Telling the two apart needs the file
+   inventory, which the strict snapshot refuses in a repository with a
+   submodule, so such a specifier stays third-party; `baseUrl` is read as
+   the root of `paths` targets.
+2. **A `"*"` pattern is not read** (an empty prefix, `"*"` or `"*.svg"`),
+   for the same reason: it maps every package name too.
+3. **The first target only.** TypeScript tries a pattern's targets in
+   order and takes the first that exists; the first is read as the module.
+4. **Bounds.** No `extends`, no nested or `jsconfig.json` file, and no
+   bundler or runner alias configuration (Vite `resolve.alias`, Jest
+   `moduleNameMapper`). A tsconfig the diff adds has no base side and maps
+   nothing; one it deletes maps through its before side.
+5. **Condition 2 stays silent rather than guessed.** Without a tsconfig
+   that decides it, an alias may name another spelling of the same module
+   (`@/billing` and `../src/billing`, or `~/billing`). A base-side
+   installation under a spelling whose path ends with the alias's own
+   counts as already installed, so respelling a mock into an alias is not a
+   new stand-in. A consumed read still needs one key: a new alias mock never
+   reaches an import spelled another way unless the tsconfig joins them.
+
+Found during this round: nothing new to file.
+
+**Cost.**
+- **New findings** (TEST_PATCHES_SUBJECT, high without repair evidence): a
+  new mock or replacing spy through an `@/` or `~/` alias, or through a
+  pattern of the base side's root tsconfig, that an existing unit's oracle
+  reads.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories (all refs) adds or removes a JS/TS line that spells a module
+  mock, a spy, a `mock*` replacement or an `@/`/`~/` import, and none has a
+  root `tsconfig.json`; the code this round changes runs only for such a
+  file.
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
