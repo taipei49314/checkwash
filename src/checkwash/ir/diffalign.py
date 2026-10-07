@@ -13,7 +13,9 @@ Assertion pairing inside a matched unit:
 3. leftovers: span-order fallback
 
 A marker is added when no marker on the other side has its identity; in
-Python, a condition that parses the same is the same identity (#332).
+Python, a condition that parses the same is the same identity (#332), and in
+JavaScript, a condition that reads the same once its formatting is taken out
+(#333).
 
 A fallback pair whose two halves record different subjects and different
 expected literals does not compare its tolerances (#196 189.2). A tolerance
@@ -27,6 +29,7 @@ import ast
 from collections import Counter
 from decimal import Decimal, InvalidOperation
 
+from checkwash.frontends.javascript.literals import comparable_operand
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir.astutil import same_expr, stable_dump
 from checkwash.ir.markers import parse_text
@@ -61,18 +64,26 @@ def _parsed_key(text: str) -> str | None:
     return stable_dump(tree) if tree is not None else None
 
 
+_JS_CONDITIONAL = "test.skipIf("
+
+
 def _marker_key(marker, python: bool) -> object:
-    """A marker's identity, its condition as parsed in Python (#332).
+    """A marker's identity, its condition as parsed in Python (#332), or with
+    its formatting taken out in JavaScript (#333).
 
     The identity is the marker's name and the normalized text of its condition
-    (`pytest.mark.skipif(sys.platform=='win32')`), and normalized text keeps
-    quote characters as written, so a condition respelled `"win32"` was a
-    marker removed and another added. The name stays the reported identity.
+    (`pytest.mark.skipif(sys.platform=='win32')`,
+    `test.skipIf(process.platform==='win32')`), and normalized text keeps
+    quote characters as written, so a condition respelled `"win32"` (black,
+    prettier) was a marker removed and another added. The name stays the
+    reported identity.
     """
     if python and "(" in marker.name:
         tree = parse_text(marker.text.strip().removeprefix("@"), mode="eval")
         if tree is not None and isinstance(tree.body, ast.Call) and tree.body.args:
             return marker.name.split("(", 1)[0], stable_dump(tree.body.args[0])
+    if not python and marker.name.startswith(_JS_CONDITIONAL) and marker.name.endswith(")"):
+        return _JS_CONDITIONAL, comparable_operand(marker.name[len(_JS_CONDITIONAL):-1])
     return marker.name
 
 

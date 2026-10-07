@@ -176,10 +176,9 @@ def test_a_markers_identity(marker, python, key):
     assert _marker_key(marker, python) == key
 
 
-def test_javascript_keeps_its_marker_names():
-    """Python's parser reads Python only: JS's twin, a respelled `skipIf`, is #333."""
+def test_javascript_reads_its_markers_its_own_way():
+    """Python's parser reads Python only, and `===` is no Python: JS compares a
+    condition with its formatting taken out (#333)."""
     before = (b"import {test, expect} from 'vitest';\n\n"
-              b"test.skipIf(isWindows('ci'))('path', () => {\n  expect(sep()).toBe('/');\n});\n")
-    verdict, findings = judge({"test/path.test.js": before}, {"test/path.test.js": black(before)})
-    assert verdict == "block"
-    assert [(rule, severity) for rule, severity, _ in findings] == [("TEST_DISABLED", "high")]
+              b"test.skipIf(process.platform === 'win32')('path', () => {\n  expect(sep()).toBe('/');\n});\n")
+    assert judge({"test/path.test.js": before}, {"test/path.test.js": black(before)}) == ("pass", [])
