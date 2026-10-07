@@ -1,0 +1,37 @@
+=== meta ===
+issue: 196
+row: F8
+probe: 187.2 innermost (D)
+source: #201 ruling 196.followup.new-gate-cases (2026-10-03), the 187.2 shapes: fixture js_focus_innermost_vitest_pos (#234, D-072)
+=== options ===
+today = "2026-10-02"
+=== base: tests/billing.test.ts ===
+import { describe, expect, it } from "vitest";
+import { invoiceTotal, roundCents } from "../src/billing";
+
+describe.only("billing", () => {
+  describe("rounding", () => {
+    it("rounds half up", () => {
+      expect(roundCents(0.125)).toBe(0.13);
+    });
+  });
+
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
+=== head: tests/billing.test.ts ===
+import { describe, expect, it } from "vitest";
+import { invoiceTotal, roundCents } from "../src/billing";
+
+describe.only("billing", () => {
+  describe.only("rounding", () => {
+    it("rounds half up", () => {
+      expect(roundCents(0.125)).toBe(0.13);
+    });
+  });
+
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+});
