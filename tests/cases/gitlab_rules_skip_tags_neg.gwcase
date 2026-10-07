@@ -1,0 +1,46 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: rules that skip tag pipelines and run the test job everywhere else
+origin: issue #214 — a rule with a condition may match; a later rule with none runs the job.
+=== before: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+=== after: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: on_success
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

@@ -1,0 +1,35 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: a fixture's numpy assertion call left as it was is no event when the test is edited elsewhere
+origin: #286 — the lent assertion is the same on both sides
+=== before: tests/test_billing.py ===
+import numpy as np
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture
+def checked():
+    np.testing.assert_allclose(total(), 78.75, rtol=1e-7)
+
+
+def test_total(checked):
+    assert total() > 0
+=== after: tests/test_billing.py ===
+import numpy as np
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture
+def checked():
+    np.testing.assert_allclose(total(), 78.75, rtol=1e-7)
+
+
+def test_total(checked):
+    """The total is positive."""
+    assert total() > 0
+=== expect ===
+[]
