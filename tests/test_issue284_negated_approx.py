@@ -23,6 +23,7 @@ from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
 from checkwash.frontends.python.frontend import _classify_assert_expr, _Offsets, parse_python
+from checkwash.ir.astutil import asserted_subject
 
 TEST = "tests/test_billing.py"
 HEAD = "import unittest\n\nimport pytest\n\nfrom app.billing import total\n\n\n"
@@ -91,6 +92,55 @@ def test_a_negated_comparison_keeps_its_expected_value():
         assert outcome(before, after) == ("block", [
             ("EXPECTED_VALUE_CHANGED", "high", "expected value rewritten 78.75 -> 75 with no change in assertion strength"),
         ])
+
+
+# --- 1, with #331: the flipped statement is compared by what it checks -------------
+#
+# An approx comparison records no subject, so #331 compares what each statement
+# checks. A negated comparison anywhere in it is read in its positive form, as a
+# `not` is peeled: without that, a flip of an approx comparison with no direct
+# approx side read as a replacement, since the operator was part of what the
+# statement checks.
+
+@pytest.mark.parametrize("positive, negative", [
+    ("assert {'t': total()} == {'t': pytest.approx(78.75)}", "assert {'t': total()} != {'t': pytest.approx(78.75)}"),
+    ("assert total() in [pytest.approx(78.75), pytest.approx(80)]",
+     "assert total() not in [pytest.approx(78.75), pytest.approx(80)]"),
+    ("assert total() == pytest.approx(78.75)", "assert total() != pytest.approx(78.75)"),
+    ("assert result is None", "assert result is not None"),
+    # where the comparison sits inside the statement
+    ("assert total() == pytest.approx(78.75) and total() > 0", "assert total() != pytest.approx(78.75) and total() > 0"),
+    ("assert all([t == pytest.approx(78.75) for t in [total()]])",
+     "assert all([t != pytest.approx(78.75) for t in [total()]])"),
+    ("assert 0 < total() == pytest.approx(78.75)", "assert 0 < total() != pytest.approx(78.75)"),
+    ("assert (total() == pytest.approx(78.75)) is True", "assert (total() != pytest.approx(78.75)) is True"),
+], ids=["nested_in_dict", "not_in", "direct_approx", "is_not", "and", "all", "chained", "inside_a_comparison"])
+def test_a_negated_comparison_checks_what_its_positive_form_checks(positive, negative):
+    assert asserted_subject(negative) == asserted_subject(positive) is not None
+    assert asserted_subject("assert not (" + positive.removeprefix("assert ") + ")") == asserted_subject(positive)
+
+
+@pytest.mark.parametrize("before, after", [
+    ("assert total() == pytest.approx(78.75) and total() > 0", "assert other() != pytest.approx(78.75) and total() > 0"),
+    ("assert all([t == pytest.approx(78.75) for t in [total()]])",
+     "assert all([t != pytest.approx(78.75) for t in [other()]])"),
+    ("assert result.okay != 0", "assert result.exception == 0"),
+], ids=["and", "all", "attribute"])
+def test_a_negated_comparison_onto_another_subject_checks_another_thing(before, after):
+    assert asserted_subject(before) != asserted_subject(after)
+
+
+@pytest.mark.parametrize("before, after", [
+    (py("assert {'t': total()} == {'t': pytest.approx(78.75)}"),
+     py("assert {'t': other()} != {'t': pytest.approx(78.75)}")),
+    (py("assert total() in [pytest.approx(78.75), pytest.approx(80)]"),
+     py("assert other() not in [pytest.approx(78.75), pytest.approx(80)]")),
+], ids=["nested_in_dict", "not_in"])
+def test_a_flip_onto_another_subject_is_a_replacement(before, after):
+    verdict, findings = outcome(before, after)
+    assert verdict == "block"
+    assert [f[:2] for f in findings] == [("ASSERT_WEAKENED", "high")]
+    assert findings[0][2].startswith("assertion replaced — subject and polarity both changed")
 
 
 # --- 2: a negated approximate comparison records no tolerance ----------------------

@@ -492,6 +492,17 @@ with `positive` in its documented meaning. A presence check (`toBeDefined()`,
 (`toEqual({...})`, `toContain(x)`, `toBe(expected)`) is not a polarity
 change, so strengthening one into the other still passes.
 
+An unkeyed pair whose polarity flipped is an inversion only on the same
+subject (SPEC §4). A bare Python `assert` records no subject, and neither
+does a `pytest.approx` comparison, so for such a pair what each statement
+checks decides: the tested expression with its `not`s peeled, or the side of
+the approx comparison that is not the approx call (#331). A negated
+comparison (`!=`, `not in`, `is not`) anywhere in the statement is read in
+its positive form, as a `not` is peeled, so `assert {'t': total()} == {'t':
+pytest.approx(78.75)}` -> `!=` is an inversion (#284). `assert result.okay` -> `assert not result.okay` is an inversion,
+and `assert result.okay` -> `assert not result.exception`, which checks
+another attribute, is a replacement; both block without repair evidence.
+
 Residuals of this reading:
 
 - A change between `<` and `<=` (or `>` and `>=`) with two different bounds,

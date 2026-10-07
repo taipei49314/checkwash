@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ast
 import sys
+import warnings
 
 from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import normalize_text
@@ -63,6 +64,58 @@ def same_expr(before: str | None, after: str | None) -> bool:
     if b is None or a is None:
         return False
     return ast.dump(b) == ast.dump(a)
+
+
+_POSITIVE_FORM = {ast.NotEq: ast.Eq, ast.NotIn: ast.In, ast.IsNot: ast.Is}
+
+
+class _PositiveComparisons(ast.NodeTransformer):
+    """Every negated comparison in its positive form: `!=` as `==`, `not in`
+    as `in`, `is not` as `is`, wherever it sits in the expression."""
+
+    def visit_Compare(self, node: ast.Compare) -> ast.Compare:
+        self.generic_visit(node)
+        node.ops = [_POSITIVE_FORM.get(type(op), type(op))() for op in node.ops]
+        return node
+
+
+def asserted_subject(statement: str) -> str | None:
+    """What a Python `assert` statement checks, its negations peeled (#331).
+
+    The tested expression itself, or, for a comparison with an `approx(...)`
+    call (`total() == pytest.approx(78.75)`), its other side. A negation is
+    no part of what is checked: the `not`s around the expression are peeled,
+    and a negated comparison (`!=`, `not in`, `is not`) anywhere in it is
+    read in its positive form, so `{'t': total()} != {'t': pytest.approx(1)}`
+    checks what its `==` spelling checks (#284). The Python frontend records
+    no subject for a bare truthy or `isinstance` assert, nor for an approx
+    comparison, so this is the subject such a pair can be compared by. None
+    when the text is not one `assert` statement.
+    """
+    # The file warned once when it was read (an invalid escape, `'\d'`, is a
+    # SyntaxWarning, or a DeprecationWarning before Python 3.12); reading one
+    # of its statements again adds nothing to say (#319).
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            body = ast.parse(statement.strip()).body
+        except (SyntaxError, RecursionError, ValueError, MemoryError):
+            return None
+    if len(body) != 1 or not isinstance(body[0], ast.Assert):
+        return None
+    test = body[0].test
+    while isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+        test = test.operand
+    if isinstance(test, ast.Compare) and len(test.ops) == 1:
+        sides = [test.left, test.comparators[0]]
+        approx = [side for side in sides if isinstance(side, ast.Call)
+                  and (dotted_name(side.func) or "").rpartition(".")[2] == "approx"]
+        if len(approx) == 1:
+            test = sides[1] if approx[0] is sides[0] else sides[0]
+    try:
+        return ast.unparse(_PositiveComparisons().visit(test))
+    except (RecursionError, ValueError):
+        return None
 
 
 def expr_wraps(before: str | None, after: str | None) -> bool:
