@@ -6770,3 +6770,114 @@ engines), as on main, where #226's relabel (D-104) has not landed. Every
 other case keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-116 (2026-10-07): `py.test` is the pytest module wherever a skip is read (#310)
+
+The py library's `py.test` is pytest itself: py 1.11.0 maps its `test`
+attribute to `pytest` and binds `sys.modules['py.test'] = pytest`. #260
+(D-090) reads `py.test.mark.*` decorators as pytest's marks, since a mark
+decorator is read by its last components. A skip a test body calls or raises
+is read through the module's import bindings (#220, D-100), and those bound
+native modules only, so `import py` bound nothing. `py.test.skip()` and
+`py.test.xfail()` in a test passed with zero findings, and the same skip
+respelled `pytest.skip()` read as a skip added. #272's sweep found the
+second in pytest `3cc58c2f78f0`, inside a helper (D-111). Filed as #310.
+
+No ruling was asked: the issue's proposed direction extends #220's one-name
+reading (D-100) to one more name of the same object, and this entry, in the
+fix PR, is where the maintainer approves it.
+
+**As implemented:**
+- `setup_skip_controls`: `py` and `py.test` are native modules, and a dotted
+  name read through them is pytest's (`_pytest_name`: `py.test.skip` is
+  `pytest.skip`, `py.test.skip.Exception` is `pytest.skip.Exception`).
+  Every reader of these bindings takes it: a test body's skips and their
+  guards (D-100, row 54), the same-file helpers a test calls (D-111), the
+  setup a unit runs, a fixture declared with `@py.test.fixture` included,
+  and the closed `pytest_runtest_setup` hook proof.
+
+Readings the direction leaves to the implementation:
+
+1. **Only an import of the py library.** `py` is read as the py library
+   where an import binds it (`import py`, `import py.test`, `import py as
+   p`, `from py import test`, `from py.test import skip`). A `py` no import
+   binds keeps its spelling, which names no outcome; a `py` rebound, or
+   imported from another module, is not the library.
+2. **The py library's meaning.** pytest 7.2 and later ship a `py` shim of
+   their own with `py.path` and `py.error` only. With that shim and no py
+   library, `py.test` does not exist, and `py.test.skip()` raises
+   AttributeError, so the test fails rather than passing. With py 1.11.0
+   installed, pytest 9.1.1 reports `py.test.skip()` as skipped and
+   `py.test.xfail()` as xfailed (run for this entry). The reading takes
+   the py library's meaning, as #260 does for `py.test.mark`: a skip added
+   through it is reported, and one respelled between `py.test` and `pytest`
+   is the skip the test had.
+3. **One name for the marker.** The marker carries pytest's name
+   (`pytest.skip`), so a finding's message and fingerprint are those of the
+   same skip spelled `pytest.skip()`.
+
+**Tests and fixtures.**
+- **Tests:** 30 in `tests/test_issue310_py_test_alias.py`. Each of the
+  round's eight mutants fails them: `py.test` not read as pytest, read on
+  a name it only begins (`py.testing`), or not read as the bare module;
+  `py` or `py.test` dropped from the native modules; the reading dropped
+  from the setup and helper readers, or from the body's; a `py` no import
+  binds read as the library.
+- **Fixtures:**
+  - row 118's new pins, each passing on v0.6.0 with zero findings:
+    `py_test_skip_added_pos` (P1) and `py_test_xfail_added_pos` (P3, in
+    the `from py.test import xfail` spelling);
+  - controls with no finding: `py_test_skip_respelled_pytest_neg` (P4,
+    which v0.6.0 blocks as a skip added) and
+    `py_test_skip_respelled_in_helper_neg` (pytest `3cc58c2f78f0`'s
+    respelling inside a helper, which D-111's engine blocks as a skip added
+    to the helper).
+
+Every existing fixture keeps its expectation, and every existing corpus
+record is byte for byte the same; the corpus gains the four fixtures'.
+
+**Fingerprints.** None moves. A skip now read through `py.test` is a new
+finding, and a respelling between `py.test` and `pytest` that read as a skip
+added no longer does.
+
+**Cost.** Measured with the round's engine against #272's (`343ff7b`, the
+head of #316), on which the round is stacked:
+- **Targeted set:** every non-merge commit, on any ref, of the sweep
+  histories whose test-side Python adds or removes a line spelling
+  `py.test.` or importing `py` (`import py`, `from py import`, `from
+  py.test import`): 669 commits in four histories (pytest 651, werkzeug 9,
+  scrapy 7, aiohttp 2), 559 readable. 23 records change, all pytest's, and
+  8 verdicts move: blocked goes from 102 to 108.
+  - **1 stops blocking:** pytest `3cc58c2f78f0`, the issue's own commit,
+    whose `py.test.skip` respelled `pytest.skip`, in the `lsof_check`
+    helper and in a test body, read as four skips added.
+  - **7 start blocking.** Six add a `py.test.skip`, `py.test.xfail` or
+    `py.test.importorskip` to an existing test or to the setup it runs
+    (`a6003ac3`, `ac934bb2`, `621f9259`, `a7dfacca`, `44337db2`,
+    `1e7d5166`), as the `pytest` spelling blocks. The seventh, `4f5d7948`,
+    moves a test into a file where it carries a guarded `py.test.skip`, so
+    the arrival is not live, the move earns no credit and the departure's
+    disappearance is high, as with `pytest.skip` there.
+  - **The other 15 keep their verdict.** Two lose skips added that were
+    respellings (`9fb20794`, `a6984654`); thirteen gain or change findings
+    at warn or info.
+- **Twin check.** Each changed commit, respelled `py.test.` -> `pytest.`
+  with `import pytest` beside `import py`, gives the round's TEST_DISABLED
+  findings under #272's engine in 21 of the 23. In `78d33a2f` two
+  disappeared units swap info and warn. In `e991bf21` twelve setup skips
+  are high in the twin and warn here: its helper file mentions only
+  `py.test`, which is no runner name, so it keeps the opaque-production
+  exemption (REPAIR_EVIDENCE); filed as #325.
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give #272's records, byte for
+  byte.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) give
+  #272's records, byte for byte. Of pytest's 368 (364 readable), three
+  change: the targeted set's `3cc58c2f`, `9fb20794` and `a6984654`.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
