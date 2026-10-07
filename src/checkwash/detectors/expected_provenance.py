@@ -6,12 +6,16 @@ import json
 from checkwash.change import EngineError
 from checkwash.detectors.expected_changed import detect as detect_changed, detect_derived
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.ir.markers import parse_text
 from checkwash.ir.model import judged_as_test
 
 
 def _literal_expression(text):
+    tree = parse_text(text, mode="eval")
+    if tree is None:
+        return False
     try:
-        ast.literal_eval(text)
+        ast.literal_eval(tree)
         return True
     except (SyntaxError, ValueError, TypeError, RecursionError, MemoryError):
         return False

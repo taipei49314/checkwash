@@ -13,6 +13,8 @@ from checkwash.ir.markers import (
     is_guarded_skip,
     is_helper_skip,
     is_setup_skip,
+    is_string_condition,
+    mark_condition,
     marker_call,
     parse_expr,
     skip_condition,
@@ -66,8 +68,29 @@ class _Maybe:
 MAYBE = _Maybe()
 
 
+class _Module:
+    """A module pytest binds in a string condition's namespace (#263).
+
+    pytest evaluates `skipif("...")` with `os`, `sys` and `platform` bound to
+    those modules beside the test module's globals. As a value, a module is
+    truthy and equals nothing but itself, so `"platform != 'linux'"` is true
+    everywhere, as it is under pytest.
+    """
+
+    __slots__ = ("name",)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return f"<module {self.name}>"
+
+
+_PYTEST_MODULES = {name: _Module(name) for name in ("os", "sys", "platform")}
+
+
 def _eval_condition(
-    node: ast.AST, env: dict, consts: dict[str, ast.AST] | None = None
+    node: ast.AST, env: dict, consts: dict[str, ast.AST] | None = None, pytest_names: bool = False
 ) -> object:
     """Evaluate a skipif condition in one hypothetical environment.
 
@@ -80,18 +103,23 @@ def _eval_condition(
     engine into the IR (same file, imported from the diff, or read at head):
     `skipif(WIN)` evaluates whatever `WIN` was bound to. Resolution is
     cycle-guarded and depth-capped; a name that cannot be chased stays MAYBE.
+
+    `pytest_names` evaluates a string condition as pytest does (#263): a bare
+    `os`, `sys` or `platform` is that module unless the test module binds the
+    name to a constant, which wins as the module's globals do. A constant's
+    own expression is module code, read as any other condition is.
     """
 
-    def ev(node: ast.AST, resolving: frozenset[str] = frozenset()) -> object:
+    def ev(node: ast.AST, resolving: frozenset[str] = frozenset(), pytest: bool = pytest_names) -> object:
         if isinstance(node, ast.Constant):
             return node.value
         if isinstance(node, ast.Tuple):
-            return tuple(ev(e, resolving) for e in node.elts)
+            return tuple(ev(e, resolving, pytest) for e in node.elts)
         if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
-            inner = ev(node.operand, resolving)
+            inner = ev(node.operand, resolving, pytest)
             return MAYBE if inner is MAYBE else not inner
         if isinstance(node, ast.BoolOp):
-            values = [ev(v, resolving) for v in node.values]
+            values = [ev(v, resolving, pytest) for v in node.values]
             if isinstance(node.op, ast.And):
                 if any(v is not MAYBE and not v for v in values):
                     return False
@@ -100,12 +128,12 @@ def _eval_condition(
                 return True
             return False if all(v is not MAYBE and not v for v in values) else MAYBE
         if isinstance(node, ast.Compare):
-            left = ev(node.left, resolving)
+            left = ev(node.left, resolving, pytest)
             for op, comparator in zip(node.ops, node.comparators):
                 fn = _EVAL_CMP_OPS.get(type(op))
                 if fn is None:
                     return MAYBE
-                right = ev(comparator, resolving)
+                right = ev(comparator, resolving, pytest)
                 if left is MAYBE or right is MAYBE:
                     return MAYBE
                 try:
@@ -116,19 +144,19 @@ def _eval_condition(
                 left = right
             return True
         if isinstance(node, ast.Subscript):
-            value = ev(node.value, resolving)
+            value = ev(node.value, resolving, pytest)
             # `sys.version_info[:2] < (3, 12)` is one of the two commonest
             # ways to spell a real version gate; refusing to evaluate it would
             # deny the de-escalation to honest code.
             if isinstance(node.slice, ast.Slice):
-                lower = ev(node.slice.lower, resolving) if node.slice.lower else None
-                upper = ev(node.slice.upper, resolving) if node.slice.upper else None
-                step = ev(node.slice.step, resolving) if node.slice.step else None
+                lower = ev(node.slice.lower, resolving, pytest) if node.slice.lower else None
+                upper = ev(node.slice.upper, resolving, pytest) if node.slice.upper else None
+                step = ev(node.slice.step, resolving, pytest) if node.slice.step else None
                 try:
                     return value[slice(lower, upper, step)]  # type: ignore[index]
                 except TypeError:
                     return MAYBE
-            index = ev(node.slice, resolving)
+            index = ev(node.slice, resolving, pytest)
             try:
                 return value[index]  # type: ignore[index]
             except (TypeError, IndexError, KeyError):
@@ -146,15 +174,22 @@ def _eval_condition(
                 "lower",
                 "upper",
             ):
-                target = ev(node.func.value, resolving)
+                target = ev(node.func.value, resolving, pytest)
                 if isinstance(target, str):
-                    args = [ev(a, resolving) for a in node.args]
+                    args = [ev(a, resolving, pytest) for a in node.args]
                     method = getattr(target, node.func.attr)
                     try:
                         return method(*args)
                     except TypeError:
                         return MAYBE
             return MAYBE
+        if pytest and isinstance(node, ast.Name) and node.id in _PYTEST_MODULES:
+            # Resolving a constant leaves pytest's namespace, so nothing is
+            # being resolved yet here and no cycle can pass through.
+            expr = consts.get(node.id) if consts else None
+            if expr is None:
+                return _PYTEST_MODULES[node.id]
+            return ev(expr, resolving | {node.id}, False)
         name = _dotted_name(node)
         if name in ("sys.version_info", "version_info"):
             return env["version_info"]
@@ -169,13 +204,13 @@ def _eval_condition(
         if consts and name and "." not in name and name not in resolving and len(resolving) < 16:
             expr = consts.get(name)
             if expr is not None:
-                return ev(expr, resolving | {name})
+                return ev(expr, resolving | {name}, False)
         return MAYBE
 
     return ev(node)
 
 
-def _discriminates(condition: ast.AST, consts: dict[str, ast.AST] | None) -> bool:
+def _discriminates(parts: list[tuple[ast.AST, bool]], consts: dict[str, ast.AST] | None) -> bool:
     """Does this condition actually depend on the environment?
 
     The old test was a substring match against seven hardcoded spellings of an
@@ -196,12 +231,17 @@ def _discriminates(condition: ast.AST, consts: dict[str, ast.AST] | None) -> boo
     a non-empty string or tuple skips everywhere just as `True` does, and the
     `is True` test used to hand exactly that spelling the credit (a truthy
     constant plus a compat token smuggled into `reason=`).
+
+    The condition is the conjunction of its parts, each evaluated in its own
+    namespace: a `pytestmark` binding's guard is module code, while the mark's
+    string condition is evaluated as pytest does (#263).
     """
 
-    def definitely(value: object) -> bool:
-        return value is not MAYBE and bool(value)
+    def definitely(env: dict) -> bool:
+        values = [_eval_condition(node, env, consts, pytest_names) for node, pytest_names in parts]
+        return all(value is not MAYBE and bool(value) for value in values)
 
-    return not all(definitely(_eval_condition(condition, env, consts)) for env in _ENV_MATRIX)
+    return not all(definitely(env) for env in _ENV_MATRIX)
 
 
 # Condition-bearing decorator markers, exactly as _canonical_marker emits
@@ -242,7 +282,7 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     gates rather than becoming general skip amnesty.
     """
     canonical = m.name.split("(", 1)[0]
-    condition: ast.AST | None = None
+    parts: list[tuple[ast.AST, bool]] = []
     if canonical in _GATE_DECORATORS or (m.guard and is_guarded_mark(canonical)):
         # A mark's condition, and the guard of the `pytestmark` binding that
         # carries it: both must hold for the mark to apply, so the condition
@@ -250,26 +290,29 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
         call = marker_call(m.text)
         if canonical == "pytest.mark.xfail" and call is not None and _xfail_strict(call):
             return False
-        parts = []
         if m.guard:
             guard = parse_expr(m.guard)
             if guard is None:
                 return False
-            parts.append(guard)
+            parts.append((guard, False))
         if canonical in _GATE_DECORATORS and call is not None and call.args:
-            parts.append(call.args[0])
-        if not parts:
-            return False
-        condition = parts[0] if len(parts) == 1 else ast.BoolOp(op=ast.And(), values=parts)
+            # A string condition is the expression pytest compiles from it;
+            # one that does not compile earns nothing (#263).
+            condition = mark_condition(call)
+            if condition is None:
+                return False
+            parts.append((condition, is_string_condition(call)))
     elif (canonical in _GATE_CALLS or is_setup_skip(canonical) or is_helper_skip(canonical)) and m.guard:
         # A skip in the setup the unit runs is judged as one in its body is
         # (#196 183.2): its guard is the condition its setup reaches it under.
         # So is one a helper ends in, under the condition its call reaches it
         # (#272).
-        condition = parse_expr(m.guard)
-    if condition is None:
+        guard = parse_expr(m.guard)
+        if guard is not None:
+            parts.append((guard, False))
+    if not parts:
         return False
-    searched = " ".join([m.text, m.guard or "", *_expansion_texts(condition, raw)])
+    searched = " ".join([m.text, m.guard or "", *(text for node, _ in parts for text in _expansion_texts(node, raw))])
     # The compat-token filter keeps the credit from becoming general skip
     # amnesty for individual tests. A *suite-level collection control* is a
     # different object: its guard is the whole justification, and the
@@ -286,7 +329,7 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     ):
         return False
     # always true, or unverifiable: not a gate, a disable
-    return _discriminates(condition, consts)
+    return _discriminates(parts, consts)
 
 
 def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: str | None) -> bool:
