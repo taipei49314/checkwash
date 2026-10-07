@@ -137,7 +137,11 @@ and a fixed set of `expect(...).matcher(...)` calls in `*.test.*` and
 JavaScript/TypeScript file beneath a `__tests__/` directory and exact
 `test`/`spec` filenames, JSX/TSX included. Node default test paths also cover
 `test/` directories and `test-*`, `*-test`, `*_test` and exact `test` filenames
-with `js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. Configured test globs
+with `js`, `cjs`, `mjs`, `ts`, `cts`, or `mts` extensions. AVA's and tap's
+defaults (`tests/`, tap's `__test__/` and `*.tests.*`) cover a file that
+imports or requires `ava` or `tap`, whose `t` assertions are read
+([#233](https://github.com/taipei49314/checkwash/issues/233)), so a Python
+project's JS helpers under `tests/` stay production. Configured test globs
 are not read. A guardrail, CI or snapshot path inside these layouts keeps that
 role, and so does a path under a `roles` glob for `ci`, `snapshot`, `lockfile`
 or `conftest` in the checkwash config. Such a file is still judged as a test,
@@ -212,9 +216,10 @@ is reported once for the file: Mocha and Jasmine apply focus to the whole
 suite, so every test outside the file stops
 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5945152490),
 187.4). It stays quiet only when the runner is proven to keep focus in the
-file: a `vitest` or `@jest/globals` import, or a base-side root `package.json`
-whose dependencies name Jest or Vitest and no other runner. A node:test
-import is no such proof. The `x`/`f`-prefixed globals count only with a
+file: a `vitest`, `@jest/globals` or `ava` import, or a base-side root
+`package.json` whose dependencies name Jest, Vitest or AVA and no other runner
+(AVA runs each file in a worker of its own, #233). A node:test import is no
+such proof. The `x`/`f`-prefixed globals count only with a
 literal name or an inline callback, so a `fit(points)` helper call focuses
 nothing.
 `t.skip()`/`t.todo()` on the callback's own context parameter and Mocha's

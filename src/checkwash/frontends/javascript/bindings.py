@@ -51,6 +51,83 @@ class Value:
 
 UNKNOWN = Value("unknown")
 
+# AVA's and tap's assertions, by the method on a test's own `t` (#233), read
+# or not: AVA 8's `Assertions` type; tap 21's `@tapjs/asserts` with the
+# core's `fail` and the snapshot plugin's `matchSnapshot` and
+# `resolveMatchSnapshot`, and tap 16's `expectUncaughtException`, which
+# tap 18 removed. `t.pass()` and every other member of `t` (`plan`, `log`,
+# `teardown`, `context`, `end`) asserts nothing.
+AVA_ASSERTIONS = frozenset({
+    "assert", "deepEqual", "fail", "false", "falsy", "is", "like", "not", "notDeepEqual", "notRegex",
+    "notThrows", "notThrowsAsync", "regex", "snapshot", "throws", "throwsAsync", "true", "truthy",
+})
+TAP_ASSERTIONS = frozenset({
+    "doesNotThrow", "emits", "equal", "error", "expectUncaughtException", "fail", "has", "hasOwnProp",
+    "hasOwnProps", "hasOwnPropsOnly", "hasProp", "hasProps", "hasStrict", "match", "matchOnly",
+    "matchOnlyStrict", "matchSnapshot", "matchStrict", "not", "notHas", "notHasStrict", "notMatch",
+    "notMatchOnly", "notMatchOnlyStrict", "notMatchStrict", "notOk", "notSame", "ok", "rejects", "resolveMatch",
+    "resolveMatchSnapshot", "resolves", "same", "strictNotSame", "strictSame", "throws", "type",
+})
+# tap 16's synonyms (its `lib/synonyms.js`), which tap 16 deprecated and tap
+# 18 removed: each is the method it names, and so is the all-lowercase and
+# the snake_case spelling of every camelCase name there, as tap 16 defines
+# them. A synonym called under tap 18 or later throws, so reading one asserts
+# nothing a passing test does not.
+_TAP16_SYNONYMS = {
+    "ok": ("true", "assert"),
+    "notOk": ("false", "assertNot"),
+    "error": ("ifError", "ifErr"),
+    "throws": ("throw",),
+    "doesNotThrow": ("notThrow",),
+    "equal": ("equals", "isEqual", "is", "strictEqual", "strictEquals", "strictIs", "isStrict", "isStrictly",
+              "identical"),
+    "not": ("inequal", "notEqual", "notEquals", "notStrictEqual", "notStrictEquals", "isNotEqual", "isNot",
+            "doesNotEqual", "isInequal"),
+    "same": ("equivalent", "looseEqual", "looseEquals", "deepEqual", "deepEquals", "isLoose", "looseIs",
+             "isEquivalent"),
+    "notSame": ("inequivalent", "looseInequal", "notDeep", "deepInequal", "notLoose", "looseNot", "notEquivalent",
+                "isNotDeepEqual", "isNotDeeply", "notDeepEqual", "isInequivalent", "isNotEquivalent"),
+    "strictSame": ("strictEquivalent", "strictDeepEqual", "sameStrict", "deepIs", "isDeeply", "isDeep",
+                   "strictDeepEquals"),
+    "strictNotSame": ("strictInequivalent", "strictDeepInequal", "notSameStrict", "deepNot", "notDeeply",
+                      "strictDeepInequals", "notStrictSame"),
+    "match": ("matches", "similar", "like", "isLike", "isSimilar"),
+    "has": ("hasFields", "includes", "include", "contains"),
+    "notMatch": ("dissimilar", "unsimilar", "notSimilar", "unlike", "isUnlike", "notLike", "isNotLike",
+                 "doesNotHave", "isNotSimilar", "isDissimilar"),
+    "type": ("isA",),
+}
+
+
+def _tap_spellings(table: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    spellings: dict[str, str] = {}
+    for method, synonyms in table.items():
+        for name in (method, *synonyms):
+            for spelling in (name, name.lower(), re.sub(r"[A-Z]", lambda m: "_" + m.group(0).lower(), name)):
+                if spelling != method:
+                    spellings.setdefault(spelling, method)
+    return spellings
+
+
+TAP_SYNONYMS = _tap_spellings(_TAP16_SYNONYMS)
+_TAP_NAMES = TAP_ASSERTIONS | frozenset(TAP_SYNONYMS)
+# The assertions tap's ES module also exports by name: tap 21's
+# `dist/esm/main.js` and tap 16's `lib/tap.mjs`. A name only one of them
+# exports throws on import under the other, before any test runs. The rest
+# (`hasProp`, a synonym, ...) are `t`'s only.
+_TAP_EXPORTS = frozenset({
+    "doesNotThrow", "emits", "equal", "error", "expectUncaughtException", "fail", "has", "hasStrict", "match",
+    "matchOnly", "matchOnlyStrict", "matchSnapshot", "matchStrict", "not", "notHas", "notHasStrict", "notMatch",
+    "notMatchOnly", "notMatchOnlyStrict", "notMatchStrict", "notOk", "notSame", "ok", "rejects", "resolveMatch",
+    "resolveMatchSnapshot", "resolves", "same", "strictNotSame", "strictSame", "throws", "type",
+})
+# AVA's test function chains: modifiers and hooks are its test function too,
+# and `skipIf`/`runIf` return it (AVA 8's `TestFn`).
+_AVA_MODIFIERS = frozenset({"serial", "skip", "only", "failing", "todo", "before", "after", "beforeEach",
+                            "afterEach", "always", "macro", "skipIf", "runIf"})
+# The members of tap's `t` that declare a subtest.
+_TAP_DECLARERS = frozenset({"test", "only", "skip", "todo"})
+
 
 @dataclass
 class Scope:
@@ -113,8 +190,9 @@ class Bindings:
         # Parameter shadows must exist before CommonJS resolution, but runner
         # authority must wait until local variables and writes are known.
         for scope, name, position in self.context_parameters:
-            if self._test_callback(position):
-                self._declare(scope, name, Value("context"))
+            kind = self._test_context(position)
+            if kind is not None:
+                self._declare(scope, name, Value(kind))
 
     def token(self, i: int) -> str:
         return self.tokens[i][0] if 0 <= i < len(self.tokens) else ""
@@ -140,6 +218,13 @@ class Bindings:
             return Value("jest_globals")
         if name == "chai":
             return Value("chai")
+        # AVA's default export is its test function (#233). tap's module
+        # exports the root test `t`, whose methods declare subtests and
+        # assert, and some of those methods by name.
+        if name == "ava":
+            return Value("ava")
+        if name == "tap":
+            return Value("tap_module")
         return UNKNOWN
 
     @staticmethod
@@ -171,6 +256,20 @@ class Bindings:
             return Value("runner")
         if value.kind == "context" and name == "assert":
             return Value("node_context")
+        if value.kind == "ava" and name in _AVA_MODIFIERS:
+            return value
+        if value.kind == "ava_context" and name in AVA_ASSERTIONS:
+            return Value("ava_method", name)
+        if value.kind in {"tap", "tap_module"} and name in {"t", "default"}:
+            return Value("tap")
+        if value.kind in {"tap", "tap_module", "tap_context"}:
+            if name in _TAP_DECLARERS:
+                return Value("tap_test")
+            if value.kind == "tap_module":
+                return Value("tap_method", name) if name in _TAP_EXPORTS else UNKNOWN
+            name = TAP_SYNONYMS.get(name, name)
+            if name in TAP_ASSERTIONS:
+                return Value("tap_method", name)
         return UNKNOWN
 
     def _pattern(self, first: int, last: int) -> list[tuple[str, str]]:
@@ -238,7 +337,8 @@ class Bindings:
             module = self.module(specifier)
             scope = self.scope_at[i]
             if _IDENT.fullmatch(self.token(i + 1)):
-                default = Value("runner") if module.kind == "node_test" else module
+                default = (Value("runner") if module.kind == "node_test"
+                           else Value("tap") if module.kind == "tap_module" else module)
                 self._declare(scope, self.token(i + 1), default)
                 if not (self.token(i + 1) == "type" and self.token(i + 2) in {"{", "*"}):
                     self.import_sources[(scope, self.token(i + 1))] = (specifier, "default")
@@ -431,6 +531,35 @@ class Bindings:
         if self.token(previous) in {"skip", "todo", "only"} and self.token(previous - 1) == ".":
             previous -= 2
         return self.resolve(self.token(previous), self.tokens[opening][1]).kind == "runner"
+
+    def _test_context(self, first: int) -> str | None:
+        """What a test callback's first parameter is, by the function that
+        declares the test: AVA's or tap's `t` (#233), or node:test's context."""
+        declarer = self._declarer(first)
+        kind = {"ava": "ava_context", "tap_test": "tap_context"}.get(declarer.kind)
+        if kind is not None:
+            return kind
+        return "context" if self._test_callback(first) else None
+
+    def _declarer(self, first: int) -> Value:
+        """The function a callback whose parameters start after token `first`
+        is passed to: `test(...)`, `test.serial(...)`, `t.test(...)`, or AVA's
+        curried `test.skipIf(cond)(...)`."""
+        opening = self.enclosing[first] if 0 <= first < len(self.enclosing) else None
+        if opening is None or self.token(opening) != "(":
+            return UNKNOWN
+        last = opening - 1
+        if self.token(last) == ")" and last in self.pairs:
+            last = self.pairs[last] - 1
+            if self.token(last) not in {"skipIf", "runIf"}:
+                return UNKNOWN
+        if not _IDENT.fullmatch(self.token(last)):
+            return UNKNOWN
+        start = last
+        while self.token(start - 1) == "." and _IDENT.fullmatch(self.token(start - 2)):
+            start -= 2
+        path = ".".join(self.token(i) for i in range(start, last + 1, 2))
+        return self.callee(path, self.tokens[start][1])
 
     def _parameters(self, first: int, last: int, scope: int, context_position: int | None = None) -> None:
         self.scopes[scope].function = True
@@ -866,6 +995,8 @@ class Bindings:
             if self.resolve("require", position, seen).kind != "require":
                 return UNKNOWN
             value = self.module(expression[2][1:-1]) if expression[2][:1] in {"'", '"'} else UNKNOWN
+            if value.kind == "tap_module":
+                value = Value("tap")  # CommonJS exports `t` itself (#233).
             rest = expression[4:]
         else:
             # An alias captures a property at initialization time. A method
@@ -980,6 +1111,10 @@ class Bindings:
             return frozenset({"expect"})
         if value.kind in {"chai_assert", "chai_assert_method"}:
             return frozenset({"chai"})
+        if value.kind in {"ava_context", "ava_method"}:
+            return frozenset({"AVA"})
+        if value.kind in {"tap", "tap_module", "tap_context", "tap_method"}:
+            return frozenset({"tap"})
         return frozenset()
 
     def _candidate_families(self, name: str, position: int,
@@ -1077,11 +1212,23 @@ class Bindings:
             return "expect"
         if value.kind in {"jest", "chai", "chai_assert", "chai_assert_method"}:
             return "chai"
+        # AVA's and tap's `t`, or a method bound from it (#233): a call of one
+        # of its assertions. `t.test(...)`, `t.plan(1)` and `t.is.skip(...)`
+        # assert nothing.
+        if value.kind in {"ava_context", "ava_method", "tap", "tap_module", "tap_context", "tap_method"}:
+            dotted = re.sub(r"\[\s*(['\"])(" + NAME + r")\1\s*\]", r".\2", re.sub(r"\s+", "", spelling))
+            if "[" in dotted:
+                return None
+            kind = self.callee(dotted.replace("?.", "."), position).kind
+            return {"ava_method": "AVA", "tap_method": "tap"}.get(kind)
         families = self._candidate_families(root, position)
         for family in families:
             if family == "context" and not member("assert"):
                 continue
             if family == "jest" and not member("expect"):
+                continue
+            if family in {"AVA", "tap"} and not any(
+                    member(name) for name in (AVA_ASSERTIONS if family == "AVA" else _TAP_NAMES)):
                 continue
             return "unresolved"
         return None

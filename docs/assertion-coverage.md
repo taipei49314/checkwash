@@ -436,6 +436,98 @@ Some edits are not reported. They are recorded here for a maintainer decision:
 `.to.not.exist` -> `.to.be.null`, `.to.not.be.undefined` -> `.to.exist` and
 `.to.exist` -> `.to.be.ok` are proven strengthenings and are not reported.
 
+### AVA and tap assertions
+
+AVA's and tap's assertions are methods of the execution context `t` that each
+test callback receives
+([#233](https://github.com/taipei49314/checkwash/issues/233)). They were
+unrepresented: `t.is(total(), 78.75)` -> `t.truthy(total())` passed with zero
+findings, and beneath `tests/`, which is a test path for AVA and tap but not
+for Node's runner or Jest, every edit passed because the file was never read.
+
+A `t` is read where it is AVA's or tap's:
+
+- the first parameter of a callback passed to AVA's test function, imported or
+  required from `ava`, with its modifiers and hooks (`test.serial`,
+  `test.failing`, `test.only`, `test.skip`, `test.skipIf(...)`,
+  `test.runIf(...)`, `test.before`, `test.macro`, ...);
+- the first parameter of a callback passed to tap's `test`: `t.test(...)` on
+  tap's root `t` or on another subtest's `t`, or a `test` imported or
+  required from `tap`;
+- tap's root `t` itself, its default export (its CommonJS export, and its
+  named export `t`).
+
+An object named `t`, a `t` from any other library (tape's included), a `t`
+the file writes over and a `t` passed to a helper are not read. A test's
+callback is read where it is written: a function the test names instead,
+as AVA's macro form `test(title, macro, ...args)` does, lends the unit
+nothing ([#320](https://github.com/taipei49314/checkwash/issues/320)). A
+macro made with `test.macro(fn)` gets AVA's `t`, but its calls run outside
+every unit and are coverage notices only; a plain function's `t` is not read.
+
+tap's ES module also exports assertions by name. `import { ok } from 'tap'`
+is read for every name tap 16's `lib/tap.mjs` or tap 21's `dist/esm/main.js`
+exports (`equal` is tap 16's only; under tap 21 its import throws before any
+test runs).
+
+Each method is read with the chai meaning it states (see the table above),
+subject first:
+
+| AVA | tap | Read as |
+|---|---|---|
+| `is(a, e)`, `not(a, e)` | `equal(a, e)`, `not(a, e)` | strict equality (`eq_strict`); `not` asserts its negation |
+| `deepEqual`, `notDeepEqual` | `same`, `strictSame`, `notSame`, `strictNotSame` | structural equality (EXACT_STRUCT) |
+| `like(a, selector)` | `has`, `hasStrict`, `notHas`, `notHasStrict` | membership (PATTERN), as chai's deep `include` |
+| `true(a)`, `false(a)` | | `=== true`, `=== false` |
+| `truthy`, `assert`, `falsy` | `ok`, `notOk` | truthy (TRUTHY) |
+| `regex`, `notRegex` | `match`, `notMatch` | pattern (PATTERN) |
+
+tap 16's synonyms (its `lib/synonyms.js`: `t.deepEqual`, `t.equals`,
+`t.isDeeply`, `t.isa`, `t.true`, ..., with the all-lowercase and snake_case
+spelling of each camelCase name, such as `t.notok` and `t.not_ok`) read as
+the method they name. tap 16 deprecated them and tap 18 removed them, so one
+called under tap 18 or later throws.
+
+The others are recorded with no strength (see
+[Assertions checkwash does not read](#assertions-checkwash-does-not-read)):
+AVA's `throws` and `throwsAsync` (`raises`), `notThrows`, `notThrowsAsync`,
+`snapshot` and `fail`, and tap's `throws` and `rejects` (`raises`),
+`doesNotThrow`, `resolves`, `resolveMatch`, `emits`, `error`, `type`,
+`hasProp` and its own and plural forms, `matchOnly`, `matchStrict` and their
+negations, `matchSnapshot`, `resolveMatchSnapshot`, `fail` and tap 16's
+`expectUncaughtException`. `t.pass()`, `t.plan(n)`, `t.log(...)`,
+`t.teardown(...)`, `t.end()` and an assertion AVA skips (`t.is.skip(...)`)
+assert nothing.
+
+The runner comes from the file or the base manifest
+(`frontends/javascript/runners.py`): an `ava` or `tap` import or require, or a
+base root `package.json` that names one of them and no other runner. AVA's
+and tap's default layouts make a file a test only when its own source imports
+or requires them, as Bun's and Deno's do (THREATMODEL row 107), so a Python
+project's JS helpers under `tests/` stay production. AVA runs each file in a
+worker of its own, so its `.only` is read as Jest's and Vitest's are: it
+reaches the file it is written in.
+
+Some edits are not reported:
+
+- tap's `same` compares scalars loosely (`==`), as Node's legacy `deepEqual`
+  does. Both read as the structural equality, so `t.equal(x, 5)` ->
+  `t.same(x, 5)` is not reported, as `assert.strictEqual(x, 5)` ->
+  `assert.deepEqual(x, 5)` is not.
+- tap's root test is no unit: an assertion at a tap file's top level, outside
+  every subtest, is a coverage diagnostic only, as a call outside a test unit
+  is for every runner.
+- tap's `t.skip(name, fn)`, `t.todo(name, fn)` and `t.only(name, fn)` declare
+  no unit, so a subtest respelled `t.skip(...)` reads as removed.
+- A test whose callback is a function the file names rather than writes
+  inline reads none of its assertions: a check moved into a macro reads as
+  removed, and one weakened inside it is not reported
+  ([#320](https://github.com/taipei49314/checkwash/issues/320)). A plain
+  function's `t` is no coverage candidate, nor is the `t` of AVA's macro
+  objects (`test.macro({exec(t) {...}})`) or a `t` passed to a helper.
+- AVA's names before 1.0 (`t.ok`, `t.same`, `t.regexTest`, ...) are not
+  read.
+
 ### Predicate identity
 
 Issue [#198](https://github.com/taipei49314/checkwash/issues/198) found that
@@ -630,11 +722,13 @@ is recorded with no strength, as Python records `assertRaises` (SPEC §3,
 [#196](https://github.com/taipei49314/checkwash/issues/196) 190.5). A throw
 check is `raises`: `expect(fn).toThrow(RangeError)`,
 `expect(promise).rejects.toThrow()`, `assert.throws`, `assert.rejects`, and
-chai's `.to.throw()`, `assert.throws` and `assert.isRejected`. Anything else
+chai's `.to.throw()`, `assert.throws` and `assert.isRejected`, and AVA's and
+tap's `t.throws`, AVA's `t.throwsAsync` and tap's `t.rejects`. Anything else
 is `unknown`: `expect(save).toHaveBeenCalledWith(78.75)`, `toHaveLength`,
 `toMatchObject`, `toMatchSnapshot`, `.resolves`, `expect.assertions(n)`,
 `assert.match`, `assert.notStrictEqual`, `assert.fail`, the chai words above,
-and a negated throw check (`.not.toThrow()`, `assert.doesNotThrow`).
+AVA's and tap's other unread assertions, and a negated throw check
+(`.not.toThrow()`, `assert.doesNotThrow`, AVA's `t.notThrows`).
 
 Deleting one is `ASSERT_REMOVED`, high without repair evidence. Rewriting one
 is not judged, because its predicate is not read. A check rewritten into a
@@ -660,7 +754,8 @@ reason that says its rewrite is not judged. The source tests are in
 ## Make unrepresented assertion candidates visible
 
 `checkwash check` scans both sides of changed JS/TS test files for bounded Node,
-chai `assert`, `expect(...)` and `.should` candidates. It compares their source positions
+chai `assert`, `expect(...)` and `.should` candidates, and for AVA's and tap's
+`t` assertions. It compares their source positions
 with assertions represented by the frontend. A candidate in a file with no
 recognized test unit, or inside another assertion, can therefore still produce
 a diagnostic.
