@@ -1,0 +1,19 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+issue: 325
+title: deleting the workflow whose suite is `py.test`
+origin: issue #325 C4. Whether a deleted workflow ran a suite is row 69's names, which held `pytest` and not `py.test`, so deleting the only test workflow passed at warn. v0.6.0 passes it; the same diff on `pytest` blocks
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: py.test
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

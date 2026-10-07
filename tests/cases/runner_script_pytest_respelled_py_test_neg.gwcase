@@ -1,0 +1,15 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+issue: 325
+title: a runner script that runs `py.test` where it ran `pytest` still runs the suite
+origin: issue #325. With `py.test` none of row 69's names, the script read as one that no longer invokes the suite, and the respelling blocked as a weakened command. v0.6.0 blocks it; a runner swap keeps a token and earns nothing (row 69)
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+pytest -q
+=== after: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+py.test -q
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "scripts/test.sh"}]
