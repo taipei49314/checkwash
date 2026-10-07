@@ -18,12 +18,13 @@ native rules' reading.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 
 from checkwash.frontends.javascript.bindings import Bindings
 from checkwash.frontends.javascript.frontend import file_bindings
-from checkwash.frontends.javascript.literals import operand_text, populate_expectation
+from checkwash.frontends.javascript.literals import comparable_operand, operand_text, populate_expectation
 from checkwash.ir.model import IR, Assertion, judged_as_test
 
 _JS_SUFFIXES = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
@@ -49,6 +50,9 @@ class _Resolved:
     # `@scope/` are no operators when the shape of the operand is asked.
     shape: str
     indirect: bool
+    # The same operand with each specifier a quoted string, so that its
+    # formatting can be taken out without reading `./` as a slash (#226).
+    key: str = ""
 
 
 def _code(source: str):
@@ -117,15 +121,17 @@ def resolve(source: str | None, bindings: Bindings, position: int, depth: int = 
         return None
     parts: list[str] = []
     shapes: list[str] = []
+    keys: list[str] = []
     last = 0
     indirect = False
     for start, end, name in _reads(operand, positions):
-        replacement = shape = None
+        replacement = shape = key = None
         imported = bindings.imported(name, position)
         if imported is not None:
             specifier, export = imported
             replacement = specifier if export == "*" else f"{specifier}.{export}"
             shape = name
+            key = json.dumps(specifier) + ("" if export == "*" else f".{export}")
         else:
             initializer = bindings.initializer(name, position)
             if initializer is not None:
@@ -135,19 +141,22 @@ def resolve(source: str | None, bindings: Bindings, position: int, depth: int = 
                 wrap = not _atomic(inner.shape)
                 replacement = f"({inner.text})" if wrap else inner.text
                 shape = f"({inner.shape})" if wrap else inner.shape
+                key = f"({inner.key})" if wrap else inner.key
             elif bindings.declared_function(name, position):
                 indirect = True
         if replacement is not None:
             indirect = True
             parts += [operand[last:start], replacement]
             shapes += [operand[last:start], shape]
+            keys += [operand[last:start], key]
             last = end
     parts.append(operand[last:])
     shapes.append(operand[last:])
-    text, shape = operand_text("".join(parts)), operand_text("".join(shapes))
-    if text is None or shape is None:
+    keys.append(operand[last:])
+    text, shape, key = operand_text("".join(parts)), operand_text("".join(shapes)), operand_text("".join(keys))
+    if text is None or shape is None or key is None:
         return None
-    return _Resolved(_canonical(text, bindings, position), shape, indirect)
+    return _Resolved(_canonical(text, bindings, position), shape, indirect, _canonical(key, bindings, position))
 
 
 def _is_call(source: str) -> bool:
@@ -193,9 +202,11 @@ def mark_js_expected_provenance(ir: IR, raw: dict[str, tuple[bytes | None, bytes
             new = resolve(a.operand_source, new_bindings, a.span[0])
             old_subject = resolve(b.left, old_bindings, b.span[0])
             new_subject = resolve(a.left, new_bindings, a.span[0])
+            # Formatting that changes no value is no change (#226).
             if (old is None or new is None or old_subject is None or new_subject is None
-                    or old_subject.text != new_subject.text or not _is_call(new_subject.shape)
-                    or not (old.indirect or new.indirect) or old.text == new.text):
+                    or comparable_operand(old_subject.key) != comparable_operand(new_subject.key)
+                    or not _is_call(new_subject.shape) or not (old.indirect or new.indirect)
+                    or comparable_operand(old.key) == comparable_operand(new.key)):
                 continue
             records.append((name, b.text, tuple(b.span), a.text, tuple(a.span),
                             new_subject.text, "Eq", old.text, new.text))
