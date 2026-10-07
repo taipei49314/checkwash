@@ -1356,7 +1356,9 @@ def build_ir(
     # one batched call (git grep in range mode); only matching files are read
     # and parsed, capped. Deleting one of two identical copies leaves the
     # oracle running — the attack shapes (survivor skipped, survivor edited)
-    # fail the liveness and hash checks and earn nothing.
+    # fail the liveness and hash checks and earn nothing. A survivor reaches
+    # the conftest fixtures above it at head, as a changed module does, so
+    # one that an always-skip fixture skips is not live either (#266).
     if head_searcher is not None and head_reader is not None:
         wanted: set[str] = set()
         needles: set[str] = set()
@@ -1387,7 +1389,7 @@ def build_ir(
                 data = head_reader(path)
                 if data is None:
                     continue
-                parsed = parse_python(data, collect_tests=True)
+                parsed = parse_python(data, collect_tests=True, chain=_conftest_chain(path, 1))
                 if not parsed.parse_ok:
                     continue
                 consts = _gate_constants(parsed, after_by_path, head_reader)
