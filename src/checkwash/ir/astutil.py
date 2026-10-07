@@ -17,9 +17,8 @@ from __future__ import annotations
 
 import ast
 import sys
-import warnings
 
-from checkwash.ir.markers import parse_expr
+from checkwash.ir.markers import parse_expr, parse_text
 from checkwash.ir.model import normalize_text
 
 
@@ -92,15 +91,10 @@ def asserted_subject(statement: str) -> str | None:
     comparison, so this is the subject such a pair can be compared by. None
     when the text is not one `assert` statement.
     """
-    # The file warned once when it was read (an invalid escape, `'\d'`, is a
-    # SyntaxWarning, or a DeprecationWarning before Python 3.12); reading one
-    # of its statements again adds nothing to say (#319).
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        try:
-            body = ast.parse(statement.strip()).body
-        except (SyntaxError, RecursionError, ValueError, MemoryError):
-            return None
+    tree = parse_text(statement.strip())
+    if tree is None:
+        return None
+    body = tree.body
     if len(body) != 1 or not isinstance(body[0], ast.Assert):
         return None
     test = body[0].test

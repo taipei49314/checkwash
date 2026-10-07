@@ -200,6 +200,23 @@ class ParsedFile:
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = field(default_factory=dict)
 
 
+# One parse's walks of a subtree (#344). A unit's tree is walked by several
+# passes, and the walk is the parse's largest cost, so `parse_python` walks
+# each subtree once, after its last change to the tree, and reuses the nodes.
+_walks: dict[int, tuple[ast.AST, tuple[ast.AST, ...]]] | None = None
+
+
+def _walk(node: ast.AST):
+    """`ast.walk(node)`, read once per parse while one is running (#344)."""
+    walks = _walks
+    if walks is None:
+        return ast.walk(node)
+    known = walks.get(id(node))
+    if known is None or known[0] is not node:
+        known = walks[id(node)] = (node, tuple(ast.walk(node)))
+    return iter(known[1])
+
+
 def normalize_source(data: bytes) -> str:
     # utf-8-sig strips a BOM if present (routine on Windows-authored files);
     # spans are offsets into this normalized text (SPEC §8).
@@ -1026,7 +1043,7 @@ def _binding_maps(
             refs_memo[id(value)] = refs
         return refs
 
-    for node in ast.walk(func):
+    for node in _walk(func):
         if isinstance(node, ast.Assign):
             targets, value = node.targets, node.value
         elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
@@ -2124,7 +2141,7 @@ def _unreachable_ids(
 
     scan(func.body)
     # Lambdas anywhere in the body are deferred code too.
-    for node in ast.walk(func):
+    for node in _walk(func):
         if isinstance(node, ast.Lambda):
             kill(node.body)
     return dead
@@ -2653,7 +2670,7 @@ def _local_scopes(func, module_scopes: dict[str, ast.AST]) -> dict[str, ast.AST]
     """Callable names visible to this unit: the module's, plus its own nested
     defs and lambdas, plus names bound to a deferred call (`partial`)."""
     out = dict(module_scopes)
-    for node in ast.walk(func):
+    for node in _walk(func):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node is not func:
             out[node.name] = node
         elif isinstance(node, ast.Assign):
@@ -2784,7 +2801,7 @@ def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
     def _nameless(node: ast.AST) -> bool:
         return not any(isinstance(n, ast.Name) for n in ast.walk(node))
 
-    for holder in ast.walk(func):
+    for holder in _walk(func):
         body = getattr(holder, "body", None)
         if not isinstance(body, list):
             continue
@@ -2913,7 +2930,7 @@ def _collect_unit(
     # it), and double-counting an oracle invents an assertion to "remove".
     own_assert_ids: set[int] = set()
 
-    for node in ast.walk(func):
+    for node in _walk(func):
         if id(node) in dead:
             continue
         # A native skip or xfail, called or raised (`raise unittest.SkipTest`
@@ -3367,7 +3384,7 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
 def _shingles(func: ast.AST, k: int = 5) -> frozenset[tuple[str, ...]]:
     """k-shingles over the AST node-kind token sequence (SPEC §7)."""
     tokens: list[str] = []
-    for node in ast.walk(func):
+    for node in _walk(func):
         kind = type(node).__name__
         if isinstance(node, ast.Name):
             kind += ":" + node.id
@@ -3380,7 +3397,11 @@ def _shingles(func: ast.AST, k: int = 5) -> frozenset[tuple[str, ...]]:
 
 
 def _strip_docstrings(tree: ast.AST) -> ast.AST:
-    for node in ast.walk(tree):
+    # Only a module, a def or a class holds a docstring, and none of them can
+    # sit inside an expression, so expressions are not walked (#344).
+    todo = [tree]
+    while todo:
+        node = todo.pop()
         if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             body = node.body
             if (
@@ -3390,6 +3411,7 @@ def _strip_docstrings(tree: ast.AST) -> ast.AST:
                 and isinstance(body[0].value.value, str)
             ):
                 node.body = body[1:] or [ast.Pass()]
+        todo.extend(child for child in ast.iter_child_nodes(node) if not isinstance(child, ast.expr))
     return tree
 
 
@@ -3574,6 +3596,18 @@ def parse_python(
 ) -> ParsedFile:
     """`chain`: the conftest files above a test module, nearest first, whose
     fixtures its units can request (#223). Only a test module reads it."""
+    global _walks
+    outer, _walks = _walks, None
+    try:
+        return _parse_python(data, collect_tests, conftest, chain)
+    finally:
+        _walks = outer
+
+
+def _parse_python(
+    data: bytes, collect_tests: bool, conftest: bool, chain: tuple[ConftestLevel, ...]
+) -> ParsedFile:
+    global _walks
     raw = normalize_source(data)
     try:
         tree = ast.parse(raw)
@@ -3599,6 +3633,8 @@ def parse_python(
     _strip_docstrings(tree)
     if not collect_tests:
         _normalize_for_fingerprint(tree)
+    # The tree is final from here on: each subtree's walk is read once (#344).
+    _walks = {}
     units: list[ParsedUnit] = []
     symbols: dict[str, str] = {}
     symbol_calls: dict[str, tuple[str, ...]] = {}
@@ -3646,7 +3682,7 @@ def parse_python(
     # Names a test can import inside itself, read when an import is indented.
     body_roots = frozenset(
         name
-        for node in ast.walk(tree)
+        for node in _walk(tree)
         if isinstance(node, (ast.Import, ast.ImportFrom))
         for name, _target in (_import_pairs(node) or ())
     ) if body_names and _NESTED_IMPORT.search(raw) else frozenset()
@@ -3747,7 +3783,7 @@ def parse_python(
         # under a subclass's.
         local = body_bindings(func, body_names, method=True)
         skips = {
-            id(node) for node in ast.walk(func)
+            id(node) for node in _walk(func)
             if isinstance(node, (ast.Call, ast.Raise)) and body_outcome(node, local) is not None
         }
         for subclass in class_attrs.crediting_subclasses(cls, func.name):
@@ -3847,7 +3883,7 @@ def parse_python(
 
     broad: list[str] = []
     swallowing: list[str] = []
-    for node in ast.walk(tree):
+    for node in _walk(tree):
         if isinstance(node, ast.Import):
             imports.extend(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
