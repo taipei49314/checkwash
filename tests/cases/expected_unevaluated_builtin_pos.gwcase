@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 122
+rule: EXPECTED_VALUE_CHANGED
+title: P2: == 78.75 -> == int('75'): int is outside the fold set, an expression checkwash does not evaluate
+origin: #226
+=== head: app/__init__.py ===
+OTHER = 75
+
+
+def make(n):
+    return 75 + n
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == int('75')
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

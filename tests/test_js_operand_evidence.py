@@ -129,8 +129,11 @@ def test_comparison_magnitude_is_the_abs_side(source, magnitude):
     ("expect(value).toBe((75));", VITEST, "75.0", "75"),
     ("expect(value).toBe(75 as number);", VITEST, "75.0", "75"),
     ("expect(value).toBe(75 satisfies number);", VITEST, "75.0", "75"),
-    # T6 stays unknown until #226.
-    ("expect(value).toBe(Number(75));", VITEST, None, "Number(75)"),
+    # T6: Number(<literal>) folds to its value (#226).
+    ("expect(value).toBe(Number(75));", VITEST, "75.0", "Number(75)"),
+    ("expect(value).toBe(Number('78.75'));", VITEST, "78.75", "Number('78.75')"),
+    # A call checkwash does not fold keeps its text only.
+    ("expect(value).toBe(Number('0x10'));", VITEST, None, "Number('0x10')"),
 ])
 def test_each_spelling_records_its_operand(body, header, value, operand):
     assertion = _assertion(body, header)
@@ -188,7 +191,8 @@ def test_asymmetric_matchers_state_their_own_predicate(body, form, key, positive
     ("expect(value).toBeCloseTo(78.75, 2);", "expect(value).to.be.closeTo(78.75, BIG);", VITEST,
      "const BIG = 1e300;\n", BLOCK, [("TOLERANCE_LOOSENED", "high", "(places=2 -> abs=1E+300)")]),
     # Twins: node:assert's legacy equal and deepEqual (T1, T2), and the
-    # literal reader's parentheses and TS wrappers (T4, T5). T6 waits for #226.
+    # literal reader's parentheses and TS wrappers (T4, T5), and T6, a
+    # Number(<literal>) folded to its value (#226).
     ("expect(value).toBe(78.75);", "assert.equal(value, 75);", NODE, "", BLOCK, [
         ("EXPECTED_VALUE_CHANGED", "high", "expected value rewritten 78.75 -> 75.0")]),
     ("expect(value).toBe(78.75);", "assert.deepEqual(value, 75);", NODE, "", BLOCK, [
@@ -197,7 +201,8 @@ def test_asymmetric_matchers_state_their_own_predicate(body, form, key, positive
         ("EXPECTED_VALUE_CHANGED", "high", "expected value rewritten 78.75 -> 75.0")]),
     ("expect(value).toBe(78.75);", "expect(value).toBe(75 as number);", VITEST, "", BLOCK, [
         ("EXPECTED_VALUE_CHANGED", "high", "expected value rewritten 78.75 -> 75.0")]),
-    ("expect(value).toBe(78.75);", "expect(value).toBe(Number(75));", VITEST, "", PASS, None),
+    ("expect(value).toBe(78.75);", "expect(value).toBe(Number(75));", VITEST, "", BLOCK, [
+        ("EXPECTED_VALUE_CHANGED", "high", "expected value rewritten 78.75 -> 75.0")]),
     # The bound operand (O1, O2).
     ("expect(value).toBeLessThan(80);", "expect(value).to.be.below(1e12);", VITEST, "", BLOCK, [
         ("EXPECTED_VALUE_CHANGED", "high", "expected value rewritten 80.0 -> 1000000000000.0")]),
@@ -278,11 +283,16 @@ def test_a_known_tolerance_lost_to_an_unread_one_is_not_preserved(before, after,
         ("EXPECTED_VALUE_CHANGED", "high", "['build', 'items'] -> ['items', 'rebuild']")]),
     ("expect(value).toBeLessThan(LIMIT);", "expect(value).toBeLessThan(OTHER_LIMIT);", BLOCK, [
         ("EXPECTED_VALUE_CHANGED", "high", "['LIMIT'] -> ['OTHER_LIMIT']")]),
-    # As in Python: the same names, an argument changed or a member changed, pass.
-    ("expect(value).toBe(build(1));", "expect(value).toBe(build(2));", PASS, None),
+    # As in Python since #226: a call whose callee the file never declares is
+    # an expression checkwash does not evaluate, so a changed argument reports
+    # (226.Q1, Q3), while the same names with a member changed pass.
+    ("expect(value).toBe(build(1));", "expect(value).toBe(build(2));", BLOCK, [
+        ("EXPECTED_VALUE_CHANGED", "high",
+         "expected value replaced by an expression checkwash does not evaluate (build(1) -> build(2))")]),
     ("expect(value).toBe(config.total);", "expect(value).toBe(config.subtotal);", PASS, None),
     ("expect(value).toBe(EXPECTED);", "expect(value).toBe((EXPECTED as number));", PASS, None),
-    # A literal and an expression, either way round, wait for #226.
+    # A name nothing declares is neither resolved nor a call (#226), and a
+    # name or call replaced by a literal is not read in JS yet (#292).
     ("expect(value).toBe(78.75);", "expect(value).toBe(EXPECTED);", PASS, None),
     ("expect(value).toBe(EXPECTED);", "expect(value).toBe(78.75);", PASS, None),
 ])

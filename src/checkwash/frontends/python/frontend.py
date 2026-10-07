@@ -37,6 +37,12 @@ from checkwash.frontends.python.class_attributes import ClassAttributes, ClassVa
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
+from checkwash.frontends.python.literal_conversions import (
+    conversion_names as _conversion_names_of,
+    folded_conversion as _folded_conversion,
+    module_bindings as _module_bindings_of,
+    unbound_callee as _unbound_callee,
+)
 from checkwash.frontends.python.tolerance_calls import (
     find_predicate as _find_tolerance_predicate,
     import_names as _tolerance_import_names,
@@ -223,6 +229,10 @@ class _Offsets:
         self.tree: ast.AST | None = None
         self.abs_shadowed: bool | None = None
         self.tolerance_names: dict[str, str | None] | None = None
+        # The names the module binds, and the spellings that fold as
+        # conversions (#226), asked lazily as the two above are.
+        self.module_bindings: tuple | None = None
+        self.conversion_names: dict[str, str] | None = None
 
     def _char_col(self, lineno: int, col: int) -> int:
         """Translate CPython's UTF-8 *byte* column into a character column.
@@ -326,8 +336,9 @@ def _is_literal(node: ast.AST) -> bool:
     return False
 
 
-def _literal_repr(node: ast.AST, text: str, *, fold_string_methods=True) -> str | None:
-    if _is_literal(node) or fold_string_methods and literal_string_replace(node) is not None:
+def _literal_repr(node: ast.AST, text: str, *, fold_string_methods=True, conversions=None) -> str | None:
+    if (_is_literal(node) or fold_string_methods and literal_string_replace(node) is not None
+            or _folded_conversion(node, conversions) is not None):
         seg = text.seg(node)
         if seg is not None and len(seg) <= 120:
             return seg
@@ -407,11 +418,18 @@ def _canonical_repr(value: object) -> str:
     return repr(value)
 
 
-def _literal_value(node: ast.AST, *, fold_string_methods=True) -> str | None:
-    """Canonical repr of a literal's VALUE (quote-style independent), else None."""
+def _literal_value(node: ast.AST, *, fold_string_methods=True, conversions=None) -> str | None:
+    """Canonical repr of a literal's VALUE (quote-style independent), else None.
+
+    `conversions` names the spellings that fold in this file (#226):
+    `float('75')` is the literal 75.0, `Decimal('75')` the Decimal it makes.
+    """
     folded = literal_string_replace(node) if fold_string_methods else None
     if folded is not None:
         return _canonical_repr(folded.value)
+    converted = _folded_conversion(node, conversions)
+    if converted is not None:
+        return _canonical_repr(converted)
     try:
         return _canonical_repr(ast.literal_eval(node))
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
@@ -442,6 +460,8 @@ class _Classified:
     # them (#198).
     predicate: str | None = None
     operand_source: str | None = None
+    # The expected call checkwash neither folds nor resolves (#226).
+    unevaluated_expected: str | None = None
 
 
 # A comparison's bound key, and the key it states read from the other side:
@@ -575,6 +595,66 @@ def _tolerance_names(text) -> dict[str, str | None]:
     return text.tolerance_names
 
 
+def _bindings(text):
+    """The names the file binds anywhere, and whether a star import binds more (#226), once per file.
+
+    None without a parsed module (an oracle helper's own offsets): no name is
+    then known to be unbound, and nothing folds.
+    """
+    if getattr(text, "module_bindings", None) is None:
+        tree = getattr(text, "tree", None)
+        if tree is None:
+            return None
+        bindings = _module_bindings_of(tree)
+        try:
+            text.module_bindings = bindings
+        except AttributeError:
+            return bindings
+    return text.module_bindings
+
+
+def _conversions(text) -> dict[str, str]:
+    """The spellings that fold as conversions in this file (#226), worked out once per file.
+
+    A module whose source spells neither `float` nor `Decimal` folds none
+    and is not walked for them.
+    """
+    if getattr(text, "conversion_names", None) is None:
+        source = getattr(text, "text", None)
+        spelled = not isinstance(source, str) or "float" in source or "Decimal" in source
+        bindings = _bindings(text) if spelled else None
+        names = _conversion_names_of(text.tree, bindings) if bindings is not None else {}
+        try:
+            text.conversion_names = names
+        except AttributeError:
+            return names
+    return text.conversion_names
+
+
+# The forms whose second operand is an expected value or a bound.
+_EXPECTED_FORMS = frozenset({"compare_eq", "compare_ord", "approx", "membership"})
+
+
+def _unevaluated(node: ast.AST | None, text) -> str | None:
+    """The expected value's source when it is a call checkwash neither folds nor resolves (#226).
+
+    Its callee's root is a name the file never binds: a builtin outside the
+    fold set (`int('75')`, `round(75.0, 2)`) or a name bound nowhere
+    (226.Q1). A call whose callee the file binds is the provenance channel's.
+    """
+    if not isinstance(node, ast.Call):
+        return None
+    bindings = _bindings(text)
+    if (bindings is None or not _unbound_callee(node, bindings)
+            or _folded_conversion(node, _conversions(text)) is not None):
+        return None
+    try:
+        source = ast.unparse(node)
+    except (ValueError, RecursionError):
+        return None
+    return source if len(source) <= 4096 else None
+
+
 def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True) -> _Classified:
     """A tolerance call (#222) as the approximate comparison it states.
 
@@ -593,8 +673,8 @@ def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True
         "approx",
         S.APPROX,
         text.seg(subject) if subject is not None else None,
-        _literal_repr(expected, text) if expected is not None else None,
-        _literal_value(expected) if expected is not None else None,
+        _literal_repr(expected, text, conversions=_conversions(text)) if expected is not None else None,
+        _literal_value(expected, conversions=_conversions(text)) if expected is not None else None,
         epsilon,
         kind,
         positive,
@@ -602,6 +682,7 @@ def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True
         _referenced_names(expected),
         subject is not None and _is_trivial_subject(subject)
         and (expected is None or _is_trivial_subject(expected)),
+        unevaluated_expected=_unevaluated(expected, text),
     )
 
 
@@ -743,10 +824,12 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         return _Classified(
             "approx",
             S.APPROX,
-            right_literal=_literal_repr(expected, text) if expected is not None else None,
-            right_value=_literal_value(expected) if expected is not None else None,
+            right_literal=(_literal_repr(expected, text, conversions=_conversions(text))
+                           if expected is not None else None),
+            right_value=_literal_value(expected, conversions=_conversions(text)) if expected is not None else None,
             epsilon=eps,
             epsilon_kind=kind,
+            unevaluated_expected=_unevaluated(expected, text),
         )
     hand = _hand_rolled_comparison(test, text, "compare_ord", S.BOUND)
     if hand is not None:
@@ -785,8 +868,11 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
                 bounds = [n for n in operands if _is_literal(n)]
                 expect_node = bounds[-1] if bounds else None
         left_text = text.seg(subject_node)
-        right_lit = _literal_repr(expect_node, text, fold_string_methods=single) if expect_node is not None else None
-        right_val = _literal_value(expect_node, fold_string_methods=single) if expect_node is not None else None
+        conversions = _conversions(text) if single else None
+        right_lit = (_literal_repr(expect_node, text, fold_string_methods=single, conversions=conversions)
+                     if expect_node is not None else None)
+        right_val = (_literal_value(expect_node, fold_string_methods=single, conversions=conversions)
+                     if expect_node is not None else None)
         if bounds is not None and len(bounds) > 1:
             # The whole bound tuple is the expectation, so moving any single
             # bound is an expectation rewrite.
@@ -805,6 +891,8 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             key = _BOUND_KEYS[type(op)]
             c.predicate = key if subject_node is left else _REVERSED_KEYS[key]
             c.operand_source = _operand_source(expect_node, text)
+        if single and c.form in _EXPECTED_FORMS:
+            c.unevaluated_expected = _unevaluated(expect_node, text)
         # Which side is the subject and which the expectation was decided
         # above, including the `assert 3 == calc()` flip, so the name sets come
         # from those nodes rather than being re-derived. EXPECTED_VALUE_DERIVED
@@ -824,6 +912,7 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             None if approximate else inner.epsilon_kind, not inner.positive,
             inner.left_names, inner.right_names,
             predicate=inner.predicate, operand_source=inner.operand_source,
+            unevaluated_expected=inner.unevaluated_expected,
         )
     if isinstance(test, ast.Call):
         name = _dotted(test.func)
@@ -1399,8 +1488,8 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
                 expect_node, subject_node = node.args[0], node.args[1]
         left_text = text.seg(subject_node) if subject_node is not None else None
         if expect_node is not None:
-            right_lit = _literal_repr(expect_node, text)
-            right_val = _literal_value(expect_node)
+            right_lit = _literal_repr(expect_node, text, conversions=_conversions(text))
+            right_val = _literal_value(expect_node, conversions=_conversions(text))
         if form == "compare_eq" and level == S.EXACT_VALUE and len(node.args) > 1:
             if _is_container_literal(node.args[0]) or _is_container_literal(node.args[1]):
                 level = S.EXACT_STRUCT
@@ -1465,6 +1554,7 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         _is_trivial_subject(subject_node)
         and (expect_node is None or _is_trivial_subject(expect_node)),
         *_unittest_bound(method, form, node, subject_node, expect_node, text),
+        unevaluated_expected=_unevaluated(expect_node, text) if form in _EXPECTED_FORMS else None,
     )
 
 
@@ -2861,6 +2951,7 @@ def _collect_unit(
                     epsilon_kind=c.epsilon_kind,
                     predicate=c.predicate,
                     operand_source=c.operand_source,
+                    unevaluated_expected=c.unevaluated_expected,
                     # A tolerance call (#222) judges its two values, as
                     # `assertTrue(<call>)` and `assertAlmostEqual` do.
                     trivial=_is_trivial_subject(node.test) or c.trivial or id(node) in vacuous,
@@ -2930,6 +3021,7 @@ def _collect_unit(
                         epsilon_kind=c.epsilon_kind,
                         predicate=c.predicate,
                         operand_source=c.operand_source,
+                        unevaluated_expected=c.unevaluated_expected,
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=depends,
@@ -3017,6 +3109,7 @@ def _collect_unit(
                         epsilon_kind=c.epsilon_kind,
                         predicate=c.predicate,
                         operand_source=c.operand_source,
+                        unevaluated_expected=c.unevaluated_expected,
                         trivial=trivial,
                         positive=c.positive,
                         left_names=c.left_names,
@@ -3895,6 +3988,7 @@ def _classified_asserts(nodes, text, off) -> tuple:
                 epsilon_kind=c.epsilon_kind,
                 predicate=c.predicate,
                 operand_source=c.operand_source,
+                unevaluated_expected=c.unevaluated_expected,
                 trivial=_is_trivial_subject(node.test) or c.trivial,
                 positive=c.positive,
                 left_names=c.left_names,

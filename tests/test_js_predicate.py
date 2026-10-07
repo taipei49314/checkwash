@@ -729,9 +729,11 @@ def test_residuals_the_evidence_closes(before, after, header, verdict, message):
     ("expect(value).toBeTruthy();", "expect(value).toBeGreaterThan(0);", VITEST, PASS, None),
     ("expect(value).to.not.exist;", "expect(value).to.include(78.75);", VITEST, PASS, None),
     ("expect(value).not.toBeDefined();", "expect(value).toEqual(expected);", VITEST, PASS, None),
-    # A literal and an expression, either way round, wait for #226: the
-    # reader does not resolve what a name or call yields.
-    ("expect(value).toBe(78.75);", "expect(value).toBe(Number(75));", VITEST, PASS, None),
+    # A name or call replaced by a literal is not read in JS yet (#292);
+    # Python reports it (#60). T6, Number(<literal>), folds to its value
+    # since #226 and is no residual.
+    ("expect(value).toBe(78.75);", "expect(value).toBe(Number(75));", VITEST, BLOCK,
+     "expected value rewritten 78.75 -> 75.0 with no change in assertion strength"),
     ("expect(value).toBe(EXPECTED);", "expect(value).toBe(75);", VITEST, PASS, None),
     ("expect(value).toBeLessThan(80);", "expect(value).toBeLessThanOrEqual(LIMIT);", VITEST, PASS, None),
     # Two different bounds: `<` -> `<=` is left to the operand rule.

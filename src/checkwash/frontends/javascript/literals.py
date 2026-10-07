@@ -254,14 +254,53 @@ def _string(source: str) -> str | object:
     return "".join(chars).encode("utf-16-le", "surrogatepass").decode("utf-16-le", "surrogatepass")
 
 
-def populate_expectation(assertion: Assertion, expression: str) -> None:
+# What `Number(<string>)` folds: a plain decimal numeral, as JavaScript's
+# StringToNumber reads one. Whitespace, separators, radix prefixes and the
+# names of infinities stay unknown rather than reasoned about (#226).
+_NUMERAL = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
+
+
+def _number_call(source: str, number_global: Callable[[], bool] | None) -> float | None:
+    """The Number value of `Number(<literal>)`, the one conversion JavaScript folds (#226).
+
+    A number literal, or a string holding a plain decimal numeral, folds to
+    its finite value, read the way the rest of this module reads literals.
+    `number_global` says whether `Number` still names the global here; without
+    it nothing folds.
+    """
+    if number_global is None or not source.startswith("Number") or len(source) > 512:
+        return None
+    inner = _parenthesized(source[len("Number"):].strip(_WHITESPACE))
+    if inner is None:
+        return None
+    argument = _peel(inner)
+    value = _number(argument)
+    if value is None and argument[:1] in "\"'":
+        text = _string(argument)
+        if text is _UNKNOWN or not _NUMERAL.fullmatch(text):
+            return None
+        try:
+            value = float(text)
+        except (ValueError, OverflowError):
+            return None
+        if not math.isfinite(value):
+            return None
+    if value is None or not number_global():
+        return None
+    return value
+
+
+def populate_expectation(assertion: Assertion, expression: str,
+                         number_global: Callable[[], bool] | None = None) -> None:
     """Attach source and canonical value only for a supported scalar operand.
 
     This does not assign meaning to the matcher: callers select the assertion
     forms whose operand is an expected value. No JavaScript coercions apply.
     Parentheses and TypeScript's `as`, `satisfies` and `!` are read through
     (#198 T4, T5); `right_literal` keeps the operand as written. The
-    4096-character cap keeps literal decoding bounded.
+    4096-character cap keeps literal decoding bounded. `Number(<literal>)`
+    folds to its value while `number_global` says `Number` is the global
+    (#226).
     """
     assertion.right_literal = None
     assertion.right_value = None
@@ -275,14 +314,17 @@ def populate_expectation(assertion: Assertion, expression: str) -> None:
     if not source:
         return
     keywords = {"true": True, "false": False, "null": None}
+    folded = _number_call(source, number_global)
     if assertion.form == "approx":
         # toBeCloseTo accepts Number operands and compares their arithmetic
         # distance, which treats either signed zero as the same center.
-        value = _number(source)
+        value = _number(source) if folded is None else folded
         if value is None:
             return
         if value == 0:
             value = 0.0
+    elif folded is not None:
+        value = folded
     elif source in keywords:
         value = keywords[source]
     elif source[0] in "\"'":
@@ -552,6 +594,66 @@ def operand_text(expression: str) -> str | None:
             last = index + 1
     parts.append(source[last:])
     return "".join(parts).strip() or None
+
+
+# One token of an operand: a quoted string, a run of word characters, a
+# punctuator of up to four characters, or any other single character.
+_OPERAND_TOKEN = re.compile(
+    r"""(['"])(?:\\.|(?!\1).)*\1|[\w$]+|>>>=|\.\.\.|===|!==|\*\*=|<<=|>>=|>>>|&&=|\|\|=|\?\?="""
+    r"""|=>|==|!=|<=|>=|&&|\|\||\?\?|\?\.|\*\*|\+\+|--|<<|>>|[+*%&|^-]=|\S""",
+    re.DOTALL,
+)
+
+
+def _double_quoted(literal: str) -> str:
+    """A quoted string in double quotes with its value unchanged: `'a"b'` reads `"a\\"b"`."""
+    out: list[str] = []
+    body = literal[1:-1]
+    i = 0
+    while i < len(body):
+        if body[i] == "\\" and i + 1 < len(body):
+            out.append("'" if body[i + 1] == "'" else body[i:i + 2])
+            i += 2
+            continue
+        out.append('\\"' if body[i] == '"' else body[i])
+        i += 1
+    return '"' + "".join(out) + '"'
+
+
+def comparable_operand(text: str) -> str:
+    """An operand with the formatting that changes no value taken out (#226).
+
+    Two spellings of one value read alike: a quoted string in double quotes,
+    tokens joined by one space, and no comma before a closing bracket. A
+    template literal or a slash, which may open a regular expression, keeps
+    the text as written.
+    """
+    tokens: list[str] = []
+    for match in _OPERAND_TOKEN.finditer(text):
+        token = match.group()
+        if token in ("`", "/"):
+            return text
+        if token[0] in "'\"":
+            token = _double_quoted(token)
+        elif token in (")", "]", "}") and len(tokens) > 1 and tokens[-1] == "," and tokens[-2] not in "([{,":
+            tokens.pop()
+        tokens.append(token)
+    return " ".join(tokens)
+
+
+_CALLEE =re.compile(r"[A-Za-z_$][\w$]*(?:[ \t]*\.[ \t]*[A-Za-z_$][\w$]*)*")
+
+
+def operand_callee(source: str) -> str | None:
+    """The callee's dotted name when an operand is exactly one call, `callee(...)` (#226).
+
+    `new`, an optional chain, a call on a call's result or anything after
+    the call's closing parenthesis is no such operand.
+    """
+    match = _CALLEE.match(source)
+    if match is None or _parenthesized(source[match.end():].strip(_WHITESPACE)) is None:
+        return None
+    return re.sub(r"[ \t]+", "", match.group())
 
 
 def operand_names(source: str) -> tuple[str, ...]:
