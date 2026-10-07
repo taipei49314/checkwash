@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **142 bypasses** are documented, of which **32 are not closed**.
+- **143 bypasses** are documented, of which **32 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -62,7 +62,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (107)
+## Closed — each pinned by something that runs (108)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -179,6 +179,7 @@ behind it* unshippable.
 | 122 | Rewrite an expected literal into something checkwash did not compare: a conversion of a literal (`== 78.75` -> `== float('75')` or `Decimal('75')`; `toBe(78.75)` -> `toBe(Number(75))`, #198 T6), a call to a builtin or to a name bound nowhere (`int('75')`, `make(1)` with `make` never imported or defined, `parseFloat('75')`), or one such call into another (`make(1)` -> `make(2)`), or, in JS, an imported or same-file value (`toBe(OTHER)`, `toBe(make(1))`, `const EXPECTED_TOTAL = 75`) (#226) | `expected_float_conversion_pos.gwcase`, `expected_unevaluated_builtin_pos.gwcase`, `expected_unevaluated_rewritten_pos.gwcase`, `expected_unevaluated_unbound_pos.gwcase`, `js_expected_imported_call_pos.gwcase`, `js_expected_imported_call_rewritten_pos.gwcase`, `js_expected_imported_name_pos.gwcase`, `js_expected_number_conversion_pos.gwcase`, `js_expected_same_file_const_pos.gwcase`, `js_expected_unevaluated_global_pos.gwcase` |
 | 123 | Weaken or delete a JS/TS assertion inside an iterator callback whose receiver is not a name, instead of fixing code: `[[1, 78.75]].forEach(([n, want]) => { expect(total(n)).toBe(want); })` -> `.toBeDefined()`, or the assertion deleted, also over `Object.entries(cases)`, `(cases)`, `cases[0]` or `cases?.forEach` (#294) | `js_iterator_callback_call_receiver_pos.gwcase`, `js_iterator_callback_table_deleted_pos.gwcase`, `js_iterator_callback_table_weakened_pos.gwcase` |
 | 124 | Wrap an approximate comparison in a structure that holds everywhere instead of fixing code: `assert total() == pytest.approx(78.75)` -> `... or True` (also `True or ...`, `or total() > 0`, `isinstance(...) or ...`), `all(t == pytest.approx(78.75) for t in ts)` -> `any(...)`, `(total() == pytest.approx(78.75)) is not None`, or `print(pytest.approx(78.75)) is None` (#299) | `approx_all_to_any_pos.gwcase`, `approx_or_true_pos.gwcase`, `approx_result_is_not_none_pos.gwcase` |
+| 125 | Move the skip one call away instead of fixing code: a same-file function the test calls (`def _later(): pytest.skip(...)`, then `_later()`), a nested def it calls, the raised spelling in a helper, or the same helper called from a fixture or xunit setup the test runs; or add the skip to a helper the test already calls (#272) | `helper_skip_added_to_called_helper_pos.gwcase`, `helper_skip_module_function_pos.gwcase`, `helper_skip_nested_def_pos.gwcase`, `helper_skip_raised_pos.gwcase`, `helper_skip_through_fixture_pos.gwcase` |
 
 ## Unclassified (11)
 

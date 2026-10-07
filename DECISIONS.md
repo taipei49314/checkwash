@@ -7269,3 +7269,190 @@ its label since #226 (D-104) says. Every other case keeps v0.6.0's
 verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-111 (2026-10-06): a skip a test reaches through a same-file helper is read (#272, first stage)
+
+A skip was read only where the test body or its setup spelled it. A test
+that called `_later()`, where `_later` calls `pytest.skip()`, was skipped as
+surely as one that called it itself, and passed with zero findings, while
+the same line in the body blocked. So did a called nested def, the raised
+spelling in a helper, and a helper a test's fixture calls; and a skip added
+to a helper the test already called. Found during #254's round.
+
+The owner adopted the issue's recommendations on 2026-10-06 ("全部核准"):
+272.Q1 (a), read a skip the test or its setup reaches through a helper, for
+the same-file scopes `_executed_scopes` already resolves for assertions,
+judged as a skip in the body or in the setup is judged; an outcome every
+run reaches is unconditional, and a guarded one keeps its guard, with the
+call site's conditions and the helper's conjoined, as 183.2 records a setup
+guard. 272.Q2 (a), follow an imported helper into the head tree as a second
+stage. 272.Q3, the marker `helper.<function>.<effect>`, with the message
+"skip/xfail added to a helper this test calls". This entry is the first
+stage; the second follows in its own round.
+
+**As implemented:**
+- `frontends/python/helper_skips.py` (new), `HelperOutcomes`: a call by a
+  plain name to a function the module defines, one nested in the calling
+  scope, or a name bound to a lambda or to `partial` of one of those, runs
+  that helper. Each helper is read once per module: `setup_outcome` gives
+  its own outcome and guard, and the helpers it calls in turn, at most four
+  calls from the test or setup callback, as `_executed_scopes` follows
+  assertions, add theirs under the conditions their calls run under.
+- A call's conditions (`call_conditions`) are what a body skip's are: each
+  enclosing `if`, `not (...)` for an `else`, and an `except` block's own
+  condition (`_handler_guard`); a loop, `with`, `match` or `try` body adds
+  none. The marker's guard is their conjunction with the helper's own.
+- `frontend.py`: the unit's calls that run (not dead) are read; a test
+  module's fixtures and xunit setup callbacks read theirs (`SetupScope`),
+  and a unit gets those of the setup providers it reaches
+  (`setup_helper_outcomes`, resolved as `setup_outcomes` resolves them).
+- The marker family `helper` (`conftest_controls.HELPER`): TEST_DISABLED
+  reports "skip/xfail added to a helper this test calls
+  (helper._later.skip)", and a guard removed or made always true "in a
+  helper this test calls"; COMPAT_GATE judges its guard as a body skip's
+  (`is_helper_skip`).
+- `ir/diffalign.py`: an added helper marker is paired with a skip the base
+  had and the head lost when it is that skip moved (`_moved_skip`, reading
+  7); the move is recorded (`UnitDelta.markers_moved`), and
+  `evidence._mark_weakened_guards` reads its guard against the old one's.
+
+Readings the rulings leave to the implementation:
+
+1. **A helper is read as a setup callback is, whoever calls it.** A skip
+   in the test body counts with any arguments, and `importorskip` too; a
+   helper is read by `setup_outcome`, the reading that records the path
+   condition an outcome is reached under inside another function, an
+   `except` block's included. So a helper's skip with an argument that
+   calls something (`pytest.skip(reason())`), and `importorskip` in a
+   helper, are not read.
+2. **The scopes are the ones `_executed_scopes` resolves, and only
+   functions.** A class is not followed: calling it runs `__init__`, not
+   the methods `_executed_scopes` lends assertions from. Nor is a
+   generator, whose body does not run when it is called, nor a helper
+   passed as an argument. A method reached through `self` is no scope
+   `_executed_scopes` resolves, for assertions either: the issue's H2 and
+   S1 are filed as #306, with A1 and A2, a helper method's assertion
+   weakened or deleted, which pass on v0.6.0 too.
+3. **A name the calling scope binds itself is not the module function.**
+   `def test_total(offline): offline()` calls a fixture's value, and
+   `_later = make(); _later()` calls what `make` returned.
+4. **Every call ends at an outcome every call reaches.** A helper that
+   always skips is read no further: what it would call after does not
+   run.
+5. **The marker names the helper that holds the outcome**, with that
+   outcome's text and span. A helper several tests reach marks each of
+   them, as a test module's own setup providers do (row 104).
+6. **A conftest fixture's helpers are not followed.** A conftest's
+   fixtures are read by their own unconditional outcome (#223); a helper
+   it calls is in another file than the test module.
+7. **A skip moved into a helper, out of one, or into a renamed one is the
+   skip it was.** The marker is named for the helper, so carrying a skip
+   the test already had, from its body or its setup, into a helper it
+   calls changed the name alone and read as a skip added; the round's
+   sweep found it in scrapy df342eee6e2f. An added helper marker is the
+   moved skip when the base had a skip the head lost with the same
+   effect that fired at least as often: unconditionally, or under the
+   same condition. Its guard is then read against the old one's, so a
+   constant behind it made always true is still reported (THREATMODEL
+   59). A skip whose guard did not move with it, one under another
+   condition, and a skip that became an xfail are reported as added. A
+   skip respelled in the body (`pytest.skip` -> `self.skipTest`) is not a
+   move; that is #281's question, unchanged.
+
+**Tests and fixtures.**
+- **Tests:** 52 in `tests/test_issue272_helper_skips.py`, and
+  `tests/test_conftest_controls.py` lists the two new minting sites and
+  the family. Thirty-five mutants of the round's code each fail them or the
+  fixtures: an `if`, an `else` or an `except` block at a call site adding
+  no condition; a generator read as a helper, or a lambda not; a
+  parameter, or a name the caller binds, not shadowing the module
+  function; the call site's conditions, or the helper's own guard,
+  dropped; the walk going on past an outcome every call reaches; one call
+  deeper, or shallower, than assertions; a nested helper read with the
+  module's names only; a lambda's parameters not shadowing; a fixture's,
+  or xunit setup's, helpers not read; the unit's own calls, or the setup's
+  helper markers, not read; COMPAT_GATE not reading a helper skip's guard;
+  a guard removal not read for one; the family unknown; and, for reading
+  7, no move credited, markers not paired by name first, a body skip
+  respelled in the body taken for a move, only a helper-to-helper move
+  credited, a skip and an xfail the same, every outcome a skip, a
+  fixture's skip without an effect, `self.skipTest` an xfail, the guard
+  not compared, a guarded skip never moving, an unconditional skip moving
+  only to an unconditional one, one skip crediting two moves, the move
+  recorded backwards, and a moved skip's guard not read against the old
+  one's.
+- **Fixtures:**
+  - row 125's pins, each passing on v0.6.0 with zero findings:
+    `helper_skip_module_function_pos`, `helper_skip_nested_def_pos`,
+    `helper_skip_raised_pos`, `helper_skip_through_fixture_pos` and
+    `helper_skip_added_to_called_helper_pos`;
+  - `helper_skip_platform_gate_neg`: a call under a platform condition is
+    a D6 gate, held at warn, as the same skip in the body is;
+  - `helper_skip_already_called_neg`: a skip the base already reached is
+    no event;
+  - `helper_skip_moved_from_body_neg`: a body skip moved with its guard
+    into a helper the test calls is no skip added (reading 7); C1 before
+    the fix blocked it.
+
+Every existing fixture keeps its expectation, and every finding in the
+corpus (`tools/emit_corpus.py`: main's 759 records and the eight new ones)
+is byte for byte main's.
+
+**Fingerprints and IR.** No fingerprint moves: the markers are new names,
+and a finding on one is a new finding. `--emit-ir` gains `markers_moved`
+on every unit delta, an optional field whose default is empty
+(docs/stability.md: IR_VERSION stays 2, as for D-067's keys); in the
+corpus it adds `"markers_moved": []` to the 655 unit deltas of the 759
+existing records and changes nothing else. The next release guide names
+it.
+
+**Cost.**
+Measured with the round's engine against main's (`4f0955b`):
+- **Targeted set:** every non-merge commit of the thirteen sweep
+  histories whose test-side Python adds or removes a line spelling
+  `skip(`, `skipTest(`, `SkipTest`, `xfail(` or `skip.Exception`: 1,144
+  commits, 959 readable. Four records change and one verdict moves
+  (blocked 272 -> 273):
+  - aiohttp `2b7cb1629f4b` ("skip some tests for tokio loop"): fifteen
+    tests start calling a new helper, `skip_if_no_dict(loop)`, which
+    skips when the loop has no `__dict__`. That gives fifteen warn
+    findings. They are the skip the commit means, and they stay at warn
+    because the commit changes production code too, as the same line in
+    each body would.
+  - pytest `ced62f30ba0d` (pass -> block): two tests call the new
+    `attempt_symlink_to`, which skips on Windows under Python 2 and when
+    a symlink cannot be made (`except OSError`):
+    - for `TestNumberedDir.test_cleanup_symlink` it is a new skip, high,
+      as it would be in the body;
+    - `test_tmpdir_always_is_realpath` trades a
+      `skipif(not hasattr(py.path.local, "mksymlinkto"))` mark for it.
+      That is a skip respelled from a mark to a call, #281's question,
+      and it reads as added.
+  - pytest `3cc58c2f78f0` (block -> block): `py.test.skip(...)` ->
+    `pytest.skip(...)` inside the `lsof_check` helper reads as a skip
+    added to it in three tests, because `py.test` is not read (#310,
+    found by this sweep).
+  - pytest `5e883f51959f` (pass -> pass): `test_tmpdir_always_is_realpath`
+    moved to `test_legacypath.py`, and its disappearance now reports at
+    warn where it was info. Its helper's `except OSError` skip is no
+    compat gate, so D2 no longer credits the move of a unit that may not
+    run (`unit_is_live`).
+
+  Before reading 7, this sweep's first run also blocked scrapy
+  `df342eee6e2f`, where fourteen tests' guarded body skips moved into
+  helpers. Its record is now main's.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits): the same records as
+  main, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the ten histories give main's records byte
+  for byte. In pytest's, two records change, both commits of the targeted
+  set above: `ced62f30ba0d` (pass -> block) and `3cc58c2f78f0` (block ->
+  block).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.

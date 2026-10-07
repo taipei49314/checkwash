@@ -28,12 +28,14 @@ from checkwash.frontends.python.setup_skip_controls import (
     body_outcome,
     conftest_level,
     module_bindings,
+    setup_helper_outcomes,
     setup_outcomes,
 )
 from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
 from checkwash.frontends.python.class_attributes import NONE as CLASS_NONE
 from checkwash.frontends.python.class_attributes import OBJECT as CLASS_OBJECT
 from checkwash.frontends.python.class_attributes import ClassAttributes, ClassValue, receivers, substitute
+from checkwash.frontends.python.helper_skips import HelperOutcomes
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
@@ -2925,6 +2927,7 @@ def _collect_unit(
     method: bool = False,
     outcome_roots: frozenset[str] = frozenset(),
     attrs=None,
+    helpers: HelperOutcomes | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -2995,10 +2998,20 @@ def _collect_unit(
     # inside `func` (this walk sees it) and an executed scope (that loop sees
     # it), and double-counting an oracle invents an assertion to "remove".
     own_assert_ids: set[int] = set()
+    # Calls by a plain name to something the unit can reach in this file: a
+    # helper whose run ends in a skip skips this unit too (#272).
+    helper_calls: list[ast.Call] = []
 
     for node in _walk(func):
         if id(node) in dead:
             continue
+        if (
+            helpers is not None
+            and isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id in local_scopes
+        ):
+            helper_calls.append(node)
         # A native skip or xfail, called or raised (`raise unittest.SkipTest`
         # is the same act as `pytest.skip()`), read through the bindings (#220).
         if isinstance(node, (ast.Call, ast.Raise)):
@@ -3132,6 +3145,15 @@ def _collect_unit(
             seg = text.seg(node) or ""
             handlers.append(
                 Handler(caught=caught, is_broad=is_broad, text=seg.split("\n")[0], span=off.span(node))
+            )
+
+    if helper_calls:
+        for helper, effect, evidence, guard in helpers.reached(
+            func, module_names, helper_calls, method=method, local_scopes=local_scopes
+        ):
+            markers.append(
+                Marker(name=f"helper.{helper}.{effect}", text=text.seg(evidence) or helper,
+                       span=off.span(evidence), guard=guard)
             )
 
     # The other half: assertions the unit runs that are not written inside it.
@@ -3756,11 +3778,21 @@ def _parse_python(
     def condition(node: ast.AST) -> str:
         return text.seg(node) or ast.unparse(node)
 
+    # Same-file helpers a unit or its setup calls (#272), read only in a test
+    # module that can spell a native outcome at all.
+    helper_outcomes = (
+        HelperOutcomes(module_scopes, condition, branch_fixtures)
+        if collect_tests and not conftest and any(token in raw for token in _SETUP_OUTCOME_TOKENS)
+        else None
+    )
+
     if collect_tests and not conftest and (
         any(token in raw for token in _SETUP_OUTCOME_TOKENS)
         or any(fixture[2] is not None for level in chain for fixture in level.fixtures.values())
     ):
-        setup_scopes = (SetupScope(tree.body, module_bindings(tree), condition=condition),)
+        setup_scopes = (
+            SetupScope(tree.body, module_bindings(tree), condition=condition, helpers=helper_outcomes),
+        )
     class_setup: dict[tuple[int, int], SetupScope] = {}
     # The class attributes a guard reads through `self` (#254): only a test
     # module with a class has any.
@@ -3790,7 +3822,7 @@ def _parse_python(
             if key not in class_setup:
                 class_setup[key] = SetupScope(
                     cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list, bases=cls.bases,
-                    condition=condition, attrs=attrs_of(owner),
+                    condition=condition, attrs=attrs_of(owner), helpers=helper_outcomes,
                 )
             scopes = scopes + (class_setup[key],)
         return scopes
@@ -3808,6 +3840,14 @@ def _parse_python(
             if origin is not None:
                 marker_origins[(marker.name, marker.span, marker.text)] = origin
             markers.append(marker)
+        # A same-file helper the setup calls (#272).
+        for helper, effect, evidence, guard in setup_helper_outcomes(
+            scopes, func, method=len(scopes) > 1, chain=chain
+        ):
+            markers.append(
+                Marker(name=f"helper.{helper}.{effect}", text=text.seg(evidence) or helper,
+                       span=off.span(evidence), guard=guard)
+            )
         return markers
 
     class_aliases: dict[int, dict[str, list[ast.expr]]] = {}
@@ -3884,7 +3924,7 @@ def _parse_python(
                         child, qual, text, off, inherited + setup_markers(child, scopes),
                         module_scopes, file_caches, branch_fixtures, doctests, aliases,
                         outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
-                        attrs=attrs_of(owner),
+                        attrs=attrs_of(owner), helpers=helper_outcomes,
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -3933,6 +3973,7 @@ def _parse_python(
                 + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls)),
                 module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
+                helpers=helper_outcomes,
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
