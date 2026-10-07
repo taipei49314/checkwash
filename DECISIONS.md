@@ -6861,3 +6861,120 @@ No callee name is added or removed, and nothing else reads these calls.
 - **Not measured:** the JS false-positive cost, which waits on #212.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-107 (2026-10-06): a string skipif or xfail condition is the expression pytest evaluates (#263)
+
+pytest compiles a `skipif` or `xfail` mark's string condition as an
+expression and evaluates it with `os`, `sys`, `platform` and `config` in
+scope beside the test module's globals. D6 read the string as a constant.
+A non-empty string is truthy in every environment, so
+`skipif("sys.platform == 'win32'")` read as a condition that always holds
+and blocked at high, as an unconditional skip would, while
+`skipif(sys.platform == 'win32')` held at warn. #260 found it: reading a
+mark applied through a bound name newly blocked three commits of pytest's
+own history this way.
+
+Rulings, 2026-10-06 (#263, adopted as recommended, "全部核准"):
+- **263.Q1:** a string condition is parsed as the expression it holds and
+  judged as an expression condition is. A string that does not parse earns
+  nothing, as today, and one that always holds (`"True"`,
+  `"sys.version_info >= (3,)"`) still blocks. The marker's name keeps the
+  string as written, so fingerprints do not move.
+- **263.Q2:** `os`, `sys` and `platform` are read as those modules even
+  when the test module does not import them. `config` stays unknown, so a
+  condition on an option is judged as an unknown is.
+
+**As implemented:**
+- `ir/markers.py`, `mark_condition`: a `skipif` or `xfail` mark's first
+  argument; for a string, the expression parsed from it as pytest compiles
+  it (`ast.parse(..., mode="eval")`, the parser `compile` uses). A string
+  that does not compile is None.
+- `compat.py`: a string condition is evaluated in pytest's namespace
+  (`_eval_condition(..., pytest_names=True)`). The condition D6 evaluates
+  is the conjunction of its parts (a `pytestmark` binding's guard and the
+  mark's own condition, #260 Q2), each part in its own namespace.
+- `evidence.py`, `_gate_condition_names`: the names inside a mark's
+  string condition are resolved as module constants, as pytest's module
+  globals hold them.
+
+Readings the rulings leave to the implementation:
+
+1. **What compiles.** Exactly what `compile(text, ..., "eval")` accepts:
+   leading whitespace, a statement, an empty string and two lines that no
+   bracket joins do not compile, and earn nothing. pytest reports an error
+   for such a mark, so the test does not run where it applies. With a
+   `pytestmark` binding's guard, the mark still earns nothing.
+2. **pytest's names.** In a string, a bare `os`, `sys` or `platform` is
+   that module unless the test module binds the name to a constant that
+   the engine resolves, which wins as the module's globals do. A module is
+   true and equals nothing but itself, so `"platform != 'linux' or
+   sys.platform == 'win32'"` holds everywhere and blocks, as it skips
+   everywhere under pytest. Dotted reads (`sys.platform`, `os.name`,
+   `platform.system()`) were already read whatever the module imports.
+3. **Module code stays module code.** A constant's own expression, and a
+   `pytestmark` binding's guard, are read as before: a bare `platform`
+   there is the `from sys import platform` an expression condition
+   assumes, and a bare `sys` is unknown.
+4. **Reasons are not conditions.** The argument of an imperative
+   `pytest.xfail(...)` is its reason. It is not parsed, so a reason that
+   happens to be a name pulls no constant into the file's IR.
+
+**Not in this round (residual):**
+- A test module that binds `platform` by `from sys import platform` has
+  that string where pytest evaluates a string condition, but the reading
+  above takes the module: `"platform != 'win32'"` there blocks though it
+  can be false. The sweeps hold no such condition.
+- Only a mark's first condition is read, and only it names the mark:
+  `skipif(sys.platform == "win32", True)` holds at warn while pytest skips
+  everywhere, and a `condition=` keyword is not read. Filed as #297.
+
+**Tests and fixtures.**
+- **Tests:** 34 in `tests/test_issue263_string_conditions.py`. All 16
+  mutants of the round's code fail them or the fixtures.
+- **Fixtures:**
+  - `compat_gate_string_condition_neg` (#263 S1), in a module that does
+    not import `sys`: v0.6.0 blocks it with TEST_DISABLED high; it is now
+    held at warn by COMPAT_GATE.
+  - `compat_gate_string_always_true_pos` (row 44): v0.6.0 blocks it, and
+    so does this round.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change.
+
+**Fingerprints.** None move: a marker's name holds the string as written.
+
+**Cost.**
+- **Targeted set:** every non-merge commit of the thirteen histories
+  (the six of the standard set, aiohttp, pytest, requests, scrapy,
+  uvicorn, werkzeug and PyWavelets) whose Python diff adds or removes a
+  line where `skipif(` or `xfail(` opens a string: 232 commits, 200
+  readable on both engines. 27 records change, all in pytest, and 20
+  verdicts move from block to pass (74 blocked -> 54):
+  - 110 TEST_DISABLED findings fall from high to warn, held by
+    COMPAT_GATE. Each is a mark whose string is a version or platform
+    gate pytest evaluates, false somewhere: `"sys.version_info < (2,6)"`,
+    `"sys.platform == 'win32'"`, `"sys.platform.startswith('java')"`,
+    `"sys.platform == 'win32' or getattr(os, '_name', None) == 'nt'"`
+    and its negation;
+  - 5 fall from high to info: tests that move or are renamed under such
+    a mark (`45065e4e2eb2`, `TestLastFailed` moving into
+    `test_cache.py`; `1ff173baee58`, two tests moving into a class whose
+    `pytestmark` is a name bound to one; `fe54762b93a3`). The new units
+    run somewhere, so the old units' disappearance is a relocation.
+  No finding appears or disappears, and none rises.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets:** the 895 commits of ten full histories (855
+  readable) give the base's records byte for byte (237 blocked). In the
+  368 of pytest's (364 readable), 15 records change, every one also in
+  the targeted set above, and 11 verdicts move from block to pass (107
+  blocked -> 96).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported (`i198/T6`, undecided, pass on both
+engines). Every case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
