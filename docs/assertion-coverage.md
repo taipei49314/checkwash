@@ -524,7 +524,9 @@ What each JS assertion records:
   coercive ones included (chai's `assert.equal`, Node's legacy `equal` and
   `deepEqual`); `toBeCloseTo` and `closeTo` record their center, and a
   hand-rolled `Math.abs(x - 78.75) < bound` its literal centre (189.2). The
-  literal reader reads through parentheses and TypeScript wrappers (T4, T5).
+  literal reader reads through parentheses and TypeScript wrappers (T4, T5),
+  and `Number(<literal>)` folds to its value while `Number` names the global
+  (T6, #226).
 - **Bounds.** The ordering matchers, chai's bound words and
   `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` record their bound as a
   Python bound is recorded (198.Q2, Q4). A bound read as a hand-rolled
@@ -543,12 +545,22 @@ How the rules read them, as Python's do (198.IR amendment 2):
   `toBeLessThan(80)` -> `.below(1e12)` included, and a name or call replaced by
   a different one: `toBe(EXPECTED_A)` -> `toBe(EXPECTED_B)` reports
   "expected call rewritten to a different call ['EXPECTED_A'] -> ['EXPECTED_B']".
-  As in Python, the same names with a changed argument (`build(1)` ->
-  `build(2)`) or member (`config.total` -> `config.subtotal`) do not.
-- A literal and an expression, in either direction, stay unreported until
-  [#226](https://github.com/taipei49314/checkwash/issues/226) decides them for
-  both frontends: `toBe(78.75)` -> `toBe(Number(75))` (T6) and
-  `toBe(EXPECTED)` -> `toBe(75)` pass. Python reports the second (#60).
+  As in Python, the same names with a changed member (`config.total` ->
+  `config.subtotal`) do not.
+- A literal and a name or call follow one definition with Python since
+  [#226](https://github.com/taipei49314/checkwash/issues/226)
+  ([Expected provenance](expected-provenance.md#conversions-unevaluated-calls-and-javascript-226)).
+  A folded `Number(<literal>)` is a literal: `toBe(78.75)` -> `toBe(Number(75))`
+  (T6) reports "expected value rewritten 78.75 -> 75.0". A literal replaced by
+  a call to a global outside the fold set or to a name no scope declares
+  (`parseFloat('75')`), or such a call rewritten into another (`build(1)` ->
+  `build(2)`), reports "expected value replaced by an expression checkwash does
+  not evaluate". A literal replaced by what an import, a declaration or a
+  declared function gives reports EXPECTATION_DEFINITION_CHANGED with the
+  value resolved: `toBe(78.75)` -> `toBe(OTHER)` reads "78.75 -> ./total.OTHER".
+- A name or call replaced by a literal is not read in JS: `toBe(EXPECTED)` ->
+  `toBe(75)` passes, where Python reports it (#60).
+  [#292](https://github.com/taipei49314/checkwash/issues/292) asks for a ruling.
 - TOLERANCE_LOOSENED compares two known tolerances. A tolerance checkwash
   cannot read (`closeTo(v, delta())`, `toBeCloseTo(v, precision())`) is
   unknown, and a known tolerance replaced by an unknown one on the same subject

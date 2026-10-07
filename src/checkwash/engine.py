@@ -82,6 +82,7 @@ from checkwash.frontends.python.fixture_local_implementations import fixture_loc
 from checkwash.frontends.python.parametrized_string_standins import parametrized_string_standin_events
 from checkwash.shadow import find_runtime_subject_shadows
 from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
+from checkwash.frontends.javascript.expected_provenance import mark_js_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
@@ -1419,6 +1420,8 @@ def build_ir(
     mark_expected_provenance(ir, raw_by_path, root_reader, config.role_of, report_context,
                              {path: data for (path, side), data in oracle_sources.items()
                               if side == -1 and (path, side) in strict_oracle_sources}, root_searcher)
+    # The JavaScript port of the same channel (#226).
+    mark_js_expected_provenance(ir, raw_by_path)
     return ir
 
 
