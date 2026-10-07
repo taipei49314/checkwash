@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a row added to the table a forEach reads, its assertion unchanged
+origin: #294 - an iterator callback keeps the lexical coverage docs/assertion-coverage.md states, whatever the call's receiver
+=== before: tests/total.test.ts ===
+import { it, expect } from "vitest";
+import { total } from "../src/total";
+
+it("totals", () => {
+  [[1, 78.75], [2, 157.5]].forEach(([n, want]) => {
+    expect(total(Number(n))).toBe(want);
+  });
+});
+=== after: tests/total.test.ts ===
+import { it, expect } from "vitest";
+import { total } from "../src/total";
+
+it("totals", () => {
+  [[1, 78.75], [2, 157.5], [3, 236.25]].forEach(([n, want]) => {
+    expect(total(Number(n))).toBe(want);
+  });
+});
+=== expect ===
+[]
