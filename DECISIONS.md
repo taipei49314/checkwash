@@ -7706,3 +7706,125 @@ engines), as on main, where #226's relabel (D-104) has not landed. Every
 other case keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-114 (2026-10-07): a positional target in addopts is an explicit target of every run (#173)
+
+pytest puts the root config's `addopts` before its own arguments, so a
+word there that is no option and no option's value is a target: `addopts =
+"tests/smoke"` makes a bare `pytest` collect tests/smoke alone, and
+testpaths no longer applies. The resolved collection inventory (§2b, #173,
+#196 184.x) read `addopts` for its options only, so a first or changed
+config that pointed every run at part of the suite passed at warn, while
+the same narrowing through `testpaths` blocked. THREATMODEL row 105 listed
+it as residual (6).
+
+Ruling ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751), 196.followup.addopts-positional-targets):
+not filed separately; handled with one definition of explicit targets for
+the CLI and for `addopts`. The maintainer decision of 2026-10-06 closes
+#173 once its ruled items are done; (3) was #221, and this is (6).
+
+**As implemented:**
+- `shadow._pytest_cli`, which reads a command's targets, reads `addopts`'
+  words too. It now knows pytest's own options that take a value (`-p`,
+  `-W`, `-r`, `--tb`, `--capture`, the `--log-*` options and the rest)
+  and the common plugins' (pytest-xdist's `-n`, `--dist`; pytest-cov's
+  `--cov-report`, `--cov-config`; pytest-timeout, pytest-rerunfailures,
+  pytest-html, pytest-randomly, pytest-django, pytest-asyncio and
+  hypothesis), and gives `--cov`, `--debug` and `--cache-show` an optional
+  value, as argparse does: they take the next word unless it is an option.
+- `collection_inventory`: a run collects beneath its command's targets and
+  the `addopts` targets together. When the `addopts` targets change, the
+  base runs, read from the base side's runner files with the base
+  `addopts`, and the head runs, with the head's, are applied to the same
+  head tree under the base settings, and a base-suite test the base runs
+  collected and no head run collects is excluded: "resolved pytest
+  collection excludes N existing test(s), including ...", the settings
+  proof's reason. A renamed file keeps its base identity. A word in
+  `addopts` that names no file or directory on its side is no target.
+- The settings proof stays withheld for a run with explicit targets,
+  whether its command's or its config's `addopts`'.
+
+Readings the ruling leaves to the implementation:
+
+1. **The runs together.** A test is lost only when no head run collects
+   it, so pointing one run at a subset while another still runs the rest
+   loses nothing, and neither does a target moved between a command and
+   `addopts` (`pytest tests/smoke` -> `pytest` with `addopts =
+   "tests/smoke"`), as an option moved into the config is not new
+   (#196 184.3).
+2. **A word that names no path is no target, and a run that cannot pass
+   makes no claim.** A word in `addopts` that names no file or directory
+   on its side is the value of an option the reader does not know
+   (aiohttp's `--loop all`), or a target that makes every run fail
+   (pytest exits 4); either way it narrows nothing, so it is not read as
+   a target, and it does not withhold the settings proof. A head run whose
+   command names a missing path fails the same way, and one that collects
+   no test fails too (exit 5), so neither is a passing narrowing. An
+   unknown option's value that names a path still reads as a target
+   (residual). The sweep showed why the first half is needed: the
+   settings reader cuts a multi-line `addopts` at its first line with
+   `=` and leaves the word `[` (attrs, scrapy; filed as #324), which
+   would otherwise have withheld the settings proof for those configs.
+3. **One definition, both readers.** The longer list of options changes
+   how a command's own targets are read as well: `pytest -n 4 tests`
+   reads `tests` alone, where `4` was a target, and `pytest --cov src
+   tests` reads `tests` alone, as pytest does. This reaches the selector
+   proof's runs (#196 184.1) and the runtime-shadow reading of which
+   tests a changed runner reaches.
+4. **Ambiguous `addopts`** (two values in the config pytest reads)
+   withholds the inventory, as an ambiguous setting does; the options of
+   every value were counted before.
+5. **A node id is read at file granularity,** as a command's is: `addopts
+   = "tests/a.py::test_x"` keeps every test of `tests/a.py` (residual).
+
+**Tests.** 53 in `tests/test_issue173_addopts_targets.py`. Each of the
+round's 27 mutants fails them: one of nine value-taking options forgotten
+(`-p`, `-W`, `-r`, `--log-level`, `-n`, `--dist`, `--cov-report`,
+`--timeout`, `--reruns`); `--cov`'s optional value ignored, or taken before
+an option; ambiguous `addopts` read; the `addopts` targets dropped, or a
+change of them ignored; testpaths applied beside them; a run that collects
+no test, or whose command names a missing path, counted; a command's own
+targets dropped, on either side; the base runs read from the head; the
+inventory judged for a run with `addopts` targets; a renamed file's base
+identity lost; a word that names no path read as a target, a directory not
+counted as a path, the base side's words read against the head tree, or the
+base tree built without the diff's base-side files. The resolved inventory
+runs on a snapshot the case runner does not supply, so the round's pins are
+tests, as #196 184.1-184.3's are; the corpus does not change:
+`tools/emit_corpus.py` gives main's 759 records, byte for byte.
+
+**Fingerprints.** No swept record moves. A narrowed run reports the
+settings proof's reason where it reported none. A settings change beside
+an `addopts` target is no longer judged by the settings proof, which that
+target overrides, so a finding the proof gave there now comes, if at all,
+from the static checks under their reason; no swept history puts a target
+in `addopts`.
+
+**Cost.** Measured with the round's engine against main's (`4f0955b`):
+- **Targeted set:** every non-merge commit of the twelve histories and of
+  PyWavelets whose root `pytest.ini`, `.pytest.ini`, `pytest.toml`,
+  `.pytest.toml`, `setup.cfg`, `tox.ini` or `pyproject.toml` adds or
+  removes a line naming `addopts` (84), and every one that adds or removes
+  a line running pytest with an option that takes a value (`-n`, `-W`,
+  `-p`, `-r`, `--tb`, `--cov`, `--cov-report`, `--dist`, `--timeout`,
+  `--reruns`, `--log-level` and others; 100): 183 commits, 167 readable.
+  No record changes.
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give main's records, byte for
+  byte.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and
+  368 of pytest's (364 readable) give main's records, byte for byte.
+
+No commit of these sets puts a path in `addopts` on either side, so the new
+target reading never fires there. 248 of them hold a word in `addopts` that
+names no path: aiohttp's `--loop all`, and the `[` that attrs' and scrapy's
+multi-line arrays read as (#324). Only in those 248 does the rule of reading
+2 that such a word is no target change what the engine reads; they were run
+again with the round's final engine, and give main's records too.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
