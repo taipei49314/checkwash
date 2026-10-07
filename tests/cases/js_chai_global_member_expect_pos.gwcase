@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 111
+rule: ASSERT_WEAKENED
+issue: 311
+title: chai.expect(...) on an undeclared global chai is chai's expect
+origin: issue #311 K5 — v0.6.0 passes this with zero findings and no coverage notice
+=== before: test/billing.spec.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    chai.expect(invoiceTotal(items)).to.equal(78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    chai.expect(invoiceTotal(items)).to.exist;
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

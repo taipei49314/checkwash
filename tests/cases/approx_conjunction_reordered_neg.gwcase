@@ -1,0 +1,27 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: the two parts of an approx conjunction swapped: no finding
+origin: #299 — a conjunction states the same approximate comparison in either order
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def totals():
+    return [78.75, 80.0]
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import totals
+
+
+def test_totals():
+    assert totals()[0] == pytest.approx(78.75) and len(totals()) == 2
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import totals
+
+
+def test_totals():
+    assert len(totals()) == 2 and totals()[0] == pytest.approx(78.75)
+=== expect ===
+[]

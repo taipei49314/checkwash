@@ -15,6 +15,17 @@ An option every base-side pytest command in the runner files carried, which
 the head commands dropped and nothing else, moved into the config: each run
 passes it before and after, so it is not new (#196 184.3). A command this
 reader cannot parse leaves that proof open, and the option is judged.
+
+A positional target in the root config's addopts is an explicit target of
+every run, read as a command's own are (#173): pytest puts addopts before its
+arguments, so a run collects beneath its command's targets and the addopts
+targets together, and testpaths no longer applies. A change of those targets
+is judged by what it leaves out of each run, on the head tree. A word in
+addopts that names no file or directory on its side is no target: it is the
+value of an option this reader does not know (`--loop all`), or a target that
+fails every run (exit 4), and either way it narrows nothing. A command's
+target that names no path, or targets that collect no test, make pytest fail
+(exit 4 or 5), so no claim is made for them.
 """
 from __future__ import annotations
 
@@ -25,6 +36,7 @@ import re
 import shlex
 
 from checkwash.change import EngineError
+from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ci_control_flow import _read_yaml, _step_command, is_github_workflow
 from checkwash.pytest_collection import (
     _commands,
@@ -169,6 +181,34 @@ def _settings(path, source):
     return {key: next(iter(value)) for key, value in settings.items() if key != "addopts"}
 
 
+def _addopts_targets(source, paths):
+    """The explicit targets a root config's addopts passes every run, or None for ambiguous addopts (#173).
+
+    A word that names no file or directory among `paths` is no target: it is
+    the value of an option this reader does not know, or a target that fails
+    every run (pytest exits 4), so it narrows nothing.
+    """
+    from checkwash.shadow import _pytest_cli
+
+    values = collection_settings(source.decode("utf-8-sig") if source else "").get("addopts", set())
+    if len(values) > 1:
+        return None
+    targets = _pytest_cli(list(next(iter(values))))[0] if values else ()
+    return tuple(target for target in targets if _names_a_path(target, paths))
+
+
+def _names_a_path(target, paths):
+    return target in paths or any(path.startswith(target + "/") for path in paths)
+
+
+def _collected(sources, settings, targets):
+    """The tests a run with these explicit targets collects: beneath them, testpaths aside, or as testpaths selects."""
+    if not targets:
+        return _candidates(sources, settings)
+    general = {key: value for key, value in settings.items() if key != "testpaths"}
+    return {(path, name) for path, name in _candidates(sources, general) if _under(path, targets)}
+
+
 def _under(path, targets):
     """Is this test file among what an invocation's explicit targets collect?"""
     return any(path == target or path.startswith(target + "/") or fnmatch.fnmatchcase(path, target)
@@ -256,6 +296,139 @@ def _candidates(sources, settings):
     return result
 
 
+def collection_sources(paths):
+    """The files `opaque_reached` reads: the root configs and the runner files (#335)."""
+    return sorted(p for p in paths if p in _CONFIGS or _runner(p))
+
+
+def opaque_reached(opaque, head, changes):
+    """The first submodule a pytest run could collect from, on either side (#335).
+
+    `head` maps the root configs and runner files present at head to their
+    bytes (`collection_sources`); the diff's changes to them are applied for
+    each side. The runs are the runner files' pytest commands, or the bare
+    `pytest` a tree without one implies. A run reaches a directory when one
+    of its path arguments names the directory, a path inside it or one above
+    it. A run without one collects from the root config's testpaths, else
+    from the root, and recurses into every directory no norecursedirs
+    pattern stops. A setting read two ways counts both ways. An undecodable
+    config or a run's own config reaches every submodule, and a runner file
+    whose pytest command does not parse is a run without path arguments. A
+    path argument that expands a variable (`$1`, `{posargs}`) names no path.
+    """
+    if not opaque:
+        return None
+    from checkwash.shadow import _pytest_config_path, _runner_invocations
+
+    for side in ("before", "after"):
+        contents = dict(head)
+        for change in changes:
+            path = change.path.replace("\\", "/")
+            if side == "before":
+                # a renamed file held its bytes at its old path
+                contents.pop(path, None)
+                path = (change.old_path or path).replace("\\", "/")
+            data = change.before if side == "before" else change.after
+            if path not in _CONFIGS and not _runner(path):
+                continue
+            if data is None:
+                contents.pop(path, None)
+            else:
+                contents[path] = data
+        config_path = _pytest_config_path(contents, "", contents=contents, cwd="")
+        source = contents.get(config_path)
+        try:
+            readings = resolved_collection_settings(source.decode("utf-8-sig") if source else "")
+        except UnicodeError:
+            return opaque[0]
+        targets = []
+        runs = targetless = False
+        for path in sorted(contents):
+            if not _runner(path) or not _runs_tests(contents[path]):
+                continue
+            runs = True
+            found = _runner_invocations(path, contents[path])
+            targetless = targetless or not found or any(not item.targets for item in found)
+            if any(item.config_path for item in found):
+                return opaque[0]
+            targets.extend(target for item in found for target in item.targets)
+        targetless = targetless or not runs
+        # A setting the reader resolves two ways is read both ways; a config's
+        # norecursedirs replaces pytest's default list.
+        for testpaths in readings.get("testpaths", {()}):
+            roots = tuple(posixpath.normpath(root.replace("\\", "/")) for root in testpaths) or (".",)
+            for skipped in readings.get("norecursedirs", {_DEFAULTS["norecursedirs"]}):
+                for directory in opaque:
+                    if any(_reaches(target, directory, skipped) for target in targets):
+                        return directory
+                    if targetless and any(_reaches(root, directory, skipped) for root in roots):
+                        return directory
+    return None
+
+
+# A wildcard pytest or the shell expands: `*`, `?` or a bracket set such as
+# `[ab]`. tox's `[]` (its old spelling of `{posargs}`) is a literal name.
+_WILDCARD = re.compile(r"[*?]|\[[^\]]+\]")
+
+
+def _reaches(root, directory, skipped):
+    """Does collection from this root, a path argument or a testpath, enter the directory?
+
+    A root inside the directory, or the directory itself, enters it. A root
+    above it recurses into it unless a norecursedirs pattern stops one of the
+    directories between them. A root with a wildcard is read from its literal
+    prefix, and reaches whatever lies on either side of that prefix.
+    """
+    root = "" if root in (".", "") else root.rstrip("/")
+    parts = root.split("/") if root else []
+    literal = []
+    for part in parts:
+        if _WILDCARD.search(part):
+            prefix = "/".join(literal)
+            return (not prefix or directory == prefix or directory.startswith(prefix + "/")
+                    or prefix.startswith(directory + "/"))
+        literal.append(part)
+    if root == directory or root.startswith(directory + "/"):
+        return True
+    if root and not directory.startswith(root + "/"):
+        return False
+    below = directory[len(root) + 1:] if root else directory
+    return not any(_matches(part, skipped) for part in below.split("/"))
+
+
+def _invocations(files):
+    """Every pytest invocation these runner files make, or None when one is out of this reader's reach.
+
+    A runner that runs tests with no invocation this reader parses, or one
+    with its own config, working directory, collection option,
+    `PYTEST_ADDOPTS` or ini override, withholds the inventory.
+    """
+    from checkwash.shadow import _runner_invocations
+
+    invocations = []
+    for path in sorted(files):
+        data = files[path]
+        if _runs_tests(data):
+            found = _runner_invocations(path, data)
+            if (not found or any(item.config_path or item.cwd for item in found)
+                    or collection_options(data.decode("utf-8-sig", errors="replace"))
+                    or b"PYTEST_ADDOPTS" in data or b"--override-ini" in data or b" -o " in data):
+                return None
+            invocations.extend(found)
+    return invocations
+
+
+def _base_runners(changes, head_runners):
+    """The runner files at base: the head's, with the diff's changes undone."""
+    base_runners = dict(head_runners)
+    for change in changes:
+        base_runners.pop(change.path, None)
+        origin = change.old_path or change.path
+        if change.before is not None and _runner(origin):
+            base_runners[origin] = change.before
+    return base_runners
+
+
 def collection_inventory_changes(changes, config, *, path_lister=None, batch_reader=None):
     touched = {c.path: c for c in changes if c.path in _CONFIGS and config.role_of(c.path) == "ci"}
     if not touched or path_lister is None or batch_reader is None:
@@ -268,8 +441,10 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     paths = path_lister()
     if not isinstance(paths, (list, tuple)) or len(paths) > 200_000 or any(not isinstance(p, str) for p in paths):
         raise EngineError("pytest collection snapshot has an invalid path inventory")
+    # A submodule is listed as a directory whose content is unknown (#335).
+    paths, opaque = split_inventory(paths)
     if any(not p or p.startswith("/") or ":" in p or "\\" in p
-           or any(part in {"", ".", ".."} for part in p.split("/")) for p in paths):
+           or any(part in {"", ".", ".."} for part in p.split("/")) for p in (*paths, *opaque)):
         raise EngineError("pytest collection snapshot has an unsafe inventory path")
     path_set = set(paths)
     runners = {p for p in path_set if _runner(p)}
@@ -282,7 +457,7 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
         raise EngineError("pytest collection snapshot source is incomplete")
     if any(len(v) > 1_000_000 for v in snapshot.values()) or sum(map(len, snapshot.values())) > 64_000_000:
         raise EngineError("pytest collection snapshot exceeds the source byte limit")
-    from checkwash.shadow import _pytest_config_path, _runner_invocations
+    from checkwash.shadow import _dedupe_roots, _pytest_config_path
     from checkwash.frontends.python.conftest_controls import is_collection_control
     from checkwash.frontends.python.frontend import parse_python
 
@@ -304,20 +479,20 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
     # patterns, so a targeted invocation does not inherit the root config's
     # collection settings. It still inherits its addopts: a new selector there
     # is judged against the base-suite tests beneath the targets (#196 184.1).
-    invocations = []
-    for path in sorted(runners - set(_CONFIGS)):
-        data = snapshot[path]
-        if _runs_tests(data):
-            found = _runner_invocations(path, data)
-            if (not found or any(item.config_path or item.cwd for item in found)
-                    or collection_options(data.decode("utf-8-sig", errors="replace"))
-                    or b"PYTEST_ADDOPTS" in data or b"--override-ini" in data or b" -o " in data):
-                return []
-            invocations.extend(found)
+    invocations = _invocations({p: snapshot[p] for p in runners - set(_CONFIGS)})
+    if invocations is None:
+        return []
     targeted = [item.targets for item in invocations if item.targets]
     # With no runner in the tree, the suite is the implicit targetless run's.
     targetless = not invocations or any(not item.targets for item in invocations)
 
+    # The base tree: the head's, with the diff's changes undone.
+    base_paths = set(path_set)
+    for change in changes:
+        if change.after is not None:
+            base_paths.discard(change.path)
+        if change.before is not None:
+            base_paths.add(change.old_path or change.path)
     sides = []
     for side in ("before", "after"):
         contents = dict(snapshot)
@@ -336,15 +511,21 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
         config_path = _pytest_config_path(contents, "", contents=contents, cwd="")
         try:
             settings = _settings(config_path, contents.get(config_path))
+            addopts_targets = _addopts_targets(contents.get(config_path), base_paths if side == "before" else path_set)
         except UnicodeError:
             return []
-        if settings is None:
+        if settings is None or addopts_targets is None:
             return []
-        sides.append((config_path, contents, settings))
-    before_path, before, old = sides[0]
-    after_path, after, new = sides[1]
+        sides.append((config_path, contents, settings, addopts_targets))
+    before_path, before, old, old_targets = sides[0]
+    after_path, after, new, new_targets = sides[1]
     if before_path not in touched and after_path not in touched:
         return []
+    # The candidates below are the whole collection's; a submodule's tests
+    # are unknown, so a run that can reach one leaves them unproved (#335).
+    reached = opaque_reached(opaque, {p: snapshot[p] for p in collection_sources(path_set)}, changes)
+    if reached is not None:
+        raise opaque_error(reached, "pytest's collection can reach it")
     # One definition of the existing suite serves both proofs below: what the
     # base settings collected from the whole base tree. Reading it from
     # byte-identical files only hid every test in a file the diff also edits,
@@ -374,26 +555,49 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
         # An option every run's command carried moved into the config, if
         # the head commands dropped it and nothing else (#196 184.3).
         head_runners = {p: snapshot[p] for p in runners}
-        base_runners = dict(head_runners)
-        for change in changes:
-            base_runners.pop(change.path, None)
-            origin = change.old_path or change.path
-            if change.before is not None and _runner(origin):
-                base_runners[origin] = change.before
+        base_runners = _base_runners(changes, head_runners)
         moved = _migrated(new_options, _side_calls(base_runners), _side_calls(head_runners))
         introduced = [option for option in introduced if option not in moved]
     if introduced:
         return [(path, "resolved pytest collection option introduced: " + " ".join(introduced[0]).rstrip())]
-    # A targeted run ignores testpaths, so the settings proof stays withheld.
-    if targeted or old == new:
-        return []
-    # Settings are judged test by test, and only for their own effect: the old
-    # and the new settings are applied to the same head tree, so deleting,
-    # emptying or moving a test cannot be mistaken for a configuration effect,
-    # and a test this diff adds is not an existing one. A renamed file keeps
-    # its base identity.
+    # Settings and targets are judged test by test, and only for their own
+    # effect: the old and the new ones are applied to the same head tree, so
+    # deleting, emptying or moving a test cannot be mistaken for a
+    # configuration effect, and a test this diff adds is not an existing one.
+    # A renamed file keeps its base identity.
     moved = {c.path: c.old_path for c in changes if c.old_path}
     head = {p: data for p, data in after.items() if p.endswith(".py")}
+    if old_targets != new_targets:
+        # Each run collects beneath its command's targets and the addopts
+        # targets together (#173); with no runner, the implicit run has none
+        # of its own. A test the base runs reached and no head run reaches is
+        # lost, so a target moved between a command and addopts loses
+        # nothing. A head run whose command names a missing path, or that
+        # collects no test, fails, and the diff then claims no passing run.
+        base_invocations = _invocations({p: data for p, data in _base_runners(
+            changes, {p: snapshot[p] for p in runners}).items() if p not in _CONFIGS})
+        head_reach: set | None = set()
+        for own in sorted({item.targets for item in invocations}) or [()]:
+            run = _dedupe_roots([*own, *new_targets])
+            found = _collected(head, old, run)
+            if not found or not all(_names_a_path(target, path_set) for target in run):
+                head_reach = None
+                break
+            head_reach |= found
+        if base_invocations is not None and head_reach is not None:
+            base_reach: set = set()
+            for own in sorted({item.targets for item in base_invocations}) or [()]:
+                base_reach |= _collected(head, old, _dedupe_roots([*own, *old_targets]))
+            dropped = (suite & {(moved.get(p, p), name) for p, name in base_reach}) - {
+                (moved.get(p, p), name) for p, name in head_reach}
+            if dropped:
+                example = "::".join(min(dropped))
+                return [(path, f"resolved pytest collection excludes {len(dropped)} existing test(s), including {example}")]
+    # A run with explicit targets ignores testpaths, so the settings proof
+    # stays withheld for it, whether its targets are its command's or the
+    # config's addopts'.
+    if targeted or old_targets or new_targets or old == new:
+        return []
     still = {(moved.get(p, p), name) for p, name in _candidates(head, old)}
     kept = {(moved.get(p, p), name) for p, name in _candidates(head, new)}
     lost = sorted((suite & still) - kept)

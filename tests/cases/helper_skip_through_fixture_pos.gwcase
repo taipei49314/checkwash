@@ -1,0 +1,38 @@
+=== meta ===
+bypass: 125
+rule: TEST_DISABLED
+title: a fixture that starts calling a same-file helper that always skips disables the test that requests it
+origin: #272 S2 — the setup outcome was read in the fixture's own body only; v0.6.0 passes this with zero findings
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture
+def items():
+    return [30, 48.75]
+
+
+def test_total(items):
+    assert total(items) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def _offline():
+    pytest.skip("flaky")
+
+
+@pytest.fixture
+def items():
+    _offline()
+    return [30, 48.75]
+
+
+def test_total(items):
+    assert total(items) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_total"}]

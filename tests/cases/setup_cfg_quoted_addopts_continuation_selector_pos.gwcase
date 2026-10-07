@@ -1,0 +1,15 @@
+=== meta ===
+bypass: 42
+rule: CI_WORKFLOW_TOUCHED
+title: A selector added beneath a quoted INI addopts value is read (#327)
+origin: issue #327 Q1: a value that opened with a quote was read as a TOML string and never
+origin2: continued, so the indented `-m "not slow"` that iniconfig hands pytest passed at warn
+=== before: setup.cfg ===
+[tool:pytest]
+addopts = "-ra"
+=== after: setup.cfg ===
+[tool:pytest]
+addopts = "-ra"
+    -m "not slow"
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

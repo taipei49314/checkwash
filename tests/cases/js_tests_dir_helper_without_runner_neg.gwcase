@@ -1,0 +1,17 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 233
+title: a JS file under tests/ that names neither AVA nor tap is no test
+origin: issue #233 — AVA's and tap's rows exist only on the file's own evidence, so a Python project's JS helper stays out
+=== before: tests/fixtures.js ===
+export const expected = 78.75;
+export function check(t, value) {
+  t.is(value, expected);
+}
+=== after: tests/fixtures.js ===
+export const expected = 78.75;
+export function check(t, value) {
+  t.truthy(value);
+}
+=== expect ===
+[]

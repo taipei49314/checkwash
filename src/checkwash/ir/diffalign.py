@@ -32,7 +32,7 @@ from decimal import Decimal, InvalidOperation
 from checkwash.frontends.javascript.literals import comparable_operand
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir.astutil import same_expr, stable_dump
-from checkwash.ir.markers import parse_text
+from checkwash.ir.markers import is_helper_skip, is_setup_skip, parse_text
 from checkwash.ir.model import (
     AssertionPair,
     FileIR,
@@ -46,6 +46,38 @@ from checkwash.ir.model import (
 
 JACCARD_THRESHOLD = 0.8  # frozen, SPEC §7
 MAX_UNPAIRED = 64  # frozen, SPEC §7
+
+
+# The effect of each body skip `GUARDED_SKIP_CALLS` names (#220's one name
+# per object), for a skip moved into a helper or out of one (#272).
+_BODY_SKIP_EFFECTS = {
+    "pytest.skip": "skip", "self.skipTest": "skip", "pytest.skip.Exception": "skip",
+    "unittest.SkipTest": "skip", "pytest.xfail": "xfail", "pytest.xfail.Exception": "xfail",
+}
+
+
+def _skip_effect(name: str) -> str | None:
+    if is_helper_skip(name) or is_setup_skip(name):
+        return name.rsplit(".", 1)[1]
+    return _BODY_SKIP_EFFECTS.get(name)
+
+
+def _moved_skip(old, new) -> bool:
+    """Is `new` the skip `old` was, moved into a helper the test calls or out of one (#272)?
+
+    A helper's marker is named for the helper, so a skip carried from the
+    test's body or the setup it runs into a helper it calls, out of one, or
+    into a renamed one, changes its name and nothing else. The effect must be
+    the same, and the old skip must have fired at least as often:
+    unconditionally (no guard), or under the same condition, whose meaning
+    `evidence._mark_weakened_guards` still compares across the diff. A skip
+    respelled in place, the body to the body, is not this (#281).
+    """
+    if not (is_helper_skip(old.name) or is_helper_skip(new.name)):
+        return False
+    if _skip_effect(old.name) != _skip_effect(new.name):
+        return False
+    return old.guard is None or same_expr(old.guard, new.guard)
 
 
 def _jaccard(a: frozenset, b: frozenset) -> float:
@@ -247,12 +279,25 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit, python: bool = False
                 if not respelled:
                     tolerance_changes.append((kind, old, a.epsilon))
 
-    pool = [_marker_key(m, python) for m in before.side.markers]
-    markers_added = []
+    # A marker is kept when its identity is on the base side (#332); one that
+    # is not is matched against the base's leftovers as a skip moved into or
+    # out of a helper (#272).
+    pool = [(_marker_key(b, python), b) for b in before.side.markers]
+    unmatched = []
     for m in after.side.markers:
         key = _marker_key(m, python)
-        if key in pool:
-            pool.remove(key)
+        kept = next((entry for entry in pool if entry[0] == key), None)
+        if kept is not None:
+            pool.remove(kept)
+        else:
+            unmatched.append(m)
+    markers_added = []
+    markers_moved = []
+    for m in unmatched:
+        moved_from = next((entry for entry in pool if _moved_skip(entry[1], m)), None)
+        if moved_from is not None:
+            pool.remove(moved_from)
+            markers_moved.append((moved_from[1].name, m.name))
         else:
             markers_added.append(m.name)
 
@@ -284,6 +329,7 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit, python: bool = False
         assertions_removed=[b.id for b in sorted(removed, key=lambda x: x.span)],
         assertions_added=[a.id for a in sorted(added, key=lambda x: x.span)],
         markers_added=markers_added,
+        markers_moved=markers_moved,
         handlers_widened=handlers_widened,
         tolerance_changes=tolerance_changes,
         param_cases_removed=max(0, param_removed),

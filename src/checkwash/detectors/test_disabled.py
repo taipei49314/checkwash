@@ -17,6 +17,7 @@ from checkwash.findings import (
 from checkwash.frontends.python.conftest_controls import (
     COLLECTION,
     FIXTURE_SETUP,
+    HELPER,
     RUNTIME,
     SETUP,
     SKIP_MARK,
@@ -26,7 +27,7 @@ from checkwash.frontends.python.conftest_controls import (
 )
 from checkwash.frontends.python.hook_guards import HOOK_MARKERS
 from checkwash.ir.assertion_identity import fingerprint_text
-from checkwash.ir.markers import is_guarded_mark, is_setup_skip, skip_condition
+from checkwash.ir.markers import is_guarded_mark, is_helper_skip, is_setup_skip, skip_condition
 from checkwash.ir.model import IR, judged_as_test
 
 # What an added marker of each kind did. Any other kind, or none, is a plain
@@ -36,6 +37,7 @@ _WHAT = {
     RUNTIME: "suite-level execution/report suppression added",
     COLLECTION: "suite-level collection control added",
     SETUP: "skip/xfail added to the setup this test runs",
+    HELPER: "skip/xfail added to a helper this test calls",
 }
 # A skip mark on a conftest's `<suite>` unit comes from its `pytestmark`,
 # which pytest never reads there (#209 Q3).
@@ -130,6 +132,8 @@ def detect(ir: IR) -> list[Finding]:
                 was = removed_skip_guard(name, unit, file.constants_before)
                 if is_setup_skip(name):
                     where, which = " in the setup this test runs", f" ({name})"
+                elif is_helper_skip(name):
+                    where, which = " in a helper this test calls", f" ({name})"
                 elif name in HOOK_MARKERS or (was is not None and is_collection_control(name)):
                     where, which = " of the suite-level control", f" ({name})"
                 elif is_guarded_mark(name):

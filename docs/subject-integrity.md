@@ -153,8 +153,23 @@ real code and install nothing. An object-literal key inside an assertion
 (`toEqual({ invoiceTotal: 78.75 })`) names a property; it does not read the
 binding of the same name.
 
-Not claimed: setup files, `__mocks__` directories and `automock`
-configuration (the conftest analogue, which needs the runner configuration);
+A setup file the runner loads before every test file is read as a conftest
+is (#218): `setupTests.js` or `setupTests.ts` (Create React App's
+`src/setupTests`), `jest.setup.*`, `vitest.setup.*`, and the files the base
+side's root `package.json` names in `jest.setupFiles` or
+`jest.setupFilesAfterEnv` as `./x` or `<rootDir>/x`. A first-party module mock
+or replacing spy installed there, read by the same scan, a
+`jest.enableAutomock()` there, and `"automock": true` under the root
+`package.json`'s `jest` key are reported as `TEST_PATCHES_SUBJECT` with no
+unit when the base side did not install them: which test reads the stand-in
+is not resolved, as `CONFTEST_PATCHES_PROD` does not resolve it, so no unit's
+repair evidence explains it. A mock moved between setup files or reformatted
+is not new; a third-party mock is hygiene.
+
+Not claimed: a rewritten manual mock under `__mocks__/`; runner config files
+(`jest.config.*`, `vitest.config.*`) and what they set, their `setupFiles`
+and `automock` among them; a setup file that only the head side's
+`package.json` names, under another name; `globalSetup`;
 installations other than `vi.mock` in hooks, helpers and `describe` bodies;
 a namespace or `require()` object passed whole under a whole-module mock
 (`compute(billing)`); plain assignment to a module object's member; template-literal keys and partial-factory names
@@ -219,8 +234,23 @@ The existing empty-needle search still means nonempty Python source and is
 not reused as the runtime-provider inventory. Its use by the installation pass
 is restricted to discovering oracle consumers. Git path metadata is read once per snapshot;
 selected regular blobs are read in batches of 256 by immutable object IDs.
-Missing required blobs, malformed paths/records, unsupported selected source,
-submodules or incomplete batches fail with `EngineError`. The inventory limit
+Missing required blobs, malformed paths/records, unsupported selected source
+or incomplete batches fail with `EngineError`. A submodule is listed as its
+path with a trailing slash, a directory whose content is unknown (#335). A
+read inside one, an import that resolves into one, or a pytest collection that
+can reach one on either side of the diff fails with an `EngineError` naming
+its path; every other pass proceeds over the rest of the tree. A run reaches
+a submodule when one of its path arguments names it, a path inside it or a
+directory above it; a run without one collects from the root config's
+`testpaths`, else from the root, into every directory no `norecursedirs`
+pattern stops. The runs are the runner files' pytest commands, or a bare
+`pytest` when there are none. A setting read two ways counts both ways; an
+undecodable config or a run's own `-c` config reaches every submodule; a
+runner file whose pytest command does not parse is a run without path
+arguments; and a path argument that expands a variable (`$1`, `{posargs}`)
+names no path. The empty-needle search still rejects a tree with a
+submodule, because the startup-context proof needs every Python source, so
+that proof is withheld there, as before. The inventory limit
 is 200,000 paths, each selected source is at most 1 MB, and a selected read batch
 is at most 64 MB. Limits raise errors instead of silently truncating evidence.
 Working-tree inventory excludes Git metadata, rejects directory symlinks, and

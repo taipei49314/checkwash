@@ -17,6 +17,7 @@ from dataclasses import replace
 
 from checkwash.allowlist import AllowEntry
 from checkwash.change import EngineError, FileChange
+from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ci import (
     _ci_base_surface,
     _deps_differ,
@@ -26,7 +27,7 @@ from checkwash.ci import (
 )
 from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
-from checkwash.collection_inventory import collection_inventory_changes
+from checkwash.collection_inventory import collection_inventory_changes, collection_sources, opaque_reached
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
@@ -43,6 +44,7 @@ from checkwash.evidence import (
 from checkwash.findings import Finding
 from checkwash.frontends.javascript.frontend import parse_javascript
 from checkwash.frontends.javascript.module_mocks import module_mock_events
+from checkwash.frontends.javascript.setup_files import setup_file_events
 from checkwash.frontends.javascript.paths import is_js_test_file
 from checkwash.frontends.javascript.runners import (
     collected,
@@ -405,7 +407,7 @@ def _native_assertion_context(
     return tuple(parts), tuple(assertions)
 
 
-def _root_importer_changes(changes, config, head_reader, head_searcher):
+def _root_importer_changes(changes, config, head_reader, head_searcher, path_lister=None):
     """Read unchanged callers of changed root helpers, once and within caps.
 
     A file absent from the real diff has the same bytes on both snapshots.
@@ -435,6 +437,16 @@ def _root_importer_changes(changes, config, head_reader, head_searcher):
         raise EngineError("changed root assertion helpers require snapshot importer search")
     if len(modules) > _MAX_ORACLE_READS:
         raise EngineError("root assertion helper search exceeds the module budget")
+    # The search reads no submodule; an importer inside one pytest can collect
+    # is unknown (#335).
+    if path_lister is not None:
+        paths, opaque = split_inventory(path_lister())
+        if opaque:
+            sources = {path: head_reader(path) for path in collection_sources(
+                path for path in paths if isinstance(path, str))}
+            reached = opaque_reached(opaque, {p: s for p, s in sources.items() if isinstance(s, bytes)}, changes)
+            if reached is not None:
+                raise opaque_error(reached, "pytest's collection can reach it")
     candidates = sorted({p.replace("\\", "/") for p in head_searcher(sorted(modules))})
     # The existing grep returns at most 64 hits. Exactly 64 can be a truncated
     # set; never call that a complete review of removed helper assertions.
@@ -483,7 +495,8 @@ def build_ir(
     root_path_lister=None,
     root_batch_reader=None,
 ) -> IR:
-    importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
+    importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(
+        changes, config, root_reader, root_searcher, root_path_lister)
     changes = [*changes, *importer_changes]
     changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher, reviewed_root_modules)]
     g = DiffGlobals()
@@ -1356,7 +1369,9 @@ def build_ir(
     # one batched call (git grep in range mode); only matching files are read
     # and parsed, capped. Deleting one of two identical copies leaves the
     # oracle running — the attack shapes (survivor skipped, survivor edited)
-    # fail the liveness and hash checks and earn nothing.
+    # fail the liveness and hash checks and earn nothing. A survivor reaches
+    # the conftest fixtures above it at head, as a changed module does, so
+    # one that an always-skip fixture skips is not live either (#266).
     if head_searcher is not None and head_reader is not None:
         wanted: set[str] = set()
         needles: set[str] = set()
@@ -1387,7 +1402,7 @@ def build_ir(
                 data = head_reader(path)
                 if data is None:
                     continue
-                parsed = parse_python(data, collect_tests=True)
+                parsed = parse_python(data, collect_tests=True, chain=_conftest_chain(path, 1))
                 if not parsed.parse_ok:
                     continue
                 consts = _gate_constants(parsed, after_by_path, head_reader)
@@ -1422,7 +1437,13 @@ def build_ir(
     # The JavaScript spelling: a newly installed first-party module mock or
     # replacing spy that an existing JS unit's own assertions read (#177).
     # An alias resolves through the base side's root tsconfig.json (#196 188.6).
-    for event in module_mock_events(ir, changes, _base_root_file(changes, root_reader, "tsconfig.json")):
+    read_tsconfig = _base_root_file(changes, root_reader, "tsconfig.json")
+    for event in module_mock_events(ir, changes, read_tsconfig):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    # The same stand-in installed from a setup file the runner loads before
+    # every test file, judged as a conftest patch is: no unit (#218).
+    for event in setup_file_events(changes, _base_manifest(changes, root_reader), read_tsconfig):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
