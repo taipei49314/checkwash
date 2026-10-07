@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 125
+rule: TEST_DISABLED
+title: a nested def the test defines and calls is a helper: its skip disables the test
+origin: #272 H3 — a nested def's body is dead until it is called, and the call was not followed; v0.6.0 passes this with zero findings
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total([30, 48.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    def later():
+        pytest.skip("flaky")
+
+    later()
+    assert total([30, 48.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_total"}]

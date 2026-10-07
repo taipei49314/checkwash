@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: `when: manual` written into the template the test job `extends:`
+origin: issue #214 — a job's `extends:` templates are merged in first, as GitLab merges them.
+=== before: .gitlab-ci.yml ===
+stages:
+  - test
+
+.tests:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+
+test-py312:
+  extends: .tests
+=== after: .gitlab-ci.yml ===
+stages:
+  - test
+
+.tests:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+  when: manual
+
+test-py312:
+  extends: .tests
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

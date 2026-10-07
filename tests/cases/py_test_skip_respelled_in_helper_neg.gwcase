@@ -1,0 +1,40 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 310
+title: `py.test.skip()` respelled `pytest.skip()` inside a helper the test calls is the skip it had
+origin: issue #310, found by #272's sweep: pytest 3cc58c2f78f0 respells the skip in its `lsof_check` helper. With #272 alone this reads as a skip added to the helper
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import py
+
+from app.billing import total
+
+
+def lsof_check():
+    if total([]) is None:
+        py.test.skip("could not run 'lsof'")
+
+
+def test_total():
+    lsof_check()
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def lsof_check():
+    if total([]) is None:
+        pytest.skip("could not run 'lsof'")
+
+
+def test_total():
+    lsof_check()
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[]
