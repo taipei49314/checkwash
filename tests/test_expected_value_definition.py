@@ -30,7 +30,7 @@ from checkwash.contract import Contract
 from checkwash.engine import analyze
 from checkwash.frontends.javascript import expected_provenance as js_provenance
 from checkwash.frontends.javascript.frontend import file_bindings, parse_javascript
-from checkwash.frontends.javascript.literals import operand_callee
+from checkwash.frontends.javascript.literals import comparable_operand, operand_callee
 from checkwash.frontends.python.frontend import parse_python
 from checkwash.frontends.python.literal_conversions import (
     conversion_names,
@@ -234,6 +234,48 @@ def test_the_issue_rows(before, after, verdict, rule, message):
 ])
 def test_rows_around_the_issue(before, after, verdict, rule, message):
     _check(_outcome(before, after), verdict, rule, message)
+
+
+# --- Formatting is no change in JavaScript either --------------------------------------------
+#
+# Python compares an expected value's AST. The JavaScript port compared its
+# text, so a value requoted or reflowed by a formatter read as another
+# definition (hexo `2d7937d3e8ff`, found by #215's sweep).
+
+@pytest.mark.parametrize("before,after,verdict,rule,message", [
+    # The provenance channel: the expected value reads an import.
+    (_js(E.format('"<" + OTHER + ">"')), _js(E.format("'<' + OTHER + '>'")), PASS, None, None),
+    (_js(E.format("make({total: OTHER})")), _js(E.format("make({\n    total: OTHER,\n  })")), PASS, None, None),
+    (_js(E.format('"<" + OTHER + ">"')), _js(E.format('"[" + OTHER + "]"')), BLOCK, EDC, PROVENANCE),
+    # A subject reflowed is the same subject, read through a local too.
+    (_js(E.format('"<" + OTHER + ">"')), _js('expect(total( )).toBe("[" + OTHER + "]");'), BLOCK, EDC, PROVENANCE),
+    (_js('const t = total;\n  expect(t()).toBe("<" + OTHER + ">");'),
+     _js('const t = total;\n  expect(t( )).toBe("[" + OTHER + "]");'), BLOCK, EDC, PROVENANCE),
+    # A call checkwash does not evaluate, as Python's `int('75')` -> `int("75")`.
+    (_js(E.format('build("75")')), _js(E.format("build('75')")), PASS, None, None),
+    (_js(E.format('build("75")')), _js(E.format('build("76")')), BLOCK, EVC, f'{UNEVALUATED} (build("75") -> build("76"))'),
+], ids=["requoted", "reflowed", "another_value", "subject_reflowed", "subject_local_reflowed",
+        "call_requoted", "call_another_argument"])
+def test_formatting_that_changes_no_value_is_no_change(before, after, verdict, rule, message):
+    _check(_outcome(before, after), verdict, rule, message)
+
+
+@pytest.mark.parametrize("before,after,same", [
+    ('"<pre>" + code + "</pre>"', "'<pre>' + code + '</pre>'", True),
+    ("wrap(code, {lang: 'js'})", "wrap(code, { lang: 'js' })", True),
+    ("wrap(code, {lang: 'js'})", "wrap(code, {\n  lang: 'js',\n})", True),
+    ("f(a, b)", "f(a, b,)", True),
+    ("'say \"hi\"'", '"say \\"hi\\""', True),
+    ("'it\\'s'", '"it\'s"', True),
+    ("'a'", "'b'", False),
+    ("[a, ,]", "[a,]", False),  # a hole is an element
+    ("[,]", "[]", False),
+    ("a + +b", "a ++b", False),  # tokens are not merged
+    ("a / b", "a/b", False),  # a slash keeps the text: it may open a regular expression
+    ("`a`", '"a"', False),  # and so does a template
+])
+def test_a_js_operand_compares_without_its_formatting(before, after, same):
+    assert (comparable_operand(before) == comparable_operand(after)) is same
 
 
 # --- What the frontends record --------------------------------------------------------------
