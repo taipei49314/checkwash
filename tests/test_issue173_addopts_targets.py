@@ -148,9 +148,10 @@ def test_a_run_whose_command_names_a_missing_path_claims_nothing():
 
 # --- a word that names no path is no target ----------------------------------------------------
 
-# A multi-line array that the settings reader cuts at an element with `=`,
-# leaving the word `[` (#324).
-CUT_ARRAY = '[tool.pytest.ini_options]\naddopts = [\n    "-ra",\n    "--import-mode=importlib",\n]\n'
+# A multi-line array with an element with `=`. The settings reader cut it at
+# that element, leaving the word `[`, until #324; read whole, it names no
+# target either.
+EQUALS_ARRAY = '[tool.pytest.ini_options]\naddopts = [\n    "-ra",\n    "--import-mode=importlib",\n]\n'
 
 
 @pytest.mark.parametrize("addopts", ["tests/smoke tests/gone", "--loop all tests/smoke"],
@@ -163,8 +164,8 @@ def test_a_word_that_names_no_path_is_no_target(addopts):
 
 @pytest.mark.parametrize("config", [
     lambda files: ini(addopts="--loop all", python_files=files),
-    lambda files: {"pyproject.toml": (CUT_ARRAY + f'python_files = ["{files}"]\n').encode()},
-], ids=["unknown_options_value", "array_cut_at_an_equals_sign"])
+    lambda files: {"pyproject.toml": (EQUALS_ARRAY + f'python_files = ["{files}"]\n').encode()},
+], ids=["unknown_options_value", "array_with_an_equals_sign"])
 def test_a_word_that_names_no_path_leaves_the_settings_proof_standing(config):
     """Only a run with targets withholds the settings proof, and such a word is none."""
     assert judge({**workflow("pytest"), **config("test_*.py")},

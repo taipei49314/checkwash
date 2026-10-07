@@ -110,7 +110,7 @@ behind it* unshippable.
 | 39 | Hand-edit an exemption past the 180-day cap | `allowlist_future_created_pos.gwcase`, `allowlist_over_cap_pos.gwcase` |
 | 40 | `__test__ = False` at module or class scope de-collects everything | `test_attr_false_class_pos.gwcase`, `test_attr_false_pos.gwcase` |
 | 41 | `pytest.param(..., marks=pytest.mark.skip)` on every row: the row count never changes | `param_marks_skip_pos.gwcase` |
-| 42 | Narrow `python_files` / `testpaths`, or add `addopts = -k ...`, in `pytest.ini` / `tox.ini` / `setup.cfg` / `pyproject.toml` | `pytest_ini_narrowed_pos.gwcase` |
+| 42 | Narrow `python_files` / `testpaths`, or add `addopts = -k ...`, in `pytest.ini` / `tox.ini` / `setup.cfg` / `pyproject.toml` | `pyproject_addopts_array_opened_with_element_selector_pos.gwcase`, `pyproject_addopts_array_respelled_one_line_neg.gwcase`, `pyproject_addopts_array_selector_after_equals_pos.gwcase`, `pytest_ini_narrowed_pos.gwcase`, `setup_cfg_addopts_continuation_selector_pos.gwcase` |
 | 43 | `git mv tests/test_x.py build/test_x.py` (or `.attic/`, `dist/`, `htmlcov/`, any dot-dir) | `moved_to_build_dir_pos.gwcase`, `moved_to_dot_dir_pos.gwcase` |
 | 44 | Any always-true `skipif` outside seven hardcoded spellings — `skipif(True or sys.platform == "win32")`, `skipif(sys.version_info >= (3, 8))`, `skipif(os.name != "java")` | `compat_gate_always_true_pos.gwcase`, `compat_gate_string_always_true_pos.gwcase`, `compat_gate_version_always_true_pos.gwcase` |
 | 45 | Delete 5 tests / 7 exact assertions, add 1 weak test with a similar name | `split_rename_mass_pos.gwcase` |

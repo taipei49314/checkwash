@@ -8519,3 +8519,85 @@ passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
 keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-119 (2026-10-07): a multi-line pytest setting is read to its end (#324)
+
+`pytest_collection.collection_settings` kept reading a value's
+continuation lines only while each was indented and held no `=`. A TOML
+array therefore stopped at its first element with `=`
+(`"--import-mode=importlib"`, `"--ignore=docs"`), and only the words
+before it were read, starting with `[`. An INI continuation that started
+with `--cov-report=term` read as nothing. An array whose first element
+sat on the opening line was never continued, and an INI value continued
+only when its first line was empty. A selector added to such a value
+(`-m "not slow"`) passed with CI_WORKFLOW_TOUCHED at warn, where the same
+edit to a one-line value blocked (THREATMODEL row 42). The cut also
+worked the other way: the same options respelled from a multi-line array
+onto one line read as a selector introduced, and blocked. attrs'
+`pyproject.toml` array (2025-09) and scrapy's (since 2024-11) were cut
+this way, and starlette's `setup.cfg` continuation (2020) read as
+nothing. Found by #173's sweep (D-114) and filed as #324.
+
+No ruling was asked: the reader's own comment said it read INI
+continuation lists and multi-line TOML arrays, and this is where it did
+not. This entry, in the fix PR, is where the maintainer approves it.
+
+**As implemented:**
+- A TOML array runs to the line that closes it, counted by its brackets
+  outside strings and comments, whatever its elements hold, and is read
+  as one literal.
+- A value that opens with neither a bracket nor a quote is an INI value.
+  It continues over every indented line after it, as iniconfig continues
+  it, whether its first line is empty or not. Blank and comment lines
+  inside it are skipped, and do not end it.
+- A line a value spans is not read again as a setting or a section.
+- A quoted value is never continued, so an indented TOML key after a
+  string stays a setting.
+
+Readings left to the implementation:
+
+1. **The kind of a value is read from its first line**, since one reader
+   serves INI and TOML files alike: an opening bracket is a TOML array, a
+   quote a TOML string, and anything else an INI value. In an INI file a
+   quoted value is continued by iniconfig all the same, so the indented
+   lines after `addopts = "-ra"` are still not read: filed as #327, to be
+   read by the section the value sits in.
+2. **An indented line that looks like a setting belongs to the value
+   above it** in an INI file, as iniconfig reads it (`addopts =` /
+   `    -ra` / `    testpaths = x` is one addopts value).
+
+**Tests.** `tests/test_issue324_multiline_addopts.py` (20): #324's P2, P4
+and I1, and an INI value continued after a first word, block, as its
+controls P3 and I2 do; a value respelled on one line is no event; the
+values pytest reads from attrs', scrapy's and starlette's configs; where
+a value ends; and the bracket depth of an array line. #173's test of a
+word that names no target keeps its expectation: the array it uses is now
+read whole and still names no target. Four fixtures: three pins of row 42
+(P2, P4 and I1) and one neg, a multi-line array respelled on one line,
+which the old reader blocked.
+
+**Cost.** The old and new readers' parse of every pytest config file,
+at any depth and on either side, was compared on every commit of the
+standard set (1,800), of D-088's sets (1,263) and of the 2,849 commits
+that touch a config in 13 histories. It differs on 986: 108 of the
+standard set (attrs), 269 of D-088's sets (scrapy 241, uvicorn 25,
+attrs 2, starlette 1) and 609 of the config commits (scrapy 417,
+aiohttp 108, uvicorn 54, attrs 26, starlette 4). No other commit can
+change. #173's engine and this one judged all 986:
+- 982 keep their records byte for byte, every one of the standard
+  set's and D-088's sets' among them, and 140 block on both engines.
+- 4 of aiohttp's config commits go from pass to an engine error.
+  aiohttp vendors `vendor/llhttp` as a submodule, and the strict
+  snapshot inventory rejects a tree that holds one. Their `addopts`
+  edits (`-p pytest_cov`, `--cov`, `--showlocals`, the `-m`
+  expression) are now read and change the collection settings, so the
+  inventory is read. 49 of aiohttp's 108 already end in that error on
+  #173's engine, and v0.6.0 gives it for a test edit in such a tree:
+  filed as #335.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.

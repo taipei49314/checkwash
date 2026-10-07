@@ -1,0 +1,19 @@
+=== meta ===
+bypass: 42
+rule: CI_WORKFLOW_TOUCHED
+title: A multi-line addopts array respelled on one line introduces nothing (#324)
+origin: issue #324: the reader cut the multi-line array at its `=` element, so the same
+origin2: options respelled on one line read as `-m not slow` introduced, and blocked
+=== before: pyproject.toml ===
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    "--import-mode=importlib",
+    "-m",
+    "not slow",
+]
+=== after: pyproject.toml ===
+[tool.pytest.ini_options]
+addopts = ["-ra", "--import-mode=importlib", "-m", "not slow"]
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

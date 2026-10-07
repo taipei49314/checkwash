@@ -1,0 +1,19 @@
+=== meta ===
+bypass: 42
+rule: CI_WORKFLOW_TOUCHED
+title: A selector added to an addopts array opened with its first element is read (#324)
+origin: issue #324 P4: an array whose first element sat on the opening line was never
+origin2: continued and read as `[-ra,` on both sides, so the added selector passed at warn
+=== before: pyproject.toml ===
+[tool.pytest.ini_options]
+addopts = ["-ra",
+    "-q",
+]
+=== after: pyproject.toml ===
+[tool.pytest.ini_options]
+addopts = ["-ra",
+    "-q",
+    "-m", "not slow",
+]
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
