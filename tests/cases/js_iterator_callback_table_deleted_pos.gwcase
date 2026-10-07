@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 123
+rule: ASSERT_REMOVED
+title: the assertion deleted from a forEach over a table literal
+origin: #294 - an iterator callback keeps the lexical coverage docs/assertion-coverage.md states, whatever the call's receiver
+=== before: tests/total.test.ts ===
+import { it, expect } from "vitest";
+import { total } from "../src/total";
+
+it("totals", () => {
+  [[1, 78.75], [2, 157.5]].forEach(([n, want]) => {
+    expect(total(Number(n))).toBe(want);
+  });
+});
+=== after: tests/total.test.ts ===
+import { it, expect } from "vitest";
+import { total } from "../src/total";
+
+it("totals", () => {
+  [[1, 78.75], [2, 157.5]].forEach(([n, want]) => {
+    total(Number(n));
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/total.test.ts", "unit": "totals"}]

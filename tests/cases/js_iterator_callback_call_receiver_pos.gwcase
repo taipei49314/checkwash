@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 123
+rule: ASSERT_WEAKENED
+title: an assertion in a forEach over Object.entries(...) weakened to toBeDefined()
+origin: #294 - an iterator callback keeps the lexical coverage docs/assertion-coverage.md states, whatever the call's receiver
+=== before: tests/total.test.ts ===
+import { it, expect } from "vitest";
+import { total } from "../src/total";
+
+const CASES = { 1: 78.75, 2: 157.5 };
+
+it("totals", () => {
+  Object.entries(CASES).forEach(([n, want]) => {
+    expect(total(Number(n))).toBe(want);
+  });
+});
+=== after: tests/total.test.ts ===
+import { it, expect } from "vitest";
+import { total } from "../src/total";
+
+const CASES = { 1: 78.75, 2: 157.5 };
+
+it("totals", () => {
+  Object.entries(CASES).forEach(([n, want]) => {
+    expect(total(Number(n))).toBeDefined();
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/total.test.ts", "unit": "totals"}]
