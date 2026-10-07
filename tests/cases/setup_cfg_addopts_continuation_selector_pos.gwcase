@@ -1,0 +1,19 @@
+=== meta ===
+bypass: 42
+rule: CI_WORKFLOW_TOUCHED
+title: A selector added to an INI addopts continuation after an `=` option is read (#324)
+origin: issue #324 I1: the reader stopped at `--cov-report=term` and read the value as
+origin2: nothing on both sides, so the added `-m 'not slow'` passed at warn
+=== before: setup.cfg ===
+[tool:pytest]
+addopts =
+  --cov-report=term
+  -rxXs
+=== after: setup.cfg ===
+[tool:pytest]
+addopts =
+  --cov-report=term
+  -rxXs
+  -m 'not slow'
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

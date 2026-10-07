@@ -34,35 +34,93 @@ def _words(value: str) -> tuple[str, ...] | None:
         return None
 
 
+def _bracket_depth(line: str, depth: int) -> int:
+    """A TOML array's bracket depth after one more of its lines, strings and comments aside."""
+    quote = ""
+    escaped = False
+    for char in line:
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\" and quote == '"':
+                escaped = True
+            elif char == quote:
+                quote = ""
+        elif char in "\"'":
+            quote = char
+        elif char == "#":
+            break
+        elif char == "[":
+            depth += 1
+        elif char == "]":
+            depth -= 1
+    return depth
+
+
+def _comment_or_blank(line: str) -> bool:
+    return not line.strip() or line.strip().startswith(("#", ";"))
+
+
+# A line that reads as a TOML setting: a bare or quoted key, then `=`. An
+# option (`-m`, `--deselect=x`) never starts one.
+_TOML_SETTING = re.compile(r"""\s*(?:[A-Za-z0-9_][A-Za-z0-9_.-]*|"[^"\n]*"|'[^'\n]*')\s*=""")
+
+
 def collection_settings(text: str) -> dict[str, set[tuple[str, ...]]]:
-    """Literal INI/TOML values; ambiguous duplicate values remain distinct."""
+    """Literal INI/TOML values; ambiguous duplicate values remain distinct.
+
+    A TOML array runs to the line that closes it, whatever its elements hold
+    (`"--import-mode=importlib"`). A value that opens with neither a bracket
+    nor a quote is an INI value, continued over every indented line, as
+    iniconfig reads it, with or without `=` (#324). A quoted value is read
+    by its section (#327): in `[tool:pytest]`, which only `setup.cfg`
+    holds, it is an INI value like any other; in `[tool.pytest.ini_options]`,
+    which only `pyproject.toml` holds, it is a TOML string and never
+    continued; in `[pytest]`, INI in `pytest.ini` and `tox.ini` but TOML in
+    `pytest.toml`, it continues up to a line that reads as a TOML setting.
+    A line a value spans is not read again as a setting or a section, and
+    no value is evaluated.
+    """
     values: dict[str, set[tuple[str, ...]]] = {}
     lines = text.splitlines()
     active = False
-    for index, line in enumerate(lines):
+    section = ""
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        index += 1
         if line.strip().startswith("[") and line.strip().endswith("]"):
-            active = line.strip() in _PYTEST_SECTIONS
+            section = line.strip()
+            active = section in _PYTEST_SECTIONS
         if not active:
             continue
         match = _SETTING.match(line)
         if not match:
             continue
         name, value = match.groups()
-        # INI continuation lists and multiline TOML arrays are both bounded
-        # by the next non-indented setting/section, never evaluated.
-        if not value.strip() or value.strip() == "[":
-            continued = []
-            for following in lines[index + 1:]:
-                stripped = following.strip()
-                if stripped == "]":
-                    continued.append("]")
+        if value.lstrip().startswith("["):
+            block = [value]
+            depth = _bracket_depth(value, 0)
+            while depth > 0 and index < len(lines):
+                block.append(lines[index])
+                depth = _bracket_depth(lines[index], depth)
+                index += 1
+            value = "\n".join(block)
+        elif not value.lstrip().startswith(("'", '"')) or section != "[tool.pytest.ini_options]":
+            # In `[pytest]` a quoted value may be a TOML string, and an
+            # indented key after it is a setting of its own. In an INI file
+            # such a line hands pytest `name` and `=` as paths, and the run
+            # stops with a usage error, so stopping there hides no passing
+            # weakening.
+            toml_too = section == "[pytest]" and value.lstrip().startswith(("'", '"'))
+            continued = [value.strip()]
+            while index < len(lines) and (_comment_or_blank(lines[index]) or lines[index][:1].isspace()):
+                if toml_too and _TOML_SETTING.match(lines[index]):
                     break
-                if not stripped or stripped.startswith(("#", ";")):
-                    continue
-                if not following[:1].isspace() or "=" in stripped or stripped.startswith("["):
-                    break
-                continued.append(stripped)
-            value = value + " " + " ".join(continued)
+                if not _comment_or_blank(lines[index]):
+                    continued.append(lines[index].strip())
+                index += 1
+            value = " ".join(part for part in continued if part)
         words = _words(value)
         if words is not None:
             values.setdefault(name, set()).add(words)

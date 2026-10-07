@@ -1,0 +1,32 @@
+=== meta ===
+bypass: 125
+rule: TEST_DISABLED
+title: a skip added to a helper the test already calls disables the test, with the test itself unchanged
+origin: #272 — the test body and its markers are byte-identical; v0.6.0 passes this with zero findings
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def _items():
+    return [30, 48.75]
+
+
+def test_total():
+    assert total(_items()) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def _items():
+    pytest.skip("flaky")
+    return [30, 48.75]
+
+
+def test_total():
+    assert total(_items()) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_total"}]

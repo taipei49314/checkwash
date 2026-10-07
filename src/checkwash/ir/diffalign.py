@@ -7,9 +7,13 @@ Order of operations:
 3. leftovers are removed/added units
 
 Assertion pairing inside a matched unit:
-1. exact normalized-text multiset matches
+1. exact normalized-text multiset matches; in Python, then the same parsed
+   statement, so a quote or line respelled (black) pairs (#332)
 2. (form, normalized left operand) key, in span order
 3. leftovers: span-order fallback
+
+A marker is added when no marker on the other side has its identity; in
+Python, a condition that parses the same is the same identity (#332).
 
 A fallback pair whose two halves record different subjects and different
 expected literals does not compare its tolerances (#196 189.2). A tolerance
@@ -19,11 +23,13 @@ with its own (#196 190.3).
 
 from __future__ import annotations
 
+import ast
 from collections import Counter
 from decimal import Decimal, InvalidOperation
 
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
-from checkwash.ir.astutil import same_expr
+from checkwash.ir.astutil import same_expr, stable_dump
+from checkwash.ir.markers import is_helper_skip, is_setup_skip, parse_text
 from checkwash.ir.model import (
     AssertionPair,
     FileIR,
@@ -39,6 +45,38 @@ JACCARD_THRESHOLD = 0.8  # frozen, SPEC §7
 MAX_UNPAIRED = 64  # frozen, SPEC §7
 
 
+# The effect of each body skip `GUARDED_SKIP_CALLS` names (#220's one name
+# per object), for a skip moved into a helper or out of one (#272).
+_BODY_SKIP_EFFECTS = {
+    "pytest.skip": "skip", "self.skipTest": "skip", "pytest.skip.Exception": "skip",
+    "unittest.SkipTest": "skip", "pytest.xfail": "xfail", "pytest.xfail.Exception": "xfail",
+}
+
+
+def _skip_effect(name: str) -> str | None:
+    if is_helper_skip(name) or is_setup_skip(name):
+        return name.rsplit(".", 1)[1]
+    return _BODY_SKIP_EFFECTS.get(name)
+
+
+def _moved_skip(old, new) -> bool:
+    """Is `new` the skip `old` was, moved into a helper the test calls or out of one (#272)?
+
+    A helper's marker is named for the helper, so a skip carried from the
+    test's body or the setup it runs into a helper it calls, out of one, or
+    into a renamed one, changes its name and nothing else. The effect must be
+    the same, and the old skip must have fired at least as often:
+    unconditionally (no guard), or under the same condition, whose meaning
+    `evidence._mark_weakened_guards` still compares across the diff. A skip
+    respelled in place, the body to the body, is not this (#281).
+    """
+    if not (is_helper_skip(old.name) or is_helper_skip(new.name)):
+        return False
+    if _skip_effect(old.name) != _skip_effect(new.name):
+        return False
+    return old.guard is None or same_expr(old.guard, new.guard)
+
+
 def _jaccard(a: frozenset, b: frozenset) -> float:
     if not a and not b:
         return 1.0
@@ -48,7 +86,29 @@ def _jaccard(a: frozenset, b: frozenset) -> float:
     return len(a & b) / union
 
 
-def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
+def _parsed_key(text: str) -> str | None:
+    """A Python statement as parsed, or None: quotes and line breaks spelled
+    another way (black's `'x'` -> `"x"`) read the same (#332)."""
+    tree = parse_text(text.strip())
+    return stable_dump(tree) if tree is not None else None
+
+
+def _marker_key(marker, python: bool) -> object:
+    """A marker's identity, its condition as parsed in Python (#332).
+
+    The identity is the marker's name and the normalized text of its condition
+    (`pytest.mark.skipif(sys.platform=='win32')`), and normalized text keeps
+    quote characters as written, so a condition respelled `"win32"` was a
+    marker removed and another added. The name stays the reported identity.
+    """
+    if python and "(" in marker.name:
+        tree = parse_text(marker.text.strip().removeprefix("@"), mode="eval")
+        if tree is not None and isinstance(tree.body, ast.Call) and tree.body.args:
+            return marker.name.split("(", 1)[0], stable_dump(tree.body.args[0])
+    return marker.name
+
+
+def _pair_assertions(before: ParsedUnit, after: ParsedUnit, python: bool = False) -> UnitDelta:
     b_asserts = list(before.side.assertions)
     a_asserts = list(after.side.assertions)
     pairs: list[tuple] = []  # (before, after, from_order_fallback)
@@ -90,6 +150,33 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
             b_rest.append(b)
     a_rest = [a for bucket in a_by_text.values() for a in bucket]
     a_rest.sort(key=lambda x: x.span)
+
+    # 1b. Python: the same statement parsed (multiset). Normalized text keeps
+    # quote characters as written, so black's respelling matched nothing
+    # above, and every bare assert of a unit, which records no subject, then
+    # shared one key below and paired in span order: a test's own check with
+    # the one its conftest fixture lends it, read as a flipped polarity
+    # (flask 025589ee, #332).
+    if python:
+        a_by_tree: dict[str, list] = {}
+        a_kept = []
+        for a in a_rest:
+            key = _parsed_key(a.text)
+            if key is None:
+                a_kept.append(a)
+            else:
+                a_by_tree.setdefault(key, []).append(a)
+        b_rest_tree = []
+        for b in b_rest:
+            key = _parsed_key(b.text)
+            bucket = a_by_tree.get(key) if key is not None else None
+            if bucket:
+                pairs.append((b, bucket.pop(0), False))
+            else:
+                b_rest_tree.append(b)
+        b_rest = b_rest_tree
+        a_rest = a_kept + [a for bucket in a_by_tree.values() for a in bucket]
+        a_rest.sort(key=lambda x: x.span)
 
     # 2. (form, left) key
     a_by_key: dict[tuple, list] = {}
@@ -181,12 +268,25 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
                 if not respelled:
                     tolerance_changes.append((kind, old, a.epsilon))
 
-    b_marker_names = [m.name for m in before.side.markers]
-    markers_added = []
-    pool = list(b_marker_names)
+    # A marker is kept when its identity is on the base side (#332); one that
+    # is not is matched against the base's leftovers as a skip moved into or
+    # out of a helper (#272).
+    pool = [(_marker_key(b, python), b) for b in before.side.markers]
+    unmatched = []
     for m in after.side.markers:
-        if m.name in pool:
-            pool.remove(m.name)
+        key = _marker_key(m, python)
+        kept = next((entry for entry in pool if entry[0] == key), None)
+        if kept is not None:
+            pool.remove(kept)
+        else:
+            unmatched.append(m)
+    markers_added = []
+    markers_moved = []
+    for m in unmatched:
+        moved_from = next((entry for entry in pool if _moved_skip(entry[1], m)), None)
+        if moved_from is not None:
+            pool.remove(moved_from)
+            markers_moved.append((moved_from[1].name, m.name))
         else:
             markers_added.append(m.name)
 
@@ -218,6 +318,7 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit) -> UnitDelta:
         assertions_removed=[b.id for b in sorted(removed, key=lambda x: x.span)],
         assertions_added=[a.id for a in sorted(added, key=lambda x: x.span)],
         markers_added=markers_added,
+        markers_moved=markers_moved,
         handlers_widened=handlers_widened,
         tolerance_changes=tolerance_changes,
         param_cases_removed=max(0, param_removed),
@@ -387,7 +488,7 @@ def align_file(
                 match=how,
                 before=b.side,
                 after=a.side,
-                delta=_pair_assertions(b, a),
+                delta=_pair_assertions(b, a, python=path.endswith(".py")),
             )
         )
     for b in b_unpaired:
