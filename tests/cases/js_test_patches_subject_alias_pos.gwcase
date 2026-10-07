@@ -1,0 +1,32 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: B: vi.mock("@/billing") above an untouched expect() that reads the same alias's export
+origin: #196 188.6 (ruling 2026-10-03): the same alias string in a mock and an import is one module; @/ and ~/ are first-party
+=== before: tests/billing.test.ts ===
+import { describe, it, expect } from "vitest";
+import { invoiceTotal } from "@/billing";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.ts ===
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/billing", () => ({
+  invoiceTotal: () => 78.75,
+}));
+
+import { invoiceTotal } from "@/billing";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/billing.test.ts", "unit": "computes invoice total"}]

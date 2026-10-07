@@ -20,7 +20,7 @@ from checkwash.frontends.python.literal_extrema_replacements import literal_extr
 from checkwash.frontends.python.generator_fixture_subjects import generator_fixture_subject_events
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.model import judged_as_test
-from checkwash.ir.markers import parse_expr
+from checkwash.ir.markers import parse_expr, parse_text
 from checkwash.pyenv import known_baseline
 
 _BUILTINS = frozenset({"abs", "all", "any", "bool", "dict", "enumerate", "float", "int",
@@ -35,8 +35,11 @@ def _parse(data):
     if len(data) > 1_000_000:
         raise EngineError("subject replacement source exceeds the byte limit")
     try:
-        tree = ast.parse(data.decode("utf-8-sig"))
-    except (SyntaxError, UnicodeError, ValueError, RecursionError):
+        text = data.decode("utf-8-sig")
+    except UnicodeError:
+        return None
+    tree = parse_text(text)
+    if tree is None:
         return None
     if sum(1 for _ in ast.walk(tree)) > 30_000:
         raise EngineError("subject replacement source exceeds the syntax node limit")
@@ -196,10 +199,10 @@ def _subject_call(assertion, tree, qualname):
     if any(isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
            for statement in tree.body):
         return None
-    try:
-        statements = ast.parse(assertion.text).body
-    except (SyntaxError, ValueError):
+    parsed = parse_text(assertion.text)
+    if parsed is None:
         return None
+    statements = parsed.body
     if len(statements) != 1 or not isinstance(statements[0], ast.Assert):
         return None
     matches = [i for i, statement in enumerate(scope.body)
@@ -391,10 +394,10 @@ def _assertion_scope(tree, qualname, assertion):
             or helper.args.vararg or helper.args.kwarg or len(helper.body) != 1
             or not isinstance(helper.body[0], ast.Assert)):
         return None
-    try:
-        expected = ast.parse(assertion.text).body
-    except (SyntaxError, ValueError):
+    parsed = parse_text(assertion.text)
+    if parsed is None:
         return None
+    expected = parsed.body
     if len(expected) != 1 or stable_dump(helper.body[0]) != stable_dump(expected[0]):
         return None
     return helper.name
@@ -461,7 +464,10 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
     events.extend(generator_fixture_subject_events(ir, changes, root_reader=root_reader, root_searcher=inventory))
     for file in ir.files:
         change = by_path.get(file.path)
-        if not judged_as_test(file) or change is None or not change.before or not change.after:
+        # A JS or TS test is no Python source: parsing it as one finds no
+        # subject and warns on stderr (#319).
+        if (not judged_as_test(file) or not file.path.endswith(".py") or change is None
+                or not change.before or not change.after):
             continue
         trees = None
         for unit in file.units:

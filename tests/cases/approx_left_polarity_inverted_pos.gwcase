@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 33
+rule: ASSERT_WEAKENED
+title: `pytest.approx(78.75) == total()` -> `!=`, the approx call on the left, inverts what the test proves
+origin: #284 — the same flip with the operands swapped
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert pytest.approx(78.75) == total()
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert pytest.approx(78.75) != total()
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

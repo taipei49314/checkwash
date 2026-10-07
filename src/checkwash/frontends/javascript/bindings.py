@@ -9,7 +9,9 @@ name.
 
 from __future__ import annotations
 
+from bisect import bisect_left
 from dataclasses import dataclass, field
+import heapq
 import re
 
 NAME = r"[A-Za-z_$][\w$]*"
@@ -43,9 +45,88 @@ class Value:
     # node:assert's strict mode (`node:assert/strict`, `assert.strict`), whose
     # equal and deepEqual are the strict comparisons (#198 Q3).
     strict: bool = False
+    # A method of chai's `should.not` object, which asserts the negation (#215).
+    negated: bool = False
 
 
 UNKNOWN = Value("unknown")
+
+# AVA's and tap's assertions, by the method on a test's own `t` (#233), read
+# or not: AVA 8's `Assertions` type; tap 21's `@tapjs/asserts` with the
+# core's `fail` and the snapshot plugin's `matchSnapshot` and
+# `resolveMatchSnapshot`, and tap 16's `expectUncaughtException`, which
+# tap 18 removed. `t.pass()` and every other member of `t` (`plan`, `log`,
+# `teardown`, `context`, `end`) asserts nothing.
+AVA_ASSERTIONS = frozenset({
+    "assert", "deepEqual", "fail", "false", "falsy", "is", "like", "not", "notDeepEqual", "notRegex",
+    "notThrows", "notThrowsAsync", "regex", "snapshot", "throws", "throwsAsync", "true", "truthy",
+})
+TAP_ASSERTIONS = frozenset({
+    "doesNotThrow", "emits", "equal", "error", "expectUncaughtException", "fail", "has", "hasOwnProp",
+    "hasOwnProps", "hasOwnPropsOnly", "hasProp", "hasProps", "hasStrict", "match", "matchOnly",
+    "matchOnlyStrict", "matchSnapshot", "matchStrict", "not", "notHas", "notHasStrict", "notMatch",
+    "notMatchOnly", "notMatchOnlyStrict", "notMatchStrict", "notOk", "notSame", "ok", "rejects", "resolveMatch",
+    "resolveMatchSnapshot", "resolves", "same", "strictNotSame", "strictSame", "throws", "type",
+})
+# tap 16's synonyms (its `lib/synonyms.js`), which tap 16 deprecated and tap
+# 18 removed: each is the method it names, and so is the all-lowercase and
+# the snake_case spelling of every camelCase name there, as tap 16 defines
+# them. A synonym called under tap 18 or later throws, so reading one asserts
+# nothing a passing test does not.
+_TAP16_SYNONYMS = {
+    "ok": ("true", "assert"),
+    "notOk": ("false", "assertNot"),
+    "error": ("ifError", "ifErr"),
+    "throws": ("throw",),
+    "doesNotThrow": ("notThrow",),
+    "equal": ("equals", "isEqual", "is", "strictEqual", "strictEquals", "strictIs", "isStrict", "isStrictly",
+              "identical"),
+    "not": ("inequal", "notEqual", "notEquals", "notStrictEqual", "notStrictEquals", "isNotEqual", "isNot",
+            "doesNotEqual", "isInequal"),
+    "same": ("equivalent", "looseEqual", "looseEquals", "deepEqual", "deepEquals", "isLoose", "looseIs",
+             "isEquivalent"),
+    "notSame": ("inequivalent", "looseInequal", "notDeep", "deepInequal", "notLoose", "looseNot", "notEquivalent",
+                "isNotDeepEqual", "isNotDeeply", "notDeepEqual", "isInequivalent", "isNotEquivalent"),
+    "strictSame": ("strictEquivalent", "strictDeepEqual", "sameStrict", "deepIs", "isDeeply", "isDeep",
+                   "strictDeepEquals"),
+    "strictNotSame": ("strictInequivalent", "strictDeepInequal", "notSameStrict", "deepNot", "notDeeply",
+                      "strictDeepInequals", "notStrictSame"),
+    "match": ("matches", "similar", "like", "isLike", "isSimilar"),
+    "has": ("hasFields", "includes", "include", "contains"),
+    "notMatch": ("dissimilar", "unsimilar", "notSimilar", "unlike", "isUnlike", "notLike", "isNotLike",
+                 "doesNotHave", "isNotSimilar", "isDissimilar"),
+    "type": ("isA",),
+}
+
+
+def _tap_spellings(table: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    spellings: dict[str, str] = {}
+    for method, synonyms in table.items():
+        for name in (method, *synonyms):
+            for spelling in (name, name.lower(), re.sub(r"[A-Z]", lambda m: "_" + m.group(0).lower(), name)):
+                if spelling != method:
+                    spellings.setdefault(spelling, method)
+    return spellings
+
+
+TAP_SYNONYMS = _tap_spellings(_TAP16_SYNONYMS)
+_TAP_NAMES = TAP_ASSERTIONS | frozenset(TAP_SYNONYMS)
+# The assertions tap's ES module also exports by name: tap 21's
+# `dist/esm/main.js` and tap 16's `lib/tap.mjs`. A name only one of them
+# exports throws on import under the other, before any test runs. The rest
+# (`hasProp`, a synonym, ...) are `t`'s only.
+_TAP_EXPORTS = frozenset({
+    "doesNotThrow", "emits", "equal", "error", "expectUncaughtException", "fail", "has", "hasStrict", "match",
+    "matchOnly", "matchOnlyStrict", "matchSnapshot", "matchStrict", "not", "notHas", "notHasStrict", "notMatch",
+    "notMatchOnly", "notMatchOnlyStrict", "notMatchStrict", "notOk", "notSame", "ok", "rejects", "resolveMatch",
+    "resolveMatchSnapshot", "resolves", "same", "strictNotSame", "strictSame", "throws", "type",
+})
+# AVA's test function chains: modifiers and hooks are its test function too,
+# and `skipIf`/`runIf` return it (AVA 8's `TestFn`).
+_AVA_MODIFIERS = frozenset({"serial", "skip", "only", "failing", "todo", "before", "after", "beforeEach",
+                            "afterEach", "always", "macro", "skipIf", "runIf"})
+# The members of tap's `t` that declare a subtest.
+_TAP_DECLARERS = frozenset({"test", "only", "skip", "todo"})
 
 
 @dataclass
@@ -63,8 +144,11 @@ class Bindings:
         self.masked = "".join(c if code[i] else " " for i, c in enumerate(text))
         imports = "".join(c if import_code[i] else " " for i, c in enumerate(text))
         self.tokens = [(m.group(), m.start(), m.end()) for m in _TOKEN.finditer(imports)]
+        # Each token's start, for bisecting a position into the tokens (#235).
+        self.token_starts = [start for _token, start, _end in self.tokens]
         self.pairs: dict[int, int] = {}
         self.scopes = [Scope(0, len(text), None, True)]
+        self._scope_index: tuple[int, list[int], list[int]] | None = None
         self.scope_at: list[int] = []
         self.body_scopes: dict[int, int] = {}
         self.enclosing: list[int | None] = []
@@ -72,6 +156,11 @@ class Bindings:
         self.initializers: set[int] = set()
         # (scope, name) -> (ready, source text) of a plain `name = value` declaration.
         self.initializer_text: dict[tuple[int, str], tuple[int, str]] = {}
+        # (scope, name) -> (module specifier, export) of an import's local
+        # name: "default" for a default import, "*" for a namespace (#226).
+        self.import_sources: dict[tuple[int, str], tuple[str, str]] = {}
+        # (scope, name) of a function or class declaration (#226).
+        self.function_declarations: set[tuple[int, str]] = set()
         self.parameter_tokens: set[int] = set()
         self.context_parameters: list[tuple[int, str, int]] = []
         stack: list[int] = []
@@ -101,8 +190,9 @@ class Bindings:
         # Parameter shadows must exist before CommonJS resolution, but runner
         # authority must wait until local variables and writes are known.
         for scope, name, position in self.context_parameters:
-            if self._test_callback(position):
-                self._declare(scope, name, Value("context"))
+            kind = self._test_context(position)
+            if kind is not None:
+                self._declare(scope, name, Value(kind))
 
     def token(self, i: int) -> str:
         return self.tokens[i][0] if 0 <= i < len(self.tokens) else ""
@@ -128,6 +218,13 @@ class Bindings:
             return Value("jest_globals")
         if name == "chai":
             return Value("chai")
+        # AVA's default export is its test function (#233). tap's module
+        # exports the root test `t`, whose methods declare subtests and
+        # assert, and some of those methods by name.
+        if name == "ava":
+            return Value("ava")
+        if name == "tap":
+            return Value("tap_module")
         return UNKNOWN
 
     @staticmethod
@@ -146,10 +243,33 @@ class Bindings:
             return Value("chai_" + name)
         if value.kind == "chai_assert":
             return Value("chai_assert_method", name)
+        # chai's should interface (#215): `chai.should()` (or its alias
+        # `chai.Should()`) installs the `.should` getter and returns the
+        # object whose `equal`, `exist` and `not.*` take the subject first.
+        if value.kind == "chai" and name in {"should", "Should"}:
+            return Value("chai_should")
+        if value.kind == "chai_should":
+            return Value("chai_should_not") if name == "not" else Value("chai_should_method", name)
+        if value.kind == "chai_should_not":
+            return Value("chai_should_method", name, negated=True)
         if value.kind == "node_test" and name in {"test", "it"}:
             return Value("runner")
         if value.kind == "context" and name == "assert":
             return Value("node_context")
+        if value.kind == "ava" and name in _AVA_MODIFIERS:
+            return value
+        if value.kind == "ava_context" and name in AVA_ASSERTIONS:
+            return Value("ava_method", name)
+        if value.kind in {"tap", "tap_module"} and name in {"t", "default"}:
+            return Value("tap")
+        if value.kind in {"tap", "tap_module", "tap_context"}:
+            if name in _TAP_DECLARERS:
+                return Value("tap_test")
+            if value.kind == "tap_module":
+                return Value("tap_method", name) if name in _TAP_EXPORTS else UNKNOWN
+            name = TAP_SYNONYMS.get(name, name)
+            if name in TAP_ASSERTIONS:
+                return Value("tap_method", name)
         return UNKNOWN
 
     def _pattern(self, first: int, last: int) -> list[tuple[str, str]]:
@@ -213,18 +333,24 @@ class Bindings:
                 end += 1
             if self.token(end) != "from" or self.token(end + 1)[:1] not in {"'", '"'}:
                 continue
-            module = self.module(self.token(end + 1)[1:-1])
+            specifier = self.token(end + 1)[1:-1]
+            module = self.module(specifier)
             scope = self.scope_at[i]
             if _IDENT.fullmatch(self.token(i + 1)):
-                default = Value("runner") if module.kind == "node_test" else module
+                default = (Value("runner") if module.kind == "node_test"
+                           else Value("tap") if module.kind == "tap_module" else module)
                 self._declare(scope, self.token(i + 1), default)
+                if not (self.token(i + 1) == "type" and self.token(i + 2) in {"{", "*"}):
+                    self.import_sources[(scope, self.token(i + 1))] = (specifier, "default")
             for j in range(i + 1, end):
                 if self.token(j) == "*" and self.token(j + 1) == "as":
                     self._declare(scope, self.token(j + 2),
                                   Value("node_namespace", strict=module.strict) if module.kind == "node" else module)
+                    self.import_sources[(scope, self.token(j + 2))] = (specifier, "*")
                 if self.token(j) == "{" and j in self.pairs:
                     for exported, local in self._pattern(j + 1, self.pairs[j]):
                         self._declare(scope, local, self.member(module, exported))
+                        self.import_sources[(scope, local)] = (specifier, exported)
 
     def _expression_end(self, start: int, limit: int | None = None) -> int:
         """Index of the token that ends the expression starting at `start`.
@@ -337,6 +463,7 @@ class Bindings:
                         previous = i - 2 if self.token(i - 1) == "async" else i - 1
                         owner = scope if self.token(previous) in {"=", "(", ",", ":", "return"} else self.scope_at[i]
                         self._declare(owner, name, UNKNOWN)
+                        self.function_declarations.add((owner, name))
                     self._parameters(cursor + 1, closing, scope, cursor)
             elif token == "=>":
                 previous = i - 1
@@ -369,6 +496,7 @@ class Bindings:
                         self._declare(scope, name, UNKNOWN)
             elif token == "class" and _IDENT.fullmatch(self.token(i + 1)):
                 self._declare(self.scope_at[i], self.token(i + 1), UNKNOWN)
+                self.function_declarations.add((self.scope_at[i], self.token(i + 1)))
             elif token == "(" and i in self.pairs and self._method_parameters(i):
                 closing = self.pairs[i]
                 self._parameters(i + 1, closing, self.body_scopes[closing + 1])
@@ -403,6 +531,35 @@ class Bindings:
         if self.token(previous) in {"skip", "todo", "only"} and self.token(previous - 1) == ".":
             previous -= 2
         return self.resolve(self.token(previous), self.tokens[opening][1]).kind == "runner"
+
+    def _test_context(self, first: int) -> str | None:
+        """What a test callback's first parameter is, by the function that
+        declares the test: AVA's or tap's `t` (#233), or node:test's context."""
+        declarer = self._declarer(first)
+        kind = {"ava": "ava_context", "tap_test": "tap_context"}.get(declarer.kind)
+        if kind is not None:
+            return kind
+        return "context" if self._test_callback(first) else None
+
+    def _declarer(self, first: int) -> Value:
+        """The function a callback whose parameters start after token `first`
+        is passed to: `test(...)`, `test.serial(...)`, `t.test(...)`, or AVA's
+        curried `test.skipIf(cond)(...)`."""
+        opening = self.enclosing[first] if 0 <= first < len(self.enclosing) else None
+        if opening is None or self.token(opening) != "(":
+            return UNKNOWN
+        last = opening - 1
+        if self.token(last) == ")" and last in self.pairs:
+            last = self.pairs[last] - 1
+            if self.token(last) not in {"skipIf", "runIf"}:
+                return UNKNOWN
+        if not _IDENT.fullmatch(self.token(last)):
+            return UNKNOWN
+        start = last
+        while self.token(start - 1) == "." and _IDENT.fullmatch(self.token(start - 2)):
+            start -= 2
+        path = ".".join(self.token(i) for i in range(start, last + 1, 2))
+        return self.callee(path, self.tokens[start][1])
 
     def _parameters(self, first: int, last: int, scope: int, context_position: int | None = None) -> None:
         self.scopes[scope].function = True
@@ -721,9 +878,48 @@ class Bindings:
         return False
 
     def scope(self, position: int) -> int:
-        candidates = [(scope.end - scope.start, -index, index) for index, scope in enumerate(self.scopes)
-                      if scope.start <= position <= scope.end]
-        return min(candidates)[2] if candidates else 0
+        """The innermost scope at `position`: the shortest one holding it, the
+        latest of equal ones, and the module's outside every scope.
+
+        Answered from an index of the regions between the scopes' bounds,
+        built once the scope list is complete, instead of a scan of every
+        scope on each call (#235).
+        """
+        if self._scope_index is None or self._scope_index[0] != len(self.scopes):
+            self._scope_index = (len(self.scopes), *self._index_scopes())
+        _count, bounds, answers = self._scope_index
+        region = bisect_left(bounds, position)
+        if region < len(bounds) and bounds[region] == position:
+            return answers[2 * region + 1]
+        return answers[2 * region]
+
+    def _index_scopes(self) -> tuple[list[int], list[int]]:
+        """Every scope's bounds, sorted, and the innermost scope of each region
+        they make: the gap before each bound, the bound itself, and the gap
+        after the last one. A sweep keeps the scopes that hold the region in a
+        heap ordered as `scope` orders them; one that ends before the region
+        never holds a later one."""
+        bounds = sorted({bound for scope in self.scopes for bound in (scope.start, scope.end)})
+        order = sorted(range(len(self.scopes)), key=lambda index: self.scopes[index].start)
+        heap: list[tuple[int, int, int]] = []
+        answers: list[int] = []
+
+        def innermost(holds) -> int:
+            while heap and not holds(self.scopes[-heap[0][1]].end):
+                heapq.heappop(heap)
+            return -heap[0][1] if heap else 0
+
+        cursor, previous = 0, None
+        for bound in bounds:
+            answers.append(innermost(lambda end: previous is not None and end > previous))
+            while cursor < len(order) and self.scopes[order[cursor]].start == bound:
+                index = order[cursor]
+                heapq.heappush(heap, (self.scopes[index].end - bound, -index, index))
+                cursor += 1
+            answers.append(innermost(lambda end: end >= bound))
+            previous = bound
+        answers.append(0)
+        return bounds, answers
 
     def _contains(self, scope: int, position: int) -> bool:
         return self.scopes[scope].start <= position <= self.scopes[scope].end
@@ -784,8 +980,13 @@ class Bindings:
             if parent is None:
                 break
             scope = parent
+        # An undeclared `should` is the global `chai/register-should` sets to
+        # `chai.should()`'s object (#215), and an undeclared `chai` is chai's
+        # module: karma-chai's adapter and chai's own suite set the global
+        # (#311).
         return {"assert": Value("node"), "expect": Value("expect"), "t": Value("context"),
-                "test": Value("runner"), "it": Value("runner"), "require": Value("require")}.get(name, UNKNOWN)
+                "test": Value("runner"), "it": Value("runner"), "require": Value("require"),
+                "should": Value("chai_should"), "chai": Value("chai")}.get(name, UNKNOWN)
 
     def _value(self, expression: tuple[str, ...], position: int, seen: frozenset[tuple[int, str]]) -> Value:
         if not expression:
@@ -794,6 +995,8 @@ class Bindings:
             if self.resolve("require", position, seen).kind != "require":
                 return UNKNOWN
             value = self.module(expression[2][1:-1]) if expression[2][:1] in {"'", '"'} else UNKNOWN
+            if value.kind == "tap_module":
+                value = Value("tap")  # CommonJS exports `t` itself (#233).
             rest = expression[4:]
         else:
             # An alias captures a property at initialization time. A method
@@ -809,6 +1012,8 @@ class Bindings:
         while len(rest) >= 2 and rest[0] == ".":
             value = self.member(value, rest[1])
             rest = rest[2:]
+        if value.kind == "chai_should" and rest == ("(", ")"):
+            return value  # `chai.should()` returns the should object
         return UNKNOWN if rest else value
 
     def callee(self, spelling: str, position: int) -> Value:
@@ -871,6 +1076,27 @@ class Bindings:
                 return None
             scope = parent
 
+    def _declaration_scope(self, name: str, position: int) -> int | None:
+        """The scope whose declaration of `name` a read at `position` reads, or None for a global."""
+        scope = self._binding_scope(name, position)
+        return scope if name in self.scopes[scope].declarations else None
+
+    def imported(self, name: str, position: int) -> tuple[str, str] | None:
+        """The module specifier and export `name` reads here, when an import declares it (#226).
+
+        A local declaration that shadows the import, or a write that may
+        reach the read, leaves the name unknown, as `initializer` does.
+        """
+        if self._written((name,), position):
+            return None
+        scope = self._declaration_scope(name, position)
+        return None if scope is None else self.import_sources.get((scope, name))
+
+    def declared_function(self, name: str, position: int) -> bool:
+        """Does `name` read a function or class this file declares (#226)?"""
+        scope = self._declaration_scope(name, position)
+        return scope is not None and (scope, name) in self.function_declarations
+
     @staticmethod
     def _family(value: Value) -> frozenset[str]:
         if value.kind in {"node", "node_method", "node_namespace", "node_context"}:
@@ -885,6 +1111,10 @@ class Bindings:
             return frozenset({"expect"})
         if value.kind in {"chai_assert", "chai_assert_method"}:
             return frozenset({"chai"})
+        if value.kind in {"ava_context", "ava_method"}:
+            return frozenset({"AVA"})
+        if value.kind in {"tap", "tap_module", "tap_context", "tap_method"}:
+            return frozenset({"tap"})
         return frozenset()
 
     def _candidate_families(self, name: str, position: int,
@@ -971,6 +1201,10 @@ class Bindings:
             return None
         if value.kind == "jest_globals" and not member("expect"):
             return None
+        # A call on chai's should object asserts; calling `should()` itself
+        # installs the getter (#215).
+        if value.kind in {"chai_should", "chai_should_not"}:
+            return "chai" if re.sub(r"\s+", "", spelling) != root else None
         if value.kind in {"node", "node_method", "node_namespace", "node_context", "context"}:
             return "Node"
         if (value.kind in {"expect", "chai_expect", "jest_expect"}
@@ -978,11 +1212,23 @@ class Bindings:
             return "expect"
         if value.kind in {"jest", "chai", "chai_assert", "chai_assert_method"}:
             return "chai"
+        # AVA's and tap's `t`, or a method bound from it (#233): a call of one
+        # of its assertions. `t.test(...)`, `t.plan(1)` and `t.is.skip(...)`
+        # assert nothing.
+        if value.kind in {"ava_context", "ava_method", "tap", "tap_module", "tap_context", "tap_method"}:
+            dotted = re.sub(r"\[\s*(['\"])(" + NAME + r")\1\s*\]", r".\2", re.sub(r"\s+", "", spelling))
+            if "[" in dotted:
+                return None
+            kind = self.callee(dotted.replace("?.", "."), position).kind
+            return {"ava_method": "AVA", "tap_method": "tap"}.get(kind)
         families = self._candidate_families(root, position)
         for family in families:
             if family == "context" and not member("assert"):
                 continue
             if family == "jest" and not member("expect"):
+                continue
+            if family in {"AVA", "tap"} and not any(
+                    member(name) for name in (AVA_ASSERTIONS if family == "AVA" else _TAP_NAMES)):
                 continue
             return "unresolved"
         return None

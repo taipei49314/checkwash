@@ -70,6 +70,7 @@ import ast
 from collections import Counter
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.ir.markers import parse_text
 from checkwash.ir.model import IR, ParamTable, judged_as_test, normalize_text, param_tables
 from checkwash.detectors.expected_provenance import detect as detect_provenance
 
@@ -292,11 +293,8 @@ def _haystack_is_produced(text: str) -> bool:
     test, the needle is the oracle. `assert x in allowed` — the container
     is a bare name and *is* the oracle. T1.10.
     """
-    try:
-        tree = ast.parse(text)
-    except SyntaxError:
-        return False
-    if not tree.body or not isinstance(tree.body[0], ast.Assert):
+    tree = parse_text(text)
+    if tree is None or not tree.body or not isinstance(tree.body[0], ast.Assert):
         return False
     test = tree.body[0].test
     if not isinstance(test, ast.Compare) or not test.ops:
@@ -312,9 +310,8 @@ def _names_in_binding_key(key: str) -> set[str]:
     for part in key.split(""):
         if not part:
             continue
-        try:
-            tree = ast.parse(part, mode="eval")
-        except SyntaxError:
+        tree = parse_text(part, mode="eval")
+        if tree is None:
             continue
         names.update(
             n.id for n in ast.walk(tree) if isinstance(n, ast.Name)

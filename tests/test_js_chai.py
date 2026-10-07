@@ -269,7 +269,8 @@ def test_lookalikes_and_shadows_do_not_acquire_chai_strength(imports, body):
     ("expect(total()).to.eventually.equal(78.75);", "expect(...).to.eventually.equal"),
     ("expect(lines()).to.be.an('array');", "expect(...).to.be.an"),
     ("expect(lines()).to.have.length.above(1);", "expect(...).to.have.length.above"),
-    ("expect(order()).to.have.own.property('total');", "expect(...).to.have.own.property"),
+    # `.own.property` is represented since #215 (pin flip authorized there).
+    ("expect(order()).to.have.keys('total');", "expect(...).to.have.keys"),
     ("expect(total()).to.be.closeTo(78.75);", "expect(...).to.be.closeTo"),
     ("assert.isFunction(total);", "assert.isFunction"),
     ("assert.notStrictEqual(total(), 80);", "assert.notStrictEqual"),
@@ -311,11 +312,12 @@ def test_vitest_namespace_assert_member_is_a_chai_candidate(body, callees):
     assert [(gap.callee, gap.reason.split()[0]) for gap in gaps] == [(callee, "chai") for callee in callees]
 
 
-def test_should_style_is_outside_the_scan():
-    # Recorded boundary: should-style needs receiver-expression and prototype
-    # registration modelling that this bounded scan does not have.
+def test_should_style_reads_as_an_expect_chain():
+    # Should-style was outside the scan until #215, which reads it as the
+    # expect() chain it is (pin flip authorized there).
     source = _source("total().should.equal(78.75);", 'import { should } from "chai";\nshould();')
-    assert _assertions(source) == []
+    assert [(a.left, a.form, a.strength, a.right_value) for a in _assertions(source)] == [
+        ("total()", "compare_eq", 90, "78.75")]
     assert _gaps(source) == []
 
 
