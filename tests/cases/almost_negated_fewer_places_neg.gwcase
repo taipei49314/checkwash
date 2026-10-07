@@ -1,0 +1,29 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: assertNotAlmostEqual(total(), 78.75, places=3) -> places=2 demands the values be further apart: no finding
+origin: #284 — fewer places on a negated call is stricter, and blocked as loosened
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TotalTest(unittest.TestCase):
+    def test_total(self):
+        self.assertNotAlmostEqual(total(), 78.75, places=3)
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TotalTest(unittest.TestCase):
+    def test_total(self):
+        self.assertNotAlmostEqual(total(), 78.75, places=2)
+=== expect ===
+[]

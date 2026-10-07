@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 233
+title: tap t.same respelled t.strictSame is no weakening
+origin: issue #233 — both read as the structural equality
+=== before: test/billing.js ===
+import t from 'tap';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+t.test('lines', async t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.same(invoiceTotal(items), [30, 45]);
+});
+=== after: test/billing.js ===
+import t from 'tap';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+t.test('lines', async t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.strictSame(invoiceTotal(items), [30, 45]);
+});
+=== expect ===
+[]

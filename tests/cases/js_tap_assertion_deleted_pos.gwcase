@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 126
+rule: ASSERT_REMOVED
+issue: 233
+title: a tap assertion deleted from its subtest is a removed assertion
+origin: issue #233 — v0.6.0 passed this with zero findings
+=== before: test/billing.js ===
+import t from 'tap';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+t.test('invoice total', async t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.equal(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.js ===
+import t from 'tap';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+t.test('invoice total', async t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  invoiceTotal(items);
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "path": "test/billing.js", "unit": "invoice total"}]

@@ -16,7 +16,8 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 
 from checkwash.change import FileChange
-from checkwash.frontends.python.frontend import _Offsets, normalize_source
+from checkwash.frontends.python.frontend import _Offsets, _canonical_repr, normalize_source
+from checkwash.frontends.python.literal_conversions import conversion_names, folded_conversion, module_bindings
 from checkwash.frontends.python.expected_constants import folded_expected
 from checkwash.frontends.python.callable_fixture_expectations import callable_fixture_events
 from checkwash.frontends.python.trace_oracle_expectations import trace_expectation_events
@@ -27,6 +28,7 @@ from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.snapshot_context import inert_test_execution_context
 from checkwash.frontends.python.table_oracles import MAX_AST_NODES, MAX_CASES, MAX_SOURCE_BYTES, _literal
 from checkwash.ir.astutil import dotted_name, stable_dump
+from checkwash.ir.expected_values import value_key
 from checkwash.ir.model import judged_as_test
 
 MAX_READS = 48
@@ -100,6 +102,11 @@ class _Module:
     tests: list
     calls_safe: bool
     math_imported: bool
+    # The conversions that fold here (#226), by the spelling substitution
+    # leaves them in: `float` while the module binds that name nowhere,
+    # `decimal.Decimal` when an import of the decimal module is the one
+    # binding of the name it is spelled with.
+    conversions: dict
 
 
 def _module(path, source):
@@ -175,7 +182,9 @@ def _module(path, source):
         or (isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) in aliases
             and id(node) not in allowed_imports)
         for node in ast.walk(tree))
-    return _Module(path, _Offsets(text), env, functions, tests, calls_safe, math_imported)
+    folds = set(conversion_names(tree, module_bindings(tree)).values())
+    return _Module(path, _Offsets(text), env, functions, tests, calls_safe, math_imported,
+                   {kind: kind for kind in sorted(folds)})
 
 
 class _Reader:
@@ -460,7 +469,10 @@ class _Project:
                 if any(isinstance(n, (ast.Lambda, ast.NamedExpr, ast.Await, ast.Yield, ast.comprehension)) for n in ast.walk(right)):
                     raise _Unsupported
                 expected_return = False
-                if not _literal(right):
+                # A fold-set conversion of a literal is the value it folds
+                # to, before any helper or constant proof is asked (226.Q2).
+                converted = None if _literal(right) else folded_conversion(right, module.conversions)
+                if converted is None and not _literal(right):
                     # Pure source substitution can prove a return expression
                     # equal to the previous literal only under the same closed
                     # execution authority used for optional constant calls.
@@ -484,7 +496,9 @@ class _Project:
                     continue
                 text, span = anchor or (module.offsets.seg(statement), module.offsets.span(statement))
                 events.append(_Event(unit, ast.unparse(left), type(comparison.ops[0]).__name__,
-                                     ast.unparse(right), indirect, bool(anchor or loop or expected_return),
+                                     _canonical_repr(converted) if converted is not None else ast.unparse(right),
+                                     indirect,
+                                     bool(anchor or loop or expected_return),
                                      stable_dump(statement), text, span))
                 if len(events) > MAX_EVENTS:
                     raise _Unsupported
@@ -608,13 +622,17 @@ def mark_expected_provenance(ir, raw, reader, role_of, report_context=None, sour
                 comparisons.append(((*subject, current[0].operator), previous, current))
         records = []
         for key, previous, current in comparisons:
-            wanted, got = Counter(e.expected for e in previous), Counter(e.expected for e in current)
+            # Equal Python answers are one answer (226.Q2): `78.75` and a
+            # folded `Decimal('78.75')` compare equal under `==`. An identity
+            # answer is a bool or None, the only answers it is compared with.
+            wanted = Counter(value_key(e.expected) for e in previous)
+            got = Counter(value_key(e.expected) for e in current)
             # Per input, preserve the established additions/reorders/dedup
             # controls. Comparing a global bag would swap answers for free.
             if wanted <= got or got <= wanted:
                 continue
-            lost = next(e for e in previous if e.expected in wanted - got)
-            arrived = next(e for e in current if e.expected in got - wanted)
+            lost = next(e for e in previous if value_key(e.expected) in wanted - got)
+            arrived = next(e for e in current if value_key(e.expected) in got - wanted)
             if not (lost.indirect or arrived.indirect):
                 continue
             # Native expectation-definition owns ordinary assertions whose

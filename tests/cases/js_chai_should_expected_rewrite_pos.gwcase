@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 111
+rule: EXPECTED_VALUE_CHANGED
+title: chai should-style .should.equal(78.75) -> .should.equal(75) rewrites the expected value
+origin: issue #215 SH2 — v0.6.0 passed this diff with zero findings and no coverage notice
+=== before: test/billing.spec.js ===
+import { should } from "chai";
+should();
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    invoiceTotal(items).should.equal(78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+import { should } from "chai";
+should();
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    invoiceTotal(items).should.equal(75);
+  });
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 111
+rule: ASSERT_WEAKENED
+issue: 311
+title: chai's assert read through an undeclared global chai
+origin: issue #311 K4 — v0.6.0 passes this with zero findings
+=== before: test/billing.spec.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", function () {
+  var assert = chai.assert;
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    assert.strictEqual(invoiceTotal(items), 78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", function () {
+  var assert = chai.assert;
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    assert.isOk(invoiceTotal(items));
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -6584,6 +6584,1129 @@ sweeps' copy):
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
 
+## D-104 (2026-10-06): one definition of an expected value that is not a plain literal (#226)
+
+A literal expected value replaced by a call or a name passed in JavaScript
+and in part of Python. `toBe(78.75)` -> `toBe(Number(75))` (#198 T6),
+`toBe(make(1))` and `toBe(OTHER)` (an import) passed in JavaScript;
+`== float('75')`, `== int('75')`, `== round(75.0, 2)` and a call to a name the
+file never binds passed in Python, while the honest `78.75` ->
+`Decimal('78.75')` blocked as a changed provenance.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.followup.expected-provenance, filed as #226): "fold a fixed set of
+literal-only conversions (Number('75'), float('75'), Decimal('75')) to their
+value, so they compare as literals. Report any other literal -> unevaluated
+call as EXPECTED_VALUE_CHANGED 'expected value replaced by an expression
+checkwash does not evaluate'. Port Python's literal -> imported-name
+provenance (EXPECTATION_DEFINITION_CHANGED) to JS. This decides i198/T6."
+Rulings of 2026-10-04 ([#226](https://github.com/taipei49314/checkwash/issues/226#issuecomment-5981759826)):
+226.Q1, a literal replaced by a call whose callee Python resolves keeps
+EXPECTATION_DEFINITION_CHANGED, and the new message covers callees that
+neither resolve nor fold; 226.Q2, `Decimal(<literal>)` folds, and a folded
+value compares as Python's `==` does; 226.Q3, the JavaScript port covers a
+call rewritten with the same callee and a same-file constant, and Python's
+P5 (the same callee, bound nowhere) reports under 226.Q1.
+
+**As implemented:**
+- **Folds.** `float(<literal>)` and `Decimal(<literal>)` in Python and
+  `Number(<literal>)` in JavaScript are the assertion's literal: `right_value`
+  records the value they fold to. A spelling folds only where its name can be
+  nothing else: `float` while the module binds that name nowhere, `Decimal`
+  when a top-level import of the decimal module is the one binding of the
+  name it is spelled with, `Number` while no scope declares it and no write
+  reaches it. The argument is one bounded literal; `Number` folds a number or
+  a string holding a plain decimal numeral; a signalling NaN does not fold.
+  The provenance pass folds the same calls in an expected value it reads,
+  what a local holds included.
+- **Comparison.** Python literals compare as Python's `==` compares them,
+  in EXPECTED_VALUE_CHANGED and in the provenance channel's answers:
+  `78.75` -> `Decimal('78.75')` is no change, `0.1` -> `Decimal('0.1')` is
+  one. JavaScript keeps one canonical Number.
+- **Unevaluated calls.** Each frontend records, in the new optional
+  `Assertion.unevaluated_expected`, an expected value or bound that is a call
+  whose callee's root the file never binds (Python: no binding of the name
+  anywhere in the module, in any scope, and no star import; JavaScript: no
+  declaration in an enclosing scope and no write, nor an assertion library's
+  name) and that does not fold. EXPECTED_VALUE_CHANGED reports a literal
+  replaced by one, and one rewritten into another, on the same subject: "expected
+  value replaced by an expression checkwash does not evaluate (78.75 ->
+  int('75'))". An expression over the subject's own input stays
+  EXPECTED_VALUE_DERIVED's.
+- **The JavaScript port.** `frontends/javascript/expected_provenance.py`
+  resolves an equality's expected value and its subject by substitution: an
+  import becomes its module and export, a `const`, `let` or `var` the read
+  reaches its initializer, resolved in turn (eight levels), and a declared
+  function or class stays a call. A pair on one subject, a call after
+  substitution, whose values differ while either side read such a name, is
+  recorded as Python's channel records its events, and
+  EXPECTATION_DEFINITION_CHANGED reports it with Python's message.
+- The verdict gate labels `i198/T6` block.
+- IR: the new optional field; a folded conversion's `right_value`.
+  IR_VERSION stays 2 (D-067). No strength value, gating row or alignment
+  parameter changes.
+
+**Readings the rulings leave open:**
+1. **Every Python literal compares by `==`.** 226.Q2 names folded values;
+   one comparison for every literal keeps a folded and a written value on
+   one reading, so `1` -> `1.0` and `1` -> `True`, which reported as an
+   expected value rewritten, are now no change.
+2. **J3 follows 226.Q1.** The issue's acceptance list, written before the
+   rulings, puts `toBe(78.75)` -> `toBe(make(1))` (`make` imported) with the
+   unevaluated calls. 226.Q1 keeps a callee the file resolves on
+   EXPECTATION_DEFINITION_CHANGED and 226.Q3 ports that to JavaScript, so
+   J3 reads "expected provenance changed 78.75 -> ./total.make(1)".
+3. **A JavaScript global call rewritten** (`toBe(build(1))` ->
+   `toBe(build(2))`, `build` declared nowhere) is P5's JavaScript twin and
+   reports. The #198 round pinned it to pass "as in Python", which Python
+   no longer does.
+4. **What "never binds" means.** Any binding anywhere counts, so a
+   parameter named `float` in an unrelated helper keeps `float('75')` from
+   folding and from reading as unbound; a star import may bind any name.
+5. **The port's reach.** It reads equality operands, not bounds or
+   tolerances, and both directions of a pair it resolves: `toBe(OTHER)` ->
+   `toBe(75)` reports through it, where Python's #60 owns that pair (#292
+   asks whether JavaScript should read #60).
+6. **Messages show the folded value** as Python prints it: `75.0` for
+   `float('75')` and `Number(75)` (JavaScript's `75` has printed as `75.0`
+   since #198), `Decimal('75')` for a Decimal. The ruling's "78.75 -> 75" is
+   that value.
+7. **A folded value restores a bound.** `x < 80` -> `x == float('78.75')`
+   passes, as `x == 78.75` passes (numeric restoration).
+
+Found during this round and filed: #292 (a name or call replaced by a
+literal is read in Python only, and #60 reports an inlined local that still
+holds the value) and #293 (a JavaScript definition rewritten under an
+unchanged assertion is not read).
+
+**Measured cost**, with the round's engine against the base branch's
+(`fix/224-python-compare-direction` at `7c01de5`, the same engine bytes as
+the sweeps' copy):
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories whose test-side Python adds or removes an `assert` or a
+  unittest assertion whose expected side is a call, or a line that spells
+  `float(` or `Decimal(` in one: 2,605 commits, 2,147 readable on both
+  engines. Twelve records change, by 14 new EXPECTED_VALUE_CHANGED
+  findings, and no verdict moves (437 blocked on both):
+  - in eleven, an expected value that was already a call is rewritten
+    with the same callee, a builtin the file never binds (226.Q1's P5):
+    aiohttp `b025d570938b` and its revert `c8d6e019d38e`
+    (`bytes(stream._input)` <-> `bytes(stream._buffer)`); pytest
+    `0394ebffee0b` (`len(... SafeRepr().maxlist ...)` -> `SafeRepr(0)`),
+    `2ca6d9f039ef` (two `dict(x=1, ...)` gaining `unnamed=1`) and
+    `af39c9850e33` (two `str(testdir.tmpdir...)` gaining
+    `.realpath()`); scrapy `d5b6c236a90a`, its revert `99d8b05a0b19` and
+    `1a4a77d49fa5` (`list(range(3, 13))` <-> `list(range(2, 13))`),
+    `08232a3f824a` and `d42a98d3b590` (a `set` of str names becoming one
+    of bytes); werkzeug `64fb22fde232` (a `set('...'.split('&'))` with
+    other keys);
+  - in one, a literal is replaced by such a call: click `b64ea07128a6`,
+    `"not-none\n"` -> `repr("not-none")` (P2).
+  Each is a change to the value the test expects, which v0.6.0 left
+  unread. Eleven findings are warn. The three high ones, with no
+  production change that explains them (E1), are in pytest
+  `af39c9850e33` and scrapy `1a4a77d49fa5`, which already blocked on the
+  same rule.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records as the base, byte for
+  byte.
+
+**Fingerprints, messages and IR:**
+- New findings, and one rule moved: a literal replaced by
+  `Decimal(<literal>)` reported EXPECTATION_DEFINITION_CHANGED through the
+  provenance channel, and now reports EXPECTED_VALUE_CHANGED (P11), or
+  nothing when the values are equal (P12), so its rule and fingerprint
+  change. `1` -> `1.0` and `1` -> `True` no longer report (reading 1).
+  No other existing finding changes rule, message or fingerprint, in the
+  fixtures or in the sweeps.
+- Messages: the new "expected value replaced by an expression checkwash
+  does not evaluate (<old> -> <new>)", and a folded value printed as
+  Python prints it (reading 6).
+- IR: the new optional `Assertion.unevaluated_expected`, null unless
+  recorded, and a folded conversion's `right_value`; IR_VERSION stays 2.
+  In the corpus every assertion record gains the null field, six existing
+  fixtures record a value in it, and `js_evidence_name_rewrite_pos`
+  records its JavaScript provenance events; every existing finding and
+  verdict is byte for byte the same.
+
+The JavaScript false-positive cost is measured by the JS/TS replay (#212)
+before a release ships these findings.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-105 (2026-10-06): JS alias specifiers name first-party modules (#196 188.6)
+
+A module mock or an import spelled through an alias was invisible to
+TEST_PATCHES_SUBJECT. `vi.mock("@/billing", () => ({ invoiceTotal: () =>
+78.75 }))` above an untouched `expect(invoiceTotal(items)).toBe(78.75)`
+that reads `import { invoiceTotal } from "@/billing"` passed with zero
+findings, and so did `vi.mock("@/billing")` standing in for
+`../src/billing`, which the project's `tsconfig.json` maps `@/*` to.
+`module_key` named a module only for a `./` or `../` specifier (THREATMODEL
+row 109 residual "aliases").
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.188.6): "Yes, in a later round. B first (the same alias string in a
+mock and an import is one module; `@/` and `~/` are first-party), then C as
+its bounded extension (the base-side root tsconfig only). Route both through
+the one module_key. This ruling authorizes flipping the pin at
+tests/test_js_module_mocks.py:58 (`@/billing` -> None today) and rewriting
+module_key's docstring."
+
+**As implemented** (`frontends/javascript/aliases.py`, `module_key`):
+- **B.** An `@/` or `~/` specifier is first-party, and its key is the alias
+  string itself, normalized as a relative specifier is: `@/billing`,
+  `@/billing.ts` and `@/billing/index.js` are one module, from any test
+  file. One that leaves its root (`@/../x`), lands in dependency or build
+  output, or carries a query is not. A scoped package (`@acme/billing`) is
+  a package.
+- **C.** The base side's root `tsconfig.json`, read once per analysis and
+  only when a mock or an import spells a specifier that is not relative:
+  its before side when the diff changes it, else the head snapshot, which
+  holds it unchanged. JSON with comments and trailing commas, at most 256
+  KiB and 256 patterns. `compilerOptions.paths` maps a specifier to a
+  repository path, joined to `baseUrl` or, without one, to the root:
+  an exact pattern first, then the longest prefix, the first target of the
+  pattern, as TypeScript resolves it. The mapped path is the key a relative
+  specifier of that file has, so under `"@/*": ["src/*"]`
+  `vi.mock("@/billing")` and `import ... from "../src/billing"` are one
+  module. A mapping wins over B, and one that leaves the repository or
+  lands in dependency output names nothing first-party.
+- The pin flips as authorized (`@/billing` -> `"@/billing"`), and the test
+  is renamed for what it now states; `module_key`'s docstring and the
+  module's are rewritten. No IR, strength, gating or alignment change.
+  Fingerprints of existing findings are unchanged; a new finding names the
+  alias key (`@/billing:invoiceTotal`) or the mapped path
+  (`src/billing:invoiceTotal`).
+
+**Readings the ruling leaves open:**
+1. **`baseUrl` alone is not read.** With `baseUrl` set, TypeScript resolves
+   `import x from "billing"` to `<baseUrl>/billing` when that file exists,
+   and to the package otherwise. Telling the two apart needs the file
+   inventory, which the strict snapshot refuses in a repository with a
+   submodule, so such a specifier stays third-party; `baseUrl` is read as
+   the root of `paths` targets.
+2. **A `"*"` pattern is not read** (an empty prefix, `"*"` or `"*.svg"`),
+   for the same reason: it maps every package name too.
+3. **The first target only.** TypeScript tries a pattern's targets in
+   order and takes the first that exists; the first is read as the module.
+4. **Bounds.** No `extends`, no nested or `jsconfig.json` file, and no
+   bundler or runner alias configuration (Vite `resolve.alias`, Jest
+   `moduleNameMapper`). A tsconfig the diff adds has no base side and maps
+   nothing; one it deletes maps through its before side.
+5. **Condition 2 stays silent rather than guessed.** Without a tsconfig
+   that decides it, an alias may name another spelling of the same module
+   (`@/billing` and `../src/billing`, or `~/billing`). A base-side
+   installation under a spelling whose path ends with the alias's own
+   counts as already installed, so respelling a mock into an alias is not a
+   new stand-in. A consumed read still needs one key: a new alias mock never
+   reaches an import spelled another way unless the tsconfig joins them.
+
+Found during this round: nothing new to file.
+
+**Cost.**
+- **New findings** (TEST_PATCHES_SUBJECT, high without repair evidence): a
+  new mock or replacing spy through an `@/` or `~/` alias, or through a
+  pattern of the base side's root tsconfig, that an existing unit's oracle
+  reads.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories (all refs) adds or removes a JS/TS line that spells a module
+  mock, a spy, a `mock*` replacement or an `@/`/`~/` import, and none has a
+  root `tsconfig.json`; the code this round changes runs only for such a
+  file.
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-106 (2026-10-06): an iterator callback keeps its assertions whatever the call's receiver (#294)
+
+`docs/assertion-coverage.md` states the rule for a JS/TS test's inline
+callbacks: "Direct inline callback arguments to other calls retain the
+existing lexical coverage, including iterator callbacks; this does not
+prove that an arbitrary callee executes its callback." The frontend
+applied it only where `CALL` matched, a callee spelled as a dotted name.
+`cases.forEach(cb)` was read; `[[1, 78.75]].forEach(cb)`,
+`Object.entries(cases).forEach(cb)`, `(cases).forEach(cb)` and
+`cases?.forEach(cb)` were not, so their callbacks were nested functions and
+their assertions no unit's. Weakening or deleting the assertion in the
+table-driven spelling passed with zero findings and a coverage notice.
+Found during #235 and filed as #294, which proposed no new ruling: it
+applies the stated rule to spellings it missed.
+
+**As implemented:** besides `CALL`'s matches, every member call opens a
+call whose direct callback arguments are inline bodies: a `(` that follows
+a name that follows `.` or `?.`, whatever comes before the `.`. The tokens
+already tell a string or a comment apart, so `` `a,b`.split(",") `` is one.
+No callee name is added or removed, and nothing else reads these calls.
+
+**Readings flagged for approval:**
+1. **A member call, not any call.** A call result called directly
+   (`each(cases)(cb)`) and an optional call (`fn?.(cb)`) are not member
+   calls, and their callbacks stay nested functions, as before.
+2. **A named callback stays a helper.** A callback passed by name or
+   declared elsewhere is a declared helper, as before: its assertions remain
+   a coverage gap.
+
+**Cost.**
+- **New findings:** ASSERT_WEAKENED, ASSERT_REMOVED and the other
+  assertion rules, where an assertion in such a callback changes.
+- **The corpus is byte for byte the same**: no fixture before this round
+  spells the shape.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file, and only such a file is parsed this
+  way.
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-107 (2026-10-06): a string skipif or xfail condition is the expression pytest evaluates (#263)
+
+pytest compiles a `skipif` or `xfail` mark's string condition as an
+expression and evaluates it with `os`, `sys`, `platform` and `config` in
+scope beside the test module's globals. D6 read the string as a constant.
+A non-empty string is truthy in every environment, so
+`skipif("sys.platform == 'win32'")` read as a condition that always holds
+and blocked at high, as an unconditional skip would, while
+`skipif(sys.platform == 'win32')` held at warn. #260 found it: reading a
+mark applied through a bound name newly blocked three commits of pytest's
+own history this way.
+
+Rulings, 2026-10-06 (#263, adopted as recommended, "全部核准"):
+- **263.Q1:** a string condition is parsed as the expression it holds and
+  judged as an expression condition is. A string that does not parse earns
+  nothing, as today, and one that always holds (`"True"`,
+  `"sys.version_info >= (3,)"`) still blocks. The marker's name keeps the
+  string as written, so fingerprints do not move.
+- **263.Q2:** `os`, `sys` and `platform` are read as those modules even
+  when the test module does not import them. `config` stays unknown, so a
+  condition on an option is judged as an unknown is.
+
+**As implemented:**
+- `ir/markers.py`, `mark_condition`: a `skipif` or `xfail` mark's first
+  argument; for a string, the expression parsed from it as pytest compiles
+  it (`ast.parse(..., mode="eval")`, the parser `compile` uses). A string
+  that does not compile is None.
+- `compat.py`: a string condition is evaluated in pytest's namespace
+  (`_eval_condition(..., pytest_names=True)`). The condition D6 evaluates
+  is the conjunction of its parts (a `pytestmark` binding's guard and the
+  mark's own condition, #260 Q2), each part in its own namespace.
+- `evidence.py`, `_gate_condition_names`: the names inside a mark's
+  string condition are resolved as module constants, as pytest's module
+  globals hold them.
+
+Readings the rulings leave to the implementation:
+
+1. **What compiles.** Exactly what `compile(text, ..., "eval")` accepts:
+   leading whitespace, a statement, an empty string and two lines that no
+   bracket joins do not compile, and earn nothing. pytest reports an error
+   for such a mark, so the test does not run where it applies. With a
+   `pytestmark` binding's guard, the mark still earns nothing.
+2. **pytest's names.** In a string, a bare `os`, `sys` or `platform` is
+   that module unless the test module binds the name to a constant that
+   the engine resolves, which wins as the module's globals do. A module is
+   true and equals nothing but itself, so `"platform != 'linux' or
+   sys.platform == 'win32'"` holds everywhere and blocks, as it skips
+   everywhere under pytest. Dotted reads (`sys.platform`, `os.name`,
+   `platform.system()`) were already read whatever the module imports.
+3. **Module code stays module code.** A constant's own expression, and a
+   `pytestmark` binding's guard, are read as before: a bare `platform`
+   there is the `from sys import platform` an expression condition
+   assumes, and a bare `sys` is unknown.
+4. **Reasons are not conditions.** The argument of an imperative
+   `pytest.xfail(...)` is its reason. It is not parsed, so a reason that
+   happens to be a name pulls no constant into the file's IR.
+
+**Not in this round (residual):**
+- A test module that binds `platform` by `from sys import platform` has
+  that string where pytest evaluates a string condition, but the reading
+  above takes the module: `"platform != 'win32'"` there blocks though it
+  can be false. The sweeps hold no such condition.
+- Only a mark's first condition is read, and only it names the mark:
+  `skipif(sys.platform == "win32", True)` holds at warn while pytest skips
+  everywhere, and a `condition=` keyword is not read. Filed as #297.
+
+**Tests and fixtures.**
+- **Tests:** 34 in `tests/test_issue263_string_conditions.py`. All 16
+  mutants of the round's code fail them or the fixtures.
+- **Fixtures:**
+  - `compat_gate_string_condition_neg` (#263 S1), in a module that does
+    not import `sys`: v0.6.0 blocks it with TEST_DISABLED high; it is now
+    held at warn by COMPAT_GATE.
+  - `compat_gate_string_always_true_pos` (row 44): v0.6.0 blocks it, and
+    so does this round.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change.
+
+**Fingerprints.** None move: a marker's name holds the string as written.
+
+**Cost.**
+- **Targeted set:** every non-merge commit of the thirteen histories
+  (the six of the standard set, aiohttp, pytest, requests, scrapy,
+  uvicorn, werkzeug and PyWavelets) whose Python diff adds or removes a
+  line where `skipif(` or `xfail(` opens a string: 232 commits, 200
+  readable on both engines. 27 records change, all in pytest, and 20
+  verdicts move from block to pass (74 blocked -> 54):
+  - 110 TEST_DISABLED findings fall from high to warn, held by
+    COMPAT_GATE. Each is a mark whose string is a version or platform
+    gate pytest evaluates, false somewhere: `"sys.version_info < (2,6)"`,
+    `"sys.platform == 'win32'"`, `"sys.platform.startswith('java')"`,
+    `"sys.platform == 'win32' or getattr(os, '_name', None) == 'nt'"`
+    and its negation;
+  - 5 fall from high to info: tests that move or are renamed under such
+    a mark (`45065e4e2eb2`, `TestLastFailed` moving into
+    `test_cache.py`; `1ff173baee58`, two tests moving into a class whose
+    `pytestmark` is a name bound to one; `fe54762b93a3`). The new units
+    run somewhere, so the old units' disappearance is a relocation.
+  No finding appears or disappears, and none rises.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets:** the 895 commits of ten full histories (855
+  readable) give the base's records byte for byte (237 blocked). In the
+  368 of pytest's (364 readable), 15 records change, every one also in
+  the targeted set above, and 11 verdicts move from block to pass (107
+  blocked -> 96).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported (`i198/T6`, undecided, pass on both
+engines). Every case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-108 (2026-10-06): a D10 survivor is read with the conftest files above it (#266)
+
+D10 credits a disappeared unit when an identical live copy of its body runs
+at head in a collectable test file the diff does not touch (THREATMODEL row
+58: "a skipped or edited survivor earns nothing"). The copy's liveness was
+read from its own file only. A copy that an always-skip conftest fixture
+skips counted as live, so deleting the running copy passed at info, while
+the same copy with a skip marker blocked. #223 had added the conftest chain
+for the modules a diff changes, as ruling 223.Q2 scoped it, and a survivor
+lies in a file the diff does not change.
+
+Rulings, 2026-10-06 (#266, adopted as recommended, "全部核准"):
+- **266.Q1:** a candidate survivor's conftest chain is read at head, as
+  #223 reads a changed module's head side, and the survivor is parsed with
+  it. A survivor that an always-skip conftest fixture reaches is not live
+  and earns nothing. The chain's reads keep #223's bounds.
+- **266.Q2:** D10's survivors only. Other readers of files the diff does
+  not change (the stand-in context, runtime subject shadows) do not judge
+  liveness through markers, and are not in this item.
+
+**As implemented:** `engine.py`'s survivor search parses each candidate
+with `chain=_conftest_chain(path, 1)`. That is the chain #223 builds for a
+changed module's head side: each `conftest.py` from the survivor's
+directory up to the repository root, nearest first, a file the diff changes
+read on its head side and any other from the strict snapshot, under #223's
+read bounds. A fixture the survivor reaches (requested by `usefixtures`, or
+`autouse`; a parameter is part of the signature, which the body hash holds)
+that always skips gives its unit a setup marker, and D2's liveness rule
+(every marker a D6 compat gate) then reads the survivor as not live.
+
+Readings the rulings leave to the implementation:
+
+1. **Without a strict snapshot**, as #223 reads it, no conftest level is
+   known: the chain is empty and the survivor reads as before. The CLI and
+   the Action always pass one.
+2. **A level that cannot be read or parsed ends the chain**, as for a
+   changed module (#223): what it defines is unknown, and it could
+   override any name beyond it.
+3. **A skip the fixture runs only under a compatibility condition**
+   (`if sys.platform == "win32": pytest.skip(...)`) leaves the survivor
+   live, as a `skipif` marker on it would (D6).
+
+**Tests and fixtures.**
+- **Tests:** 8 in `tests/test_issue266_survivor_conftest_chain.py`. Both
+  mutants of the round's code (the chain left out; the base side read for
+  it) fail them or the fixtures.
+- **Fixtures:**
+  - `duplicate_remains_conftest_skipped_copy_pos` (#266 U1, row 58): the
+    surviving copy requests an always-skip conftest fixture. v0.6.0 passes
+    the deletion of the running copy at info; it now blocks with
+    TEST_DISABLED high.
+  - `duplicate_remains_conftest_live_copy_neg` (#266 U2): the same
+    conftest, and a copy that requests nothing from it, still earns
+    DUPLICATE_REMAINS at info.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change.
+
+**Fingerprints.** None move.
+
+**Cost.**
+- **Targeted set:** every commit of #224's sweeps (its targeted set, the
+  standard set and D-088's sets, twelve histories) where a test unit's
+  disappearance was held at info, the only findings this round can
+  change: 98 commits, all readable. The same records as the base, byte
+  for byte (32 blocked). No credited survivor there is one that a conftest
+  fixture skips.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records as the base, byte for byte
+  (237 and 107 blocked).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported (`i198/T6`, undecided, pass on both
+engines). Every case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-109 (2026-10-06): a negated approximate comparison is read as negated (#284)
+
+The approx branch of the Python frontend's assertion classifier ran first
+and found an `approx(...)` call anywhere in the test expression, so the
+comparison it sat in was never read: `== pytest.approx(78.75)` ->
+`!= pytest.approx(78.75)` passed with zero findings, as did a `not` around
+it, while the same flips without `approx` blocked as a polarity inversion
+(THREATMODEL row 33). A negated approximate comparison passes when the
+values are far apart, so its tolerance orders the other way: a bigger `abs`
+or `delta`, or fewer `places`, is stricter. The frontend recorded it as a
+positive one's, so `TOLERANCE_LOOSENED` blocked a tightening
+(`!= approx(x, abs=0.01)` -> `abs=0.5`,
+`assertNotAlmostEqual(..., delta=0.1)` -> `delta=0.5`, `places=3` ->
+`places=2`) and passed a loosening. The JavaScript frontend already records
+no tolerance for a negated matcher, and #222 did the same for a negated
+Python tolerance call.
+
+The issue proposed the fix as one round, with one choice: read a negated
+tolerance in the reversed direction, or record none. It recommended none,
+for one rule in both frontends, and the round takes that.
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_classify_assert_expr`: the approx
+  branch reads the comparison it sits in. A single `!=` (or `is not`,
+  `not in`, as the plain comparison path reads them) is negative; a `not`
+  around the comparison is left to the negation branch, which negates its
+  operand and drops an approximate comparison's tolerance (#222). A
+  negated approximate comparison records no tolerance. Its expected value
+  is still recorded, as a plain `!=` records its own.
+- `assertNotAlmostEqual` records no `places` or `delta`, its implicit
+  `places=7` included.
+
+Readings the issue leaves to the implementation:
+
+1. **One rule for every negation.** `!=`, `not`, a negated unittest call
+   and a negated tolerance call record no tolerance, whatever they wrap,
+   so a change of it is unknown: neither the tightening that blocked nor
+   the loosening that passed is reported. An approximate comparison whose
+   polarity flips is reported as the inversion (ASSERT_WEAKENED), whatever
+   its tolerance does.
+2. **A double negation** (`not x != approx(y)`) is positive, and records no
+   tolerance either: the negation branch drops the tolerance of the
+   negated comparison it wraps. A known tolerance replaced by it is the
+   unverifiable replacement the unknown-tolerance rule reports. The sweeps
+   hold no such spelling.
+3. **Only the comparison the call sits in is read.** An approx call inside
+   a boolean operator or another structure still makes the whole
+   assertion an approximate comparison (`== approx(x) or True` passes);
+   that is #299, filed during this round.
+
+**Tests and fixtures.**
+- **Tests:** 31 in `tests/test_issue284_negated_approx.py`. Seven
+  mutants of the round's code each fail them or the fixtures: every
+  approximate comparison read as positive; a `not` around one handed
+  back to the approx branch; a negated `approx` keeping its tolerance;
+  `assertNotAlmostEqual` keeping its `places` or `delta`; the polarity
+  left out of the record; `!=` read as positive; `not in` read as
+  positive.
+- **Fixtures:**
+  - row 33's pins for the approx spelling, each passing on v0.6.0 with
+    zero findings: `approx_polarity_inverted_pos`,
+    `approx_left_polarity_inverted_pos` and
+    `approx_not_polarity_inverted_pos`;
+  - the false positives, each blocked by v0.6.0 with TOLERANCE_LOOSENED
+    high and now quiet: `approx_negated_stricter_tolerance_neg`,
+    `almost_negated_stricter_delta_neg` and
+    `almost_negated_fewer_places_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's 775 records, byte for
+byte, and the six new ones.
+
+**Fingerprints.** None move: a flipped approx comparison reports a new
+finding, and a negated tolerance reports none where it reported
+TOLERANCE_LOOSENED.
+
+**Cost.** Measured with the round's engine against the base branch's
+(`2ece6f2`, #226's branch with #291 merged in):
+- **Targeted set:** every non-merge commit in the checked-out history of
+  the twelve histories and PyWavelets whose Python adds or removes a line
+  matching `assertNotAlmostEqual` or `approx(`: 106 commits, 99 readable.
+  No record changes; 6 commits block on both engines.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` blocks (pass -> block), as
+its label since #226 (D-104) says. Every other case keeps v0.6.0's
+verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-110 (2026-10-06): an assertion is an approximate comparison only where it states one (#299)
+
+The approx branch of the Python frontend's assertion classifier found an
+`approx(...)` call anywhere in the test expression and read the whole
+assertion as that approximate comparison, at APPROX strength with the
+call's expected value and tolerance. A structure around the call that
+makes the assertion hold everywhere was therefore the same assertion on
+both sides, and passed with zero findings: `== pytest.approx(78.75)` ->
+`== pytest.approx(78.75) or True` (also `True or ...`, `or total() > 0`
+and `isinstance(...) or ...`), `all(...)` -> `any(...)` over the same
+comparison, a comparison of the comparison's result
+(`(total() == pytest.approx(78.75)) is not None`) and an unrelated call
+(`print(pytest.approx(78.75)) is None`). The plain spellings block.
+Found during #284's round, which fixed the negations at the same site.
+
+The issue proposed one round: the approx branch applies only where the
+call is an operand of the assertion's own comparison, or inside one, and
+every other structure, a boolean combination of approximate comparisons
+included, is read as the plain path reads it.
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_asserted_approx_comparison`: the
+  assertion states an approximate comparison when it is a single `==`,
+  `!=`, `in` or `not in` (approx answers equality and membership only)
+  with an `approx(...)` call as an operand, or inside one through list,
+  tuple, set and dict displays and starred items (`[total()] ==
+  pytest.approx([78.75])`, `{'t': total()} == {'t': pytest.approx(78.75)}`).
+- It also states one when such a comparison is a link of a chained
+  comparison (`0 < total() == pytest.approx(78.75)`), when it conjoins one
+  with `and` (the first, at any depth), or when it asserts one with
+  `all(...)` over a generator or list comprehension.
+- Anything else is read by the plain path: `or`, `any(...)`, `is` and
+  `is not`, an ordering, a comparison of a comparison's result, and a
+  call that only receives an approx object. `repr(pytest.approx(1.0)) ==
+  '1.0 ± 1.0e-06'`, as in pytest's own tests, is a string equality whose
+  expected value is the string.
+- The comparison read carries its own polarity (#284): the operator of
+  its link, inside a chain, `and` and `all(...)` too.
+
+Readings the issue leaves to the implementation:
+
+1. **A conjunction, a chained comparison and `all(...)` keep the
+   approximate reading.** The issue proposed reading a boolean
+   combination as the plain path reads it, TRUTHY. Main read
+   `total() == pytest.approx(78.75) and total() > 0` as the approximate
+   comparison it holds, so `approx(78.75)` -> `approx(75)` there blocked
+   as EXPECTED_VALUE_CHANGED; a TRUTHY reading would pass it with no
+   finding. Each part of a conjunction and each link of a chain must
+   hold, and `all(...)` asserts its element for every item, so each
+   states the comparison; the round keeps reading it. Joining approximate
+   comparisons with `and`, or splitting one, reads as it did on main.
+2. **The other parts of a conjunction or chain are not read**, as on
+   main: `... and total() > 0` -> `... and True`, or `0 < total() == ...`
+   -> `-1e9 < total() == ...`, is not seen. A conjunction whose
+   approximate comparison moves to another position is the same assertion
+   (`approx_conjunction_reordered_neg`).
+3. **A call that receives an approx object is the call.**
+   `isinstance(pytest.approx(78.75), object)` and `print(...) is None`
+   hold whatever the value, and checkwash cannot tell an operator from
+   any other function, so an operator call is read as the call too:
+   `operator.eq(total(), pytest.approx(78.75))`, or pytest's own
+   `op(a, approx(x))` with the operator passed in, as
+   `operator.eq(total(), 78.75)` is. The cost: its
+   expected value rewritten (`approx(78.75)` -> `approx(75)`) is no
+   longer reported; main blocked it as EXPECTED_VALUE_CHANGED, and the
+   plain `operator.eq(total(), 78.75)` -> `75` passes on main and v0.6.0
+   alike. A respelling from `==` into such a call is a strength drop
+   (APPROX -> TRUTHY) and blocks. The sweeps hold no such edit.
+
+**Tests and fixtures.**
+- **Tests:** 37 in `tests/test_issue299_approx_structure.py`. Thirteen
+  mutants of the round's code each fail them or the fixtures: a bare
+  `approx(...)` not recognized; a list, tuple or set display not
+  descended; a dict display's keys read for its values; a starred item
+  not descended; membership not an approximate comparison; a chain's
+  later link read against its first operands; only a chain's first link
+  read; a disjunction stating its comparison; a conjunction stating
+  none; `any(...)` stating its element; `all([...])` over a list
+  comprehension stating none; `not in` read as positive; every stated
+  comparison read as positive.
+- **Fixtures:**
+  - row 124's pins, each passing on v0.6.0 with zero findings:
+    `approx_or_true_pos`, `approx_all_to_any_pos` and
+    `approx_result_is_not_none_pos`;
+  - reading 1, each read the same way on v0.6.0 and kept:
+    `approx_conjunction_expected_rewrite_pos`,
+    `approx_chained_expected_rewrite_pos` and
+    `approx_conjunction_reordered_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's 781 records, byte for
+byte, and the six new ones.
+
+**Fingerprints.** None move: a wrapped approximate comparison reports a
+new finding where it reported none.
+
+**Cost.** Measured with the round's engine against the base branch's
+(`90c1da4`, #284's branch):
+- **Targeted set:** every non-merge commit in the checked-out history of
+  the twelve histories and PyWavelets whose Python adds or removes a line
+  matching `assertNotAlmostEqual` or `approx(`, as for D-109: 106
+  commits, 99 readable. No record changes; 6 commits block on both
+  engines.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` blocks (pass -> block), as
+its label since #226 (D-104) says. Every other case keeps v0.6.0's
+verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-111 (2026-10-06): a skip a test reaches through a same-file helper is read (#272, first stage)
+
+A skip was read only where the test body or its setup spelled it. A test
+that called `_later()`, where `_later` calls `pytest.skip()`, was skipped as
+surely as one that called it itself, and passed with zero findings, while
+the same line in the body blocked. So did a called nested def, the raised
+spelling in a helper, and a helper a test's fixture calls; and a skip added
+to a helper the test already called. Found during #254's round.
+
+The owner adopted the issue's recommendations on 2026-10-06 ("全部核准"):
+272.Q1 (a), read a skip the test or its setup reaches through a helper, for
+the same-file scopes `_executed_scopes` already resolves for assertions,
+judged as a skip in the body or in the setup is judged; an outcome every
+run reaches is unconditional, and a guarded one keeps its guard, with the
+call site's conditions and the helper's conjoined, as 183.2 records a setup
+guard. 272.Q2 (a), follow an imported helper into the head tree as a second
+stage. 272.Q3, the marker `helper.<function>.<effect>`, with the message
+"skip/xfail added to a helper this test calls". This entry is the first
+stage; the second follows in its own round.
+
+**As implemented:**
+- `frontends/python/helper_skips.py` (new), `HelperOutcomes`: a call by a
+  plain name to a function the module defines, one nested in the calling
+  scope, or a name bound to a lambda or to `partial` of one of those, runs
+  that helper. Each helper is read once per module: `setup_outcome` gives
+  its own outcome and guard, and the helpers it calls in turn, at most four
+  calls from the test or setup callback, as `_executed_scopes` follows
+  assertions, add theirs under the conditions their calls run under.
+- A call's conditions (`call_conditions`) are what a body skip's are: each
+  enclosing `if`, `not (...)` for an `else`, and an `except` block's own
+  condition (`_handler_guard`); a loop, `with`, `match` or `try` body adds
+  none. The marker's guard is their conjunction with the helper's own.
+- `frontend.py`: the unit's calls that run (not dead) are read; a test
+  module's fixtures and xunit setup callbacks read theirs (`SetupScope`),
+  and a unit gets those of the setup providers it reaches
+  (`setup_helper_outcomes`, resolved as `setup_outcomes` resolves them).
+- The marker family `helper` (`conftest_controls.HELPER`): TEST_DISABLED
+  reports "skip/xfail added to a helper this test calls
+  (helper._later.skip)", and a guard removed or made always true "in a
+  helper this test calls"; COMPAT_GATE judges its guard as a body skip's
+  (`is_helper_skip`).
+- `ir/diffalign.py`: an added helper marker is paired with a skip the base
+  had and the head lost when it is that skip moved (`_moved_skip`, reading
+  7); the move is recorded (`UnitDelta.markers_moved`), and
+  `evidence._mark_weakened_guards` reads its guard against the old one's.
+
+Readings the rulings leave to the implementation:
+
+1. **A helper is read as a setup callback is, whoever calls it.** A skip
+   in the test body counts with any arguments, and `importorskip` too; a
+   helper is read by `setup_outcome`, the reading that records the path
+   condition an outcome is reached under inside another function, an
+   `except` block's included. So a helper's skip with an argument that
+   calls something (`pytest.skip(reason())`), and `importorskip` in a
+   helper, are not read.
+2. **The scopes are the ones `_executed_scopes` resolves, and only
+   functions.** A class is not followed: calling it runs `__init__`, not
+   the methods `_executed_scopes` lends assertions from. Nor is a
+   generator, whose body does not run when it is called, nor a helper
+   passed as an argument. A method reached through `self` is no scope
+   `_executed_scopes` resolves, for assertions either: the issue's H2 and
+   S1 are filed as #306, with A1 and A2, a helper method's assertion
+   weakened or deleted, which pass on v0.6.0 too.
+3. **A name the calling scope binds itself is not the module function.**
+   `def test_total(offline): offline()` calls a fixture's value, and
+   `_later = make(); _later()` calls what `make` returned.
+4. **Every call ends at an outcome every call reaches.** A helper that
+   always skips is read no further: what it would call after does not
+   run.
+5. **The marker names the helper that holds the outcome**, with that
+   outcome's text and span. A helper several tests reach marks each of
+   them, as a test module's own setup providers do (row 104).
+6. **A conftest fixture's helpers are not followed.** A conftest's
+   fixtures are read by their own unconditional outcome (#223); a helper
+   it calls is in another file than the test module.
+7. **A skip moved into a helper, out of one, or into a renamed one is the
+   skip it was.** The marker is named for the helper, so carrying a skip
+   the test already had, from its body or its setup, into a helper it
+   calls changed the name alone and read as a skip added; the round's
+   sweep found it in scrapy df342eee6e2f. An added helper marker is the
+   moved skip when the base had a skip the head lost with the same
+   effect that fired at least as often: unconditionally, or under the
+   same condition. Its guard is then read against the old one's, so a
+   constant behind it made always true is still reported (THREATMODEL
+   59). A skip whose guard did not move with it, one under another
+   condition, and a skip that became an xfail are reported as added. A
+   skip respelled in the body (`pytest.skip` -> `self.skipTest`) is not a
+   move; that is #281's question, unchanged.
+
+**Tests and fixtures.**
+- **Tests:** 52 in `tests/test_issue272_helper_skips.py`, and
+  `tests/test_conftest_controls.py` lists the two new minting sites and
+  the family. Thirty-five mutants of the round's code each fail them or the
+  fixtures: an `if`, an `else` or an `except` block at a call site adding
+  no condition; a generator read as a helper, or a lambda not; a
+  parameter, or a name the caller binds, not shadowing the module
+  function; the call site's conditions, or the helper's own guard,
+  dropped; the walk going on past an outcome every call reaches; one call
+  deeper, or shallower, than assertions; a nested helper read with the
+  module's names only; a lambda's parameters not shadowing; a fixture's,
+  or xunit setup's, helpers not read; the unit's own calls, or the setup's
+  helper markers, not read; COMPAT_GATE not reading a helper skip's guard;
+  a guard removal not read for one; the family unknown; and, for reading
+  7, no move credited, markers not paired by name first, a body skip
+  respelled in the body taken for a move, only a helper-to-helper move
+  credited, a skip and an xfail the same, every outcome a skip, a
+  fixture's skip without an effect, `self.skipTest` an xfail, the guard
+  not compared, a guarded skip never moving, an unconditional skip moving
+  only to an unconditional one, one skip crediting two moves, the move
+  recorded backwards, and a moved skip's guard not read against the old
+  one's.
+- **Fixtures:**
+  - row 125's pins, each passing on v0.6.0 with zero findings:
+    `helper_skip_module_function_pos`, `helper_skip_nested_def_pos`,
+    `helper_skip_raised_pos`, `helper_skip_through_fixture_pos` and
+    `helper_skip_added_to_called_helper_pos`;
+  - `helper_skip_platform_gate_neg`: a call under a platform condition is
+    a D6 gate, held at warn, as the same skip in the body is;
+  - `helper_skip_already_called_neg`: a skip the base already reached is
+    no event;
+  - `helper_skip_moved_from_body_neg`: a body skip moved with its guard
+    into a helper the test calls is no skip added (reading 7); C1 before
+    the fix blocked it.
+
+Every existing fixture keeps its expectation, and every finding in the
+corpus (`tools/emit_corpus.py`: main's 759 records and the eight new ones)
+is byte for byte main's.
+
+**Fingerprints and IR.** No fingerprint moves: the markers are new names,
+and a finding on one is a new finding. `--emit-ir` gains `markers_moved`
+on every unit delta, an optional field whose default is empty
+(docs/stability.md: IR_VERSION stays 2, as for D-067's keys); in the
+corpus it adds `"markers_moved": []` to the 655 unit deltas of the 759
+existing records and changes nothing else. The next release guide names
+it.
+
+**Cost.**
+Measured with the round's engine against main's (`4f0955b`):
+- **Targeted set:** every non-merge commit of the thirteen sweep
+  histories whose test-side Python adds or removes a line spelling
+  `skip(`, `skipTest(`, `SkipTest`, `xfail(` or `skip.Exception`: 1,144
+  commits, 959 readable. Four records change and one verdict moves
+  (blocked 272 -> 273):
+  - aiohttp `2b7cb1629f4b` ("skip some tests for tokio loop"): fifteen
+    tests start calling a new helper, `skip_if_no_dict(loop)`, which
+    skips when the loop has no `__dict__`. That gives fifteen warn
+    findings. They are the skip the commit means, and they stay at warn
+    because the commit changes production code too, as the same line in
+    each body would.
+  - pytest `ced62f30ba0d` (pass -> block): two tests call the new
+    `attempt_symlink_to`, which skips on Windows under Python 2 and when
+    a symlink cannot be made (`except OSError`):
+    - for `TestNumberedDir.test_cleanup_symlink` it is a new skip, high,
+      as it would be in the body;
+    - `test_tmpdir_always_is_realpath` trades a
+      `skipif(not hasattr(py.path.local, "mksymlinkto"))` mark for it.
+      That is a skip respelled from a mark to a call, #281's question,
+      and it reads as added.
+  - pytest `3cc58c2f78f0` (block -> block): `py.test.skip(...)` ->
+    `pytest.skip(...)` inside the `lsof_check` helper reads as a skip
+    added to it in three tests, because `py.test` is not read (#310,
+    found by this sweep).
+  - pytest `5e883f51959f` (pass -> pass): `test_tmpdir_always_is_realpath`
+    moved to `test_legacypath.py`, and its disappearance now reports at
+    warn where it was info. Its helper's `except OSError` skip is no
+    compat gate, so D2 no longer credits the move of a unit that may not
+    run (`unit_is_live`).
+
+  Before reading 7, this sweep's first run also blocked scrapy
+  `df342eee6e2f`, where fourteen tests' guarded body skips moved into
+  helpers. Its record is now main's.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits): the same records as
+  main, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the ten histories give main's records byte
+  for byte. In pytest's, two records change, both commits of the targeted
+  set above: `ced62f30ba0d` (pass -> block) and `3cc58c2f78f0` (block ->
+  block).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-112 (2026-10-06): numpy's and torch's assertion calls are lent as a bare `assert` is (#286)
+
+#222 made numpy's and torch's assertion calls
+(`numpy.testing.assert_allclose`, `assert_array_almost_equal`,
+`assert_almost_equal`, `torch.testing.assert_close`) assertions, read in a
+test unit and in a same-file helper it calls. A fixture the test requests
+and a helper another file defines lent the test their bare `assert`s only
+(A5-x), so the same call there was no assertion: widening its tolerance or
+deleting it passed with zero findings, while `assert np.allclose(...)` in
+the same place blocked. Found during #222's round.
+
+The issue proposed one round with no alternative, and the round takes it:
+`_classified_asserts`, which builds what a fixture and a module helper lend,
+also records the calls the unit's own walk reads
+(`_tolerance_statement_classified`).
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_classified_asserts`: a numpy or torch
+  assertion call is recorded as the unit's walk records it, with the same
+  form, strength, expected value and tolerance, marked `inherited`. Every
+  channel that lends a bare `assert` lends it: a fixture the test requests,
+  in its module or the conftest beside it, an autouse fixture, and a helper
+  another file defines and the test calls (A5-x's import channel).
+- `docs/assertion-coverage.md` says so, where it listed the gap;
+  `docs/defence-design.md`'s A5-x note says what the channels lend.
+
+Readings the issue leaves to the implementation:
+
+1. **The root-module projection channel is unchanged.** It projects a
+   transparent equality helper (`assert actual == expected`, two
+   parameters) onto its caller and nothing else; a tolerance call is no
+   such helper, so a root module's numpy helper still lends nothing there.
+2. **Only the assertion calls.** `np.allclose(...)` and
+   `math.isclose(...)` return a bool, and are read only inside an
+   `assert`, which was already lent.
+
+**Tests and fixtures.**
+- **Tests:** 13 in `tests/test_issue286_lent_tolerance_calls.py`. Two
+  mutants of the round's code each fail them: a fixture's or helper's
+  tolerance call not lent, and every lent call read as trivial.
+- **Fixtures**, row 120's pins, each passing on v0.6.0 with zero findings:
+  `tolerance_call_fixture_widened_pos` (TOLERANCE_LOOSENED),
+  `tolerance_call_fixture_deleted_pos` and
+  `tolerance_call_other_file_helper_dropped_pos` (ASSERT_REMOVED); control
+  `tolerance_call_fixture_unchanged_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's records and the 4 new
+ones.
+
+**Fingerprints.** A unit that now inherits such a call carries it in its
+assertions, so the fingerprint of a whole-unit TEST_DISABLED removal, which
+names the unit's assertions, changes for it, as #222's own calls changed it.
+No fixture or sweep record holds such a unit before this round.
+
+**Cost.** Measured with the round's engine against main's (`4f0955b`) on
+D-102's sets:
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories and of PyWavelets whose test-side Python adds or removes a line
+  naming `isclose`, `allclose`, `assert_array_almost_equal`,
+  `assert_almost_equal` or `assert_close`: 180 commits, 171 readable, as on
+  main. No record changes.
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give main's records, byte for
+  byte.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and 368
+  of pytest's (364 readable) give main's records, byte for byte.
+
+These sweeps reach none of the new channels. In the targeted set, main's
+engine and the round's lend the same numpy and torch calls: 70, in 18 of
+PyWavelets' commits, all through same-file helpers, which #222 already
+read. PyWavelets defines no pytest fixture anywhere in its history. So the
+sweeps measure neither a cost nor a benefit, and the round's fixtures pin
+its readings.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-113 (2026-10-06): a GitLab runner job that cannot fail the pipeline is a weakened command (#214)
+
+In `.gitlab-ci.yml` a test job stops failing the pipeline without any
+change to its `script:` lines. `allow_failure: true` (or `allow_failure:`
+with `exit_codes`) lets it fail and stay green; `when: manual` or a `rules:`
+entry `when: never` stops it from running on its own. GitHub's spelling of
+the first, `continue-on-error: true`, is a swallow token and blocks at high.
+The runner-site reader (#181, #196 191.x) read GitHub workflows and
+`.pre-commit-config.yaml` only, so all four GitLab spellings passed at warn
+(THREATMODEL row 112's residual "GitLab/Azure/CircleCI/Travis conditions").
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751), filed as #214):
+allow_failure (true or exit_codes), `when: manual` and `when: never` count
+only on jobs whose `script:` passes the runner-site predicate. No global
+token: a lint job allowed to fail stays at warn. GitHub's
+`continue-on-error: true` stays a global token (D-052). The maintainer edit
+is row 112's text.
+
+**As implemented:**
+- `ci_control_flow._gitlab_sites` reads `.gitlab-ci.yml` (the root file,
+  the path the `ci` role names) as an inventory of runner sites: each
+  command of a job's `script:` that invokes a test runner
+  (`runner_command.invokes_test_runner`, as for a workflow step's `run:`) is
+  a site, live when its job can fail a green pipeline. `before_script:`
+  and `after_script:` are not the job's test command. The inventory goes
+  through the predicates workflows use: a runner command that loses a live
+  site and gains a dead one is disabled, and a runner reworded as its job
+  dies names both commands (#196 191.8).
+- A job is dead when no way of adding it to a pipeline starts it by itself
+  with its failure counted (`_gitlab_idle`). Without `rules:`, its own
+  `when:` and `allow_failure:` decide. With `rules:`, each entry that may
+  match adds the job with its own `when:` and `allow_failure:`, the job's
+  where it sets none; an entry with no `if:`, `changes:` or `exists:`
+  always matches, so no later entry is reached; and a job no entry adds is
+  not in the pipeline. A shape the reader does not take (an empty list, a
+  rule that is no mapping) keeps the job live.
+- A job's `extends:` templates are merged in first, as GitLab merges them:
+  mappings key by key, arrays and scalars replaced, templates in the order
+  listed and the job's own keys last (`_gitlab_jobs`). A chain that loops
+  or runs deeper than GitLab's eleven levels leaves the job out, and the
+  entries merging copies are bounded as merge keys are (100,000).
+- The deletion rule reads the GitLab sites too (`holds_runner_site`): a
+  deleted `.gitlab-ci.yml` whose only runner is a site row 69's scan does
+  not name (`node --test`) ran a suite. That closes D-097's reading 5
+  residual.
+- The reason says what the job lost: "pytest can no longer fail the
+  pipeline (job test allow_failure: true)", "pytest is disabled (job test
+  when: manual)", "pytest is disabled (job test rules: when: never)".
+- Unchanged: the added-line scan (`pytest || true` in a job's script still
+  blocks as before), GitHub's `continue-on-error: true` token, and every
+  workflow and pre-commit reason, byte for byte.
+
+Readings the ruling leaves to the implementation:
+
+1. **`when: on_failure` is dead too.** It runs the job only once an
+   earlier job has failed, which is how the reader reads `failure()` on a
+   GitHub step: false on the otherwise green run, the only run in which the
+   suite can turn a passing check red
+   (`gitlab_when_on_failure_test_job_pos`).
+   `when: delayed` and `when: always` start the job by themselves and keep
+   it live.
+2. **A hidden job is a job set aside unless another job extends it.**
+   GitLab documents a leading `.` as the way to disable a job without
+   deleting it, and `test:` -> `.test:` passed at warn
+   (`gitlab_test_job_hidden_pos`). A hidden job that a job `extends:` is a
+   template: its commands are that job's, so templating a job disables
+   nothing (`gitlab_job_templated_neg`). A hidden job used only through a
+   YAML anchor and merge key is read as set aside, both sides alike: it
+   changes nothing until a diff both drops a live runner job and adds such
+   a template with the same command.
+3. **`workflow: rules:` that can only say `when: never`** keep every
+   pipeline from running, so every site is dead
+   (`gitlab_workflow_rules_never_pos`): the ruling's `when: never`, written
+   for the whole pipeline. When no workflow rule matches, the pipeline does
+   not run, so conditional `when: never` entries alone are dead too; any
+   entry that may match and says otherwise keeps the sites live.
+4. **A rule's condition is not evaluated.** An entry with `if:`, `changes:`
+   or `exists:` may match, so `rules: [{if: $CI_COMMIT_BRANCH == "main"}]`
+   keeps the job live although it no longer runs on a merge request's
+   branch. Reading those conditions is GitLab's counterpart of the GitHub
+   expression folding (#196 191.x) and is left out, with `only:` and
+   `except:`.
+5. **The ruled spellings, read literally.** `allow_failure` counts as a
+   YAML 1.1 boolean, as GitLab's parser reads one (`true`, `yes`, `on` in
+   their three cases); a quoted `"true"` is a string GitLab rejects, not a
+   swallow. Any non-empty `exit_codes` counts, as ruled, whether or not it
+   names the code the runner fails with.
+6. **#196 191.3 covers the GitLab pipeline.** A `.gitlab-ci.yml` whose base
+   side the reader takes with a live runner site and whose head side it
+   declines is out of reach (`CI_BECAME_UNANALYSABLE`), as a workflow is
+   (`gitlab_head_yaml_tag_pos`). GitLab's own `!reference` tag is a tag the
+   reader declines, so a pipeline that starts using it blocks once, on the
+   commit that introduces it; one that used it at base is not read at all.
+
+**Tests and fixtures.**
+- **Tests:** 80 in `tests/test_issue214_gitlab_jobs.py`. Twenty-four
+  mutants of the round's code each fail them or the fixtures: `manual`
+  or `on_failure` read as starting the job; `allow_failure: true` not
+  read; only the YAML 1.2 booleans read as true; a quoted `"true"` read
+  as one; `exit_codes` not read; an empty `exit_codes` read as one; a
+  rule with no condition not ending the list; a rule not taking the
+  job's `when:` and `allow_failure:`; an empty `rules:` read as rules; a
+  rule that may run the job skipped; `workflow: rules:` not read; an
+  unconditional workflow rule not ending the list; a template read as a
+  site of its own; a hidden job read as live; the templates winning over
+  the job's own keys; no depth limit on `extends:`; a job merged without
+  a parent that was left out; mappings replaced instead of merged;
+  merging unbounded; `.gitlab-ci.yml` not read for sites; an allowed
+  failure reading as disabled; `variables` read as a job;
+  `before_script:` read as the test command.
+- **Fixtures:**
+  - row 112's pins, each passing on v0.6.0 and main at warn:
+    `gitlab_allow_failure_test_job_pos` (G1),
+    `gitlab_allow_failure_exit_codes_pos` (G2),
+    `gitlab_when_manual_test_job_pos` (G3),
+    `gitlab_rules_when_never_test_job_pos` (G4),
+    `gitlab_when_on_failure_test_job_pos` (reading 1),
+    `gitlab_test_job_hidden_pos` (reading 2),
+    `gitlab_workflow_rules_never_pos` (reading 3),
+    `gitlab_template_when_manual_pos` (`extends:`) and
+    `gitlab_head_yaml_tag_pos` (reading 6);
+  - what stays at warn: `gitlab_allow_failure_lint_job_neg` (G7),
+    `gitlab_allow_failure_kept_neg` and `gitlab_when_manual_removed_neg`
+    (the issue's acceptance), `gitlab_rules_skip_tags_neg` and
+    `gitlab_job_templated_neg`.
+
+Every existing fixture keeps its expectation, `circleci_weakened_pos` and
+every `ci_*` and `precommit_*` fixture included, and its corpus record does
+not change: `tools/emit_corpus.py` gives main's 759 records, byte for
+byte, and the fourteen new ones.
+
+**Fingerprints.** None move: a GitLab job that can no longer fail the
+pipeline reports a reason where it reported none, and every other reason
+is the same text.
+
+**Cost.** Measured with the round's engine against main's (`4f0955b`):
+- **GitLab set** (recorded before any engine ran on it): every non-merge
+  commit touching `.gitlab-ci.yml` in the default-branch history of eight
+  GitLab-hosted projects, ase, fdroidserver, graphviz, hyperkitty,
+  inkscape-extensions, libvirt-python, mailman and postorius: 1,532
+  commits, 1,443 readable (89 hold a submodule the snapshot reader
+  declines on both engines). Six records change, each pass -> block:
+  - `allow_failure: true` added to a runner job: postorius `d1602e2c`
+    (`git-heads`) and `da891d9e` ("allow released to fail");
+  - an `allow_failure: true` rule for merge request pipelines on ase's
+    `bleeding-edge` job (`a252419c`, "allow bleeding-edge job to fail"),
+    whose only rule also keeps the job out of every other pipeline;
+  - `when: manual` on ase's `pytest` job (`f6eaab0e`);
+  - ase's `windows_test` hidden as `.windows_test` (`5f6460d2`, "cannot
+    currently run windows tests, disable for now"; reading 2);
+  - ase `1f8c6c20`, out of reach (reading 6): its head is YAML GitLab
+    itself rejects, a quoted scalar followed by `|| echo`.
+  Each is a ruled spelling or a reading above, and none misreads the
+  file. The projects meant them (a bleeding-edge or flaky job allowed to
+  fail, a job set aside): the ruling's accepted cost, where a reviewer
+  accepts the block, as for GitHub's `continue-on-error: true`.
+- **The standard set and D-088's sets cannot move:** no commit of the
+  thirteen sweep histories touches `.gitlab-ci.yml`, the only file the
+  round reads differently, and every workflow and pre-commit reason is
+  the same text.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
 ## D-114 (2026-10-07): a positional target in addopts is an explicit target of every run (#173)
 
 pytest puts the root config's `addopts` before its own arguments, so a
@@ -6703,6 +7826,697 @@ again with the round's final engine, and give main's records too.
 passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
 engines), as on main, where #226's relabel (D-104) has not landed. Every
 other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-115 (2026-10-06): chai's should-style and property assertions are read (#215)
+
+v0.5.0 (#190) read two chai forms: `expect(...)` chains that end in one
+terminal, and the `assert` interface. Should-style was not read at all:
+weakening, rewriting or deleting `total.should.equal(78.75)` gave zero
+findings and no coverage notice. A property assertion
+(`expect(order).to.have.property("total", 78.75)`,
+`assert.propertyVal(order, "total", 78.75)`) was recorded with no strength
+(#196 190.5), so dropping or rewriting its value passed with a coverage
+notice, and respelling `expect(order.total).to.equal(78.75)` as one
+blocked as a removal (N1). THREATMODEL row 111 listed both as open.
+
+Ruling ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+2026-10-03, and the [maintainer decision on #215](https://github.com/taipei49314/checkwash/issues/215#issuecomment-6016537935),
+2026-10-06): should-style is judged in full, mapped onto the lattice as
+`expect` chains are; `.property(name[, value])`, its nested and own forms
+and `assert.property`/`propertyVal`/`deepPropertyVal` retarget the
+assertion to `subject[name]` with the value as the expectation, and
+`.property(name)` alone asserts only that the property is there, on a rung
+of the existing lattice. The two pin flips the issue names are authorized:
+`test_should_style_is_outside_the_scan` and the `.own.property` row of
+`test_unsupported_chai_spellings_remain_coverage_gaps`.
+
+**As implemented:**
+- `frontends/javascript/frontend.py`:
+  - `.property(name)`, `.ownProperty(name)` and `.haveOwnProperty(name)`
+    move the subject of the rest of an `expect` chain to the property
+    (`property_subject`): with a value, the chain is an equality on the
+    property, deep under `deep`; without one, at the chain's end, it is
+    presence, `type_shape` on TYPE_SHAPE. `nested` reads the name as a
+    path and `own` as the plain property; as in chai, `deep`, `nested` and
+    `own` stay set for the rest of the chain.
+  - `assert.property`, `ownProperty`, `nestedProperty`, `propertyVal`,
+    `ownPropertyVal`, `deepPropertyVal`, `deepOwnPropertyVal`,
+    `nestedPropertyVal` and `deepNestedPropertyVal` read the same way,
+    subject first. One whose property cannot be followed is recorded with
+    no strength, as an unread assert method is.
+  - Should-style (`_should_assertions`): `value.should.<chain>` is read as
+    `expect(value).<chain>` by the same chain reader (the value is the
+    member chain before `.should`, with a `new` that precedes it, as
+    `new` binds first), and `should.equal`,
+    `should.exist` and their `should.not` forms, on the object
+    `chai.should()` (or `chai.Should()`) returns, take the subject first. A
+    should chain the reader declines is recorded with no strength.
+- `frontends/javascript/bindings.py`: `chai.should()` (or `chai.Should()`)
+  returns the should object, and so does an undeclared `should`, the global
+  `chai/register-should` sets to it; a call on it is a chai assertion
+  candidate.
+- `frontends/javascript/coverage.py`: a `.should` chain is a candidate in
+  the coverage inventory, so one the scan does not represent shows the
+  banner.
+
+Readings the ruling leaves to the implementation:
+
+1. **A `.should` chain is read wherever a test spells it, and an undeclared
+   `should` is chai's.** `chai.should()` adds the getter to every object,
+   and projects run it in a setup file the runner loads (mocha's
+   `--require`, `chai/register-should`, which also sets the global
+   `should` to the object `chai.should()` returns), which this file-local
+   scan cannot see. So the setup is not required, as an unimported global
+   `expect` is read too. should.js extends `Object.prototype` the same way
+   with mostly the same words: its chains read as chai's, its own words
+   (`exactly`, `containEql`) are recorded with no strength, and its global
+   `should.equal`, node's coercive `equal`, reads as chai's strict one. A
+   `should` declared in the file from another module is not chai's. A
+   `.should` that no chain continues (`options.should`,
+   `options.should = true`) and a call of it (`chai.should()`) assert
+   nothing.
+2. **Presence is TYPE_SHAPE.** A key's presence is a shape check on the
+   subject, the rung of `isinstance` and `len(x) == n`. It sits above
+   NON_NULL although neither check implies the other (presence passes a
+   null value; `.exist` passes an inherited key): `.exist` on the value ->
+   `.property(name)` reads as a strengthening, and the reverse as a
+   weakening.
+3. **`own` reads as the plain property**, so dropping `own` is not reported
+   (row 111, still open). `include` reads `own` and `nested` too, and stays
+   unread with either flag, as before.
+4. **The retargeted subject is spelled as source.** A literal name reads as
+   `order.total` (`order["unit price"]` when it is no identifier), a
+   computed one as `order[key]`, and a nested path as the member chain it
+   spells (`order.totals.gross`, `order.lines[0].price`), so a property
+   assertion pairs with the `expect(order.total)` spelling of the same
+   check. A nested path that is not a literal is not followed, and the
+   assertion is recorded with no strength.
+5. **A chain after a property reads its last check.**
+   `.property("total").that.equals(78.75)` reads as the equality, which
+   holds only for a present property unless the value is `undefined`. A
+   negated property with a chain after it is recorded with no strength.
+6. **The assert interface's own and nested forms** (`ownProperty`,
+   `ownPropertyVal`, `deepOwnPropertyVal`, `nestedProperty`,
+   `nestedPropertyVal`, `deepNestedPropertyVal`) read as their expect
+   counterparts do, beside the three methods the ruling names.
+7. **Four more pins in `tests/test_js_unjudged_assertions.py`**, flagged for
+   approval: 190.5's examples of an unread chai assertion used `property`
+   in three rows of `test_an_unread_assertion_is_recorded_with_no_strength`
+   and one of `test_deleting_an_unread_assertion_is_assert_removed`. They
+   keep what they pin (an unread chai assertion is recorded with no
+   strength, and deleting it is ASSERT_REMOVED) with spellings that stay
+   unread: `.to.have.keys`, `.to.be.an(...).that.has.keys` and
+   `assert.hasAllKeys`.
+
+**Tests and fixtures.**
+- **Tests:** 129 in `tests/test_issue215_chai_grammar.py`. Thirty-seven
+  mutants of the round's code each fail them: presence on another rung;
+  `propertyVal` comparing deeply, or `deepPropertyVal` strictly;
+  `nestedProperty` reading a plain key; the assert own forms unread; a
+  plain key read as an index; a computed key not followed; any nested path
+  followed; an expression subject not parenthesized; the `own` flag not
+  taken, or `nested` ignored; the rest of a chain after a property not
+  followed; a negated property with a chain after it followed; a deep
+  property value compared strictly; a negated presence read as positive;
+  `include` reading `own` and `nested` as absent; an expect chain not
+  retargeted; should-style not read; a `.should` no chain continues, or a
+  call of `.should`, taken for a site; a should chain the reader declines
+  not recorded; `should.exist` not read, or `should.not` not negated; a
+  should method the scan does not read not recorded; an assert property
+  call that cannot be followed not recorded; the assert property methods
+  not read; the name taken as the value; a call without a name read;
+  `chai.Should` no alias; `should.not`'s methods not negated;
+  `chai.should()` not returning the should object; an undeclared `should`
+  not chai's global; a call on the should object no candidate; should
+  chains not in the coverage inventory; a recorded should chain read as
+  unrepresented; a `new` before a chain left out of its subject, and the
+  coverage notice dropping the space after it.
+- **Fixtures** (18), each `_pos` passing on v0.6.0 with zero findings:
+  - should-style: `js_chai_should_equal_to_exist_pos` (SH1),
+    `js_chai_should_expected_rewrite_pos` (SH2),
+    `js_chai_should_deleted_pos` (SH3), `js_chai_should_true_to_ok_pos`
+    (SH4),
+    `js_chai_should_require_setup_pos` (SH5),
+    `js_chai_should_register_import_pos` (SH6),
+    `js_chai_should_object_exist_pos` (SH7);
+  - property: `js_chai_property_value_dropped_pos` (P1),
+    `js_chai_property_value_rewrite_pos` (P2),
+    `js_chai_nested_property_value_dropped_pos` (P3),
+    `js_chai_own_property_value_dropped_pos` (P4),
+    `js_chai_property_chain_tail_dropped_pos` (P5),
+    `js_chai_assert_property_val_dropped_pos` (P6),
+    `js_chai_assert_deep_property_val_dropped_pos` (P7),
+    `js_chai_assert_property_val_rewrite_pos` (P8);
+  - respellings that report nothing: `js_chai_property_respelled_neg`
+    (N1, which blocked on v0.6.0 as a removal),
+    `js_chai_property_assert_respelled_neg` and
+    `js_chai_should_respelled_as_expect_neg`.
+
+Every existing fixture keeps its expectation, and the chai mutation
+inventory (`tests/data/javascript_chai_mutations.json`, 39 records) keeps
+every verdict. `tools/emit_corpus.py` gives the base's 783 records and the
+18 new ones; one existing record changes, `js_chai_property_deleted_pos`:
+the same ASSERT_REMOVED high, fingerprint and verdict, with the strength it
+now reads in its message and IR (TYPE_SHAPE, presence on `order.total`,
+where it said UNKNOWN).
+
+**Fingerprints.** No corpus fingerprint moves. TEST_DISABLED's fingerprint
+for a removed unit keys on the unit's assertions, so a removed unit that
+holds a should-style or property assertion, now read, gets a new one, as
+190.5's newly recorded assertions did; an allowlist entry for such a
+finding needs renewing.
+
+**Cost.** Measured on four JavaScript histories whose tests use chai
+should-style or property assertions: chai, hexo, node-fetch and yargs.
+The set is every non-merge commit whose JS or TS diff adds or removes a
+line spelling `should.`, `Should(`, `propertyVal`, `.property(`,
+`ownProperty` or `nestedProperty`: 1,399 commits, all readable. The
+round's engine was run against the base branch's (`5fa3554`). 277 records
+change and 58 verdicts move, so blocked goes from 18 to 72: 56 commits
+start blocking and 2 stop.
+- **True positives: 24 of the 56.** Each commit's message or diff shows
+  the edit was meant:
+  - fifteen expected values follow a behaviour or fixture change in the
+    same commit (hexo `2cdecbfdec9e`, `fffafac27de8`, `d1c3098f0120` and
+    twelve more);
+  - two removals or flips come with a breaking change (yargs
+    `a93f5ff35d7c`, `6ee2c82df515`);
+  - seven are real loosenings or deletions: `=== undefined` -> `== null`
+    (hexo `c3d0367955c8`, `1936e68dc897`), timestamps cut to whole
+    seconds (`28ac0697c2aa`), event order no longer asserted
+    (`1c8cd09d823f`), `>` -> `>=` (yargs `c68127ac5e9a`,
+    `4e186e036193`), and a check in a callback deleted
+    (`86457538ef4e`).
+
+  Each is reported for a reviewer, as the same edit spelled with `expect`
+  already was.
+- **False positives: 31 of the 56.** Twenty-eight of them are classes of
+  the existing `expect` reader, and the base engine blocks the `expect`
+  twin of each the same way:
+  - an expected call respelled through a destructured import, such as
+    `pathFn.join` -> `join` (twelve hexo commits; filed as #312);
+  - a check moved onto a form the reader records with no strength. Most
+    are row 111's open words: `.keys`, `.string()`, `should.throw(fn,
+    msg)`, a `should.fail` sentinel, a mocha `done` callback. The others
+    are `sinon.assert` calls (hexo `f766caf592a3`, 69 findings; filed as
+    #314);
+  - two spellings of one check ranked apart: `x.length` equality ->
+    `lengthOf(n)` (hexo `70c5378525ef`, 30 findings; filed as #313),
+    per-field `eql` -> `deep.include`, and a value check -> a sinon
+    query asserted true;
+  - a renamed test paired with an unrelated new one;
+  - a private field read through the public API;
+  - an expected value respelled, such as one only requoted (hexo
+    `2d7937d3e8ff`). That one is a defect of D-104's JavaScript port,
+    fixed in its PR;
+  - a strengthening read as SUBJECT_NORMALIZED.
+- **Three false positives owe their block to this round:**
+  - chai `6ccbd0378053` stores the should object under another global
+    name (`globalShould = chai.should()`), which is not followed.
+  - hexo `03e1a1d067ed` spells own-property presence two ways:
+    `hasOwnProperty.call(o, k).should.eql(true)` (EXACT_STRUCT) ->
+    `o.should.have.own.property(k)` (presence, TYPE_SHAPE, reading 2).
+    The base blocks the `expect` twin of this edit as a removal.
+  - In node-fetch `c3a4e96a61b9`, a presence check, now read, takes the
+    position-order pairing from a renamed subject's `deep.equal`.
+- **One mixed commit:** hexo `f3d2c37ec3d4`. Twelve findings are #312's
+  class. One is real: an async rewrite dropped the check that the call
+  rejects.
+- **Two commits stop blocking:**
+  - hexo `3d59784da286`: a `contain` respelled as
+    `includes(...).should.eql(true)` is now paired. The commit still
+    loses a sentinel that neither engine reads.
+  - hexo `3e8473027739`: `assert.fail()` sentinels are replaced by
+    spy-count checks the round reads, and they are held at warn as a
+    rewrite.
+- **Twin check.** Each JS test file changed by the 1,186 commits that
+  touch one was rewritten with every `x.should.` as `expect(x).`. The
+  round judges 1,184 of them as it judges their twin (verdict and high
+  rules). The other two are in chai's own suite, whose
+  `var expect = chai.expect` reads a global `chai` the reader does not
+  take (filed as #311). The base engine gives 1,173 twins the verdict
+  the round gives the original. The other 13 involve what only the round
+  reads: property assertions, the should object's `equal` and `exist`,
+  and chai's own should chains.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file (D-106), and only such a file is
+  read this way.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases)
+on the round's engine: passed, 0 failures, 1 reported: `i198/T6`, which
+passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
+keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-116 (2026-10-07): `py.test` is the pytest module wherever a skip is read (#310)
+
+The py library's `py.test` is pytest itself: py 1.11.0 maps its `test`
+attribute to `pytest` and binds `sys.modules['py.test'] = pytest`. #260
+(D-090) reads `py.test.mark.*` decorators as pytest's marks, since a mark
+decorator is read by its last components. A skip a test body calls or raises
+is read through the module's import bindings (#220, D-100), and those bound
+native modules only, so `import py` bound nothing. `py.test.skip()` and
+`py.test.xfail()` in a test passed with zero findings, and the same skip
+respelled `pytest.skip()` read as a skip added. #272's sweep found the
+second in pytest `3cc58c2f78f0`, inside a helper (D-111). Filed as #310.
+
+No ruling was asked: the issue's proposed direction extends #220's one-name
+reading (D-100) to one more name of the same object, and this entry, in the
+fix PR, is where the maintainer approves it.
+
+**As implemented:**
+- `setup_skip_controls`: `py` and `py.test` are native modules, and a dotted
+  name read through them is pytest's (`_pytest_name`: `py.test.skip` is
+  `pytest.skip`, `py.test.skip.Exception` is `pytest.skip.Exception`).
+  Every reader of these bindings takes it: a test body's skips and their
+  guards (D-100, row 54), the same-file helpers a test calls (D-111), the
+  setup a unit runs, a fixture declared with `@py.test.fixture` included,
+  and the closed `pytest_runtest_setup` hook proof.
+
+Readings the direction leaves to the implementation:
+
+1. **Only an import of the py library.** `py` is read as the py library
+   where an import binds it (`import py`, `import py.test`, `import py as
+   p`, `from py import test`, `from py.test import skip`). A `py` no import
+   binds keeps its spelling, which names no outcome; a `py` rebound, or
+   imported from another module, is not the library.
+2. **The py library's meaning.** pytest 7.2 and later ship a `py` shim of
+   their own with `py.path` and `py.error` only. With that shim and no py
+   library, `py.test` does not exist, and `py.test.skip()` raises
+   AttributeError, so the test fails rather than passing. With py 1.11.0
+   installed, pytest 9.1.1 reports `py.test.skip()` as skipped and
+   `py.test.xfail()` as xfailed (run for this entry). The reading takes
+   the py library's meaning, as #260 does for `py.test.mark`: a skip added
+   through it is reported, and one respelled between `py.test` and `pytest`
+   is the skip the test had.
+3. **One name for the marker.** The marker carries pytest's name
+   (`pytest.skip`), so a finding's message and fingerprint are those of the
+   same skip spelled `pytest.skip()`.
+
+**Tests and fixtures.**
+- **Tests:** 30 in `tests/test_issue310_py_test_alias.py`. Each of the
+  round's eight mutants fails them: `py.test` not read as pytest, read on
+  a name it only begins (`py.testing`), or not read as the bare module;
+  `py` or `py.test` dropped from the native modules; the reading dropped
+  from the setup and helper readers, or from the body's; a `py` no import
+  binds read as the library.
+- **Fixtures:**
+  - row 118's new pins, each passing on v0.6.0 with zero findings:
+    `py_test_skip_added_pos` (P1) and `py_test_xfail_added_pos` (P3, in
+    the `from py.test import xfail` spelling);
+  - controls with no finding: `py_test_skip_respelled_pytest_neg` (P4,
+    which v0.6.0 blocks as a skip added) and
+    `py_test_skip_respelled_in_helper_neg` (pytest `3cc58c2f78f0`'s
+    respelling inside a helper, which D-111's engine blocks as a skip added
+    to the helper).
+
+Every existing fixture keeps its expectation, and every existing corpus
+record is byte for byte the same; the corpus gains the four fixtures'.
+
+**Fingerprints.** None moves. A skip now read through `py.test` is a new
+finding, and a respelling between `py.test` and `pytest` that read as a skip
+added no longer does.
+
+**Cost.** Measured with the round's engine against #272's (`343ff7b`, the
+head of #316), on which the round is stacked:
+- **Targeted set:** every non-merge commit, on any ref, of the sweep
+  histories whose test-side Python adds or removes a line spelling
+  `py.test.` or importing `py` (`import py`, `from py import`, `from
+  py.test import`): 669 commits in four histories (pytest 651, werkzeug 9,
+  scrapy 7, aiohttp 2), 559 readable. 23 records change, all pytest's, and
+  8 verdicts move: blocked goes from 102 to 108.
+  - **1 stops blocking:** pytest `3cc58c2f78f0`, the issue's own commit,
+    whose `py.test.skip` respelled `pytest.skip`, in the `lsof_check`
+    helper and in a test body, read as four skips added.
+  - **7 start blocking.** Six add a `py.test.skip`, `py.test.xfail` or
+    `py.test.importorskip` to an existing test or to the setup it runs
+    (`a6003ac3`, `ac934bb2`, `621f9259`, `a7dfacca`, `44337db2`,
+    `1e7d5166`), as the `pytest` spelling blocks. The seventh, `4f5d7948`,
+    moves a test into a file where it carries a guarded `py.test.skip`, so
+    the arrival is not live, the move earns no credit and the departure's
+    disappearance is high, as with `pytest.skip` there.
+  - **The other 15 keep their verdict.** Two lose skips added that were
+    respellings (`9fb20794`, `a6984654`); thirteen gain or change findings
+    at warn or info.
+- **Twin check.** Each changed commit, respelled `py.test.` -> `pytest.`
+  with `import pytest` beside `import py`, gives the round's TEST_DISABLED
+  findings under #272's engine in 21 of the 23. In `78d33a2f` two
+  disappeared units swap info and warn. In `e991bf21` twelve setup skips
+  are high in the twin and warn here: its helper file mentions only
+  `py.test`, which is no runner name, so it keeps the opaque-production
+  exemption (REPAIR_EVIDENCE); filed as #325.
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give #272's records, byte for
+  byte.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) give
+  #272's records, byte for byte. Of pytest's 368 (364 readable), three
+  change: the targeted set's `3cc58c2f`, `9fb20794` and `a6984654`.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-117 (2026-10-06): an undeclared `chai` is chai's module (#311)
+
+The JS reader resolves a name no scope declares through a short table of
+runner globals: `expect`, `assert` (Node's), `t`, `test`, `it`, `require`,
+and since #215 (D-115) `should`. `chai` was not in it, so an undeclared
+`chai` was unknown, and so were `chai.expect`, `chai.assert` and an `expect`
+or `assert` bound from them. karma-chai loads chai's browser build, which
+defines `window.chai`, and its adapter sets the `should`, `expect` and
+`assert` globals from it (karma-chai 0.1.0's `adapter.js`, read from the
+published tarball). chai's own suite sets `global.chai` in its bootstrap
+(`test/bootstrap/index.js`) and binds `var expect = chai.expect;` in each
+`describe`. So `expect(x).to.equal(y)` -> `.to.exist` there passed with a
+coverage notice, a deletion passed, and `chai.expect(...)` written directly
+was no candidate at all. #215's twin check found it: the round read chai's
+should-style chains, but not their `expect` twins. Filed as #311.
+
+No ruling was asked: the issue's proposed direction reads the global as
+#215 reads an undeclared `should` (D-115, reading 1), and this entry, in
+the fix PR, is where the maintainer approves it.
+
+**As implemented:**
+- `frontends/javascript/bindings.py`: an undeclared `chai` resolves to
+  chai's module (`Value("chai")`), as an imported or required one does, so
+  `chai.expect`, `chai.assert`, `chai.should()` and `chai.Should()`, and the
+  names bound from them, read as through an imported chai, in the assertion
+  scan and in the coverage inventory.
+
+Readings the direction leaves to the implementation:
+
+1. **Only an undeclared `chai`.** A `chai` the file declares, imports,
+   requires from another path or takes as a parameter keeps its own
+   binding, as a local `expect` does.
+2. **`window.chai` is not read.** karma's test files use the globals the
+   adapter sets, and `window` is no binding the reader follows; it stays a
+   residual of row 111.
+3. **Only chai's own members assert.** Through the global as through an
+   import, `chai.expect` and `chai.assert` are candidates and `chai.use`
+   or `chai.config` are not.
+
+**Tests and fixtures.**
+- **Tests:** 17 in `tests/test_issue311_global_chai.py`. Three mutants of
+  the round's code each fail them: the global not read, or read as
+  chai's `expect` or as its `assert` instead of its module.
+- **Fixtures** (4):
+  - row 111's new pins, each passing on v0.6.0 with zero findings:
+    `js_chai_global_expect_weakened_pos` (K1),
+    `js_chai_global_assert_weakened_pos` (K4) and
+    `js_chai_global_member_expect_pos` (K5);
+  - `js_chai_global_shadowed_by_local_neg`: a `chai` the file declares is
+    not chai's module.
+
+Every existing fixture keeps its expectation, and the chai mutation
+inventory (`tests/data/javascript_chai_mutations.json`, 39 records) keeps
+every verdict. `tools/emit_corpus.py` gives the base's records unchanged
+and the 4 new ones.
+
+**Fingerprints.** No corpus fingerprint moves. The assertions read through
+the global are new findings, and a removed unit that holds one gets a new
+TEST_DISABLED fingerprint, as D-115 notes for should-style; an allowlist
+entry for such a finding needs renewing.
+
+**Cost.** Measured on D-115's four JavaScript histories: every non-merge
+commit of chai's that touches `test/` (427), and the commits of hexo,
+node-fetch and yargs whose JS or TS diff adds or removes a line spelling
+`chai.` (15): 442 commits, all readable. The round's engine was run
+against the base branch's (`c46bba5`). 29 records change, all in chai's
+own history, and 5 verdicts move: blocked goes from 9 to 14, and none
+stops blocking.
+- **One true positive:** chai `f6c4fa3939d9` drops the check that the
+  property a test overwrites is there
+  (`expect(new chai.Assertion()).to.have.property('tea')`, which an
+  earlier test's leftovers made true) and adds the property instead.
+- **Four false positives, each a class of the existing reader.** The base
+  engine blocks each the same way once the file requires chai:
+  - `assert.throws(...)` respelled `assert[throws](...)` in a loop over
+    its aliases, a computed member the reader does not read (`3be31001d1e3`,
+    13 findings; `40dc848842bd`, 12, for `isFrozen`, `isSealed` and
+    `isExtensible`);
+  - a check moved from a test into a `describe`'s `before` hook, which is
+    not the test's (`5d11228cfa42`, 2);
+  - four tests rewritten as twenty-four, where the renamed-test pairing
+    matches four of the new tests with the old ones and the old
+    assertions they do not keep read as removed (`8fa4f7857456`, 8).
+- **The other 24 records keep their verdict.**
+  - Eighteen gain warn or info findings: 2,401 in all, 2,257 of them in
+    one commit. Every one but `f73d026f2863` (two info findings) changes
+    `lib/` too. The big one is chai's own move off the global:
+    `0fc290b5ea98` (Karma to Web Test Runner) replaces `var assert =
+    chai.assert` with `import * as chai from '../index.js'`, a chai
+    another path exports (reading 1). The round reads the base side's
+    2,257 assertions and not the head side's, and reports them removed
+    at warn.
+  - `7f8a268e5206` loses a warn finding: a check respelled through the
+    global now pairs with its new spelling.
+  - In `dd5159407588` (blocked on both), a substitution read through the
+    global adds a high finding.
+  - In four records (`d89a9fe470ad`, `93be4b15d9c3`, `a33ab4818682`,
+    `7bc580910ee3`), TEST_DISABLED findings on removed units take a new
+    fingerprint and nothing else changes.
+- **Equivalence check.** Each of the 442 commits was also judged by the
+  base engine with `var chai = require('chai');` prepended to every
+  changed file under `test/` that declares no `chai` of its own. On all
+  442, that record is the round's on the commit as it is: the round
+  reads chai's own suite as an imported chai is read, and nothing else.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file (D-106), and only such a file is
+  read this way.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases)
+on the round's engine: passed, 0 failures, 1 reported: `i198/T6`, which
+passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
+keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-118 (2026-10-07): AVA's and tap's tests are read (#233)
+
+AVA's and tap's assertions are methods of the `t` each test callback
+receives, and neither was read. `t.is(total(), 78.75)` ->
+`t.truthy(total())` passed with zero findings wherever the file was parsed
+(#233 A3, T2). Their default layouts collect `tests/**`, a path that is no
+JS test path for Node's runner or Jest, so beneath `tests/` the file was
+never parsed and even a deleted test passed (A1, A2, T1). The ruling of
+2026-10-03 (196.followup.ava-tap-tests-dir) asked for runner evidence, a
+layout row and the dialect. The owner confirmed the issue's direction on
+2026-10-06 (the maintainer decision on #233): an `ava` or `tap` import, or a
+base root `package.json` naming one of them alone, names the runner, with
+evidence-only rows; layout rows from the runners' defaults; and AVA's and
+tap's `t` assertions mapped onto the existing lattice and predicate keys,
+read only on the callback's own `t` (and tap's top-level `t`).
+
+**As implemented:**
+- `frontends/javascript/runners.py`: `ava` and `tap` imports and requires
+  name the runner, and so does a base root `package.json` that names one of
+  them and no other runner. AVA 8's (`lib/globs.js`, `lib/extensions.js`)
+  and tap 21's (`@tapjs/config`'s `include` and `exclude`) defaults are
+  their rows, in `EVIDENCE_ONLY` beside Bun's and Deno's. Those rows
+  collect JS/TS extensions only, so any other file is answered without
+  reading them, and a Python-only diff does not pay for the new two.
+- `frontends/javascript/paths.py`: those rows give a file test obligations
+  only on its own evidence (`is_js_test_file`), either side's import being
+  enough.
+- `frontends/javascript/bindings.py`: AVA's test function (its default
+  export, with its modifiers and hooks, `test.serial`, `test.failing`,
+  `test.skipIf(cond)(...)`, `test.macro(fn)` and the rest) passes AVA's `t`
+  to the callback it declares. tap's module (its default export and named
+  `t`, its CommonJS export, which is `t` itself, and a `test` imported or
+  required from it) declares subtests whose callback gets tap's `t`, and
+  `t.test(...)` on any of them declares the next level. A method of either
+  `t` resolves by name, for the assertion scan and the coverage inventory:
+  AVA 8's methods, and tap 21's with tap 16's `expectUncaughtException`
+  and synonyms (reading 7).
+- `frontends/javascript/frontend.py`: the dialect (`_AVA_METHODS`,
+  `_TAP_METHODS`) is read with chai's meanings (`_chai_assertion`); the
+  other assertions are recorded with no strength (#196 190.5); AVA's
+  `serial` is a neutral modifier, so a serial test is a unit.
+
+Readings the decision leaves to the implementation:
+
+1. **The meanings**, subject first: AVA's `is` (Object.is) and tap's
+   `equal` (===) are a strict equality, and `not` its negation;
+   `deepEqual`, `same` and `strictSame` the structural equality, and their
+   negations; AVA's `like` and tap's `has`/`hasStrict` membership (PATTERN),
+   as chai's deep `include` is, since each asserts a subset of fields;
+   `true` and `false` the `=== true` and `=== false` keys; `truthy`, AVA's
+   `assert` and tap's `ok` truthiness, `falsy` and `notOk` its negation;
+   `regex` and tap's `match` a pattern, and their negations. A negation is
+   read as chai's `.not` is (D-115's `should.not`). The others are recorded
+   with no strength: AVA's `throws` and `throwsAsync` and tap's `throws` and
+   `rejects` as `raises`, and `notThrows`, `snapshot`, `fail`, tap's `type`,
+   `hasProp` and its forms, `matchOnly`, `matchStrict` and their negations,
+   `resolves`, `resolveMatch`, `emits`, `error`, `matchSnapshot`,
+   `resolveMatchSnapshot` and tap 16's `expectUncaughtException` as
+   `unknown`. `t.pass()`, `t.plan(n)` and an assertion AVA skips
+   (`t.is.skip(...)`) assert nothing.
+2. **tap's `same` is loose for scalars** (`==`), and it reads as the
+   structural equality, as Node's legacy `deepEqual` does. So
+   `t.equal(x, 5)` -> `t.same(x, 5)` is not reported, as
+   `assert.strictEqual(x, 5)` -> `assert.deepEqual(x, 5)` is not.
+3. **Whose `t`.** A `t` is read where it is the first parameter of a
+   callback passed to AVA's test function or to one of tap's declarers, and
+   where it is tap's root `t`, inside a test unit. tap's root test is no
+   unit: an assertion at a tap file's top level, outside every subtest, is a
+   coverage notice, as a call outside a test unit is for every runner. An
+   object named `t`, a `t` the file writes over, a `t` passed to a helper
+   and tape's `t` are not read.
+4. **tap's module exports by name what tap 16 or tap 21 exports.** tap 21's
+   ES module exports some assertions (`ok`, `same`, `match`, ...) and not
+   others; tap 16's exports `equal`, `strictSame`, `rejects` and a few more.
+   A name one of them does not export throws on import under it, before any
+   test runs, so reading the union hides nothing. A synonym or `hasProp` is
+   `t`'s only. tap's CommonJS export is `t`, which has every method.
+5. **The manifest counts AVA and tap among the runners**, as the decision
+   says, so a root `package.json` that names Jest and AVA, or Mocha and
+   tap, is now a mix and unknown, where it proved Jest or Mocha before.
+   Continuity then falls back to the union of the Jest and node:test
+   defaults, and focus to Jest's rule.
+6. **AVA's `.only` stays in its file.** AVA runs each test file in a worker
+   with a runner of its own (`lib/worker/base.js`), so its focus is read as
+   Jest's and Vitest's is: added to a file whose units it turns off none of,
+   it is not reported for the whole suite.
+7. **tap 16's synonyms are read; older names are not.** tap 16 deprecated
+   and tap 18 removed the synonyms its `lib/synonyms.js` defines
+   (`t.deepEqual`, `t.equals`, `t.isDeeply`, `t.isa`, `t.true`, ..., and
+   the all-lowercase and snake_case spelling of every camelCase name, 214
+   in all). Each reads as the method it names, as tap 16 runs it; under tap
+   18 or later a synonym throws, so reading one hides nothing. The sweep's
+   tap histories use them (yargs's `t.deepEqual`, node-lru-cache's
+   `t.similar` and `t.isa`). Not read: AVA's names before 1.0 (`t.ok`,
+   `t.same`, `t.regexTest`), AVA's macro objects
+   (`test.macro({exec(t) {}})`), tap's `t.skip(name, fn)`, `t.todo(...)`
+   and `t.only(...)`, which declare no unit, so a subtest respelled
+   `t.skip(...)` reads as removed, and a test whose callback is a function
+   the file names rather than writes inline, as AVA's macro form
+   `test(title, macro, ...args)` does: it lends the unit nothing, as a
+   declared function lends no other runner's test anything (#320). A test
+   that gets its runner through another module
+   (`import test from './helpers/test.js'`) is not one of their test paths.
+
+**Tests and fixtures.**
+- **Tests:** 209 in `tests/test_issue233_ava_tap.py`. Fifty-four mutants of
+  the round's code each fail them or the fixtures: an `ava` or `tap`
+  import, require, default import or manifest entry not read; a modifier,
+  a hook, the curried `skipIf` or a receiver path not followed; tap's
+  named exports read as `t`'s methods, or read as tap 21's alone; a meaning
+  or its polarity changed; the throw family, an unread method or a bound
+  method's name not recorded; a member of a call's result read as `t`; a
+  layout row or exclusion changed; AVA's rows or focus scope dropped; tap
+  16's synonyms not looked up, their lowercase or snake_case spellings
+  dropped, or an entry of the table lost; `resolveMatchSnapshot` or
+  `expectUncaughtException` not recorded; a synonym on a `t` the file
+  writes over not a coverage notice.
+- **Fixtures** (12), each `_pos` passing on v0.6.0 with zero findings:
+  - row 107: `js_ava_tests_dir_unit_deleted_pos` (A1);
+  - row 126: `js_ava_tests_dir_weakened_pos` (A2), `js_ava_is_to_truthy_pos`
+    (A3), `js_ava_expected_rewrite_pos`, `js_tap_tests_dir_weakened_pos`
+    (T1), `js_tap_equal_to_ok_pos` (T2), `js_tap_assertion_deleted_pos` and
+    `js_tap16_synonym_weakened_pos`;
+  - controls with no finding on either:
+    `js_tests_dir_helper_without_runner_neg` (a JS file under `tests/` that
+    names neither runner),
+    `js_ava_true_respelled_as_is_neg`, `js_tap_same_respelled_strict_neg`
+    and `js_tap16_synonym_respelled_neg`.
+
+Every existing fixture keeps its expectation, and `tools/emit_corpus.py`
+gives the base's 805 records byte for byte and the 12 new ones. The chai
+mutation inventory (`tests/data/javascript_chai_mutations.json`, 39
+records) keeps every verdict.
+
+**Fingerprints, messages and IR.** No corpus fingerprint moves. A coverage
+diagnostic for an AVA or tap call names its family (`AVA assertion
+candidate ...`, `tap assertion candidate ...`). The IR does not change
+shape.
+
+**Cost.** Measured on five JavaScript histories whose tests use AVA or
+tap: got and execa (AVA), node-semver and node-lru-cache (tap), and yargs
+(tap until 2014). The set is every non-merge commit whose JS or TS diff
+adds or removes a line calling a method of a `t` (`t.<name>(`): 1,766
+commits, 1,764 readable on both engines. The round's engine was run
+against the base branch's (`c704a0c`). 311 records change and 40 verdicts
+move, so blocked goes from 34 to 58: 32 commits start blocking and 8 stop.
+- **The 8 that stop were false blocks.** A test respelled `test.serial(...)`
+  read as one that disappeared (TEST_DISABLED high), because `serial` was
+  no modifier the reader knew: execa `7bf6ac26`, `9435a34a`, `45475e7d`,
+  `ff22803f`, `9a2b00f4`, `2ddec78c` and `f0715464`, and got `0863bcd5`.
+- **True positives: 15 of the 32.** Each commit's diff shows the edit was
+  meant:
+  - four loosen a check: an IP that may now also be `::1` (got
+    `8122d96e`), an error code that may be either of two (got
+    `891dcbea`), an exit-code name replaced by `t.true(failed)` (execa
+    `55337f79`), and a message cut to its first words (execa `5587ae1d`);
+  - eight replace or delete a check: got `81fc00aa` (tests named for
+    stripping a standard port now assert a non-standard one, and an
+    `instanceof` check is gone), `48b817ee`, `464515f1` and `2bc2b90f`;
+    execa `9a641b0c`, `e55dc8bd` and `0070738c`; and yargs `58798d8d`,
+    whose finding says the expected value stayed the same when the
+    expected object was rewritten too: a JS object or array is never
+    compared as an expected value (filed as #323);
+  - three rewrite an expected value with the behaviour or input it follows
+    (execa `68986b79`, node-lru-cache `ac2a7f49`, yargs `50451226`).
+
+  Each is reported for a reviewer, as the same edit spelled with
+  node:assert or chai already was.
+- **False positives: 16 of the 32, each a class of the existing reader.**
+  The base engine blocks the node:assert or chai twin of each class the
+  same way (probed one by one):
+  - eight move checks into a function the test names as its callback, an
+    AVA macro (execa `97c0a0bd`, `da7aec7a`, `81f0b2d4`, `282d1895`,
+    `6cf1c5e7` and `14485c75`), or into a helper the test calls with its
+    `t` (execa `c09bb188`, node-semver `cb71dbbd`). Filed as #320, and
+    named in row 126's residuals;
+  - two respell a `t.fail()` sentinel in `try`/`catch` as `t.throws(...)`
+    (got `21c5c78d`, `39bf8282`);
+  - one drops a `t.notThrows(...)` around a call the test awaits anyway
+    (execa `1861b5eb`);
+  - one moves a negation from the subject into the assertion,
+    `t.truthy(!x)` -> `t.false(x)` (got `f5e227ed`; filed as #322);
+  - one respells an expected string as a template literal (got
+    `a03201fb`; filed as #321);
+  - one splits a test in two, and destructuring makes the halves' subjects
+    the same names (execa `f5172cde`);
+  - one moves checks into nested subtests with their subjects respelled
+    (node-semver `18c21b24`);
+  - one migrates a file from tap to mocha and chai, renaming the tests and
+    the subject's variable (yargs `d1f082c3`).
+- **One mixed commit:** got `f7500d47` (tests rewritten with
+  `async`/`await`) drops a real check, the synchronous throw of the
+  callback API; the rest is a test split into five with one title and
+  `t.throws` respelled as `t.fail` sentinels.
+- **Two defects of the round, fixed before this measure.** A first run
+  blocked node-semver `24af4615`, because tap's `t.resolveMatchSnapshot`
+  was missing from the methods recorded with no strength, and yargs
+  `1ed92b97`, whose tap 0.x `t.deepEqual` was not yet read (reading 7).
+- **The other 271 records keep their verdict.** In 230 the round adds
+  findings, among them 1,071 ASSERT_REMOVED, 424 TEST_DISABLED and 205
+  ASSERT_WEAKENED at warn; every one is at warn or info except in five
+  commits that block on both engines. The largest two:
+  - execa `698a1b84` moves the suite from AVA to node:test. The base engine
+    read only the node side; the round reads both, and holds its 507
+    findings at warn.
+  - got `0a79ccbe` renames its tests to `.ts` under an AVA configuration
+    for TypeScript. AVA's default extensions are `js` and `mjs`, and a
+    configured extension is not read, as configured globs are not, so 313
+    tests read as leaving AVA's collection, at warn.
+
+  In 25 records TEST_DISABLED findings at warn or info are dropped or
+  change severity, and in 39 only a fingerprint or a message changes.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file (D-106), and only such a file is
+  read this way.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases)
+on the round's engine: passed, 0 failures, 1 reported: `i198/T6`, which
+passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
+keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
 

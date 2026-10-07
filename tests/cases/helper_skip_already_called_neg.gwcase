@@ -1,0 +1,33 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a helper skip the test already reached is no new event when the test is edited elsewhere
+origin: #272 — the marker is on both sides, so nothing is added
+=== before: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def _later():
+    pytest.skip("later")
+
+
+def test_weighted_quota():
+    _later()
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import pytest
+
+from app import remaining
+
+
+def _later():
+    pytest.skip("later")
+
+
+def test_weighted_quota():
+    """Bulk requests weigh four."""
+    _later()
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[]

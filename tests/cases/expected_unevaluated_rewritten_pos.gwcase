@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 122
+rule: EXPECTED_VALUE_CHANGED
+title: P5: == make(1) -> == make(2), make bound nowhere: one unevaluated call rewritten into another
+origin: #226
+=== head: app/__init__.py ===
+OTHER = 75
+
+
+def make(n):
+    return 75 + n
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == make(1)
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total() == make(2)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
