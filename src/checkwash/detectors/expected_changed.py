@@ -19,7 +19,7 @@ import operator
 import re
 
 from checkwash.findings import Evidence, Finding, make_fingerprint
-from checkwash.frontends.javascript.literals import operand_names
+from checkwash.frontends.javascript.literals import comparable_operand, operand_names
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.expected_values import literal_value, same_value
 from checkwash.ir.model import Assertion, FileIR, IR, judged_as_test
@@ -229,10 +229,13 @@ def detect(ir: IR) -> list[Finding]:
                             f"{list(before_names)} -> {list(after_names)} "
                             f"{strength_description}"
                         )
-                    elif b_call is not None and a_call is not None and b_call != a_call:
+                    elif b_call is not None and a_call is not None and (
+                            comparable_operand(b_call) != comparable_operand(a_call) if js else b_call != a_call):
                         # #226: the same names, a call checkwash does not
                         # evaluate rewritten into another (`make(1)` ->
                         # `make(2)` with `make` bound nowhere, 226.Q3).
+                        # JS compares the operand's text without its
+                        # formatting, as Python compares `ast.unparse`.
                         message = _unevaluated(b_call, a_call, strength_description)
                     else:
                         continue
