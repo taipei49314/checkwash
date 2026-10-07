@@ -136,8 +136,9 @@ between the two is a laundering route (all confirmed by reproduction):
   narrowed `python_files`/`testpaths`, or a filtering `addopts`, is a weakened
   test command. Moving one between files is not — see §5's two token families.
   A value written over several lines is read to its end: a TOML array to its
-  closing bracket, and an unquoted INI value over every indented line after it
-  (#324)
+  closing bracket, and an INI value, quoted or not, over every indented line
+  after it (#324, #327). In `[pytest]`, which pytest 9's `pytest.toml` uses
+  too, a quoted value stops at a line that reads as a TOML setting
 - `conftest.py` is analysed for suite-level collection controls
   (`pytest_collection_modifyitems`, `pytest_ignore_collect`,
   `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`). A

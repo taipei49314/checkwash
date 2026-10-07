@@ -8601,3 +8601,72 @@ engines), as on main, where #226's relabel (D-104) has not landed. Every
 other case keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-121 (2026-10-07): a quoted pytest setting is read by its section (#327)
+
+D-119 read a value's kind from its first line, since one reader serves INI
+and TOML files alike, and a value that opened with a quote was a TOML
+string, never continued. In an INI file the quote is part of the value:
+iniconfig continues it over the indented lines after it, as it continues
+any other, and pytest splits `addopts` with `shlex`, which drops the
+quotes. A selector added beneath `addopts = "-ra"` in `setup.cfg`,
+`pytest.ini` or `tox.ini` therefore ran (`['-ra', '-m', 'not slow']`) and
+passed with CI_WORKFLOW_TOUCHED at warn, where the same selector on the
+value's first line blocked (THREATMODEL row 42). The cut also worked the
+other way: the same options respelled onto one line read as a selector
+introduced, and blocked. Found while fixing #324 (D-119's reading 1) and
+filed as #327.
+
+No ruling was asked: the reader's own contract is to read the value pytest
+reads, and #327's proposed fix is what D-119's reading 1 left open. This
+entry, in the fix PR, is where the maintainer approves it.
+
+**As implemented** (#327's proposal):
+- `[tool:pytest]`, which only `setup.cfg` holds, is INI: a quoted value
+  continues over its indented lines like any other, blank and comment
+  lines skipped.
+- `[tool.pytest.ini_options]`, which only `pyproject.toml` holds, is TOML:
+  a string is never continued, so an indented key after it stays a
+  setting.
+- `[pytest]` is INI in `pytest.ini` and `tox.ini` but TOML in pytest 9's
+  `pytest.toml`. A quoted value there continues over its indented lines up
+  to a line that reads as a TOML setting: a bare key, which never starts
+  with `-`, or a quoted key, then `=`. In an INI file such a line would
+  hand pytest `name` and `=` as paths, and pytest stops with a usage
+  error (exit 4), so ending the value there hides no passing weakening.
+
+Reading left to the implementation:
+
+1. **A line that reads as a TOML setting ends the value**, and is read as
+   a setting of its own, rather than being skipped while the value goes on
+   over the lines after it (the issue's "except a line"). In `pytest.toml`
+   every line after a key belongs to that key or to the next one, never to
+   the string above it.
+
+**Tests.** `tests/test_issue327_quoted_ini_value.py` (20): #327's Q1 and
+Q2, `tox.ini` beside them and the control Q3 block; a quoted value
+respelled on one line is no event; the values pytest reads in each
+section, a setting-shaped line inside an INI value among them; and the
+lines that read as a TOML setting. #324's tests keep their expectations;
+their docstring says the quote is now read by its section. Four fixtures:
+two pins of row 42 (Q1 and Q2); one guard, an indented key after a string
+in `pytest.toml` narrowed, which blocks on both engines and pins that the
+string does not swallow it; and one neg, a quoted continuation respelled
+on one line, which #324's reader blocked.
+
+**Cost.** Every blob at a pytest configuration path (`pytest.ini`,
+`.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`, `setup.cfg`,
+`pyproject.toml`) on every ref of the thirteen sweep histories, 3,685
+blobs, was read by #324's reader and by this one: each that mentions
+pytest gives the same `collection_settings`, `collection_options` and
+`resolved_collection_settings` on both, so no commit of those histories
+can change its record. The same holds for every blob at any path in
+those histories, 317,869 in all, that holds a pytest section header
+(`[pytest]`, `[tool:pytest]` or `[tool.pytest.ini_options]`).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
