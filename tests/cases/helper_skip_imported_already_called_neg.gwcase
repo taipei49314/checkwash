@@ -1,0 +1,34 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an imported helper skip the test already reached is no new event when the test is edited elsewhere
+origin: #272 — the module is read for both sides, so the marker is on both and nothing is added
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/__init__.py ===
+=== head: tests/helpers.py ===
+import pytest
+
+
+def offline():
+    pytest.skip("flaky")
+=== before: tests/test_billing.py ===
+from app.billing import total
+from tests.helpers import offline
+
+
+def test_total():
+    offline()
+    assert total([30, 48.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+from tests.helpers import offline
+
+
+def test_total():
+    """Two items, rounded to cents."""
+    offline()
+    assert total([30, 48.75]) == 78.75
+=== expect ===
+[]
