@@ -99,10 +99,28 @@ above an untouched `expect(invoiceTotal(items)).toBe(78.75)`. The JS pass
 
 First-party means a `./` or `../` specifier that stays inside the repository
 and outside dependency or build output; `./billing`, `./billing.js` and
-`./billing.ts` name one module. Bare specifiers (packages, `node:` builtins)
-are hygiene. Aliases (`@/`, tsconfig `paths`, `#imports`, root-relative
-`/src`) resolve through runner configuration the scan does not execute, so
-they stay silent rather than guessed.
+`./billing.ts` name one module. Two kinds of alias name first-party modules
+too (#196 188.6):
+
+- an `@/` or `~/` specifier, by convention the project's own source root:
+  the same alias string in a mock and an import is one module, so
+  `vi.mock("@/billing")` stands in for `import ... from "@/billing.ts"`;
+- a specifier the base side's root `tsconfig.json` maps through
+  `compilerOptions.paths`, relative to `baseUrl` or the repository root: it
+  names the module at the path it maps to, so under `"@/*": ["src/*"]`
+  `vi.mock("@/billing")` stands in for `import ... from "../src/billing"`.
+  An exact pattern comes first, then the longest prefix, and the first
+  target is the module, as TypeScript resolves it. The base side's file is
+  read, so a diff cannot remap its own mocks.
+
+Without the tsconfig, an alias and another spelling may still name one
+module; a base-side installation under such a spelling counts as already
+installed, so respelling a mock is not a new stand-in. Bare specifiers
+(packages, `node:` builtins, scoped packages such as `@acme/billing`) are
+hygiene. Other aliases (`#imports`, root-relative `/src`, a bare specifier
+`baseUrl` alone resolves, a `"*"` pattern, `extends`, `jsconfig.json`,
+bundler and runner alias configuration) resolve through configuration the
+scan does not read, so they stay silent rather than guessed.
 
 Timing is modelled, not executed. `vi.mock` is hoisted above the file's
 imports wherever it is written and reaches every binding of the module in

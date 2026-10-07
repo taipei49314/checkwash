@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: J8: toBe(78.75) -> toBe(Number('78.75')) states the same value
+origin: #226
+=== head: src/total.ts ===
+export const total = () => 78.75;
+export const OTHER = 75;
+export const make = (n: number) => 75 + n;
+=== before: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, OTHER, make } from "./total";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== after: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, OTHER, make } from "./total";
+
+test("total", () => {
+  expect(total()).toBe(Number('78.75'));
+});
+=== expect ===
+[]
