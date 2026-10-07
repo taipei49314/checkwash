@@ -8181,3 +8181,118 @@ engines), as on main, where #226's relabel (D-104) has not landed. Every
 other case keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-117 (2026-10-06): an undeclared `chai` is chai's module (#311)
+
+The JS reader resolves a name no scope declares through a short table of
+runner globals: `expect`, `assert` (Node's), `t`, `test`, `it`, `require`,
+and since #215 (D-115) `should`. `chai` was not in it, so an undeclared
+`chai` was unknown, and so were `chai.expect`, `chai.assert` and an `expect`
+or `assert` bound from them. karma-chai loads chai's browser build, which
+defines `window.chai`, and its adapter sets the `should`, `expect` and
+`assert` globals from it (karma-chai 0.1.0's `adapter.js`, read from the
+published tarball). chai's own suite sets `global.chai` in its bootstrap
+(`test/bootstrap/index.js`) and binds `var expect = chai.expect;` in each
+`describe`. So `expect(x).to.equal(y)` -> `.to.exist` there passed with a
+coverage notice, a deletion passed, and `chai.expect(...)` written directly
+was no candidate at all. #215's twin check found it: the round read chai's
+should-style chains, but not their `expect` twins. Filed as #311.
+
+No ruling was asked: the issue's proposed direction reads the global as
+#215 reads an undeclared `should` (D-115, reading 1), and this entry, in
+the fix PR, is where the maintainer approves it.
+
+**As implemented:**
+- `frontends/javascript/bindings.py`: an undeclared `chai` resolves to
+  chai's module (`Value("chai")`), as an imported or required one does, so
+  `chai.expect`, `chai.assert`, `chai.should()` and `chai.Should()`, and the
+  names bound from them, read as through an imported chai, in the assertion
+  scan and in the coverage inventory.
+
+Readings the direction leaves to the implementation:
+
+1. **Only an undeclared `chai`.** A `chai` the file declares, imports,
+   requires from another path or takes as a parameter keeps its own
+   binding, as a local `expect` does.
+2. **`window.chai` is not read.** karma's test files use the globals the
+   adapter sets, and `window` is no binding the reader follows; it stays a
+   residual of row 111.
+3. **Only chai's own members assert.** Through the global as through an
+   import, `chai.expect` and `chai.assert` are candidates and `chai.use`
+   or `chai.config` are not.
+
+**Tests and fixtures.**
+- **Tests:** 17 in `tests/test_issue311_global_chai.py`. Three mutants of
+  the round's code each fail them: the global not read, or read as
+  chai's `expect` or as its `assert` instead of its module.
+- **Fixtures** (4):
+  - row 111's new pins, each passing on v0.6.0 with zero findings:
+    `js_chai_global_expect_weakened_pos` (K1),
+    `js_chai_global_assert_weakened_pos` (K4) and
+    `js_chai_global_member_expect_pos` (K5);
+  - `js_chai_global_shadowed_by_local_neg`: a `chai` the file declares is
+    not chai's module.
+
+Every existing fixture keeps its expectation, and the chai mutation
+inventory (`tests/data/javascript_chai_mutations.json`, 39 records) keeps
+every verdict. `tools/emit_corpus.py` gives the base's records unchanged
+and the 4 new ones.
+
+**Fingerprints.** No corpus fingerprint moves. The assertions read through
+the global are new findings, and a removed unit that holds one gets a new
+TEST_DISABLED fingerprint, as D-115 notes for should-style; an allowlist
+entry for such a finding needs renewing.
+
+**Cost.** Measured on D-115's four JavaScript histories: every non-merge
+commit of chai's that touches `test/` (427), and the commits of hexo,
+node-fetch and yargs whose JS or TS diff adds or removes a line spelling
+`chai.` (15): 442 commits, all readable. The round's engine was run
+against the base branch's (`c46bba5`). 29 records change, all in chai's
+own history, and 5 verdicts move: blocked goes from 9 to 14, and none
+stops blocking.
+- **One true positive:** chai `f6c4fa3939d9` drops the check that the
+  property a test overwrites is there
+  (`expect(new chai.Assertion()).to.have.property('tea')`, which an
+  earlier test's leftovers made true) and adds the property instead.
+- **Four false positives, each a class of the existing reader.** The base
+  engine blocks each the same way once the file requires chai:
+  - `assert.throws(...)` respelled `assert[throws](...)` in a loop over
+    its aliases, a computed member the reader does not read (`3be31001d1e3`,
+    13 findings; `40dc848842bd`, 12, for `isFrozen`, `isSealed` and
+    `isExtensible`);
+  - a check moved from a test into a `describe`'s `before` hook, which is
+    not the test's (`5d11228cfa42`, 2);
+  - four tests rewritten as twenty-four, where the renamed-test pairing
+    matches four of the new tests with the old ones and the old
+    assertions they do not keep read as removed (`8fa4f7857456`, 8).
+- **The other 24 records keep their verdict.**
+  - Eighteen gain warn or info findings: 2,401 in all, 2,257 of them in
+    one commit. Every one but `f73d026f2863` (two info findings) changes
+    `lib/` too. The big one is chai's own move off the global:
+    `0fc290b5ea98` (Karma to Web Test Runner) replaces `var assert =
+    chai.assert` with `import * as chai from '../index.js'`, a chai
+    another path exports (reading 1). The round reads the base side's
+    2,257 assertions and not the head side's, and reports them removed
+    at warn.
+  - `7f8a268e5206` loses a warn finding: a check respelled through the
+    global now pairs with its new spelling.
+  - In `dd5159407588` (blocked on both), a substitution read through the
+    global adds a high finding.
+  - In four records (`d89a9fe470ad`, `93be4b15d9c3`, `a33ab4818682`,
+    `7bc580910ee3`), TEST_DISABLED findings on removed units take a new
+    fingerprint and nothing else changes.
+- **Equivalence check.** Each of the 442 commits was also judged by the
+  base engine with `var chai = require('chai');` prepended to every
+  changed file under `test/` that declares no `chai` of its own. On all
+  442, that record is the round's on the commit as it is: the round
+  reads chai's own suite as an imported chai is read, and nothing else.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file (D-106), and only such a file is
+  read this way.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases)
+on the round's engine: passed, 0 failures, 1 reported: `i198/T6`, which
+passes on v0.6.0 and blocks here, as D-104 labels it. Every other case
+keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.

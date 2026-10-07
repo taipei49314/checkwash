@@ -1,0 +1,29 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 311
+title: a chai the file declares itself is not chai's module
+origin: issue #311 — the global is read only where no scope declares the name
+=== before: test/billing.spec.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", function () {
+  var chai = { expect: function () { return { to: { equal: function () {}, exist: true } }; } };
+  var expect = chai.expect;
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).to.equal(78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+const { invoiceTotal } = require("../src/billing.js");
+
+describe("billing", function () {
+  var chai = { expect: function () { return { to: { equal: function () {}, exist: true } }; } };
+  var expect = chai.expect;
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).to.exist;
+  });
+});
+=== expect ===
+[]
