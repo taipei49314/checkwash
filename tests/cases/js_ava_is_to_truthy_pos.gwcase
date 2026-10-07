@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 126
+rule: ASSERT_WEAKENED
+issue: 233
+title: AVA t.is -> t.truthy widens the assertion
+origin: issue #233 A3 — v0.6.0 parsed the unit and passed this with zero findings: t.is was no assertion
+=== before: test/billing.js ===
+import test from 'ava';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+test('invoice total', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.is(invoiceTotal(items), 78.75);
+});
+=== after: test/billing.js ===
+import test from 'ava';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+test('invoice total', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.truthy(invoiceTotal(items));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "path": "test/billing.js", "unit": "invoice total"}]
