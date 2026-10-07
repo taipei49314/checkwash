@@ -14,7 +14,7 @@ from __future__ import annotations
 from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir import predicate as P
 from checkwash.ir.assertion_identity import fingerprint_text
-from checkwash.ir.astutil import same_expr
+from checkwash.ir.astutil import asserted_subject, same_expr
 from checkwash.ir.model import IR, Assertion, judged_as_test
 from checkwash.ir import strength as S
 from checkwash.ir.strength import name_of
@@ -40,6 +40,21 @@ def _presence_meets_affirmation(b: Assertion, a: Assertion) -> bool:
         return x.positive and x.predicate not in P.PRESENCE
 
     return (check(b) and affirms(a)) or (check(a) and affirms(b))
+
+
+def _checks_another_subject(path: str, b: Assertion, a: Assertion) -> bool:
+    """Two bare Python `assert`s that record no subject and check different ones (#331).
+
+    The Python frontend records no subject for a bare truthy or `isinstance`
+    assert, nor for a `pytest.approx` comparison, so their `left` is None on
+    both sides and reads as one subject: `assert result.okay` -> `assert not
+    result.exception` was "polarity inverted". What each statement checks is
+    compared instead (`astutil.asserted_subject`).
+    """
+    if b.left is not None or a.left is not None or not path.endswith(".py"):
+        return False
+    old, new = asserted_subject(b.text), asserted_subject(a.text)
+    return old is not None and new is not None and not same_expr(old, new)
 
 
 _JS_SUFFIXES = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
@@ -199,12 +214,15 @@ def detect(ir: IR) -> list[Finding]:
                 # 2026-08-02, httpx fc84f7f / click cf0c36d). A rewrite is
                 # reported as a rewrite; it still blocks without repair
                 # evidence, because MILD_WEAKENING already refuses to excuse a
-                # changed subject.
+                # changed subject. A pair of bare Python `assert`s records no
+                # subject on either side, so what each statement checks
+                # decides it (#331).
                 # Two different predicate keys in one form are a replacement
                 # too: `.not.toBe(true)` -> `assert.equal(x, 75)` proves no
                 # opposite (#198).
                 keys_differ = bool(b.predicate and a.predicate and b.predicate != a.predicate)
                 if b.positive != a.positive and not _presence_meets_affirmation(b, a):
+                    subject_changed = subject_changed or _checks_another_subject(file.path, b, a)
                     if subject_changed:
                         message = (
                             f"{unit.qualname}: assertion replaced — subject and polarity "
