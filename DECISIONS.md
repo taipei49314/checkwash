@@ -6583,3 +6583,85 @@ sweeps' copy):
   values and every finding is byte for byte the same.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-112 (2026-10-06): numpy's and torch's assertion calls are lent as a bare `assert` is (#286)
+
+#222 made numpy's and torch's assertion calls
+(`numpy.testing.assert_allclose`, `assert_array_almost_equal`,
+`assert_almost_equal`, `torch.testing.assert_close`) assertions, read in a
+test unit and in a same-file helper it calls. A fixture the test requests
+and a helper another file defines lent the test their bare `assert`s only
+(A5-x), so the same call there was no assertion: widening its tolerance or
+deleting it passed with zero findings, while `assert np.allclose(...)` in
+the same place blocked. Found during #222's round.
+
+The issue proposed one round with no alternative, and the round takes it:
+`_classified_asserts`, which builds what a fixture and a module helper lend,
+also records the calls the unit's own walk reads
+(`_tolerance_statement_classified`).
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_classified_asserts`: a numpy or torch
+  assertion call is recorded as the unit's walk records it, with the same
+  form, strength, expected value and tolerance, marked `inherited`. Every
+  channel that lends a bare `assert` lends it: a fixture the test requests,
+  in its module or the conftest beside it, an autouse fixture, and a helper
+  another file defines and the test calls (A5-x's import channel).
+- `docs/assertion-coverage.md` says so, where it listed the gap;
+  `docs/defence-design.md`'s A5-x note says what the channels lend.
+
+Readings the issue leaves to the implementation:
+
+1. **The root-module projection channel is unchanged.** It projects a
+   transparent equality helper (`assert actual == expected`, two
+   parameters) onto its caller and nothing else; a tolerance call is no
+   such helper, so a root module's numpy helper still lends nothing there.
+2. **Only the assertion calls.** `np.allclose(...)` and
+   `math.isclose(...)` return a bool, and are read only inside an
+   `assert`, which was already lent.
+
+**Tests and fixtures.**
+- **Tests:** 13 in `tests/test_issue286_lent_tolerance_calls.py`. Two
+  mutants of the round's code each fail them: a fixture's or helper's
+  tolerance call not lent, and every lent call read as trivial.
+- **Fixtures**, row 120's pins, each passing on v0.6.0 with zero findings:
+  `tolerance_call_fixture_widened_pos` (TOLERANCE_LOOSENED),
+  `tolerance_call_fixture_deleted_pos` and
+  `tolerance_call_other_file_helper_dropped_pos` (ASSERT_REMOVED); control
+  `tolerance_call_fixture_unchanged_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's records and the 4 new
+ones.
+
+**Fingerprints.** A unit that now inherits such a call carries it in its
+assertions, so the fingerprint of a whole-unit TEST_DISABLED removal, which
+names the unit's assertions, changes for it, as #222's own calls changed it.
+No fixture or sweep record holds such a unit before this round.
+
+**Cost.** Measured with the round's engine against main's (`4f0955b`) on
+D-102's sets:
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories and of PyWavelets whose test-side Python adds or removes a line
+  naming `isclose`, `allclose`, `assert_array_almost_equal`,
+  `assert_almost_equal` or `assert_close`: 180 commits, 171 readable, as on
+  main. No record changes.
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give main's records, byte for
+  byte.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and 368
+  of pytest's (364 readable) give main's records, byte for byte.
+
+These sweeps reach none of the new channels. In the targeted set, main's
+engine and the round's lend the same numpy and torch calls: 70, in 18 of
+PyWavelets' commits, all through same-file helpers, which #222 already
+read. PyWavelets defines no pytest fixture anywhere in its history. So the
+sweeps measure neither a cost nor a benefit, and the round's fixtures pin
+its readings.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
