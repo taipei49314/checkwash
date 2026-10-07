@@ -45,8 +45,13 @@ diagnostics; the supplement does not claim to analyze that top-level execution.
 Nested test callbacks own their own assertions. Declared or assigned helper
 functions and their default parameter expressions do not donate assertions to
 the surrounding test. Direct inline callback arguments to other calls retain
-the existing lexical coverage, including iterator callbacks; this does not
-prove that an arbitrary callee executes its callback. Vitest's optional second
+the existing lexical coverage, including iterator callbacks, whatever the
+call's receiver: `cases.forEach(cb)`, `[[1, 78.75]].forEach(cb)`,
+`Object.entries(cases).forEach(cb)`, `(cases).forEach(cb)` and
+`cases?.forEach(cb)` alike (#294); this does not prove that an arbitrary
+callee executes its callback. A call result called directly (`f()(cb)`) and an
+optional call (`fn?.(cb)`) are not member calls, and their callbacks stay
+nested functions. Vitest's optional second
 `expect(actual, message)` argument is diagnostic text, not the asserted subject.
 
 Preserving controls cover assertion messages, multiline formatting, equivalent

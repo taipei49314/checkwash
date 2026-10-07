@@ -1,0 +1,41 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a scoped package (@acme/billing) is a dependency, not an alias of the project's source
+origin: #196 188.6 bound: only @/ and ~/ and the tsconfig's own patterns are aliases
+=== head: tsconfig.json ===
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    // the project's own source root
+    "paths": {
+      "@/*": ["src/*"],
+    },
+  },
+}
+=== before: tests/billing.test.ts ===
+import { describe, it, expect } from "vitest";
+import { invoiceTotal } from "@acme/billing";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.ts ===
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@acme/billing", () => ({
+  invoiceTotal: () => 78.75,
+}));
+
+import { invoiceTotal } from "@acme/billing";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[]
