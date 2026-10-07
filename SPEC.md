@@ -132,7 +132,10 @@ between the two is a laundering route (all confirmed by reproduction):
   `.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`, `setup.cfg` and
   `pyproject.toml` are test-runner config: *introducing* a
   narrowed `python_files`/`testpaths`, or a filtering `addopts`, is a weakened
-  test command. Moving one between files is not — see §5's two token families
+  test command. Moving one between files is not — see §5's two token families.
+  A value written over several lines is read to its end: a TOML array to its
+  closing bracket, and an unquoted INI value over every indented line after it
+  (#324)
 - `conftest.py` is analysed for suite-level collection controls
   (`pytest_collection_modifyitems`, `pytest_ignore_collect`,
   `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`). A
