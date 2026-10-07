@@ -112,6 +112,11 @@ For JSON/SARIF output and more examples, see the [usage guide](https://github.co
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
+A git submodule's content belongs to another repository and is not read. When
+a judgement needs a fact from inside one, an import that resolves into it or a
+pytest collection that can reach it, `check` exits 2 and names the
+submodule's path; every other change is judged as usual.
+
 Legitimate refactors can be flagged. The frozen historical corpus records
 **22 blocks out of 60 (36.7%)**. A separate pre-release source replay records
 4/60 blocks, including 2/57 strictly qualified cases; three existing fixture
@@ -244,5 +249,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 15728 tests in the current source tree.
+Alpha pre-release. 22 detectors, 15790 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

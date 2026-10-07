@@ -12,6 +12,7 @@ from pathlib import Path
 import subprocess
 
 from checkwash.change import EngineError
+from checkwash.opaque import opaque_error, opaque_owner
 
 MAX_SOURCE_BYTES = 1_000_000
 MAX_SEARCH_HITS = 64
@@ -51,6 +52,8 @@ class GitSnapshot:
         self.revision = revision
         self._resolved = None
         self._tree_entries = None
+        self._opaque = None
+        self._owners = {}
 
     def list_paths(self):
         """Complete revision inventory, including empty modules and controls.
@@ -59,10 +62,13 @@ class GitSnapshot:
         change import resolution, and pytest/runner settings are not Python.
         Selected nonregular files are rejected by read_many, never read as
         the bytes of a symlink target or silently omitted from this inventory.
+        A submodule is listed as its path with a trailing slash, a directory
+        whose content is unknown (`split_inventory`, #335).
         """
         if self._tree_entries is None:
             raw = _run(self.repo, ["ls-tree", "-r", "-l", "-z", self._rev()])
             entries = {}
+            opaque = set()
             for record in raw.split(b"\0"):
                 if not record:
                     continue
@@ -71,19 +77,21 @@ class GitSnapshot:
                 if not separator or len(fields) != 4:
                     raise EngineError("strict snapshot inventory returned an invalid tree record")
                 mode, kind, oid, size = fields
-                if kind == b"commit":
-                    raise EngineError("strict snapshot inventory cannot inspect a submodule")
-                if kind != b"blob" or not size.isdigit():
-                    raise EngineError("strict snapshot inventory returned an invalid blob")
                 try:
                     path = raw_path.decode("utf-8")
                 except UnicodeError as exc:
                     raise EngineError("strict snapshot inventory has an undecodable path") from exc
+                if kind == b"commit":
+                    opaque.add(path)
+                    continue
+                if kind != b"blob" or not size.isdigit():
+                    raise EngineError("strict snapshot inventory returned an invalid blob")
                 entries[path] = (mode, oid, int(size))
-                if len(entries) > MAX_INVENTORY_PATHS:
+                if len(entries) + len(opaque) > MAX_INVENTORY_PATHS:
                     raise EngineError("strict snapshot inventory exceeds the path limit")
             self._tree_entries = entries
-        return sorted(self._tree_entries)
+            self._opaque = tuple(sorted(opaque))
+        return sorted([*self._tree_entries, *(directory + "/" for directory in self._opaque)])
 
     def read_many(self, paths):
         """Read selected regular blobs in bounded batches from one frozen tree."""
@@ -95,6 +103,9 @@ class GitSnapshot:
         present = []
         size_total = 0
         for path in selected:
+            owner = opaque_owner(path, self._opaque)
+            if owner is not None:
+                raise opaque_error(owner, f"{path} lies inside it")
             entry = self._tree_entries.get(path)
             if entry is None:
                 result[path] = None
@@ -126,6 +137,33 @@ class GitSnapshot:
                 raise EngineError("strict snapshot batch returned trailing bytes")
         return result
 
+    def _owner(self, path):
+        """The submodule a path lies inside, or None (#335).
+
+        A path inside a submodule reads as missing, as an absent one does. The
+        inventory, once listed, knows every submodule; until then each parent
+        directory is asked once, with one tree listing of its ancestors.
+        """
+        if self._opaque is not None:
+            return opaque_owner(path, self._opaque)
+        parent = path.rpartition("/")[0]
+        if not parent:
+            return None
+        if parent not in self._owners:
+            parts = parent.split("/")
+            ancestors = ["/".join(parts[:end]) for end in range(1, len(parts) + 1)]
+            raw = _run(self.repo, ["ls-tree", "-d", "-z", self._rev(), "--", *ancestors])
+            owner = None
+            for record in raw.split(b"\0"):
+                metadata, separator, name = record.partition(b"\t")
+                fields = metadata.split()
+                named = name.decode("utf-8", errors="replace")
+                if separator and len(fields) == 3 and fields[1] == b"commit" and named in ancestors:
+                    owner = named
+                    break
+            self._owners[parent] = owner
+        return self._owners[parent]
+
     def _rev(self):
         if self._resolved is None:
             self._resolved = _run(
@@ -139,6 +177,9 @@ class GitSnapshot:
         spec = f"{self._rev()}:{path}".encode("utf-8")
         checked = _run(self.repo, ["cat-file", "--batch-check"], data=spec + b"\n")
         if checked == spec + b" missing\n":
+            owner = self._owner(path)
+            if owner is not None:
+                raise opaque_error(owner, f"{path} lies inside it")
             return None
         header = checked.rstrip(b"\n")
         parts = header.split()
@@ -171,7 +212,10 @@ class GitSnapshot:
                     raise EngineError("strict snapshot inventory returned an invalid tree record")
                 mode, kind, _oid, size = fields
                 if kind == b"commit":
-                    raise EngineError("strict snapshot inventory cannot inspect a submodule")
+                    # The startup-context proof needs every Python source;
+                    # a submodule's are unknown (#335).
+                    raise opaque_error(path.decode("utf-8", errors="replace"),
+                                       "the Python inventory needs its sources")
                 if not path.endswith(b".py"):
                     continue
                 if mode not in {b"100644", b"100755"} or kind != b"blob" or not size.isdigit():

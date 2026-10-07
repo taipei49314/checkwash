@@ -32,6 +32,7 @@ from checkwash.change import EngineError, FileChange
 from checkwash.ir.astutil import stable_dump
 from checkwash.config import Config
 from checkwash.frontends.python.frontend import _static_truth, parse_python
+from checkwash.opaque import opaque_error, split_inventory
 from checkwash.roles import _is_runner_script, _runner_shape, _runs_tests, collectable
 
 
@@ -1240,9 +1241,19 @@ def _join(root: str, rel: str) -> str:
     return f"{root.rstrip('/')}/{rel}" if root else rel
 
 
-def _directory_exists(directory: str, paths: set[str]) -> bool:
+def _directory_exists(directory: str, paths: set[str], opaque: Sequence[str] = ()) -> bool:
     prefix = directory.rstrip("/") + "/"
-    return any(path.startswith(prefix) for path in paths)
+    return any(path.startswith(prefix) for path in paths) or any(
+        item.startswith(prefix) for item in opaque
+    )
+
+
+def _opaque_location(path: str, opaque: Sequence[str]) -> str | None:
+    """The submodule a search location is, or lies inside, or None (#335)."""
+    for directory in opaque:
+        if path == directory or path.startswith(directory + "/"):
+            return directory
+    return None
 
 
 def _extends_package_path(data: bytes | None) -> bool:
@@ -1328,6 +1339,7 @@ def _selected_provider(
     roots: Sequence[str],
     paths: Iterable[str],
     contents: Mapping[str, bytes | None] | None = None,
+    opaque: Sequence[str] = (),
 ) -> tuple[str, str] | None:
     path_set = set(paths)
     ordered = list(_dedupe_roots(roots))
@@ -1342,6 +1354,14 @@ def _selected_provider(
         candidates: list[tuple[str, str, str]] = []
         for origin, directory in locations:
             child = _join(directory, part)
+            # A location inside a submodule may hold the package; it decides
+            # the import unless a regular package earlier on the path does
+            # (#335).
+            owner = _opaque_location(child, opaque)
+            if owner is not None:
+                if not candidates:
+                    raise opaque_error(owner, f"the import of {module} can resolve inside it")
+                continue
             init = f"{child}/__init__.py"
             if init in path_set:
                 candidates.append((origin, child, init))
@@ -1351,14 +1371,19 @@ def _selected_provider(
             if _extends_package_path((contents or {}).get(init)):
                 for other_origin, directory in locations:
                     other = _join(directory, part)
-                    if other != child and _directory_exists(other, path_set):
+                    # A location inside a submodule joins the package's path;
+                    # the walk fails there only if it gets that far (#335).
+                    if other != child and (
+                        _directory_exists(other, path_set, opaque)
+                        or _opaque_location(other, opaque) is not None
+                    ):
                         next_locations.append((other_origin, other))
             locations = next_locations
         else:
             locations = [
                 (origin, child)
                 for origin, directory in locations
-                if _directory_exists((child := _join(directory, part)), path_set)
+                if _directory_exists((child := _join(directory, part)), path_set, opaque)
             ]
         if not locations:
             return None
@@ -1367,6 +1392,11 @@ def _selected_provider(
     for origin, directory in locations:
         file_path = _join(directory, f"{leaf}.py")
         package_path = _join(directory, f"{leaf}/__init__.py")
+        owner = _opaque_location(file_path, opaque) or _opaque_location(
+            _join(directory, leaf), opaque
+        )
+        if owner is not None:
+            raise opaque_error(owner, f"the import of {module} can resolve inside it")
         if package_path in path_set:
             return origin, package_path
         if file_path in path_set:
@@ -1439,12 +1469,13 @@ def _changed_provider(
         tuple[tuple[str, str], ...] | None,
     ]
     | None = None,
+    opaque: Sequence[str] = (),
 ) -> tuple[str, str] | None:
     """The one family predicate: did the imported module change provider?"""
 
     base_contents = contents if before_contents is None else before_contents
-    before = _selected_provider(module, plan.before_roots, before_paths, base_contents)
-    after = _selected_provider(module, plan.after_roots, after_paths, contents)
+    before = _selected_provider(module, plan.before_roots, before_paths, base_contents, opaque)
+    after = _selected_provider(module, plan.after_roots, after_paths, contents, opaque)
     if before is None or after is None:
         return None
     keyer = provider_keyer or _provider_execution_key
@@ -2241,8 +2272,11 @@ def find_runtime_subject_shadows(
         raise EngineError("runtime-shadow inventory returned invalid paths")
     if len(raw_inventory) > 200_000:
         raise EngineError("runtime-shadow inventory exceeds the path limit")
+    # A submodule is listed as a directory whose content is unknown (#335).
+    raw_inventory, raw_opaque = split_inventory(raw_inventory)
     inventory = [_normalized_head_search_path(path) for path in raw_inventory]
-    if any(path is None for path in inventory):
+    opaque = tuple(_normalized_head_search_path(path) for path in raw_opaque)
+    if any(path is None for path in (*inventory, *opaque)):
         raise EngineError("runtime-shadow inventory returned an unsafe path")
     listed = [
         path
@@ -2402,11 +2436,17 @@ def find_runtime_subject_shadows(
         for module in _path_to_modules(path) & indexed_modules:
             provider_index.setdefault(module, set()).add(path)
     # A changed provider necessarily has two different leaf locations across
-    # the two sides. Discard ordinary new modules before reading any source.
+    # the two sides. Discard ordinary new modules before reading any source,
+    # but not one whose other provider may lie inside a submodule (#335): its
+    # import walk fails closed there.
     modules = {
         module
         for module in modules
         if len(provider_index.get(module, ())) > 1
+        or any(
+            _opaque_location(_join(root, module.replace(".", "/")), opaque)
+            for root in changed_roots | {""}
+        )
     }
     if not modules:
         return []
@@ -2438,6 +2478,20 @@ def find_runtime_subject_shadows(
     if presearched is not None and not presearched:
         return []
 
+    # A test inside a submodule pytest can collect is unknown, and it may
+    # import a changed provider (#335).
+    if opaque and head_batch_reader is not None:
+        from checkwash.collection_inventory import collection_sources, opaque_reached
+
+        sources = collection_sources(inventory)
+        head = head_batch_reader(sources) if sources else {}
+        if not isinstance(head, Mapping):
+            raise EngineError("runtime-shadow snapshot returned invalid source bytes")
+        reached = opaque_reached(
+            opaque, {path: head[path] for path in sources if isinstance(head.get(path), bytes)}, changes
+        )
+        if reached is not None:
+            raise opaque_error(reached, "pytest's collection can reach it")
     # A test module is one pytest collects, whatever role its path holds:
     # `tests/golden/test_x.py` imports its subject like any other (#219).
     eligible_tests = {
@@ -2824,6 +2878,7 @@ def find_runtime_subject_shadows(
                     semantic_paths=staged_candidate_paths,
                     allow_equivalent=include_equivalent,
                     provider_keyer=analysis.provider_execution_key,
+                    opaque=opaque,
                 )
                 if changed is None:
                     continue
@@ -2832,10 +2887,10 @@ def find_runtime_subject_shadows(
                 # code under test, rather than a test choosing between two
                 # fixtures or two vendored third-party copies.
                 before_selected = _selected_provider(
-                    module, scoped.before_roots, module_paths[module][0], before_contents
+                    module, scoped.before_roots, module_paths[module][0], before_contents, opaque
                 )
                 after_selected = _selected_provider(
-                    module, scoped.after_roots, module_paths[module][1], contents
+                    module, scoped.after_roots, module_paths[module][1], contents, opaque
                 )
                 if before_selected is None or after_selected is None:
                     continue
