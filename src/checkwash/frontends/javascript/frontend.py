@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -605,6 +605,25 @@ def _chai_assertion(
     return assertion
 
 
+_WORD_CHARACTER = re.compile(r"\w")
+
+
+def follows_new(masked: str, previous: int) -> bool:
+    """Does the text up to `previous` end in the word `new`?
+
+    `re.search(r"\\bnew$", masked[:previous + 1])`, as each call scan asks
+    it, without copying or scanning the text before (#235): `$` also
+    matches before a final newline.
+    """
+    end = previous + 1
+    for stop in ((end, end - 1) if end >= 1 and masked[end - 1] == "\n" else (end,)):
+        start = stop - 3
+        if (start >= 0 and masked.startswith("new", start)
+                and (start == 0 or not _WORD_CHARACTER.match(masked, start - 1))):
+            return True
+    return False
+
+
 def _recover_block_end(masked: str, opening: int) -> int | None:
     """Recover a callback after a malformed statement, without crossing it.
 
@@ -638,7 +657,7 @@ def _callback_body(bindings: Bindings, span: tuple[int, int], *,
     This bounded structural reader uses the binding scanner's balanced tokens.
     Named callbacks, generators and computed test factories remain unknown.
     """
-    starts = [token[1] for token in bindings.tokens]
+    starts = bindings.token_starts
     first, last = bisect_left(starts, span[0]), bisect_left(starts, span[1])
     while bindings.token(first) == "(" and bindings.pairs.get(first) == last - 1:
         first, last = first + 1, last - 1
@@ -919,8 +938,7 @@ def _test_body(text: str, code: bytearray, bindings: Bindings,
         # calls; those must not hide a later valid assertion in the same body.
         if declaration.name_end is None:
             return None
-        starts = [token[1] for token in bindings.tokens]
-        cursor = bisect_left(starts, declaration.name_end)
+        cursor = bisect_left(bindings.token_starts, declaration.name_end)
         if bindings.token(cursor) != ",":
             return None
         cursor += 1
@@ -975,7 +993,7 @@ def _callback_receivers(bindings: Bindings, span: tuple[int, int]) -> frozenset[
     `function` callback, Mocha's `this`. A destructured context is not
     followed.
     """
-    starts = [token[1] for token in bindings.tokens]
+    starts = bindings.token_starts
     first, last = bisect_left(starts, span[0]), bisect_left(starts, span[1])
     while bindings.token(first) == "(" and bindings.pairs.get(first) == last - 1:
         first, last = first + 1, last - 1
@@ -1462,7 +1480,7 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
             continue
         if method is not None and method not in (_CHAI_ASSERT if is_chai else _ASSERT_STRENGTH):
             continue
-        if re.search(r"\bnew$", bindings.masked[:previous + 1]):
+        if follows_new(bindings.masked, previous):
             continue
         if method is None:
             # Function declarations (including generators and TS return
@@ -1662,7 +1680,7 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
             previous -= 1
         if previous >= 0 and text[previous] in ".#":
             continue
-        if re.search(r"\bnew$", masked[:previous + 1]):
+        if follows_new(masked, previous):
             continue
         callee = text[position:match.end() - 1].strip()
         spelling = _CANDIDATE_INDEX.sub(lambda index: "." + index.group("word"), callee)
@@ -1767,16 +1785,70 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
         innermost = innermost_focus is not None and innermost_focus()
         stops = _focus_stops(text, code, bindings, declarations, innermost)
     inline_body_starts: set[int] = set()
-    for call in CALL.finditer(bindings.masked):
-        if call.group("callee") in {"if", "for", "while", "switch", "catch", "with"}:
-            continue
-        arguments = _call_argument_spans(text, code, call.end() - 1, len(text))
+    openings = {call.end() - 1 for call in CALL.finditer(bindings.masked)
+                if call.group("callee") not in {"if", "for", "while", "switch", "catch", "with"}}
+    # A member call passes its callbacks as directly whatever its receiver:
+    # `[[1, 78.75]].forEach(...)`, `Object.entries(cases).forEach(...)`,
+    # `(cases).forEach(...)` and `cases?.forEach(...)` as `cases.forEach(...)`
+    # (#294). `CALL` reads only a dotted name.
+    openings.update(start for index, (token, start, _end) in enumerate(bindings.tokens)
+                    if token == "(" and bindings.token(index - 2) in {".", "?."}
+                    and re.fullmatch(NAME, bindings.token(index - 1)))
+    for opening in sorted(openings):
+        arguments = _call_argument_spans(text, code, opening, len(text))
         if arguments is None:
             continue
         for argument in arguments[0]:
             callback = _callback_body(bindings, argument)
             if callback is not None and callback[0] not in test_body_starts:
                 inline_body_starts.add(callback[0])
+    # The file's nested functions, read once and kept by each unit whose body
+    # holds them (#235). Child test callbacks are scanned as their own units;
+    # declared helpers remain visible coverage gaps. Direct inline call
+    # arguments retain the established lexical callback coverage (such as
+    # forEach); this does not prove an arbitrary callee invokes them.
+    functions = sorted((scope.start, scope.end) for scope in bindings.scopes
+                       if scope.function and scope.start not in inline_body_starts)
+    # Default parameter expressions belong to invocation of the nested
+    # function too, even though they precede its body scope.
+    parameter_positions = {bindings.tokens[index][1] for index in bindings.parameter_tokens}
+    # A TypeScript return annotation can keep the binding scanner from
+    # recognizing an arrow's parameter scope. Its body is still a nested
+    # function, and cannot donate assertions to the surrounding test.
+    arrows: list[tuple[int, int]] = []
+    for index, (token, _, _) in enumerate(bindings.tokens):
+        if token != "=>" or index + 1 >= len(bindings.tokens):
+            continue
+        body_index = index + 1
+        if bindings.token(body_index) == "{" and body_index in bindings.pairs:
+            first = bindings.tokens[body_index][2]
+            last = bindings.tokens[bindings.pairs[body_index]][1]
+        else:
+            first = bindings.tokens[body_index][1]
+            last_index = bindings._expression_end(body_index)
+            last = bindings.tokens[last_index][1] if last_index < len(bindings.tokens) else len(text)
+        inline_body = first in inline_body_starts
+        parameter_end = index - 1
+        if bindings.token(parameter_end) != ")":
+            # The same simple return annotation supported on test
+            # callbacks may separate an arrow from its parameter list.
+            while parameter_end >= 0 and (
+                re.fullmatch(NAME, bindings.token(parameter_end))
+                or bindings.token(parameter_end) in {"<", ">", "[", "]", ",", "|", "."}
+            ):
+                parameter_end -= 1
+            if bindings.token(parameter_end) == ":":
+                parameter_end -= 1
+        if bindings.token(parameter_end) == ")" and parameter_end in bindings.pairs:
+            parameter_start = bindings.pairs[parameter_end]
+            parameter_positions.update(bindings.tokens[cursor][1]
+                                       for cursor in range(parameter_start + 1, parameter_end))
+            first = bindings.tokens[parameter_start][1]
+        if not inline_body:
+            arrows.append((first, last))
+    arrows.sort()
+    function_starts = [first for first, _last in functions]
+    arrow_starts = [first for first, _last in arrows]
     units: list[ParsedUnit] = []
     for declaration in scanned:
         name = declaration.name
@@ -1790,51 +1862,9 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             start, end, unit_end, _ = callback
         body = text[declaration.start:unit_end]
         # Assertions inside another function are not this callback's direct
-        # assertions. Child test callbacks are scanned as their own units;
-        # declared helpers remain visible coverage gaps. Direct inline call
-        # arguments retain the established lexical callback coverage (such as
-        # forEach); this does not prove an arbitrary callee invokes them.
-        nested = [(scope.start, scope.end) for scope in bindings.scopes
-                  if scope.function and start < scope.start < end
-                  and scope.start not in inline_body_starts]
-        # Default parameter expressions belong to invocation of the nested
-        # function too, even though they precede its body scope.
-        parameter_positions = {bindings.tokens[index][1] for index in bindings.parameter_tokens}
-        # A TypeScript return annotation can keep the binding scanner from
-        # recognizing an arrow's parameter scope. Its body is still a nested
-        # function, and cannot donate assertions to the surrounding test.
-        for index, (token, _, _) in enumerate(bindings.tokens):
-            if token != "=>" or index + 1 >= len(bindings.tokens):
-                continue
-            body_index = index + 1
-            if bindings.token(body_index) == "{" and body_index in bindings.pairs:
-                first = bindings.tokens[body_index][2]
-                last = bindings.tokens[bindings.pairs[body_index]][1]
-            else:
-                first = bindings.tokens[body_index][1]
-                last_index = bindings._expression_end(body_index)
-                last = bindings.tokens[last_index][1] if last_index < len(bindings.tokens) else len(text)
-            inline_body = first in inline_body_starts
-            parameter_end = index - 1
-            if bindings.token(parameter_end) != ")":
-                # The same simple return annotation supported on test
-                # callbacks may separate an arrow from its parameter list.
-                while parameter_end >= 0 and (
-                    re.fullmatch(NAME, bindings.token(parameter_end))
-                    or bindings.token(parameter_end) in {"<", ">", "[", "]", ",", "|", "."}
-                ):
-                    parameter_end -= 1
-                if bindings.token(parameter_end) == ":":
-                    parameter_end -= 1
-            if bindings.token(parameter_end) == ")" and parameter_end in bindings.pairs:
-                parameter_start = bindings.pairs[parameter_end]
-                parameter_positions.update(bindings.tokens[cursor][1]
-                                           for cursor in range(parameter_start + 1, parameter_end))
-                first = bindings.tokens[parameter_start][1]
-            if inline_body:
-                continue
-            if start < first < end:
-                nested.append((first, last))
+        # assertions: the file's nested functions inside this callback's body.
+        nested = (functions[bisect_right(function_starts, start):bisect_left(function_starts, end)]
+                  + arrows[bisect_right(arrow_starts, start):bisect_left(arrow_starts, end)])
 
         def owned(position: int) -> bool:
             return (position not in parameter_positions
