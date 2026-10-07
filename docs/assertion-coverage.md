@@ -280,7 +280,10 @@ torch's omitted pair, cannot be read; a known tolerance replaced on the same
 subject by one that cannot be read, such as
 `torch.testing.assert_close(a, b, rtol=1e-5, atol=1e-8)` ->
 `torch.testing.assert_close(a, b)`, is an unverifiable replacement
-(`ASSERT_WEAKENED`), as in JavaScript.
+(`ASSERT_WEAKENED`), as in JavaScript. numpy's and torch's assertion calls
+are lent to the test as a bare `assert` is: by a fixture it requests, its own
+or a conftest's, by an autouse fixture, and by a helper another file defines
+([#286](https://github.com/taipei49314/checkwash/issues/286)).
 
 Not read: a negated call (`assert not math.isclose(...)`, `assertFalse(...)`),
 which passes when the values are far apart, so its tolerance orders the other
@@ -289,10 +292,8 @@ way and is not recorded, as in JavaScript (#284 does the same for
 significant digits, `assert_array_less`, `assert_array_max_ulp`, torch's
 deprecated `assert_allclose`); a predicate inside a comparison or a boolean
 operator (`assert math.isclose(a, b) == True`,
-`assert isclose(a, b) and ok`); a name bound to numpy by anything but an
-import or `pytest.importorskip`; and an assertion call in a fixture or in a
-helper another file defines, which lend the test their bare `assert`s only
-([#286](https://github.com/taipei49314/checkwash/issues/286)). A call inside
+`assert isclose(a, b) and ok`); and a name bound to numpy by anything but an
+import or `pytest.importorskip`. A call inside
 `pytest.raises(AssertionError)` is read as positive, as unittest's assertion
 methods are. A `decimal` rewritten into `assert_allclose`'s `rtol` and `atol`,
 the migration numpy's documentation recommends, is a pair of several
