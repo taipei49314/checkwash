@@ -6861,3 +6861,107 @@ No callee name is added or removed, and nothing else reads these calls.
 - **Not measured:** the JS false-positive cost, which waits on #212.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-123 (2026-10-07): a git submodule is a directory whose content is unknown (#335)
+
+In range mode, every pass that read the path inventory raised "strict
+snapshot inventory cannot inspect a submodule". A repository whose tree
+holds a gitlink got an engine error (exit 2) for nearly any change to a
+Python test or to pytest's settings: a rewritten expected value was not
+blocked, and an added test was not passed. Found during #324's sweep
+(aiohttp vendors `vendor/http-parser`, later `vendor/llhttp`; flask held
+`docs/_themes`). The owner adopted the issue's proposed ruling on
+2026-10-07: a submodule is a directory whose content is unknown, a pass
+that needs a fact from inside one fails closed naming its path, and every
+other pass proceeds over the rest of the tree.
+
+**As implemented:**
+- **The inventory.** `GitSnapshot.list_paths` lists a gitlink as its path
+  with a trailing slash (`vendor/lib/`), and `split_inventory` sets it
+  apart. A consumer that does not split it reads it as an unsafe path and
+  fails, as every inventory read failed before. A read inside a submodule
+  raises "strict snapshot cannot inspect the submodule vendor/lib:
+  vendor/lib/calc.py lies inside it".
+- **Imports.** The runtime-provider pass's import walk fails closed where
+  a location at or under a submodule could decide the import: ahead of the
+  first regular package on the path, or on a package path that
+  `pkgutil.extend_path` extends, once the walk gets that far.
+- **Collection.** `opaque_reached` reads, on each side of the diff, whether
+  a pytest run could collect from a submodule. Four passes ask before they
+  rely on the tree's tests: the collection-inventory comparison, the
+  runtime-provider pass, the stand-in installation pass (for a submodule
+  beneath a changed conftest) and the root assertion-helper importer
+  search.
+- **Unchanged:** the empty-needle search still rejects a tree with a
+  submodule, because the startup-context proof needs every Python source;
+  that proof stays withheld there, as before.
+
+**Readings flagged for approval:**
+1. **What reaches.** The runs are the runner files' pytest commands on
+   each side, `tox.ini`'s included, or the bare `pytest` a tree without one
+   implies. A run reaches a submodule when a path argument names it, a path
+   inside it or a directory above it; a run without one collects from the
+   root config's `testpaths`, else from the root, into every directory no
+   `norecursedirs` pattern stops. A setting read two ways counts both ways.
+   An undecodable config or a run's own `-c` config reaches every
+   submodule, and a runner file whose pytest command does not parse is a
+   run without path arguments. A path argument that expands a variable
+   (`$1`, `{posargs}`) names no path, as the ruling's "a path argument
+   naming it" reads. Not read: `-o` overrides, `addopts` path arguments,
+   and `--ignore`, which can only keep a run out. An option's value the
+   parser reads as a path argument (`pytest -n 4`) is #343.
+2. **A pointer move.** A diff that moves a submodule's pointer changes code
+   checkwash does not read, and is judged as any such change: it passes.
+3. **The head's inventory.** The inventory is the head side's. A submodule
+   only the base holds is not listed, so a diff that removes one is not
+   checked for what a collection reached in it.
+4. **Worktree mode reads what is checked out.** A checked-out submodule's
+   files are read as part of the tree, as before.
+5. **A test of a submodule's code.** A test that imports from a submodule
+   is judged as usual where no pass needs a fact from inside it: its own
+   oracle is compared. A pass that needs one, such as an expected value
+   defined there or a stand-in installed on a module object from there,
+   fails closed.
+
+**Measured cost**, with the round's engine against `main` at `5f5ec46`
+(the same engine bytes as the sweeps' copies):
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable) and
+  **D-088's sets** (895 commits of ten full histories; 368 of pytest's,
+  364 readable): every record is `main`'s, byte for byte, but those of
+  D-088's 28 flask commits whose tree holds `docs/_themes`. Each exited 2
+  on `main`; 11 now block, 14 pass and 3 exit 2, naming the submodule.
+  The ten histories' readable commits go from 855 to 880.
+- **The config commits that hold a submodule:** of the 2,849 commits that
+  touch a pytest config in 13 histories (#324's list), flask's 45 and
+  aiohttp's 142 whose tree holds one, with D-088's 28 for flask (72
+  commits, one in both):
+  - flask: on `main` 49 exited 2 and 23 passed; now 18 block, 48 pass
+    and 6 exit 2;
+  - aiohttp: on `main` 76 exited 2 and 66 passed; now 12 block, 123 pass
+    and 7 exit 2.
+- **Against the same engine with the gitlinks dropped from the
+  inventory** (the tree read as if it held none), each of those 214
+  records is the same, byte for byte, but the 7 where a run reaches a
+  submodule, which exit 2 naming it:
+  - flask's 6 reach `docs/_themes` from the root. Four (2012 to 2014)
+    have no pytest config, and a runner file whose test command has no
+    path argument: a bare `py.test`, or `python run-tests.py`, which
+    checkwash does not parse as a pytest run. In two (2016) the
+    `norecursedirs = ... docs` that would keep it out sits in a
+    `[pytest]` section of `setup.cfg`, which checkwash, like current
+    pytest, does not read;
+  - aiohttp's `3e2fe7937e` adds a Makefile run with its own config,
+    `pytest -c pytest.ci.ini`.
+  aiohttp's 6 other exits are the same with the gitlinks dropped: 5 hit
+  the stand-in node limit (#345) and 1 a symlinked nested config (#346).
+- **So each new block is the engine's verdict on the same commit with
+  the gitlinks dropped.** The 30 (flask 18, aiohttp 12), from 2012 to
+  2026, are test refactors, test-config edits and workflow edits; their
+  high findings are TEST_DISABLED (13 commits), CI_WORKFLOW_TOUCHED (8),
+  ASSERT_REMOVED (4), EXPECTED_VALUE_CHANGED (3),
+  EXPECTATION_DEFINITION_CHANGED (2), and ASSERT_WEAKENED,
+  CONFTEST_PATCHES_PROD and SUBJECT_NORMALIZED (1 each).
+- **The corpus is byte for byte the same**: no fixture holds a gitlink.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
