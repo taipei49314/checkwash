@@ -45,6 +45,8 @@ class Value:
     # node:assert's strict mode (`node:assert/strict`, `assert.strict`), whose
     # equal and deepEqual are the strict comparisons (#198 Q3).
     strict: bool = False
+    # A method of chai's `should.not` object, which asserts the negation (#215).
+    negated: bool = False
 
 
 UNKNOWN = Value("unknown")
@@ -156,6 +158,15 @@ class Bindings:
             return Value("chai_" + name)
         if value.kind == "chai_assert":
             return Value("chai_assert_method", name)
+        # chai's should interface (#215): `chai.should()` (or its alias
+        # `chai.Should()`) installs the `.should` getter and returns the
+        # object whose `equal`, `exist` and `not.*` take the subject first.
+        if value.kind == "chai" and name in {"should", "Should"}:
+            return Value("chai_should")
+        if value.kind == "chai_should":
+            return Value("chai_should_not") if name == "not" else Value("chai_should_method", name)
+        if value.kind == "chai_should_not":
+            return Value("chai_should_method", name, negated=True)
         if value.kind == "node_test" and name in {"test", "it"}:
             return Value("runner")
         if value.kind == "context" and name == "assert":
@@ -840,8 +851,11 @@ class Bindings:
             if parent is None:
                 break
             scope = parent
+        # An undeclared `should` is the global `chai/register-should` sets to
+        # `chai.should()`'s object (#215).
         return {"assert": Value("node"), "expect": Value("expect"), "t": Value("context"),
-                "test": Value("runner"), "it": Value("runner"), "require": Value("require")}.get(name, UNKNOWN)
+                "test": Value("runner"), "it": Value("runner"), "require": Value("require"),
+                "should": Value("chai_should")}.get(name, UNKNOWN)
 
     def _value(self, expression: tuple[str, ...], position: int, seen: frozenset[tuple[int, str]]) -> Value:
         if not expression:
@@ -865,6 +879,8 @@ class Bindings:
         while len(rest) >= 2 and rest[0] == ".":
             value = self.member(value, rest[1])
             rest = rest[2:]
+        if value.kind == "chai_should" and rest == ("(", ")"):
+            return value  # `chai.should()` returns the should object
         return UNKNOWN if rest else value
 
     def callee(self, spelling: str, position: int) -> Value:
@@ -1048,6 +1064,10 @@ class Bindings:
             return None
         if value.kind == "jest_globals" and not member("expect"):
             return None
+        # A call on chai's should object asserts; calling `should()` itself
+        # installs the getter (#215).
+        if value.kind in {"chai_should", "chai_should_not"}:
+            return "chai" if re.sub(r"\s+", "", spelling) != root else None
         if value.kind in {"node", "node_method", "node_namespace", "node_context", "context"}:
             return "Node"
         if (value.kind in {"expect", "chai_expect", "jest_expect"}

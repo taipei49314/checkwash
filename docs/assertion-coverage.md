@@ -362,18 +362,55 @@ takes an existing rung; the strength lattice is unchanged.
 | `above`/`below`/`least`/`most` and their aliases; `assert.isAbove`/`isAtLeast`/`isBelow`/`isAtMost` | `compare_ord`, BOUND | the bound operand |
 | `within` | `compare_ord`, BOUND | none |
 | `lengthOf`/`length(n)`; `assert.lengthOf` | `type_shape`, TYPE_SHAPE | none |
+| `property(name)`, with `own`/`nested`, `ownProperty`/`haveOwnProperty`; `assert.property`/`ownProperty`/`nestedProperty` | `type_shape`, TYPE_SHAPE, on the property | none |
+| `property(name, value)`, with `own`/`nested`; `assert.propertyVal`/`ownPropertyVal`/`nestedPropertyVal` | `compare_eq`, EXACT_VALUE, on the property | the value |
+| `deep.property(name, value)`; `assert.deepPropertyVal`/`deepOwnPropertyVal`/`deepNestedPropertyVal` | `compare_eq`, EXACT_STRUCT, on the property | the value |
+
+A property assertion is an assertion on the property it names
+([#215](https://github.com/taipei49314/checkwash/issues/215)), as chai makes
+it the subject of the rest of the chain:
+`expect(order).to.have.property("total", 78.75)`,
+`.property("total").that.equals(78.75)` and
+`assert.propertyVal(order, "total", 78.75)` all compare `order.total` with
+78.75, so respelling one as another, or as
+`expect(order.total).to.equal(78.75)`, reports nothing, while dropping or
+rewriting the value is judged as for `equal`. A literal name reads as
+`order.total` (`order["unit price"]` when it is not an identifier), a computed
+one as `order[key]`, and a `nested` path as the member chain it spells; a
+nested path that is not a literal is not followed. As in chai, `deep`,
+`nested` and `own` stay set after the property, so
+`.nested.property("a.b").that.has.property("c.d", 1)` compares `order.a.b.c.d`.
+Without a value, `.property(name)` asserts only that the key is there: a shape
+check on the TYPE_SHAPE rung, so `.property("total", 78.75)` ->
+`.property("total")` reads EXACT_VALUE -> TYPE_SHAPE. Neither presence nor
+`.exist` implies the other, but their rungs are ordered: `.exist` on the
+property's value -> `.property(name)` reads as a strengthening, and the
+reverse as a weakening. `own` reads as the plain property, so dropping it is
+not reported.
+
+Should-style is read as the `expect` chain it is (#215):
+`value.should.<chain>` is `expect(value).<chain>`, with the same words, flags,
+forms and rungs, and the object `chai.should()` returns reads
+`should.equal(actual, expected)`, `should.exist(value)` and their
+`should.not` forms subject first, as does an undeclared `should`, the global
+`chai/register-should` sets to that object. `chai.should()` adds the getter to every
+object and often runs in a setup file the runner loads, so a `.should` chain
+is read wherever a test spells it, whether or not its file sets it up. A
+`.should` that no chain continues (`options.should`, `options.should = true`)
+and a call of it (`chai.should()`) assert nothing.
 
 Everything else is recorded with no strength
 ([below](#assertions-checkwash-does-not-read), #196 190.5) and stays visible
-as a coverage gap: type checks (`a(...)`, `instanceof`), `property`, `keys`,
-`members`, `oneOf`, `throw`, `satisfy`, `empty`, `NaN`, change assertions, the
-`own`, `nested`, `any`, `all`, `ordered` and `length` flags, plugin words such
-as chai-as-promised's `eventually`, a chain that continues after its terminal,
-and negated assert methods (`notEqual`, `isNotOk`, `notExists`, ...). Deleting
-one reports its removal, and so does replacing a represented assertion with
-one; rewriting one is not judged. Plugins that overwrite a
-core assertion word are not modeled. Should-style assertions
-(`value.should.equal(...)`) are not scanned and produce no diagnostic.
+as a coverage gap: type checks (`a(...)`, `instanceof`), `keys`, `members`,
+`oneOf`, `throw`, `satisfy`, `empty`, `NaN`, change assertions, `include` with
+the `own` or `nested` flag, the `any`, `all`, `ordered` and `length` flags,
+plugin words such as chai-as-promised's `eventually`, a chain that continues
+after its terminal, a negated property with a chain after it, and negated
+assert methods (`notEqual`, `isNotOk`, `notExists`, `notProperty`, ...),
+whether spelled with `expect`, `assert` or `.should`. Deleting one reports its
+removal, and so does replacing a represented assertion with one; rewriting
+one is not judged. Plugins that overwrite a core assertion word are not
+modeled.
 
 The `.null` spelling is chai's `=== null`, so it shares `equal(null)`'s
 EXACT_VALUE rung while Jest's `toBeNull()` keeps NON_NULL. The rungs differ,
@@ -649,7 +686,7 @@ reason that says its rewrite is not judged. The source tests are in
 ## Make unrepresented assertion candidates visible
 
 `checkwash check` scans both sides of changed JS/TS test files for bounded Node,
-chai `assert` and `expect(...)` candidates. It compares their source positions
+chai `assert`, `expect(...)` and `.should` candidates. It compares their source positions
 with assertions represented by the frontend. A candidate in a file with no
 recognized test unit, or inside another assertion, can therefore still produce
 a diagnostic.
@@ -734,7 +771,8 @@ chai's `expect` and `assert` (including Vitest's `assert` re-export).
 Lexical declarations and function parameters can shadow those bindings, and
 a name that any write may have reached is unknown, as in the hand-rolled
 tolerance section above; a lookalike object cannot retain a real assertion's
-strength. Unresolved assertion
+strength. chai's should interface needs no binding: a `.should` chain is a
+candidate wherever it is spelled (#215). Unresolved assertion
 candidates still produce diagnostics. Dynamic module names, arbitrary wrapper
 functions, computed properties and template interpolations remain outside this
 evidence. This is a bounded static scan, not complete JavaScript scope or
