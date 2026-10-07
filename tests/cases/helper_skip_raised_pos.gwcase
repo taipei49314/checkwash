@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 125
+rule: TEST_DISABLED
+title: a helper that raises pytest's skip exception skips the test that calls it
+origin: #272 H4 — the raised spelling, one call away; v0.6.0 passes this with zero findings
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total([30, 48.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def _flaky():
+    raise pytest.skip.Exception("flaky")
+
+
+def test_total():
+    _flaky()
+    assert total([30, 48.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_total"}]

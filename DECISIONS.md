@@ -6584,6 +6584,961 @@ sweeps' copy):
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
 
+## D-104 (2026-10-06): one definition of an expected value that is not a plain literal (#226)
+
+A literal expected value replaced by a call or a name passed in JavaScript
+and in part of Python. `toBe(78.75)` -> `toBe(Number(75))` (#198 T6),
+`toBe(make(1))` and `toBe(OTHER)` (an import) passed in JavaScript;
+`== float('75')`, `== int('75')`, `== round(75.0, 2)` and a call to a name the
+file never binds passed in Python, while the honest `78.75` ->
+`Decimal('78.75')` blocked as a changed provenance.
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.followup.expected-provenance, filed as #226): "fold a fixed set of
+literal-only conversions (Number('75'), float('75'), Decimal('75')) to their
+value, so they compare as literals. Report any other literal -> unevaluated
+call as EXPECTED_VALUE_CHANGED 'expected value replaced by an expression
+checkwash does not evaluate'. Port Python's literal -> imported-name
+provenance (EXPECTATION_DEFINITION_CHANGED) to JS. This decides i198/T6."
+Rulings of 2026-10-04 ([#226](https://github.com/taipei49314/checkwash/issues/226#issuecomment-5981759826)):
+226.Q1, a literal replaced by a call whose callee Python resolves keeps
+EXPECTATION_DEFINITION_CHANGED, and the new message covers callees that
+neither resolve nor fold; 226.Q2, `Decimal(<literal>)` folds, and a folded
+value compares as Python's `==` does; 226.Q3, the JavaScript port covers a
+call rewritten with the same callee and a same-file constant, and Python's
+P5 (the same callee, bound nowhere) reports under 226.Q1.
+
+**As implemented:**
+- **Folds.** `float(<literal>)` and `Decimal(<literal>)` in Python and
+  `Number(<literal>)` in JavaScript are the assertion's literal: `right_value`
+  records the value they fold to. A spelling folds only where its name can be
+  nothing else: `float` while the module binds that name nowhere, `Decimal`
+  when a top-level import of the decimal module is the one binding of the
+  name it is spelled with, `Number` while no scope declares it and no write
+  reaches it. The argument is one bounded literal; `Number` folds a number or
+  a string holding a plain decimal numeral; a signalling NaN does not fold.
+  The provenance pass folds the same calls in an expected value it reads,
+  what a local holds included.
+- **Comparison.** Python literals compare as Python's `==` compares them,
+  in EXPECTED_VALUE_CHANGED and in the provenance channel's answers:
+  `78.75` -> `Decimal('78.75')` is no change, `0.1` -> `Decimal('0.1')` is
+  one. JavaScript keeps one canonical Number.
+- **Unevaluated calls.** Each frontend records, in the new optional
+  `Assertion.unevaluated_expected`, an expected value or bound that is a call
+  whose callee's root the file never binds (Python: no binding of the name
+  anywhere in the module, in any scope, and no star import; JavaScript: no
+  declaration in an enclosing scope and no write, nor an assertion library's
+  name) and that does not fold. EXPECTED_VALUE_CHANGED reports a literal
+  replaced by one, and one rewritten into another, on the same subject: "expected
+  value replaced by an expression checkwash does not evaluate (78.75 ->
+  int('75'))". An expression over the subject's own input stays
+  EXPECTED_VALUE_DERIVED's.
+- **The JavaScript port.** `frontends/javascript/expected_provenance.py`
+  resolves an equality's expected value and its subject by substitution: an
+  import becomes its module and export, a `const`, `let` or `var` the read
+  reaches its initializer, resolved in turn (eight levels), and a declared
+  function or class stays a call. A pair on one subject, a call after
+  substitution, whose values differ while either side read such a name, is
+  recorded as Python's channel records its events, and
+  EXPECTATION_DEFINITION_CHANGED reports it with Python's message.
+- The verdict gate labels `i198/T6` block.
+- IR: the new optional field; a folded conversion's `right_value`.
+  IR_VERSION stays 2 (D-067). No strength value, gating row or alignment
+  parameter changes.
+
+**Readings the rulings leave open:**
+1. **Every Python literal compares by `==`.** 226.Q2 names folded values;
+   one comparison for every literal keeps a folded and a written value on
+   one reading, so `1` -> `1.0` and `1` -> `True`, which reported as an
+   expected value rewritten, are now no change.
+2. **J3 follows 226.Q1.** The issue's acceptance list, written before the
+   rulings, puts `toBe(78.75)` -> `toBe(make(1))` (`make` imported) with the
+   unevaluated calls. 226.Q1 keeps a callee the file resolves on
+   EXPECTATION_DEFINITION_CHANGED and 226.Q3 ports that to JavaScript, so
+   J3 reads "expected provenance changed 78.75 -> ./total.make(1)".
+3. **A JavaScript global call rewritten** (`toBe(build(1))` ->
+   `toBe(build(2))`, `build` declared nowhere) is P5's JavaScript twin and
+   reports. The #198 round pinned it to pass "as in Python", which Python
+   no longer does.
+4. **What "never binds" means.** Any binding anywhere counts, so a
+   parameter named `float` in an unrelated helper keeps `float('75')` from
+   folding and from reading as unbound; a star import may bind any name.
+5. **The port's reach.** It reads equality operands, not bounds or
+   tolerances, and both directions of a pair it resolves: `toBe(OTHER)` ->
+   `toBe(75)` reports through it, where Python's #60 owns that pair (#292
+   asks whether JavaScript should read #60).
+6. **Messages show the folded value** as Python prints it: `75.0` for
+   `float('75')` and `Number(75)` (JavaScript's `75` has printed as `75.0`
+   since #198), `Decimal('75')` for a Decimal. The ruling's "78.75 -> 75" is
+   that value.
+7. **A folded value restores a bound.** `x < 80` -> `x == float('78.75')`
+   passes, as `x == 78.75` passes (numeric restoration).
+
+Found during this round and filed: #292 (a name or call replaced by a
+literal is read in Python only, and #60 reports an inlined local that still
+holds the value) and #293 (a JavaScript definition rewritten under an
+unchanged assertion is not read).
+
+**Measured cost**, with the round's engine against the base branch's
+(`fix/224-python-compare-direction` at `7c01de5`, the same engine bytes as
+the sweeps' copy):
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories whose test-side Python adds or removes an `assert` or a
+  unittest assertion whose expected side is a call, or a line that spells
+  `float(` or `Decimal(` in one: 2,605 commits, 2,147 readable on both
+  engines. Twelve records change, by 14 new EXPECTED_VALUE_CHANGED
+  findings, and no verdict moves (437 blocked on both):
+  - in eleven, an expected value that was already a call is rewritten
+    with the same callee, a builtin the file never binds (226.Q1's P5):
+    aiohttp `b025d570938b` and its revert `c8d6e019d38e`
+    (`bytes(stream._input)` <-> `bytes(stream._buffer)`); pytest
+    `0394ebffee0b` (`len(... SafeRepr().maxlist ...)` -> `SafeRepr(0)`),
+    `2ca6d9f039ef` (two `dict(x=1, ...)` gaining `unnamed=1`) and
+    `af39c9850e33` (two `str(testdir.tmpdir...)` gaining
+    `.realpath()`); scrapy `d5b6c236a90a`, its revert `99d8b05a0b19` and
+    `1a4a77d49fa5` (`list(range(3, 13))` <-> `list(range(2, 13))`),
+    `08232a3f824a` and `d42a98d3b590` (a `set` of str names becoming one
+    of bytes); werkzeug `64fb22fde232` (a `set('...'.split('&'))` with
+    other keys);
+  - in one, a literal is replaced by such a call: click `b64ea07128a6`,
+    `"not-none\n"` -> `repr("not-none")` (P2).
+  Each is a change to the value the test expects, which v0.6.0 left
+  unread. Eleven findings are warn. The three high ones, with no
+  production change that explains them (E1), are in pytest
+  `af39c9850e33` and scrapy `1a4a77d49fa5`, which already blocked on the
+  same rule.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records as the base, byte for
+  byte.
+
+**Fingerprints, messages and IR:**
+- New findings, and one rule moved: a literal replaced by
+  `Decimal(<literal>)` reported EXPECTATION_DEFINITION_CHANGED through the
+  provenance channel, and now reports EXPECTED_VALUE_CHANGED (P11), or
+  nothing when the values are equal (P12), so its rule and fingerprint
+  change. `1` -> `1.0` and `1` -> `True` no longer report (reading 1).
+  No other existing finding changes rule, message or fingerprint, in the
+  fixtures or in the sweeps.
+- Messages: the new "expected value replaced by an expression checkwash
+  does not evaluate (<old> -> <new>)", and a folded value printed as
+  Python prints it (reading 6).
+- IR: the new optional `Assertion.unevaluated_expected`, null unless
+  recorded, and a folded conversion's `right_value`; IR_VERSION stays 2.
+  In the corpus every assertion record gains the null field, six existing
+  fixtures record a value in it, and `js_evidence_name_rewrite_pos`
+  records its JavaScript provenance events; every existing finding and
+  verdict is byte for byte the same.
+
+The JavaScript false-positive cost is measured by the JS/TS replay (#212)
+before a release ships these findings.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-105 (2026-10-06): JS alias specifiers name first-party modules (#196 188.6)
+
+A module mock or an import spelled through an alias was invisible to
+TEST_PATCHES_SUBJECT. `vi.mock("@/billing", () => ({ invoiceTotal: () =>
+78.75 }))` above an untouched `expect(invoiceTotal(items)).toBe(78.75)`
+that reads `import { invoiceTotal } from "@/billing"` passed with zero
+findings, and so did `vi.mock("@/billing")` standing in for
+`../src/billing`, which the project's `tsconfig.json` maps `@/*` to.
+`module_key` named a module only for a `./` or `../` specifier (THREATMODEL
+row 109 residual "aliases").
+
+Ruling, 2026-10-03 ([#196](https://github.com/taipei49314/checkwash/issues/196#issuecomment-5965834751),
+item 196.188.6): "Yes, in a later round. B first (the same alias string in a
+mock and an import is one module; `@/` and `~/` are first-party), then C as
+its bounded extension (the base-side root tsconfig only). Route both through
+the one module_key. This ruling authorizes flipping the pin at
+tests/test_js_module_mocks.py:58 (`@/billing` -> None today) and rewriting
+module_key's docstring."
+
+**As implemented** (`frontends/javascript/aliases.py`, `module_key`):
+- **B.** An `@/` or `~/` specifier is first-party, and its key is the alias
+  string itself, normalized as a relative specifier is: `@/billing`,
+  `@/billing.ts` and `@/billing/index.js` are one module, from any test
+  file. One that leaves its root (`@/../x`), lands in dependency or build
+  output, or carries a query is not. A scoped package (`@acme/billing`) is
+  a package.
+- **C.** The base side's root `tsconfig.json`, read once per analysis and
+  only when a mock or an import spells a specifier that is not relative:
+  its before side when the diff changes it, else the head snapshot, which
+  holds it unchanged. JSON with comments and trailing commas, at most 256
+  KiB and 256 patterns. `compilerOptions.paths` maps a specifier to a
+  repository path, joined to `baseUrl` or, without one, to the root:
+  an exact pattern first, then the longest prefix, the first target of the
+  pattern, as TypeScript resolves it. The mapped path is the key a relative
+  specifier of that file has, so under `"@/*": ["src/*"]`
+  `vi.mock("@/billing")` and `import ... from "../src/billing"` are one
+  module. A mapping wins over B, and one that leaves the repository or
+  lands in dependency output names nothing first-party.
+- The pin flips as authorized (`@/billing` -> `"@/billing"`), and the test
+  is renamed for what it now states; `module_key`'s docstring and the
+  module's are rewritten. No IR, strength, gating or alignment change.
+  Fingerprints of existing findings are unchanged; a new finding names the
+  alias key (`@/billing:invoiceTotal`) or the mapped path
+  (`src/billing:invoiceTotal`).
+
+**Readings the ruling leaves open:**
+1. **`baseUrl` alone is not read.** With `baseUrl` set, TypeScript resolves
+   `import x from "billing"` to `<baseUrl>/billing` when that file exists,
+   and to the package otherwise. Telling the two apart needs the file
+   inventory, which the strict snapshot refuses in a repository with a
+   submodule, so such a specifier stays third-party; `baseUrl` is read as
+   the root of `paths` targets.
+2. **A `"*"` pattern is not read** (an empty prefix, `"*"` or `"*.svg"`),
+   for the same reason: it maps every package name too.
+3. **The first target only.** TypeScript tries a pattern's targets in
+   order and takes the first that exists; the first is read as the module.
+4. **Bounds.** No `extends`, no nested or `jsconfig.json` file, and no
+   bundler or runner alias configuration (Vite `resolve.alias`, Jest
+   `moduleNameMapper`). A tsconfig the diff adds has no base side and maps
+   nothing; one it deletes maps through its before side.
+5. **Condition 2 stays silent rather than guessed.** Without a tsconfig
+   that decides it, an alias may name another spelling of the same module
+   (`@/billing` and `../src/billing`, or `~/billing`). A base-side
+   installation under a spelling whose path ends with the alias's own
+   counts as already installed, so respelling a mock into an alias is not a
+   new stand-in. A consumed read still needs one key: a new alias mock never
+   reaches an import spelled another way unless the tsconfig joins them.
+
+Found during this round: nothing new to file.
+
+**Cost.**
+- **New findings** (TEST_PATCHES_SUBJECT, high without repair evidence): a
+  new mock or replacing spy through an `@/` or `~/` alias, or through a
+  pattern of the base side's root tsconfig, that an existing unit's oracle
+  reads.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories (all refs) adds or removes a JS/TS line that spells a module
+  mock, a spy, a `mock*` replacement or an `@/`/`~/` import, and none has a
+  root `tsconfig.json`; the code this round changes runs only for such a
+  file.
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-106 (2026-10-06): an iterator callback keeps its assertions whatever the call's receiver (#294)
+
+`docs/assertion-coverage.md` states the rule for a JS/TS test's inline
+callbacks: "Direct inline callback arguments to other calls retain the
+existing lexical coverage, including iterator callbacks; this does not
+prove that an arbitrary callee executes its callback." The frontend
+applied it only where `CALL` matched, a callee spelled as a dotted name.
+`cases.forEach(cb)` was read; `[[1, 78.75]].forEach(cb)`,
+`Object.entries(cases).forEach(cb)`, `(cases).forEach(cb)` and
+`cases?.forEach(cb)` were not, so their callbacks were nested functions and
+their assertions no unit's. Weakening or deleting the assertion in the
+table-driven spelling passed with zero findings and a coverage notice.
+Found during #235 and filed as #294, which proposed no new ruling: it
+applies the stated rule to spellings it missed.
+
+**As implemented:** besides `CALL`'s matches, every member call opens a
+call whose direct callback arguments are inline bodies: a `(` that follows
+a name that follows `.` or `?.`, whatever comes before the `.`. The tokens
+already tell a string or a comment apart, so `` `a,b`.split(",") `` is one.
+No callee name is added or removed, and nothing else reads these calls.
+
+**Readings flagged for approval:**
+1. **A member call, not any call.** A call result called directly
+   (`each(cases)(cb)`) and an optional call (`fn?.(cb)`) are not member
+   calls, and their callbacks stay nested functions, as before.
+2. **A named callback stays a helper.** A callback passed by name or
+   declared elsewhere is a declared helper, as before: its assertions remain
+   a coverage gap.
+
+**Cost.**
+- **New findings:** ASSERT_WEAKENED, ASSERT_REMOVED and the other
+  assertion rules, where an assertion in such a callback changes.
+- **The corpus is byte for byte the same**: no fixture before this round
+  spells the shape.
+- **The Python sweep cannot move.** No commit of the thirteen sweep
+  histories touches a JS/TS test file, and only such a file is parsed this
+  way.
+- **Not measured:** the JS false-positive cost, which waits on #212.
+
+The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-107 (2026-10-06): a string skipif or xfail condition is the expression pytest evaluates (#263)
+
+pytest compiles a `skipif` or `xfail` mark's string condition as an
+expression and evaluates it with `os`, `sys`, `platform` and `config` in
+scope beside the test module's globals. D6 read the string as a constant.
+A non-empty string is truthy in every environment, so
+`skipif("sys.platform == 'win32'")` read as a condition that always holds
+and blocked at high, as an unconditional skip would, while
+`skipif(sys.platform == 'win32')` held at warn. #260 found it: reading a
+mark applied through a bound name newly blocked three commits of pytest's
+own history this way.
+
+Rulings, 2026-10-06 (#263, adopted as recommended, "全部核准"):
+- **263.Q1:** a string condition is parsed as the expression it holds and
+  judged as an expression condition is. A string that does not parse earns
+  nothing, as today, and one that always holds (`"True"`,
+  `"sys.version_info >= (3,)"`) still blocks. The marker's name keeps the
+  string as written, so fingerprints do not move.
+- **263.Q2:** `os`, `sys` and `platform` are read as those modules even
+  when the test module does not import them. `config` stays unknown, so a
+  condition on an option is judged as an unknown is.
+
+**As implemented:**
+- `ir/markers.py`, `mark_condition`: a `skipif` or `xfail` mark's first
+  argument; for a string, the expression parsed from it as pytest compiles
+  it (`ast.parse(..., mode="eval")`, the parser `compile` uses). A string
+  that does not compile is None.
+- `compat.py`: a string condition is evaluated in pytest's namespace
+  (`_eval_condition(..., pytest_names=True)`). The condition D6 evaluates
+  is the conjunction of its parts (a `pytestmark` binding's guard and the
+  mark's own condition, #260 Q2), each part in its own namespace.
+- `evidence.py`, `_gate_condition_names`: the names inside a mark's
+  string condition are resolved as module constants, as pytest's module
+  globals hold them.
+
+Readings the rulings leave to the implementation:
+
+1. **What compiles.** Exactly what `compile(text, ..., "eval")` accepts:
+   leading whitespace, a statement, an empty string and two lines that no
+   bracket joins do not compile, and earn nothing. pytest reports an error
+   for such a mark, so the test does not run where it applies. With a
+   `pytestmark` binding's guard, the mark still earns nothing.
+2. **pytest's names.** In a string, a bare `os`, `sys` or `platform` is
+   that module unless the test module binds the name to a constant that
+   the engine resolves, which wins as the module's globals do. A module is
+   true and equals nothing but itself, so `"platform != 'linux' or
+   sys.platform == 'win32'"` holds everywhere and blocks, as it skips
+   everywhere under pytest. Dotted reads (`sys.platform`, `os.name`,
+   `platform.system()`) were already read whatever the module imports.
+3. **Module code stays module code.** A constant's own expression, and a
+   `pytestmark` binding's guard, are read as before: a bare `platform`
+   there is the `from sys import platform` an expression condition
+   assumes, and a bare `sys` is unknown.
+4. **Reasons are not conditions.** The argument of an imperative
+   `pytest.xfail(...)` is its reason. It is not parsed, so a reason that
+   happens to be a name pulls no constant into the file's IR.
+
+**Not in this round (residual):**
+- A test module that binds `platform` by `from sys import platform` has
+  that string where pytest evaluates a string condition, but the reading
+  above takes the module: `"platform != 'win32'"` there blocks though it
+  can be false. The sweeps hold no such condition.
+- Only a mark's first condition is read, and only it names the mark:
+  `skipif(sys.platform == "win32", True)` holds at warn while pytest skips
+  everywhere, and a `condition=` keyword is not read. Filed as #297.
+
+**Tests and fixtures.**
+- **Tests:** 34 in `tests/test_issue263_string_conditions.py`. All 16
+  mutants of the round's code fail them or the fixtures.
+- **Fixtures:**
+  - `compat_gate_string_condition_neg` (#263 S1), in a module that does
+    not import `sys`: v0.6.0 blocks it with TEST_DISABLED high; it is now
+    held at warn by COMPAT_GATE.
+  - `compat_gate_string_always_true_pos` (row 44): v0.6.0 blocks it, and
+    so does this round.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change.
+
+**Fingerprints.** None move: a marker's name holds the string as written.
+
+**Cost.**
+- **Targeted set:** every non-merge commit of the thirteen histories
+  (the six of the standard set, aiohttp, pytest, requests, scrapy,
+  uvicorn, werkzeug and PyWavelets) whose Python diff adds or removes a
+  line where `skipif(` or `xfail(` opens a string: 232 commits, 200
+  readable on both engines. 27 records change, all in pytest, and 20
+  verdicts move from block to pass (74 blocked -> 54):
+  - 110 TEST_DISABLED findings fall from high to warn, held by
+    COMPAT_GATE. Each is a mark whose string is a version or platform
+    gate pytest evaluates, false somewhere: `"sys.version_info < (2,6)"`,
+    `"sys.platform == 'win32'"`, `"sys.platform.startswith('java')"`,
+    `"sys.platform == 'win32' or getattr(os, '_name', None) == 'nt'"`
+    and its negation;
+  - 5 fall from high to info: tests that move or are renamed under such
+    a mark (`45065e4e2eb2`, `TestLastFailed` moving into
+    `test_cache.py`; `1ff173baee58`, two tests moving into a class whose
+    `pytestmark` is a name bound to one; `fe54762b93a3`). The new units
+    run somewhere, so the old units' disappearance is a relocation.
+  No finding appears or disappears, and none rises.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets:** the 895 commits of ten full histories (855
+  readable) give the base's records byte for byte (237 blocked). In the
+  368 of pytest's (364 readable), 15 records change, every one also in
+  the targeted set above, and 11 verdicts move from block to pass (107
+  blocked -> 96).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported (`i198/T6`, undecided, pass on both
+engines). Every case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-108 (2026-10-06): a D10 survivor is read with the conftest files above it (#266)
+
+D10 credits a disappeared unit when an identical live copy of its body runs
+at head in a collectable test file the diff does not touch (THREATMODEL row
+58: "a skipped or edited survivor earns nothing"). The copy's liveness was
+read from its own file only. A copy that an always-skip conftest fixture
+skips counted as live, so deleting the running copy passed at info, while
+the same copy with a skip marker blocked. #223 had added the conftest chain
+for the modules a diff changes, as ruling 223.Q2 scoped it, and a survivor
+lies in a file the diff does not change.
+
+Rulings, 2026-10-06 (#266, adopted as recommended, "全部核准"):
+- **266.Q1:** a candidate survivor's conftest chain is read at head, as
+  #223 reads a changed module's head side, and the survivor is parsed with
+  it. A survivor that an always-skip conftest fixture reaches is not live
+  and earns nothing. The chain's reads keep #223's bounds.
+- **266.Q2:** D10's survivors only. Other readers of files the diff does
+  not change (the stand-in context, runtime subject shadows) do not judge
+  liveness through markers, and are not in this item.
+
+**As implemented:** `engine.py`'s survivor search parses each candidate
+with `chain=_conftest_chain(path, 1)`. That is the chain #223 builds for a
+changed module's head side: each `conftest.py` from the survivor's
+directory up to the repository root, nearest first, a file the diff changes
+read on its head side and any other from the strict snapshot, under #223's
+read bounds. A fixture the survivor reaches (requested by `usefixtures`, or
+`autouse`; a parameter is part of the signature, which the body hash holds)
+that always skips gives its unit a setup marker, and D2's liveness rule
+(every marker a D6 compat gate) then reads the survivor as not live.
+
+Readings the rulings leave to the implementation:
+
+1. **Without a strict snapshot**, as #223 reads it, no conftest level is
+   known: the chain is empty and the survivor reads as before. The CLI and
+   the Action always pass one.
+2. **A level that cannot be read or parsed ends the chain**, as for a
+   changed module (#223): what it defines is unknown, and it could
+   override any name beyond it.
+3. **A skip the fixture runs only under a compatibility condition**
+   (`if sys.platform == "win32": pytest.skip(...)`) leaves the survivor
+   live, as a `skipif` marker on it would (D6).
+
+**Tests and fixtures.**
+- **Tests:** 8 in `tests/test_issue266_survivor_conftest_chain.py`. Both
+  mutants of the round's code (the chain left out; the base side read for
+  it) fail them or the fixtures.
+- **Fixtures:**
+  - `duplicate_remains_conftest_skipped_copy_pos` (#266 U1, row 58): the
+    surviving copy requests an always-skip conftest fixture. v0.6.0 passes
+    the deletion of the running copy at info; it now blocks with
+    TEST_DISABLED high.
+  - `duplicate_remains_conftest_live_copy_neg` (#266 U2): the same
+    conftest, and a copy that requests nothing from it, still earns
+    DUPLICATE_REMAINS at info.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change.
+
+**Fingerprints.** None move.
+
+**Cost.**
+- **Targeted set:** every commit of #224's sweeps (its targeted set, the
+  standard set and D-088's sets, twelve histories) where a test unit's
+  disappearance was held at info, the only findings this round can
+  change: 98 commits, all readable. The same records as the base, byte
+  for byte (32 blocked). No credited survivor there is one that a conftest
+  fixture skips.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records as the base, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records as the base, byte for byte
+  (237 and 107 blocked).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported (`i198/T6`, undecided, pass on both
+engines). Every case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
+
+## D-109 (2026-10-06): a negated approximate comparison is read as negated (#284)
+
+The approx branch of the Python frontend's assertion classifier ran first
+and found an `approx(...)` call anywhere in the test expression, so the
+comparison it sat in was never read: `== pytest.approx(78.75)` ->
+`!= pytest.approx(78.75)` passed with zero findings, as did a `not` around
+it, while the same flips without `approx` blocked as a polarity inversion
+(THREATMODEL row 33). A negated approximate comparison passes when the
+values are far apart, so its tolerance orders the other way: a bigger `abs`
+or `delta`, or fewer `places`, is stricter. The frontend recorded it as a
+positive one's, so `TOLERANCE_LOOSENED` blocked a tightening
+(`!= approx(x, abs=0.01)` -> `abs=0.5`,
+`assertNotAlmostEqual(..., delta=0.1)` -> `delta=0.5`, `places=3` ->
+`places=2`) and passed a loosening. The JavaScript frontend already records
+no tolerance for a negated matcher, and #222 did the same for a negated
+Python tolerance call.
+
+The issue proposed the fix as one round, with one choice: read a negated
+tolerance in the reversed direction, or record none. It recommended none,
+for one rule in both frontends, and the round takes that.
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_classify_assert_expr`: the approx
+  branch reads the comparison it sits in. A single `!=` (or `is not`,
+  `not in`, as the plain comparison path reads them) is negative; a `not`
+  around the comparison is left to the negation branch, which negates its
+  operand and drops an approximate comparison's tolerance (#222). A
+  negated approximate comparison records no tolerance. Its expected value
+  is still recorded, as a plain `!=` records its own.
+- `assertNotAlmostEqual` records no `places` or `delta`, its implicit
+  `places=7` included.
+
+Readings the issue leaves to the implementation:
+
+1. **One rule for every negation.** `!=`, `not`, a negated unittest call
+   and a negated tolerance call record no tolerance, whatever they wrap,
+   so a change of it is unknown: neither the tightening that blocked nor
+   the loosening that passed is reported. An approximate comparison whose
+   polarity flips is reported as the inversion (ASSERT_WEAKENED), whatever
+   its tolerance does.
+2. **A double negation** (`not x != approx(y)`) is positive, and records no
+   tolerance either: the negation branch drops the tolerance of the
+   negated comparison it wraps. A known tolerance replaced by it is the
+   unverifiable replacement the unknown-tolerance rule reports. The sweeps
+   hold no such spelling.
+3. **Only the comparison the call sits in is read.** An approx call inside
+   a boolean operator or another structure still makes the whole
+   assertion an approximate comparison (`== approx(x) or True` passes);
+   that is #299, filed during this round.
+
+**Tests and fixtures.**
+- **Tests:** 31 in `tests/test_issue284_negated_approx.py`. Seven
+  mutants of the round's code each fail them or the fixtures: every
+  approximate comparison read as positive; a `not` around one handed
+  back to the approx branch; a negated `approx` keeping its tolerance;
+  `assertNotAlmostEqual` keeping its `places` or `delta`; the polarity
+  left out of the record; `!=` read as positive; `not in` read as
+  positive.
+- **Fixtures:**
+  - row 33's pins for the approx spelling, each passing on v0.6.0 with
+    zero findings: `approx_polarity_inverted_pos`,
+    `approx_left_polarity_inverted_pos` and
+    `approx_not_polarity_inverted_pos`;
+  - the false positives, each blocked by v0.6.0 with TOLERANCE_LOOSENED
+    high and now quiet: `approx_negated_stricter_tolerance_neg`,
+    `almost_negated_stricter_delta_neg` and
+    `almost_negated_fewer_places_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's 775 records, byte for
+byte, and the six new ones.
+
+**Fingerprints.** None move: a flipped approx comparison reports a new
+finding, and a negated tolerance reports none where it reported
+TOLERANCE_LOOSENED.
+
+**Cost.** Measured with the round's engine against the base branch's
+(`2ece6f2`, #226's branch with #291 merged in):
+- **Targeted set:** every non-merge commit in the checked-out history of
+  the twelve histories and PyWavelets whose Python adds or removes a line
+  matching `assertNotAlmostEqual` or `approx(`: 106 commits, 99 readable.
+  No record changes; 6 commits block on both engines.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` blocks (pass -> block), as
+its label since #226 (D-104) says. Every other case keeps v0.6.0's
+verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-110 (2026-10-06): an assertion is an approximate comparison only where it states one (#299)
+
+The approx branch of the Python frontend's assertion classifier found an
+`approx(...)` call anywhere in the test expression and read the whole
+assertion as that approximate comparison, at APPROX strength with the
+call's expected value and tolerance. A structure around the call that
+makes the assertion hold everywhere was therefore the same assertion on
+both sides, and passed with zero findings: `== pytest.approx(78.75)` ->
+`== pytest.approx(78.75) or True` (also `True or ...`, `or total() > 0`
+and `isinstance(...) or ...`), `all(...)` -> `any(...)` over the same
+comparison, a comparison of the comparison's result
+(`(total() == pytest.approx(78.75)) is not None`) and an unrelated call
+(`print(pytest.approx(78.75)) is None`). The plain spellings block.
+Found during #284's round, which fixed the negations at the same site.
+
+The issue proposed one round: the approx branch applies only where the
+call is an operand of the assertion's own comparison, or inside one, and
+every other structure, a boolean combination of approximate comparisons
+included, is read as the plain path reads it.
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_asserted_approx_comparison`: the
+  assertion states an approximate comparison when it is a single `==`,
+  `!=`, `in` or `not in` (approx answers equality and membership only)
+  with an `approx(...)` call as an operand, or inside one through list,
+  tuple, set and dict displays and starred items (`[total()] ==
+  pytest.approx([78.75])`, `{'t': total()} == {'t': pytest.approx(78.75)}`).
+- It also states one when such a comparison is a link of a chained
+  comparison (`0 < total() == pytest.approx(78.75)`), when it conjoins one
+  with `and` (the first, at any depth), or when it asserts one with
+  `all(...)` over a generator or list comprehension.
+- Anything else is read by the plain path: `or`, `any(...)`, `is` and
+  `is not`, an ordering, a comparison of a comparison's result, and a
+  call that only receives an approx object. `repr(pytest.approx(1.0)) ==
+  '1.0 ± 1.0e-06'`, as in pytest's own tests, is a string equality whose
+  expected value is the string.
+- The comparison read carries its own polarity (#284): the operator of
+  its link, inside a chain, `and` and `all(...)` too.
+
+Readings the issue leaves to the implementation:
+
+1. **A conjunction, a chained comparison and `all(...)` keep the
+   approximate reading.** The issue proposed reading a boolean
+   combination as the plain path reads it, TRUTHY. Main read
+   `total() == pytest.approx(78.75) and total() > 0` as the approximate
+   comparison it holds, so `approx(78.75)` -> `approx(75)` there blocked
+   as EXPECTED_VALUE_CHANGED; a TRUTHY reading would pass it with no
+   finding. Each part of a conjunction and each link of a chain must
+   hold, and `all(...)` asserts its element for every item, so each
+   states the comparison; the round keeps reading it. Joining approximate
+   comparisons with `and`, or splitting one, reads as it did on main.
+2. **The other parts of a conjunction or chain are not read**, as on
+   main: `... and total() > 0` -> `... and True`, or `0 < total() == ...`
+   -> `-1e9 < total() == ...`, is not seen. A conjunction whose
+   approximate comparison moves to another position is the same assertion
+   (`approx_conjunction_reordered_neg`).
+3. **A call that receives an approx object is the call.**
+   `isinstance(pytest.approx(78.75), object)` and `print(...) is None`
+   hold whatever the value, and checkwash cannot tell an operator from
+   any other function, so an operator call is read as the call too:
+   `operator.eq(total(), pytest.approx(78.75))`, or pytest's own
+   `op(a, approx(x))` with the operator passed in, as
+   `operator.eq(total(), 78.75)` is. The cost: its
+   expected value rewritten (`approx(78.75)` -> `approx(75)`) is no
+   longer reported; main blocked it as EXPECTED_VALUE_CHANGED, and the
+   plain `operator.eq(total(), 78.75)` -> `75` passes on main and v0.6.0
+   alike. A respelling from `==` into such a call is a strength drop
+   (APPROX -> TRUTHY) and blocks. The sweeps hold no such edit.
+
+**Tests and fixtures.**
+- **Tests:** 37 in `tests/test_issue299_approx_structure.py`. Thirteen
+  mutants of the round's code each fail them or the fixtures: a bare
+  `approx(...)` not recognized; a list, tuple or set display not
+  descended; a dict display's keys read for its values; a starred item
+  not descended; membership not an approximate comparison; a chain's
+  later link read against its first operands; only a chain's first link
+  read; a disjunction stating its comparison; a conjunction stating
+  none; `any(...)` stating its element; `all([...])` over a list
+  comprehension stating none; `not in` read as positive; every stated
+  comparison read as positive.
+- **Fixtures:**
+  - row 124's pins, each passing on v0.6.0 with zero findings:
+    `approx_or_true_pos`, `approx_all_to_any_pos` and
+    `approx_result_is_not_none_pos`;
+  - reading 1, each read the same way on v0.6.0 and kept:
+    `approx_conjunction_expected_rewrite_pos`,
+    `approx_chained_expected_rewrite_pos` and
+    `approx_conjunction_reordered_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's 781 records, byte for
+byte, and the six new ones.
+
+**Fingerprints.** None move: a wrapped approximate comparison reports a
+new finding where it reported none.
+
+**Cost.** Measured with the round's engine against the base branch's
+(`90c1da4`, #284's branch):
+- **Targeted set:** every non-merge commit in the checked-out history of
+  the twelve histories and PyWavelets whose Python adds or removes a line
+  matching `assertNotAlmostEqual` or `approx(`, as for D-109: 106
+  commits, 99 readable. No record changes; 6 commits block on both
+  engines.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the same records.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` blocks (pass -> block), as
+its label since #226 (D-104) says. Every other case keeps v0.6.0's
+verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-111 (2026-10-06): a skip a test reaches through a same-file helper is read (#272, first stage)
+
+A skip was read only where the test body or its setup spelled it. A test
+that called `_later()`, where `_later` calls `pytest.skip()`, was skipped as
+surely as one that called it itself, and passed with zero findings, while
+the same line in the body blocked. So did a called nested def, the raised
+spelling in a helper, and a helper a test's fixture calls; and a skip added
+to a helper the test already called. Found during #254's round.
+
+The owner adopted the issue's recommendations on 2026-10-06 ("全部核准"):
+272.Q1 (a), read a skip the test or its setup reaches through a helper, for
+the same-file scopes `_executed_scopes` already resolves for assertions,
+judged as a skip in the body or in the setup is judged; an outcome every
+run reaches is unconditional, and a guarded one keeps its guard, with the
+call site's conditions and the helper's conjoined, as 183.2 records a setup
+guard. 272.Q2 (a), follow an imported helper into the head tree as a second
+stage. 272.Q3, the marker `helper.<function>.<effect>`, with the message
+"skip/xfail added to a helper this test calls". This entry is the first
+stage; the second follows in its own round.
+
+**As implemented:**
+- `frontends/python/helper_skips.py` (new), `HelperOutcomes`: a call by a
+  plain name to a function the module defines, one nested in the calling
+  scope, or a name bound to a lambda or to `partial` of one of those, runs
+  that helper. Each helper is read once per module: `setup_outcome` gives
+  its own outcome and guard, and the helpers it calls in turn, at most four
+  calls from the test or setup callback, as `_executed_scopes` follows
+  assertions, add theirs under the conditions their calls run under.
+- A call's conditions (`call_conditions`) are what a body skip's are: each
+  enclosing `if`, `not (...)` for an `else`, and an `except` block's own
+  condition (`_handler_guard`); a loop, `with`, `match` or `try` body adds
+  none. The marker's guard is their conjunction with the helper's own.
+- `frontend.py`: the unit's calls that run (not dead) are read; a test
+  module's fixtures and xunit setup callbacks read theirs (`SetupScope`),
+  and a unit gets those of the setup providers it reaches
+  (`setup_helper_outcomes`, resolved as `setup_outcomes` resolves them).
+- The marker family `helper` (`conftest_controls.HELPER`): TEST_DISABLED
+  reports "skip/xfail added to a helper this test calls
+  (helper._later.skip)", and a guard removed or made always true "in a
+  helper this test calls"; COMPAT_GATE judges its guard as a body skip's
+  (`is_helper_skip`).
+- `ir/diffalign.py`: an added helper marker is paired with a skip the base
+  had and the head lost when it is that skip moved (`_moved_skip`, reading
+  7); the move is recorded (`UnitDelta.markers_moved`), and
+  `evidence._mark_weakened_guards` reads its guard against the old one's.
+
+Readings the rulings leave to the implementation:
+
+1. **A helper is read as a setup callback is, whoever calls it.** A skip
+   in the test body counts with any arguments, and `importorskip` too; a
+   helper is read by `setup_outcome`, the reading that records the path
+   condition an outcome is reached under inside another function, an
+   `except` block's included. So a helper's skip with an argument that
+   calls something (`pytest.skip(reason())`), and `importorskip` in a
+   helper, are not read.
+2. **The scopes are the ones `_executed_scopes` resolves, and only
+   functions.** A class is not followed: calling it runs `__init__`, not
+   the methods `_executed_scopes` lends assertions from. Nor is a
+   generator, whose body does not run when it is called, nor a helper
+   passed as an argument. A method reached through `self` is no scope
+   `_executed_scopes` resolves, for assertions either: the issue's H2 and
+   S1 are filed as #306, with A1 and A2, a helper method's assertion
+   weakened or deleted, which pass on v0.6.0 too.
+3. **A name the calling scope binds itself is not the module function.**
+   `def test_total(offline): offline()` calls a fixture's value, and
+   `_later = make(); _later()` calls what `make` returned.
+4. **Every call ends at an outcome every call reaches.** A helper that
+   always skips is read no further: what it would call after does not
+   run.
+5. **The marker names the helper that holds the outcome**, with that
+   outcome's text and span. A helper several tests reach marks each of
+   them, as a test module's own setup providers do (row 104).
+6. **A conftest fixture's helpers are not followed.** A conftest's
+   fixtures are read by their own unconditional outcome (#223); a helper
+   it calls is in another file than the test module.
+7. **A skip moved into a helper, out of one, or into a renamed one is the
+   skip it was.** The marker is named for the helper, so carrying a skip
+   the test already had, from its body or its setup, into a helper it
+   calls changed the name alone and read as a skip added; the round's
+   sweep found it in scrapy df342eee6e2f. An added helper marker is the
+   moved skip when the base had a skip the head lost with the same
+   effect that fired at least as often: unconditionally, or under the
+   same condition. Its guard is then read against the old one's, so a
+   constant behind it made always true is still reported (THREATMODEL
+   59). A skip whose guard did not move with it, one under another
+   condition, and a skip that became an xfail are reported as added. A
+   skip respelled in the body (`pytest.skip` -> `self.skipTest`) is not a
+   move; that is #281's question, unchanged.
+
+**Tests and fixtures.**
+- **Tests:** 52 in `tests/test_issue272_helper_skips.py`, and
+  `tests/test_conftest_controls.py` lists the two new minting sites and
+  the family. Thirty-five mutants of the round's code each fail them or the
+  fixtures: an `if`, an `else` or an `except` block at a call site adding
+  no condition; a generator read as a helper, or a lambda not; a
+  parameter, or a name the caller binds, not shadowing the module
+  function; the call site's conditions, or the helper's own guard,
+  dropped; the walk going on past an outcome every call reaches; one call
+  deeper, or shallower, than assertions; a nested helper read with the
+  module's names only; a lambda's parameters not shadowing; a fixture's,
+  or xunit setup's, helpers not read; the unit's own calls, or the setup's
+  helper markers, not read; COMPAT_GATE not reading a helper skip's guard;
+  a guard removal not read for one; the family unknown; and, for reading
+  7, no move credited, markers not paired by name first, a body skip
+  respelled in the body taken for a move, only a helper-to-helper move
+  credited, a skip and an xfail the same, every outcome a skip, a
+  fixture's skip without an effect, `self.skipTest` an xfail, the guard
+  not compared, a guarded skip never moving, an unconditional skip moving
+  only to an unconditional one, one skip crediting two moves, the move
+  recorded backwards, and a moved skip's guard not read against the old
+  one's.
+- **Fixtures:**
+  - row 125's pins, each passing on v0.6.0 with zero findings:
+    `helper_skip_module_function_pos`, `helper_skip_nested_def_pos`,
+    `helper_skip_raised_pos`, `helper_skip_through_fixture_pos` and
+    `helper_skip_added_to_called_helper_pos`;
+  - `helper_skip_platform_gate_neg`: a call under a platform condition is
+    a D6 gate, held at warn, as the same skip in the body is;
+  - `helper_skip_already_called_neg`: a skip the base already reached is
+    no event;
+  - `helper_skip_moved_from_body_neg`: a body skip moved with its guard
+    into a helper the test calls is no skip added (reading 7); C1 before
+    the fix blocked it.
+
+Every existing fixture keeps its expectation, and every finding in the
+corpus (`tools/emit_corpus.py`: main's 759 records and the eight new ones)
+is byte for byte main's.
+
+**Fingerprints and IR.** No fingerprint moves: the markers are new names,
+and a finding on one is a new finding. `--emit-ir` gains `markers_moved`
+on every unit delta, an optional field whose default is empty
+(docs/stability.md: IR_VERSION stays 2, as for D-067's keys); in the
+corpus it adds `"markers_moved": []` to the 655 unit deltas of the 759
+existing records and changes nothing else. The next release guide names
+it.
+
+**Cost.**
+Measured with the round's engine against main's (`4f0955b`):
+- **Targeted set:** every non-merge commit of the thirteen sweep
+  histories whose test-side Python adds or removes a line spelling
+  `skip(`, `skipTest(`, `SkipTest`, `xfail(` or `skip.Exception`: 1,144
+  commits, 959 readable. Four records change and one verdict moves
+  (blocked 272 -> 273):
+  - aiohttp `2b7cb1629f4b` ("skip some tests for tokio loop"): fifteen
+    tests start calling a new helper, `skip_if_no_dict(loop)`, which
+    skips when the loop has no `__dict__`. That gives fifteen warn
+    findings. They are the skip the commit means, and they stay at warn
+    because the commit changes production code too, as the same line in
+    each body would.
+  - pytest `ced62f30ba0d` (pass -> block): two tests call the new
+    `attempt_symlink_to`, which skips on Windows under Python 2 and when
+    a symlink cannot be made (`except OSError`):
+    - for `TestNumberedDir.test_cleanup_symlink` it is a new skip, high,
+      as it would be in the body;
+    - `test_tmpdir_always_is_realpath` trades a
+      `skipif(not hasattr(py.path.local, "mksymlinkto"))` mark for it.
+      That is a skip respelled from a mark to a call, #281's question,
+      and it reads as added.
+  - pytest `3cc58c2f78f0` (block -> block): `py.test.skip(...)` ->
+    `pytest.skip(...)` inside the `lsof_check` helper reads as a skip
+    added to it in three tests, because `py.test` is not read (#310,
+    found by this sweep).
+  - pytest `5e883f51959f` (pass -> pass): `test_tmpdir_always_is_realpath`
+    moved to `test_legacypath.py`, and its disappearance now reports at
+    warn where it was info. Its helper's `except OSError` skip is no
+    compat gate, so D2 no longer credits the move of a unit that may not
+    run (`unit_is_live`).
+
+  Before reading 7, this sweep's first run also blocked scrapy
+  `df342eee6e2f`, where fourteen tests' guarded body skips moved into
+  helpers. Its record is now main's.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits): the same records as
+  main, byte for byte (48 blocked).
+- **D-088's sets** (895 commits of ten full histories, 855 readable; 368
+  of pytest's, 364 readable): the ten histories give main's records byte
+  for byte. In pytest's, two records change, both commits of the targeted
+  set above: `ced62f30ba0d` (pass -> block) and `3cc58c2f78f0` (block ->
+  block).
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
+## D-112 (2026-10-06): numpy's and torch's assertion calls are lent as a bare `assert` is (#286)
+
+#222 made numpy's and torch's assertion calls
+(`numpy.testing.assert_allclose`, `assert_array_almost_equal`,
+`assert_almost_equal`, `torch.testing.assert_close`) assertions, read in a
+test unit and in a same-file helper it calls. A fixture the test requests
+and a helper another file defines lent the test their bare `assert`s only
+(A5-x), so the same call there was no assertion: widening its tolerance or
+deleting it passed with zero findings, while `assert np.allclose(...)` in
+the same place blocked. Found during #222's round.
+
+The issue proposed one round with no alternative, and the round takes it:
+`_classified_asserts`, which builds what a fixture and a module helper lend,
+also records the calls the unit's own walk reads
+(`_tolerance_statement_classified`).
+
+**As implemented:**
+- `frontends/python/frontend.py`, `_classified_asserts`: a numpy or torch
+  assertion call is recorded as the unit's walk records it, with the same
+  form, strength, expected value and tolerance, marked `inherited`. Every
+  channel that lends a bare `assert` lends it: a fixture the test requests,
+  in its module or the conftest beside it, an autouse fixture, and a helper
+  another file defines and the test calls (A5-x's import channel).
+- `docs/assertion-coverage.md` says so, where it listed the gap;
+  `docs/defence-design.md`'s A5-x note says what the channels lend.
+
+Readings the issue leaves to the implementation:
+
+1. **The root-module projection channel is unchanged.** It projects a
+   transparent equality helper (`assert actual == expected`, two
+   parameters) onto its caller and nothing else; a tolerance call is no
+   such helper, so a root module's numpy helper still lends nothing there.
+2. **Only the assertion calls.** `np.allclose(...)` and
+   `math.isclose(...)` return a bool, and are read only inside an
+   `assert`, which was already lent.
+
+**Tests and fixtures.**
+- **Tests:** 13 in `tests/test_issue286_lent_tolerance_calls.py`. Two
+  mutants of the round's code each fail them: a fixture's or helper's
+  tolerance call not lent, and every lent call read as trivial.
+- **Fixtures**, row 120's pins, each passing on v0.6.0 with zero findings:
+  `tolerance_call_fixture_widened_pos` (TOLERANCE_LOOSENED),
+  `tolerance_call_fixture_deleted_pos` and
+  `tolerance_call_other_file_helper_dropped_pos` (ASSERT_REMOVED); control
+  `tolerance_call_fixture_unchanged_neg`.
+
+Every existing fixture keeps its expectation, and its corpus record does
+not change: `tools/emit_corpus.py` gives the base's records and the 4 new
+ones.
+
+**Fingerprints.** A unit that now inherits such a call carries it in its
+assertions, so the fingerprint of a whole-unit TEST_DISABLED removal, which
+names the unit's assertions, changes for it, as #222's own calls changed it.
+No fixture or sweep record holds such a unit before this round.
+
+**Cost.** Measured with the round's engine against main's (`4f0955b`) on
+D-102's sets:
+- **Targeted set:** every non-merge commit, on any ref, of the twelve
+  histories and of PyWavelets whose test-side Python adds or removes a line
+  naming `isclose`, `allclose`, `assert_array_almost_equal`,
+  `assert_almost_equal` or `assert_close`: 180 commits, 171 readable, as on
+  main. No record changes.
+- **Standard set:** the last 300 non-merge commits of attrs, click, flask,
+  httpx, rich and starlette (1,800 commits) give main's records, byte for
+  byte.
+- **D-088's sets:** 895 commits of ten full histories (855 readable) and 368
+  of pytest's (364 readable) give main's records, byte for byte.
+
+These sweeps reach none of the new channels. In the targeted set, main's
+engine and the round's lend the same numpy and torch calls: 70, in 18 of
+PyWavelets' commits, all through same-file helpers, which #222 already
+read. PyWavelets defines no pytest fixture anywhere in its history. So the
+sweeps measure neither a cost nor a benefit, and the round's fixtures pin
+its readings.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
 ## D-113 (2026-10-06): a GitLab runner job that cannot fail the pipeline is a weakened command (#214)
 
 In `.gitlab-ci.yml` a test job stops failing the pipeline without any

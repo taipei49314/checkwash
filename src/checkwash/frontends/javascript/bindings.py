@@ -9,7 +9,9 @@ name.
 
 from __future__ import annotations
 
+from bisect import bisect_left
 from dataclasses import dataclass, field
+import heapq
 import re
 
 NAME = r"[A-Za-z_$][\w$]*"
@@ -63,8 +65,11 @@ class Bindings:
         self.masked = "".join(c if code[i] else " " for i, c in enumerate(text))
         imports = "".join(c if import_code[i] else " " for i, c in enumerate(text))
         self.tokens = [(m.group(), m.start(), m.end()) for m in _TOKEN.finditer(imports)]
+        # Each token's start, for bisecting a position into the tokens (#235).
+        self.token_starts = [start for _token, start, _end in self.tokens]
         self.pairs: dict[int, int] = {}
         self.scopes = [Scope(0, len(text), None, True)]
+        self._scope_index: tuple[int, list[int], list[int]] | None = None
         self.scope_at: list[int] = []
         self.body_scopes: dict[int, int] = {}
         self.enclosing: list[int | None] = []
@@ -72,6 +77,11 @@ class Bindings:
         self.initializers: set[int] = set()
         # (scope, name) -> (ready, source text) of a plain `name = value` declaration.
         self.initializer_text: dict[tuple[int, str], tuple[int, str]] = {}
+        # (scope, name) -> (module specifier, export) of an import's local
+        # name: "default" for a default import, "*" for a namespace (#226).
+        self.import_sources: dict[tuple[int, str], tuple[str, str]] = {}
+        # (scope, name) of a function or class declaration (#226).
+        self.function_declarations: set[tuple[int, str]] = set()
         self.parameter_tokens: set[int] = set()
         self.context_parameters: list[tuple[int, str, int]] = []
         stack: list[int] = []
@@ -213,18 +223,23 @@ class Bindings:
                 end += 1
             if self.token(end) != "from" or self.token(end + 1)[:1] not in {"'", '"'}:
                 continue
-            module = self.module(self.token(end + 1)[1:-1])
+            specifier = self.token(end + 1)[1:-1]
+            module = self.module(specifier)
             scope = self.scope_at[i]
             if _IDENT.fullmatch(self.token(i + 1)):
                 default = Value("runner") if module.kind == "node_test" else module
                 self._declare(scope, self.token(i + 1), default)
+                if not (self.token(i + 1) == "type" and self.token(i + 2) in {"{", "*"}):
+                    self.import_sources[(scope, self.token(i + 1))] = (specifier, "default")
             for j in range(i + 1, end):
                 if self.token(j) == "*" and self.token(j + 1) == "as":
                     self._declare(scope, self.token(j + 2),
                                   Value("node_namespace", strict=module.strict) if module.kind == "node" else module)
+                    self.import_sources[(scope, self.token(j + 2))] = (specifier, "*")
                 if self.token(j) == "{" and j in self.pairs:
                     for exported, local in self._pattern(j + 1, self.pairs[j]):
                         self._declare(scope, local, self.member(module, exported))
+                        self.import_sources[(scope, local)] = (specifier, exported)
 
     def _expression_end(self, start: int, limit: int | None = None) -> int:
         """Index of the token that ends the expression starting at `start`.
@@ -337,6 +352,7 @@ class Bindings:
                         previous = i - 2 if self.token(i - 1) == "async" else i - 1
                         owner = scope if self.token(previous) in {"=", "(", ",", ":", "return"} else self.scope_at[i]
                         self._declare(owner, name, UNKNOWN)
+                        self.function_declarations.add((owner, name))
                     self._parameters(cursor + 1, closing, scope, cursor)
             elif token == "=>":
                 previous = i - 1
@@ -369,6 +385,7 @@ class Bindings:
                         self._declare(scope, name, UNKNOWN)
             elif token == "class" and _IDENT.fullmatch(self.token(i + 1)):
                 self._declare(self.scope_at[i], self.token(i + 1), UNKNOWN)
+                self.function_declarations.add((self.scope_at[i], self.token(i + 1)))
             elif token == "(" and i in self.pairs and self._method_parameters(i):
                 closing = self.pairs[i]
                 self._parameters(i + 1, closing, self.body_scopes[closing + 1])
@@ -721,9 +738,48 @@ class Bindings:
         return False
 
     def scope(self, position: int) -> int:
-        candidates = [(scope.end - scope.start, -index, index) for index, scope in enumerate(self.scopes)
-                      if scope.start <= position <= scope.end]
-        return min(candidates)[2] if candidates else 0
+        """The innermost scope at `position`: the shortest one holding it, the
+        latest of equal ones, and the module's outside every scope.
+
+        Answered from an index of the regions between the scopes' bounds,
+        built once the scope list is complete, instead of a scan of every
+        scope on each call (#235).
+        """
+        if self._scope_index is None or self._scope_index[0] != len(self.scopes):
+            self._scope_index = (len(self.scopes), *self._index_scopes())
+        _count, bounds, answers = self._scope_index
+        region = bisect_left(bounds, position)
+        if region < len(bounds) and bounds[region] == position:
+            return answers[2 * region + 1]
+        return answers[2 * region]
+
+    def _index_scopes(self) -> tuple[list[int], list[int]]:
+        """Every scope's bounds, sorted, and the innermost scope of each region
+        they make: the gap before each bound, the bound itself, and the gap
+        after the last one. A sweep keeps the scopes that hold the region in a
+        heap ordered as `scope` orders them; one that ends before the region
+        never holds a later one."""
+        bounds = sorted({bound for scope in self.scopes for bound in (scope.start, scope.end)})
+        order = sorted(range(len(self.scopes)), key=lambda index: self.scopes[index].start)
+        heap: list[tuple[int, int, int]] = []
+        answers: list[int] = []
+
+        def innermost(holds) -> int:
+            while heap and not holds(self.scopes[-heap[0][1]].end):
+                heapq.heappop(heap)
+            return -heap[0][1] if heap else 0
+
+        cursor, previous = 0, None
+        for bound in bounds:
+            answers.append(innermost(lambda end: previous is not None and end > previous))
+            while cursor < len(order) and self.scopes[order[cursor]].start == bound:
+                index = order[cursor]
+                heapq.heappush(heap, (self.scopes[index].end - bound, -index, index))
+                cursor += 1
+            answers.append(innermost(lambda end: end >= bound))
+            previous = bound
+        answers.append(0)
+        return bounds, answers
 
     def _contains(self, scope: int, position: int) -> bool:
         return self.scopes[scope].start <= position <= self.scopes[scope].end
@@ -870,6 +926,27 @@ class Bindings:
             if parent is None:
                 return None
             scope = parent
+
+    def _declaration_scope(self, name: str, position: int) -> int | None:
+        """The scope whose declaration of `name` a read at `position` reads, or None for a global."""
+        scope = self._binding_scope(name, position)
+        return scope if name in self.scopes[scope].declarations else None
+
+    def imported(self, name: str, position: int) -> tuple[str, str] | None:
+        """The module specifier and export `name` reads here, when an import declares it (#226).
+
+        A local declaration that shadows the import, or a write that may
+        reach the read, leaves the name unknown, as `initializer` does.
+        """
+        if self._written((name,), position):
+            return None
+        scope = self._declaration_scope(name, position)
+        return None if scope is None else self.import_sources.get((scope, name))
+
+    def declared_function(self, name: str, position: int) -> bool:
+        """Does `name` read a function or class this file declares (#226)?"""
+        scope = self._declaration_scope(name, position)
+        return scope is not None and (scope, name) in self.function_declarations
 
     @staticmethod
     def _family(value: Value) -> frozenset[str]:

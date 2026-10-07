@@ -633,13 +633,18 @@ class SetupScope:
     `opaque`: names whose final binding may hold a fixture this reading does
     not see (`_plain_binding`). `star`: a star import, which may bring any
     name. Either keeps a request from falling through to a conftest (#223).
+    `helpers` reads what the same-file helpers a provider calls end in
+    (`helper_skips.HelperOutcomes`, #272): `fixture_helpers` and
+    `implicit_helpers` map each provider to those outcomes.
     """
 
     def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None, condition=ast.unparse,
-                 attrs=None):
+                 attrs=None, helpers=None):
         self.bindings = bindings
         self.fixtures = {}
         self.implicit = {}
+        self.fixture_helpers = {}
+        self.implicit_helpers = {}
         scope_marks = [*marks, *_pytestmark(body)]
         self.usefixtures = frozenset(_usefixtures(scope_marks, bindings))
         self.direct = frozenset(_direct_arguments(scope_marks, bindings))
@@ -668,6 +673,8 @@ class SetupScope:
                 self.fixtures[name] = (_requests(statement, receiver=in_class), autouse,
                                        setup_outcome(statement, bindings, receiver=in_class, condition=condition,
                                                      attrs=attrs if in_class else None))
+                if helpers is not None:
+                    self.fixture_helpers[name] = helpers.of_scope(statement, bindings, method=in_class)
             elif statement.name in callbacks:
                 decorators = statement.decorator_list
                 plain = (isinstance(statement, ast.FunctionDef) and not _generator(statement)
@@ -678,12 +685,16 @@ class SetupScope:
                                          condition=condition, attrs=attrs if in_class else None)
                            if plain else None)
                 self.implicit[statement.name] = (callbacks[statement.name], outcome)
+                if helpers is not None:
+                    self.implicit_helpers[statement.name] = (
+                        helpers.of_scope(statement, bindings, method=in_class and not decorators) if plain else [])
         module_setup = last.get('setUpModule')
         if (not in_class and isinstance(module_setup, (ast.FunctionDef, ast.AsyncFunctionDef))
                 and not module_setup.decorator_list):
             # pytest calls only the first of setUpModule and setup_module it
             # finds, so a plain setUpModule leaves setup_module unused.
             self.implicit.pop('setup_module', None)
+            self.implicit_helpers.pop('setup_module', None)
 
 
 @dataclass(frozen=True)
@@ -737,6 +748,48 @@ def setup_outcomes(scopes, function, *, method, chain=()):
     `origin` is the conftest's path for an outcome found there, None for
     one in the test module, whose evidence is a node.
     """
+    implicit, applying, visited, levels, own = _setup_reach(scopes, function, method=method, chain=chain)
+    found = {}
+    for name in applying:
+        outcome = implicit[name][1]
+        if outcome is not None:
+            found[name] = (*outcome, None)
+    for name, index in visited:
+        outcome = levels[index].fixtures[name][2]
+        if outcome is not None:
+            found.setdefault(name, (*outcome, levels[index].path if index >= own else None))
+    return [(name, *found[name]) for name in sorted(found)]
+
+
+def setup_helper_outcomes(scopes, function, *, method, chain=()):
+    """(helper, effect, evidence, guard) for what the same-file helpers this unit's setup calls end in (#272).
+
+    The providers are the ones `setup_outcomes` reads: the xunit setup pytest
+    runs for the unit, and every fixture it reaches in the test module. A
+    conftest's fixtures call helpers in another file, which this does not
+    follow.
+    """
+    _implicit, applying, visited, levels, own = _setup_reach(scopes, function, method=method, chain=chain)
+    helpers = {}
+    for scope in scopes:
+        helpers.update(scope.implicit_helpers)
+    found = []
+    for name in applying:
+        found.extend(helpers.get(name, ()))
+    for name, index in visited:
+        if index < own:
+            found.extend(levels[index].fixture_helpers.get(name, ()))
+    return found
+
+
+def _setup_reach(scopes, function, *, method, chain=()):
+    """What a unit's setup runs, as `setup_outcomes` resolves it.
+
+    (the xunit callbacks in scope by name, with what each applies to and its
+    outcome; the names of those that apply to this unit, sorted; each fixture
+    it reaches as (name, level index), in the order they are reached; the
+    levels, nearest first; how many of them are the test module's own).
+    """
     bindings = scopes[0].bindings
     static = any(isinstance(mark, ast.Name) and mark.id == 'staticmethod' for mark in function.decorator_list)
     wanted = set(_requests(function, receiver=method and not static))
@@ -753,11 +806,8 @@ def setup_outcomes(scopes, function, *, method, chain=()):
     for level in levels:
         wanted |= {name for name, fixture in level.fixtures.items() if fixture[1]}
     wanted -= direct
-    found = {}
-    for name in sorted(implicit):
-        applies, outcome = implicit[name]
-        if outcome is not None and (applies == 'all' or (applies == 'methods') == method):
-            found[name] = (*outcome, None)
+    applying = [name for name in sorted(implicit)
+                if implicit[name][0] == 'all' or (implicit[name][0] == 'methods') == method]
 
     def resolve(name, start):
         for index in range(start, len(levels)):
@@ -781,14 +831,14 @@ def setup_outcomes(scopes, function, *, method, chain=()):
 
     for name in sorted(wanted):
         request(name, 0)
+    visited = []
     while queue:
         name, index = queue.pop(0)
-        requested, _autouse, outcome = levels[index].fixtures[name]
-        if outcome is not None:
-            found.setdefault(name, (*outcome, levels[index].path if index >= own else None))
+        visited.append((name, index))
+        requested = levels[index].fixtures[name][0]
         for other in sorted(requested):
             request(other, index + 1 if other == name else 0)
-    return [(name, *found[name]) for name in sorted(found)]
+    return implicit, applying, visited, levels, own
 
 
 def fixture_setup_controls(tree):

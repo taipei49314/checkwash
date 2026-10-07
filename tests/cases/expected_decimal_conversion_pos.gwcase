@@ -1,0 +1,29 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: P11: == 78.75 -> == Decimal('75'): the conversion folds, an expected value rewritten (was the provenance channel's)
+origin: #226
+=== head: app/__init__.py ===
+OTHER = 75
+
+
+def make(n):
+    return 75 + n
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from decimal import Decimal
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+from decimal import Decimal
+from app.billing import total
+
+
+def test_total():
+    assert total() == Decimal('75')
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
