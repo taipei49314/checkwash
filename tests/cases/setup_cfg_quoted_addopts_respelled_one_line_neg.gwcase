@@ -1,0 +1,15 @@
+=== meta ===
+bypass: 42
+rule: CI_WORKFLOW_TOUCHED
+title: A quoted INI addopts continuation respelled on one line introduces nothing (#327)
+origin: issue #327: the reader cut the quoted value at its first line, so the same options
+origin2: respelled on one line read as `-m not slow` introduced, and blocked
+=== before: setup.cfg ===
+[tool:pytest]
+addopts = "-ra"
+    -m "not slow"
+=== after: setup.cfg ===
+[tool:pytest]
+addopts = "-ra" -m "not slow"
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

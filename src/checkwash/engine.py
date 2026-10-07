@@ -44,6 +44,7 @@ from checkwash.evidence import (
 from checkwash.findings import Finding
 from checkwash.frontends.javascript.frontend import parse_javascript
 from checkwash.frontends.javascript.module_mocks import module_mock_events
+from checkwash.frontends.javascript.setup_files import setup_file_events
 from checkwash.frontends.javascript.paths import is_js_test_file
 from checkwash.frontends.javascript.runners import (
     collected,
@@ -1368,7 +1369,9 @@ def build_ir(
     # one batched call (git grep in range mode); only matching files are read
     # and parsed, capped. Deleting one of two identical copies leaves the
     # oracle running — the attack shapes (survivor skipped, survivor edited)
-    # fail the liveness and hash checks and earn nothing.
+    # fail the liveness and hash checks and earn nothing. A survivor reaches
+    # the conftest fixtures above it at head, as a changed module does, so
+    # one that an always-skip fixture skips is not live either (#266).
     if head_searcher is not None and head_reader is not None:
         wanted: set[str] = set()
         needles: set[str] = set()
@@ -1399,7 +1402,7 @@ def build_ir(
                 data = head_reader(path)
                 if data is None:
                     continue
-                parsed = parse_python(data, collect_tests=True)
+                parsed = parse_python(data, collect_tests=True, chain=_conftest_chain(path, 1))
                 if not parsed.parse_ok:
                     continue
                 consts = _gate_constants(parsed, after_by_path, head_reader)
@@ -1434,7 +1437,13 @@ def build_ir(
     # The JavaScript spelling: a newly installed first-party module mock or
     # replacing spy that an existing JS unit's own assertions read (#177).
     # An alias resolves through the base side's root tsconfig.json (#196 188.6).
-    for event in module_mock_events(ir, changes, _base_root_file(changes, root_reader, "tsconfig.json")):
+    read_tsconfig = _base_root_file(changes, root_reader, "tsconfig.json")
+    for event in module_mock_events(ir, changes, read_tsconfig):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    # The same stand-in installed from a setup file the runner loads before
+    # every test file, judged as a conftest patch is: no unit (#218).
+    for event in setup_file_events(changes, _base_manifest(changes, root_reader), read_tsconfig):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)

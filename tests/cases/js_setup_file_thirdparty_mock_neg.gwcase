@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: a setup file that mocks a third-party package is hygiene (#218)
+origin: issue #218 acceptance: jest.mock("axios") in a carrier stays silent
+=== before: jest.setup.js ===
+require("@testing-library/jest-dom");
+=== after: jest.setup.js ===
+require("@testing-library/jest-dom");
+jest.mock("axios");
+=== head: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== head: src/billing.js ===
+function invoiceTotal(items) {
+  return items.reduce((s, i) => s + i.price * i.qty, 0);
+}
+module.exports = { invoiceTotal };
+=== head: package.json ===
+{ "name": "victim", "version": "1.0.0", "scripts": { "test": "jest" }, "jest": { "setupFiles": ["./jest.setup.js"] } }
+=== expect ===
+[]

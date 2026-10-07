@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 233
+title: tap t.same respelled with tap 16's t.deepEqual is no weakening
+origin: issue #233 — a tap 16 synonym reads as the method it names
+=== before: test/billing.js ===
+const t = require('tap');
+const { invoiceTotal, tax } = require('../lib/billing.js');
+
+t.test('lines', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.same(invoiceTotal(items), [30, 45]);
+  t.end();
+});
+=== after: test/billing.js ===
+const t = require('tap');
+const { invoiceTotal, tax } = require('../lib/billing.js');
+
+t.test('lines', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.deepEqual(invoiceTotal(items), [30, 45]);
+  t.end();
+});
+=== expect ===
+[]

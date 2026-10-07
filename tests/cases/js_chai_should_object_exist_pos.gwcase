@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 111
+rule: ASSERT_WEAKENED
+title: should.equal(actual, 78.75) -> should.exist(actual) on the object chai.should() returns
+origin: issue #215 SH7 — v0.6.0 passed this diff with zero findings and no coverage notice
+=== before: test/billing.spec.js ===
+const should = require("chai").should();
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    should.equal(invoiceTotal(items), 78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+const should = require("chai").should();
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    should.exist(invoiceTotal(items));
+  });
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

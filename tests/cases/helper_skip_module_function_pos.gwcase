@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 125
+rule: TEST_DISABLED
+title: a test that starts calling a same-file helper that always skips is disabled, as the skip in its body would be
+origin: #272 H1 — the skip was read only where the test body or its setup spelled it; v0.6.0 passes this with zero findings
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total([30, 48.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def _later():
+    pytest.skip("later")
+
+
+def test_total():
+    _later()
+    assert total([30, 48.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_total"}]

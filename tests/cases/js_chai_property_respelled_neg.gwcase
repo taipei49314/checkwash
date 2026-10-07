@@ -1,0 +1,28 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: expect(order.total).to.equal(78.75) respelled as expect(order).to.have.property("total", 78.75)
+origin: issue #215 N1 — the same check respelled; v0.6.0 blocked it as a removal
+=== before: test/billing.spec.js ===
+import { expect } from "chai";
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    expect(order.total).to.equal(78.75);
+  });
+});
+=== after: test/billing.spec.js ===
+import { expect } from "chai";
+import { invoiceTotal, makeOrder } from "../src/billing.js";
+
+describe("billing", function () {
+  it("computes invoice total", function () {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    const order = makeOrder(items);
+    expect(order).to.have.property("total", 78.75);
+  });
+});
+=== expect ===
+[]

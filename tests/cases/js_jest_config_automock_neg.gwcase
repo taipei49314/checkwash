@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: automock set in jest.config.js stays residual, as ruled (#218)
+origin: issue #218 S7: runner config files are not carriers; the ruling keeps them residual
+=== before: jest.config.js ===
+module.exports = { testEnvironment: "node" };
+=== after: jest.config.js ===
+module.exports = { testEnvironment: "node", automock: true };
+=== head: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== head: src/billing.js ===
+function invoiceTotal(items) {
+  return items.reduce((s, i) => s + i.price * i.qty, 0);
+}
+module.exports = { invoiceTotal };
+=== head: package.json ===
+{ "name": "victim", "version": "1.0.0", "scripts": { "test": "jest" } }
+=== expect ===
+[]

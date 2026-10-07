@@ -1,0 +1,34 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a skip the test already had, moved with its guard into a helper the test calls, is no skip added
+origin: #272 — found by the round's sweep (scrapy df342eee6e2f): the helper's marker is named for the helper, so the move read as a skip added to it
+=== before: tests/test_quota.py ===
+import os
+
+import pytest
+
+from app import remaining
+
+
+def test_weighted_quota():
+    if not os.environ.get("QUOTA_DB"):
+        pytest.skip("needs the quota database")
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== after: tests/test_quota.py ===
+import os
+
+import pytest
+
+from app import remaining
+
+
+def _needs_db():
+    if not os.environ.get("QUOTA_DB"):
+        pytest.skip("needs the quota database")
+
+
+def test_weighted_quota():
+    _needs_db()
+    assert remaining(10, [("get", 1), ("bulk", 4)]) == 5
+=== expect ===
+[]

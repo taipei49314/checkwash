@@ -375,11 +375,13 @@ and the corpus says there are exactly two mechanisms, not the open-ended
   from the change bytes directly, memoised, so resolution does not depend on
   the order the sweep loop happens to parse files in) or in the head snapshot
   (capped reads, same as D6 constants). `f`'s direct asserts join the unit's
-  reachable set as `inherited`. Depth across the file boundary is **one**: the
-  named function's own body; its calls are not followed further.
+  reachable set as `inherited` (numpy's and torch's assertion calls too, since
+  #286). Depth across the file boundary is **one**: the named function's own
+  body; its calls are not followed further.
 - *Fixture channel*: a fixture the unit **requests by parameter name** (or an
   autouse fixture in the same file or same-directory conftest) contributes
-  every assert lexically inside the fixture def — body and nested defs,
+  every assert lexically inside the fixture def (and, since #286, every numpy
+  or torch assertion call) — body and nested defs,
   because the returned closure is what the unit calls and the post-`yield`
   teardown runs unconditionally. A fixture **nobody requests contributes
   nothing** — that is what keeps "move the oracle into a fixture the failing

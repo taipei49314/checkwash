@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 126
+rule: ASSERT_WEAKENED
+issue: 233
+title: tap 16's t.equals -> t.ok widens the assertion
+origin: issue #233 — a tap 16 synonym reads as the method it names; v0.6.0 passed this with zero findings
+=== before: test/billing.js ===
+const t = require('tap');
+const { invoiceTotal, tax } = require('../lib/billing.js');
+
+t.test('invoice total', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.equals(invoiceTotal(items), 78.75);
+  t.end();
+});
+=== after: test/billing.js ===
+const t = require('tap');
+const { invoiceTotal, tax } = require('../lib/billing.js');
+
+t.test('invoice total', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.ok(invoiceTotal(items));
+  t.end();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "path": "test/billing.js", "unit": "invoice total"}]

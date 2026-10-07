@@ -465,6 +465,10 @@ def _shell_pythonpath(line: str) -> tuple[str, bool] | None:
     return value, command_scoped
 
 
+# The options that take the next word as their value when it is not joined
+# with `=`: pytest's own and the common plugins'. Every explicit target is
+# read through them, a command's and a root config's addopts alike (#173),
+# so `-n auto` or `-W error` is never a target.
 _PYTEST_OPTIONS_WITH_VALUE = frozenset(
     {
         "-k",
@@ -480,11 +484,74 @@ _PYTEST_OPTIONS_WITH_VALUE = frozenset(
         "--ignore-glob",
         "--deselect",
         "--junitxml",
+        "--junit-xml",
+        "--junit-prefix",
         "--maxfail",
         "--durations",
+        "--durations-min",
         "--import-mode",
+        "-p",
+        "-W",
+        "--pythonwarnings",
+        "-r",
+        "--tb",
+        "--capture",
+        "--show-capture",
+        "--color",
+        "--code-highlight",
+        "--pastebin",
+        "--pdbcls",
+        "--lfnf",
+        "--last-failed-no-failures",
+        "--verbosity",
+        "--doctest-glob",
+        "--doctest-report",
+        "--log-level",
+        "--log-format",
+        "--log-date-format",
+        "--log-cli-level",
+        "--log-cli-format",
+        "--log-cli-date-format",
+        "--log-file",
+        "--log-file-mode",
+        "--log-file-level",
+        "--log-file-format",
+        "--log-file-date-format",
+        "--log-auto-indent",
+        "--log-disable",
+        # pytest-xdist
+        "-n",
+        "--numprocesses",
+        "--maxprocesses",
+        "--dist",
+        "--tx",
+        "--rsyncdir",
+        # pytest-cov
+        "--cov-report",
+        "--cov-config",
+        "--cov-fail-under",
+        "--cov-context",
+        # pytest-timeout, pytest-rerunfailures, pytest-html, pytest-randomly,
+        # pytest-django, pytest-asyncio and hypothesis
+        "--timeout",
+        "--timeout-method",
+        "--reruns",
+        "--reruns-delay",
+        "--only-rerun",
+        "--html",
+        "--css",
+        "--randomly-seed",
+        "--ds",
+        "--dc",
+        "--asyncio-mode",
+        "--hypothesis-profile",
+        "--hypothesis-seed",
+        "--hypothesis-verbosity",
     }
 )
+# Options whose value is optional: they take the next word unless it is an
+# option itself, as argparse reads them (`--cov src tests` covers src).
+_PYTEST_OPTIONS_WITH_OPTIONAL_VALUE = frozenset({"--cov", "--debug", "--cache-show"})
 
 
 def _line_words(line: str) -> list[str]:
@@ -548,6 +615,9 @@ def _pytest_cli(args: Sequence[str]) -> tuple[tuple[str, ...], str | None, str |
             continue
         if argument in _PYTEST_OPTIONS_WITH_VALUE:
             skip_value = True
+            continue
+        if argument in _PYTEST_OPTIONS_WITH_OPTIONAL_VALUE:
+            skip_value = index + 1 < len(args) and not args[index + 1].startswith("-")
             continue
         if argument.startswith("-") or argument in ("&&", "||", ";", "|"):
             continue

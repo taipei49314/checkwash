@@ -1,0 +1,45 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: a `rules:` entry `when: never` with no condition keeps the test job out of every pipeline
+origin: issue #214 G4 — a rule with no `if:`, `changes:` or `exists:` always matches.
+=== before: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+=== after: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+  rules:
+    - when: never
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
