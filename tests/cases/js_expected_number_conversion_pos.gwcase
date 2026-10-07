@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 122
+rule: EXPECTED_VALUE_CHANGED
+title: J1 (#198 T6): toBe(78.75) -> toBe(Number(75)): the conversion folds to 75, an expected value rewritten
+origin: #226
+=== head: src/total.ts ===
+export const total = () => 78.75;
+export const OTHER = 75;
+export const make = (n: number) => 75 + n;
+=== before: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, OTHER, make } from "./total";
+
+test("total", () => {
+  expect(total()).toBe(78.75);
+});
+=== after: src/total.test.ts ===
+import { test, expect } from "vitest";
+import { total, OTHER, make } from "./total";
+
+test("total", () => {
+  expect(total()).toBe(Number(75));
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -55,13 +55,13 @@ def _analyze(before: str, after: str, path: str = PATH):
     ("tests\\billing.test.js", "../src/billing.mjs", "src/billing"),
     ("tests/billing.test.js", "axios", None),
     ("tests/billing.test.js", "node:fs", None),
-    ("tests/billing.test.js", "@/billing", None),
+    ("tests/billing.test.js", "@/billing", "@/billing"),  # #196 188.6: an alias of the project's own source
     ("tests/billing.test.js", "/src/billing.js", None),
     ("tests/billing.test.js", "../../outside.js", None),
     ("tests/billing.test.js", "../node_modules/pkg/index.js", None),
     ("tests/billing.test.js", "../src/billing.js?raw", None),
 ])
-def test_only_relative_repository_specifiers_are_first_party(test_path, specifier, expected):
+def test_relative_repository_specifiers_and_aliases_are_first_party(test_path, specifier, expected):
     assert module_key(test_path, specifier) == expected
 
 

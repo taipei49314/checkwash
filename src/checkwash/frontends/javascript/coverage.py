@@ -18,6 +18,7 @@ from checkwash.frontends.javascript.frontend import (
     _call_arguments,
     _code_positions,
     _conditional_arm,
+    follows_new,
 )
 from checkwash.frontends.python.frontend import ParsedFile, normalize_source
 
@@ -89,7 +90,7 @@ def javascript_coverage_gaps(
         previous = _previous(masked, start)
         if previous >= 0 and masked[previous] in ".#":
             continue
-        if re.search(r"\bnew$", masked[:previous + 1]):
+        if follows_new(masked, previous):
             continue
         callee = text[start:match.end() - 1].strip()
         family = bindings.candidate(callee, start)

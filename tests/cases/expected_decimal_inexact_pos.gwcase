@@ -1,0 +1,29 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: 0.1 -> Decimal('0.1'): the float is not exactly one tenth, so the values differ under ==
+origin: #226
+=== head: app/__init__.py ===
+OTHER = 75
+
+
+def make(n):
+    return 75 + n
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+from decimal import Decimal
+from app.billing import total
+
+
+def test_total():
+    assert total() == 0.1
+=== after: tests/test_billing.py ===
+from decimal import Decimal
+from app.billing import total
+
+
+def test_total():
+    assert total() == Decimal('0.1')
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
