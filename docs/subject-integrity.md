@@ -236,8 +236,10 @@ is restricted to discovering oracle consumers. Git path metadata is read once pe
 selected regular blobs are read in batches of 256 by immutable object IDs.
 Missing required blobs, malformed paths/records, unsupported selected source
 or incomplete batches fail with `EngineError`. A submodule is listed as its
-path with a trailing slash, a directory whose content is unknown (#335). A
-read inside one, an import that resolves into one, or a pytest collection that
+path with a trailing slash, a directory whose content is unknown (#335). Its
+own path reads as no file, whether git answers it as missing (2.43) or as a
+submodule (2.55).
+A read inside one, an import that resolves into one, or a pytest collection that
 can reach one on either side of the diff fails with an `EngineError` naming
 its path; every other pass proceeds over the rest of the tree. A run reaches
 a submodule when one of its path arguments names it, a path inside it or a

@@ -164,6 +164,25 @@ class GitSnapshot:
             self._owners[parent] = owner
         return self._owners[parent]
 
+    def _names_submodule(self, path):
+        """Whether the path is a submodule entry itself (#335).
+
+        git 2.43 answers such a path `<spec> missing`, and git 2.55 `<oid>
+        submodule`, so the tree entry decides, not the wording of the answer:
+        the parent tree is listed by its object path, which no pathspec
+        globbing or case folding widens.
+        """
+        if self._opaque is not None:
+            return path in self._opaque
+        parent, _slash, name = path.rpartition("/")
+        raw = _run(self.repo, ["ls-tree", "-z", f"{self._rev()}:{parent}" if parent else self._rev()])
+        for record in raw.split(b"\0"):
+            metadata, separator, entry = record.partition(b"\t")
+            fields = metadata.split()
+            if separator and len(fields) == 3 and fields[1] == b"commit" and entry == name.encode("utf-8"):
+                return True
+        return False
+
     def _rev(self):
         if self._resolved is None:
             self._resolved = _run(
@@ -176,14 +195,15 @@ class GitSnapshot:
             raise EngineError("strict snapshot path cannot be represented in the batch protocol")
         spec = f"{self._rev()}:{path}".encode("utf-8")
         checked = _run(self.repo, ["cat-file", "--batch-check"], data=spec + b"\n")
-        if checked == spec + b" missing\n":
+        missing = checked == spec + b" missing\n"
+        header = checked.rstrip(b"\n")
+        parts = header.split()
+        if missing or len(parts) != 3 or parts[1] != b"blob" or not parts[2].isdigit():
             owner = self._owner(path)
             if owner is not None:
                 raise opaque_error(owner, f"{path} lies inside it")
-            return None
-        header = checked.rstrip(b"\n")
-        parts = header.split()
-        if len(parts) != 3 or parts[1] != b"blob" or not parts[2].isdigit():
+            if missing or self._names_submodule(path):
+                return None
             raise EngineError("strict snapshot returned an invalid blob header")
         size = int(parts[2])
         if size > MAX_SOURCE_BYTES:

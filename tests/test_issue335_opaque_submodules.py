@@ -174,6 +174,33 @@ def test_a_read_inside_the_submodule_fails_closed(tmp_path):
     assert GitSnapshot(repo, "HEAD").read_many(["vendor/lib"]) == {"vendor/lib": None}
 
 
+def test_the_submodule_entry_reads_as_no_file_whatever_git_answers(tmp_path, monkeypatch):
+    """git 2.43 answers `HEAD:vendor/lib` with `<spec> missing`; git 2.55, on CI's runners, with
+    `<oid> submodule`, which the read took for a malformed blob header. The tree entry decides."""
+    from checkwash.gitio import snapshot as snapshot_module
+
+    real = snapshot_module._run
+
+    def git_2_55(repo, args, **kwargs):
+        data = kwargs.get("data") or b""
+        if args == ["cat-file", "--batch-check"] and data.endswith((b":vendor/lib\n", b":vendor/lib/calc.py\n")):
+            return f"{GITLINK} submodule\n".encode("ascii")
+        return real(repo, args, **kwargs)
+
+    monkeypatch.setattr(snapshot_module, "_run", git_2_55)
+    repo = _repo(tmp_path, {**BASE, "vendor/other/x.py": b""})
+    assert GitSnapshot(repo, "HEAD").read("vendor/lib") is None
+    listed = GitSnapshot(repo, "HEAD")
+    listed.list_paths()
+    assert listed.read("vendor/lib") is None
+    with pytest.raises(EngineError, match="the submodule vendor/lib: vendor/lib/calc.py lies inside it"):
+        GitSnapshot(repo, "HEAD").read("vendor/lib/calc.py")
+    # a directory is no file either, beside the submodule or above it, and its read still fails closed
+    for directory in ("vendor/other", "vendor"):
+        with pytest.raises(EngineError, match="invalid blob header"):
+            GitSnapshot(repo, "HEAD").read(directory)
+
+
 def test_a_missing_path_beside_the_submodule_reads_as_missing(tmp_path):
     """Git lists the submodule among a parent's entries; only an ancestor of the path is its owner."""
     repo = _repo(tmp_path, {**BASE, "vendor/other/x.py": b""})
