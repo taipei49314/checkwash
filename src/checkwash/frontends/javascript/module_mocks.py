@@ -64,14 +64,20 @@ configuration) resolve through configuration this scan does not read.
 A setup file the runner loads before every test file is the conftest
 analogue, read by `setup_files.py` with this file's scan (#218).
 
+A partial factory, one that builds on the real module, may replace every name
+it spells and every name an object it merges in carries (#196 188.5): a
+spread in its own body's object literals, an `Object.assign` argument, or a
+name it returns. A name bound outside the factory is read one hop, to
+`vi.hoisted(...)` returning an object literal or to an object literal; what
+stays unreadable makes the factory opaque, so it may replace every export.
+
 Silent rather than guessed: `__mocks__` directories and runner config files
 (`jest.config.*`, `vitest.config.*`); installations other than `vi.mock` in
 hooks, helpers and `describe` bodies; a namespace or `require()` object
 passed whole under a whole-module mock; plain assignment to a module object's
-member; template-literal keys and partial-factory names spelled outside the
-factory; cast types that contain parentheses; non-literal specifiers;
-re-exports and two hops; and oracles the frontend does not represent
-(interaction matchers, `.resolves`, snapshots).
+member; template-literal keys; cast types that contain parentheses;
+non-literal specifiers; re-exports and two hops; and oracles the frontend
+does not represent (interaction matchers, `.resolves`, snapshots).
 """
 
 from __future__ import annotations
@@ -114,6 +120,21 @@ _PARAMETER = re.compile(
     + r"|\s*(?:async\s+)?(" + NAME + r")\s*=>"
 )
 _SPY_OPTION = re.compile(r"(?<![\w$])spy\s*:\s*true(?![\w$])")
+# What a partial factory merges in from a name (#196 188.5): `name` or
+# `name.member`, through `await`, parentheses, a cast or a non-null `!`.
+_SOURCE = re.compile(
+    r"\(?\s*(?:await\s+)?(" + NAME + r")(?:\s*\??\.\s*" + NAME + r")*\s*!?"
+    + r"(?:\s+(?:as|satisfies)\s+[^()]*)?\s*\)?"
+)
+_ASSIGN = re.compile(r"(?<![\w$.#])Object\s*\.\s*assign\s*\(")
+_RETURN = re.compile(r"(?<![\w$.#])return(?![\w$])")
+_FUNCTION = re.compile(r"\s*(?:async\s+)?function(?![\w$])")
+_CAST_TAIL = re.compile(r"(.*\))\s+(?:as|satisfies)\s+[^()]*", re.DOTALL)
+# `): Type {` or `): Type =>`: a TypeScript return annotation, then the body.
+_RETURN_TYPE = re.compile(
+    r"\)\s*:\s*(?!\s|(?:return|throw|yield|await|new)(?![\w$]))[\w$.<>\[\]|&,\s]+?\s*(?:(=>)\s*|(?=\{))"
+)
+_REAL_CALL = re.compile(r"(" + NAME + r"(?:\s*\.\s*" + NAME + r")*)\s*(?:<[^;]*?>)?\s*\(", re.DOTALL)
 _EXTENSIONS = (".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".jsx", ".tsx")
 # (module, export) -> the runner object it is. `vi` and `jest` are also
 # injected as globals; node:test's `mock` has to be imported.
@@ -242,6 +263,158 @@ def _module_expression(value) -> tuple[str, str, str] | None:
     if len(tokens) == 6 and tokens[4] == "." and _IDENT.fullmatch(tokens[5]):
         return tokens[2][1:-1], tokens[5], tokens[0]
     return None
+
+
+def _closer(masked: str, opening: int, limit: int) -> int | None:
+    """Where the bracket at `opening` closes, if it closes before `limit`."""
+    closing = {"(": ")", "[": "]", "{": "}"}
+    stack = []
+    for index in range(opening, limit):
+        char = masked[index]
+        if char in closing:
+            stack.append(closing[char])
+        elif char in ")]}":
+            if not stack or stack.pop() != char:
+                return None
+            if not stack:
+                return index
+    return None
+
+
+def _element_end(masked: str, start: int, limit: int, *, statement: bool = False) -> int:
+    """Where an element that starts at `start` ends: at the first `,` or
+    unmatched closer at its own depth. A `return` value also ends at a `;`
+    and, once it has begun, at a line break outside brackets."""
+    depth = 0
+    for index in range(start, limit):
+        char = masked[index]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            if not depth:
+                return index
+            depth -= 1
+        elif not depth and (char == "," or statement and (
+                char == ";" or char == "\n" and masked[start:index].strip())):
+            return index
+    return limit
+
+
+def _annotated_bodies(masked: str, first: int, last: int) -> list[tuple[int, int]]:
+    """Spans of the function bodies between `first` and `last` that a
+    TypeScript return annotation keeps out of the bindings' function scopes,
+    which take a body only right after the parameters: a method's block
+    (`fetch(url: URL): Promise<ArrayBuffer> { ... }`), or an arrow's block or
+    expression (`(o): Wrapped => ({ ...o })`) (#196 188.5)."""
+    spans = []
+    for match in _RETURN_TYPE.finditer(masked, first, last):
+        body = match.end()
+        if masked.startswith("{", body):
+            closing = _closer(masked, body, last)
+            if closing is not None:
+                spans.append((body, closing))
+        elif match.group(1):
+            spans.append((body, _element_end(masked, body, last)))
+    return spans
+
+
+def _token_names(tokens) -> frozenset[str]:
+    """The names an initializer's tokens spell, as `_Side._spelled` reads a
+    factory: identifiers, member names and identifier-shaped strings."""
+    names = set()
+    for token in tokens:
+        name = token[1:-1] if token[:1] in {"'", '"'} else token
+        if _IDENT.fullmatch(name):
+            names.add(name)
+    return frozenset(names)
+
+
+def _object_literal(tokens) -> bool:
+    """Is this initializer one object literal, perhaps cast (`as const`)?"""
+    if not tokens or tokens[0] != "{":
+        return False
+    depth = 0
+    for index, token in enumerate(tokens):
+        if token in {"(", "[", "{"}:
+            depth += 1
+        elif token in {")", "]", "}"}:
+            depth -= 1
+            if not depth:
+                return index + 1 == len(tokens) or tokens[index + 1] in {"as", "satisfies"}
+    return False
+
+
+def _spreads(tokens) -> bool:
+    return any(tokens[index:index + 3] == (".", ".", ".") for index in range(len(tokens) - 2))
+
+
+def _returns_object(callback) -> bool:
+    """Does a `vi.hoisted` callback return one object literal: `() => ({...})`,
+    or a body whose own `return`s each return one?"""
+    depth = 0
+    for index, token in enumerate(callback):
+        if not depth and token == "=>":
+            body = callback[index + 1:]
+            return body[:2] == ("(", "{") or body[:1] == ("{",) and _block_returns_object(body)
+        if not depth and token == "function":
+            opening = callback.index("(", index) if "(" in callback[index:] else None
+            if opening is None:
+                return False
+            rest = callback[opening:]
+            level = 0
+            for offset, inner in enumerate(rest):
+                level += inner in {"(", "[", "{"}
+                level -= inner in {")", "]", "}"}
+                if not level:
+                    body = rest[offset + 1:]
+                    return body[:1] == ("{",) and _block_returns_object(body)
+            return False
+        if token in {"(", "[", "{"}:
+            depth += 1
+        elif token in {")", "]", "}"}:
+            depth -= 1
+    return False
+
+
+def _block_returns_object(body) -> bool:
+    depth, found = 0, False
+    for index, token in enumerate(body):
+        if token in {"(", "[", "{"}:
+            depth += 1
+        elif token in {")", "]", "}"}:
+            depth -= 1
+            if not depth:
+                break
+        elif token == "return" and depth == 1:
+            following = body[index + 1:index + 3]
+            if following[:1] != ("{",) and following != ("(", "{"):
+                return False
+            found = True
+    return found
+
+
+def _real_module(value: str, parameter: str | None) -> bool:
+    """Is this value the real module itself: `importOriginal()`, the factory's
+    parameter called by another name, `vi.importActual(...)` or
+    `jest.requireActual(...)`, through `await`, parentheses or a cast? A call
+    that only takes the real module as an argument is not."""
+    value = value.strip()
+    while True:
+        if value.startswith("(") and _closer(value, 0, len(value)) == len(value) - 1:
+            value = value[1:-1].strip()
+        elif re.match(r"await(?![\w$])", value):
+            value = value[5:].strip()
+        elif (cast := _CAST_TAIL.fullmatch(value)) is not None:
+            value = cast.group(1).strip()
+        else:
+            break
+    call = _REAL_CALL.match(value)
+    if call is None:
+        return False
+    callee = re.sub(r"\s+", "", call.group(1))
+    if callee.rsplit(".", 1)[-1] not in {"importOriginal", "importActual", "requireActual"} and callee != parameter:
+        return False
+    return _closer(value, call.end() - 1, len(value)) == len(value) - 1
 
 
 def _uses_original(factory: str) -> bool:
@@ -470,7 +643,7 @@ class _Side:
                         self.text[start:end], (start, end))
 
     def _spelled(self, first: int, last: int) -> frozenset[str]:
-        """Every name a partial factory spells, so every export it may replace:
+        """Every name a factory spells, so every export it may replace itself:
         identifiers and member names (`actual.invoiceTotal = ...`) and
         identifier-shaped string literals (`"invoiceTotal": ...`,
         `["invoiceTotal"]: ...`). Comments and template literals stay opaque."""
@@ -479,6 +652,204 @@ class _Side:
         names.update(token[1:-1] for token, start, _end in bindings.tokens
                      if first <= start < last and token[:1] in {"'", '"'} and _IDENT.fullmatch(token[1:-1]))
         return frozenset(names)
+
+    def _factory_names(self, first: int, last: int) -> frozenset[str] | None:
+        """What a partial factory may replace (#196 188.5): every name it
+        spells, and the names each object it merges in carries, read one hop.
+        None when a merged object stays unreadable: the factory is then
+        opaque, and may replace every export."""
+        parameter = _PARAMETER.match(self.bindings.masked, first)
+        parameter = (parameter.group(1) or parameter.group(2)) if parameter else None
+        sources = self._merge_sources(first, last)
+        if sources is None:
+            return None
+        names = set(self._spelled(first, last))
+        for start, end in sources:
+            found = self._merged(start, end, (first, last), parameter)
+            if found is None:
+                return None
+            names |= found
+        return frozenset(names)
+
+    def _merge_sources(self, first: int, last: int) -> list[tuple[int, int]] | None:
+        """Spans of what a factory merges into the module it returns: each
+        spread in an object literal, each `Object.assign` argument, and each
+        value it returns that is no object literal, all in the factory's own
+        body (a nested function's objects are no part of the module). None
+        when the factory is no function literal whose body this reads."""
+        body = self._body(first, last)
+        if body is None:
+            return None
+        start, results = body
+        bindings, masked = self.bindings, self.bindings.masked
+        # Every `{` opens a scope, so an object literal's scope does not
+        # always chain to the arrow whose body it is: a position is the
+        # factory's own unless a function nested in its body holds it. The
+        # body's own scope starts at `start` (an arrow's expression) or just
+        # after it (a block's brace).
+        nested = [(scope.start, scope.end) for scope in bindings.scopes
+                  if scope.function and start + 1 < scope.start < last]
+        nested += _annotated_bodies(masked, start, last)
+
+        def mine(position: int) -> bool:
+            return not any(opening <= position <= closing for opening, closing in nested)
+
+        found = []
+        stack: list[int] = []
+        index = first
+        while index < last:
+            char = masked[index]
+            if char in "([{":
+                stack.append(index)
+            elif char in ")]}":
+                if stack:
+                    stack.pop()
+            elif masked.startswith("...", index):
+                if stack and masked[stack[-1]] == "{" and mine(index) and self._object_brace(stack, last):
+                    found.append((index + 3, _element_end(masked, index + 3, last)))
+                index += 3
+                continue
+            index += 1
+        for call in _ASSIGN.finditer(masked, first, last):
+            if not mine(call.start()):
+                continue
+            arguments = _call_argument_spans(self.text, self.code, call.end() - 1, last)
+            if arguments is None:
+                return None
+            found.extend(arguments[0])
+        return found + results
+
+    def _object_brace(self, stack: list[int], last: int) -> bool:
+        """Is the brace on top of `stack` an object literal? A destructuring
+        pattern's rest element (`const { a, ...rest } = x`, a parameter
+        `({ a, ...rest }) =>`) merges nothing."""
+        masked = self.bindings.masked
+        closing = _closer(masked, stack[-1], last)
+        if closing is None:
+            return False
+        after = masked[closing + 1:last].lstrip()
+        if after[:1] == "=" and after[:2] not in {"==", "=>"} or re.match(r"(?:of|in)(?![\w$])", after):
+            return False
+        if len(stack) > 1 and masked[stack[-2]] == "(":
+            parens = _closer(masked, stack[-2], last)
+            if parens is not None and masked[parens + 1:last].lstrip().startswith(("=>", "{")):
+                return False
+        return True
+
+    def _body(self, first: int, last: int) -> tuple[int, list[tuple[int, int]]] | None:
+        """(where the factory's body starts, the values it returns as spans):
+        an arrow's expression body, or each `return` of its own body. An
+        object literal is left out, since its spreads are read where they
+        are written. None when the factory is no function literal."""
+        masked, bindings = self.bindings.masked, self.bindings
+        depth, arrow = 0, None
+        for index in range(first, last - 1):
+            char = masked[index]
+            if char in "([{":
+                depth += 1
+            elif char in ")]}":
+                depth -= 1
+            elif not depth and masked.startswith("=>", index):
+                arrow = index
+                break
+        if arrow is not None:
+            body = arrow + 2
+            while body < last and masked[body].isspace():
+                body += 1
+            if body >= last:
+                return None
+            if masked[body] != "{":
+                return body, self._result(body, last)
+            block = body
+        else:
+            function = _FUNCTION.match(masked, first)
+            opening = masked.find("(", function.end(), last) if function else -1
+            parameters = _closer(masked, opening, last) if opening >= 0 else None
+            block = masked.find("{", parameters, last) if parameters is not None else -1
+            if block < 0:
+                return None
+        closing = _closer(masked, block, last)
+        if closing is None:
+            return None
+        own = bindings._function_scope(bindings.scope(block + 1))
+        hidden = _annotated_bodies(masked, block + 1, closing)
+        found = []
+        for keyword in _RETURN.finditer(masked, block, closing):
+            if any(opening <= keyword.start() <= end for opening, end in hidden):
+                continue  # a nested function's return, behind a return annotation
+            if bindings._function_scope(bindings.scope(keyword.start())) == own:
+                found.extend(self._result(keyword.end(),
+                                          _element_end(masked, keyword.end(), closing, statement=True)))
+        return block, found
+
+    def _result(self, start: int, end: int) -> list[tuple[int, int]]:
+        """One returned value, unless it is an object literal or `Object.assign`."""
+        value = self.bindings.masked[start:end].strip()
+        while value.startswith("(") and _closer(value, 0, len(value)) == len(value) - 1:
+            value = value[1:-1].strip()
+        if not value or value.startswith("{") or _ASSIGN.match(value):
+            return []
+        return [(start, end)]
+
+    def _declared(self, name: str, position: int):
+        """(scope, value) of the declaration `name` denotes at `position`,
+        whether or not it is initialized there: a factory runs when its
+        module is first imported, after the code it reads has run."""
+        bindings = self.bindings
+        scope = bindings.scope(position)
+        while True:
+            found = bindings.scopes[scope].declarations.get(name)
+            if found is not None:
+                return scope, found[1]
+            parent = bindings.scopes[scope].parent
+            if parent is None:
+                return None
+            scope = parent
+
+    def _merged(self, start: int, end: int, factory: tuple[int, int],
+                parameter: str | None) -> frozenset[str] | None:
+        """The names one merged source may replace: none for the real module
+        or an object written in the factory, whose names are spelled there,
+        and one hop for a name bound outside it, to `vi.hoisted` returning
+        an object literal or to an object literal. None when unreadable."""
+        raw = self.bindings.masked[start:end]
+        operand = raw.strip()
+        if not operand or operand.startswith("{"):
+            return frozenset()
+        if _real_module(operand, parameter):
+            return frozenset()
+        match = _SOURCE.fullmatch(operand)
+        if match is None:
+            return None
+        name = match.group(1)
+        position = start + len(raw) - len(raw.lstrip()) + match.start(1)
+        found = self._declared(name, position)
+        if found is None:
+            return None
+        scope, value = found
+        bindings = self.bindings
+        inside = factory[0] <= bindings.scopes[scope].start < factory[1]
+        if any(path[0] == name and bindings._binding_scope(name, at) == scope
+               for path, at, _scope in bindings.writes):
+            return None  # rebound, or a member assigned: not the object as written
+        if not isinstance(value, tuple):
+            # `const { invoiceTotal, ...rest } = await importOriginal()`: what
+            # is left of the real module adds no name.
+            rest = re.compile(r"(?:const|let|var)\s*\{[^{}]*\.\.\.\s*" + re.escape(name)
+                              + r"\s*\}\s*=\s*([^;\n]+)").search(bindings.masked, *factory)
+            return frozenset() if inside and rest and _real_module(rest.group(1), parameter) else None
+        tokens = value[1:] if value[:1] == ("await",) else value
+        if _real_module(" ".join(tokens), parameter):
+            return frozenset()
+        if inside:
+            return frozenset() if _object_literal(tokens) else None
+        if (len(tokens) > 4 and tokens[1:4] == (".", "hoisted", "(") and tokens[-1] == ")"
+                and self._runner(tokens[0], position) == "vi"):
+            callback = tokens[4:-1]
+            return _token_names(callback) if _returns_object(callback) and not _spreads(callback) else None
+        if _object_literal(tokens) and not _spreads(tokens):
+            return _token_names(tokens)
+        return None
 
     def _install(self, runner, method, spans, owner, start, end) -> _Install | None:
         args = [self.text[first:last].strip() for first, last in spans]
@@ -511,7 +882,7 @@ class _Side:
                 if _SPY_OPTION.search(factory):
                     return None  # Vitest `{ spy: true }` keeps every real implementation
             elif _uses_original(factory):
-                names = self._spelled(*spans[1])
+                names = self._factory_names(*spans[1])
         if runner == "vi" and method == "mock":
             # Vitest hoists `vi.mock` to the top of the file wherever it is
             # written: 3.2 and 4.1 apply it to every test in the file (4.1

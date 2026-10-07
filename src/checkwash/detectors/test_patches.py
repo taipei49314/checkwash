@@ -28,11 +28,19 @@ a mock. So three conditions, all required:
 Like every oracle rule it earns severity from repair evidence (SPEC §5 E1):
 swapping a collaborator out is routine when production moved under the test.
 
+A target built at runtime is read one hop (#196 188.5): a name bound once to
+a string literal, `__name__`, and an f-string or `+` of those. One that
+stays unreadable is opaque, and its attribute is `*`: it may replace any
+attribute of its object, so it counts as reached when the assertions reach
+that object, or anything at all when the object is unknown too. One that is
+provably no string (a def, a class, an imported module, a constant that is no
+string) installs nothing: the patcher raises TypeError instead.
+
 Residuals, open by design and not quietly: a stub installed by a fixture the
-unit merely requests; targets built at runtime; `respx`/`responses` and the
-other HTTP-mock dialects; an attribute reached only through a helper; and an
-attribute named on the *expectation* side of a non-literal comparison, where
-the IR keeps names but not the expression.
+unit merely requests; `respx`/`responses` and the other HTTP-mock dialects;
+an attribute reached only through a helper; and an attribute named on the
+*expectation* side of a non-literal comparison, where the IR keeps names but
+not the expression.
 """
 
 from __future__ import annotations
@@ -119,16 +127,28 @@ def detect(ir: IR) -> list[Finding]:
                 continue
             reached = _reached(unit.after)
             for target, attr in candidates:
-                if attr not in reached:  # condition 3
+                if attr == "*":
+                    # Opaque (#196 188.5): reached when the assertions reach
+                    # its object, or reach anything when that is unknown too.
+                    owner = target[:-2].rsplit(".", 1)[-1] if target.endswith(".*") else None
+                    if not (owner in reached if owner is not None else reached):
+                        continue
+                    message = (
+                        f"{unit.qualname}: this test now replaces {target}, a target built at "
+                        f"runtime that checkwash cannot read, so its own assertions may check the stand-in"
+                    )
+                elif attr not in reached:  # condition 3
                     continue
+                else:
+                    message = (
+                        f"{unit.qualname}: this test now replaces {target}, which its own "
+                        f"assertions check — the oracle runs against the stand-in"
+                    )
                 findings.append(
                     Finding(
                         rule="TEST_PATCHES_SUBJECT",
                         severity="warn",  # gating escalates without a prod change
-                        message=(
-                            f"{unit.qualname}: this test now replaces {target}, which its own "
-                            f"assertions check — the oracle runs against the stand-in"
-                        ),
+                        message=message,
                         path=file.path,
                         unit=unit.qualname,
                         after=Evidence(text=target, span=(0, 0)),

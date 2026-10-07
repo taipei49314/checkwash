@@ -24,6 +24,7 @@ from checkwash.frontends.python.setup_skip_controls import (
     SetupScope,
     _conjunction,
     _import_pairs,
+    _names as _bound_names,
     body_bindings,
     body_outcome,
     conftest_level,
@@ -3082,7 +3083,7 @@ def _collect_unit(
                 # 0.18 s, and the dotted name is already computed here.
                 # Unreachable code is skipped above, which is right — a patch
                 # that never executes installs nothing.
-                pair = _patch_call_target(node, name)
+                pair = _patch_call_target(node, name, func, text)
                 if pair is not None:
                     patches.add(pair)
                 if name in ("pytest.raises", "pytest.warns", "raises"):
@@ -4213,9 +4214,200 @@ def _top_level_constants(tree: ast.Module, text) -> dict[str, str]:
 
 
 _PATCH_CALLS = ("setattr", "setitem", "set_attribute")
+# A target a test builds at runtime is read only from a patcher (#196 188.5):
+# a literal "pkg.mod.attr" is read from any `.patch(...)`, but a computed
+# one there is as likely `client.patch(url)`, an HTTP request.
+_RUNTIME_PATCHERS = frozenset({
+    "patch", "mock.patch", "unittest.mock.patch", "mocker.patch", "module_mocker.patch",
+    "class_mocker.patch", "package_mocker.patch", "session_mocker.patch",
+})
+_RUNTIME_SETTERS = frozenset({"monkeypatch", "mp"})
+# `__name__` in a test module is that module: a target built from it
+# (`f"{__name__}.A"`) replaces the test's own code, not the code it tests.
+OWN_MODULE = "\x00"
 
 
-def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | None:
+def _runtime_patcher(dotted: str) -> bool:
+    parts = dotted.split(".")
+    if parts[-1] == "patch":
+        return dotted in _RUNTIME_PATCHERS
+    if parts[-1] == "object":
+        return ".".join(parts[:-1]) in _RUNTIME_PATCHERS
+    return len(parts) == 2 and parts[0] in _RUNTIME_SETTERS and parts[1] in {"setattr", "setitem"}
+
+
+def _opaque_target(node: ast.AST) -> tuple[str, str]:
+    """A target built at runtime that one hop cannot read: its source, and
+    the attribute when a literal tail spells it (`f"{MOD}.compute"`), else
+    `*`, any attribute (#196 188.5)."""
+    tail = None
+    if isinstance(node, ast.JoinedStr) and node.values and isinstance(node.values[-1], ast.Constant):
+        tail = node.values[-1].value
+    elif (isinstance(node, ast.BinOp) and isinstance(node.right, ast.Constant)
+          and isinstance(node.right.value, str)):
+        tail = node.right.value
+    attribute = tail.rsplit(".", 1)[1] if isinstance(tail, str) and "." in tail else ""
+    return ast.unparse(node), attribute if attribute.isidentifier() else "*"
+
+
+def _module_strings(text) -> dict[str, str]:
+    """Top-level names the module binds once, and to a string literal (#196 188.5)."""
+    cached = getattr(text, "module_strings", None)
+    if cached is not None:
+        return cached
+    counts: dict[str, int] = {}
+    values: dict[str, str] = {}
+    tree = getattr(text, "tree", None)
+    for statement in tree.body if tree is not None else ():
+        for name in _bound_names([statement]):
+            counts[name] = counts.get(name, 0) + 1
+        if isinstance(statement, (ast.Assign, ast.AnnAssign)):
+            targets = statement.targets if isinstance(statement, ast.Assign) else [statement.target]
+            value = statement.value
+            if (len(targets) == 1 and isinstance(targets[0], ast.Name)
+                    and isinstance(value, ast.Constant) and isinstance(value.value, str)):
+                values[targets[0].id] = value.value
+    cached = {name: value for name, value in values.items() if counts.get(name) == 1}
+    try:
+        text.module_strings = cached
+    except AttributeError:
+        pass
+    return cached
+
+
+# What binds a name to no string: a def, a class, or `import x` (a module).
+# `from m import x` may bind a string constant, so it is no such binding.
+_OBJECT_BINDINGS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import)
+
+
+def _module_objects(text) -> frozenset[str]:
+    """Top-level names the module binds once, and to no string: a def, a
+    class or an imported module. None at all once a star import may rebind
+    any name (#196 188.5)."""
+    cached = getattr(text, "module_objects", None)
+    if cached is not None:
+        return cached
+    counts: dict[str, int] = {}
+    objects: set[str] = set()
+    tree = getattr(text, "tree", None)
+    body = tree.body if tree is not None else []
+    if any(isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
+           for statement in body):
+        body = []
+    for statement in body:
+        names = _bound_names([statement])
+        for name in names:
+            counts[name] = counts.get(name, 0) + 1
+        if isinstance(statement, _OBJECT_BINDINGS):
+            objects |= names
+    cached = frozenset(name for name in objects if counts.get(name) == 1)
+    try:
+        text.module_objects = cached
+    except AttributeError:
+        pass
+    return cached
+
+
+def _not_a_string(node: ast.AST, func, text) -> bool:
+    """Is a patch target provably no string? The patcher then raises
+    TypeError and installs nothing, as pytest's own tests of monkeypatch
+    spell it (`monkeypatch.setattr(A, "y")` under `pytest.raises(TypeError)`):
+    a constant that is no string, or a name bound once, to a def, a class or
+    an imported module, in the test or else the module (#196 188.5)."""
+    if isinstance(node, ast.Constant):
+        return not isinstance(node.value, str)
+    if not isinstance(node, ast.Name):
+        return False
+    args = func.args
+    if node.id in {arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg)
+                   if arg is not None}:
+        return False
+    bindings = objects = 0
+    for child in ast.walk(func):
+        if child is func:
+            continue
+        if isinstance(child, ast.Name) and child.id == node.id and isinstance(child.ctx, (ast.Store, ast.Del)):
+            bindings += 1
+        elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and child.name == node.id:
+            bindings += 1
+            objects += 1
+        elif isinstance(child, (ast.Import, ast.ImportFrom)):
+            for alias in child.names:
+                if (alias.asname or alias.name.split(".")[0]) == node.id:
+                    bindings += 1
+                    objects += isinstance(child, ast.Import)
+        elif (isinstance(child, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)) and child.name == node.id
+              or isinstance(child, (ast.Global, ast.Nonlocal)) and node.id in child.names):
+            bindings += 1
+    if bindings:
+        return bindings == 1 and objects == 1
+    return node.id in _module_objects(text)
+
+
+def _runtime_string(node: ast.AST, func, text) -> str | None:
+    """A patch target the test builds at runtime, read one hop (#196 188.5).
+
+    A string literal; a name the test function binds once, to a string
+    literal, or else one the module binds once that way; `__name__`, the test
+    module itself (`OWN_MODULE`); and an f-string or `+` of those. Anything
+    else is None: unreadable, so the target is opaque.
+    """
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Name):
+        if node.id == "__name__":
+            return OWN_MODULE
+        return _function_string(func, node.id, text)
+    if isinstance(node, ast.JoinedStr):
+        parts = []
+        for value in node.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                parts.append(value.value)
+                continue
+            part = (_runtime_string(value.value, func, text)
+                    if isinstance(value, ast.FormattedValue) and value.conversion == -1
+                    and value.format_spec is None and isinstance(value.value, ast.Name) else None)
+            if part is None:
+                return None
+            parts.append(part)
+        return "".join(parts)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left, right = _runtime_string(node.left, func, text), _runtime_string(node.right, func, text)
+        return left + right if left is not None and right is not None else None
+    return None
+
+
+def _function_string(func, name: str, text) -> str | None:
+    """The string literal `name` holds in `func`: its one binding there, an
+    assignment of a literal; or, bound nowhere in the function, the module's."""
+    args = func.args
+    parameters = {arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg)
+                  if arg is not None}
+    if name in parameters:
+        return None
+    stores = []
+    for node in ast.walk(func):
+        if isinstance(node, ast.Name) and node.id == name and isinstance(node.ctx, (ast.Store, ast.Del)):
+            stores.append(node)
+        elif (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == name
+              and node is not func
+              or isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) == name
+              or isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)) and node.name == name
+              or isinstance(node, (ast.Global, ast.Nonlocal)) and name in node.names):
+            return None  # an import, a def, `except ... as`, a pattern: not a literal
+    if len(stores) > 1:
+        return None
+    if not stores:
+        return _module_strings(text).get(name)
+    for node in ast.walk(func):
+        if (isinstance(node, (ast.Assign, ast.AnnAssign))
+                and (node.targets if isinstance(node, ast.Assign) else [node.target]) == [stores[0]]
+                and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)):
+            return node.value.value
+    return None
+
+
+def _patch_call_target(node: ast.Call, dotted: str | None, func=None, text=None) -> tuple[str, str] | None:
     """One patch dialect -> (target, attribute), or None if this is not one.
 
     Called from `_collect_unit`'s single walk, which covers the decorator list
@@ -4254,15 +4446,32 @@ def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | 
         if "." not in target:
             return None  # unqualified: neither a module nor an attribute
         return (target, target.rsplit(".", 1)[1])
+    # A target built at runtime (#196 188.5) is read one hop from a patcher,
+    # and one that stays unreadable is opaque: `*` for its attribute.
+    runtime = func is not None and _runtime_patcher(dotted)
+    if runtime and (tail == "patch" or tail == "setattr" and len(node.args) == 2):
+        if _not_a_string(first, func, text):
+            return None  # the patcher raises TypeError: nothing is installed
+        target = _runtime_string(first, func, text)
+        if target is None:
+            return _opaque_target(first)
+        if target.startswith(OWN_MODULE) or "." not in target:
+            return None
+        return (target, target.rsplit(".", 1)[1])
     if len(node.args) < 2:
         return None
     attr = node.args[1]
-    if not (isinstance(attr, ast.Constant) and isinstance(attr.value, str)):
-        return None
     base = _dotted(first)
     if base is None:
         return None
-    return (f"{base}.{attr.value}", attr.value)
+    if isinstance(attr, ast.Constant) and isinstance(attr.value, str):
+        return (f"{base}.{attr.value}", attr.value)
+    if not runtime:
+        return None
+    name = _runtime_string(attr, func, text)
+    if name is None or name.startswith(OWN_MODULE):
+        return (f"{base}.*", "*")
+    return (f"{base}.{name}", name)
 
 
 def conftest_patch_targets(data: bytes, first_party: frozenset[str] = frozenset(), *, module_exists=None, module_name="") -> list[str]:
