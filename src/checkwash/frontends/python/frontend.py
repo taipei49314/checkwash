@@ -4120,15 +4120,24 @@ def _is_fixture_def(node) -> bool:
 def _classified_asserts(nodes, text, off) -> tuple:
     out = []
     for node in nodes:
-        if not isinstance(node, ast.Assert):
+        if isinstance(node, ast.Call):
+            # numpy's and torch's assertion calls are lent as a bare `assert`
+            # is, as the unit's own walk reads them (#222, #286).
+            c = _tolerance_statement_classified(node, text)
+            if c is None:
+                continue
+            bare, trivial = False, c.trivial
+        elif isinstance(node, ast.Assert):
+            c = _classify_assert(node, text)
+            bare = (
+                isinstance(node.test, ast.Compare)
+                and len(node.test.comparators) == 1
+                and isinstance(node.test.comparators[0], ast.Name)
+            )
+            trivial = _is_trivial_subject(node.test) or c.trivial
+        else:
             continue
-        c = _classify_assert(node, text)
         seg = text.seg(node) or ""
-        bare = (
-            isinstance(node.test, ast.Compare)
-            and len(node.test.comparators) == 1
-            and isinstance(node.test.comparators[0], ast.Name)
-        )
         out.append(
             Assertion(
                 id="a?",  # assigned when merged into a unit
@@ -4145,7 +4154,7 @@ def _classified_asserts(nodes, text, off) -> tuple:
                 predicate=c.predicate,
                 operand_source=c.operand_source,
                 unevaluated_expected=c.unevaluated_expected,
-                trivial=_is_trivial_subject(node.test) or c.trivial,
+                trivial=trivial,
                 positive=c.positive,
                 left_names=c.left_names,
                 right_depends_on=c.right_names,
