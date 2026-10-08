@@ -6,7 +6,7 @@ contract for every file here.
 
 | file | what it holds | who edits it |
 |---|---|---|
-| `cases/{i196,i197,i198,i199}/<row>.vgcase` | the T1 cases: 149 transcribed from the #196-#199 probe matrices, and the cases a ruling adds in its fix PR (`i197/O1`-`O3`, `Q5a`, `Q5b`; `i196/W1`, `Wc1`) | a reviewed PR; inputs only, never an expected verdict |
+| `cases/{i196,i197,i198,i199}/<row>.vgcase` | the T1 cases: 149 transcribed from the #196-#199 probe matrices, and the cases a ruling adds in its fix PR (`i197/O1`-`O3`, `Q5a`, `Q5b`; `i196/W1`, `Wc1`, `F7`, `F8`, `Fc2`) | a reviewed PR; inputs only, never an expected verdict |
 | `labels.toml` | `block`, `pass` or `undecided` for every T1 case, each with its source | a label changes only by maintainer ruling (`AGENTS.md` rule 2) |
 | `baseline.toml` | the pins: baseline engine, canary pair, `[t3.cases]`, and later `baseline_blocked` and `[canary] block_to_pass` | a reviewed PR (rotation after a release) |
 
@@ -37,6 +37,9 @@ ruling 196.184.3) raise `baseline_blocked` to 77; v0.4.2 blocks both too, so
 the canary set stays 70. The rotation to v0.6.0 on 2026-10-05 (D-094)
 re-pins `baseline_blocked` to 156: v0.6.0 blocks the 130 T1 cases labelled
 `block` and the 26 T3 cases. The canary pair stays v0.4.2 -> v0.5.0.
+The three cases added on 2026-10-07 (`i196/F7`, `F8` and `Fc2`, ruling
+196.187.2) raise `baseline_blocked` to 158, since v0.6.0 blocks F7 and F8,
+and the canary set to 71, since v0.4.2 blocks F7 and v0.5.0 passes it.
 `options` sets `today` (every case: `2026-10-02`) and, for the #196 S rows,
 `task = "TASK.md"`.
 
