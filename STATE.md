@@ -1,6 +1,69 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-07 (the 2026-10-05 scope: 36 pull requests merged since 2026-10-06; the rest waits on rulings or is under way; then stop)
+Updated: 2026-10-08 (the 2026-10-05 scope: two of its 22 issues stay open, #196 on #351's ruling and #212 until the release; the rest waits on rulings; then stop)
+
+## 2026-10-08: the last approvals land
+
+On 2026-10-08 the maintainer approved the three maintainer-owned changes then
+waiting ("核准"): `8977093` in #352, and the C2 text of #353 (THREATMODEL row
+125, D-124) and of #354 (SPEC's `TEST_PATCHES_SUBJECT` row, THREATMODEL rows
+90 and 109, D-125). The agent committed each C2 exactly as its pull
+request's description wrote it.
+
+Since #349 updated this file, four more pull requests merged into `main`,
+each with a merge commit once CI on its head showed only the expected red.
+`main` is now `d4b2529`.
+
+| PR | what it does | merge | record |
+|---|---|---|---|
+| #350 | #212: the JS/TS replay corpus selection, recorded under `benchmarks/` | `1367e0b` | — |
+| #352 | #201: verdict-gate cases F7, F8 and Fc2 for #196's 187.2 shapes | `17b0e79` | — |
+| #353 | #272, second stage: a skip reached through an imported helper is read | `b7405a7` | D-124 |
+| #354 | #196 188.5: what a stand-in names outside its own call is read one hop | `d4b2529` | D-125 |
+
+#352 closed #201, and #353 closed #272. #354 is part of #196, which stays
+open for one item.
+
+A review of the merged documentation found passages that lagged #353 and
+#354. The agent-writable ones were fixed in those pull requests before they
+merged (`8e5a571`, `e17841d`). Three maintainer-owned passages wait on the
+maintainer's approval of exact text, put to them on 2026-10-08:
+
+- THREATMODEL row 118's residual still says a skip in an imported helper is
+  not read;
+- SPEC's `TEST_DISABLED` row describes only a same-file helper;
+- SPEC's `TEST_PATCHES_SUBJECT` residuals do not list the
+  `monkeypatch.context()` receiver that THREATMODEL row 90 and D-125 name.
+
+Open on 2026-10-08:
+
+- Of the 22 issues the scope started with, two are open:
+  - #196: its one remaining ruled item is 183.2's conftest half, a guarded
+    skip in a conftest fixture a test requests. Doing it changes an existing
+    fixture's expected output, which AGENTS.md rule 2 leaves to the
+    maintainer; #351 asks for that ruling.
+  - #212: the selection is recorded (#350). The measurement on it, and its
+    class label and release criterion, wait for the release that ships the
+    JS rounds.
+- #325's fix is #340 (D-120). It waits on the maintainer's approval of its
+  maintainer-owned commit `dcc6104`, and it conflicts with `main`.
+- These wait on the maintainer's rulings: #351, and the 22 put as one list
+  on 2026-10-07 (#275, #278, #280, #281, #282, #288, #289, #292, #293,
+  #297, #306, #312, #313, #314, #320, #321, #322, #323, #330, #343, #345
+  and #346).
+
+What a successor needs to know:
+
+- **The ruleset merges only a pull request that is up to date with
+  `main`.** Approved pull requests therefore merge one at a time: merge
+  `main` into the next one, wait for CI (about 13 minutes), then merge.
+  A scratch merge of the next pull request onto the previous one's head has
+  the tree its real merge will have, so it can be checked before the
+  previous one merges, and the real merge's tree compared with it after.
+- **A maintainer-owned commit carries the approved text and nothing else.**
+  Each C2 was applied by exact replacement from the text in its pull
+  request's description, and an independent check compared each commit
+  with the live description byte for byte.
 
 ## 2026-10-07: the merge train, and what waits on the maintainer
 
