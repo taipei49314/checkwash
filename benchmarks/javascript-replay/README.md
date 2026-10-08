@@ -1,5 +1,7 @@
 # JS/TS history-replay corpus: the selection
 
+**Correction (2026-10-09):** see [the additive correction](correction-2026-10-09.md) for the actual reading chronology, runner-evidence limits, omitted exclusions and the still-unverified held-out qualification; the original record below is preserved.
+
 checkwash measures its Python false-positive cost on a fixed sweep of six
 repositories, 300 non-merge commits each ([`../sweeps/`](../sweeps/README.md)).
 JS/TS had no such corpus. The only JS history record is the 14-file diagnostic
