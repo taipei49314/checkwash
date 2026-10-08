@@ -653,12 +653,12 @@ def build_ir(
         chain_levels[key] = unknown if data is not None and level is None else level
         return chain_levels[key]
 
-    def _conftest_chain(tpath: str, side: int) -> tuple:
+    def _conftest_chain(tpath: str, side: int, test_source: bytes) -> tuple:
         levels = []
-        configured_marks = False
+        directories = []
         directory = tpath.rpartition("/")[0]
         while True:
-            configured_marks |= _config_may_load_marks(directory, side)
+            directories.append(directory)
             cpath = f"{directory}/conftest.py" if directory else "conftest.py"
             level = _chain_level(cpath, side)
             if level is unknown:
@@ -671,7 +671,16 @@ def build_ir(
             if not directory:
                 break
             directory = directory.rpartition("/")[0]
-        if configured_marks:
+        reads_own_marks = b"request" in test_source and any(
+            word in test_source for word in (b"marker", b"keywords"))
+        reads_own_marks |= any(
+            outcome and outcome[2] and "request" in outcome[2]
+            and ("marker" in outcome[2] or "keywords" in outcome[2])
+            for level in levels for _requested, _autouse, outcome in level.fixtures.values()
+        )
+        # Unrelated test/helper reads keep their existing source-read
+        # contract and budget. Configuration matters only to this reading.
+        if reads_own_marks and any(_config_may_load_marks(d, side) for d in directories):
             # This context changes only the mark reading: it neither
             # supplies fixtures nor cuts off the fixture lookup chain.
             levels.append(ConftestLevel("<plugin-configuration>", {}, frozenset(), False, adds_marks=True))
@@ -970,13 +979,13 @@ def build_ir(
                 before_path = (change.old_path or path).replace("\\", "/")
                 before_parsed = parse_python(
                     change.before, collect_tests=collect, conftest=is_conftest,
-                    chain=_conftest_chain(before_path, 0) if reaches_chain else (),
+                    chain=_conftest_chain(before_path, 0, change.before) if reaches_chain else (),
                     imported=_imported_helpers(before_path, 0) if reaches_chain else None,
                 )
             if change.after is not None:
                 after_parsed = parse_python(
                     change.after, collect_tests=collect, conftest=is_conftest,
-                    chain=_conftest_chain(path, 1) if reaches_chain else (),
+                    chain=_conftest_chain(path, 1, change.after) if reaches_chain else (),
                     imported=_imported_helpers(path, 1) if reaches_chain else None,
                 )
         elif is_js_test:
@@ -1507,7 +1516,7 @@ def build_ir(
                 if data is None:
                     continue
                 parsed = parse_python(
-                    data, collect_tests=True, chain=_conftest_chain(path, 1), imported=_imported_helpers(path, 1)
+                    data, collect_tests=True, chain=_conftest_chain(path, 1, data), imported=_imported_helpers(path, 1)
                 )
                 if not parsed.parse_ok:
                     continue
