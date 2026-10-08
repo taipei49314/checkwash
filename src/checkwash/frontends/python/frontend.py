@@ -17,6 +17,7 @@ from dataclasses import dataclass, field, replace
 
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
+from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
 from checkwash.frontends.python.runtime_controls import runtime_controls
 from checkwash.frontends.python.setup_skip_controls import (
     BODY_MARKERS,
@@ -3864,13 +3865,31 @@ def _parse_python(
             scopes = scopes + (class_setup[key],)
         return scopes
 
-    def setup_markers(func, scopes: tuple[SetupScope, ...]) -> list[Marker]:
+    own_marks: list[OwnMarks] = []
+
+    def setup_markers(func, scopes: tuple[SetupScope, ...], classes: tuple[ast.ClassDef, ...] = ()) -> list[Marker]:
+        """The setup outcomes this unit reaches, as markers.
+
+        `classes` are the classes the unit is collected in, outermost first.
+        A guard that reads the unit's own marks is read with them first
+        (#358): a guarded outcome that never fires for this unit is no marker.
+        """
         if not scopes:
             return []
         markers = []
         for provider, effect, evidence, guard, origin in setup_outcomes(
             scopes, func, method=len(scopes) > 1, chain=chain
         ):
+            paths = getattr(guard, "paths", None)
+            if paths and any(reads_marks(cond) for _effect, _evidence, conds in paths for cond in conds):
+                if not own_marks:
+                    own_marks.append(OwnMarks(tree, chain))
+                names = frozenset({func.name, *(cls.name for cls in classes)})
+                resolved = resolve_own_marks(paths, own_marks[0].of(func, classes), names)
+                if resolved is None:
+                    continue
+                effect, evidence, guard = resolved
+            guard = None if guard is None else str(guard)
             # A conftest's outcome carries its text and span in that file.
             seg, span = evidence if origin is not None else (text.seg(evidence), off.span(evidence))
             marker = Marker(name=f"setup.{provider}.{effect}", text=seg or provider, span=span, guard=guard)
@@ -3930,7 +3949,7 @@ def _parse_python(
             dead = _unreachable_ids(func, branch_fixtures, lambda stmt: id(stmt) in skips, attrs_of(subclass))
             if any(node not in dead for node in skips):
                 continue
-            if setup_markers(func, nested_setup(setup_scopes, cls, instance=subclass)):
+            if setup_markers(func, nested_setup(setup_scopes, cls, instance=subclass), (subclass,)):
                 continue
             return ParsedUnit(
                 qualname=unit.qualname, span=unit.span,
@@ -3946,6 +3965,7 @@ def _parse_python(
         scopes: tuple[SetupScope, ...] = (),
         aliases: dict[str, list[ast.expr]] | None = None,
         owner: ast.ClassDef | None = None,
+        classes: tuple[ast.ClassDef, ...] = (),
     ) -> None:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -3955,7 +3975,7 @@ def _parse_python(
                     symbol_calls[qual] = _callees(child)
                 if collect_tests and collectible and _is_test_name(child.name):
                     unit = _collect_unit(
-                        child, qual, text, off, inherited + setup_markers(child, scopes),
+                        child, qual, text, off, inherited + setup_markers(child, scopes, classes),
                         module_scopes, file_caches, branch_fixtures, doctests, aliases,
                         outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
                         attrs=attrs_of(owner), helpers=helper_outcomes, origins=marker_origins,
@@ -3985,6 +4005,7 @@ def _parse_python(
                     nested_setup(scopes, child) if class_collectible else (),
                     aliases_of(child) if collect_tests else None,
                     child,
+                    classes + (child,),
                 )
             elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):
                 # Module- and class-level constants are behaviour too. They
@@ -3996,7 +4017,7 @@ def _parse_python(
                     if isinstance(target, ast.Name):
                         symbols[f"{prefix}{target.id}"] = _fingerprint(child)
             else:
-                visit(child, prefix, inherited, collectible, scopes, aliases)
+                visit(child, prefix, inherited, collectible, scopes, aliases, classes=classes)
 
     visit(tree, "", module_markers, True, setup_scopes, module_aliases)
     if collect_tests:
@@ -4004,7 +4025,7 @@ def _parse_python(
             units.append(_collect_unit(
                 method, f"{cls.name}.{method.name}", text, off,
                 module_markers + class_marks(owner) + class_marks(cls)
-                + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls)),
+                + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls), (cls,)),
                 module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
                 helpers=helper_outcomes, origins=marker_origins,

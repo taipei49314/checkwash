@@ -61,6 +61,7 @@ from checkwash.frontends.python.frontend import (
     parse_python,
 )
 from checkwash.frontends.python.helper_skips import HelperModule
+from checkwash.frontends.python.setup_skip_controls import unreadable_level
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
 from checkwash.frontends.python.param_input_identity import mark_param_input_identity
@@ -614,8 +615,12 @@ def build_ir(
         levels = []
         directory = tpath.rpartition("/")[0]
         while True:
-            level = _chain_level(f"{directory}/conftest.py" if directory else "conftest.py", side)
+            cpath = f"{directory}/conftest.py" if directory else "conftest.py"
+            level = _chain_level(cpath, side)
             if level is unknown:
+                # What it defines is unknown, and so are the marks it may add
+                # to a test (#358).
+                levels.append(unreadable_level(cpath))
                 break
             if level is not None:
                 levels.append(level)
