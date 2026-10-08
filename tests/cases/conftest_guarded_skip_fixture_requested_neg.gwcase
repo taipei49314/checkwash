@@ -1,9 +1,9 @@
 === meta ===
 bypass: 104
 rule: TEST_DISABLED
-title: a request of a guarded conftest skip fixture is not judged until 183.2's conftest half
-origin: #223 acceptance: the fixture skips only without NETWORK; a guarded conftest skip waits for the
-origin2: 183.2 round. With NETWORK=1, pytest 9.1.1 runs test_total on both sides.
+title: an existing test that starts requesting a conftest fixture which skips unless an environment variable is set is a disable
+origin: #223 acceptance pinned this as [] until 183.2's conftest half; ruling 351.Q1 (2026-10-08): judged
+origin2: as the same fixture in the test module is (setup_env_guard_requested_pos); no COMPAT_GATE.
 === head: app/__init__.py ===
 === head: app/billing.py ===
 def total():
@@ -35,4 +35,4 @@ from app.billing import total
 def test_total(needs_network):
     assert total() == 78.75
 === expect ===
-[]
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_total"}]
