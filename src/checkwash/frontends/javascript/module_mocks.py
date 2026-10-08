@@ -46,8 +46,9 @@ When an installation takes effect is part of the evidence:
 A factory that reaches for the original module (`importOriginal`,
 `importActual`, `requireActual`, or its own parameter) replaces every name it
 spells - an identifier, a member name, or an identifier-shaped string such as
-a quoted or computed key - and nothing else. No factory is an automock and
-replaces every export. Vitest's `{ spy: true }` and a spy with no replacement
+a quoted or computed key - and every name an object it merges in carries
+(below), and nothing else. No factory is an automock; only an opaque one may
+replace every export. Vitest's `{ spy: true }` and a spy with no replacement
 keep the real code. An object-literal key in an assertion names a property;
 it does not read the binding of the same name.
 

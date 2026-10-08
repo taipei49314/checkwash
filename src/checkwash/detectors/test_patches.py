@@ -37,10 +37,11 @@ provably no string (a def, a class, an imported module, a constant that is no
 string) installs nothing: the patcher raises TypeError instead.
 
 Residuals, open by design and not quietly: a stub installed by a fixture the
-unit merely requests; `respx`/`responses` and the other HTTP-mock dialects;
-an attribute reached only through a helper; and an attribute named on the
-*expectation* side of a non-literal comparison, where the IR keeps names but
-not the expression.
+unit merely requests; a computed target passed through a receiver no patcher
+name spells (`monkeypatch.context()`'s); `respx`/`responses` and the other
+HTTP-mock dialects; an attribute reached only through a helper; and an
+attribute named on the *expectation* side of a non-literal comparison, where
+the IR keeps names but not the expression.
 """
 
 from __future__ import annotations
