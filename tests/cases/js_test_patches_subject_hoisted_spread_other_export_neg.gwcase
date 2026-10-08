@@ -1,0 +1,33 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a partial vi.mock factory spreads a vi.hoisted object that replaces another export only
+origin: #196 188.5 C control - the hoisted object is read one hop and names sendInvoice alone, so invoiceTotal stays real
+=== before: tests/billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "../src/billing.js";
+
+const mocks = vi.hoisted(() => ({ sendInvoice: vi.fn() }));
+
+vi.mock("../src/billing.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ...mocks,
+}));
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[]

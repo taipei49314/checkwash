@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: a partial vi.mock factory spreads a vi.hoisted object that replaces the subject
+origin: #196 188.5 C - names a partial factory merges in from outside were never read, so a hoisted stand-in spread into it replaced invoiceTotal in silence; the hoisted object is now read one hop
+=== before: tests/billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "../src/billing.js";
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== after: tests/billing.test.js ===
+import { describe, it, expect, vi } from "vitest";
+import { invoiceTotal } from "../src/billing.js";
+
+const mocks = vi.hoisted(() => ({ invoiceTotal: vi.fn(() => 78.75) }));
+
+vi.mock("../src/billing.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ...mocks,
+}));
+
+describe("billing", () => {
+  it("computes invoice total", () => {
+    const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+    expect(invoiceTotal(items)).toBe(78.75);
+  });
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]

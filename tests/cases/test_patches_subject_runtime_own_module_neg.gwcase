@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a target built from __name__ replaces the test module's own code
+origin: #196 188.5 C control - attrs patches f"{__name__}.A" in tests/test_slots.py; __name__ is the test module, so the patch replaces test code, not the code under test
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+class Total:
+    value = 105.3
+
+
+def test_invoice_total(mocker):
+    items = [10.0, 90.0]
+    assert billing.invoice_total(items, 0.053) == Total.value
+=== after: tests/test_billing.py ===
+from app import billing
+
+
+class Total:
+    value = 105.3
+
+
+def test_invoice_total(mocker):
+    mocker.patch(f"{__name__}.Total", Total)
+    items = [10.0, 90.0]
+    assert billing.invoice_total(items, 0.053) == Total.value
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== expect ===
+[]

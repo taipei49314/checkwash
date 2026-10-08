@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: a partial jest.mock factory spreads a mock-prefixed object that replaces the subject
+origin: #196 188.5 C - jest lets a hoisted factory reach a variable named mock*, and its object literal was never read; it is now read one hop
+=== before: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== after: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+const mockBilling = { invoiceTotal: () => 78.75 };
+
+jest.mock("../src/billing", () => ({
+  ...jest.requireActual("../src/billing"),
+  ...mockBilling,
+}));
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "computes invoice total"}]

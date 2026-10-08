@@ -545,10 +545,13 @@ subject).
 - **FP risk: high, and higher than A1's.** A1 could at least claim the edited
   binding *was* the expectation; here the corpus is full of first-party patching
   by construction.
-- **Residual, expected to stay open:** `patch` targets built at runtime; a stub
-  installed by a fixture the unit merely requests; `respx`/`responses` and other
-  HTTP mock dialects; and the whole class where the patched name reaches the
-  assertion only through a helper. Stated, not hidden.
+- **Residual, expected to stay open:** a stub installed by a fixture the unit
+  merely requests; a computed target passed through a receiver no patcher name
+  spells (`monkeypatch.context()`'s); `respx`/`responses` and other HTTP mock
+  dialects; and the whole class where the patched name reaches the assertion
+  only through a helper. Stated, not hidden. `patch` targets built at runtime
+  were on this list until #196 188.5, which reads them one hop and treats one
+  that stays unreadable as opaque.
 - **How this gets falsified — and the severity threshold, fixed here before a
   line of the detector exists:** the attack shape above must block; the four
   legitimate shapes (stdlib stub, third-party stub, brand-new mocking test,

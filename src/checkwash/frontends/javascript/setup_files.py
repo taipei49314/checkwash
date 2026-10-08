@@ -125,9 +125,11 @@ def _automock_calls(side: _Side) -> list[tuple[str, tuple[int, int]]]:
 
 def _target(install: _Install) -> str:
     """What an installation replaces: one member, a whole module, or part of
-    one. A partial factory's names are every name it spells (`_Side._spelled`),
-    which reads right when an oracle consumes one of them and lists runner
-    calls too when nothing is consumed, so here the module is named."""
+    one. A partial factory's names are every name it spells and every name
+    it merges in one hop (`_Side._factory_names`), which reads right when an
+    oracle consumes one of them and lists runner calls too when nothing is
+    consumed, so here the module is named. An opaque factory replaces the
+    whole module (#196 188.5)."""
     if install.member is not None:
         return f"{install.module}:{'.'.join(install.member)}"
     if install.names is not None:
@@ -141,8 +143,9 @@ def _installed_before(install: _Install, base: list[_Side]) -> bool:
     A member is covered by a spy on it or a module mock that replaces it; a
     whole-module mock by a whole-module mock. A partial mock is covered by
     any mock of its module: which exports a partial factory replaces is read
-    only as every name it spells, and that set moves with any edit to the
-    factory's body (`super.getContent()` -> `super.getContent(new Set())`)."""
+    only as every name it spells or merges in, and that set moves with any
+    edit to the factory's body (`super.getContent()` ->
+    `super.getContent(new Set())`). An opaque factory is a whole-module mock."""
     for side in base:
         if install.member is not None:
             if side.replaces(install.module, install.member):

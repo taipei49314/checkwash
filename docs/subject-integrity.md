@@ -147,8 +147,18 @@ is read through one hop of the local binding on either side, and takes effect
 where the replacing call runs (#196 188.4). A factory that reaches for the original module (`importOriginal`,
 `importActual`, `requireActual` or its own parameter) replaces every name it
 spells — an identifier, a member name, or an identifier-shaped string literal
-such as a quoted or computed key — and nothing else; no factory is an
-automock. Vitest's `{ spy: true }` and a spy without a replacement keep the
+such as a quoted or computed key — and every name an object it merges in
+carries, and nothing else; no factory is an automock (#196 188.5). It merges
+in a spread in its own body's object literals, an `Object.assign` argument,
+and a name it returns. What a function nested in it spreads or returns is
+that function's, a method or an arrow behind a TypeScript return annotation
+(`fetch(url: URL): Promise<ArrayBuffer> { ... }`) included. The real module (the call itself, or a name bound to
+it or to the rest of it) and an object written in the factory add no name; a
+name bound outside the factory is read one hop, to `vi.hoisted(...)` that
+returns an object literal or to an object literal, whatever its name (Jest's
+`mock` prefix only lets its hoisted factory reach the variable). A source that
+stays unreadable — a call, a second hop, a name bound nowhere, rebound or
+given a member — makes the factory opaque: it may replace every export. Vitest's `{ spy: true }` and a spy without a replacement keep the
 real code and install nothing. An object-literal key inside an assertion
 (`toEqual({ invoiceTotal: 78.75 })`) names a property; it does not read the
 binding of the same name.
@@ -172,9 +182,8 @@ and `automock` among them; a setup file that only the head side's
 `package.json` names, under another name; `globalSetup`;
 installations other than `vi.mock` in hooks, helpers and `describe` bodies;
 a namespace or `require()` object passed whole under a whole-module mock
-(`compute(billing)`); plain assignment to a module object's member; template-literal keys and partial-factory names
-spelled outside the factory (a spread of an object declared elsewhere, a
-computed key from a variable); cast types that contain parentheses;
+(`compute(billing)`); plain assignment to a module object's member; template-literal keys and a
+computed key from a variable; cast types that contain parentheses;
 non-literal specifiers; re-exports and two hops; and oracles the JS frontend
 does not represent (interaction matchers, `.resolves`/`.rejects`,
 snapshots). Severity and escalation are the existing policy: a modified JS
