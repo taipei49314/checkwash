@@ -26,13 +26,14 @@ open for one item.
 
 A review of the merged documentation found passages that lagged #353 and
 #354. The agent-writable ones were fixed in those pull requests before they
-merged (`8e5a571`, `e17841d`). Three maintainer-owned passages wait on the
-maintainer's approval of exact text, put to them on 2026-10-08:
+merged (`8e5a571`, `e17841d`). Three maintainer-owned passages lagged too.
+The maintainer approved their exact text on 2026-10-08 ("核准"), and #355
+commits it:
 
-- THREATMODEL row 118's residual still says a skip in an imported helper is
-  not read;
-- SPEC's `TEST_DISABLED` row describes only a same-file helper;
-- SPEC's `TEST_PATCHES_SUBJECT` residuals do not list the
+- THREATMODEL row 118's residual said a skip in an imported helper is not
+  read;
+- SPEC's `TEST_DISABLED` row described only a same-file helper;
+- SPEC's `TEST_PATCHES_SUBJECT` residuals did not list the
   `monkeypatch.context()` receiver that THREATMODEL row 90 and D-125 name.
 
 Open on 2026-10-08:
