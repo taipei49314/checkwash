@@ -8874,3 +8874,172 @@ other pass proceeds over the rest of the tree.
 - **The corpus is byte for byte the same**: no fixture holds a gitlink.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
+
+## D-125 (2026-10-07): what a stand-in names outside its own call is read one hop (#196 188.5)
+
+THREATMODEL rows 109 and 90 left two shapes as residuals:
+
+- **JS: names a partial factory merges in from outside.** A partial
+  `vi.mock` factory that spread a `vi.hoisted` object,
+  `({ ...(await importOriginal()), ...mocks })`, replaced `invoiceTotal` in
+  silence. The factory spells `mocks`, not `invoiceTotal`.
+- **Python: targets built at runtime.** `mocker.patch(TARGET)` with
+  `TARGET = "app.billing.invoice_total"` was no patch at all.
+
+v0.6.0 and `main` pass every such shape with zero findings.
+
+Ruling 196.188.5, adopted by the owner on 2026-10-06 ("全部核准"): choose A
+now, and make C the closing round. C reads names one hop through
+`vi.hoisted` or a mock-prefixed object literal, and treats only what stays
+unreadable as opaque. Python's targets built at runtime are handled in the
+same family.
+
+**As implemented:**
+- **JS** (`module_mocks._Side._factory_names`). A partial factory builds on
+  the real module. It may replace every name it spells, as before, and now
+  also every name carried by an object it merges in:
+  - a spread in its own body's object literals;
+  - an `Object.assign` argument;
+  - a name it returns.
+
+  The real module adds no name: the call itself, a name bound to it, or what
+  is left of it after destructuring. An object written in the factory adds
+  none either, since its names are spelled there.
+
+  A name bound outside the factory is read one hop, as `vi.hoisted(...)`
+  whose callback returns an object literal, or as an object literal. What
+  stays unreadable makes the factory opaque, which is a whole-module mock.
+- **Python** (`frontend._patch_call_target`, `detectors/test_patches.py`). A
+  target built at runtime is read one hop, and only from a patcher:
+  - the patchers: `patch`, `mock.patch`, `unittest.mock.patch`,
+    `mocker.patch` and the other pytest-mock fixtures, `monkeypatch.setattr`
+    and `setitem` (or `mp.`), and `patch.object`;
+  - what is read: a name bound once to a string literal, in the test or
+    else in the module; `__name__`; and an f-string or `+` of those.
+
+  A target that stays unreadable is opaque, and its attribute is `*`. An
+  opaque attribute of a known object counts as reached when the assertions
+  reach that object. A target of which nothing is known counts as reached
+  when the assertions reach anything.
+
+Readings the ruling leaves to the implementation:
+
+1. **Any object literal, whatever its name.** The ruling names a
+   mock-prefixed object literal, because Jest's `mock` prefix is what lets a
+   hoisted `jest.mock` factory reach a variable at all. A literal bound to
+   any other name is read too:
+   - `doMock` and `unstable_mockModule` are not hoisted, and reach any
+     variable;
+   - under a hoisted mock, an unprefixed reference fails before any test
+     runs.
+2. **Only the factory's own body merges.** None of these merges anything
+   into the module:
+   - a spread inside a function nested in the factory
+     (`wrap: (o) => ({ ...o })`), or a value such a function returns;
+   - a rest parameter;
+   - an array or call spread;
+   - a destructuring rest.
+
+   A method or an arrow behind a TypeScript return annotation
+   (`fetch(url: URL): Promise<ArrayBuffer> { ... }`) is nested too. The
+   bindings keep it out of their function scopes, so the round finds its
+   body itself; the targeted set found the shape in excalidraw.
+3. **Opaque is a whole-module mock.** An unreadable source may carry any
+   name, so the factory may replace every export. A setup file's opaque
+   factory is reported for its whole module.
+4. **Python reads a computed target only from a patcher.** A literal
+   `"pkg.mod.attr"` is read from any `.patch(...)`, as before. A computed
+   one there is as likely `client.patch(url)`, an HTTP request.
+5. **`__name__` is the test module.** A target built from it replaces the
+   test's own code, so no patch is recorded. attrs does this with
+   `f"{__name__}.A"` in `tests/test_slots.py`.
+6. **One hop.** These are not resolved, and each is opaque, so it fails
+   toward flagging:
+   - a loop variable;
+   - a parameter;
+   - a name bound twice, or bound to an f-string;
+   - a helper call.
+
+   Residual: a computed target through `monkeypatch.context()`'s receiver
+   (`m.setattr(TARGET, v)`), which names no patcher.
+7. **A target provably no string installs nothing.** A patcher given one
+   raises TypeError instead, so no patch is recorded. That covers a
+   constant that is no string, and a name bound once to a def, a class or
+   an imported module (`import x`), in the test or else the module.
+   pytest's own `monkeypatch.setattr(A, "y")` under
+   `pytest.raises(TypeError)` is the case (b4f046b777). Two bindings stay
+   unreadable, since each may hold a string:
+   - `from m import x`, which may bind a string constant;
+   - a parameter, even one named like a module-level function, since a
+     fixture's parameter holds what the fixture returns.
+
+**Tests and fixtures.**
+- **Tests:** 72 in `tests/test_issue196_188_5_merged_sources.py`. Each of
+  the 42 mutants of the round's code fails them or the round's fixtures.
+- **Row 109 fixtures:**
+  - `js_test_patches_subject_hoisted_spread_pos`;
+  - `js_test_patches_subject_mock_prefixed_spread_pos`;
+  - `js_test_patches_subject_opaque_spread_pos`;
+  - control: `js_test_patches_subject_hoisted_spread_other_export_neg`.
+- **Row 90 fixtures:**
+  - `test_patches_subject_runtime_constant_pos`;
+  - `test_patches_subject_runtime_fstring_pos`;
+  - `test_patches_subject_runtime_opaque_pos`;
+  - controls: `test_patches_subject_runtime_own_module_neg` and
+    `test_patches_subject_http_client_patch_neg`.
+- Each `_pos` fixture passes with zero findings on v0.6.0 and on `main`.
+- No existing fixture changes its expectation.
+
+**Fingerprints.** Every finding is new except one. A new opaque partial
+factory in a setup file is named for its module (`src/billing`), where
+`main` named it `part of src/billing`.
+
+**Cost.** Measured with the round's engine against main's (`23cf967`):
+- **Targeted sets:** every non-merge commit of the 23 sweep histories that
+  changes a file holding what the round reads, on either side.
+  - **Python** (13 histories, 62,800 commits): a test or conftest module
+    that calls a patcher with a target that is no string literal. 350
+    commits: aiohttp 78, attrs 14, pytest 256, werkzeug 2. All 350
+    records are main's: 288 pass, 38 blocked, and 24 unjudged on both
+    sides (23 engine errors at the same read limits, and pytest's root
+    commit). The first run found one record that was not: pytest's
+    `b4f046b777` adds `monkeypatch.setattr(A, "y")` under
+    `pytest.raises(TypeError)` to `test_setattr`, where `A` is a class
+    the test defines. It read as an opaque patch, a new warn. Reading 7
+    fixed that.
+  - **JS** (10 histories, 36,707 commits): a JS or TS file that spells a
+    module mock and a spread, `Object.assign` or the real module. 84
+    commits, all in excalidraw (mastodon, a blobless clone, was read on
+    its 58 test-like paths). All 84 records are main's (82 pass, 2
+    blocked). The first run found two that were not, both excalidraw's
+    `setupTests.ts` (`62228e0bbb`, `b479f3bd65`). It spreads the real
+    module beside a class whose method carries a TypeScript return
+    annotation (`getContent(): Promise<string>`), and that method's
+    `return` read as the factory's. The factory was therefore opaque, and
+    its warn named the whole font module instead of part of it. Reading
+    2's annotated bodies fixed that, so the two records are main's again.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits): main's verdicts and
+  finding fingerprints for every record (48 blocked, no engine error).
+- **D-088's sets** (895 commits of ten full histories; 368 of pytest's):
+  main's verdicts and finding fingerprints for every record (247 and 95
+  blocked). The 15 and 4 engine errors are the same read limits on both
+  sides.
+- The standard set and D-088's sets ran on the round's engine before
+  readings 2 (annotated bodies) and 7 (no string) were added. Neither can
+  change a record there:
+  - reading 2 is in the JS frontend alone;
+  - reading 7 only drops patches from calls the Python targeted set
+    covers, which is every commit of these histories whose changed tests
+    hold such a call, and its final run is main's.
+- **Speed:** the perf gate's cases, timed in the cloud container with the
+  sweeps paused: 500 changed files take 2.27 s (median of nine runs),
+  main's 2.26 s; the 3,000-line diff takes 0.61 and 0.64 s, main's 0.72
+  and 0.64 s.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` (pass -> block), as on main.
+No case changes its verdict.
+
+The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
+the maintainer approves it there.
