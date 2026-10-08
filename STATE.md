@@ -36,6 +36,19 @@ commits it:
 - SPEC's `TEST_PATCHES_SUBJECT` residuals did not list the
   `monkeypatch.context()` receiver that THREATMODEL row 90 and D-125 name.
 
+A second review the same day found two more agent-writable comments, fixed
+in #355, and four more maintainer-owned passages that lag. Their exact text
+waits on the maintainer's approval:
+
+- THREATMODEL row 104's last residual still names only row 125's
+  same-file helpers;
+- row 104 still lists the conftest fixtures of a duplicate survivor as
+  unread, which #266 reads;
+- THREATMODEL row 54 still lists aliased and raised body skips as unread,
+  which #220 reads;
+- SPEC's D6 row does not name a skip a helper ends in among those it
+  holds, though the engine and row 125 hold it.
+
 Open on 2026-10-08:
 
 - Of the 22 issues the scope started with, two are open:
