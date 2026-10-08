@@ -9294,3 +9294,45 @@ Validation and cost are still pending at this proposal commit. The handover's
 candidate; they are not validation of this fix. The current remote CI and
 new mutant artifacts must be reviewed, and #351's scrapy impact must be
 measured before deciding whether both rounds remain known limitations.
+
+## D-127 (2026-10-09, pending maintainer approval): bounded conftest guards (#351)
+
+Ruling 351.Q1 authorizes changing the existing guarded-conftest fixture
+expectation and the TEST_DISABLED exemption for the prior #223 test pin.
+Q2 adopts readings 1–4: top-level constants, unresolved value names,
+unfollowed imports, and changed-test-module scope. The fixture expectation
+change remains a separate commit. This is proposed maintainer text.
+
+The restored #351 implementation is stacked on #358. Guard paths retain
+conftest source text/span pairs, so per-unit mark resolution neither loses
+the original file nor applies test-module handler offsets. Mapping-rest
+captures are fixture locals. Constant closure retains the prior depth 16
+and 24-expansion limit (expansions, not distinct constants). Each expanded
+expression is at most 4,096 characters; all condition closures in one
+conftest share a 65,536-character construction budget. Exhaustion produces
+an unparseable unknown guard and retains the skip. Source offsets cache
+line encoding facts, avoiding repeated whole-line scans for every name.
+
+Corrections to the handover's draft:
+
+- Value-name closure is partial. D6's compatibility-token expansion still
+  uses the test module's constants for surviving call targets and attribute
+  roots. The claim that no test-module name can affect the guard is false.
+- Imported values remain unknown. A guard containing a compatibility token
+  can earn COMPAT_GATE when its truth is unknown, so this residual can fail
+  open as well as flag; it is not uniformly conservative. A bare imported
+  `platform` is not a valid example of a same-module gate that would warn.
+- Global declarations and comprehension bindings can over-approximate
+  fixture locals and retain unknown. Guard-closure bounds can also diverge
+  from the same guard written directly in a test module.
+- Tests reaching guarded conftest skips may no longer be live for D2/D10
+  move/duplicate credit. That is a measured-cost obligation, not omitted
+  behavior. Suite-level guarded skips and unchanged test modules retain
+  their prior limits.
+
+Remote targeted execution on cb51e7e (workflow 37848865732) passed, including
+the #358 stack regressions, closure bounds and cross-file evidence tests.
+All 8 additional #358 fallback mutants were killed. The historical #351
+3,063-record sweep predates #358 and is not the cost of this candidate.
+Full CI, pool sweeps, targeted scrapy comparison and final cost remain
+pending; neither round is approved for merge by this entry.
