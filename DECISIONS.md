@@ -9258,3 +9258,39 @@ No case changes its verdict.
 
 The agent wrote this entry in the fix PR, as the rulings' X.doc-batch asks;
 the maintainer approves it there.
+
+## D-126 (2026-10-09, pending maintainer approval): bounded own-mark guards (#358)
+
+Ruling 358.Q1-Q3 reads the requesting unit's own static marks before joining
+a function-scoped fixture's guard paths, retaining unknown when the reading
+cannot see how marks are supplied. The handover's extra conservative rules
+were accepted for continuation on 2026-10-09. This entry is proposed text;
+it is not a record of approval of this new wording or permission to release.
+
+The original bundle is c627db7. Independent synthetic regressions on its
+restored successor 859a86b reproduced all four blocking categories: fixture
+params, externally supplied parameter lists, conftest hook bindings and
+object-level marks. Ubuntu 3.11 CI run 37847402510 recorded 23 new regression
+failures, 3 bookkeeping/tag failures, and 16,964 passing tests. Four pytest
+subprocess cases independently confirmed that dynamic marks skip the test.
+
+The fix retains unknown for those sources, including any fixture `params`,
+imports inside followed parameter helpers, imported/assigned pytest hooks,
+metaclasses, module `__getattr__`, mark-mutating calls and test-object writes.
+`functools` decorators are no longer assumed mark-free. A callable argument
+to a mark decorator, replaced `pytestmark`, rebound `request`, and shadowed
+`bool` also prevent the unsafe simplification. The test function name is not
+assumed to be a keyword; enclosing class names still may be.
+
+Configuration bytes naming `-p`, `PYTEST_PLUGINS` or `pytest11` retain unknown
+marks. They are read only when a source/fixture guard may read own marks,
+within the existing snapshot resource bounds. This is a conservative text
+screen, not execution of configuration. Ambient entry-point or environment
+plugins absent from the repository remain a known limitation. The engine
+does not prove a complete runtime mark set.
+
+Validation and cost are still pending at this proposal commit. The handover's
+86 tests, 56/56 mutants and 3,063 unchanged sweep records describe its old
+candidate; they are not validation of this fix. The current remote CI and
+new mutant artifacts must be reviewed, and #351's scrapy impact must be
+measured before deciding whether both rounds remain known limitations.
