@@ -1,0 +1,38 @@
+=== meta ===
+bypass: 104
+rule: TEST_DISABLED
+title: a conftest platform gate spelled through an imported name is judged unknown and blocks
+origin: #351 reading 3, a stated residual: `from sys import platform` is not followed, so the guard
+origin2: reads conftest.platform, unknown; the same skip in the test module would hold at warn.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/conftest.py ===
+from sys import platform
+
+import pytest
+
+
+@pytest.fixture
+def posix_only():
+    if platform == "win32":
+        pytest.skip("posix only")
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total(posix_only):
+    assert total() == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_total"}]

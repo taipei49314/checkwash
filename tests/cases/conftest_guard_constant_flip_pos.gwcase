@@ -1,0 +1,49 @@
+=== meta ===
+bypass: 59
+rule: TEST_DISABLED
+title: STRICT = True -> False under a conftest fixture's if not STRICT: pytest.skip() silences a requesting test the diff edits
+origin: #351: the closed guard is not (True) at base and not (False) at head, so it now always fires,
+origin2: as THREATMODEL 59's constant flip does in the test module's own setup.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/conftest.py ===
+import pytest
+
+STRICT = True
+
+
+@pytest.fixture
+def strict_only():
+    if not STRICT:
+        pytest.skip("lenient mode")
+=== after: tests/conftest.py ===
+import pytest
+
+STRICT = False
+
+
+@pytest.fixture
+def strict_only():
+    if not STRICT:
+        pytest.skip("lenient mode")
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total(strict_only):
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+# The total of the default basket.
+def test_total(strict_only):
+    assert total() == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_total"}]

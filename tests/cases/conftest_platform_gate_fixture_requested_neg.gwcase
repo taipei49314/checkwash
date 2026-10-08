@@ -1,0 +1,40 @@
+=== meta ===
+bypass: 104
+rule: TEST_DISABLED
+title: an existing test that starts requesting a conftest fixture with a platform gate holds at warn
+origin: #351 (183.2's conftest half): the guard reads the conftest's own constant WIN, closed over
+origin2: the conftest to sys.platform == "win32", and is a D6 interpreter/OS gate as in the test module.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== head: tests/conftest.py ===
+import sys
+
+import pytest
+
+WIN = sys.platform == "win32"
+
+
+@pytest.fixture
+def posix_only():
+    if WIN:
+        pytest.skip("posix only")
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total(posix_only):
+    assert total() == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"], "path": "tests/test_billing.py", "unit": "test_total"}]
