@@ -14,6 +14,8 @@ name unless the command is known not to run it:
 
 - A name counts as a whole word only. `jest` in `deploy-majestic.sh` and `tox`
   in `.tox` do not count; `pytest` in `run-pytest.sh` and in `pytest.exe` does.
+  `py.test`, pytest's own console script, counts as a whole name: not in
+  `numpy.testing` or `copy.test` (#325).
   A tool with a subcommand (`make test`, `npm test`) needs the tool as a whole
   word, and the target may go on (`make tests`, `yarn test:unit`), as before.
 - These contexts do not run it: the words of an `echo` or `printf` command; a

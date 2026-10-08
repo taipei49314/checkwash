@@ -162,6 +162,11 @@ def collectable(path: str) -> bool:
 # Enough of a test runner to call a workflow's removal a loss of coverage.
 _TEST_RUNNER_TOKENS = (
     "pytest",
+    # pytest's own console script, which pytest still installs beside
+    # `pytest` (#325). A dotted name counts only as a whole name, here and in
+    # `runner_command`: `numpy.testing` and `copy.test` hold it as a
+    # substring.
+    "py.test",
     "unittest",
     "tox",
     "nox",
@@ -178,6 +183,8 @@ _TEST_RUNNER_TOKENS = (
     "jest",
     "vitest",
 )
+_DOTTED_RUNNER = re.compile(
+    "|".join(rf"(?<![\w.]){re.escape(token)}(?!\w)" for token in _TEST_RUNNER_TOKENS if "." in token))
 
 # Two families, and the difference between them is the whole of E6's
 # precision. A *swallow* discards an exit code: introducing one anywhere is a
@@ -272,12 +279,14 @@ def _runs_tests(data: bytes | None) -> bool:
 
     Deliberately generous: any recognised runner anywhere in the file counts,
     because the cost of guessing wrong in this direction is one warn-level
-    finding, while guessing wrong the other way blocks an honest commit.
+    finding, while guessing wrong the other way blocks an honest commit. A
+    dotted name (`py.test`) counts only as a whole name (#325).
     """
     if not data:
         return False
     text = data.decode("utf-8", errors="replace").lower()
-    return any(token in text for token in _TEST_RUNNER_TOKENS)
+    return any(token in text for token in _TEST_RUNNER_TOKENS if "." not in token) or (
+        _DOTTED_RUNNER.search(text) is not None)
 
 
 _RUNNER_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd", ".mk", ".mak")

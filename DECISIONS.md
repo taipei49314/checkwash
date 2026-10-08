@@ -8602,6 +8602,121 @@ other case keeps v0.6.0's verdict.
 
 The agent wrote this entry in the fix PR; the maintainer approves it there.
 
+## D-120 (2026-10-07): `py.test`, pytest's own console script, is a test runner name (#325)
+
+pytest still installs `py.test` beside `pytest` (pytest 9.1.1's
+`entry_points.txt` has `py.test = _pytest.config:_console_main`), but row
+69's names (`roles._TEST_RUNNER_TOKENS`) held `pytest` and not `py.test`,
+and neither the substring reader (`_runs_tests`) nor the whole-word reader
+(`runner_command`) finds `pytest` inside `py.test`. A file whose only
+runner was `py.test` therefore ran no tests as far as these readers could
+tell: a workflow step that ran it could be turned off with `if: false`,
+and its workflow deleted, at warn (THREATMODEL row 112); a runner script
+that ran it was no test command, so losing its `py.test` line was no
+weakened command (row 69), and swapping `pytest` for `py.test` in it read
+as a suite that is no longer invoked; and a production file that named
+only `py.test` kept the opaque-change exemption (row 66). Found by #310's
+sweep (D-116) and filed as #325.
+
+No ruling was asked: `py.test` runs pytest, and row 69's names are the
+runners checkwash recognises. This entry, in the fix PR, is where the
+maintainer approves it.
+
+**As implemented:** `py.test` is one of row 69's names. A dotted name
+counts only as a whole name, in both readers: `numpy.testing`,
+`copy.test`, `py.testing` and `pkg.py.test` name no runner, while
+`./bin/py.test`, `py.test.exe` and `py.test.main()` do. Every reader of
+the names takes it: runner sites, the deletion rule, the content gate
+that makes a runner-shaped file a test command, the opaque-exemption
+denial and the collection inventory's runner files.
+
+Readings left to the implementation:
+
+1. **A whole name, in the whole-file reader too.** `_runs_tests` reads
+   every other name as a substring, deliberately generous. A dotted name
+   is read whole there as well, since a substring `py.test` is common in
+   names that run nothing (`numpy.testing`).
+
+**Tests.** `tests/test_issue325_py_test_runner.py` (28): #325's C1 to
+C5, with a step that names targets or a path; the runner script; the swap;
+the opaque exemption; the whole name in both readers; runner sites. Four
+fixtures: three pins (row 112's `if: false` and deleted workflow, row 66's
+runner script) and one neg, a runner script respelled from `pytest` to
+`py.test`, which the old reader blocked.
+
+**Cost.** Measured with the round's engine against main's (`4f0955b`):
+- **Targeted set:** every non-merge commit, on any ref, of the thirteen
+  histories that changes a file whose reading the name can move (a
+  non-Python file whose path role is `prod` or `ci`, that names `py.test`
+  on either side, and that holds no other of row 69's names or is a
+  workflow, a pre-commit config or `.gitlab-ci.yml`; 360), or that changes
+  a root pytest configuration while the tree holds such a file (188):
+  548 commits in six histories (pytest 343, aiohttp 119, requests 66,
+  click 10, werkzeug 8, scrapy 2). 106 records change and 9 verdicts
+  move: blocked goes from 25 to 30.
+  - **Twin check:** each of the 106, with `py.test` respelled `pytest` in
+    its non-Python files, gives the round's record under main's engine,
+    verdict and findings alike, in all 106.
+  - **7 start blocking.** In six, a file that runs or names `py.test` no
+    longer buys the opaque exemption, so the findings it held at warn are
+    high: click `7360097e` (a Makefile gains a `py.test` target; four
+    `assert result.okay` -> `assert not result.exception`, whose reason
+    is filed as #331), pytest `49319ba7` (an example test file renamed
+    out of collection), pytest `77b640d1` (two tests deleted and an
+    expectation's definition changed, beside a CHANGELOG that names
+    `py.test`), requests `18b26d20` (tests moved and split across files,
+    read as disappeared), requests `6c2942b1` (five assertions removed)
+    and requests `e4c4c80b` (the old suite deleted). The seventh,
+    requests `e70179a6`, adds the Makefile comment `# the -k flag, like
+    "py.test -k "`, which E6 reads as a narrowing (filed as #330).
+  - **2 stop blocking.** requests `77e2ca1a`: a Makefile's `test` target
+    moved from `detox` to `python setup.py test` while its `ci` target
+    still runs `py.test`, and main read a suite no longer invoked.
+    requests `874bca97`: a first `pytest.ini` adds `-p no:warnings`;
+    with the Makefile's `py.test` runs read, the collection inventory
+    withholds, since that Makefile spells `py.test -k ...` in a comment,
+    and the first-adoption syntax rule keeps the change at warn.
+  - **4 aiohttp commits** (`e8737099`, `36bb09dc`, `3e06f09d`,
+    `90d5dfa9`) pass on main and stop with an engine error here: they
+    now reach the collection inventory, which cannot read a tree that
+    holds a submodule (#335), where 33 other aiohttp commits of the set
+    stop on both engines.
+  - **The other 93 keep their verdict:** a file that runs `py.test` is
+    now ci, so CI_WORKFLOW_TOUCHED is added, at warn in 92. In werkzeug
+    `884dfc3a`, which blocks on both engines, it is high: the Makefile
+    moved from `py.test` to `nosetests`, which is none of row 69's
+    names.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits, all readable): the
+  same records.
+- **D-088's sets** (895 commits of ten full histories, 855 readable;
+  368 of pytest's, 364 readable): 4 records differ, each in the targeted
+  set above. click `7360097e` and requests `18b26d20` start blocking;
+  werkzeug `884dfc3a` (blocking on both engines) and `83c06a9a` (passing
+  on both) gain CI_WORKFLOW_TOUCHED.
+- **Since #331 (main `974053b`):** this round rebased onto it judges
+  click `7360097e` with the same verdict, rules, severities and paths;
+  #331 words its nine polarity findings as replacements.
+- **Since #335 (main `7fba434`):** the targeted set, re-run with this
+  round merged into main against main itself: 112 records change and 10
+  verdicts move; blocked goes from 28 to 34. The 102 records above that
+  both engines read change as they did. #335 reads a tree that holds a
+  submodule, so the four aiohttp commits that stopped here now give a
+  verdict: they pass on both engines, with CI_WORKFLOW_TOUCHED added at
+  warn. 32 of the 33 that stopped on both now run as well. Six of those
+  change: five gain CI_WORKFLOW_TOUCHED at warn, and aiohttp `456c0caa`
+  starts blocking. Its `tools/build-wheels.sh` runs `py.test`, so it no
+  longer buys the opaque exemption, and the SUBJECT_NORMALIZED it held at
+  warn (`str(exc)` -> `str(exc.value)` on a `pytest.raises` result) is
+  high, as in the seven above.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
+engines), as on main, where #226's relabel (D-104) has not landed. Every
+other case keeps v0.6.0's verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
 ## D-121 (2026-10-07): a quoted pytest setting is read by its section (#327)
 
 D-119 read a value's kind from its first line, since one reader serves INI

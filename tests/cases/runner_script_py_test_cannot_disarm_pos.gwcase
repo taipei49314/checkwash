@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 66
+rule: ASSERT_WEAKENED
+issue: 325
+title: touching a runner script that runs `py.test` is not production repair evidence
+origin: issue #325. A script whose only runner was `py.test` was no test command, so it stayed production, and one line of it bought the opaque exemption that held the weakened assertion beside it at warn. v0.6.0 passes it; the same diff on `pytest` blocks (runner_script_cannot_disarm_pos)
+=== before: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+py.test -q
+=== after: scripts/test.sh ===
+#!/usr/bin/env bash
+set -euo pipefail
+py.test -q --maxfail=1
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice_total():
+    assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+
+
+def test_invoice_total():
+    assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) > 0
+=== expect ===
+[
+  {"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+  {"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn", "path": "scripts/test.sh"}
+]

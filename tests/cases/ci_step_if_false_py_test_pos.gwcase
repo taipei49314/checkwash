@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+issue: 325
+title: `if: false` under the step that runs `py.test`
+origin: issue #325 C2. `py.test`, the console script pytest still installs beside `pytest`, was none of row 69's names, so the step was no runner site and the condition that stops the suite passed at warn. v0.6.0 passes it; the same diff on `pytest` blocks
+=== before: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: py.test
+=== after: .github/workflows/ci.yml ===
+name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: py.test
+        if: false
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]
