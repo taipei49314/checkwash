@@ -35,7 +35,12 @@ from checkwash.frontends.python.branch_constants import guard_truths, literal_fi
 from checkwash.frontends.python.class_attributes import NONE as CLASS_NONE
 from checkwash.frontends.python.class_attributes import OBJECT as CLASS_OBJECT
 from checkwash.frontends.python.class_attributes import ClassAttributes, ClassValue, receivers, substitute
-from checkwash.frontends.python.helper_skips import HelperOutcomes
+from checkwash.frontends.python.helper_skips import (
+    Foreign,
+    HelperOutcomes,
+    ImportedHelpers,
+    imported_helper_names,
+)
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
@@ -2912,6 +2917,22 @@ def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
     return out
 
 
+def _helper_marker(helper, effect, evidence, guard, text, off, origins) -> Marker:
+    """The `helper.<function>.<effect>` marker for an outcome a unit reaches through a helper (#272).
+
+    An outcome in another module (`Foreign`) keeps that file's text and span,
+    and `origins` records the file, as a conftest fixture's outcome is
+    recorded (#223), so a report locates it there.
+    """
+    if isinstance(evidence, Foreign):
+        marker = Marker(name=f"helper.{helper}.{effect}", text=evidence.text or helper, span=evidence.span, guard=guard)
+        if origins is not None:
+            origins[(marker.name, marker.span, marker.text)] = evidence.path
+        return marker
+    return Marker(name=f"helper.{helper}.{effect}", text=text.seg(evidence) or helper, span=off.span(evidence),
+                  guard=guard)
+
+
 def _collect_unit(
     func: ast.FunctionDef | ast.AsyncFunctionDef,
     qualname: str,
@@ -2928,6 +2949,7 @@ def _collect_unit(
     outcome_roots: frozenset[str] = frozenset(),
     attrs=None,
     helpers: HelperOutcomes | None = None,
+    origins: dict | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -3009,7 +3031,8 @@ def _collect_unit(
             helpers is not None
             and isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
-            and node.func.id in local_scopes
+            and (node.func.id in local_scopes
+                 or helpers.imported is not None and node.func.id in helpers.imported)
         ):
             helper_calls.append(node)
         # A native skip or xfail, called or raised (`raise unittest.SkipTest`
@@ -3151,10 +3174,7 @@ def _collect_unit(
         for helper, effect, evidence, guard in helpers.reached(
             func, module_names, helper_calls, method=method, local_scopes=local_scopes
         ):
-            markers.append(
-                Marker(name=f"helper.{helper}.{effect}", text=text.seg(evidence) or helper,
-                       span=off.span(evidence), guard=guard)
-            )
+            markers.append(_helper_marker(helper, effect, evidence, guard, text, off, origins))
 
     # The other half: assertions the unit runs that are not written inside it.
     # `assert_sum(add(2, 3), 5)` is a *call*, so without this the unit records
@@ -3680,20 +3700,24 @@ def _callees(node: ast.AST) -> tuple[str, ...]:
 
 
 def parse_python(
-    data: bytes, collect_tests: bool, conftest: bool = False, chain: tuple[ConftestLevel, ...] = ()
+    data: bytes, collect_tests: bool, conftest: bool = False, chain: tuple[ConftestLevel, ...] = (),
+    imported=None,
 ) -> ParsedFile:
     """`chain`: the conftest files above a test module, nearest first, whose
-    fixtures its units can request (#223). Only a test module reads it."""
+    fixtures its units can request (#223). `imported`: reads the module a
+    top-level `from M import f` names, `(module, original) -> outcomes`, for
+    what calling `f` ends in (#272, second stage). Only a test module reads
+    either."""
     global _walks
     outer, _walks = _walks, None
     try:
-        return _parse_python(data, collect_tests, conftest, chain)
+        return _parse_python(data, collect_tests, conftest, chain, imported)
     finally:
         _walks = outer
 
 
 def _parse_python(
-    data: bytes, collect_tests: bool, conftest: bool, chain: tuple[ConftestLevel, ...]
+    data: bytes, collect_tests: bool, conftest: bool, chain: tuple[ConftestLevel, ...], imported=None
 ) -> ParsedFile:
     global _walks
     raw = normalize_source(data)
@@ -3779,15 +3803,26 @@ def _parse_python(
         return text.seg(node) or ast.unparse(node)
 
     # Same-file helpers a unit or its setup calls (#272), read only in a test
-    # module that can spell a native outcome at all.
+    # module that can spell a native outcome at all, and the functions it
+    # imports by name from another module, read in that module (#272, second
+    # stage).
+    imported_helpers = (
+        ImportedHelpers(imported_helper_names(tree), imported)
+        if imported is not None and collect_tests and not conftest
+        else None
+    )
+    if imported_helpers is not None and not imported_helpers.names:
+        imported_helpers = None
+    spells_outcome = any(token in raw for token in _SETUP_OUTCOME_TOKENS)
     helper_outcomes = (
-        HelperOutcomes(module_scopes, condition, branch_fixtures)
-        if collect_tests and not conftest and any(token in raw for token in _SETUP_OUTCOME_TOKENS)
+        HelperOutcomes(module_scopes, condition, branch_fixtures, imported_helpers)
+        if collect_tests and not conftest and (spells_outcome or imported_helpers is not None)
         else None
     )
 
     if collect_tests and not conftest and (
-        any(token in raw for token in _SETUP_OUTCOME_TOKENS)
+        spells_outcome
+        or imported_helpers is not None
         or any(fixture[2] is not None for level in chain for fixture in level.fixtures.values())
     ):
         setup_scopes = (
@@ -3840,14 +3875,11 @@ def _parse_python(
             if origin is not None:
                 marker_origins[(marker.name, marker.span, marker.text)] = origin
             markers.append(marker)
-        # A same-file helper the setup calls (#272).
+        # A helper the setup calls (#272), in this file or imported.
         for helper, effect, evidence, guard in setup_helper_outcomes(
             scopes, func, method=len(scopes) > 1, chain=chain
         ):
-            markers.append(
-                Marker(name=f"helper.{helper}.{effect}", text=text.seg(evidence) or helper,
-                       span=off.span(evidence), guard=guard)
-            )
+            markers.append(_helper_marker(helper, effect, evidence, guard, text, off, marker_origins))
         return markers
 
     class_aliases: dict[int, dict[str, list[ast.expr]]] = {}
@@ -3924,7 +3956,7 @@ def _parse_python(
                         child, qual, text, off, inherited + setup_markers(child, scopes),
                         module_scopes, file_caches, branch_fixtures, doctests, aliases,
                         outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
-                        attrs=attrs_of(owner), helpers=helper_outcomes,
+                        attrs=attrs_of(owner), helpers=helper_outcomes, origins=marker_origins,
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -3973,7 +4005,7 @@ def _parse_python(
                 + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls)),
                 module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
-                helpers=helper_outcomes,
+                helpers=helper_outcomes, origins=marker_origins,
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
