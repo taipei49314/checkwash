@@ -1,0 +1,43 @@
+=== meta ===
+rule: CI_WORKFLOW_TOUCHED
+title: the test job loses `when: manual` and runs on every pipeline again
+origin: issue #214 acceptance — a strengthened job is no weakened command.
+=== before: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+  when: manual
+=== after: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "warn"}]

@@ -99,10 +99,28 @@ above an untouched `expect(invoiceTotal(items)).toBe(78.75)`. The JS pass
 
 First-party means a `./` or `../` specifier that stays inside the repository
 and outside dependency or build output; `./billing`, `./billing.js` and
-`./billing.ts` name one module. Bare specifiers (packages, `node:` builtins)
-are hygiene. Aliases (`@/`, tsconfig `paths`, `#imports`, root-relative
-`/src`) resolve through runner configuration the scan does not execute, so
-they stay silent rather than guessed.
+`./billing.ts` name one module. Two kinds of alias name first-party modules
+too (#196 188.6):
+
+- an `@/` or `~/` specifier, by convention the project's own source root:
+  the same alias string in a mock and an import is one module, so
+  `vi.mock("@/billing")` stands in for `import ... from "@/billing.ts"`;
+- a specifier the base side's root `tsconfig.json` maps through
+  `compilerOptions.paths`, relative to `baseUrl` or the repository root: it
+  names the module at the path it maps to, so under `"@/*": ["src/*"]`
+  `vi.mock("@/billing")` stands in for `import ... from "../src/billing"`.
+  An exact pattern comes first, then the longest prefix, and the first
+  target is the module, as TypeScript resolves it. The base side's file is
+  read, so a diff cannot remap its own mocks.
+
+Without the tsconfig, an alias and another spelling may still name one
+module; a base-side installation under such a spelling counts as already
+installed, so respelling a mock is not a new stand-in. Bare specifiers
+(packages, `node:` builtins, scoped packages such as `@acme/billing`) are
+hygiene. Other aliases (`#imports`, root-relative `/src`, a bare specifier
+`baseUrl` alone resolves, a `"*"` pattern, `extends`, `jsconfig.json`,
+bundler and runner alias configuration) resolve through configuration the
+scan does not read, so they stay silent rather than guessed.
 
 Timing is modelled, not executed. `vi.mock` is hoisted above the file's
 imports wherever it is written and reaches every binding of the module in
@@ -129,19 +147,43 @@ is read through one hop of the local binding on either side, and takes effect
 where the replacing call runs (#196 188.4). A factory that reaches for the original module (`importOriginal`,
 `importActual`, `requireActual` or its own parameter) replaces every name it
 spells — an identifier, a member name, or an identifier-shaped string literal
-such as a quoted or computed key — and nothing else; no factory is an
-automock. Vitest's `{ spy: true }` and a spy without a replacement keep the
+such as a quoted or computed key — and every name an object it merges in
+carries, and nothing else; no factory is an automock (#196 188.5). It merges
+in a spread in its own body's object literals, an `Object.assign` argument,
+and a name it returns. What a function nested in it spreads or returns is
+that function's, a method or an arrow behind a TypeScript return annotation
+(`fetch(url: URL): Promise<ArrayBuffer> { ... }`) included. The real module (the call itself, or a name bound to
+it or to the rest of it) and an object written in the factory add no name; a
+name bound outside the factory is read one hop, to `vi.hoisted(...)` that
+returns an object literal or to an object literal, whatever its name (Jest's
+`mock` prefix only lets its hoisted factory reach the variable). A source that
+stays unreadable — a call, a second hop, a name bound nowhere, rebound or
+given a member — makes the factory opaque: it may replace every export. Vitest's `{ spy: true }` and a spy without a replacement keep the
 real code and install nothing. An object-literal key inside an assertion
 (`toEqual({ invoiceTotal: 78.75 })`) names a property; it does not read the
 binding of the same name.
 
-Not claimed: setup files, `__mocks__` directories and `automock`
-configuration (the conftest analogue, which needs the runner configuration);
+A setup file the runner loads before every test file is read as a conftest
+is (#218): `setupTests.js` or `setupTests.ts` (Create React App's
+`src/setupTests`), `jest.setup.*`, `vitest.setup.*`, and the files the base
+side's root `package.json` names in `jest.setupFiles` or
+`jest.setupFilesAfterEnv` as `./x` or `<rootDir>/x`. A first-party module mock
+or replacing spy installed there, read by the same scan, a
+`jest.enableAutomock()` there, and `"automock": true` under the root
+`package.json`'s `jest` key are reported as `TEST_PATCHES_SUBJECT` with no
+unit when the base side did not install them: which test reads the stand-in
+is not resolved, as `CONFTEST_PATCHES_PROD` does not resolve it, so no unit's
+repair evidence explains it. A mock moved between setup files or reformatted
+is not new; a third-party mock is hygiene.
+
+Not claimed: a rewritten manual mock under `__mocks__/`; runner config files
+(`jest.config.*`, `vitest.config.*`) and what they set, their `setupFiles`
+and `automock` among them; a setup file that only the head side's
+`package.json` names, under another name; `globalSetup`;
 installations other than `vi.mock` in hooks, helpers and `describe` bodies;
 a namespace or `require()` object passed whole under a whole-module mock
-(`compute(billing)`); plain assignment to a module object's member; template-literal keys and partial-factory names
-spelled outside the factory (a spread of an object declared elsewhere, a
-computed key from a variable); cast types that contain parentheses;
+(`compute(billing)`); plain assignment to a module object's member; template-literal keys and a
+computed key from a variable; cast types that contain parentheses;
 non-literal specifiers; re-exports and two hops; and oracles the JS frontend
 does not represent (interaction matchers, `.resolves`/`.rejects`,
 snapshots). Severity and escalation are the existing policy: a modified JS
@@ -201,8 +243,25 @@ The existing empty-needle search still means nonempty Python source and is
 not reused as the runtime-provider inventory. Its use by the installation pass
 is restricted to discovering oracle consumers. Git path metadata is read once per snapshot;
 selected regular blobs are read in batches of 256 by immutable object IDs.
-Missing required blobs, malformed paths/records, unsupported selected source,
-submodules or incomplete batches fail with `EngineError`. The inventory limit
+Missing required blobs, malformed paths/records, unsupported selected source
+or incomplete batches fail with `EngineError`. A submodule is listed as its
+path with a trailing slash, a directory whose content is unknown (#335). Its
+own path reads as no file, whether git answers it as missing (2.43) or as a
+submodule (2.55).
+A read inside one, an import that resolves into one, or a pytest collection that
+can reach one on either side of the diff fails with an `EngineError` naming
+its path; every other pass proceeds over the rest of the tree. A run reaches
+a submodule when one of its path arguments names it, a path inside it or a
+directory above it; a run without one collects from the root config's
+`testpaths`, else from the root, into every directory no `norecursedirs`
+pattern stops. The runs are the runner files' pytest commands, or a bare
+`pytest` when there are none. A setting read two ways counts both ways; an
+undecodable config or a run's own `-c` config reaches every submodule; a
+runner file whose pytest command does not parse is a run without path
+arguments; and a path argument that expands a variable (`$1`, `{posargs}`)
+names no path. The empty-needle search still rejects a tree with a
+submodule, because the startup-context proof needs every Python source, so
+that proof is withheld there, as before. The inventory limit
 is 200,000 paths, each selected source is at most 1 MB, and a selected read batch
 is at most 64 MB. Limits raise errors instead of silently truncating evidence.
 Working-tree inventory excludes Git metadata, rejects directory symlinks, and

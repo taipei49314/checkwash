@@ -17,6 +17,7 @@ from dataclasses import replace
 
 from checkwash.allowlist import AllowEntry
 from checkwash.change import EngineError, FileChange
+from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ci import (
     _ci_base_surface,
     _deps_differ,
@@ -26,7 +27,7 @@ from checkwash.ci import (
 )
 from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
-from checkwash.collection_inventory import collection_inventory_changes
+from checkwash.collection_inventory import collection_inventory_changes, collection_sources, opaque_reached
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
@@ -43,6 +44,7 @@ from checkwash.evidence import (
 from checkwash.findings import Finding
 from checkwash.frontends.javascript.frontend import parse_javascript
 from checkwash.frontends.javascript.module_mocks import module_mock_events
+from checkwash.frontends.javascript.setup_files import setup_file_events
 from checkwash.frontends.javascript.paths import is_js_test_file
 from checkwash.frontends.javascript.runners import (
     collected,
@@ -58,6 +60,7 @@ from checkwash.frontends.python.frontend import (
     parse_conftest_level,
     parse_python,
 )
+from checkwash.frontends.python.helper_skips import HelperModule
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
 from checkwash.frontends.python.param_input_identity import mark_param_input_identity
@@ -82,9 +85,11 @@ from checkwash.frontends.python.fixture_local_implementations import fixture_loc
 from checkwash.frontends.python.parametrized_string_standins import parametrized_string_standin_events
 from checkwash.shadow import find_runtime_subject_shadows
 from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
+from checkwash.frontends.javascript.expected_provenance import mark_js_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
+from checkwash.ir.markers import parse_text
 from checkwash.ir.model import IR, ChangeEvidence, DiffGlobals, Marker, judged_as_test, normalize_text
 from checkwash.pyenv import known_baseline
 from checkwash.report.context import ReportContext
@@ -167,27 +172,33 @@ def _innermost_focus(data: bytes, manifest):
     return lambda: focus_is_innermost(runner_evidence(data, manifest))
 
 
-def _base_manifest(changes: list[FileChange], root_reader):
-    """A reader of the base side's root package.json, for runner evidence.
+def _base_root_file(changes: list[FileChange], root_reader, name: str):
+    """A reader of one root file as the base side holds it.
 
     In the diff, its before side. Otherwise the head snapshot holds it
     unchanged, so that is the base side too (#196 186.7). Read once, and only
-    when a JS test file names no runner itself.
+    when asked.
     """
     read: list[bytes | None] = []
 
-    def manifest() -> bytes | None:
+    def base() -> bytes | None:
         if not read:
             for change in changes:
                 paths = (change.path.replace("\\", "/"), (change.old_path or "").replace("\\", "/"))
-                if "package.json" in paths:
+                if name in paths:
                     read.append(change.before)
                     break
             else:
-                read.append(root_reader("package.json") if root_reader is not None else None)
+                read.append(root_reader(name) if root_reader is not None else None)
         return read[0]
 
-    return manifest
+    return base
+
+
+def _base_manifest(changes: list[FileChange], root_reader):
+    """A reader of the base side's root package.json, for runner evidence,
+    read only when a JS test file names no runner itself."""
+    return _base_root_file(changes, root_reader, "package.json")
 
 
 def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
@@ -342,9 +353,12 @@ def _canonical_constants(raw: dict[str, str]) -> dict[str, str]:
     """
     out: dict[str, str] = {}
     for name, seg in raw.items():
+        tree = parse_text(seg, mode="eval")
+        if tree is None:
+            continue
         try:
-            out[name] = ast.unparse(ast.parse(seg, mode="eval"))
-        except (SyntaxError, ValueError):
+            out[name] = ast.unparse(tree)
+        except ValueError:
             continue
     return out
 
@@ -394,7 +408,7 @@ def _native_assertion_context(
     return tuple(parts), tuple(assertions)
 
 
-def _root_importer_changes(changes, config, head_reader, head_searcher):
+def _root_importer_changes(changes, config, head_reader, head_searcher, path_lister=None):
     """Read unchanged callers of changed root helpers, once and within caps.
 
     A file absent from the real diff has the same bytes on both snapshots.
@@ -424,6 +438,16 @@ def _root_importer_changes(changes, config, head_reader, head_searcher):
         raise EngineError("changed root assertion helpers require snapshot importer search")
     if len(modules) > _MAX_ORACLE_READS:
         raise EngineError("root assertion helper search exceeds the module budget")
+    # The search reads no submodule; an importer inside one pytest can collect
+    # is unknown (#335).
+    if path_lister is not None:
+        paths, opaque = split_inventory(path_lister())
+        if opaque:
+            sources = {path: head_reader(path) for path in collection_sources(
+                path for path in paths if isinstance(path, str))}
+            reached = opaque_reached(opaque, {p: s for p, s in sources.items() if isinstance(s, bytes)}, changes)
+            if reached is not None:
+                raise opaque_error(reached, "pytest's collection can reach it")
     candidates = sorted({p.replace("\\", "/") for p in head_searcher(sorted(modules))})
     # The existing grep returns at most 64 hits. Exactly 64 can be a truncated
     # set; never call that a complete review of removed helper assertions.
@@ -472,7 +496,8 @@ def build_ir(
     root_path_lister=None,
     root_batch_reader=None,
 ) -> IR:
-    importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(changes, config, root_reader, root_searcher)
+    importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(
+        changes, config, root_reader, root_searcher, root_path_lister)
     changes = [*changes, *importer_changes]
     changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher, reviewed_root_modules)]
     g = DiffGlobals()
@@ -598,6 +623,53 @@ def build_ir(
                 break
             directory = directory.rpartition("/")[0]
         return tuple(levels)
+
+    # The modules a test module imports a helper from (#272, second stage),
+    # resolved as an imported assertion helper's module is
+    # (`_merge_crossfile_oracles`: a dotted module from the root, a dotless
+    # one beside the test) and read as the conftest chain is: a file the diff
+    # changes on its own side, any other once from the strict head snapshot,
+    # within the same limits. Only a test or conftest module is read.
+    helper_modules: dict[tuple[str, int], HelperModule | None] = {}
+
+    def _helper_module(mpath: str, side: int) -> HelperModule | None:
+        key = (mpath, side if mpath in chain_sides else -1)
+        if key in helper_modules:
+            return helper_modules[key]
+        data = None
+        if config.role_of(mpath) in ("test", "conftest"):
+            if mpath in chain_sides:
+                data = chain_sides[mpath][side]
+            elif root_reader is not None:
+                if chain_reads[0] >= _MAX_CHAIN_READS:
+                    raise EngineError("imported helper modules exceed the source read limit")
+                chain_reads[0] += 1
+                data = root_reader(mpath)
+                if data is not None and not isinstance(data, bytes):
+                    raise EngineError("imported helper strict snapshot returned invalid source bytes")
+                if data is not None:
+                    chain_reads[1] += len(data)
+                    if chain_reads[1] > _MAX_CHAIN_BYTES:
+                        raise EngineError("imported helper modules exceed the source byte limit")
+                    if report_context is not None:
+                        report_context.snapshot(mpath, 0, data)
+                        report_context.snapshot(mpath, 1, data)
+        helper_modules[key] = HelperModule(data, mpath) if data is not None else None
+        return helper_modules[key]
+
+    def _imported_helpers(tpath: str, side: int):
+        """`(module, original) -> outcomes` for the test module at `tpath` on `side`."""
+        tdir = tpath.rpartition("/")[0]
+
+        def resolve(module: str, original: str) -> tuple:
+            if "." in module:
+                mpath = module.replace(".", "/") + ".py"
+            else:
+                mpath = f"{tdir}/{module}.py" if tdir else f"{module}.py"
+            helper = _helper_module(mpath, side)
+            return helper.outcomes(original) if helper is not None else ()
+
+        return resolve
 
     oracle_memo: dict[tuple[str, int], ParsedFile | None] = {}
     oracle_sources: dict[tuple[str, int], bytes | None] = {}
@@ -842,14 +914,17 @@ def build_ir(
             reaches_chain = collect and not is_conftest and change.synthetic not in (
                 "root_helper_importer", "expected_provenance_importer")
             if change.before is not None:
+                before_path = (change.old_path or path).replace("\\", "/")
                 before_parsed = parse_python(
                     change.before, collect_tests=collect, conftest=is_conftest,
-                    chain=_conftest_chain((change.old_path or path).replace("\\", "/"), 0) if reaches_chain else (),
+                    chain=_conftest_chain(before_path, 0) if reaches_chain else (),
+                    imported=_imported_helpers(before_path, 0) if reaches_chain else None,
                 )
             if change.after is not None:
                 after_parsed = parse_python(
                     change.after, collect_tests=collect, conftest=is_conftest,
                     chain=_conftest_chain(path, 1) if reaches_chain else (),
+                    imported=_imported_helpers(path, 1) if reaches_chain else None,
                 )
         elif is_js_test:
             # Each side is judged under its own runner's focus rule.
@@ -1345,7 +1420,9 @@ def build_ir(
     # one batched call (git grep in range mode); only matching files are read
     # and parsed, capped. Deleting one of two identical copies leaves the
     # oracle running — the attack shapes (survivor skipped, survivor edited)
-    # fail the liveness and hash checks and earn nothing.
+    # fail the liveness and hash checks and earn nothing. A survivor reaches
+    # the conftest fixtures above it at head, as a changed module does, so
+    # one that an always-skip fixture skips is not live either (#266).
     if head_searcher is not None and head_reader is not None:
         wanted: set[str] = set()
         needles: set[str] = set()
@@ -1376,7 +1453,9 @@ def build_ir(
                 data = head_reader(path)
                 if data is None:
                     continue
-                parsed = parse_python(data, collect_tests=True)
+                parsed = parse_python(
+                    data, collect_tests=True, chain=_conftest_chain(path, 1), imported=_imported_helpers(path, 1)
+                )
                 if not parsed.parse_ok:
                     continue
                 consts = _gate_constants(parsed, after_by_path, head_reader)
@@ -1410,7 +1489,14 @@ def build_ir(
             g.subject_installations.append(event)
     # The JavaScript spelling: a newly installed first-party module mock or
     # replacing spy that an existing JS unit's own assertions read (#177).
-    for event in module_mock_events(ir, changes):
+    # An alias resolves through the base side's root tsconfig.json (#196 188.6).
+    read_tsconfig = _base_root_file(changes, root_reader, "tsconfig.json")
+    for event in module_mock_events(ir, changes, read_tsconfig):
+        if event not in g.subject_installations:
+            g.subject_installations.append(event)
+    # The same stand-in installed from a setup file the runner loads before
+    # every test file, judged as a conftest patch is: no unit (#218).
+    for event in setup_file_events(changes, _base_manifest(changes, root_reader), read_tsconfig):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)
@@ -1419,6 +1505,8 @@ def build_ir(
     mark_expected_provenance(ir, raw_by_path, root_reader, config.role_of, report_context,
                              {path: data for (path, side), data in oracle_sources.items()
                               if side == -1 and (path, side) in strict_oracle_sources}, root_searcher)
+    # The JavaScript port of the same channel (#226).
+    mark_js_expected_provenance(ir, raw_by_path)
     return ir
 
 

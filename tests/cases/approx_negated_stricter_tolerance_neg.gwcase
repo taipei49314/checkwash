@@ -1,0 +1,27 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: `!= pytest.approx(78.75, abs=0.01)` -> `abs=0.5` demands the values be further apart: no finding
+origin: #284 — a negated tolerance was compared in the positive direction and blocked as loosened
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() != pytest.approx(78.75, abs=0.01)
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() != pytest.approx(78.75, abs=0.5)
+=== expect ===
+[]

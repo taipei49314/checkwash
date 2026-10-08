@@ -26,7 +26,10 @@ schema_version = 1
 "i196/F4" = "block"  # 196.187.4: Jasmine globals name no file-scoped runner, so fit on the only unit stops the suite; was undecided
 "i196/F5" = "block"  # 196.187.4: it.only on every unit of a Mocha file stops every test outside it; was undecided
 "i196/F6" = "block"  # 196.187.4: describe.only over a whole Mocha file stops every test outside it; was undecided
+"i196/F7" = "block"  # #201 ruling 196.followup.new-gate-cases and 196.187.2 (2026-10-03): it.only beside a plain test inside describe.only stops the plain test under every runner (probe 187.2a)
+"i196/F8" = "block"  # #201 ruling 196.followup.new-gate-cases and 196.187.2 (D): Vitest runs only the innermost focus, so the outer focused block's own test stops
 "i196/Fc1" = "block"  # ruling X.control-labels (2026-10-03): 187 control: Fc1's sibling stops running; matches v0.5.0, no entry needed
+"i196/Fc2" = "pass"  # #201 ruling 196.followup.new-gate-cases and 196.187.2 (B): control for F8; Jest passes a block's focus to its direct tests when none of them is focused, so the outer test still runs
 "i196/M0" = "block"  # 196.186.7: Vitest's default include does not collect __tests__/value.ts; was undecided
 "i196/M1" = "block"  # 196.186.7: Vitest's default include does not collect spec.tsx; was undecided
 "i196/M2" = "block"  # 196.186.7: Vitest's default include does not collect test.tsx; was undecided
@@ -146,7 +149,7 @@ schema_version = 1
 "i198/T3" = "block"  # 198.Q3: node:assert/strict's equal is strictEqual, so 78.75 -> 75 is an expected-value change; was undecided
 "i198/T4" = "block"  # 198.Q3: the literal reader reads through parentheses; was undecided
 "i198/T5" = "block"  # 198.Q3: the literal reader reads through a TypeScript cast; was undecided
-"i198/T6" = "undecided"  # #198 Acceptance: "Decided by the rulings above: J1-J5, T1-T6, FPJ1-FPJ2 (question 3)"
+"i198/T6" = "block"  # #226 (196.followup.expected-provenance, 2026-10-03): Number(<literal>) folds to its value; was undecided
 
 # --- i199: #199 setup-skip markers trip the collection-inventory withhold
 "i199/C1" = "block"  # #199 Acceptance: "N1-N6, C1-C4, G1-G3 and R2-R4 block"

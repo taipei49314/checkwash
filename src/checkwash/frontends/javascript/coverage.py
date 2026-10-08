@@ -18,6 +18,8 @@ from checkwash.frontends.javascript.frontend import (
     _call_arguments,
     _code_positions,
     _conditional_arm,
+    follows_new,
+    should_sites,
 )
 from checkwash.frontends.python.frontend import ParsedFile, normalize_source
 
@@ -66,6 +68,13 @@ def _declaration(text: str, masked: str, code: bytearray, start: int, opening: i
     return masked[following] == "{" and "\n" not in text[call[1]:following]
 
 
+def _reason(family: str, unjudged: bool) -> str:
+    if unjudged:
+        return (f"{family} assertion candidate is recorded with no strength: its predicate "
+                "is not represented in the assertion scan, so a rewrite is not judged")
+    return f"{family} assertion candidate is not represented in the assertion scan"
+
+
 def javascript_coverage_gaps(
     data: bytes, parsed: ParsedFile, path: str, side: str,
 ) -> list[CoverageGap]:
@@ -89,7 +98,7 @@ def javascript_coverage_gaps(
         previous = _previous(masked, start)
         if previous >= 0 and masked[previous] in ".#":
             continue
-        if re.search(r"\bnew$", masked[:previous + 1]):
+        if follows_new(masked, previous):
             continue
         callee = text[start:match.end() - 1].strip()
         family = bindings.candidate(callee, start)
@@ -107,12 +116,18 @@ def javascript_coverage_gaps(
                 chain = re.match(r"(?:\s*\.\s*" + _NAME + r")+", masked[call[1]:])
                 if chain:
                     callee += re.sub(r"\s+", "", chain.group())
-        if start in unjudged:
-            reason = (f"{family} assertion candidate is recorded with no strength: its predicate "
-                      "is not represented in the assertion scan, so a rewrite is not judged")
-        else:
-            reason = f"{family} assertion candidate is not represented in the assertion scan"
-        candidates[start] = (callee, reason)
+        candidates[start] = (callee, _reason(family, start in unjudged))
+
+    # chai's should interface (#215): a `.should` chain read off a value,
+    # whose root is the subject rather than an assertion binding.
+    for start, subject, getter_end in should_sites(text, code, bindings):
+        if start in candidates:
+            continue
+        chain = re.match(r"(?:\s*(?:\?\.|\.)\s*" + _NAME + r")+", masked[getter_end:])
+        # Whitespace goes, but a space between two words stays: `new Date(0)`.
+        compact = re.sub(r"\s+", " ", re.sub(r"(?<![\w$])\s+|\s+(?![\w$])", "", subject))
+        callee = compact + ".should" + re.sub(r"\s+", "", chain.group() if chain else "")
+        candidates[start] = (callee, _reason("chai", start in unjudged))
 
     return [
         CoverageGap(

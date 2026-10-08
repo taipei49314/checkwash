@@ -1,7 +1,7 @@
 """JS assertions checkwash does not read, recorded with no strength (#196 190.5).
 
 `assert.throws(fn)`, `expect(spy).toHaveBeenCalledWith(1)` and
-`expect(order).to.have.property("total")` are assertions whose predicate the
+`expect(order).to.have.keys("total")` are assertions whose predicate the
 scans do not read. Before this round they were coverage notices only, so
 deleting one passed. SPEC §3 records such a form with strength null, as
 Python records `assertRaises`: its removal is ASSERT_REMOVED, and a rewrite
@@ -85,11 +85,12 @@ def _outcome(before, after, header):
     ("expect(() => total(-1)).to.throw(RangeError);", CHAI, "raises", "() => total(-1)"),
     ("expect(save()).to.be.rejectedWith(Error);", CHAI, "raises", "save()"),
     ("expect(() => total()).to.not.throw();", CHAI, "unknown", "() => total()"),
-    ("expect({ value }).to.have.property('value');", CHAI, "unknown", "{ value }"),
-    ("expect({ value }).to.have.property('value').that.equals(78.75);", CHAI, "unknown", "{ value }"),
+    # `.property` is read since #215; these rows keep spellings the scan does not read.
+    ("expect({ value }).to.have.keys('value');", CHAI, "unknown", "{ value }"),
+    ("expect({ value }).to.be.an('object').that.has.keys('value');", CHAI, "unknown", "{ value }"),
     ("assert.throws(() => total(-1));", CHAI, "raises", "() => total(-1)"),
     ("assert.isRejected(save());", CHAI, "raises", "save()"),
-    ("assert.property({ value }, 'value');", CHAI, "unknown", "{ value }"),
+    ("assert.hasAllKeys({ value }, ['value']);", CHAI, "unknown", "{ value }"),
 ])
 def test_an_unread_assertion_is_recorded_with_no_strength(body, header, form, left):
     (recorded_form, strength, recorded_left, text), = _recorded(body, header)
@@ -142,7 +143,7 @@ def test_a_read_assertion_keeps_its_strength():
     ("expect(save).toHaveBeenCalledWith(78.75);", VITEST, "UNKNOWN"),
     ("assert.throws(() => total(-1), RangeError);", NODE, "UNKNOWN"),
     ("assert.rejects(save());", NODE, "UNKNOWN"),
-    ("expect({ value }).to.have.property('value');", CHAI, "UNKNOWN"),
+    ("expect({ value }).to.have.keys('value');", CHAI, "UNKNOWN"),
     ("assert.isRejected(save());", CHAI, "UNKNOWN"),
 ])
 def test_deleting_an_unread_assertion_is_assert_removed(body, header, strength):

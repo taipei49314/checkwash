@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: an HTTP client's patch method is no patcher, whatever its argument
+origin: #196 188.5 C control - httpx tests call client.patch(server.url, ...); a computed target is read only from a patcher, so an HTTP PATCH request records no patch
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+def test_invoice_total(client, server):
+    items = [10.0, 90.0]
+    assert billing.invoice_total(items, 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app import billing
+
+
+def test_invoice_total(client, server):
+    client.patch(server.url, content=b"total")
+    items = [10.0, 90.0]
+    assert billing.invoice_total(items, 0.053) == 105.3
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== expect ===
+[]

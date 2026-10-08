@@ -34,6 +34,8 @@ MODULE = "module"
 SKIP_MARK = "skip_mark"
 # A skip or xfail called in the test body.
 SKIP_CALL = "skip_call"
+# A skip or xfail a helper ends in, same-file or imported, called by the test or its setup (#272).
+HELPER = "helper"
 
 # `_conftest_unit` mints these names, and only these, for collection controls.
 COLLECTION_NAMES = frozenset({
@@ -60,6 +62,8 @@ def marker_kind(name: str) -> str | None:
         return RUNTIME
     if name.startswith("setup."):
         return SETUP
+    if name.startswith("helper."):
+        return HELPER
     if name.startswith("module."):
         return MODULE
     if name in BODY_MARKERS:

@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 233
+title: AVA t.true(x) respelled t.is(x, true) states the same predicate
+origin: issue #233 — both read as === true
+=== before: test/billing.js ===
+import test from 'ava';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+test('paid', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.true(invoiceTotal(items) > 0);
+});
+=== after: test/billing.js ===
+import test from 'ava';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+test('paid', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.is(invoiceTotal(items) > 0, true);
+});
+=== expect ===
+[]

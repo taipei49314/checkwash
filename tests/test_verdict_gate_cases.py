@@ -17,9 +17,10 @@ SPEC.loader.exec_module(VG)
 
 INPUTS = ROOT / "tests/verdict_gate"
 # The #201 transcription: #196 28, #197 36, #198 52, #199 33 rows. The #197
-# dual-obligation PR added i197/O1-O3, Q5a and Q5b, and the 184.3 PR added
-# i196/W1 and Wc1 (#201 ruling 196.followup.new-gate-cases).
-FAMILIES = {"i196": 30, "i197": 41, "i198": 52, "i199": 33}
+# dual-obligation PR added i197/O1-O3, Q5a and Q5b, the 184.3 PR added
+# i196/W1 and Wc1, and the 187.2 cases i196/F7, F8 and Fc2 followed (#201
+# ruling 196.followup.new-gate-cases).
+FAMILIES = {"i196": 33, "i197": 41, "i198": 52, "i199": 33}
 
 
 def test_every_case_file_parses():

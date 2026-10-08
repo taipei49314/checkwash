@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 44
+rule: TEST_DISABLED
+title: A string skipif condition true on every supported Python still blocks
+origin: #263 ruling: the string is read as its expression, and `sys.version_info >= (3,)` always holds
+=== before: tests/test_calc.py ===
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif("sys.version_info >= (3,)", reason="legacy")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

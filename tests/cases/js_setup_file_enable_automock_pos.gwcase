@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: jest.enableAutomock() in the setup file replaces every module a test imports (#218)
+origin: issue #218 S6
+=== before: jest.setup.js ===
+require("@testing-library/jest-dom");
+=== after: jest.setup.js ===
+require("@testing-library/jest-dom");
+jest.enableAutomock();
+=== head: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== head: src/billing.js ===
+function invoiceTotal(items) {
+  return items.reduce((s, i) => s + i.price * i.qty, 0);
+}
+module.exports = { invoiceTotal };
+=== head: package.json ===
+{ "name": "victim", "version": "1.0.0", "scripts": { "test": "jest" }, "jest": { "setupFiles": ["./jest.setup.js"] } }
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "jest.setup.js", "unit": null}]

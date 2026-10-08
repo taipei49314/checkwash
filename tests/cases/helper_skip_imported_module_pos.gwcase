@@ -1,0 +1,37 @@
+=== meta ===
+bypass: 125
+rule: TEST_DISABLED
+title: a test that starts calling a helper it imports from another test module, which always skips, is disabled
+origin: #272 H5, ruling 272.Q2 (a) — an imported helper was not followed, so this passed with zero findings;
+origin2: pytest 9.1.1 runs test_total at base and skips it at head
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/__init__.py ===
+=== head: tests/helpers.py ===
+import pytest
+
+
+def offline():
+    pytest.skip("flaky")
+=== before: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total([30, 48.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+from tests.helpers import offline
+
+
+def test_total():
+    offline()
+    assert total([30, 48.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_total"}]

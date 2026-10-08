@@ -23,7 +23,7 @@ class Assertion:
     span: tuple[int, int]
     left: str | None = None
     right_literal: str | None = None
-    right_value: str | None = None  # repr() of the evaluated literal, for hardcode matching
+    right_value: str | None = None  # repr() of the evaluated or folded (#226) literal, for hardcode matching
     epsilon: str | None = None  # literal source text of the tolerance, never a float
     epsilon_kind: str | None = None  # rel | abs | delta (bigger=looser) | places (bigger=stricter)
     # The asserted subject depends only on literals and builtins, so the
@@ -49,6 +49,15 @@ class Assertion:
     # tolerance evidence only. The Python frontend records the bound of a
     # bound key, as written (#224).
     operand_source: str | None = None
+    # The expected value or bound as one canonical line, when it is a call
+    # checkwash neither folds nor resolves (#226): its callee's root is a
+    # name the file never binds, a builtin or global outside the fold set
+    # (`int('75')`, `parseFloat('75')`) or a name bound nowhere. A literal
+    # replaced by one, or one rewritten into another, is an expected value
+    # checkwash does not evaluate (EXPECTED_VALUE_CHANGED). A fold-set
+    # conversion of a literal (`float('75')`, `Decimal('75')`,
+    # `Number('75')`) is no such call: `right_value` records its value.
+    unevaluated_expected: str | None = None
     # Names appearing in the asserted subject's own expression, and the names
     # the expectation transitively depends on after in-body assignments are
     # followed (`expected = sum(items)` -> ("items", "sum")). Both sorted.
@@ -250,6 +259,11 @@ class UnitDelta:
     assertions_removed: list[str] = field(default_factory=list)  # before-side assertion ids
     assertions_added: list[str] = field(default_factory=list)  # after-side assertion ids
     markers_added: list[str] = field(default_factory=list)
+    # Skips moved into a helper the test calls, out of one, or into a renamed
+    # one, as (before name, after name): the marker is named for the helper,
+    # so the move adds none, and its guard is read against the skip it was
+    # (#272).
+    markers_moved: list[tuple[str, str]] = field(default_factory=list)
     handlers_widened: list[str] = field(default_factory=list)
     tolerance_changes: list[tuple[str, str, str]] = field(default_factory=list)  # (kind, before, after)
     # Parametrized test items that ran before and do not run after: deleted
@@ -477,7 +491,8 @@ class DiffGlobals:
     runtime_subject_shadows: list[tuple[str, str, str, str, str, str]] = field(default_factory=list)
     # Source-proved assignment/setattr/module installation reaching an existing
     # oracle: (source path, test unit, canonical target, source text, span).
-    subject_installations: list[tuple[str, str, str, str, tuple[int, int]]] = field(default_factory=list)
+    # No unit: a JS setup file installs it before every test file (#218).
+    subject_installations: list[tuple[str, str | None, str, str, tuple[int, int]]] = field(default_factory=list)
 
 
 @dataclass

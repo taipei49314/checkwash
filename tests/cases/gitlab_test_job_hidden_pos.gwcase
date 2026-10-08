@@ -1,0 +1,44 @@
+=== meta ===
+bypass: 112
+rule: CI_WORKFLOW_TOUCHED
+title: a leading `.` hides the test job, the way GitLab documents disabling one
+origin: issue #214, D-113 reading — a hidden job never runs; one no job `extends:` is a job set
+origin2: aside, so its runner commands are dead sites.
+=== before: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+=== after: .gitlab-ci.yml ===
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.12
+  script:
+    - pip install ruff
+    - ruff check .
+
+.test:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -e .[test]
+    - pytest
+=== expect ===
+[{"rule": "CI_WORKFLOW_TOUCHED", "severity": "high", "escalators": ["CI_TEST_COMMAND_WEAKENED"]}]

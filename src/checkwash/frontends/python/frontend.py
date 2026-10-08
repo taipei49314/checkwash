@@ -24,19 +24,33 @@ from checkwash.frontends.python.setup_skip_controls import (
     SetupScope,
     _conjunction,
     _import_pairs,
+    _names as _bound_names,
     body_bindings,
     body_outcome,
     conftest_level,
     module_bindings,
+    setup_helper_outcomes,
     setup_outcomes,
 )
 from checkwash.frontends.python.branch_constants import guard_truths, literal_fixtures
 from checkwash.frontends.python.class_attributes import NONE as CLASS_NONE
 from checkwash.frontends.python.class_attributes import OBJECT as CLASS_OBJECT
 from checkwash.frontends.python.class_attributes import ClassAttributes, ClassValue, receivers, substitute
+from checkwash.frontends.python.helper_skips import (
+    Foreign,
+    HelperOutcomes,
+    ImportedHelpers,
+    imported_helper_names,
+)
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
+from checkwash.frontends.python.literal_conversions import (
+    conversion_names as _conversion_names_of,
+    folded_conversion as _folded_conversion,
+    module_bindings as _module_bindings_of,
+    unbound_callee as _unbound_callee,
+)
 from checkwash.frontends.python.tolerance_calls import (
     find_predicate as _find_tolerance_predicate,
     import_names as _tolerance_import_names,
@@ -194,6 +208,23 @@ class ParsedFile:
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = field(default_factory=dict)
 
 
+# One parse's walks of a subtree (#344). A unit's tree is walked by several
+# passes, and the walk is the parse's largest cost, so `parse_python` walks
+# each subtree once, after its last change to the tree, and reuses the nodes.
+_walks: dict[int, tuple[ast.AST, tuple[ast.AST, ...]]] | None = None
+
+
+def _walk(node: ast.AST):
+    """`ast.walk(node)`, read once per parse while one is running (#344)."""
+    walks = _walks
+    if walks is None:
+        return ast.walk(node)
+    known = walks.get(id(node))
+    if known is None or known[0] is not node:
+        known = walks[id(node)] = (node, tuple(ast.walk(node)))
+    return iter(known[1])
+
+
 def normalize_source(data: bytes) -> str:
     # utf-8-sig strips a BOM if present (routine on Windows-authored files);
     # spans are offsets into this normalized text (SPEC §8).
@@ -223,6 +254,10 @@ class _Offsets:
         self.tree: ast.AST | None = None
         self.abs_shadowed: bool | None = None
         self.tolerance_names: dict[str, str | None] | None = None
+        # The names the module binds, and the spellings that fold as
+        # conversions (#226), asked lazily as the two above are.
+        self.module_bindings: tuple | None = None
+        self.conversion_names: dict[str, str] | None = None
 
     def _char_col(self, lineno: int, col: int) -> int:
         """Translate CPython's UTF-8 *byte* column into a character column.
@@ -326,20 +361,87 @@ def _is_literal(node: ast.AST) -> bool:
     return False
 
 
-def _literal_repr(node: ast.AST, text: str, *, fold_string_methods=True) -> str | None:
-    if _is_literal(node) or fold_string_methods and literal_string_replace(node) is not None:
+def _literal_repr(node: ast.AST, text: str, *, fold_string_methods=True, conversions=None) -> str | None:
+    if (_is_literal(node) or fold_string_methods and literal_string_replace(node) is not None
+            or _folded_conversion(node, conversions) is not None):
         seg = text.seg(node)
         if seg is not None and len(seg) <= 120:
             return seg
     return None
 
 
-def _find_approx_call(node: ast.AST) -> ast.Call | None:
-    for sub in ast.walk(node):
-        if isinstance(sub, ast.Call):
-            name = _dotted(sub.func)
-            if name in ("pytest.approx", "approx"):
-                return sub
+def _is_approx_call(node: ast.AST) -> bool:
+    return isinstance(node, ast.Call) and _dotted(node.func) in ("pytest.approx", "approx")
+
+
+def _operand_approx_call(node: ast.AST) -> ast.Call | None:
+    """The approx call an operand is, or holds through container displays."""
+    if _is_approx_call(node):
+        return node  # type: ignore[return-value]
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        children = list(node.elts)
+    elif isinstance(node, ast.Dict):
+        children = list(node.values)
+    elif isinstance(node, ast.Starred):
+        children = [node.value]
+    else:
+        return None
+    for child in children:
+        found = _operand_approx_call(child)
+        if found is not None:
+            return found
+    return None
+
+
+# The operators `pytest.approx` answers: equality, and membership, which tests
+# equality item by item.
+_APPROX_OPS = (ast.Eq, ast.NotEq, ast.In, ast.NotIn)
+
+
+def _comparison_approx_call(test: ast.AST) -> tuple[ast.cmpop, ast.Call] | None:
+    """The `==`, `!=`, `in` or `not in` that compares with an approx call, and the call.
+
+    The call is one of its operands, or sits inside one through container
+    displays (`[total()] == approx([78.75])`, `{"t": approx(78.75)} == d`). A
+    chained comparison holds each of its links, so a link that is such a
+    comparison is stated too (`0 < total() == approx(78.75)`): the first one.
+    """
+    if not isinstance(test, ast.Compare):
+        return None
+    operands = (test.left, *test.comparators)
+    for i, op in enumerate(test.ops):
+        if not isinstance(op, _APPROX_OPS):
+            continue
+        for operand in operands[i:i + 2]:
+            found = _operand_approx_call(operand)
+            if found is not None:
+                return op, found
+    return None
+
+
+def _asserted_approx_comparison(test: ast.AST) -> tuple[ast.cmpop, ast.Call] | None:
+    """The approximate comparison an assertion states: its operator and its approx call (#299).
+
+    The assertion's own comparison, or a link of it; or, since each part must
+    hold, a comparison it conjoins with `and`, or one `all(...)` asserts for
+    every item of a comprehension. Anywhere else (a disjunction, `any(...)`, a
+    call's arguments, a comparison of a comparison's result) the assertion is
+    not that comparison: `x == approx(y) or True` was read as it, so the
+    disjunction that makes it hold everywhere was no change at all. Such a
+    test is read as the plain path reads it.
+    """
+    found = _comparison_approx_call(test)
+    if found is not None:
+        return found
+    if isinstance(test, ast.BoolOp) and isinstance(test.op, ast.And):
+        for value in test.values:
+            found = _asserted_approx_comparison(value)
+            if found is not None:
+                return found
+        return None
+    if (isinstance(test, ast.Call) and _dotted(test.func) == "all" and len(test.args) == 1
+            and not test.keywords and isinstance(test.args[0], (ast.GeneratorExp, ast.ListComp))):
+        return _asserted_approx_comparison(test.args[0].elt)
     return None
 
 
@@ -407,11 +509,18 @@ def _canonical_repr(value: object) -> str:
     return repr(value)
 
 
-def _literal_value(node: ast.AST, *, fold_string_methods=True) -> str | None:
-    """Canonical repr of a literal's VALUE (quote-style independent), else None."""
+def _literal_value(node: ast.AST, *, fold_string_methods=True, conversions=None) -> str | None:
+    """Canonical repr of a literal's VALUE (quote-style independent), else None.
+
+    `conversions` names the spellings that fold in this file (#226):
+    `float('75')` is the literal 75.0, `Decimal('75')` the Decimal it makes.
+    """
     folded = literal_string_replace(node) if fold_string_methods else None
     if folded is not None:
         return _canonical_repr(folded.value)
+    converted = _folded_conversion(node, conversions)
+    if converted is not None:
+        return _canonical_repr(converted)
     try:
         return _canonical_repr(ast.literal_eval(node))
     except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
@@ -442,6 +551,8 @@ class _Classified:
     # them (#198).
     predicate: str | None = None
     operand_source: str | None = None
+    # The expected call checkwash neither folds nor resolves (#226).
+    unevaluated_expected: str | None = None
 
 
 # A comparison's bound key, and the key it states read from the other side:
@@ -575,6 +686,66 @@ def _tolerance_names(text) -> dict[str, str | None]:
     return text.tolerance_names
 
 
+def _bindings(text):
+    """The names the file binds anywhere, and whether a star import binds more (#226), once per file.
+
+    None without a parsed module (an oracle helper's own offsets): no name is
+    then known to be unbound, and nothing folds.
+    """
+    if getattr(text, "module_bindings", None) is None:
+        tree = getattr(text, "tree", None)
+        if tree is None:
+            return None
+        bindings = _module_bindings_of(tree)
+        try:
+            text.module_bindings = bindings
+        except AttributeError:
+            return bindings
+    return text.module_bindings
+
+
+def _conversions(text) -> dict[str, str]:
+    """The spellings that fold as conversions in this file (#226), worked out once per file.
+
+    A module whose source spells neither `float` nor `Decimal` folds none
+    and is not walked for them.
+    """
+    if getattr(text, "conversion_names", None) is None:
+        source = getattr(text, "text", None)
+        spelled = not isinstance(source, str) or "float" in source or "Decimal" in source
+        bindings = _bindings(text) if spelled else None
+        names = _conversion_names_of(text.tree, bindings) if bindings is not None else {}
+        try:
+            text.conversion_names = names
+        except AttributeError:
+            return names
+    return text.conversion_names
+
+
+# The forms whose second operand is an expected value or a bound.
+_EXPECTED_FORMS = frozenset({"compare_eq", "compare_ord", "approx", "membership"})
+
+
+def _unevaluated(node: ast.AST | None, text) -> str | None:
+    """The expected value's source when it is a call checkwash neither folds nor resolves (#226).
+
+    Its callee's root is a name the file never binds: a builtin outside the
+    fold set (`int('75')`, `round(75.0, 2)`) or a name bound nowhere
+    (226.Q1). A call whose callee the file binds is the provenance channel's.
+    """
+    if not isinstance(node, ast.Call):
+        return None
+    bindings = _bindings(text)
+    if (bindings is None or not _unbound_callee(node, bindings)
+            or _folded_conversion(node, _conversions(text)) is not None):
+        return None
+    try:
+        source = ast.unparse(node)
+    except (ValueError, RecursionError):
+        return None
+    return source if len(source) <= 4096 else None
+
+
 def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True) -> _Classified:
     """A tolerance call (#222) as the approximate comparison it states.
 
@@ -593,8 +764,8 @@ def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True
         "approx",
         S.APPROX,
         text.seg(subject) if subject is not None else None,
-        _literal_repr(expected, text) if expected is not None else None,
-        _literal_value(expected) if expected is not None else None,
+        _literal_repr(expected, text, conversions=_conversions(text)) if expected is not None else None,
+        _literal_value(expected, conversions=_conversions(text)) if expected is not None else None,
         epsilon,
         kind,
         positive,
@@ -602,6 +773,7 @@ def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True
         _referenced_names(expected),
         subject is not None and _is_trivial_subject(subject)
         and (expected is None or _is_trivial_subject(expected)),
+        unevaluated_expected=_unevaluated(expected, text),
     )
 
 
@@ -732,9 +904,18 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         return _Classified("tautology", S.TAUTOLOGY)
     if _is_unfalsifiable(test, text):
         return _Classified("tautology", S.TAUTOLOGY)
-    approx = _find_approx_call(test)
-    if approx is not None:
-        eps, kind = _approx_epsilon(approx, text)
+    # `assert not x == approx(y)` is read by the `not` branch below, which
+    # negates what its operand states (#284).
+    stated = _asserted_approx_comparison(test)
+    if stated is not None:
+        op, approx = stated
+        # The comparison the call sits in states the polarity, as for a plain
+        # comparison: `x != approx(y)` asserts that the values differ. It read
+        # as positive, so `==` -> `!=` was no change at all (#284). A negated
+        # approximate comparison passes when the values are far apart, so its
+        # tolerance orders the other way and is not recorded, as in JavaScript.
+        positive = not isinstance(op, (ast.NotEq, ast.NotIn))
+        eps, kind = _approx_epsilon(approx, text) if positive else (None, None)
         # The argument of the approx call is the expected value; recording it
         # puts `approx(105.0)` -> `approx(100.0)` in front of
         # EXPECTED_VALUE_CHANGED. Strength is APPROX on both sides, so the
@@ -743,10 +924,13 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         return _Classified(
             "approx",
             S.APPROX,
-            right_literal=_literal_repr(expected, text) if expected is not None else None,
-            right_value=_literal_value(expected) if expected is not None else None,
+            right_literal=(_literal_repr(expected, text, conversions=_conversions(text))
+                           if expected is not None else None),
+            right_value=_literal_value(expected, conversions=_conversions(text)) if expected is not None else None,
             epsilon=eps,
             epsilon_kind=kind,
+            positive=positive,
+            unevaluated_expected=_unevaluated(expected, text),
         )
     hand = _hand_rolled_comparison(test, text, "compare_ord", S.BOUND)
     if hand is not None:
@@ -785,8 +969,11 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
                 bounds = [n for n in operands if _is_literal(n)]
                 expect_node = bounds[-1] if bounds else None
         left_text = text.seg(subject_node)
-        right_lit = _literal_repr(expect_node, text, fold_string_methods=single) if expect_node is not None else None
-        right_val = _literal_value(expect_node, fold_string_methods=single) if expect_node is not None else None
+        conversions = _conversions(text) if single else None
+        right_lit = (_literal_repr(expect_node, text, fold_string_methods=single, conversions=conversions)
+                     if expect_node is not None else None)
+        right_val = (_literal_value(expect_node, fold_string_methods=single, conversions=conversions)
+                     if expect_node is not None else None)
         if bounds is not None and len(bounds) > 1:
             # The whole bound tuple is the expectation, so moving any single
             # bound is an expectation rewrite.
@@ -805,6 +992,8 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             key = _BOUND_KEYS[type(op)]
             c.predicate = key if subject_node is left else _REVERSED_KEYS[key]
             c.operand_source = _operand_source(expect_node, text)
+        if single and c.form in _EXPECTED_FORMS:
+            c.unevaluated_expected = _unevaluated(expect_node, text)
         # Which side is the subject and which the expectation was decided
         # above, including the `assert 3 == calc()` flip, so the name sets come
         # from those nodes rather than being re-derived. EXPECTED_VALUE_DERIVED
@@ -824,6 +1013,7 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             None if approximate else inner.epsilon_kind, not inner.positive,
             inner.left_names, inner.right_names,
             predicate=inner.predicate, operand_source=inner.operand_source,
+            unevaluated_expected=inner.unevaluated_expected,
         )
     if isinstance(test, ast.Call):
         name = _dotted(test.func)
@@ -927,7 +1117,7 @@ def _binding_maps(
             refs_memo[id(value)] = refs
         return refs
 
-    for node in ast.walk(func):
+    for node in _walk(func):
         if isinstance(node, ast.Assign):
             targets, value = node.targets, node.value
         elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
@@ -1399,8 +1589,8 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
                 expect_node, subject_node = node.args[0], node.args[1]
         left_text = text.seg(subject_node) if subject_node is not None else None
         if expect_node is not None:
-            right_lit = _literal_repr(expect_node, text)
-            right_val = _literal_value(expect_node)
+            right_lit = _literal_repr(expect_node, text, conversions=_conversions(text))
+            right_val = _literal_value(expect_node, conversions=_conversions(text))
         if form == "compare_eq" and level == S.EXACT_VALUE and len(node.args) > 1:
             if _is_container_literal(node.args[0]) or _is_container_literal(node.args[1]):
                 level = S.EXACT_STRUCT
@@ -1416,7 +1606,10 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             and _dotted(subject_node.func) == "len"
         ):
             form, level = "type_shape", S.TYPE_SHAPE
-    if form == "approx":
+    # assertNotAlmostEqual passes when the values are far apart, so its
+    # tolerance orders the other way and is not recorded, as a negated
+    # `approx` is not (#284).
+    if form == "approx" and positive:
         for kw in node.keywords:
             if kw.arg in ("places", "delta"):
                 epsilon = text.seg(kw.value)
@@ -1465,6 +1658,7 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         _is_trivial_subject(subject_node)
         and (expect_node is None or _is_trivial_subject(expect_node)),
         *_unittest_bound(method, form, node, subject_node, expect_node, text),
+        unevaluated_expected=_unevaluated(expect_node, text) if form in _EXPECTED_FORMS else None,
     )
 
 
@@ -2021,7 +2215,7 @@ def _unreachable_ids(
 
     scan(func.body)
     # Lambdas anywhere in the body are deferred code too.
-    for node in ast.walk(func):
+    for node in _walk(func):
         if isinstance(node, ast.Lambda):
             kill(node.body)
     return dead
@@ -2550,7 +2744,7 @@ def _local_scopes(func, module_scopes: dict[str, ast.AST]) -> dict[str, ast.AST]
     """Callable names visible to this unit: the module's, plus its own nested
     defs and lambdas, plus names bound to a deferred call (`partial`)."""
     out = dict(module_scopes)
-    for node in ast.walk(func):
+    for node in _walk(func):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node is not func:
             out[node.name] = node
         elif isinstance(node, ast.Assign):
@@ -2681,7 +2875,7 @@ def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
     def _nameless(node: ast.AST) -> bool:
         return not any(isinstance(n, ast.Name) for n in ast.walk(node))
 
-    for holder in ast.walk(func):
+    for holder in _walk(func):
         body = getattr(holder, "body", None)
         if not isinstance(body, list):
             continue
@@ -2724,6 +2918,22 @@ def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
     return out
 
 
+def _helper_marker(helper, effect, evidence, guard, text, off, origins) -> Marker:
+    """The `helper.<function>.<effect>` marker for an outcome a unit reaches through a helper (#272).
+
+    An outcome in another module (`Foreign`) keeps that file's text and span,
+    and `origins` records the file, as a conftest fixture's outcome is
+    recorded (#223), so a report locates it there.
+    """
+    if isinstance(evidence, Foreign):
+        marker = Marker(name=f"helper.{helper}.{effect}", text=evidence.text or helper, span=evidence.span, guard=guard)
+        if origins is not None:
+            origins[(marker.name, marker.span, marker.text)] = evidence.path
+        return marker
+    return Marker(name=f"helper.{helper}.{effect}", text=text.seg(evidence) or helper, span=off.span(evidence),
+                  guard=guard)
+
+
 def _collect_unit(
     func: ast.FunctionDef | ast.AsyncFunctionDef,
     qualname: str,
@@ -2739,6 +2949,8 @@ def _collect_unit(
     method: bool = False,
     outcome_roots: frozenset[str] = frozenset(),
     attrs=None,
+    helpers: HelperOutcomes | None = None,
+    origins: dict | None = None,
 ) -> ParsedUnit:
     assertions: list[Assertion] = []
     calls: set[str] = set()
@@ -2809,10 +3021,22 @@ def _collect_unit(
     # inside `func` (this walk sees it) and an executed scope (that loop sees
     # it), and double-counting an oracle invents an assertion to "remove".
     own_assert_ids: set[int] = set()
+    # Calls by a plain name to something the unit can reach in this file, or
+    # to a name a top-level `from M import f` binds: a helper whose run ends
+    # in a skip skips this unit too (#272).
+    helper_calls: list[ast.Call] = []
 
-    for node in ast.walk(func):
+    for node in _walk(func):
         if id(node) in dead:
             continue
+        if (
+            helpers is not None
+            and isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and (node.func.id in local_scopes
+                 or helpers.imported is not None and node.func.id in helpers.imported)
+        ):
+            helper_calls.append(node)
         # A native skip or xfail, called or raised (`raise unittest.SkipTest`
         # is the same act as `pytest.skip()`), read through the bindings (#220).
         if isinstance(node, (ast.Call, ast.Raise)):
@@ -2861,6 +3085,7 @@ def _collect_unit(
                     epsilon_kind=c.epsilon_kind,
                     predicate=c.predicate,
                     operand_source=c.operand_source,
+                    unevaluated_expected=c.unevaluated_expected,
                     # A tolerance call (#222) judges its two values, as
                     # `assertTrue(<call>)` and `assertAlmostEqual` do.
                     trivial=_is_trivial_subject(node.test) or c.trivial or id(node) in vacuous,
@@ -2882,7 +3107,7 @@ def _collect_unit(
                 # 0.18 s, and the dotted name is already computed here.
                 # Unreachable code is skipped above, which is right — a patch
                 # that never executes installs nothing.
-                pair = _patch_call_target(node, name)
+                pair = _patch_call_target(node, name, func, text)
                 if pair is not None:
                     patches.add(pair)
                 if name in ("pytest.raises", "pytest.warns", "raises"):
@@ -2930,6 +3155,7 @@ def _collect_unit(
                         epsilon_kind=c.epsilon_kind,
                         predicate=c.predicate,
                         operand_source=c.operand_source,
+                        unevaluated_expected=c.unevaluated_expected,
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=depends,
@@ -2945,6 +3171,12 @@ def _collect_unit(
             handlers.append(
                 Handler(caught=caught, is_broad=is_broad, text=seg.split("\n")[0], span=off.span(node))
             )
+
+    if helper_calls:
+        for helper, effect, evidence, guard in helpers.reached(
+            func, module_names, helper_calls, method=method, local_scopes=local_scopes
+        ):
+            markers.append(_helper_marker(helper, effect, evidence, guard, text, off, origins))
 
     # The other half: assertions the unit runs that are not written inside it.
     # `assert_sum(add(2, 3), 5)` is a *call*, so without this the unit records
@@ -3017,6 +3249,7 @@ def _collect_unit(
                         epsilon_kind=c.epsilon_kind,
                         predicate=c.predicate,
                         operand_source=c.operand_source,
+                        unevaluated_expected=c.unevaluated_expected,
                         trivial=trivial,
                         positive=c.positive,
                         left_names=c.left_names,
@@ -3261,7 +3494,7 @@ def _conftest_unit(tree: ast.Module, text: str, off: _Offsets) -> ParsedUnit:
 def _shingles(func: ast.AST, k: int = 5) -> frozenset[tuple[str, ...]]:
     """k-shingles over the AST node-kind token sequence (SPEC §7)."""
     tokens: list[str] = []
-    for node in ast.walk(func):
+    for node in _walk(func):
         kind = type(node).__name__
         if isinstance(node, ast.Name):
             kind += ":" + node.id
@@ -3274,7 +3507,11 @@ def _shingles(func: ast.AST, k: int = 5) -> frozenset[tuple[str, ...]]:
 
 
 def _strip_docstrings(tree: ast.AST) -> ast.AST:
-    for node in ast.walk(tree):
+    # Only a module, a def or a class holds a docstring, and none of them can
+    # sit inside an expression, so expressions are not walked (#344).
+    todo = [tree]
+    while todo:
+        node = todo.pop()
         if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             body = node.body
             if (
@@ -3284,6 +3521,7 @@ def _strip_docstrings(tree: ast.AST) -> ast.AST:
                 and isinstance(body[0].value.value, str)
             ):
                 node.body = body[1:] or [ast.Pass()]
+        todo.extend(child for child in ast.iter_child_nodes(node) if not isinstance(child, ast.expr))
     return tree
 
 
@@ -3464,10 +3702,26 @@ def _callees(node: ast.AST) -> tuple[str, ...]:
 
 
 def parse_python(
-    data: bytes, collect_tests: bool, conftest: bool = False, chain: tuple[ConftestLevel, ...] = ()
+    data: bytes, collect_tests: bool, conftest: bool = False, chain: tuple[ConftestLevel, ...] = (),
+    imported=None,
 ) -> ParsedFile:
     """`chain`: the conftest files above a test module, nearest first, whose
-    fixtures its units can request (#223). Only a test module reads it."""
+    fixtures its units can request (#223). `imported`: reads the module a
+    top-level `from M import f` names, `(module, original) -> outcomes`, for
+    what calling `f` ends in (#272, second stage). Only a test module reads
+    either."""
+    global _walks
+    outer, _walks = _walks, None
+    try:
+        return _parse_python(data, collect_tests, conftest, chain, imported)
+    finally:
+        _walks = outer
+
+
+def _parse_python(
+    data: bytes, collect_tests: bool, conftest: bool, chain: tuple[ConftestLevel, ...], imported=None
+) -> ParsedFile:
+    global _walks
     raw = normalize_source(data)
     try:
         tree = ast.parse(raw)
@@ -3493,6 +3747,8 @@ def parse_python(
     _strip_docstrings(tree)
     if not collect_tests:
         _normalize_for_fingerprint(tree)
+    # The tree is final from here on: each subtree's walk is read once (#344).
+    _walks = {}
     units: list[ParsedUnit] = []
     symbols: dict[str, str] = {}
     symbol_calls: dict[str, tuple[str, ...]] = {}
@@ -3540,7 +3796,7 @@ def parse_python(
     # Names a test can import inside itself, read when an import is indented.
     body_roots = frozenset(
         name
-        for node in ast.walk(tree)
+        for node in _walk(tree)
         if isinstance(node, (ast.Import, ast.ImportFrom))
         for name, _target in (_import_pairs(node) or ())
     ) if body_names and _NESTED_IMPORT.search(raw) else frozenset()
@@ -3548,11 +3804,32 @@ def parse_python(
     def condition(node: ast.AST) -> str:
         return text.seg(node) or ast.unparse(node)
 
+    # Same-file helpers a unit or its setup calls (#272), read only in a test
+    # module that can spell a native outcome at all, and the functions it
+    # imports by name from another module, read in that module (#272, second
+    # stage).
+    imported_helpers = (
+        ImportedHelpers(imported_helper_names(tree), imported)
+        if imported is not None and collect_tests and not conftest
+        else None
+    )
+    if imported_helpers is not None and not imported_helpers.names:
+        imported_helpers = None
+    spells_outcome = any(token in raw for token in _SETUP_OUTCOME_TOKENS)
+    helper_outcomes = (
+        HelperOutcomes(module_scopes, condition, branch_fixtures, imported_helpers)
+        if collect_tests and not conftest and (spells_outcome or imported_helpers is not None)
+        else None
+    )
+
     if collect_tests and not conftest and (
-        any(token in raw for token in _SETUP_OUTCOME_TOKENS)
+        spells_outcome
+        or imported_helpers is not None
         or any(fixture[2] is not None for level in chain for fixture in level.fixtures.values())
     ):
-        setup_scopes = (SetupScope(tree.body, module_bindings(tree), condition=condition),)
+        setup_scopes = (
+            SetupScope(tree.body, module_bindings(tree), condition=condition, helpers=helper_outcomes),
+        )
     class_setup: dict[tuple[int, int], SetupScope] = {}
     # The class attributes a guard reads through `self` (#254): only a test
     # module with a class has any.
@@ -3582,7 +3859,7 @@ def parse_python(
             if key not in class_setup:
                 class_setup[key] = SetupScope(
                     cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list, bases=cls.bases,
-                    condition=condition, attrs=attrs_of(owner),
+                    condition=condition, attrs=attrs_of(owner), helpers=helper_outcomes,
                 )
             scopes = scopes + (class_setup[key],)
         return scopes
@@ -3600,6 +3877,11 @@ def parse_python(
             if origin is not None:
                 marker_origins[(marker.name, marker.span, marker.text)] = origin
             markers.append(marker)
+        # A helper the setup calls (#272), in this file or imported.
+        for helper, effect, evidence, guard in setup_helper_outcomes(
+            scopes, func, method=len(scopes) > 1, chain=chain
+        ):
+            markers.append(_helper_marker(helper, effect, evidence, guard, text, off, marker_origins))
         return markers
 
     class_aliases: dict[int, dict[str, list[ast.expr]]] = {}
@@ -3641,7 +3923,7 @@ def parse_python(
         # under a subclass's.
         local = body_bindings(func, body_names, method=True)
         skips = {
-            id(node) for node in ast.walk(func)
+            id(node) for node in _walk(func)
             if isinstance(node, (ast.Call, ast.Raise)) and body_outcome(node, local) is not None
         }
         for subclass in class_attrs.crediting_subclasses(cls, func.name):
@@ -3676,7 +3958,7 @@ def parse_python(
                         child, qual, text, off, inherited + setup_markers(child, scopes),
                         module_scopes, file_caches, branch_fixtures, doctests, aliases,
                         outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
-                        attrs=attrs_of(owner),
+                        attrs=attrs_of(owner), helpers=helper_outcomes, origins=marker_origins,
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -3725,6 +4007,7 @@ def parse_python(
                 + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls)),
                 module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
+                helpers=helper_outcomes, origins=marker_origins,
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
@@ -3741,7 +4024,7 @@ def parse_python(
 
     broad: list[str] = []
     swallowing: list[str] = []
-    for node in ast.walk(tree):
+    for node in _walk(tree):
         if isinstance(node, ast.Import):
             imports.extend(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
@@ -3871,15 +4154,24 @@ def _is_fixture_def(node) -> bool:
 def _classified_asserts(nodes, text, off) -> tuple:
     out = []
     for node in nodes:
-        if not isinstance(node, ast.Assert):
+        if isinstance(node, ast.Call):
+            # numpy's and torch's assertion calls are lent as a bare `assert`
+            # is, as the unit's own walk reads them (#222, #286).
+            c = _tolerance_statement_classified(node, text)
+            if c is None:
+                continue
+            bare, trivial = False, c.trivial
+        elif isinstance(node, ast.Assert):
+            c = _classify_assert(node, text)
+            bare = (
+                isinstance(node.test, ast.Compare)
+                and len(node.test.comparators) == 1
+                and isinstance(node.test.comparators[0], ast.Name)
+            )
+            trivial = _is_trivial_subject(node.test) or c.trivial
+        else:
             continue
-        c = _classify_assert(node, text)
         seg = text.seg(node) or ""
-        bare = (
-            isinstance(node.test, ast.Compare)
-            and len(node.test.comparators) == 1
-            and isinstance(node.test.comparators[0], ast.Name)
-        )
         out.append(
             Assertion(
                 id="a?",  # assigned when merged into a unit
@@ -3895,7 +4187,8 @@ def _classified_asserts(nodes, text, off) -> tuple:
                 epsilon_kind=c.epsilon_kind,
                 predicate=c.predicate,
                 operand_source=c.operand_source,
-                trivial=_is_trivial_subject(node.test) or c.trivial,
+                unevaluated_expected=c.unevaluated_expected,
+                trivial=trivial,
                 positive=c.positive,
                 left_names=c.left_names,
                 right_depends_on=c.right_names,
@@ -3954,9 +4247,200 @@ def _top_level_constants(tree: ast.Module, text) -> dict[str, str]:
 
 
 _PATCH_CALLS = ("setattr", "setitem", "set_attribute")
+# A target a test builds at runtime is read only from a patcher (#196 188.5):
+# a literal "pkg.mod.attr" is read from any `.patch(...)`, but a computed
+# one there is as likely `client.patch(url)`, an HTTP request.
+_RUNTIME_PATCHERS = frozenset({
+    "patch", "mock.patch", "unittest.mock.patch", "mocker.patch", "module_mocker.patch",
+    "class_mocker.patch", "package_mocker.patch", "session_mocker.patch",
+})
+_RUNTIME_SETTERS = frozenset({"monkeypatch", "mp"})
+# `__name__` in a test module is that module: a target built from it
+# (`f"{__name__}.A"`) replaces the test's own code, not the code it tests.
+OWN_MODULE = "\x00"
 
 
-def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | None:
+def _runtime_patcher(dotted: str) -> bool:
+    parts = dotted.split(".")
+    if parts[-1] == "patch":
+        return dotted in _RUNTIME_PATCHERS
+    if parts[-1] == "object":
+        return ".".join(parts[:-1]) in _RUNTIME_PATCHERS
+    return len(parts) == 2 and parts[0] in _RUNTIME_SETTERS and parts[1] in {"setattr", "setitem"}
+
+
+def _opaque_target(node: ast.AST) -> tuple[str, str]:
+    """A target built at runtime that one hop cannot read: its source, and
+    the attribute when a literal tail spells it (`f"{MOD}.compute"`), else
+    `*`, any attribute (#196 188.5)."""
+    tail = None
+    if isinstance(node, ast.JoinedStr) and node.values and isinstance(node.values[-1], ast.Constant):
+        tail = node.values[-1].value
+    elif (isinstance(node, ast.BinOp) and isinstance(node.right, ast.Constant)
+          and isinstance(node.right.value, str)):
+        tail = node.right.value
+    attribute = tail.rsplit(".", 1)[1] if isinstance(tail, str) and "." in tail else ""
+    return ast.unparse(node), attribute if attribute.isidentifier() else "*"
+
+
+def _module_strings(text) -> dict[str, str]:
+    """Top-level names the module binds once, and to a string literal (#196 188.5)."""
+    cached = getattr(text, "module_strings", None)
+    if cached is not None:
+        return cached
+    counts: dict[str, int] = {}
+    values: dict[str, str] = {}
+    tree = getattr(text, "tree", None)
+    for statement in tree.body if tree is not None else ():
+        for name in _bound_names([statement]):
+            counts[name] = counts.get(name, 0) + 1
+        if isinstance(statement, (ast.Assign, ast.AnnAssign)):
+            targets = statement.targets if isinstance(statement, ast.Assign) else [statement.target]
+            value = statement.value
+            if (len(targets) == 1 and isinstance(targets[0], ast.Name)
+                    and isinstance(value, ast.Constant) and isinstance(value.value, str)):
+                values[targets[0].id] = value.value
+    cached = {name: value for name, value in values.items() if counts.get(name) == 1}
+    try:
+        text.module_strings = cached
+    except AttributeError:
+        pass
+    return cached
+
+
+# What binds a name to no string: a def, a class, or `import x` (a module).
+# `from m import x` may bind a string constant, so it is no such binding.
+_OBJECT_BINDINGS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import)
+
+
+def _module_objects(text) -> frozenset[str]:
+    """Top-level names the module binds once, and to no string: a def, a
+    class or an imported module. None at all once a star import may rebind
+    any name (#196 188.5)."""
+    cached = getattr(text, "module_objects", None)
+    if cached is not None:
+        return cached
+    counts: dict[str, int] = {}
+    objects: set[str] = set()
+    tree = getattr(text, "tree", None)
+    body = tree.body if tree is not None else []
+    if any(isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
+           for statement in body):
+        body = []
+    for statement in body:
+        names = _bound_names([statement])
+        for name in names:
+            counts[name] = counts.get(name, 0) + 1
+        if isinstance(statement, _OBJECT_BINDINGS):
+            objects |= names
+    cached = frozenset(name for name in objects if counts.get(name) == 1)
+    try:
+        text.module_objects = cached
+    except AttributeError:
+        pass
+    return cached
+
+
+def _not_a_string(node: ast.AST, func, text) -> bool:
+    """Is a patch target provably no string? The patcher then raises
+    TypeError and installs nothing, as pytest's own tests of monkeypatch
+    spell it (`monkeypatch.setattr(A, "y")` under `pytest.raises(TypeError)`):
+    a constant that is no string, or a name bound once, to a def, a class or
+    an imported module, in the test or else the module (#196 188.5)."""
+    if isinstance(node, ast.Constant):
+        return not isinstance(node.value, str)
+    if not isinstance(node, ast.Name):
+        return False
+    args = func.args
+    if node.id in {arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg)
+                   if arg is not None}:
+        return False
+    bindings = objects = 0
+    for child in ast.walk(func):
+        if child is func:
+            continue
+        if isinstance(child, ast.Name) and child.id == node.id and isinstance(child.ctx, (ast.Store, ast.Del)):
+            bindings += 1
+        elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and child.name == node.id:
+            bindings += 1
+            objects += 1
+        elif isinstance(child, (ast.Import, ast.ImportFrom)):
+            for alias in child.names:
+                if (alias.asname or alias.name.split(".")[0]) == node.id:
+                    bindings += 1
+                    objects += isinstance(child, ast.Import)
+        elif (isinstance(child, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)) and child.name == node.id
+              or isinstance(child, (ast.Global, ast.Nonlocal)) and node.id in child.names):
+            bindings += 1
+    if bindings:
+        return bindings == 1 and objects == 1
+    return node.id in _module_objects(text)
+
+
+def _runtime_string(node: ast.AST, func, text) -> str | None:
+    """A patch target the test builds at runtime, read one hop (#196 188.5).
+
+    A string literal; a name the test function binds once, to a string
+    literal, or else one the module binds once that way; `__name__`, the test
+    module itself (`OWN_MODULE`); and an f-string or `+` of those. Anything
+    else is None: unreadable, so the target is opaque.
+    """
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Name):
+        if node.id == "__name__":
+            return OWN_MODULE
+        return _function_string(func, node.id, text)
+    if isinstance(node, ast.JoinedStr):
+        parts = []
+        for value in node.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                parts.append(value.value)
+                continue
+            part = (_runtime_string(value.value, func, text)
+                    if isinstance(value, ast.FormattedValue) and value.conversion == -1
+                    and value.format_spec is None and isinstance(value.value, ast.Name) else None)
+            if part is None:
+                return None
+            parts.append(part)
+        return "".join(parts)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left, right = _runtime_string(node.left, func, text), _runtime_string(node.right, func, text)
+        return left + right if left is not None and right is not None else None
+    return None
+
+
+def _function_string(func, name: str, text) -> str | None:
+    """The string literal `name` holds in `func`: its one binding there, an
+    assignment of a literal; or, bound nowhere in the function, the module's."""
+    args = func.args
+    parameters = {arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg)
+                  if arg is not None}
+    if name in parameters:
+        return None
+    stores = []
+    for node in ast.walk(func):
+        if isinstance(node, ast.Name) and node.id == name and isinstance(node.ctx, (ast.Store, ast.Del)):
+            stores.append(node)
+        elif (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == name
+              and node is not func
+              or isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) == name
+              or isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)) and node.name == name
+              or isinstance(node, (ast.Global, ast.Nonlocal)) and name in node.names):
+            return None  # an import, a def, `except ... as`, a pattern: not a literal
+    if len(stores) > 1:
+        return None
+    if not stores:
+        return _module_strings(text).get(name)
+    for node in ast.walk(func):
+        if (isinstance(node, (ast.Assign, ast.AnnAssign))
+                and (node.targets if isinstance(node, ast.Assign) else [node.target]) == [stores[0]]
+                and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)):
+            return node.value.value
+    return None
+
+
+def _patch_call_target(node: ast.Call, dotted: str | None, func=None, text=None) -> tuple[str, str] | None:
     """One patch dialect -> (target, attribute), or None if this is not one.
 
     Called from `_collect_unit`'s single walk, which covers the decorator list
@@ -3995,15 +4479,32 @@ def _patch_call_target(node: ast.Call, dotted: str | None) -> tuple[str, str] | 
         if "." not in target:
             return None  # unqualified: neither a module nor an attribute
         return (target, target.rsplit(".", 1)[1])
+    # A target built at runtime (#196 188.5) is read one hop from a patcher,
+    # and one that stays unreadable is opaque: `*` for its attribute.
+    runtime = func is not None and _runtime_patcher(dotted)
+    if runtime and (tail == "patch" or tail == "setattr" and len(node.args) == 2):
+        if _not_a_string(first, func, text):
+            return None  # the patcher raises TypeError: nothing is installed
+        target = _runtime_string(first, func, text)
+        if target is None:
+            return _opaque_target(first)
+        if target.startswith(OWN_MODULE) or "." not in target:
+            return None
+        return (target, target.rsplit(".", 1)[1])
     if len(node.args) < 2:
         return None
     attr = node.args[1]
-    if not (isinstance(attr, ast.Constant) and isinstance(attr.value, str)):
-        return None
     base = _dotted(first)
     if base is None:
         return None
-    return (f"{base}.{attr.value}", attr.value)
+    if isinstance(attr, ast.Constant) and isinstance(attr.value, str):
+        return (f"{base}.{attr.value}", attr.value)
+    if not runtime:
+        return None
+    name = _runtime_string(attr, func, text)
+    if name is None or name.startswith(OWN_MODULE):
+        return (f"{base}.*", "*")
+    return (f"{base}.{name}", name)
 
 
 def conftest_patch_targets(data: bytes, first_party: frozenset[str] = frozenset(), *, module_exists=None, module_name="") -> list[str]:

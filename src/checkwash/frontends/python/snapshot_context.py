@@ -121,6 +121,9 @@ def inert_test_execution_context(path, read, search=None):
         return False
     if not isinstance(paths, (list, tuple)) or len(paths) >= 64 or any(not isinstance(p, str) for p in paths):
         return False
+    # A submodule's sources are unknown, and the proof needs every one (#335).
+    if any(p.endswith("/") for p in paths):
+        return False
     inventoried = {p.replace("\\", "/") for p in paths}
     siblings = {p for p in inventoried if collectable(p) and p != path.replace("\\", "/")}
     selected = set(siblings)

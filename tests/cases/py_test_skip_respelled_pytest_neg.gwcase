@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 310
+title: a guarded `py.test.skip()` respelled `pytest.skip()` is the skip the test had
+origin: issue #310 P4. The two names are one object, so the respelling adds no skip; v0.6.0 blocks this as a skip added
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== before: tests/test_billing.py ===
+import py
+
+from app.billing import total
+
+
+def test_total():
+    if total([]) is None:
+        py.test.skip("no total")
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    if total([]) is None:
+        pytest.skip("no total")
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[]

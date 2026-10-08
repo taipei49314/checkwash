@@ -1,9 +1,10 @@
 name: verdict gate
 
 # Previous-release verdict gate (#201): the pinned previous release and the
-# candidate run through the CLI on the same 149 T1 cases and the baseline
-# tag's chai block records; a block that turns into a pass needs a reviewed
-# entry in tests/gates/verdict_gate_accepted.toml (maintainer-only). The
+# candidate run through the CLI on the same T1 cases (every file under
+# tests/verdict_gate/cases) and the baseline tag's chai block records; a
+# block that turns into a pass needs a reviewed entry in
+# tests/gates/verdict_gate_accepted.toml (maintainer-only). The
 # v0.4.2 -> v0.5.0 canary proves the harness still sees the known escapes.
 # Advisory on pull requests and main (#201 Decision 3); #201's release
 # integration requires a green run on the release commit and on the pushed tag.

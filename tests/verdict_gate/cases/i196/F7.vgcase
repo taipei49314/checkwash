@@ -1,0 +1,31 @@
+=== meta ===
+issue: 196
+row: F7
+probe: 187.2a
+source: #201 ruling 196.followup.new-gate-cases (2026-10-03), the 187.2 shapes: fixture js_focus_nested_sibling_pos (#234, D-072)
+=== options ===
+today = "2026-10-02"
+=== base: tests/billing.test.ts ===
+import { invoiceTotal } from "../src/billing";
+
+describe.only("billing", () => {
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+
+  it("handles empty carts", () => {
+    expect(invoiceTotal([])).toBe(0);
+  });
+});
+=== head: tests/billing.test.ts ===
+import { invoiceTotal } from "../src/billing";
+
+describe.only("billing", () => {
+  it("computes invoice total with tax", () => {
+    expect(invoiceTotal([{ price: 10, qty: 3 }, { price: 5, qty: 9 }])).toBe(78.75);
+  });
+
+  it.only("handles empty carts", () => {
+    expect(invoiceTotal([])).toBe(0);
+  });
+});

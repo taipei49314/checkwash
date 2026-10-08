@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "purpose": "The JS/TS history-replay corpus ruled on #212 on 2026-10-06: six JS/TS repositories, the last 300 non-merge commits of each (1,800 commits), run as consecutive whole-commit windows with `checkwash sweep`, the JS counterpart of the six-repository Python sweep",
+  "drawn_at": "2026-10-07T19:31:30Z",
+  "selection_before_checkwash_execution": true,
+  "checkwash_executed_during_selection": false,
+  "selection_reading": "Each repository's package manifest and test-file paths at the pinned commit were read to confirm its runner and layout; no checkwash engine ran on any of them",
+  "selection_rule": [
+    "Widely used, actively maintained open-source JS/TS projects whose test suites run under one of the runners the JS rounds read: Jest, Vitest, Mocha with chai, and node:test",
+    "Together they cover the test layouts the rounds read: tests colocated beside the source (`*.test.ts`), `__tests__/` directories and a `test/` directory",
+    "At least 300 non-merge commits reachable from the pinned commit",
+    "No repository checkwash has run on before (see `excluded`)"
+  ],
+  "excluded": {
+    "reason": "Repositories the JS rounds, fixtures or replays have already run on, so their histories are in-sample",
+    "repositories": [
+      "jestjs/jest",
+      "vitest-dev/vitest",
+      "nodejs/node",
+      "chaijs/chai",
+      "hexojs/hexo",
+      "node-fetch/node-fetch",
+      "yargs/yargs",
+      "sindresorhus/got",
+      "sindresorhus/execa",
+      "npm/node-semver",
+      "isaacs/node-lru-cache",
+      "excalidraw/excalidraw",
+      "mastodon/mastodon"
+    ]
+  },
+  "window": "The 300 newest non-merge commits reachable from `commit`: `git rev-list --no-merges -300 <commit>`, each judged against its first parent as `checkwash sweep` does",
+  "class": null,
+  "class_note": "In-sample or held-out (SPEC §10) is not ruled: #212's question 2 is asked again when the release that ships the JS rounds is prepared. No engine has run on these windows, so either label remains possible",
+  "release_criterion": null,
+  "release_criterion_note": "#212's question 3, asked at the same time",
+  "engines_to_measure": "The candidate of the release that ships the JS rounds, against v0.6.0, on the same windows (#212, acceptance 2)",
+  "repositories": [
+    {
+      "repository": "moment/luxon",
+      "remote": "https://github.com/moment/luxon",
+      "commit": "f427515a38f6a671f8de663e6bcc040ed81f114e",
+      "test_runner": "Jest",
+      "layout": "test/",
+      "runner_evidence": "package.json: scripts.test `jest --coverage`, devDependency `jest`; tests in `test/**/*.test.js` (58)"
+    },
+    {
+      "repository": "apollographql/apollo-client",
+      "remote": "https://github.com/apollographql/apollo-client",
+      "commit": "0cf7ebd593059526a28703606fe8b634311dc569",
+      "test_runner": "Jest",
+      "layout": "__tests__/",
+      "runner_evidence": "package.json: scripts.test runs `jest` with `config/jest.config.ts`, devDependencies `jest`, `ts-jest`, `@jest/globals`; tests beneath `__tests__/` directories (270 files)"
+    },
+    {
+      "repository": "honojs/hono",
+      "remote": "https://github.com/honojs/hono",
+      "commit": "5f36607f67aa9357887337328ac84a1c1d48dc04",
+      "test_runner": "Vitest",
+      "layout": "colocated *.test.ts",
+      "runner_evidence": "package.json: dependency `vitest`; tests colocated beside the source as `src/**/*.test.ts` (160)"
+    },
+    {
+      "repository": "vuejs/core",
+      "remote": "https://github.com/vuejs/core",
+      "commit": "4ab865a848a1da3d10fb674f857e5fff13094644",
+      "test_runner": "Vitest",
+      "layout": "__tests__/*.spec.ts",
+      "runner_evidence": "package.json: scripts.test `vitest`, devDependency `vitest`; tests in `packages/*/__tests__/*.spec.ts` (196)"
+    },
+    {
+      "repository": "typeorm/typeorm",
+      "remote": "https://github.com/typeorm/typeorm",
+      "commit": "67991e8d82997e18536f94b6009033be54164fe6",
+      "test_runner": "Mocha with chai",
+      "layout": "test/ in a package",
+      "runner_evidence": "packages/typeorm/package.json: devDependencies `mocha`, `chai`, `chai-as-promised`, `sinon`, with `.mocharc.json`; tests in `packages/typeorm/test/` (968 `*.test.ts`)"
+    },
+    {
+      "repository": "nodejs/undici",
+      "remote": "https://github.com/nodejs/undici",
+      "commit": "2def92487020ee8418e995a8c10998f86fc863f6",
+      "test_runner": "node:test",
+      "layout": "test/",
+      "runner_evidence": "package.json: devDependency `borp`, a node:test runner; tests in `test/` call `require('node:test')` (514 files)"
+    }
+  ]
+}

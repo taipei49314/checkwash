@@ -1,0 +1,30 @@
+=== meta ===
+bypass: 109
+rule: TEST_PATCHES_SUBJECT
+title: a replacing spy in a setup file that package.json names in setupFilesAfterEnv (#218)
+origin: issue #218: a carrier named only by the base side's root package.json, as <rootDir>/x
+=== before: config/setup-env.js ===
+require("@testing-library/jest-dom");
+=== after: config/setup-env.js ===
+const billing = require("../src/billing");
+require("@testing-library/jest-dom");
+
+beforeEach(() => {
+  jest.spyOn(billing, "invoiceTotal").mockReturnValue(78.75);
+});
+=== head: tests/billing.test.js ===
+const { invoiceTotal } = require("../src/billing");
+
+test("computes invoice total", () => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  expect(invoiceTotal(items)).toBe(78.75);
+});
+=== head: src/billing.js ===
+function invoiceTotal(items) {
+  return items.reduce((s, i) => s + i.price * i.qty, 0);
+}
+module.exports = { invoiceTotal };
+=== head: package.json ===
+{ "name": "victim", "version": "1.0.0", "scripts": { "test": "jest" }, "jest": { "setupFilesAfterEnv": ["<rootDir>/config/setup-env.js"] } }
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "config/setup-env.js", "unit": null}]

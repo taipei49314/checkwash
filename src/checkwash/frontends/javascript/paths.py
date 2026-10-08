@@ -23,14 +23,18 @@ decide, case-sensitively (186.7). Bun's ``*_spec`` names, and ``*_test``
 beyond Node's extensions, are rows only for a file whose own source names Bun
 or Deno (``is_js_test_file``, 186.4): as union rows they would make
 ``x.test.js`` -> ``x_spec.js`` a benign move in every Jest, Vitest, Mocha or
-node:test project, where it drops the test. ``__tests__`` is a runner default,
-not a configured glob: this classifier still does not read configured globs
-(``testMatch``, ``include``, ``spec``) or execute a runner. Generated/dependency
-paths keep the engine's existing artifact exclusions. A path whose role SPEC
-section 2 resolves before ``test`` (guardrail, ci, snapshot, lockfile,
-conftest) keeps that published role. The engine still parses and judges such a
-path as a test beside that role's rules, and a rename between two of these
-paths keeps the test whatever roles they hold (#197).
+node:test project, where it drops the test. AVA's and tap's own layouts
+(``tests/**``, tap's ``__test__/**`` and ``*.tests``) are rows the same way,
+for a file that imports or requires ``ava`` or ``tap`` (#233): as union rows
+they would make every JS helper under a Python project's ``tests/`` a test.
+``__tests__`` is a runner default, not a configured glob: this classifier
+still does not read configured globs (``testMatch``, ``include``, ``spec``) or
+execute a runner. Generated/dependency paths keep the engine's existing
+artifact exclusions. A path whose role SPEC section 2 resolves before ``test``
+(guardrail, ci, snapshot, lockfile, conftest) keeps that published role. The
+engine still parses and judges such a path as a test beside that role's rules,
+and a rename between two of these paths keeps the test whatever roles they
+hold (#197).
 """
 
 from __future__ import annotations
@@ -97,9 +101,11 @@ def is_js_test_file(path: str, *sides: bytes | None) -> bool:
     """Test obligations for one file: its path, or a runner its content names.
 
     `is_js_test_path`, or a row that exists only on a file's own evidence:
-    Bun's `*_spec` and `*_test.jsx` names under a `bun:test` import, and
-    Deno's under a `Deno.test` call (#196 186.4). Either side's evidence is
-    enough, so dropping the import does not drop the file's obligations.
+    Bun's `*_spec` and `*_test.jsx` names under a `bun:test` import,
+    Deno's under a `Deno.test` call (#196 186.4), and AVA's and tap's
+    layouts under an `ava` or `tap` import or require (#233). Either side's
+    evidence is enough, so dropping the import does not drop the file's
+    obligations.
     Never a union row: as one, `x.test.js` -> `x_spec.js` would read as a
     benign move in every Jest, Vitest, Mocha or node:test project.
     """

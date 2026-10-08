@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 107
+rule: TEST_DISABLED
+issue: 233
+title: an AVA test deleted from tests/, a layout AVA collects and Node's runner and Jest do not
+origin: issue #233 A1 — v0.6.0 passed this with zero findings: tests/ was no JS test path
+=== before: tests/billing.js ===
+import test from 'ava';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+test('invoice total', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.is(invoiceTotal(items), 78.75);
+});
+
+test('tax', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.is(tax(items), 3.75);
+});
+=== after: tests/billing.js ===
+import test from 'ava';
+import { invoiceTotal, tax } from '../src/billing.js';
+
+test('invoice total', t => {
+  const items = [{ price: 10.0, qty: 3 }, { price: 5.0, qty: 9 }];
+  t.is(invoiceTotal(items), 78.75);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/billing.js", "unit": "tax"}]

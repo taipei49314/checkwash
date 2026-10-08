@@ -1,6 +1,186 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-06 (the 2026-10-05 scope under way: ten pull requests merged, two in review; then stop)
+Updated: 2026-10-08 (the 2026-10-05 scope: two of its 22 issues stay open, #196 on #351's ruling and #212 until the release; the rest waits on rulings; then stop)
+
+## 2026-10-08: the last approvals land
+
+On 2026-10-08 the maintainer approved the three maintainer-owned changes then
+waiting ("核准"): `8977093` in #352, and the C2 text of #353 (THREATMODEL row
+125, D-124) and of #354 (SPEC's `TEST_PATCHES_SUBJECT` row, THREATMODEL rows
+90 and 109, D-125). The agent committed each C2 exactly as its pull
+request's description wrote it.
+
+Since #349 updated this file, four more pull requests merged into `main`,
+each with a merge commit once CI on its head showed only the expected red.
+`main` is now `d4b2529`.
+
+| PR | what it does | merge | record |
+|---|---|---|---|
+| #350 | #212: the JS/TS replay corpus selection, recorded under `benchmarks/` | `1367e0b` | — |
+| #352 | #201: verdict-gate cases F7, F8 and Fc2 for #196's 187.2 shapes | `17b0e79` | — |
+| #353 | #272, second stage: a skip reached through an imported helper is read | `b7405a7` | D-124 |
+| #354 | #196 188.5: what a stand-in names outside its own call is read one hop | `d4b2529` | D-125 |
+
+#352 closed #201, and #353 closed #272. #354 is part of #196, which stays
+open for one item.
+
+A review of the merged documentation found passages that lagged #353 and
+#354. The agent-writable ones were fixed in those pull requests before they
+merged (`8e5a571`, `e17841d`). Three maintainer-owned passages lagged too.
+The maintainer approved their exact text on 2026-10-08 ("核准"), and #355
+commits it:
+
+- THREATMODEL row 118's residual said a skip in an imported helper is not
+  read;
+- SPEC's `TEST_DISABLED` row described only a same-file helper;
+- SPEC's `TEST_PATCHES_SUBJECT` residuals did not list the
+  `monkeypatch.context()` receiver that THREATMODEL row 90 and D-125 name.
+
+A second review the same day found two more agent-writable comments, fixed
+in #355, and four more maintainer-owned passages that lagged. The
+maintainer approved their exact text the same day ("核准"), and `775672d`
+commits it:
+
+- THREATMODEL row 104's last residual named only row 125's same-file
+  helpers;
+- row 104 listed the conftest fixtures of a duplicate survivor as unread,
+  which #266 reads;
+- THREATMODEL row 54 listed aliased and raised body skips as unread,
+  which #220 reads;
+- SPEC's D6 row did not name a skip a helper ends in among those it
+  holds, though the engine and row 125 hold it.
+
+Open on 2026-10-08:
+
+- Of the 22 issues the scope started with, two are open:
+  - #196: its one remaining ruled item is 183.2's conftest half, a guarded
+    skip in a conftest fixture a test requests. Doing it changes an existing
+    fixture's expected output, which AGENTS.md rule 2 leaves to the
+    maintainer; #351 asks for that ruling.
+  - #212: the selection is recorded (#350). The measurement on it, and its
+    class label and release criterion, wait for the release that ships the
+    JS rounds.
+- #325's fix is #340 (D-120). It waits on the maintainer's approval of its
+  maintainer-owned commit `dcc6104`, and it conflicts with `main`.
+- These wait on the maintainer's rulings: #351, and the 22 put as one list
+  on 2026-10-07 (#275, #278, #280, #281, #282, #288, #289, #292, #293,
+  #297, #306, #312, #313, #314, #320, #321, #322, #323, #330, #343, #345
+  and #346).
+
+What a successor needs to know:
+
+- **The ruleset merges only a pull request that is up to date with
+  `main`.** Approved pull requests therefore merge one at a time: merge
+  `main` into the next one, wait for CI (about 13 minutes), then merge.
+  A scratch merge of the next pull request onto the previous one's head has
+  the tree its real merge will have, so it can be checked before the
+  previous one merges, and the real merge's tree compared with it after.
+- **A maintainer-owned commit carries the approved text and nothing else.**
+  Each C2 was applied by exact replacement from the text in its pull
+  request's description, and an independent check compared each commit
+  with the live description byte for byte.
+
+## 2026-10-07: the merge train, and what waits on the maintainer
+
+After #300 updated this file, 26 more pull requests merged into `main`, the
+first on 2026-10-06 and the rest on 2026-10-07. Each merged with a merge
+commit once CI on its head showed only the expected red,
+`test_pinned_tag_ships_the_current_source` on the nine test legs. `main` is
+now `b2e0eb5`.
+
+On 2026-10-07 the maintainer:
+
+- approved the maintainer-owned commits then waiting, those of D-104 to
+  D-122 except D-120, whose pull request was not yet open ("核准", then
+  "全部 18 個");
+- ruled #335 as its proposal says ("照提案"), and approved its D-123
+  ("核准");
+- let the agent resolve the conflicts the stacked rounds met in the
+  maintainer-owned files, where each round adds its entry at the same place,
+  by keeping both sides' approved text and changing no word ("A").
+
+Each pull request's description lists the merges its branch took in, and
+each merge commit's message names its conflicts and how they were resolved.
+
+| PR | what it fixes | merge | record |
+|---|---|---|---|
+| #291 | #224: Python comparisons carry a direction | `4f0955b` | D-103 |
+| #334 | #331: a bare assert's subject is compared before "polarity inverted" | `974053b` | — |
+| #298 | #226: one definition of a non-literal expected value, in Python and JS | `1eb93e7` | D-104 |
+| #303 | #196 188.6: JS alias specifiers name first-party modules | `c3c1101` | D-105 |
+| #304 | #235: parsing a JS/TS test file is linear in its size | `8deb244` | — |
+| #305 | #294: an iterator callback keeps its assertions whatever the receiver | `bca7ff2` | D-106 |
+| #339 | #319: reading JS or TS tests prints no Python warning | `577c535` | — |
+| #341 | #332: a quote-style respelling (black) is no change | `5f5ec46` | — |
+| #347 | #344: each subtree is walked once per parse | `ebea450` | — |
+| #302 | #263: a string skipif/xfail condition is the expression pytest evaluates | `584c6ca` | D-107 |
+| #301 | #266: a D10 survivor is read with the conftest files above it | `fdb5d79` | D-108 |
+| #307 | #284: a negated approximate comparison is read as negated | `4a3699b` | D-109 |
+| #308 | #299: an assertion is an approximate comparison only where it states one | `9361ddb` | D-110 |
+| #316 | #272, first stage: a skip reached through a same-file helper is read | `e6b46db` | D-111 |
+| #318 | #286: numpy's and torch's assertion calls are lent as a bare assert is | `6f6c056` | D-112 |
+| #309 | #214: a GitLab runner job that cannot fail the pipeline is a weakened command | `6aeca0f` | D-113 |
+| #329 | #173: an addopts target is an explicit target of every run | `eca25df` | D-114 |
+| #315 | #215: chai's should-style and property assertions are read | `7ec7aaf` | D-115 |
+| #328 | #310: `py.test` is the pytest module wherever a skip is read | `2371afd` | D-116 |
+| #317 | #311: an undeclared global `chai` is chai's module | `edb1f8a` | D-117 |
+| #326 | #233: AVA's and tap's tests are read | `e1cacff` | D-118 |
+| #336 | #324: a multi-line pytest setting is read to its end | `e82dd14` | D-119 |
+| #337 | #327: a quoted pytest setting is read by its section | `43b1947` | D-121 |
+| #338 | #218: stand-ins a JS setup file installs are reported | `f12224f` | D-122 |
+| #348 | #335: a git submodule is a directory whose content is unknown | `cc5141c` | D-123 |
+| #342 | #333: a JS skip condition respelled (prettier) is no change | `b2e0eb5` | — |
+
+Each issue these pull requests name is closed, except two. #316 is the
+first stage of #272, which stays open for the rest. #303 fixed item 188.6
+of #196, which stays open for its other items.
+
+Open on 2026-10-07:
+
+- Of the 22 issues the scope started with, three are open:
+  - #196 closes once its ruled sub-items are done (its 2026-10-06
+    decision). Two remain: 183.2's conftest half, a guarded skip in a
+    conftest fixture a test requests, and 188.5's closing round C, which
+    reads stand-in names one hop through `vi.hoisted` or a mock-prefixed
+    object, with Python's targets built at runtime.
+  - #201 closes on the same terms. Its last ruled item is verdict-gate
+    cases for the 187.2 shapes.
+  - #212 is the JS/TS history-replay corpus, ruled on 2026-10-06: six
+    repositories, the last 300 non-merge commits of each, selected and
+    recorded under `benchmarks/` before any engine runs on them. It is the
+    scope's last item. Its class label and release criterion are asked
+    again when the release that ships the JS rounds is prepared.
+- #180 and #181 closed on 2026-10-07 under their 2026-10-06 closing
+  decisions, once #215 and #214 were done.
+- Filed along the way and fixed: #284, #286, #294, #295, #299, #310, #311,
+  #319, #324, #327, #331, #332, #333, #335 and #344.
+- #272's second stage, a skip in a helper imported from another module, is
+  ruled (272.Q2 (a)) and under way.
+- #325's fix is #340 (D-120). It waits on the maintainer's approval of its
+  maintainer-owned commit `dcc6104`, and it conflicts with `main`, so
+  GitHub has run no CI on it.
+- These wait on the maintainer's rulings, put to them as one list on
+  2026-10-07: #275, #278, #280, #281, #282, #288, #289, #292, #293, #297,
+  #306, #312, #313, #314, #320, #321, #322, #323, #330, #343, #345 and
+  #346.
+
+What a successor needs to know:
+
+- **A job that never got a runner is not a test result.** In GitHub's
+  Actions incident on 2026-10-07 (from about 16:54Z), some jobs failed
+  without ever getting a runner, and left no log. Each such job was re-run
+  once, and each re-run gave the expected result: a pass, or on a test leg
+  only the expected red.
+- **`byte-compare` needs all nine test legs' artifacts from the same
+  attempt.** It downloads `corpus-*-attempt-<run_attempt>`, so one leg that
+  left no artifact fails it with "expected exactly nine named artifacts".
+  Re-running a run's failed jobs re-runs every failed leg, the nine
+  expected-red ones included, and then `byte-compare`. A pull request whose
+  run was re-run merged only after the whole re-run attempt finished.
+- **Merge a stack in order, and retarget each pull request to `main`
+  before its merge.** A pull request merges into its current base, so one
+  still based on another branch would merge into that branch. A retarget
+  starts no CI run.
 
 ## 2026-10-06: the scope's first merges
 

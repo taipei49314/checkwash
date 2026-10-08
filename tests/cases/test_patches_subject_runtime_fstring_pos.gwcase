@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: a test patches its subject through an f-string target built from a module constant
+origin: #196 188.5 C - f"{MODULE}.invoice_total" is read one hop: each part a string literal or a name bound once to one
+=== before: tests/test_billing.py ===
+from app import billing
+
+
+def test_invoice_total(mocker):
+    items = [10.0, 90.0]
+    assert billing.invoice_total(items, 0.053) == 105.3
+=== after: tests/test_billing.py ===
+from app import billing
+
+MODULE = "app.billing"
+
+
+def test_invoice_total(mocker):
+    mocker.patch(f"{MODULE}.invoice_total", return_value=105.3)
+    items = [10.0, 90.0]
+    assert billing.invoice_total(items, 0.053) == 105.3
+=== head: src/app/billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

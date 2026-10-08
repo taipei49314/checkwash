@@ -23,6 +23,7 @@ from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.frontend import _static_truth, parse_python
 from checkwash.frontends.python.mock_testcase_replacements import restructured_patch_event
 from checkwash.gating import unit_is_live
+from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ir.astutil import stable_dump
 from checkwash.pyenv import known_baseline
 from checkwash.roles import collectable
@@ -1024,18 +1025,35 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
     if (not isinstance(raw_inventory, Sequence) or isinstance(raw_inventory, (str, bytes))
             or len(raw_inventory) > 200_000):
         raise EngineError("stand-in strict inventory is invalid or exceeds the path limit")
+    # A submodule is listed as a directory whose content is unknown (#335).
+    raw_inventory, opaque = split_inventory(raw_inventory)
     inventory = set()
-    for path in raw_inventory:
+    for path in (*raw_inventory, *opaque):
         if not isinstance(path, str):
             raise EngineError("stand-in strict inventory contains an invalid path")
         path = path.replace("\\", "/")
         if not path or path.startswith("/") or ":" in path or any(p in {"", ".", ".."} for p in path.split("/")):
             raise EngineError("stand-in strict inventory contains an unsafe path")
-        inventory.add(path)
+        if path not in opaque:
+            inventory.add(path)
+
+    def scoped(path):
+        return any(not c.rpartition("/")[0] or path.startswith(c.rpartition("/")[0] + "/")
+                   for c in conftest_changed)
+
     test_paths = {path for path in candidates if config.role_of(path) == "test"}
     test_paths.update(path for path in inventory if config.role_of(path) == "test" and collectable(path)
-                      and any(not c.rpartition("/")[0] or path.startswith(c.rpartition("/")[0] + "/")
-                              for c in conftest_changed))
+                      and scoped(path))
+    # A changed conftest's fixtures reach the tests beneath it, and those
+    # inside a submodule pytest can collect are unknown (#335).
+    beneath = tuple(directory for directory in opaque if scoped(directory))
+    if beneath and root_reader is not None:
+        from checkwash.collection_inventory import collection_sources, opaque_reached
+
+        sources = {path: root_reader(path) for path in collection_sources(inventory)}
+        reached = opaque_reached(beneath, {p: s for p, s in sources.items() if isinstance(s, bytes)}, changes)
+        if reached is not None:
+            raise opaque_error(reached, "pytest's collection can reach it")
     memo = {}
     read_bytes = [0]
     budget = [0]
