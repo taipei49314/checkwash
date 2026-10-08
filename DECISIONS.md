@@ -8697,6 +8697,18 @@ runner script) and one neg, a runner script respelled from `pytest` to
 - **Since #331 (main `974053b`):** this round rebased onto it judges
   click `7360097e` with the same verdict, rules, severities and paths;
   #331 words its nine polarity findings as replacements.
+- **Since #335 (main `7fba434`):** the targeted set, re-run with this
+  round merged into main against main itself: 112 records change and 10
+  verdicts move; blocked goes from 28 to 34. The 102 records above that
+  both engines read change as they did. #335 reads a tree that holds a
+  submodule, so the four aiohttp commits that stopped here now give a
+  verdict: they pass on both engines, with CI_WORKFLOW_TOUCHED added at
+  warn. 32 of the 33 that stopped on both now run as well. Six of those
+  change: five gain CI_WORKFLOW_TOUCHED at warn, and aiohttp `456c0caa`
+  starts blocking. Its `tools/build-wheels.sh` runs `py.test`, so it no
+  longer buys the opaque exemption, and the SUBJECT_NORMALIZED it held at
+  warn (`str(exc)` -> `str(exc.value)` on a `pytest.raises` result) is
+  high, as in the seven above.
 
 **Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
 passed, 0 failures, 1 reported: `i198/T6` is undecided (pass on both
