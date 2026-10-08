@@ -271,10 +271,11 @@ class HelperOutcomes:
         """(helper, effect, evidence, guard) for each outcome these calls in `scope` reach.
 
         `calls` are the calls in `scope` that run (not dead), by a plain name
-        `local_scopes` holds; `bindings` resolves `scope`'s module names, and
-        `method` reads its first parameter as the instance. Most calls reach
-        a helper that ends in nothing, so the scope's own names and path
-        conditions are worked out only for one that does.
+        `local_scopes` holds or an imported helper's; `bindings` resolves
+        `scope`'s module names, and `method` reads its first parameter as the
+        instance. Most calls reach a helper that ends in nothing, so the
+        scope's own names and path conditions are worked out only for one
+        that does.
         """
         found = []
         conditions = own = shadowed = None

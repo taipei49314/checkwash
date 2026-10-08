@@ -3021,8 +3021,9 @@ def _collect_unit(
     # inside `func` (this walk sees it) and an executed scope (that loop sees
     # it), and double-counting an oracle invents an assertion to "remove".
     own_assert_ids: set[int] = set()
-    # Calls by a plain name to something the unit can reach in this file: a
-    # helper whose run ends in a skip skips this unit too (#272).
+    # Calls by a plain name to something the unit can reach in this file, or
+    # to a name a top-level `from M import f` binds: a helper whose run ends
+    # in a skip skips this unit too (#272).
     helper_calls: list[ast.Call] = []
 
     for node in _walk(func):
