@@ -1,4 +1,4 @@
-"""Skips a test reaches through a same-file helper (#272).
+"""Skips a test reaches through a same-file or imported helper (#272).
 
 A test that calls `_later()` is skipped as surely as one that calls
 `pytest.skip()` itself when `_later` always skips, and so is a test whose
@@ -8,15 +8,15 @@ one reached under a path condition keeps that condition (#196 183.2). The
 call site's own conditions, and those of every helper call on the way, are
 conjoined with it.
 
-Only the same-file scopes `_executed_scopes` resolves for assertions are
-followed (ruling 272.Q1): a function the module defines, or one nested in
-the calling scope, or a lambda bound to a name, called by that plain name,
-at most four calls deep. A method reached through `self`, a class, a
-generator and a helper passed as an argument are not. The marker is
-`helper.<function>.<effect>`, named for the helper that holds the outcome
-(272.Q3).
+In the test's own file, the scopes `_executed_scopes` resolves for
+assertions are followed (ruling 272.Q1): a function the module defines, or
+one nested in the calling scope, or a lambda bound to a name, called by
+that plain name, at most four calls deep. A method reached through `self`,
+a class, a generator and a helper passed as an argument are not. The
+marker is `helper.<function>.<effect>`, named for the helper that holds the
+outcome (272.Q3).
 
-A function another test module defines, bound by a top-level
+A function a test or conftest module defines, bound by a top-level
 `from M import f` and called by that plain name, is followed into the
 module the engine resolves for it (272.Q2, the second stage). As a conftest
 fixture is read (#223), only an outcome every call of it reaches is kept;

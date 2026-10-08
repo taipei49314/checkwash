@@ -107,7 +107,7 @@ def is_setup_skip(name: str) -> bool:
 
 
 def is_helper_skip(name: str) -> bool:
-    """A skip or xfail a same-file helper the unit or its setup calls ends in (#272)."""
+    """A skip or xfail a helper the unit or its setup calls ends in, same-file or imported (#272)."""
     return name.startswith("helper.")
 
 

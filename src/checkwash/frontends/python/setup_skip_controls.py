@@ -643,8 +643,8 @@ class SetupScope:
     `opaque`: names whose final binding may hold a fixture this reading does
     not see (`_plain_binding`). `star`: a star import, which may bring any
     name. Either keeps a request from falling through to a conftest (#223).
-    `helpers` reads what the same-file helpers a provider calls end in
-    (`helper_skips.HelperOutcomes`, #272): `fixture_helpers` and
+    `helpers` reads what the helpers a provider calls end in, same-file or
+    imported (`helper_skips.HelperOutcomes`, #272): `fixture_helpers` and
     `implicit_helpers` map each provider to those outcomes.
     """
 
@@ -772,7 +772,7 @@ def setup_outcomes(scopes, function, *, method, chain=()):
 
 
 def setup_helper_outcomes(scopes, function, *, method, chain=()):
-    """(helper, effect, evidence, guard) for what the same-file helpers this unit's setup calls end in (#272).
+    """(helper, effect, evidence, guard) for what the helpers this unit's setup calls end in (#272).
 
     The providers are the ones `setup_outcomes` reads: the xunit setup pytest
     runs for the unit, and every fixture it reaches in the test module. A
