@@ -270,6 +270,8 @@ def _names(nodes, *, mutated=False):
             names.add(node.asname or node.name.split('.')[0])
         elif isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)) and node.name:
             names.add(node.name)
+        elif isinstance(node, ast.MatchMapping) and node.rest:
+            names.add(node.rest)
         elif isinstance(node, (ast.Global, ast.Nonlocal)):
             names.update(node.names)
         stack.extend(ast.iter_child_nodes(node))
@@ -774,6 +776,10 @@ _EVALUATED_METHODS = frozenset({'startswith', 'endswith', 'lower', 'upper'})
 # at most as many constants as a test module's environment holds (24), and a
 # bound on the text they expand to.
 _CLOSE_DEPTH, _CLOSE_CONSTANTS, _CLOSE_TEXT = 16, 24, 4096
+# Total constructed closure text per conftest, shared by all conditions.
+# Hitting a budget keeps the outcome with an unparseable unknown guard;
+# it never drops the skip or qualifies it as a compatibility gate.
+_CLOSE_TOTAL = 65536
 
 
 def _value_names(node):
@@ -843,6 +849,8 @@ class ConftestGuard:
 
     def __init__(self, tree, text_of, span_of):
         self._text_of, self._span_of = text_of, span_of
+        self._remaining = _CLOSE_TOTAL
+        self._segments = {}
         imported = set()
         constants = {}
         for statement in tree.body:
@@ -868,24 +876,42 @@ class ConftestGuard:
 
     def __call__(self, node):
         budget = [_CLOSE_CONSTANTS]
-        return self._close(node, frozenset(), budget)
+        try:
+            return self._close(node, frozenset(), budget)
+        except _ClosureBudget:
+            return 'conftest.<unreadable>'
 
     def _close(self, node, resolving, budget):
-        text = self._text_of(node)
+        if self._remaining <= 0:
+            raise _ClosureBudget
+        key = id(node)
+        if key not in self._segments:
+            start, end = self._span_of(node)
+            if end - start > min(_CLOSE_TEXT, self._remaining):
+                raise _ClosureBudget
+            self._segments[key] = (self._text_of(node), start, end)
+        text, start, end = self._segments[key]
+        self._remaining -= len(text or '')
         names = _value_names(node)
         if not names:
             return text or ast.unparse(node)
-        start, end = self._span_of(node)
         spans = [self._span_of(name) for name in names]
         if not text or end - start != len(text) or any(not start <= s <= e <= end for s, e in spans):
             # No source to splice the names into (never a node this file's
             # parser built): the guard is recorded as unknown, and earns nothing.
             return 'conftest.<unreadable>'
-        pieces, last = [], start
+        pieces, last, size = [], start, 0
         for name, (s, e) in sorted(zip(names, spans), key=lambda pair: pair[1]):
-            pieces.append(text[last - start:s - start])
-            pieces.append(self._name(name, resolving, budget))
+            literal = text[last - start:s - start]
+            replacement = self._name(name, resolving, budget)
+            size += len(literal) + len(replacement)
+            if size > _CLOSE_TEXT or len(replacement) > self._remaining:
+                raise _ClosureBudget
+            self._remaining -= len(replacement)
+            pieces.extend((literal, replacement))
             last = e
+        if size + end - last > _CLOSE_TEXT:
+            raise _ClosureBudget
         pieces.append(text[last - start:])
         return ''.join(pieces)
 
@@ -899,6 +925,10 @@ class ConftestGuard:
             if len(closed) <= _CLOSE_TEXT:
                 return f'({closed})'
         return f'conftest.{name}'
+
+
+class _ClosureBudget(Exception):
+    """An internal bounded-closure stop, converted to an unknown guard."""
 
 
 def conftest_level(path, tree, text_of, span_of):

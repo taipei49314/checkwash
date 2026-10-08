@@ -250,6 +250,7 @@ class _Offsets:
         self._len = len(text)
         self.text = text
         self._bytecols: dict[int, list[int]] = {}
+        self._ascii_lines: dict[int, bool] = {}
         # The parsed module, when the parser attaches it, for the rare
         # question about the whole file (`_shadows_abs`); asked lazily.
         self.tree: ast.AST | None = None
@@ -273,13 +274,17 @@ class _Offsets:
         idx = lineno - 1
         if col <= 0 or idx < 0 or idx >= len(self._starts):
             return col
-        start = self._starts[idx]
-        end = self._starts[idx + 1] if idx + 1 < len(self._starts) else self._len
-        line = self.text[start:end]
-        if line.isascii():  # the overwhelmingly common case: bytes == chars
+        if idx not in self._ascii_lines:
+            start = self._starts[idx]
+            end = self._starts[idx + 1] if idx + 1 < len(self._starts) else self._len
+            self._ascii_lines[idx] = self.text[start:end].isascii()
+        if self._ascii_lines[idx]:  # bytes == chars; do not rescan a long line per name
             return col
         table = self._bytecols.get(idx)
         if table is None:
+            start = self._starts[idx]
+            end = self._starts[idx + 1] if idx + 1 < len(self._starts) else self._len
+            line = self.text[start:end]
             table = []
             byte = 0
             for ch in line:
