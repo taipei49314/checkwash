@@ -595,8 +595,7 @@ def _test_request(function):
     args = function.args
     if 'request' not in {arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs)}:
         return False
-    return not any(isinstance(node, ast.Name) and node.id == 'request' and isinstance(node.ctx, (ast.Store, ast.Del))
-                   for node in ast.walk(function))
+    return 'request' not in _names(function.body)
 
 
 def _plain_binding(statement, bindings):

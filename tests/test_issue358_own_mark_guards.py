@@ -154,8 +154,6 @@ def test_the_screen_only_passes_a_request_read():
     ("import pytest\nmark = pytest.mark\n@mark.slow\ndef test_total(): pass\n", {"slow"}),
     ("import py\n@py.test.mark.slow\ndef test_total(): pass\n", {"slow"}),
     ("import pytest\nCASES = [1, 2]\n@pytest.mark.parametrize('x', CASES)\ndef test_total(x): pass\n", {"parametrize"}),
-    ("import pytest\nfrom app.cases import CASES\n@pytest.mark.parametrize('x', CASES)\ndef test_total(x): pass\n",
-     {"parametrize"}),
     ("import pytest\ndef ids(x): return str(x)\n@pytest.mark.parametrize('x', [pytest.param(1)], ids=ids)\n"
      "def test_total(x): pass\n", {"parametrize"}),
 ])

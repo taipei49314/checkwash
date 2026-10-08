@@ -63,10 +63,6 @@ _MARK_READS = frozenset({"get_closest_marker", "get_marker"})
 # hook that may, a plugin a conftest loads, and a test module's own
 # `pytest_generate_tests`, which may parametrize with `marks=`.
 _MARK_ADDERS = frozenset({"add_marker", "applymarker"})
-_MARK_HOOKS = frozenset({
-    "pytest_collection_modifyitems", "pytest_itemcollected", "pytest_pycollect_makeitem",
-    "pytest_generate_tests", "pytest_collection_finish",
-})
 _PLAIN_BASES = frozenset({
     "object", "unittest.TestCase", "unittest.case.TestCase",
     "twisted.trial.unittest.TestCase", "twisted.trial.unittest.SynchronousTestCase",
@@ -75,24 +71,68 @@ _PLAIN_BASES = frozenset({
 # standard library's test tools, and Twisted's, which ships no pytest plugin.
 # Any other imported decorator may be a mark under another name, or its
 # plugin may mark what it decorates (hypothesis marks each `@given` test).
-_PLAIN_MODULES = frozenset({"unittest", "mock", "functools", "contextlib", "typing", "abc", "twisted"})
-# Module path parts read as the test suite's own, and pytest's own roots: a
-# value imported from one of them may be a param with marks.
-_TEST_ROOTS = frozenset({"tests", "test", "testing", "conftest"})
-_PLUGIN_ROOTS = frozenset({"pytest", "_pytest"})
+_PLAIN_MODULES = frozenset({"unittest", "mock", "contextlib", "typing", "abc", "twisted"})
 _UNKNOWN = object()
 
 
 def adds_marks(tree: ast.Module) -> bool:
     """Can this module add a mark a static reading of a test does not see?"""
+    # Pluggy registers hook attributes, including imported and assigned
+    # ones. The spelling of the binding matters, not just a FunctionDef.
+    if any(name.startswith("pytest_") for name in _names(tree.body)):
+        return True
+    bindings = module_bindings(tree, mutated=False)
+    # Mark calls in decorators and plain pytestmark values are read below.
+    # The same call used as a statement mutates an existing function object.
+    read_calls = set()
+    test_objects = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            test_objects.add(node.name)
+            for decorator in node.decorator_list:
+                read_calls.update(id(part) for part in ast.walk(decorator))
+        if any(isinstance(target, ast.Name) and target.id == "pytestmark" for target in _targets(node)) \
+                and node.value is not None:
+            read_calls.update(id(part) for part in ast.walk(node.value))
     for node in ast.walk(tree):
         if isinstance(node, ast.Attribute) and node.attr in _MARK_ADDERS:
             return True
         if isinstance(node, ast.Name) and node.id in _MARK_ADDERS:
             return True
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in _MARK_HOOKS:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in {
+            "__getattr__", "__init_subclass__", "bool",
+        }:
             return True
-        if isinstance(node, ast.Name) and node.id == "pytest_plugins" and isinstance(node.ctx, ast.Store):
+        if isinstance(node, ast.ImportFrom) and any(alias.name == "*" for alias in node.names):
+            return True
+        # A fixture's params may be marked even without a parametrize
+        # decorator on the test. Until fixture parameter values are proven
+        # mark-free, retain the guard for every affected unit.
+        if isinstance(node, ast.keyword) and node.arg == "params":
+            return True
+        if isinstance(node, ast.ClassDef) and node.keywords:
+            return True
+        if isinstance(node, ast.Attribute):
+            if node.attr in {"own_markers", "__dict__"}:
+                return True
+            if isinstance(node.ctx, (ast.Store, ast.Del)) and (
+                node.attr in {"pytestmark", "keywords"}
+                or isinstance(node.value, ast.Name) and node.value.id in test_objects
+            ):
+                return True
+        if isinstance(node, ast.Call):
+            name = dotted_name(node.func) or ""
+            first, dot, rest = name.partition(".")
+            full = (bindings.get(first) or first) + dot + rest
+            if name in {"setattr", "delattr"} or name.endswith("pluginmanager.register"):
+                return True
+            if id(node) not in read_calls and _mark_name(full) is not None:
+                return True
+        if isinstance(node, ast.Name) and node.id == "bool" and isinstance(node.ctx, (ast.Store, ast.Del)):
+            return True
+        if isinstance(node, ast.alias) and (node.asname or node.name) == "bool":
+            return True
+        if isinstance(node, ast.arg) and node.arg == "bool":
             return True
     return False
 
@@ -237,13 +277,6 @@ def resolve(paths, marks, names):
 UNKNOWN = _UNKNOWN
 
 
-def _testish(module: str) -> bool:
-    """Is this module the test suite's own, or a pytest plugin's, so that it may build marked params?"""
-    parts = module.split(".")
-    return parts[0] in _PLUGIN_ROOTS or parts[0].startswith("pytest_") or any(
-        part in _TEST_ROOTS or part.startswith("test") or part.endswith("testing") for part in parts)
-
-
 def _mark_name(full: str) -> str | None:
     """The mark a dotted target names (`pytest.mark.<name>`, legacy `py.test.mark.<name>`), else None."""
     parts = full.split(".")
@@ -361,6 +394,9 @@ class OwnMarks:
                 parts.append(_UNKNOWN)
                 continue
             first, dot, rest = name.partition(".")
+            if first in self._class_names:
+                parts.append(_UNKNOWN)
+                continue
             target = self._bindings.get(first)
             full = target + dot + rest if target else name
             if full in _PLAIN_BASES and first not in self._opaque and first not in self._defs \
@@ -400,6 +436,8 @@ class OwnMarks:
         marks = frozenset()
         for statement in body:
             if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if statement.name == "pytestmark":
+                    return _UNKNOWN
                 continue
             replace = True
             if isinstance(statement, ast.Assign) and len(statement.targets) == 1 \
@@ -487,6 +525,11 @@ class OwnMarks:
         mark = _mark_name(full)
         if mark is None:
             return frozenset()
+        # MarkDecorator(callable) applies to that callable and returns it;
+        # using the result as a decorator need not mark the test at all.
+        if call is not None and len(call.args) == 1 and not call.keywords \
+                and not isinstance(call.args[0], ast.Constant):
+            return _UNKNOWN
         if mark == "parametrize" and call is not None and self._hides_params(call, frozenset()):
             return _UNKNOWN
         return frozenset({mark})
@@ -497,12 +540,14 @@ class OwnMarks:
         A param takes marks only by the `marks` keyword, which the module
         must then spell (`_marks_spelled`), or through a `**` mapping. What
         the call reads is followed through the module's own values and defs;
-        a name imported from a test-side or plugin module, opaque, or bound
-        in a class body may hold one.
+        any imported value, opaque name, or class-body binding may hold
+        one. A module's name says nothing about the values it exports.
         """
         if self._marks_spelled:
             return True
         for sub in ast.walk(node):
+            if isinstance(sub, (ast.Import, ast.ImportFrom)):
+                return True
             if isinstance(sub, ast.Call) and any(keyword.arg is None for keyword in sub.keywords):
                 return True
             if not (isinstance(sub, ast.Name) and isinstance(sub.ctx, ast.Load)):
@@ -510,11 +555,11 @@ class OwnMarks:
             name = sub.id
             if name in self._opaque or name in self._class_names:
                 return True
-            if self._bindings.get(name):
-                continue
             if name in self._imports:
-                module, level = self._imports[name]
-                if level or _testish(module):
+                # The pytest constructor itself is recognized; its values
+                # are inspected by the marks/** checks. Other imports do
+                # not establish that a parameter list contains no marks.
+                if self._bindings.get(name) not in {"pytest", "py.test"}:
                     return True
                 continue
             target = self._values.get(name) or self._defs.get(name)
@@ -537,6 +582,8 @@ def _targets(statement):
 def _touches_pytestmark(statement) -> bool:
     """Does this statement bind, extend or delete `pytestmark` in a way `_scope` does not read?"""
     for node in ast.walk(statement):
+        if isinstance(node, ast.alias) and (node.asname or node.name) == "pytestmark":
+            return True
         if isinstance(node, ast.Name) and node.id == "pytestmark" and isinstance(node.ctx, (ast.Store, ast.Del)):
             return True
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \

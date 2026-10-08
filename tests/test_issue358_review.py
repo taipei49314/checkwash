@@ -3,7 +3,6 @@
 These synthetic examples have no held-out input. A hidden mark must retain
 the old guard instead of proving that a real skip cannot run.
 """
-import ast
 import os
 import subprocess
 import sys
@@ -11,7 +10,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from checkwash.frontends.python.own_marks import UNKNOWN, OwnMarks
+from checkwash.frontends.python.own_marks import UNKNOWN
 from test_issue358_own_mark_guards import GATE, marks, module, run, setup_markers
 
 
@@ -50,6 +49,17 @@ def test_hidden_mark_keeps_the_disable(prelude, tests):
 ])
 def test_conftest_can_supply_an_unseen_mark(conftest):
     found, verdict = run(module(gate=""), module(), files={"tests/conftest.py": conftest.encode()})
+    assert verdict == "block"
+    assert any(severity == "high" for _message, severity in found)
+
+
+@pytest.mark.parametrize("path,config", [
+    ("pytest.ini", "[pytest]\naddopts = -p tests.marking\n"),
+    ("tests/pytest.ini", "[pytest]\naddopts = -ptests.marking\n"),
+    ("pyproject.toml", "[project.entry-points.pytest11]\nmarking = 'tests.marking'\n"),
+])
+def test_explicit_plugin_configuration_keeps_marks_unknown(path, config):
+    found, verdict = run(module(gate=""), module(), files={path: config.encode()})
     assert verdict == "block"
     assert any(severity == "high" for _message, severity in found)
 

@@ -3884,7 +3884,10 @@ def _parse_python(
             if paths and any(reads_marks(cond) for _effect, _evidence, conds in paths for cond in conds):
                 if not own_marks:
                     own_marks.append(OwnMarks(tree, chain))
-                names = frozenset({func.name, *(cls.name for cls in classes)})
+                # Parametrized items have test_name[id], and fixture params
+                # can add that suffix too. The function name is not a
+                # guaranteed keyword; enclosing class names still are.
+                names = frozenset(cls.name for cls in classes)
                 resolved = resolve_own_marks(paths, own_marks[0].of(func, classes), names)
                 if resolved is None:
                     continue
