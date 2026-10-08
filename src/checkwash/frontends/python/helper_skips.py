@@ -1,4 +1,4 @@
-"""Skips a test reaches through a same-file helper (#272).
+"""Skips a test reaches through a same-file or imported helper (#272).
 
 A test that calls `_later()` is skipped as surely as one that calls
 `pytest.skip()` itself when `_later` always skips, and so is a test whose
@@ -8,17 +8,25 @@ one reached under a path condition keeps that condition (#196 183.2). The
 call site's own conditions, and those of every helper call on the way, are
 conjoined with it.
 
-Only the same-file scopes `_executed_scopes` resolves for assertions are
-followed (ruling 272.Q1): a function the module defines, or one nested in
-the calling scope, or a lambda bound to a name, called by that plain name,
-at most four calls deep. A method reached through `self`, a class, a
-generator and a helper passed as an argument are not. The marker is
-`helper.<function>.<effect>`, named for the helper that holds the outcome
-(272.Q3).
+In the test's own file, the scopes `_executed_scopes` resolves for
+assertions are followed (ruling 272.Q1): a function the module defines, or
+one nested in the calling scope, or a lambda bound to a name, called by
+that plain name, at most four calls deep. A method reached through `self`,
+a class, a generator and a helper passed as an argument are not. The
+marker is `helper.<function>.<effect>`, named for the helper that holds the
+outcome (272.Q3).
+
+A function a test or conftest module defines, bound by a top-level
+`from M import f` and called by that plain name, is followed into the
+module the engine resolves for it (272.Q2, the second stage). As a conftest
+fixture is read (#223), only an outcome every call of it reaches is kept;
+the marker keeps that module's text and span (`Foreign`).
 """
 from __future__ import annotations
 
 import ast
+from collections import Counter
+from typing import NamedTuple
 
 from checkwash.frontends.python.setup_skip_controls import (
     _conjunction,
@@ -26,6 +34,7 @@ from checkwash.frontends.python.setup_skip_controls import (
     _names,
     body_bindings,
     body_outcome,
+    module_bindings,
     outcome_call,
     setup_outcome,
 )
@@ -34,6 +43,122 @@ from checkwash.frontends.python.setup_skip_controls import (
 MAX_DEPTH = 4
 _BODY_FIELDS = ("body", "orelse", "finalbody")
 _DEFS = (ast.FunctionDef, ast.AsyncFunctionDef)
+# A module that spells none of these ends no call in a native outcome.
+_OUTCOME_TOKENS = ("skip", "Skip", "xfail", "XFail")
+
+
+class Foreign(NamedTuple):
+    """An outcome's evidence in another file: its text and span there, and that file's path."""
+
+    text: str
+    span: tuple[int, int]
+    path: str
+
+
+class Imported(NamedTuple):
+    """A call's target that a top-level `from M import f` binds, by its local name."""
+
+    name: str
+
+
+class ImportedHelpers:
+    """The functions a test module imports by name whose every call ends in an outcome.
+
+    `names` maps a local name to (module, original name); `resolve` reads
+    that module and gives what calling its function ends in, every call
+    reaching it, or nothing. Each name is resolved once, here, and one that
+    ends in nothing is dropped: a module that imports no such function
+    reads as it did before.
+    """
+
+    def __init__(self, names: dict[str, tuple[str, str]], resolve):
+        self._outcomes: dict[str, tuple] = {}
+        for name, (module, original) in names.items():
+            found = tuple(resolve(module, original) or ())
+            if found:
+                self._outcomes[name] = found
+        self.names = {name: names[name] for name in self._outcomes}
+
+    def __contains__(self, name) -> bool:
+        return name in self._outcomes
+
+    def outcomes(self, name: str) -> tuple:
+        return self._outcomes[name]
+
+
+def imported_helper_names(tree: ast.Module) -> dict[str, tuple[str, str]]:
+    """Local name -> (module, original) for each name a top-level `from M import f` binds alone.
+
+    The imports `_top_level_from_imports` reads, which the engine resolves
+    for an imported assertion helper too. A name any other top-level
+    statement binds as well is not followed: which binding a call sees
+    depends on order. Nor is any name, once a star import may bind it.
+    """
+    from checkwash.frontends.python.frontend import _top_level_from_imports
+
+    names = _top_level_from_imports(tree)
+    if not names:
+        return {}
+    counts: Counter = Counter()
+    for statement in tree.body:
+        if isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names):
+            return {}
+        counts.update(_names([statement]))
+    return {name: target for name, target in names.items() if counts[name] == 1}
+
+
+class HelperModule:
+    """A module a test imports a helper from, read for what calling each of its functions ends in.
+
+    Its own functions are followed as a test module's are, with its own
+    names, branch constants and same-file helpers. What they import is not
+    followed: one hop into the tree. Only an outcome every call reaches is
+    kept, as a conftest fixture's is (#223).
+    """
+
+    def __init__(self, data: bytes, path: str):
+        from checkwash.frontends.python.branch_constants import literal_fixtures
+        from checkwash.frontends.python.frontend import _Offsets, normalize_source
+
+        self.path = path
+        self._memo: dict[str, tuple] = {}
+        self._scopes: dict[str, ast.AST] = {}
+        raw = normalize_source(data)
+        if not any(token in raw for token in _OUTCOME_TOKENS):
+            return
+        try:
+            tree = ast.parse(raw)
+        except (SyntaxError, RecursionError, ValueError, MemoryError):
+            return
+        for node in tree.body:
+            if isinstance(node, (*_DEFS, ast.ClassDef)):
+                self._scopes[node.name] = node
+            elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Lambda):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        self._scopes[target.id] = node.value
+        self._text = _Offsets(raw)
+        self._bindings = module_bindings(tree, mutated=False)
+        self._helpers = HelperOutcomes(
+            self._scopes, lambda node: self._text.seg(node) or ast.unparse(node), literal_fixtures(tree)
+        )
+
+    def outcomes(self, name: str) -> tuple:
+        """(helper, effect, Foreign, ()) for each outcome every call of `name` reaches."""
+        if name not in self._memo:
+            target = self._scopes.get(name)
+            found = ()
+            if isinstance(target, ast.Lambda) or (isinstance(target, _DEFS) and not _generator(target)):
+                found = tuple(
+                    (helper, effect, self._foreign(evidence, helper), ())
+                    for helper, effect, evidence, conds in self._helpers.of(name, target, self._bindings)
+                    if not conds
+                )
+            self._memo[name] = found
+        return self._memo[name]
+
+    def _foreign(self, evidence, helper: str) -> Foreign:
+        return Foreign(self._text.seg(evidence) or helper, self._text.span(evidence), self.path)
 
 
 def call_conditions(scope, condition) -> dict[int, tuple[str, ...]]:
@@ -107,13 +232,16 @@ class HelperOutcomes:
     `module_scopes` maps the module's top-level names to their definitions,
     as `_executed_scopes` sees them. `condition` gives an expression's source
     text, and `fixtures` the module's literal fixtures, which settle branches
-    in a helper as they do in a test (`_unreachable_ids`).
+    in a helper as they do in a test (`_unreachable_ids`). `imported` holds
+    the functions other modules define that the module imports by name
+    (`ImportedHelpers`), or None.
     """
 
-    def __init__(self, module_scopes: dict, condition, fixtures=None):
+    def __init__(self, module_scopes: dict, condition, fixtures=None, imported: ImportedHelpers | None = None):
         self.module_scopes = module_scopes
         self.condition = condition
         self.fixtures = fixtures
+        self.imported = imported
         self._of: dict[tuple[int, int], tuple] = {}
         self._scope: dict[tuple[int, int], tuple] = {}
 
@@ -123,13 +251,17 @@ class HelperOutcomes:
         `shadowed` holds the names the calling scope binds itself, its
         parameters included: a module function of that name is not what the
         call runs there (`def test(offline): offline()` calls a fixture's
-        value).
+        value). A name only an import binds gives `Imported`.
         """
         if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
             return None
         name = node.func.id
         target = local_scopes.get(name)
-        if target is None or (name in shadowed and self.module_scopes.get(name) is target):
+        if target is None:
+            if self.imported is not None and name in self.imported and name not in shadowed:
+                return Imported(name)
+            return None
+        if name in shadowed and self.module_scopes.get(name) is target:
             return None
         if isinstance(target, ast.Lambda) or (isinstance(target, _DEFS) and not _generator(target)):
             return target
@@ -151,11 +283,17 @@ class HelperOutcomes:
             if target is None or target is scope:
                 continue
             name = node.func.id
-            nested = self.module_scopes.get(name) is not target
-            if nested and own is None:
-                # A nested function sees the names its enclosing scope binds.
-                own = body_bindings(scope, bindings, method=method)
-            inner = self.of(name, target, own if nested else bindings, frozenset({id(scope)}))
+            if isinstance(target, Imported):
+                # Another module's function: what every call of it reaches,
+                # unless the calling scope binds the name itself.
+                inner = self.imported.outcomes(name)
+                nested = False
+            else:
+                nested = self.module_scopes.get(name) is not target
+                if nested and own is None:
+                    # A nested function sees the names its enclosing scope binds.
+                    own = body_bindings(scope, bindings, method=method)
+                inner = self.of(name, target, own if nested else bindings, frozenset({id(scope)}))
             if not inner:
                 continue
             if shadowed is None:
@@ -205,10 +343,15 @@ class HelperOutcomes:
         shadowed = _shadowed(target)
         for node in calls:
             sub = self.candidate(node, local_scopes, shadowed)
-            if sub is None or id(sub) in chain:
+            if sub is None:
                 continue
-            nested = self.module_scopes.get(node.func.id) is not sub
-            inner = self._read(node.func.id, sub, own if nested else bindings, depth - 1, chain | {id(sub)})
+            if isinstance(sub, Imported):
+                inner = self.imported.outcomes(sub.name)
+            elif id(sub) in chain:
+                continue
+            else:
+                nested = self.module_scopes.get(node.func.id) is not sub
+                inner = self._read(node.func.id, sub, own if nested else bindings, depth - 1, chain | {id(sub)})
             if not inner:
                 continue
             if conditions is None:

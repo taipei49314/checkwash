@@ -8875,6 +8875,106 @@ other pass proceeds over the rest of the tree.
 
 The agent wrote this entry; the maintainer approves it in the round's PR.
 
+## D-124 (2026-10-07): a skip a test reaches through a helper it imports is read (#272, second stage)
+
+D-111 read a skip a test reaches through a same-file helper. A test that
+imported the helper instead, `from tests.helpers import offline`, and called
+`offline()` was skipped as surely, and passed with zero findings (#272's
+H5): an imported helper was not followed.
+
+Ruling 272.Q2 (a), adopted by the owner on 2026-10-06 ("全部核准"): follow
+the import into the head tree, as #223 follows the conftest chain, as a
+second stage after the same-file reading. 272.Q3's marker applies:
+`helper.<function>.<effect>`.
+
+**As implemented:**
+- `frontends/python/helper_skips.py`: `imported_helper_names` reads the
+  names a test module's top-level `from M import f` binds, the imports
+  `_top_level_from_imports` reads for an imported assertion helper
+  (absolute, and same-directory package-relative). `HelperOutcomes` takes
+  them (`ImportedHelpers`): a call by such a plain name, in the test, in its
+  setup or in a same-file helper on the way, runs the imported function,
+  unless the calling scope binds the name itself. `HelperModule` reads the
+  module for what calling each of its functions ends in, with the module's
+  own names, branch constants and same-file helpers, as a test module's are
+  read.
+- `engine.py`: the module is the one an imported assertion helper resolves
+  to (`_merge_crossfile_oracles`): a dotted module's path from the
+  repository root, a dotless one's beside the test. It is read as the
+  conftest chain is (`_helper_module`): a file the diff changes on its own
+  side, any other once from the strict head snapshot, within the chain's
+  read limits, past which the run is an engine error. Only a test or
+  conftest module is read. Each side of a test module the diff changes
+  reaches it, and so does a D10 survivor (D-108).
+- `frontend.py`: the marker keeps the helper file's text and span, and
+  `marker_origins` names that file, so a report locates the finding at the
+  helper's skip, as it locates a conftest fixture's (#223).
+
+Readings the ruling leaves to the implementation:
+
+1. **Only an outcome every call reaches.** As a conftest fixture's outcome
+   is (D-093 reading 5), a guarded skip in an imported helper records
+   nothing: its guard is written in another module's names, which
+   COMPAT_GATE would read in the test module's. The conditions at the call
+   site still guard the marker, as in D-111, so a call under a platform
+   condition holds at warn.
+2. **One hop.** What the imported module imports in turn is not followed;
+   its own same-file helpers are.
+3. **The module an imported assertion helper resolves to, and only a test
+   or conftest module.** A helper in a package's `__init__.py`
+   (`from tests import requires_db`), a module found through another
+   `sys.path` entry, a deeper relative import and a production module are
+   not followed.
+4. **A name bound once.** A name another top-level statement binds as well
+   is not followed, since which binding a call sees depends on order; nor
+   is any name once a top-level star import may rebind it. An attribute
+   call (`helpers.offline()`) is no call by a plain name.
+5. **D10's survivors read their imported helpers too**, as they read their
+   conftest chain (D-108): a survivor whose setup calls an imported helper
+   that always skips is not live.
+
+**Tests and fixtures.**
+- **Tests:** 34 in `tests/test_issue272_imported_helper_skips.py`. Each
+  of the 20 mutants of the round's code fails them or the round's
+  fixtures.
+- **Fixtures** (row 125):
+  - `helper_skip_imported_module_pos` (H5) and
+    `helper_skip_imported_relative_pos` (a package-relative import whose
+    module raises the skip in its own helper), each passing with zero
+    findings on v0.6.0 and on `main`;
+  - `helper_skip_imported_platform_gate_neg`: a call under a platform
+    condition holds at warn (COMPAT_GATE);
+  - `helper_skip_imported_already_called_neg`: a skip the base already
+    reached is no event.
+
+**Cost.** Measured with the round's engine against main's (`b2e0eb5`):
+- **Targeted set:** every non-merge commit of the thirteen sweep histories
+  (62,800 commits), searched for a test module the commit changes that, on
+  either side, calls by a plain name a function a top-level
+  `from M import f` binds, where M resolves, as the round's engine
+  resolves it, to a test or conftest module in which calling `f` ends in
+  an outcome every call reaches. No commit does, so the new reading
+  changes no record there. The same search finds H5 in a synthetic
+  history.
+- **Standard set** (the last 300 non-merge commits of attrs, click,
+  flask, httpx, rich and starlette: 1,800 commits): main's verdicts and
+  finding fingerprints for every record (48 blocked, no engine error).
+- **D-088's sets** (895 commits of ten full histories; 368 of pytest's):
+  main's verdicts and finding fingerprints for every record (247 and 95
+  blocked). The 15 and 4 engine errors are the same read limits on both
+  sides.
+- **Speed:** the perf gate's cases, timed in the cloud container with
+  the sweeps paused: 500 changed files take 2.25 s (median of nine runs),
+  main's 2.32 s; the 3,000-line diff takes 0.61 to 0.72 s, main's 0.59 to
+  0.62 s. Reading each test module's top-level imports costs about 16 ms
+  of the 500-file case.
+
+**Verdict gate.** Run as CI runs it (four engines, 156 T1 + 26 T3 cases):
+passed, 0 failures, 1 reported: `i198/T6` (pass -> block), as on main.
+No case changes its verdict.
+
+The agent wrote this entry in the fix PR; the maintainer approves it there.
+
 ## D-125 (2026-10-07): what a stand-in names outside its own call is read one hop (#196 188.5)
 
 THREATMODEL rows 109 and 90 left two shapes as residuals:

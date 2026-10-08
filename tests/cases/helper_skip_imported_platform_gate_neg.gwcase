@@ -1,0 +1,38 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test that starts calling an imported skipping helper under a platform condition holds at warn
+origin: #272 — the call site's condition is the imported helper skip's guard, a D6 interpreter/OS gate, as the same
+origin2: skip in the test body is
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/__init__.py ===
+=== head: tests/helpers.py ===
+import pytest
+
+
+def posix_only():
+    pytest.skip("posix only")
+=== before: tests/test_billing.py ===
+import sys
+
+from app.billing import total
+from tests.helpers import posix_only
+
+
+def test_total():
+    assert total([30, 48.75]) == 78.75
+=== after: tests/test_billing.py ===
+import sys
+
+from app.billing import total
+from tests.helpers import posix_only
+
+
+def test_total():
+    if sys.platform == "win32":
+        posix_only()
+    assert total([30, 48.75]) == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"], "path": "tests/test_billing.py", "unit": "test_total"}]

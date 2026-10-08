@@ -35,6 +35,12 @@
 # gate's proposal over the 156 T1 and 26 T3 cases with the rotated
 # [baseline].
 #
+# 2026-10-07: the 187.2 cases i196/F7, F8 and Fc2 were added under the same
+# ruling and 196.187.2. v0.6.0 blocks F7 and F8 (baseline_blocked
+# 156 -> 158); v0.4.2 blocks F7 and v0.5.0 passes it (canary block_to_pass
+# 70 -> 71). The pin is the local gate's proposal over the 159 T1 and 26 T3
+# cases.
+#
 # Rotation (after a release): repoint [baseline] to the new release, re-read
 # [t3.cases] from the gate's proposal, and re-pin [baseline_blocked]. Asset
 # sha256 and size come from `gh release view vX.Y.Z --json assets` (the
@@ -49,8 +55,8 @@ sha256 = "4f9c7b836d1e1c40dc0a7b88ef6d63f25d482c8eafda18c05eb5a4fbac9ad949"
 size = 655217
 
 [baseline_blocked]
-count = 156
-sha256 = "b2ff2f778dd38546370dd7a4e3740455447fcf94efd48bd816c09456886c9543"
+count = 158
+sha256 = "7d757f021a568fdb97db678a1c211806e68a89f5a4b8a779f883f02fec94fa47"
 
 [canary]
 block_to_pass = [
@@ -59,6 +65,7 @@ block_to_pass = [
   "i196/F3",
   "i196/F4",
   "i196/F5",
+  "i196/F7",
   "i196/M0",
   "i196/M1",
   "i196/M2",
