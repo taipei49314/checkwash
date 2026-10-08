@@ -15,11 +15,11 @@ units that reach them (`SetupScope`, `setup_outcomes`).
 
 A guarded skip is not this evidence: its guard is its justification, and an
 environment condition is not something a source reading can settle. A unit's
-own setup still records it, with that guard (`setup_outcome`, #196 183.2), so
-it is judged as a guarded skip in a test body is. The conftest paths read only
-the unconditional outcome: the `<suite>` control, and the conftest fixtures a
-unit reaches (`ConftestLevel`, #223). A guarded conftest skip waits for 183.2's
-conftest half.
+setup still records it, with that guard (`setup_outcome`, #196 183.2), so it
+is judged as a guarded skip in a test body is: in its own module's fixtures
+and xunit setup, and in the conftest fixtures it reaches (`ConftestLevel`,
+#223), whose guard is first closed over the conftest's names (`ConftestGuard`,
+#351). The `<suite>` control reads only the unconditional outcome.
 """
 from __future__ import annotations
 
@@ -750,8 +750,8 @@ class ConftestLevel:
 
     `fixtures`, `opaque` and `star` are its module `SetupScope`'s, except
     that an outcome's evidence is a (source text, span) pair in this file,
-    and only an unconditional outcome is kept: a guarded conftest skip waits
-    for 183.2's conftest half. `path` is the conftest's own.
+    and a guarded outcome's guard is closed over the conftest's own names
+    (`ConftestGuard`, #351). `path` is the conftest's own.
     """
     path: str
     fixtures: dict
@@ -766,20 +766,161 @@ def unreadable_level(path):
     return ConftestLevel(path, {}, frozenset(), True, adds_marks=True)
 
 
+# The receivers whose value the D6 evaluator reads (`compat._eval_condition`):
+# `PLAT.startswith("win")` evaluates `PLAT`, `sys.platform.startswith(...)`
+# reads `sys.platform` by its spelling.
+_EVALUATED_METHODS = frozenset({'startswith', 'endswith', 'lower', 'upper'})
+# How far one guard's constants are followed: the evaluator's own depth (16),
+# at most as many constants as a test module's environment holds (24), and a
+# bound on the text they expand to.
+_CLOSE_DEPTH, _CLOSE_CONSTANTS, _CLOSE_TEXT = 16, 24, 4096
+
+
+def _value_names(node):
+    """Each name D6 may read as a value in `node`.
+
+    A call's target and an attribute chain's root are read by their spelling
+    (`os.environ.get(...)`, `sys.platform`, `system()`) or not at all, so they
+    stay as written; so does everything inside an f-string, which the
+    evaluator does not read. A call's arguments count: the evaluator reads
+    them for a string method, and the compat-token search reads every name
+    the guard holds through the test module's constants.
+    """
+    found = []
+
+    def visit(node):
+        if isinstance(node, ast.Name):
+            if isinstance(node.ctx, ast.Load):
+                found.append(node)
+            return
+        if isinstance(node, ast.JoinedStr):
+            return
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Attribute) and func.attr in _EVALUATED_METHODS:
+                visit(func.value)
+            elif not isinstance(func, ast.Name):
+                visit(func)
+            for child in (*node.args, *(keyword.value for keyword in node.keywords)):
+                visit(child)
+            return
+        if isinstance(node, ast.Attribute):
+            root = node.value
+            while isinstance(root, ast.Attribute):
+                root = root.value
+            if not isinstance(root, ast.Name):
+                visit(root)
+            return
+        for child in ast.iter_child_nodes(node):
+            visit(child)
+
+    visit(node)
+    return found
+
+
+class ConftestGuard:
+    """A conftest fixture's guard, closed over the conftest's names (#351, 183.2's conftest half).
+
+    D6 evaluates a marker's guard with the test module's constants, but a
+    conftest guard is written in the conftest's names: a `WIN` or `ON_CI` both
+    files define would be judged by the test module's value. So before the
+    guard is recorded:
+
+    1. a name the conftest binds as a top-level constant is replaced by its
+       defining expression, closed the same way, as far as the evaluator
+       follows a constant; a name an import also binds is ambiguous, as
+       `_gate_constants` treats it, and is not replaced;
+    2. any other name the evaluator reads as a value becomes
+       `conftest.<name>`, which it reads as unknown and never resolves
+       through the test module; call targets and attribute roots stay;
+    3. so a name imported from another module is not followed: a gate
+       spelled through one is judged with that part unknown.
+
+    A name the fixture binds itself (a parameter, an assignment) is its own
+    local, never the conftest's constant. Called with an `if` test inside one
+    of the conftest's top-level functions, as `setup_outcome`'s `condition`.
+    """
+
+    def __init__(self, tree, text_of, span_of):
+        self._text_of, self._span_of = text_of, span_of
+        imported = set()
+        constants = {}
+        for statement in tree.body:
+            if isinstance(statement, (ast.Import, ast.ImportFrom)):
+                imported.update(alias.asname or alias.name.split('.')[0] for alias in statement.names)
+            elif isinstance(statement, ast.Assign):
+                constants.update((target.id, statement.value) for target in statement.targets
+                                 if isinstance(target, ast.Name))
+            elif (isinstance(statement, ast.AnnAssign) and statement.value is not None
+                  and isinstance(statement.target, ast.Name)):
+                constants[statement.target.id] = statement.value
+        self._constants = {name: value for name, value in constants.items() if name not in imported}
+        self._locals = {}
+        for statement in tree.body:
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                args = statement.args
+                bound = frozenset(_names(statement.body)) | frozenset(
+                    arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg)
+                    if arg is not None)
+                for node in ast.walk(statement):
+                    if isinstance(node, ast.Name):
+                        self._locals[id(node)] = bound
+
+    def __call__(self, node):
+        budget = [_CLOSE_CONSTANTS]
+        return self._close(node, frozenset(), budget)
+
+    def _close(self, node, resolving, budget):
+        text = self._text_of(node)
+        names = _value_names(node)
+        if not names:
+            return text or ast.unparse(node)
+        start, end = self._span_of(node)
+        spans = [self._span_of(name) for name in names]
+        if not text or end - start != len(text) or any(not start <= s <= e <= end for s, e in spans):
+            # No source to splice the names into (never a node this file's
+            # parser built): the guard is recorded as unknown, and earns nothing.
+            return 'conftest.<unreadable>'
+        pieces, last = [], start
+        for name, (s, e) in sorted(zip(names, spans), key=lambda pair: pair[1]):
+            pieces.append(text[last - start:s - start])
+            pieces.append(self._name(name, resolving, budget))
+            last = e
+        pieces.append(text[last - start:])
+        return ''.join(pieces)
+
+    def _name(self, node, resolving, budget):
+        name = node.id
+        value = self._constants.get(name)
+        if (value is not None and name not in self._locals.get(id(node), ()) and name not in resolving
+                and len(resolving) < _CLOSE_DEPTH and budget[0] > 0):
+            budget[0] -= 1
+            closed = self._close(value, resolving | {name}, budget)
+            if len(closed) <= _CLOSE_TEXT:
+                return f'({closed})'
+        return f'conftest.{name}'
+
+
 def conftest_level(path, tree, text_of, span_of):
     """`path`'s `ConftestLevel`, read from its parsed module `tree`.
 
     `text_of` and `span_of` give a node's source text and span in that file.
+    A guarded outcome keeps its guard, closed over the conftest's names, and
+    is judged on the unit as a guarded skip in its own setup is (#351).
     """
     from .own_marks import adds_marks
 
-    scope = SetupScope(tree.body, module_bindings(tree))
+    scope = SetupScope(tree.body, module_bindings(tree), condition=ConftestGuard(tree, text_of, span_of))
     fixtures = {}
     for name, (requested, autouse, outcome) in scope.fixtures.items():
-        if outcome is not None and outcome[2] is None:
-            outcome = (outcome[0], (text_of(outcome[1]), span_of(outcome[1])), None)
-        else:
-            outcome = None
+        if outcome is not None:
+            effect, evidence, guard = outcome
+            if isinstance(guard, Guard):
+                guard = Guard(str(guard), tuple(
+                    (kind, (text_of(site), span_of(site)), conds)
+                    for kind, site, conds in guard.paths
+                ))
+            outcome = (effect, (text_of(evidence), span_of(evidence)), guard)
         fixtures[name] = (requested, autouse, outcome)
     return ConftestLevel(path, fixtures, scope.opaque, scope.star, adds_marks=adds_marks(tree))
 
@@ -906,8 +1047,8 @@ def fixture_setup_controls(tree):
     lesson). A test module the diff changes resolves its own requests to it
     (`setup_outcomes`, #223), but the others may live anywhere under the
     directory, outside the diff, so the fixture is reported here whoever
-    requests it (ruling 196.183.1). A guarded one waits for 183.2's conftest
-    half.
+    requests it (ruling 196.183.1). A guarded one is no suite-level control:
+    it is judged on the units of a changed test module that reach it (#351).
     """
     fixtures = SetupScope(tree.body, module_bindings(tree)).fixtures
     for name in sorted(fixtures):

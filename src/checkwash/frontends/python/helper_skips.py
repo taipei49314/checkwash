@@ -18,9 +18,10 @@ outcome (272.Q3).
 
 A function a test or conftest module defines, bound by a top-level
 `from M import f` and called by that plain name, is followed into the
-module the engine resolves for it (272.Q2, the second stage). As a conftest
-fixture is read (#223), only an outcome every call of it reaches is kept;
-the marker keeps that module's text and span (`Foreign`).
+module the engine resolves for it (272.Q2, the second stage). Only an
+outcome every call of it reaches is kept, since a guard is written in that
+module's names (D-124 reading 1); the marker keeps that module's text and
+span (`Foreign`).
 """
 from __future__ import annotations
 
@@ -113,7 +114,7 @@ class HelperModule:
     Its own functions are followed as a test module's are, with its own
     names, branch constants and same-file helpers. What they import is not
     followed: one hop into the tree. Only an outcome every call reaches is
-    kept, as a conftest fixture's is (#223).
+    kept (D-124 reading 1).
     """
 
     def __init__(self, data: bytes, path: str):

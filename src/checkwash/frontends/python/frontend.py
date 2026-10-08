@@ -3788,8 +3788,9 @@ def _parse_python(
     # the unit as surely as a marker does, so it is recorded as one (issue
     # #172), and a guarded one in the test module is recorded with its guard,
     # like a skip in the body (#196 183.2). A conftest fixture the unit
-    # reaches records its unconditional skip on the unit too (#223); the
-    # fixture itself is judged suite-wide in `_conftest_unit`.
+    # reaches records its skip on the unit too (#223), a guarded one with its
+    # guard closed over the conftest's names (#351); an unconditional one is
+    # also judged suite-wide in `_conftest_unit`.
     setup_scopes: tuple[SetupScope, ...] = ()
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = {}
     # What a test body's names resolve to at module level, for its skips (#220).

@@ -69,7 +69,8 @@ def blocks(*rows):
 # --- the conftest's own reading -------------------------------------------------------------
 
 
-def test_a_level_keeps_only_unconditional_outcomes():
+def test_a_level_keeps_each_outcome_with_its_guard():
+    """A guarded outcome keeps its guard, closed over the conftest's names (#351)."""
     source = SKIP + (
         "\n\n@pytest.fixture\ndef gated():\n    if not os.environ.get('NETWORK'):\n        pytest.skip('off')\n"
         "\n\n@pytest.fixture(autouse=True)\ndef flaky():\n    pytest.xfail('backend is flaky')\n"
@@ -77,7 +78,9 @@ def test_a_level_keeps_only_unconditional_outcomes():
     level = parse_conftest_level(source.encode(), "tests/conftest.py")
     assert level.path == "tests/conftest.py"
     assert level.fixtures["db"] == (frozenset(), False, None)
-    assert level.fixtures["gated"][2] is None
+    effect, (text, span), guard = level.fixtures["gated"][2]
+    assert (effect, text, guard) == ("skip", "pytest.skip('off')", "not os.environ.get('NETWORK')")
+    assert source[span[0]:span[1]] == text
     effect, (text, span), guard = level.fixtures["needs_network"][2]
     assert (effect, text, guard) == ("skip", 'pytest.skip("network tests are disabled")', None)
     assert source[span[0]:span[1]] == text
@@ -161,12 +164,13 @@ def test_a_plain_conftest_fixture_is_no_event():
     assert run(module("def test_total(db):")) == ([], "pass")
 
 
-def test_a_guarded_conftest_skip_waits_for_183_2():
+def test_a_guarded_conftest_skip_is_judged_by_its_guard():
+    """183.2's conftest half (#351): an environment guard earns no COMPAT_GATE, as in the test module."""
     gated = (
         "import os\n\nimport pytest\n\n\n@pytest.fixture\ndef needs_network():\n"
         '    if not os.environ.get("NETWORK"):\n        pytest.skip("network tests are disabled")\n'
     )
-    assert run(module("def test_total(needs_network):"), {"tests/conftest.py": gated}) == ([], "pass")
+    assert run(module("def test_total(needs_network):"), {"tests/conftest.py": gated}) == blocks(("test_total", ADDED))
 
 
 def test_an_xfail_fixture():
