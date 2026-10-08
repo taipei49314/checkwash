@@ -23,6 +23,7 @@ from test_issue358_own_mark_guards import GATE, marks, module, run, setup_marker
     ("def values():\n    from samples.cases import CASES\n    return CASES\n",
      "@pytest.mark.parametrize('sample', values())\ndef test_total(sample): assert total() == 78.75\n"),
     ("", "def test_total(): assert total() == 78.75\ntest_total.pytestmark = [pytest.mark.slow]\n"),
+    ("", "def test_total(): assert total() == 78.75\ntarget = test_total\ntarget.pytestmark = [pytest.mark.slow]\n"),
     ("", "def test_total(): assert total() == 78.75\npytest.mark.slow(test_total)\n"),
     ("import functools\n@pytest.mark.slow\ndef template(): pass\n",
      "@functools.wraps(template)\ndef test_total(): assert total() == 78.75\n"),

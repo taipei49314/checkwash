@@ -21,7 +21,8 @@ MUTANTS = [
     ('module getattr', OWN, '"__getattr__", "__init_subclass__", "bool",', '"never_getattr", "__init_subclass__", "bool",'),
     ('fixture request binding', 'checkwash/frontends/python/setup_skip_controls.py',
      "return 'request' not in _names(function.body)", 'return True'),
-    ('config plugin marks', 'checkwash/engine.py', 'if configured_marks:', 'if False:'),
+    ('config plugin marks', 'checkwash/engine.py',
+     'if reads_own_marks and any(_config_may_load_marks(d, side) for d in directories):', 'if False:'),
     ('metaclass', OWN, 'isinstance(node, ast.ClassDef) and node.keywords', 'False'),
 ]
 
