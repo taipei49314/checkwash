@@ -456,7 +456,14 @@ reaches it under: each enclosing `if` test, `not (...)` for an `else`
 branch and for the code after a branch that always ends, and an `except`
 block's condition, with several outcomes joined by `or`. It is judged as a
 body skip is, so a setup guard that now always holds, or was removed, is
-reported too (183.2's second stage). A unit of a test module the diff
+reported too (183.2's second stage). A function-scoped fixture's guard may
+read the requesting unit's static marks first (#358). A path proved false
+for that unit is dropped. Visible sources of marks that this reading cannot
+resolve keep the guard unknown: fixture params, imported parameter values,
+hook bindings, explicit plugin configuration and mutations of test objects,
+among others (D-126). Ambient plugins outside the repository snapshot remain
+a stated limit; this is not a proof of the complete runtime mark set.
+A unit of a test module the diff
 changes also reaches the fixtures of every `conftest.py` from the module's
 directory up to the repository root, read on each side: the nearest
 definition of a name wins, the module's own before every conftest, and a

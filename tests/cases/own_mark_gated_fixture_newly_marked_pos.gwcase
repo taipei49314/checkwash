@@ -1,0 +1,45 @@
+=== meta ===
+bypass: 104
+rule: TEST_DISABLED
+title: a test newly marked so that an autouse marker-gated fixture skips it is a disable
+origin: #358: with the mark, the fixture's guard is the rest of its condition, not os.environ.get("SLOW"),
+origin2: an environment condition that earns no COMPAT_GATE; main saw the same marker on both sides.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+import os
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture(autouse=True)
+def only_slow(request):
+    if request.node.get_closest_marker("slow") and not os.environ.get("SLOW"):
+        pytest.skip("slow tests are off")
+
+
+def test_total():
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+import os
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture(autouse=True)
+def only_slow(request):
+    if request.node.get_closest_marker("slow") and not os.environ.get("SLOW"):
+        pytest.skip("slow tests are off")
+
+
+@pytest.mark.slow
+def test_total():
+    assert total() == 78.75
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_total"}]

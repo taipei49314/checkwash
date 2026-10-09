@@ -405,7 +405,22 @@ def _conjunction(conds):
     return ' and '.join(parts) or None
 
 
-def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse, attrs=None):
+class Guard(str):
+    """A setup outcome's guard text, with the paths it joins (#358).
+
+    `paths` holds (effect, evidence, conditions) for each outcome the setup
+    reaches under a condition, so a unit can read a condition on its own
+    marks before they are joined (`own_marks.resolve`). It compares and
+    hashes as its text.
+    """
+
+    def __new__(cls, text, paths):
+        guard = super().__new__(cls, text)
+        guard.paths = paths
+        return guard
+
+
+def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse, attrs=None, per_test=False):
     """(effect, evidence, guard) for the outcome a unit's setup callback ends in, or None.
 
     guard None: every call reaches it, read exactly as `callback_outcome`
@@ -416,6 +431,8 @@ def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse, 
     be evaluated. The first such outcome names the effect and is the evidence.
     `condition` gives an expression's source text. `attrs` resolves the
     class attributes a method's guards read through its receiver (#254).
+    `per_test`: the callback is a fixture whose `request` is the test's own
+    (`_test_request`), so its guard keeps the paths it joins (`Guard`).
     """
     local = _local(function, bindings, receiver)
     body = _body(function.body)
@@ -435,7 +452,8 @@ def setup_outcome(function, bindings, *, receiver=False, condition=ast.unparse, 
     clauses = [_conjunction(conds) for _effect, _evidence, conds in sites]
     if None in clauses:
         return effect, evidence, None
-    return effect, evidence, clauses[0] if len(clauses) == 1 else ' or '.join(f'({c})' for c in clauses)
+    text = clauses[0] if len(clauses) == 1 else ' or '.join(f'({c})' for c in clauses)
+    return effect, evidence, Guard(text, tuple(sites)) if per_test else text
 
 
 def module_bindings(tree, *, mutated=True):
@@ -562,6 +580,24 @@ def _fixture(function, bindings):
     return name, autouse
 
 
+def _test_request(function):
+    """Is `request` in this fixture the requesting test's own, its `node` the test item (#358)?
+
+    It is in a fixture of the default function scope (no `scope`, or the
+    literal "function") that takes `request` and never rebinds it. A wider
+    scope's `request.node` is a class, module, package or session, whose
+    marks and keywords are not the test's.
+    """
+    decorator = function.decorator_list[0]
+    for keyword in decorator.keywords if isinstance(decorator, ast.Call) else ():
+        if keyword.arg == 'scope' and not (isinstance(keyword.value, ast.Constant) and keyword.value.value == 'function'):
+            return False
+    args = function.args
+    if 'request' not in {arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs)}:
+        return False
+    return 'request' not in _names(function.body)
+
+
 def _plain_binding(statement, bindings):
     """Does this final binding of a name show every fixture it holds?
 
@@ -682,7 +718,8 @@ class SetupScope:
                 name, autouse = fixture
                 self.fixtures[name] = (_requests(statement, receiver=in_class), autouse,
                                        setup_outcome(statement, bindings, receiver=in_class, condition=condition,
-                                                     attrs=attrs if in_class else None))
+                                                     attrs=attrs if in_class else None,
+                                                     per_test=_test_request(statement)))
                 if helpers is not None:
                     self.fixture_helpers[name] = helpers.of_scope(statement, bindings, method=in_class)
             elif statement.name in callbacks:
@@ -720,6 +757,13 @@ class ConftestLevel:
     fixtures: dict
     opaque: frozenset
     star: bool
+    # May it add a mark a static reading of a test does not see (#358)?
+    adds_marks: bool = False
+
+
+def unreadable_level(path):
+    """The level a conftest that cannot be read stands for: it ends the chain (#223) and its marks are unknown."""
+    return ConftestLevel(path, {}, frozenset(), True, adds_marks=True)
 
 
 def conftest_level(path, tree, text_of, span_of):
@@ -727,6 +771,8 @@ def conftest_level(path, tree, text_of, span_of):
 
     `text_of` and `span_of` give a node's source text and span in that file.
     """
+    from .own_marks import adds_marks
+
     scope = SetupScope(tree.body, module_bindings(tree))
     fixtures = {}
     for name, (requested, autouse, outcome) in scope.fixtures.items():
@@ -735,7 +781,7 @@ def conftest_level(path, tree, text_of, span_of):
         else:
             outcome = None
         fixtures[name] = (requested, autouse, outcome)
-    return ConftestLevel(path, fixtures, scope.opaque, scope.star)
+    return ConftestLevel(path, fixtures, scope.opaque, scope.star, adds_marks=adds_marks(tree))
 
 
 def setup_outcomes(scopes, function, *, method, chain=()):

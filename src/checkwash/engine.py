@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import datetime
 import hashlib
+import re
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
@@ -61,6 +62,7 @@ from checkwash.frontends.python.frontend import (
     parse_python,
 )
 from checkwash.frontends.python.helper_skips import HelperModule
+from checkwash.frontends.python.setup_skip_controls import ConftestLevel, unreadable_level
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
 from checkwash.frontends.python.normalization import mark_normalization_equivalence
 from checkwash.frontends.python.param_input_identity import mark_param_input_identity
@@ -581,6 +583,47 @@ def build_ir(
     chain_levels: dict[tuple[str, int], object] = {}
     chain_reads = [0, 0]
     unknown = object()
+    mark_config_cache: dict[tuple[str, int], bool] = {}
+
+    def _config_may_load_marks(directory: str, side: int) -> bool:
+        """Explicit plugin configuration defeats a known static mark set.
+
+        Read snapshot bytes only, cached per directory/side under the same
+        resource limits as conftest. No plugin or configuration executes.
+        Ambient entry-point plugins and command-line environment remain
+        outside this repository snapshot's visibility.
+        """
+        key = (directory, side)
+        if key in mark_config_cache:
+            return mark_config_cache[key]
+        found = False
+        for name in ("pytest.ini", ".pytest.ini", "pytest.toml", ".pytest.toml",
+                     "pyproject.toml", "tox.ini", "setup.cfg"):
+            cpath = f"{directory}/{name}" if directory else name
+            if cpath in chain_sides:
+                data = chain_sides[cpath][side]
+            elif root_reader is None:
+                found = True
+                break
+            else:
+                if chain_reads[0] >= _MAX_CHAIN_READS:
+                    raise EngineError("conftest chain exceeds the source read limit")
+                chain_reads[0] += 1
+                data = root_reader(cpath)
+                if data is not None and not isinstance(data, bytes):
+                    raise EngineError("conftest chain strict snapshot returned invalid source bytes")
+                if data is not None:
+                    chain_reads[1] += len(data)
+                    if chain_reads[1] > _MAX_CHAIN_BYTES:
+                        raise EngineError("conftest chain exceeds the source byte limit")
+                    if report_context is not None:
+                        report_context.snapshot(cpath, 0, data)
+                        report_context.snapshot(cpath, 1, data)
+            if data and (re.search(rb"(?<![\w-])-p(?:\s|[A-Za-z_])", data)
+                         or b"PYTEST_PLUGINS" in data or b"pytest11" in data):
+                found = True
+        mark_config_cache[key] = found
+        return found
 
     def _chain_level(cpath: str, side: int):
         """`cpath`'s level on `side`: a ConftestLevel, None when absent, `unknown` when unknowable."""
@@ -610,18 +653,37 @@ def build_ir(
         chain_levels[key] = unknown if data is not None and level is None else level
         return chain_levels[key]
 
-    def _conftest_chain(tpath: str, side: int) -> tuple:
+    def _conftest_chain(tpath: str, side: int, test_source: bytes) -> tuple:
         levels = []
+        directories = []
         directory = tpath.rpartition("/")[0]
         while True:
-            level = _chain_level(f"{directory}/conftest.py" if directory else "conftest.py", side)
+            directories.append(directory)
+            cpath = f"{directory}/conftest.py" if directory else "conftest.py"
+            level = _chain_level(cpath, side)
             if level is unknown:
+                # What it defines is unknown, and so are the marks it may add
+                # to a test (#358).
+                levels.append(unreadable_level(cpath))
                 break
             if level is not None:
                 levels.append(level)
             if not directory:
                 break
             directory = directory.rpartition("/")[0]
+        reads_own_marks = b"request" in test_source and any(
+            word in test_source for word in (b"marker", b"keywords"))
+        reads_own_marks |= any(
+            outcome and outcome[2] and "request" in outcome[2]
+            and ("marker" in outcome[2] or "keywords" in outcome[2])
+            for level in levels for _requested, _autouse, outcome in level.fixtures.values()
+        )
+        # Unrelated test/helper reads keep their existing source-read
+        # contract and budget. Configuration matters only to this reading.
+        if reads_own_marks and any(_config_may_load_marks(d, side) for d in directories):
+            # This context changes only the mark reading: it neither
+            # supplies fixtures nor cuts off the fixture lookup chain.
+            levels.append(ConftestLevel("<plugin-configuration>", {}, frozenset(), False, adds_marks=True))
         return tuple(levels)
 
     # The modules a test module imports a helper from (#272, second stage),
@@ -917,13 +979,13 @@ def build_ir(
                 before_path = (change.old_path or path).replace("\\", "/")
                 before_parsed = parse_python(
                     change.before, collect_tests=collect, conftest=is_conftest,
-                    chain=_conftest_chain(before_path, 0) if reaches_chain else (),
+                    chain=_conftest_chain(before_path, 0, change.before) if reaches_chain else (),
                     imported=_imported_helpers(before_path, 0) if reaches_chain else None,
                 )
             if change.after is not None:
                 after_parsed = parse_python(
                     change.after, collect_tests=collect, conftest=is_conftest,
-                    chain=_conftest_chain(path, 1) if reaches_chain else (),
+                    chain=_conftest_chain(path, 1, change.after) if reaches_chain else (),
                     imported=_imported_helpers(path, 1) if reaches_chain else None,
                 )
         elif is_js_test:
@@ -1454,7 +1516,7 @@ def build_ir(
                 if data is None:
                     continue
                 parsed = parse_python(
-                    data, collect_tests=True, chain=_conftest_chain(path, 1), imported=_imported_helpers(path, 1)
+                    data, collect_tests=True, chain=_conftest_chain(path, 1, data), imported=_imported_helpers(path, 1)
                 )
                 if not parsed.parse_ok:
                     continue

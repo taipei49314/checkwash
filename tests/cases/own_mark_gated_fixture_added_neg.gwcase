@@ -1,0 +1,38 @@
+=== meta ===
+bypass: 104
+rule: TEST_DISABLED
+title: an autouse fixture that skips only tests carrying a mark is no disable of a test without it
+origin: #358: the guard reads request.node.get_closest_marker('slow'), false for test_total, which
+origin2: carries no mark; main blocked it as a setup skip added. pytest 9.1.1 runs test_total either way.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+import os
+
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total() == 78.75
+=== after: tests/test_billing.py ===
+import os
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture(autouse=True)
+def only_slow(request):
+    if request.node.get_closest_marker("slow") and not os.environ.get("SLOW"):
+        pytest.skip("slow tests are off")
+
+
+def test_total():
+    assert total() == 78.75
+=== expect ===
+[]
