@@ -1,23 +1,23 @@
 === meta ===
 bypass: 104
 rule: TEST_DISABLED
-title: an existing test that starts requesting a conftest fixture which skips unless an environment variable is set is a disable
-origin: #223 acceptance pinned this as [] until 183.2's conftest half; ruling 351.Q1 (2026-10-08): judged
-origin2: as the same fixture in the test module is (setup_env_guard_requested_pos); no COMPAT_GATE.
+title: a conftest platform gate spelled through an imported name is judged unknown and blocks
+origin: #351 reading 3, a stated residual: `from sys import platform` is not followed, so the guard
+origin2: reads conftest.platform, unknown; the same skip in the test module would hold at warn.
 === head: app/__init__.py ===
 === head: app/billing.py ===
 def total():
     return 78.75
 === head: tests/conftest.py ===
-import os
+from sys import platform
 
 import pytest
 
 
 @pytest.fixture
-def needs_network():
-    if not os.environ.get("NETWORK"):
-        pytest.skip("network tests are disabled")
+def posix_only():
+    if platform == "win32":
+        pytest.skip("posix only")
 === before: tests/test_billing.py ===
 import pytest
 
@@ -32,7 +32,7 @@ import pytest
 from app.billing import total
 
 
-def test_total(needs_network):
+def test_total(posix_only):
     assert total() == 78.75
 === expect ===
 [{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_billing.py", "unit": "test_total"}]

@@ -137,6 +137,10 @@ def skip_condition(marker, side) -> str | None:
     """
     if marker.guard:
         return marker.guard
+    if is_setup_skip(marker.name) or is_helper_skip(marker.name):
+        # These spans belong to a callback/helper, possibly in another
+        # file. Equal offsets do not mean the unit's handler encloses it.
+        return None
     start, end = marker.span
     inside = [h for h in side.handlers if h.span[0] <= start and end <= h.span[1]]
     if not inside:

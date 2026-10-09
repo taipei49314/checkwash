@@ -250,6 +250,7 @@ class _Offsets:
         self._len = len(text)
         self.text = text
         self._bytecols: dict[int, list[int]] = {}
+        self._ascii_lines: dict[int, bool] = {}
         # The parsed module, when the parser attaches it, for the rare
         # question about the whole file (`_shadows_abs`); asked lazily.
         self.tree: ast.AST | None = None
@@ -273,13 +274,17 @@ class _Offsets:
         idx = lineno - 1
         if col <= 0 or idx < 0 or idx >= len(self._starts):
             return col
-        start = self._starts[idx]
-        end = self._starts[idx + 1] if idx + 1 < len(self._starts) else self._len
-        line = self.text[start:end]
-        if line.isascii():  # the overwhelmingly common case: bytes == chars
+        if idx not in self._ascii_lines:
+            start = self._starts[idx]
+            end = self._starts[idx + 1] if idx + 1 < len(self._starts) else self._len
+            self._ascii_lines[idx] = self.text[start:end].isascii()
+        if self._ascii_lines[idx]:  # bytes == chars; do not rescan a long line per name
             return col
         table = self._bytecols.get(idx)
         if table is None:
+            start = self._starts[idx]
+            end = self._starts[idx + 1] if idx + 1 < len(self._starts) else self._len
+            line = self.text[start:end]
             table = []
             byte = 0
             for ch in line:
@@ -3788,8 +3793,9 @@ def _parse_python(
     # the unit as surely as a marker does, so it is recorded as one (issue
     # #172), and a guarded one in the test module is recorded with its guard,
     # like a skip in the body (#196 183.2). A conftest fixture the unit
-    # reaches records its unconditional skip on the unit too (#223); the
-    # fixture itself is judged suite-wide in `_conftest_unit`.
+    # reaches records its skip on the unit too (#223), a guarded one with its
+    # guard closed over the conftest's names (#351); an unconditional one is
+    # also judged suite-wide in `_conftest_unit`.
     setup_scopes: tuple[SetupScope, ...] = ()
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = {}
     # What a test body's names resolve to at module level, for its skips (#220).

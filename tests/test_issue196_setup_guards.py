@@ -6,9 +6,10 @@ its justification, so the shipped default read nothing. It is now a
 `setup.<provider>.<effect>` marker that carries the condition its setup
 reaches it under, and it is judged as a guarded skip in a test body is. D6
 qualifies an interpreter or OS gate, a guard edited to one that always holds
-or removed is reported, and any other new disable is a marker added. Conftest
-fixtures still read only the unconditional outcome, on the `<suite>` unit and
-on the units of a changed test module that reach them (#223).
+or removed is reported, and any other new disable is a marker added. A
+conftest's `<suite>` control still reads only the unconditional outcome; the
+units of a changed test module that reach a conftest fixture read a guarded
+one too, its guard closed over the conftest's names (#223, #351).
 """
 import ast
 import datetime
