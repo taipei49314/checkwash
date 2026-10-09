@@ -30,6 +30,16 @@ MUTANTS = [
 def main():
     output = ROOT / 'review-output'
     output.mkdir(exist_ok=True)
+    baseline = subprocess.run(
+        [sys.executable, '-m', 'pytest', '-o', 'addopts=', '-q',
+         str(ROOT / 'tests/test_issue357_helper_guards.py')],
+        cwd=ROOT, env={**os.environ, 'PYTHONPATH': str(ROOT / 'src'),
+                       'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'},
+        capture_output=True, text=True, timeout=180,
+    )
+    (output / 'mutant-baseline.log').write_text(baseline.stdout + baseline.stderr, encoding='utf-8')
+    if baseline.returncode != 0:
+        raise RuntimeError('The unmodified test baseline must pass before measuring mutants')
     records = []
     for label, relative, old, new in MUTANTS:
         with tempfile.TemporaryDirectory(prefix='checkwash-helper-mutant-') as directory:

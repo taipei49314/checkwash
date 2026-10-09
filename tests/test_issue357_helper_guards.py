@@ -115,7 +115,9 @@ def test_optional_import_handler_keeps_dependency_guard():
     text = ("import pytest\ndef gate():\n    try:\n        import optional_dep\n"
             "    except ImportError:\n        pytest.skip('off')\n")
     assert guard(text) == 'find_spec("optional_dep") is None'
-    assert run(text) == ("pass", [disabled("helper.gate.skip", "warn")])
+    # D6's dependency-only hold is for suite controls. Individual helper
+    # skips still require an interpreter/OS token; #357 does not widen D6.
+    assert run(text) == ("block", [disabled("helper.gate.skip")])
 
 
 def test_existing_guarded_call_is_no_new_event():
