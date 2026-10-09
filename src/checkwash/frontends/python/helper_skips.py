@@ -18,10 +18,10 @@ outcome (272.Q3).
 
 A function a test or conftest module defines, bound by a top-level
 `from M import f` and called by that plain name, is followed into the
-module the engine resolves for it (272.Q2, the second stage). Only an
-outcome every call of it reaches is kept, since a guard is written in that
-module's names (D-124 reading 1); the marker keeps that module's text and
-span (`Foreign`).
+module the engine resolves for it (272.Q2, the second stage). A guarded
+outcome keeps its condition closed over that module's names (#357): its
+constants are inlined and other value reads use the fixed `helper.` prefix.
+The marker keeps that module's evidence text and span (`Foreign`).
 """
 from __future__ import annotations
 
@@ -30,6 +30,7 @@ from collections import Counter
 from typing import NamedTuple
 
 from checkwash.frontends.python.setup_skip_controls import (
+    ConftestGuard,
     _conjunction,
     _generator,
     _names,
@@ -63,11 +64,11 @@ class Imported(NamedTuple):
 
 
 class ImportedHelpers:
-    """The functions a test module imports by name whose every call ends in an outcome.
+    """The functions a test module imports by name with a reachable native outcome.
 
     `names` maps a local name to (module, original name); `resolve` reads
-    that module and gives what calling its function ends in, every call
-    reaching it, or nothing. Each name is resolved once, here, and one that
+    that module and gives its outcomes with their conditions, or nothing.
+    Each name is resolved once, here, and one that
     ends in nothing is dropped: a module that imports no such function
     reads as it did before.
     """
@@ -108,13 +109,38 @@ def imported_helper_names(tree: ast.Module) -> dict[str, tuple[str, str]]:
     return {name: target for name, target in names.items() if counts[name] == 1}
 
 
+class HelperGuard(ConftestGuard):
+    """Close imported-helper guards with a fixed prefix and lexical local bindings.
+
+    Nested helpers may bind their own parameters, or close over an enclosing
+    helper's locals. Neither is the module constant of the same name. This
+    does not resolve arguments or imports and does not change conftest scope
+    handling. Attribute roots and call targets retain #351's stated limits.
+    """
+
+    _prefix = 'helper'
+
+    def __init__(self, tree, text_of, span_of):
+        super().__init__(tree, text_of, span_of)
+        stack = [(tree, frozenset())]
+        while stack:
+            node, bound = stack.pop()
+            if isinstance(node, _DEFS):
+                bound = bound | _shadowed(node)
+            elif isinstance(node, ast.Lambda):
+                bound = bound | frozenset(_parameters(node))
+            if isinstance(node, ast.Name):
+                self._locals[id(node)] = bound
+            stack.extend((child, bound) for child in ast.iter_child_nodes(node))
+
+
 class HelperModule:
     """A module a test imports a helper from, read for what calling each of its functions ends in.
 
     Its own functions are followed as a test module's are, with its own
     names, branch constants and same-file helpers. What they import is not
-    followed: one hop into the tree. Only an outcome every call reaches is
-    kept (D-124 reading 1).
+    followed: one hop into the tree. A conditional outcome is closed over
+    this module before it is combined with the importing call site's guard.
     """
 
     def __init__(self, data: bytes, path: str):
@@ -141,19 +167,18 @@ class HelperModule:
         self._text = _Offsets(raw)
         self._bindings = module_bindings(tree, mutated=False)
         self._helpers = HelperOutcomes(
-            self._scopes, lambda node: self._text.seg(node) or ast.unparse(node), literal_fixtures(tree)
+            self._scopes, HelperGuard(tree, self._text.seg, self._text.span), literal_fixtures(tree)
         )
 
     def outcomes(self, name: str) -> tuple:
-        """(helper, effect, Foreign, ()) for each outcome every call of `name` reaches."""
+        """(helper, effect, Foreign, conditions) for each outcome `name` reaches."""
         if name not in self._memo:
             target = self._scopes.get(name)
             found = ()
             if isinstance(target, ast.Lambda) or (isinstance(target, _DEFS) and not _generator(target)):
                 found = tuple(
-                    (helper, effect, self._foreign(evidence, helper), ())
+                    (helper, effect, self._foreign(evidence, helper), conds)
                     for helper, effect, evidence, conds in self._helpers.of(name, target, self._bindings)
-                    if not conds
                 )
             self._memo[name] = found
         return self._memo[name]

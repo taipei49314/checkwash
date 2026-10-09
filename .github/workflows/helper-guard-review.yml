@@ -1,0 +1,48 @@
+name: helper guard review
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/test_issue357*'
+      - 'tests/test_issue272*'
+      - 'tools/helper_guard_mutants.py'
+      - '.github/workflows/helper-guard-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regressions:
+    if: github.head_ref == 'fix/357-helper-guards'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: pip install -e '.[dev]'
+      - name: Targeted regressions
+        run: pytest -o addopts='' -q tests/test_issue357*.py tests/test_issue272*.py tests/test_issue351*.py tests/test_issue358*.py
+      - name: Imported helper mutants
+        if: always()
+        run: python tools/helper_guard_mutants.py
+      - name: Preserve review evidence
+        if: always()
+        run: |
+          mkdir -p review-output
+          python benchmarks/make_failures.py
+          cp benchmarks/FAILURES.md review-output/FAILURES.md
+          pytest --collect-only -o addopts='' -q > review-output/collection.txt
+          git rev-parse HEAD > review-output/source-sha.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: helper-guard-review-${{ github.event.pull_request.head.sha }}
+          path: review-output
+          if-no-files-found: error
