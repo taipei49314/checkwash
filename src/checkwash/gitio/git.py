@@ -6,6 +6,7 @@ The head side may be attacker-controlled; nothing here executes repo content.
 from __future__ import annotations
 
 import re
+import hashlib
 import subprocess
 
 from checkwash.change import EngineError, FileChange
@@ -46,6 +47,30 @@ def resolve_commit(repo: str, rev: str) -> str:
     if not re.fullmatch(b"(?:[0-9a-f]{40}|[0-9a-f]{64})\n", raw):
         raise GitError("invalid resolved commit identity")
     return raw.decode("ascii").strip()
+
+
+def read_commit_parents(repo: str, rev: str) -> list[str]:
+    """Read actual object headers, including parents hidden by shallow history."""
+    revision = resolve_commit(repo, rev)
+    raw = _run(repo, ["cat-file", "commit", revision])
+    if len(raw) > 1_000_000:
+        raise GitError("commit object exceeds the input byte limit")
+    algorithm = "sha1" if len(revision) == 40 else "sha256"
+    actual = hashlib.new(algorithm, b"commit " + str(len(raw)).encode("ascii") + b"\0" + raw).hexdigest()
+    if actual != revision:
+        raise GitError("commit bytes do not match their object identity")
+    header, separator, _message = raw.partition(b"\n\n")
+    fields = header.split(b"\n")
+    oid_pattern = b"[0-9a-f]{" + str(len(revision)).encode("ascii") + b"}"
+    if not separator or not re.fullmatch(b"tree " + oid_pattern, fields[0]):
+        raise GitError("invalid commit object header")
+    parents = []
+    for field in fields[1:]:
+        if field.startswith(b"parent "):
+            if not re.fullmatch(b"parent " + oid_pattern, field):
+                raise GitError("invalid commit parent identity")
+            parents.append(field[7:].decode("ascii"))
+    return parents
 
 
 def _read_blob(repo: str, rev: str, path: str) -> bytes | None:
@@ -97,7 +122,7 @@ def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
         raise GitError("head search could not complete") from exc
     if proc.returncode == 1 and not proc.stdout and not proc.stderr:
         return []
-    if proc.returncode != 0:
+    if proc.returncode != 0 or proc.stderr:
         raise GitError("head search Git read failed")
     raw = proc.stdout
     if not raw or not raw.endswith(b"\0") or len(raw) > 32_000_000:
@@ -191,14 +216,28 @@ def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
 def list_worktree_changes(repo: str) -> list[FileChange]:
     """HEAD vs working tree (staged + unstaged + untracked)."""
     out = _run(repo, ["status", "--porcelain", "-z", "--untracked-files=all", "--no-renames"])
-    tokens = out.decode("utf-8", "strict").split("\0")
+    if len(out) > 64_000_000 or (out and not out.endswith(b"\0")):
+        raise GitError("incomplete or over-budget worktree status")
+    try:
+        tokens = out[:-1].decode("utf-8", "strict").split("\0") if out else []
+    except UnicodeError as exc:
+        raise GitError("undecodable worktree status") from exc
+    entries = []
+    seen = set()
+    for token in tokens:
+        if len(token) < 4 or token[2] != " ":
+            raise GitError("incomplete worktree status record")
+        xy, path = token[:2], token[3:]
+        if xy != "??" and (not re.fullmatch(r"[ MTADU]{2}", xy) or xy == "  "):
+            raise GitError("invalid worktree status code")
+        if any(c in path for c in "\r\n\0") or path in seen:
+            raise GitError("unsafe or duplicate worktree status path")
+        seen.add(path)
+        entries.append((xy, path))
     changes: list[FileChange] = []
     base = resolve_commit(repo, "HEAD")
     snapshot = WorkingTreeSnapshot(repo)
-    for token in tokens:
-        if len(token) < 4:
-            continue
-        xy, path = token[:2], token[3:]
+    for xy, path in entries:
         before = _read_blob(repo, base, path)
         # Trust git's status codes over the filesystem: on a case-insensitive
         # volume, reading a deleted path back off disk returns the *renamed*

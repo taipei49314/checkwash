@@ -214,3 +214,153 @@ def test_sweep_counts_read_failure_separately_from_proven_root(repo):
     target.unlink()
     result = sweep(str(repo), "HEAD", 2, datetime.date(2026, 1, 1))
     assert (result.commits, result.errors, result.skipped) == (0, 1, 1)
+
+
+@pytest.mark.parametrize("case", ["no_match", "match", "empty_success", "null_record", "extra_null", "one_stdout", "one_stderr", "success_stderr", "error_valid_stdout", "unterminated", "wrong_prefix", "duplicate", "undecodable"])
+def test_root_context_search_preserves_status_and_record_failure(monkeypatch, case):
+    oid = "a" * 40
+    path = oid.encode() + b":tests/test_example.py\0"
+    responses = {
+        "no_match": (1, b"", b""), "match": (0, path, b""),
+        "empty_success": (0, b"", b""), "null_record": (0, b"\0", b""),
+        "extra_null": (0, path + b"\0", b""), "one_stdout": (1, path, b""),
+        "one_stderr": (1, b"", b"read failed"), "success_stderr": (0, path, b"read failed"),
+        "error_valid_stdout": (128, path, b"read failed"), "unterminated": (0, path[:-1], b""),
+        "wrong_prefix": (0, b"other:test.py\0", b""), "duplicate": (0, path + path, b""),
+        "undecodable": (0, oid.encode() + b":test_\xff.py\0", b""),
+    }
+    snapshot = snapshots.GitSnapshot("unused", oid)
+    snapshot._resolved = oid
+    monkeypatch.setattr(subprocess, "run", lambda argv, **kwargs: subprocess.CompletedProcess(argv, *responses[case]))
+    if case in {"no_match", "match"}:
+        assert snapshot.search(["needle"]) == ([] if case == "no_match" else ["tests/test_example.py"])
+    else:
+        with pytest.raises(EngineError):
+            snapshot.search(["needle"])
+
+
+@pytest.mark.parametrize("case", ["empty_success", "success_stderr"])
+def test_head_search_rejects_inconsistent_success(monkeypatch, case):
+    oid = "a" * 40
+    path = oid.encode() + b":tests/test_example.py\0"
+    monkeypatch.setattr(gitio, "resolve_commit", lambda *args: oid)
+    monkeypatch.setattr(subprocess, "run", lambda argv, **kwargs: subprocess.CompletedProcess(
+        argv, 0, b"" if case == "empty_success" else path, b"read failed" if case == "success_stderr" else b""))
+    with pytest.raises(GitError):
+        gitio.grep_head_paths("unused", oid, ["needle"])
+
+
+def test_real_root_search_object_loss_is_not_no_matches(repo):
+    snapshot = snapshots.GitSnapshot(repo, "HEAD")
+    assert "test_example.py" in snapshot.list_paths()
+    target = object_path(repo)
+    assert target.resolve().is_relative_to((repo / ".git" / "objects").resolve())
+    target.chmod(0o600)
+    target.unlink()
+    with pytest.raises(EngineError):
+        snapshot.search(["test_example"])
+
+
+@pytest.mark.parametrize("raw", [
+    b" M\0", b" M test_example.py", b" M test_example.py\0\0", b" M:test_example.py\0",
+    b"ZZ test_example.py\0", b"   test_example.py\0", b" M test_example.py\0 M test_example.py\0",
+    b" M test_\xff.py\0", b" M test_\n.py\0",
+])
+def test_worktree_status_rejects_malformed_input_before_reading(monkeypatch, raw):
+    monkeypatch.setattr(gitio, "_run", lambda *args: raw)
+
+    def unexpected_read(*args):
+        pytest.fail("malformed status must be rejected before any source read")
+
+    monkeypatch.setattr(gitio, "resolve_commit", unexpected_read)
+    monkeypatch.setattr(gitio, "_read_blob", unexpected_read)
+    with pytest.raises(GitError):
+        gitio.list_worktree_changes("unused")
+
+
+@pytest.mark.parametrize("operation", ["clean", "modified", "deleted"])
+def test_complete_worktree_status_keeps_normal_changes(repo, operation):
+    path = repo / "test_example.py"
+    if operation == "modified":
+        path.write_bytes(b"def test_example():\n    assert True\n")
+    elif operation == "deleted":
+        path.unlink()
+    changes = gitio.list_worktree_changes(str(repo))
+    if operation == "clean":
+        assert changes == []
+    else:
+        assert len(changes) == 1 and changes[0].path == "test_example.py"
+        assert changes[0].status == operation
+
+
+@pytest.mark.parametrize("operation", ["list", "startup_search"])
+@pytest.mark.parametrize("case", ["empty_tree", "null_record", "double_null", "leading_null", "extra_null", "unterminated", "malformed", "empty_name", "wrong_oid"])
+def test_inventory_failure_cannot_erase_sources(monkeypatch, operation, case):
+    oid = "a" * 40
+    record = b"100644 blob " + oid.encode() + b" 1\ttest_example.py\0"
+    responses = {
+        "empty_tree": b"", "null_record": b"\0", "double_null": b"\0\0",
+        "leading_null": b"\0" + record, "extra_null": record + b"\0",
+        "unterminated": record[:-1], "malformed": b"100644 blob\0",
+        "empty_name": b"100644 blob " + oid.encode() + b" 1\t\0",
+        "wrong_oid": b"100644 blob nope 1\ttest_example.py\0",
+    }
+    snapshot = snapshots.GitSnapshot("unused", oid)
+    snapshot._resolved = oid
+    monkeypatch.setattr(subprocess, "run", lambda argv, **kwargs: subprocess.CompletedProcess(argv, 0, responses[case], b""))
+    read = snapshot.list_paths if operation == "list" else lambda: snapshot.search([""])
+    if case == "empty_tree":
+        assert read() == []
+    else:
+        with pytest.raises(EngineError):
+            read()
+
+
+@pytest.mark.parametrize("fault", ["empty", "truncated", "parent_removed", "nonzero_valid"])
+def test_sweep_commit_object_fault_is_error_not_root(repo, monkeypatch, fault):
+    from checkwash.sweep import sweep
+
+    (repo / "test_example.py").write_bytes(b"def test_example():\n    assert True\n")
+    git(repo, "commit", "-am", "weaken")
+    child = git(repo, "rev-parse", "HEAD").decode().strip()
+    original = subprocess.run
+
+    def inject(argv, **kwargs):
+        proc = original(argv, **kwargs)
+        if argv[-3:] != ["cat-file", "commit", child]:
+            return proc
+        raw = proc.stdout
+        assert b"\nparent " in raw
+        changed = {"empty": b"", "truncated": raw[:-1],
+                   "parent_removed": b"\n".join(line for line in raw.split(b"\n") if not line.startswith(b"parent "))}
+        return subprocess.CompletedProcess(argv, 128 if fault == "nonzero_valid" else 0,
+                                           changed.get(fault, raw), b"fault" if fault == "nonzero_valid" else b"")
+
+    monkeypatch.setattr(subprocess, "run", inject)
+    result = sweep(str(repo), "HEAD", 2, datetime.date(2026, 1, 1))
+    assert (result.commits, result.errors, result.skipped) == (0, 1, 1)
+
+
+def test_shallow_boundary_is_not_a_root(repo, tmp_path):
+    from checkwash.sweep import sweep
+
+    (repo / "test_example.py").write_bytes(b"def test_example():\n    assert True\n")
+    git(repo, "commit", "-am", "weaken")
+    clone = tmp_path / "shallow-clone"
+    subprocess.run(["git", "clone", "--depth", "1", "--no-local", repo.as_uri(), str(clone)],
+                   check=True, capture_output=True, timeout=60)
+    assert git(clone, "rev-parse", "--is-shallow-repository").strip() == b"true"
+    assert len(git(clone, "rev-list", "--parents", "-n", "1", "HEAD").split()) == 1
+    result = sweep(str(clone), "HEAD", 2, datetime.date(2026, 1, 1))
+    assert (result.commits, result.errors, result.skipped) == (0, 1, 0)
+
+
+@pytest.mark.parametrize("raw", [b"abc\n", b"a" * 40, b"g" * 40 + b"\n", b"a" * 40 + b"\n" + b"b" * 40 + b"\n"])
+def test_snapshot_rejects_unbound_revision_output(monkeypatch, raw):
+    def response(argv, **kwargs):
+        assert "rev-parse" in argv, "no source command may use the invalid identity"
+        return subprocess.CompletedProcess(argv, 0, raw, b"")
+
+    monkeypatch.setattr(subprocess, "run", response)
+    with pytest.raises(EngineError, match="resolved commit"):
+        snapshots.GitSnapshot("unused", "HEAD").list_paths()

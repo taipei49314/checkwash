@@ -21,7 +21,7 @@ from checkwash.config import load_config, read_base_config_file
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS, parse_manifest, project_names
 from checkwash.engine import analyze
-from checkwash.gitio import GitError, grep_head_paths, list_range_changes, read_base_file
+from checkwash.gitio import grep_head_paths, list_range_changes, read_base_file
 from checkwash.gitio.snapshot import GitSnapshot
 from checkwash.ir.model import judged_as_test
 from checkwash.pyenv import known_baseline
@@ -95,15 +95,13 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
         result.corpus_oldest = commits[-1]
     for sha in commits:
         try:
-            from checkwash.gitio.git import _run
+            from checkwash.gitio.git import read_commit_parents
 
-            family = _run(repo, ["rev-list", "--parents", "-n", "1", sha]).decode("ascii").split()
-            if not family or family[0] != sha:
-                raise GitError("invalid commit parent record")
-            if len(family) == 1:
+            parents = read_commit_parents(repo, sha)
+            if not parents:
                 result.skipped += 1  # Proven root, never inferred from a read failure.
                 continue
-            parent = family[1]
+            parent = parents[0]
             changes = list_range_changes(repo, parent, sha)
             config_path, config_data = read_base_config_file(repo, parent, "config.toml")
             config, _err, _warn = load_config(config_data, path=config_path)

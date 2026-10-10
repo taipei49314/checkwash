@@ -44,6 +44,8 @@ def _run(repo, args, *, data=None, no_matches=False):
         return b""
     if result.returncode != 0:
         raise EngineError("strict snapshot git read failed: " + result.stderr.decode("utf-8", errors="replace").strip())
+    if no_matches and (not result.stdout or result.stderr):
+        raise EngineError("strict snapshot search returned an inconsistent success response")
     return result.stdout
 
 
@@ -81,9 +83,7 @@ class GitSnapshot:
                 raise EngineError("strict snapshot inventory returned incomplete records")
             entries = {}
             opaque = set()
-            for record in raw.split(b"\0"):
-                if not record:
-                    continue
+            for record in raw[:-1].split(b"\0") if raw else []:
                 metadata, separator, raw_path = record.partition(b"\t")
                 fields = metadata.split()
                 if not separator or len(fields) != 4:
@@ -95,14 +95,18 @@ class GitSnapshot:
                     path = raw_path.decode("utf-8")
                 except UnicodeError as exc:
                     raise EngineError("strict snapshot inventory has an undecodable path") from exc
+                if not path or any(c in path for c in "\r\n\0"):
+                    raise EngineError("strict snapshot inventory returned an unsafe path")
                 if path in entries or path in opaque:
                     raise EngineError("strict snapshot inventory returned a duplicate path")
                 if len(entries) + len(opaque) >= MAX_INVENTORY_PATHS:
                     raise EngineError("strict snapshot inventory exceeds the path limit")
                 if kind == b"commit":
+                    if mode != b"160000" or size != b"-":
+                        raise EngineError("strict snapshot inventory returned an invalid gitlink")
                     opaque.add(path)
                     continue
-                if kind != b"blob" or not size.isdigit():
+                if kind != b"blob" or mode not in {b"100644", b"100755", b"120000"} or not size.isdigit():
                     raise EngineError("strict snapshot inventory returned an invalid blob")
                 entries[path] = (mode, oid, int(size))
                 if len(entries) + len(opaque) > MAX_INVENTORY_PATHS:
@@ -206,9 +210,10 @@ class GitSnapshot:
 
     def _rev(self):
         if self._resolved is None:
-            self._resolved = _run(
-                self.repo, ["rev-parse", "--verify", f"{self.revision}^{{commit}}"],
-            ).decode("ascii").strip()
+            raw = _run(self.repo, ["rev-parse", "--verify", "--end-of-options", f"{self.revision}^{{commit}}"])
+            if not re.fullmatch(b"(?:[0-9a-f]{40}|[0-9a-f]{64})\n", raw):
+                raise EngineError("strict snapshot returned an invalid resolved commit")
+            self._resolved = raw.decode("ascii").strip()
         return self._resolved
 
     def read(self, path):
@@ -252,27 +257,17 @@ class GitSnapshot:
             # grep skips symlink blobs; a complete startup inventory must not
             # turn those omitted sources into known absence. Tree metadata
             # also identifies empty files without parsing their contents.
-            raw = _run(self.repo, ["ls-tree", "-r", "-l", "-z", self._rev()])
+            self.list_paths()
+            if self._opaque:
+                raise opaque_error(self._opaque[0], "the Python inventory needs its sources")
             paths = []
-            for record in raw.split(b"\0"):
-                if not record:
+            for path, (mode, _oid, size) in sorted(self._tree_entries.items()):
+                if not path.endswith(".py"):
                     continue
-                metadata, separator, path = record.partition(b"\t")
-                fields = metadata.split()
-                if not separator or len(fields) != 4:
-                    raise EngineError("strict snapshot inventory returned an invalid tree record")
-                mode, kind, _oid, size = fields
-                if kind == b"commit":
-                    # The startup-context proof needs every Python source;
-                    # a submodule's are unknown (#335).
-                    raise opaque_error(path.decode("utf-8", errors="replace"),
-                                       "the Python inventory needs its sources")
-                if not path.endswith(b".py"):
-                    continue
-                if mode not in {b"100644", b"100755"} or kind != b"blob" or not size.isdigit():
+                if mode not in {b"100644", b"100755"}:
                     raise EngineError("strict snapshot inventory cannot inspect a nonregular Python source")
-                if int(size):
-                    paths.append(path.decode("utf-8"))
+                if size:
+                    paths.append(path)
                     if len(paths) >= MAX_SEARCH_HITS:
                         raise EngineError("strict snapshot importer search exceeds the hit limit")
             return paths
@@ -285,11 +280,16 @@ class GitSnapshot:
             raise EngineError("strict snapshot search returned incomplete or over-budget records")
         paths = []
         prefix = self._rev().encode("ascii") + b":"
-        for record in raw.split(b"\0"):
-            if record:
-                if not record.startswith(prefix) or record == prefix:
-                    raise EngineError("strict snapshot search returned an invalid path record")
-                paths.append(record[len(prefix):].decode("utf-8"))
+        for record in raw[:-1].split(b"\0") if raw else []:
+            if not record.startswith(prefix) or record == prefix:
+                raise EngineError("strict snapshot search returned an invalid path record")
+            try:
+                path = record[len(prefix):].decode("utf-8", errors="strict")
+            except UnicodeError as exc:
+                raise EngineError("strict snapshot search returned an undecodable path") from exc
+            if any(c in path for c in "\r\n\0"):
+                raise EngineError("strict snapshot search returned an unsafe path")
+            paths.append(path)
         if len(paths) != len(set(paths)):
             raise EngineError("strict snapshot search returned duplicate paths")
         if len(paths) >= MAX_SEARCH_HITS:
