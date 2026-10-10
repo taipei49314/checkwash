@@ -9027,7 +9027,8 @@ second stage after the same-file reading. 272.Q3's marker applies:
 
 Readings the ruling leaves to the implementation:
 
-1. **Only an outcome every call reaches.** As a conftest fixture's outcome
+1. **Historical reading; superseded in the #357 draft by D-128 below.**
+   Only an outcome every call reaches. As a conftest fixture's outcome
    is (D-093 reading 5), a guarded skip in an imported helper records
    nothing: its guard is written in another module's names, which
    COMPAT_GATE would read in the test module's. The conditions at the call
@@ -9336,3 +9337,37 @@ All 8 additional #358 fallback mutants were killed. The historical #351
 3,063-record sweep predates #358 and is not the cost of this candidate.
 Full CI, pool sweeps, targeted scrapy comparison and final cost remain
 pending; neither round is approved for merge by this entry.
+
+
+## D-128 (2026-10-10, draft): preserve imported helper guards (#357)
+
+The current handover agent adjudicates this change under the owner's explicit
+“裁定交給你” delegation in the current session. This entry is an agent-authored
+draft disposition, not a claim that the owner independently reviewed these
+source bytes or that an earlier exact-source approval covers the new code.
+It supersedes D-124 reading 1 for this draft; the other import and call-target
+bounds remain. An imported helper's conditional skip is retained, with the
+condition closed over bounded helper-module constants before joining the
+caller's conditions. Evidence remains in the defining helper's file and span.
+
+Unknown value names use the fixed `helper.` prefix. Import bindings, function
+parameters, enclosing locals and module names also written by conditional,
+augmented, destructuring or definition statements stay unknown. Expansion
+limits retain `helper.<unreadable>` rather than dropping the outcome. Plain
+module assignments keep the existing bounded closure, not a complete Python
+execution or symbol-table model. Call targets and attribute roots stay written.
+
+This does not establish complete namespace isolation: D6's compatibility-token
+search can still inspect surviving names through test-module constants, and an
+unknown guard containing a compatibility token can fail open. Existing one-hop
+import limits, production helpers, methods, generators, class helpers, dynamic
+binding and source-read limits remain. An individual imported helper does not
+gain the suite-control dependency compatibility exemption. Existing .gwcase
+expectations and conftest's default closure are unchanged.
+
+The independent AI source review of the earlier packet requested changes.
+This revision addresses stale helper constants and the assertion-only mutant
+receipt oracle; its new remote CI, independent follow-up source review and
+standard/D-088/imported-helper-targeted cost disposition are pending. Historical
+#358/#351 costs and earlier mutation totals are not validation of this source.
+PR362 remains draft; this entry is neither a merge nor a held-out freeze.
