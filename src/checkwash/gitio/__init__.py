@@ -6,6 +6,7 @@ from checkwash.gitio.git import (
     merge_base,
     read_base_file,
     rev_parse,
+    resolve_commit,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "merge_base",
     "read_base_file",
     "rev_parse",
+    "resolve_commit",
 ]
