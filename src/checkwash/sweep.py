@@ -94,32 +94,35 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
         result.corpus_newest = commits[0]
         result.corpus_oldest = commits[-1]
     for sha in commits:
-        parent = f"{sha}^"
         try:
+            from checkwash.gitio.git import _run
+
+            family = _run(repo, ["rev-list", "--parents", "-n", "1", sha]).decode("ascii").split()
+            if not family or family[0] != sha:
+                raise GitError("invalid commit parent record")
+            if len(family) == 1:
+                result.skipped += 1  # Proven root, never inferred from a read failure.
+                continue
+            parent = family[1]
             changes = list_range_changes(repo, parent, sha)
-        except GitError:
-            # A root commit has no parent: nothing to diff, not an error.
-            result.skipped += 1
-            continue
-        config_path, config_data = read_base_config_file(repo, parent, "config.toml")
-        config, _err, _warn = load_config(config_data, path=config_path)
-        if fail_on:
-            config.fail_on = fail_on
-        allow_path, allow_data = read_base_config_file(repo, parent, "allow.toml")
-        allow, _aerr = load_allowlist(allow_data, path=allow_path)
+            config_path, config_data = read_base_config_file(repo, parent, "config.toml")
+            config, _err, _warn = load_config(config_data, path=config_path)
+            if fail_on:
+                config.fail_on = fail_on
+            allow_path, allow_data = read_base_config_file(repo, parent, "allow.toml")
+            allow, _aerr = load_allowlist(allow_data, path=allow_path)
 
-        declared: set[str] = set()
-        self_modules: set[str] = set()
-        found = False
-        for manifest in MANIFESTS:
-            data = read_base_file(repo, parent, manifest)
-            if data is not None:
-                found = True
-                declared |= parse_manifest(manifest, data)
-                self_modules |= project_names(manifest, data)
-        known = (known_baseline() | declared) if found else None
+            declared: set[str] = set()
+            self_modules: set[str] = set()
+            found = False
+            for manifest in MANIFESTS:
+                data = read_base_file(repo, parent, manifest)
+                if data is not None:
+                    found = True
+                    declared |= parse_manifest(manifest, data)
+                    self_modules |= project_names(manifest, data)
+            known = (known_baseline() | declared) if found else None
 
-        try:
             root_snapshot = GitSnapshot(repo, sha)
             ir, findings, verdict = analyze(
                 changes, config, Contract(), allow, today, base_label=parent,

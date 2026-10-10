@@ -31,6 +31,7 @@ from checkwash.gitio import (
     merge_base,
     read_base_file,
     rev_parse,
+    resolve_commit,
 )
 from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 from checkwash.report.jsonout import findings_to_json, ir_to_json
@@ -94,6 +95,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         if not base or not head:
             write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
             return 2
+        base, head = resolve_commit(repo, base), resolve_commit(repo, head)
         changes = list_range_changes(repo, base, head)
         base_label = rev_parse(repo, base)
         head_label = rev_parse(repo, head)
@@ -101,8 +103,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
         # D6 resolves skip-condition constants imported from files outside
         # the diff; the head snapshot is where those files live.
-        def head_reader(path: str, _rev: str = head) -> bytes | None:
-            return read_base_file(repo, _rev, path)
+        head_snapshot = GitSnapshot(repo, head)
+        head_reader = head_snapshot.read
 
         def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
             return grep_head_paths(repo, _rev, needles)
@@ -113,39 +115,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         head_label = "worktree"
         config_side = "HEAD"
 
-        def head_reader(path: str) -> bytes | None:
-            # Worktree mode's head snapshot is the working tree itself, the
-            # same place list_worktree_changes reads the after side from.
-            disk = os.path.join(repo, path.replace("/", os.sep))
-            try:
-                with open(disk, "rb") as fh:
-                    return fh.read()
-            except OSError:
-                return None
-
-        def head_searcher(needles: list[str]) -> list[str]:
-            # Working-tree grep, bounded: .py files only, artifact dirs
-            # pruned, first 64 hits win. Only runs when a test unit
-            # disappeared from the working diff.
-            wanted = [n.encode("utf-8") for n in needles]
-            hits: list[str] = []
-            skip_dirs = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
-            for root, dirs, files in os.walk(repo):
-                dirs[:] = sorted(d for d in dirs if d not in skip_dirs and not d.startswith("."))
-                for fn in sorted(files):
-                    if not fn.endswith(".py"):
-                        continue
-                    full = os.path.join(root, fn)
-                    try:
-                        with open(full, "rb") as fh:
-                            data = fh.read(1_000_000)
-                    except OSError:
-                        continue
-                    if any(n in data for n in wanted):
-                        hits.append(os.path.relpath(full, repo).replace(os.sep, "/"))
-                        if len(hits) >= 64:
-                            return hits
-            return hits
+        worktree_snapshot = WorkingTreeSnapshot(repo)
+        head_reader = worktree_snapshot.read
+        head_searcher = worktree_snapshot.search
 
     config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
     config, config_error, config_warnings = load_config(config_data, path=config_path)
@@ -202,7 +174,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         known_modules = known_baseline() | declared
 
     report_context = ReportContext(collect_locations=args.format == "sarif")
-    root_snapshot = GitSnapshot(repo, head_label) if args.range else WorkingTreeSnapshot(repo)
+    root_snapshot = head_snapshot if args.range else worktree_snapshot
     ir, findings, verdict = analyze(
         changes,
         config,

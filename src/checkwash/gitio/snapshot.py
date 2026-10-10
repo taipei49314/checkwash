@@ -1,13 +1,11 @@
-"""Strict, bounded snapshots for reverse oracle discovery.
-
-Legacy readers deliberately treat several failures as missing data. That is
-safe when withholding refactor credit, but not when searching for assertions
-that disappeared. These adapters distinguish absence from an incomplete read.
-"""
+"""Strict, bounded snapshots distinguish absence from incomplete source reads."""
 
 from __future__ import annotations
 
 import os
+import hashlib
+import re
+import stat
 from pathlib import Path
 import subprocess
 
@@ -38,12 +36,24 @@ def search_source_mapping(snapshot, needles):
 
 
 def _run(repo, args, *, data=None, no_matches=False):
-    result = subprocess.run(["git", "-C", str(repo), *args], input=data, capture_output=True)
-    if no_matches and result.returncode == 1:
+    try:
+        result = subprocess.run(["git", "-C", str(repo), *args], input=data, capture_output=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise EngineError("strict snapshot git read could not complete") from exc
+    if no_matches and result.returncode == 1 and not result.stdout and not result.stderr:
         return b""
     if result.returncode != 0:
         raise EngineError("strict snapshot git read failed: " + result.stderr.decode("utf-8", errors="replace").strip())
     return result.stdout
+
+
+def _verify_blob(oid, data):
+    algorithm = "sha1" if len(oid) == 40 else "sha256" if len(oid) == 64 else None
+    if algorithm is None or not re.fullmatch(b"[0-9a-f]+", oid):
+        raise EngineError("strict snapshot returned an invalid object identity")
+    actual = hashlib.new(algorithm, b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest().encode("ascii")
+    if actual != oid:
+        raise EngineError("strict snapshot blob content does not match its object identity")
 
 
 class GitSnapshot:
@@ -67,6 +77,8 @@ class GitSnapshot:
         """
         if self._tree_entries is None:
             raw = _run(self.repo, ["ls-tree", "-r", "-l", "-z", self._rev()])
+            if len(raw) > 64_000_000 or (raw and not raw.endswith(b"\0")):
+                raise EngineError("strict snapshot inventory returned incomplete records")
             entries = {}
             opaque = set()
             for record in raw.split(b"\0"):
@@ -77,10 +89,16 @@ class GitSnapshot:
                 if not separator or len(fields) != 4:
                     raise EngineError("strict snapshot inventory returned an invalid tree record")
                 mode, kind, oid, size = fields
+                if not re.fullmatch(b"(?:[0-9a-f]{40}|[0-9a-f]{64})", oid):
+                    raise EngineError("strict snapshot inventory returned an invalid object identity")
                 try:
                     path = raw_path.decode("utf-8")
                 except UnicodeError as exc:
                     raise EngineError("strict snapshot inventory has an undecodable path") from exc
+                if path in entries or path in opaque:
+                    raise EngineError("strict snapshot inventory returned a duplicate path")
+                if len(entries) + len(opaque) >= MAX_INVENTORY_PATHS:
+                    raise EngineError("strict snapshot inventory exceeds the path limit")
                 if kind == b"commit":
                     opaque.add(path)
                     continue
@@ -103,6 +121,8 @@ class GitSnapshot:
         present = []
         size_total = 0
         for path in selected:
+            if any(c in path for c in "\r\n\0"):
+                raise EngineError("strict snapshot path cannot be represented in the batch protocol")
             owner = opaque_owner(path, self._opaque)
             if owner is not None:
                 raise opaque_error(owner, f"{path} lies inside it")
@@ -132,6 +152,7 @@ class GitSnapshot:
                 if len(raw) < cursor + size + 1 or raw[cursor + size:cursor + size + 1] != b"\n":
                     raise EngineError("strict snapshot batch returned incomplete source")
                 result[path] = raw[cursor:cursor + size]
+                _verify_blob(oid, result[path])
                 cursor += size + 1
             if cursor != len(raw):
                 raise EngineError("strict snapshot batch returned trailing bytes")
@@ -203,15 +224,25 @@ class GitSnapshot:
             if owner is not None:
                 raise opaque_error(owner, f"{path} lies inside it")
             if missing or self._names_submodule(path):
+                # A successful `missing` batch response is not proof of path
+                # absence: its tree can still name a lost loose object.
+                self.list_paths()
+                if path in self._tree_entries:
+                    raise EngineError("strict snapshot inventoried source returned missing")
                 return None
             raise EngineError("strict snapshot returned an invalid blob header")
         size = int(parts[2])
         if size > MAX_SOURCE_BYTES:
             raise EngineError("strict snapshot source exceeds the byte limit")
+        self.list_paths()
+        entry = self._tree_entries.get(path)
+        if entry is None or entry[0] not in {b"100644", b"100755"} or entry[1:] != (parts[0], size):
+            raise EngineError("strict snapshot blob header does not match its regular tree entry")
         raw = _run(self.repo, ["cat-file", "--batch"], data=spec + b"\n")
         actual_header, separator, body = raw.partition(b"\n")
         if not separator or actual_header != header or len(body) != size + 1 or not body.endswith(b"\n"):
             raise EngineError("strict snapshot blob is incomplete or exceeds the source limit")
+        _verify_blob(parts[0], body[:-1])
         return body[:-1]
 
     def search(self, needles):
@@ -250,12 +281,17 @@ class GitSnapshot:
             args.extend(["-e", needle])
         args.extend([self._rev(), "--", "*.py"])
         raw = _run(self.repo, args, no_matches=True)
+        if len(raw) > 32_000_000 or (raw and not raw.endswith(b"\0")):
+            raise EngineError("strict snapshot search returned incomplete or over-budget records")
         paths = []
+        prefix = self._rev().encode("ascii") + b":"
         for record in raw.split(b"\0"):
             if record:
-                if b":" not in record:
+                if not record.startswith(prefix) or record == prefix:
                     raise EngineError("strict snapshot search returned an invalid path record")
-                paths.append(record.split(b":", 1)[1].decode("utf-8"))
+                paths.append(record[len(prefix):].decode("utf-8"))
+        if len(paths) != len(set(paths)):
+            raise EngineError("strict snapshot search returned duplicate paths")
         if len(paths) >= MAX_SEARCH_HITS:
             raise EngineError("strict snapshot importer search exceeds the hit limit")
         return paths
@@ -303,14 +339,21 @@ class WorkingTreeSnapshot:
         return result
 
     def read(self, path):
-        target = (self.root / path).resolve()
+        lexical = self.root / path
+        target = lexical.resolve()
         if not target.is_relative_to(self.root):
             raise EngineError("strict snapshot path leaves the repository")
         try:
-            with target.open("rb") as source:
-                data = source.read(MAX_SOURCE_BYTES + 1)
+            mode = lexical.lstat().st_mode
         except FileNotFoundError:
             return None
+        if not stat.S_ISREG(mode):
+            raise EngineError("strict snapshot cannot inspect nonregular source")
+        try:
+            with target.open("rb") as source:
+                data = source.read(MAX_SOURCE_BYTES + 1)
+        except FileNotFoundError as exc:
+            raise EngineError("strict snapshot source disappeared after inventory") from exc
         if len(data) > MAX_SOURCE_BYTES:
             raise EngineError("strict snapshot source exceeds the byte limit")
         return data
