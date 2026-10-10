@@ -272,7 +272,7 @@ def test_worktree_status_rejects_malformed_input_before_reading(monkeypatch, raw
     def unexpected_read(*args):
         pytest.fail("malformed status must be rejected before any source read")
 
-    monkeypatch.setattr(gitio, "resolve_commit", unexpected_read)
+    monkeypatch.setattr(gitio, "resolve_commit", lambda *args: "a" * 40)
     monkeypatch.setattr(gitio, "_read_blob", unexpected_read)
     with pytest.raises(GitError):
         gitio.list_worktree_changes("unused")
@@ -294,7 +294,7 @@ def test_complete_worktree_status_keeps_normal_changes(repo, operation):
 
 
 @pytest.mark.parametrize("operation", ["list", "startup_search"])
-@pytest.mark.parametrize("case", ["empty_tree", "null_record", "double_null", "leading_null", "extra_null", "unterminated", "malformed", "empty_name", "wrong_oid"])
+@pytest.mark.parametrize("case", ["empty_tree", "null_record", "double_null", "leading_null", "extra_null", "unterminated", "malformed", "empty_name", "wrong_oid", "duplicate"])
 def test_inventory_failure_cannot_erase_sources(monkeypatch, operation, case):
     oid = "a" * 40
     record = b"100644 blob " + oid.encode() + b" 1\ttest_example.py\0"
@@ -304,6 +304,7 @@ def test_inventory_failure_cannot_erase_sources(monkeypatch, operation, case):
         "unterminated": record[:-1], "malformed": b"100644 blob\0",
         "empty_name": b"100644 blob " + oid.encode() + b" 1\t\0",
         "wrong_oid": b"100644 blob nope 1\ttest_example.py\0",
+        "duplicate": record + record,
     }
     snapshot = snapshots.GitSnapshot("unused", oid)
     snapshot._resolved = oid
@@ -364,3 +365,148 @@ def test_snapshot_rejects_unbound_revision_output(monkeypatch, raw):
     monkeypatch.setattr(subprocess, "run", response)
     with pytest.raises(EngineError, match="resolved commit"):
         snapshots.GitSnapshot("unused", "HEAD").list_paths()
+
+
+def test_three_dot_cli_freezes_endpoints_before_merge_base(repo, monkeypatch, capsys):
+    from checkwash import cli
+
+    first = git(repo, "rev-parse", "HEAD").decode().strip()
+    (repo / "test_example.py").write_bytes(b"def test_example():\n    assert True\n")
+    git(repo, "commit", "-am", "weaken")
+    second = git(repo, "rev-parse", "HEAD").decode().strip()
+    git(repo, "branch", "left", second)
+    git(repo, "branch", "right", first)
+    original_merge, original_changes = cli.merge_base, cli.list_range_changes
+    seen = []
+
+    def move_after_merge(repo_arg, left, right):
+        base = original_merge(repo_arg, left, right)
+        seen.append((left, right))
+        git(repo, "update-ref", "refs/heads/right", second)
+        return base
+
+    def capture_changes(repo_arg, base, head):
+        seen.append((base, head))
+        return original_changes(repo_arg, base, head)
+
+    monkeypatch.setattr(cli, "merge_base", move_after_merge)
+    monkeypatch.setattr(cli, "list_range_changes", capture_changes)
+    assert cli.main(["check", "left...right", "--repo", str(repo), "--format", "json"]) == 0
+    assert seen == [(second, first), (first, first)]
+    assert git(repo, "rev-parse", "right").decode().strip() == second
+    capsys.readouterr()
+
+
+def test_worktree_cli_uses_one_committed_baseline_after_head_moves(repo, monkeypatch, capsys):
+    from checkwash import cli
+
+    control = repo / ".checkwash" / "config.toml"
+    control.parent.mkdir()
+    control.write_bytes(b"# baseline A\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-m", "baseline A")
+    first = git(repo, "rev-parse", "HEAD").decode().strip()
+    control.write_bytes(b"# baseline B\n")
+    git(repo, "commit", "-am", "baseline B")
+    second = git(repo, "rev-parse", "HEAD").decode().strip()
+    git(repo, "reset", "--hard", first)
+    (repo / "test_example.py").write_bytes(b"def test_example():\n    assert True\n")
+    original_changes, original_config, original_file = cli.list_worktree_changes, cli.read_base_config_file, cli.read_base_file
+    versions, config_bytes = [], []
+
+    def move_after_changes(repo_arg, *, base=None):
+        assert base == first
+        changes = original_changes(repo_arg, base=base)
+        git(repo, "update-ref", "HEAD", second)
+        return changes
+
+    def config(repo_arg, revision, name):
+        versions.append(revision)
+        value = original_config(repo_arg, revision, name)
+        if name == "config.toml":
+            config_bytes.append(value[1])
+        return value
+
+    def manifest(repo_arg, revision, path):
+        versions.append(revision)
+        return original_file(repo_arg, revision, path)
+
+    monkeypatch.setattr(cli, "list_worktree_changes", move_after_changes)
+    monkeypatch.setattr(cli, "read_base_config_file", config)
+    monkeypatch.setattr(cli, "read_base_file", manifest)
+    assert cli.main(["check", "--repo", str(repo), "--format", "json"]) in {0, 1}
+    assert versions and set(versions) == {first}
+    assert config_bytes == [b"# baseline A\n"]
+    assert git(repo, "rev-parse", "HEAD").decode().strip() == second
+    capsys.readouterr()
+
+
+def test_worktree_head_movement_during_status_has_no_verdict(repo, monkeypatch, capsys):
+    from checkwash import cli
+
+    first = git(repo, "rev-parse", "HEAD").decode().strip()
+    (repo / "test_example.py").write_bytes(b"def test_example():\n    assert True\n")
+    git(repo, "commit", "-am", "weaken")
+    second = git(repo, "rev-parse", "HEAD").decode().strip()
+    git(repo, "reset", "--hard", first)
+    original = subprocess.run
+    injections = []
+
+    def inject(argv, **kwargs):
+        result = original(argv, **kwargs)
+        if "status" in argv and "--porcelain" in argv:
+            git(repo, "update-ref", "HEAD", second)
+            injections.append(True)
+        return result
+
+    monkeypatch.setattr(subprocess, "run", inject)
+    assert cli.main(["check", "--repo", str(repo), "--format", "json"]) == 2
+    assert injections == [True] and not capsys.readouterr().out.strip()
+
+
+@pytest.mark.parametrize("raw", [b"", b"\0"])
+def test_root_importer_discovery_fault_has_no_cli_verdict(repo, monkeypatch, capsys, raw):
+    from checkwash import cli
+
+    helper = repo / "test_helpers.py"
+    helper.write_bytes(b"def check(value):\n    assert value == 1\n")
+    (repo / "test_example.py").write_bytes(b"from test_helpers import check\n\ndef test_example():\n    check(1)\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-m", "helper caller")
+    helper.write_bytes(b"def check(value):\n    assert True\n")
+    git(repo, "commit", "-am", "weaken helper")
+    original = subprocess.run
+    injections = []
+
+    def inject(argv, **kwargs):
+        if "grep" in argv and argv[-1] == "*.py":
+            injections.append(True)
+            return subprocess.CompletedProcess(argv, 0, raw, b"")
+        return original(argv, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", inject)
+    assert cli.main(["check", "HEAD~1..HEAD", "--repo", str(repo), "--format", "json"]) == 2
+    assert injections and not capsys.readouterr().out.strip()
+
+
+@pytest.mark.parametrize("raw", [b"\0", b"100644 blob invalid 1\ttest_example.py\0", b"100644 blob " + b"a" * 40 + b" 1\ttest_example.py"])
+def test_malformed_inventory_cannot_return_none_for_present_source(repo, monkeypatch, raw):
+    original = subprocess.run
+
+    def inject(argv, **kwargs):
+        if "ls-tree" in argv:
+            return subprocess.CompletedProcess(argv, 0, raw, b"")
+        return original(argv, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", inject)
+    with pytest.raises(GitError):
+        gitio.read_blobs(str(repo), [("HEAD", "test_example.py")])
+
+
+@pytest.mark.parametrize("operation", ["untracked", "staged"])
+def test_worktree_status_keeps_untracked_and_staged(repo, operation):
+    (repo / "new_test.py").write_bytes(b"def test_new():\n    assert True\n")
+    if operation == "staged":
+        git(repo, "add", "new_test.py")
+    changes = gitio.list_worktree_changes(str(repo))
+    assert len(changes) == 1 and changes[0].path == "new_test.py" and changes[0].status == "added"

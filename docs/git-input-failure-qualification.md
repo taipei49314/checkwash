@@ -11,7 +11,11 @@ fixtures are unchanged.
 Single-path reads verify content identity and check the tree before accepting
 a missing response. Whole-tree grep only treats clean exit 1 as no match.
 Startup failures, timeout, incomplete records and nonzero status retain an
-error. Range references are resolved before diff/context/config reads.
+error. Range references are resolved before diff/context/config reads; the
+three-dot merge-base also receives those frozen endpoints. Worktree before,
+labels, config, allowlist and manifests use one frozen HEAD; a HEAD movement
+around status collection is an error. This does not make filesystem reads
+atomic or claim to detect a ref that changes and changes back between checks.
 Worktree reads distinguish absence from permission failure and disappearance
 after stat, and reuse the bounded snapshot search. Status records are checked
 before reading source; malformed, duplicate or unrepresentable paths fail.
@@ -21,7 +25,7 @@ Sweep reads the original commit object and verifies its identity before
 classifying a root. A shallow boundary still has a parent in that object;
 an unavailable parent therefore counts as an error, not a skipped root.
 
-The qualification workflow uses only generated repositories. The 99 new cases
+The qualification workflow uses only generated repositories. The 111 new cases
 include actual loose object removal/corruption after inventory, batch protocol
 faults, valid-looking output with nonzero status, startup/timeout, grep status
 and protocol faults, CLI failure without an ordinary verdict, permission
@@ -29,6 +33,9 @@ failure, and readable empty/missing/rename behavior. They include normal
 controls as well as faults, and must not all be described as fault trials.
 The follow-up adds root-search empty/NUL/status checks, both inventory entry
 points, worktree protocol checks and actual shallow-history qualification.
+CLI integration covers malformed reverse caller discovery and actual ref
+movement during three-dot and worktree processing, including fixed base-side
+policy after the branch moves and an error if HEAD moves during status.
 Empty successful grep output, empty NUL records and success with stderr are
 errors. Only clean status 1 means no match; a truly empty tree remains valid.
 Existing CLI, opaque

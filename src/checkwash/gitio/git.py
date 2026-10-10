@@ -213,9 +213,14 @@ def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
     return changes
 
 
-def list_worktree_changes(repo: str) -> list[FileChange]:
+def list_worktree_changes(repo: str, *, base: str | None = None) -> list[FileChange]:
     """HEAD vs working tree (staged + unstaged + untracked)."""
+    base = resolve_commit(repo, "HEAD" if base is None else base)
+    if resolve_commit(repo, "HEAD") != base:
+        raise GitError("worktree HEAD changed before status collection")
     out = _run(repo, ["status", "--porcelain", "-z", "--untracked-files=all", "--no-renames"])
+    if resolve_commit(repo, "HEAD") != base:
+        raise GitError("worktree HEAD changed during status collection")
     if len(out) > 64_000_000 or (out and not out.endswith(b"\0")):
         raise GitError("incomplete or over-budget worktree status")
     try:
@@ -235,7 +240,6 @@ def list_worktree_changes(repo: str) -> list[FileChange]:
         seen.add(path)
         entries.append((xy, path))
     changes: list[FileChange] = []
-    base = resolve_commit(repo, "HEAD")
     snapshot = WorkingTreeSnapshot(repo)
     for xy, path in entries:
         before = _read_blob(repo, base, path)

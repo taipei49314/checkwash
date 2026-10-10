@@ -85,8 +85,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
             if not left or not right:
                 write_text(f"error: range must be BASE...HEAD, got {args.range!r}\n", sys.stderr)
                 return 2
-            base = merge_base(repo, left, right)
-            head = right
+            left, head = resolve_commit(repo, left), resolve_commit(repo, right)
+            base = merge_base(repo, left, head)
         elif ".." in args.range:
             base, _, head = args.range.partition("..")
         else:
@@ -109,11 +109,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
             return grep_head_paths(repo, _rev, needles)
     else:
-        base = "HEAD"
-        changes = list_worktree_changes(repo)
-        base_label = rev_parse(repo, "HEAD")
+        base = resolve_commit(repo, "HEAD")
+        changes = list_worktree_changes(repo, base=base)
+        base_label = rev_parse(repo, base)
         head_label = "worktree"
-        config_side = "HEAD"
+        config_side = base
 
         worktree_snapshot = WorkingTreeSnapshot(repo)
         head_reader = worktree_snapshot.read
