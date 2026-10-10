@@ -122,6 +122,25 @@ class HelperGuard(ConftestGuard):
 
     def __init__(self, tree, text_of, span_of):
         super().__init__(tree, text_of, span_of)
+        # A conditional assignment, augmented update, deletion, unpacking or
+        # definition can overwrite a plain module constant. Keep such names
+        # unknown rather than reusing the earlier defining expression. Plain
+        # assignments retain the existing last-assignment closure behavior.
+        uncertain = set()
+        for statement in tree.body:
+            plain = (
+                isinstance(statement, ast.Assign)
+                and all(isinstance(target, ast.Name) for target in statement.targets)
+            ) or (
+                isinstance(statement, ast.AnnAssign)
+                and isinstance(statement.target, ast.Name)
+                and statement.value is not None
+            )
+            if not plain:
+                uncertain.update(_names([statement], mutated=True))
+        self._constants = {
+            name: value for name, value in self._constants.items() if name not in uncertain
+        }
         stack = [(tree, frozenset())]
         while stack:
             node, bound = stack.pop()

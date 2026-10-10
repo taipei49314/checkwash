@@ -23,8 +23,30 @@ def run(text, *, call="gate()", defs="", path="tests/helpers.py"):
 
 
 def guard(text, name="gate", path="tests/helpers.py"):
-    [(helper, effect, evidence, conditions)] = HelperModule(text.encode(), path).outcomes(name)
+    helper, effect, evidence, conditions = single_outcome(text, name, path)
     return conditions[0] if conditions else None
+
+
+def single_outcome(text, name="gate", path="tests/helpers.py"):
+    outcomes = HelperModule(text.encode(), path).outcomes(name)
+    assert len(outcomes) == 1
+    return outcomes[0]
+
+
+@pytest.mark.parametrize("replacement", [
+    "if SWITCH:\n    WIN = os.environ.get('NET')\n",
+    "WIN |= True\n",
+    "del WIN\n",
+    "def WIN():\n    return os.environ.get('NET')\n",
+    "class WIN:\n    pass\n",
+    "WIN, other = (os.environ.get('NET'), 1)\n",
+    "for WIN in values:\n    pass\n",
+    "with resource() as WIN:\n    pass\n",
+])
+def test_module_rebinding_does_not_reuse_stale_compatibility_constant(replacement):
+    text = source("WIN", "WIN = sys.platform == 'win32'\n" + replacement)
+    assert guard(text) == "helper.WIN"
+    assert run(text) == ("block", [disabled("helper.gate.skip")])
 
 
 @pytest.mark.parametrize("expression, prelude, closed", [
@@ -107,7 +129,7 @@ def test_intermediate_helper_conditions_are_retained():
     text = ("import pytest\nimport sys\n"
             "def gate():\n    if sys.platform == 'win32':\n        inner()\n"
             "def inner():\n    if UNKNOWN:\n        pytest.skip('off')\n")
-    [(_name, _effect, _evidence, conditions)] = HelperModule(text.encode(), "tests/helpers.py").outcomes("gate")
+    _name, _effect, _evidence, conditions = single_outcome(text)
     assert conditions == ("sys.platform == 'win32'", "helper.UNKNOWN")
 
 
@@ -129,7 +151,7 @@ def test_existing_guarded_call_is_no_new_event():
 
 def test_foreign_evidence_keeps_helper_file_unicode_offsets():
     text = source("not UNKNOWN", "LABEL = '測試'\n")
-    [(_name, _effect, evidence, conditions)] = HelperModule(text.encode(), "tests/helpers.py").outcomes("gate")
+    _name, _effect, evidence, conditions = single_outcome(text)
     assert evidence.path == "tests/helpers.py"
     assert text[slice(*evidence.span)] == evidence.text == "pytest.skip('off')"
     assert conditions == ("not helper.UNKNOWN",)
