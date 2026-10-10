@@ -5,10 +5,12 @@ The head side may be attacker-controlled; nothing here executes repo content.
 
 from __future__ import annotations
 
-import os
+import re
+import hashlib
 import subprocess
 
-from checkwash.engine import FileChange
+from checkwash.change import EngineError, FileChange
+from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 
 
 class GitError(Exception):
@@ -21,9 +23,10 @@ def _run(repo: str, args: list[str]) -> bytes:
             ["git", "-C", repo, *args],
             capture_output=True,
             check=False,
+            timeout=60,
         )
-    except FileNotFoundError as exc:
-        raise GitError("git executable not found") from exc
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise GitError("git read could not complete") from exc
     if proc.returncode != 0:
         raise GitError(
             f"git {' '.join(args[:2])} failed: {proc.stderr.decode('utf-8', 'replace').strip()}"
@@ -39,143 +42,144 @@ def merge_base(repo: str, a: str, b: str) -> str:
     return _run(repo, ["merge-base", a, b]).decode("ascii").strip()
 
 
+def resolve_commit(repo: str, rev: str) -> str:
+    raw = _run(repo, ["rev-parse", "--verify", "--end-of-options", f"{rev}^{{commit}}"])
+    if not re.fullmatch(b"(?:[0-9a-f]{40}|[0-9a-f]{64})\n", raw):
+        raise GitError("invalid resolved commit identity")
+    return raw.decode("ascii").strip()
+
+
+def read_commit_parents(repo: str, rev: str) -> list[str]:
+    """Read actual object headers, including parents hidden by shallow history."""
+    revision = resolve_commit(repo, rev)
+    raw = _run(repo, ["cat-file", "commit", revision])
+    if len(raw) > 1_000_000:
+        raise GitError("commit object exceeds the input byte limit")
+    algorithm = "sha1" if len(revision) == 40 else "sha256"
+    actual = hashlib.new(algorithm, b"commit " + str(len(raw)).encode("ascii") + b"\0" + raw).hexdigest()
+    if actual != revision:
+        raise GitError("commit bytes do not match their object identity")
+    header, separator, _message = raw.partition(b"\n\n")
+    fields = header.split(b"\n")
+    oid_pattern = b"[0-9a-f]{" + str(len(revision)).encode("ascii") + b"}"
+    if not separator or not re.fullmatch(b"tree " + oid_pattern, fields[0]):
+        raise GitError("invalid commit object header")
+    parents = []
+    for field in fields[1:]:
+        if field.startswith(b"parent "):
+            if not re.fullmatch(b"parent " + oid_pattern, field):
+                raise GitError("invalid commit parent identity")
+            parents.append(field[7:].decode("ascii"))
+    return parents
+
+
 def _read_blob(repo: str, rev: str, path: str) -> bytes | None:
     try:
-        return _run(repo, ["show", f"{rev}:{path}"])
-    except GitError:
-        return None
+        return GitSnapshot(repo, rev).read(path)
+    except EngineError as exc:
+        raise GitError(str(exc)) from exc
 
 
 def read_base_file(repo: str, base: str, path: str) -> bytes | None:
     return _read_blob(repo, base, path)
 
 
-def read_blobs(repo: str, specs: list[tuple[str, str]]) -> dict[tuple[str, str], bytes | None]:
-    """Every requested blob, in one `git cat-file --batch` process.
+def read_blobs(repo: str, specs: list[tuple[str, str]], *, required=False) -> dict[tuple[str, str], bytes | None]:
+    """Read exact inventoried OIDs in bounded batches, preserving failures.
 
-    `_read_blob` spawns a process per blob, and a range diff needs two per
-    modified file. Measured on pydantic: a 120-file commit spent 9.1 s in 241
-    `git show` calls, 58% of its wall clock — and the perf gate could not see
-    any of it, because it calls `analyze()` with in-memory changes and never
-    touches git (field integration 2026-08-07). Batching is the same bytes in
-    one process.
-
-    The batch protocol answers requests in order, either
-    `<oid> <type> <size>\\n<content>\\n` or `<request> missing\\n`. Anything
-    unparseable falls back to the per-blob path rather than guessing, so a
-    surprising response degrades to slow rather than wrong.
+    GitSnapshot separates tree absence and the reference submodule refusal
+    from failed blob reads. It validates process status, ordered headers,
+    sizes, delimiters and content identities; no permissive fallback is used.
     """
-    if not specs:
-        return {}
-    uniq = sorted(set(specs))
-    stdin_specs: list[tuple[str, str]] = []
-    result: dict[tuple[str, str], bytes | None] = {}
-    for s in uniq:
-        if "\n" in s[0] or "\n" in s[1]:
-            # A newline inside a spec becomes two protocol requests; git's
-            # extra `<fragment> missing` response is then consumed as the
-            # next spec's header, and when the response count happens to
-            # realign the loop below completes with WRONG assignments and no
-            # fallback — an existing file's blob reads as None and its
-            # weakenings vanish silently (audit 2026-08-19, verified at
-            # protocol level with the real binary; Git-for-Windows refuses
-            # such paths outright, so the entry arrives in Linux-authored
-            # trees). Rejected here as missing: the file stays visible as
-            # unreadable rather than poisoning its neighbours.
-            result[s] = None
-        else:
-            stdin_specs.append(s)
-    if not stdin_specs:
-        return result
-    stdin = b"".join(f"{rev}:{path}\n".encode("utf-8") for rev, path in stdin_specs)
+    grouped: dict[str, list[str]] = {}
+    for revision, path in sorted(set(specs)):
+        grouped.setdefault(revision, []).append(path)
+    result = {}
     try:
-        proc = subprocess.run(
-            ["git", "-C", repo, "cat-file", "--batch"],
-            input=stdin,
-            capture_output=True,
-            check=False,
-        )
-    except FileNotFoundError as exc:
-        raise GitError("git executable not found") from exc
-
-    out, pos = proc.stdout, 0
-    for spec in stdin_specs:
-        end = out.find(b"\n", pos)
-        if end < 0:
-            result.update({s: _read_blob(repo, *s) for s in stdin_specs if s not in result})
-            return result
-        header = out[pos:end]
-        pos = end + 1
-        if header.endswith(b" missing") or header.endswith(b" ambiguous"):
-            result[spec] = None
-            continue
-        parts = header.rsplit(b" ", 1)
-        if len(parts) != 2 or not parts[1].isdigit():
-            result.update({s: _read_blob(repo, *s) for s in stdin_specs if s not in result})
-            return result
-        size = int(parts[1])
-        result[spec] = out[pos : pos + size]
-        pos += size + 1  # content is followed by a newline
+        for revision, paths in grouped.items():
+            snapshot = GitSnapshot(repo, revision)
+            blobs = snapshot.read_many(paths)
+            if required and any(data is None for data in blobs.values()):
+                raise GitError("required diff side is absent from its tree")
+            result.update({(revision, path): data for path, data in blobs.items()})
+    except EngineError as exc:
+        raise GitError(str(exc)) from exc
     return result
 
 
 def grep_head_paths(repo: str, rev: str, needles: list[str]) -> list[str]:
-    """Paths at `rev` whose content contains any needle (fixed strings).
-
-    One subprocess for the whole batch; used by the duplicate-unit search to
-    find surviving copies of deleted tests without reading the tree. git grep
-    exits 1 on no match, which is an answer, not an error.
-
-    `-z` keeps the `rev:path` record shape but NUL-terminates it and — the
-    load-bearing half — disables path quoting. With the default
-    `core.quotepath`, any non-ASCII path came back C-quoted
-    (`"tests/test_\\346\\213\\267\\350\\262\\235.py"`), failed the role
-    filter downstream, and the duplicate-survivor search never found
-    CJK-named copies: a false block for exactly the repositories most likely
-    to have them (audit 2026-08-19). Format verified against the real binary:
-    one record per match, first-colon split, path bytes verbatim UTF-8.
-    """
+    """Whole-tree fixed-string search: only clean exit 1 means no matches."""
     if not needles:
         return []
+    revision = resolve_commit(repo, rev)
     args = ["grep", "-l", "-F", "-z"]
     for needle in needles:
-        args += ["-e", needle]
-    args.append(rev)
+        args.extend(["-e", needle])
+    args.append(revision)
     try:
-        out = _run(repo, args)
-    except GitError:
+        proc = subprocess.run(["git", "-C", repo, *args], capture_output=True, check=False, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise GitError("head search could not complete") from exc
+    if proc.returncode == 1 and not proc.stdout and not proc.stderr:
         return []
+    if proc.returncode != 0 or proc.stderr:
+        raise GitError("head search Git read failed")
+    raw = proc.stdout
+    if not raw or not raw.endswith(b"\0") or len(raw) > 32_000_000:
+        raise GitError("head search returned incomplete or over-budget records")
+    prefix = revision.encode("ascii") + b":"
     paths = []
-    for tok in out.split(b"\0"):
-        if b":" in tok:
-            paths.append(tok.split(b":", 1)[1].decode("utf-8", "replace"))
+    for record in raw[:-1].split(b"\0"):
+        if not record.startswith(prefix) or record == prefix:
+            raise GitError("head search returned invalid path record")
+        try:
+            path = record[len(prefix):].decode("utf-8", errors="strict")
+        except UnicodeError as exc:
+            raise GitError("head search returned undecodable path") from exc
+        if any(c in path for c in "\r\n\0"):
+            raise GitError("head search returned unsafe path")
+        paths.append(path)
+    if len(paths) != len(set(paths)):
+        raise GitError("head search returned duplicate paths")
     return paths
 
 
 def _parse_name_status(tokens: list[str]) -> list[tuple[str, str, str | None]]:
-    """(code, path, old_path) for each entry of a -z name-status stream."""
-    entries: list[tuple[str, str, str | None]] = []
+    """Validate the complete NUL-delimited diff stream before reading blobs."""
+    if tokens == [""]:
+        return []
+    if not tokens or tokens[-1] != "":
+        raise GitError("incomplete name-status stream")
+    tokens = tokens[:-1]
+    entries = []
+    seen = set()
     i = 0
     while i < len(tokens):
         status = tokens[i]
-        if not status:
-            i += 1
-            continue
+        if not re.fullmatch(r"(?:[ADMT]|[RCM](?:100|0?[0-9]{1,2}))", status):
+            raise GitError("invalid diff status")
         code = status[0]
-        if code in ("R", "C"):
-            entries.append((code, tokens[i + 2], tokens[i + 1]))
-            i += 3
-        else:
-            entries.append((code, tokens[i + 1], None))
-            i += 2
+        count = 2 if code in "RC" else 1
+        if i + count >= len(tokens):
+            raise GitError("incomplete diff path record")
+        paths = tokens[i + 1:i + count + 1]
+        if any(not path or any(c in path for c in "\r\n\0") for path in paths):
+            raise GitError("invalid diff path")
+        path, old = (paths[1], paths[0]) if count == 2 else (paths[0], None)
+        if path in seen:
+            raise GitError("duplicate diff path")
+        seen.add(path)
+        entries.append((code, path, old))
+        i += count + 1
     return entries
 
 
 def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
+    base, head = resolve_commit(repo, base), resolve_commit(repo, head)
     out = _run(repo, ["diff", "--name-status", "-z", "--find-renames", base, head])
-    entries = _parse_name_status([t for t in out.decode("utf-8", "replace").split("\0")])
+    entries = _parse_name_status([t for t in out.decode("utf-8", "strict").split("\0")])
 
-    # Collect every blob this diff needs, then fetch them in one process.
+    # Collect required sides, then fetch bounded OID batches per revision.
     specs: list[tuple[str, str]] = []
     for code, path, old in entries:
         if code == "R":
@@ -188,7 +192,7 @@ def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
             specs.append((base, path))
         else:
             specs += [(base, path), (head, path)]
-    blobs = read_blobs(repo, specs)
+    blobs = read_blobs(repo, specs, required=True)
 
     changes: list[FileChange] = []
     for code, path, old in entries:
@@ -209,16 +213,36 @@ def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
     return changes
 
 
-def list_worktree_changes(repo: str) -> list[FileChange]:
+def list_worktree_changes(repo: str, *, base: str | None = None) -> list[FileChange]:
     """HEAD vs working tree (staged + unstaged + untracked)."""
+    base = resolve_commit(repo, "HEAD" if base is None else base)
+    if resolve_commit(repo, "HEAD") != base:
+        raise GitError("worktree HEAD changed before status collection")
     out = _run(repo, ["status", "--porcelain", "-z", "--untracked-files=all", "--no-renames"])
-    tokens = out.decode("utf-8", "replace").split("\0")
-    changes: list[FileChange] = []
+    if resolve_commit(repo, "HEAD") != base:
+        raise GitError("worktree HEAD changed during status collection")
+    if len(out) > 64_000_000 or (out and not out.endswith(b"\0")):
+        raise GitError("incomplete or over-budget worktree status")
+    try:
+        tokens = out[:-1].decode("utf-8", "strict").split("\0") if out else []
+    except UnicodeError as exc:
+        raise GitError("undecodable worktree status") from exc
+    entries = []
+    seen = set()
     for token in tokens:
-        if len(token) < 4:
-            continue
+        if len(token) < 4 or token[2] != " ":
+            raise GitError("incomplete worktree status record")
         xy, path = token[:2], token[3:]
-        before = _read_blob(repo, "HEAD", path)
+        if xy != "??" and (not re.fullmatch(r"[ MTADU]{2}", xy) or xy == "  "):
+            raise GitError("invalid worktree status code")
+        if any(c in path for c in "\r\n\0") or path in seen:
+            raise GitError("unsafe or duplicate worktree status path")
+        seen.add(path)
+        entries.append((xy, path))
+    changes: list[FileChange] = []
+    snapshot = WorkingTreeSnapshot(repo)
+    for xy, path in entries:
+        before = _read_blob(repo, base, path)
         # Trust git's status codes over the filesystem: on a case-insensitive
         # volume, reading a deleted path back off disk returns the *renamed*
         # file's bytes, which made case-only test renames vanish entirely
@@ -226,12 +250,9 @@ def list_worktree_changes(repo: str) -> list[FileChange]:
         deleted = "D" in xy
         after: bytes | None = None
         if not deleted:
-            disk = os.path.join(repo, path.replace("/", os.sep))
-            try:
-                with open(disk, "rb") as fh:
-                    after = fh.read()
-            except OSError:
-                after = None
+            after = snapshot.read(path)
+            if after is None:
+                raise GitError("status-present worktree source disappeared")
         if before is None and after is None:
             continue
         if before is None:
@@ -251,7 +272,7 @@ def _detect_worktree_renames(changes: list[FileChange]) -> list[FileChange]:
 
     `git status` is asked for --no-renames (its rename detection needs the
     index), so relocation would otherwise look like two unrelated events and
-    slip past the rename handling in the engine — the round-1 git-mv fix was
+    slip past the rename handling in the engine â€” the round-1 git-mv fix was
     live only in range mode (confirmed red-team finding).
     """
     deleted = [c for c in changes if c.status == "deleted" and c.before is not None]
