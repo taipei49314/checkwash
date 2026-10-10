@@ -221,8 +221,10 @@ class GitSnapshot:
             raise EngineError("strict snapshot path cannot be represented in the batch protocol")
         spec = f"{self._rev()}:{path}".encode("utf-8")
         checked = _run(self.repo, ["cat-file", "--batch-check"], data=spec + b"\n")
+        if not checked.endswith(b"\n") or checked.count(b"\n") != 1:
+            raise EngineError("strict snapshot returned an incomplete batch-check frame")
         missing = checked == spec + b" missing\n"
-        header = checked.rstrip(b"\n")
+        header = checked[:-1]
         parts = header.split()
         if missing or len(parts) != 3 or parts[1] != b"blob" or not parts[2].isdigit():
             owner = self._owner(path)

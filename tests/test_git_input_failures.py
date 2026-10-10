@@ -510,3 +510,55 @@ def test_worktree_status_keeps_untracked_and_staged(repo, operation):
         git(repo, "add", "new_test.py")
     changes = gitio.list_worktree_changes(str(repo))
     assert len(changes) == 1 and changes[0].path == "new_test.py" and changes[0].status == "added"
+
+
+@pytest.mark.parametrize("operation", ["legacy_one", "snapshot_one"])
+@pytest.mark.parametrize("fault", ["missing_terminator", "extra_terminator"])
+def test_single_read_rejects_incomplete_batch_check_frame(repo, monkeypatch, operation, fault):
+    read = reader(repo, operation)
+    original = subprocess.run
+
+    def inject(argv, **kwargs):
+        proc = original(argv, **kwargs)
+        if argv[-2:] != ["cat-file", "--batch-check"]:
+            return proc
+        assert proc.returncode == 0 and proc.stdout.endswith(b"\n")
+        assert proc.stdout.count(b"\n") == 1 and b" blob " in proc.stdout
+        raw = proc.stdout[:-1] if fault == "missing_terminator" else proc.stdout + b"\n"
+        return subprocess.CompletedProcess(argv, 0, raw, b"")
+
+    monkeypatch.setattr(subprocess, "run", inject)
+    with pytest.raises((GitError, EngineError), match="batch-check frame"):
+        read()
+
+
+@pytest.mark.parametrize("fault", ["missing_terminator", "extra_terminator"])
+def test_cli_batch_check_frame_failure_has_no_verdict(repo, monkeypatch, capsys, fault):
+    from checkwash import cli
+
+    config = repo / ".checkwash" / "config.toml"
+    config.parent.mkdir()
+    config.write_bytes(b"")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-m", "empty base config")
+    (repo / "test_example.py").write_bytes(b"def test_example():\n    assert True\n")
+    git(repo, "commit", "-am", "weaken")
+    original = subprocess.run
+    injections = []
+
+    def inject(argv, **kwargs):
+        proc = original(argv, **kwargs)
+        if argv[-2:] != ["cat-file", "--batch-check"]:
+            return proc
+        assert kwargs["input"].endswith(b":.checkwash/config.toml\n")
+        assert proc.returncode == 0 and proc.stdout.endswith(b" blob 0\n")
+        raw = proc.stdout[:-1] if fault == "missing_terminator" else proc.stdout + b"\n"
+        injections.append(True)
+        return subprocess.CompletedProcess(argv, 0, raw, b"")
+
+    monkeypatch.setattr(subprocess, "run", inject)
+    assert cli.main(["check", "HEAD~1..HEAD", "--repo", str(repo), "--format", "json"]) == 2
+    captured = capsys.readouterr()
+    assert injections == [True]
+    assert not captured.out.strip(), "malformed input must not publish an ordinary verdict"
+    assert "batch-check frame" in captured.err
