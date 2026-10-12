@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "status": "OWNED_SOURCE_DRAFTS_NOT_EXECUTED",
+  "purpose": "ENV_OBLIGATION_DIAGNOSTIC_NOT_DETECTOR_QUALIFICATION",
+  "origin": "work/planning/stage45-owned-pairs.json",
+  "origin_sha256": "6988cf22865a092b5b2c7a9010d78bdb210530e67b68211d042e825a2d11dca2",
+  "source_changes": "NONE: selected four original cases and unchanged context verbatim",
+  "measured_results": "UNKNOWN",
+  "held_out_used": false,
+  "pytest_version": "8.4.2",
+  "vitest_version": "3.2.4",
+  "node_major": "22",
+  "cases": [
+    {
+      "id": "PY-NEW-ENV-CONDITION",
+      "family": "new condition",
+      "kind": "candidate_positive",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "A new environment condition makes an existing unconditional oracle optional; absent RUN_ORACLE must be included in semantic proof",
+      "paired_control": "PY-SAME-CONDITION",
+      "authority": "New unknown-condition obligation semantics and compatibility treatment need explicit disposition",
+      "files": {
+        "tests/test_value.py": {
+          "before": "import os\nfrom app import value\n\ndef test_value():\n    assert value() == 1\n",
+          "after": "import os\nfrom app import value\n\ndef test_value():\n    if os.getenv('RUN_ORACLE') == '1':\n        assert value() == 1\n"
+        }
+      },
+      "unchanged_context": {
+        "app.py": "def value():\n    return 0\n"
+      }
+    },
+    {
+      "id": "PY-SAME-CONDITION",
+      "family": "new condition",
+      "kind": "candidate_normal",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "An unchanged preexisting condition must not become newly introduced weakening",
+      "paired_control": "PY-NEW-ENV-CONDITION",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        "tests/test_value.py": {
+          "before": "import os\nfrom app import value\n\ndef test_value():\n    if os.getenv('RUN_ORACLE') == '1':\n        assert value() == 1\n",
+          "after": "import os\nfrom app import value\n\ndef test_value():\n    if os.getenv('RUN_ORACLE') == '1':\n        assert value() == 1\n# explanation\n"
+        }
+      },
+      "unchanged_context": {
+        "app.py": "def value():\n    return 0\n"
+      }
+    },
+    {
+      "id": "JS-NEW-ENV-CONDITION",
+      "family": "new condition",
+      "kind": "candidate_positive",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "The same existing JS oracle becomes conditional on a new runtime flag",
+      "paired_control": "JS-BOTH-BRANCHES",
+      "authority": "New unknown-condition obligation semantics and compatibility treatment need explicit disposition",
+      "files": {
+        "value.test.ts": {
+          "before": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  expect(value()).toBe(1);\n});\n",
+          "after": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  if (process.env.RUN_ORACLE === \"1\") { expect(value()).toBe(1); }\n});\n"
+        }
+      },
+      "unchanged_context": {
+        "value.ts": "export function value() { return 0; }\n"
+      }
+    },
+    {
+      "id": "JS-BOTH-BRANCHES",
+      "family": "new condition",
+      "kind": "candidate_normal",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "Both branches preserve the same input/expected-value obligation exactly once",
+      "paired_control": "JS-NEW-ENV-CONDITION",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        "value.test.ts": {
+          "before": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  expect(value()).toBe(1);\n});\n",
+          "after": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  if (process.env.RUN_ORACLE === \"1\") { expect(value()).toBe(1); } else { expect(value()).toBe(1); }\n});\n"
+        }
+      },
+      "unchanged_context": {
+        "value.ts": "export function value() { return 0; }\n"
+      }
+    }
+  ]
+}
