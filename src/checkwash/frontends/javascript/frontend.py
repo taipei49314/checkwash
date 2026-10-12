@@ -440,6 +440,64 @@ def _call_argument_spans(
     return None
 
 
+_CALL_PUNCTUATION = re.compile(r"[()\[\]{},;]")
+
+
+def _inline_call_argument_spans(
+    text: str, masked: str, openings: set[int],
+) -> dict[int, tuple[list[tuple[int, int]], int] | None]:
+    """Index selected full-file calls with the existing argument reader's grammar.
+
+    ``masked`` is Bindings.masked from the same code mask the single-call
+    reader uses. Each live punctuation is visited once; nested calls do not
+    reread their descendants. This does not use Bindings' recovery pairs.
+    """
+    results: dict[int, tuple[list[tuple[int, int]], int] | None] = {
+        opening: None for opening in openings
+    }
+    if not openings:
+        return results
+    closing = {"(": ")", "[": "]", "{": "}"}
+    # Expected closer, opening position, current argument start, collected
+    # spans. None spans mean an unselected frame or a call already rejected
+    # by a top-level semicolon. Such a frame still delimits ancestor calls.
+    stack: list[tuple[str, int, int, list[tuple[int, int]] | None]] = []
+    for match in _CALL_PUNCTUATION.finditer(masked):
+        char, position = match.group(), match.start()
+        if char in closing:
+            arguments: list[tuple[int, int]] | None = (
+                [] if char == "(" and position in openings else None
+            )
+            stack.append((closing[char], position, position + 1, arguments))
+        elif char in ")]}":
+            if not stack or char != stack[-1][0]:
+                # Every still-open selected call would encounter this same
+                # mismatch in its independent scan. Completed calls retain
+                # their result; later calls can start independently.
+                stack.clear()
+                continue
+            _closer, opening, start, arguments = stack.pop()
+            if arguments is not None:
+                # pos/endpos avoid copying a nested call's entire argument.
+                # The original empty-argument regex has no start anchor or
+                # lookbehind; its end anchors observe this exact endpos.
+                if not _EMPTY_ARGUMENT.fullmatch(text, start, position):
+                    arguments.append((start, position))
+                results[opening] = arguments, position + 1
+        elif stack:
+            closer, opening, start, arguments = stack[-1]
+            if arguments is None:
+                continue
+            if char == ",":
+                arguments.append((start, position))
+                stack[-1] = closer, opening, position + 1, arguments
+            else:  # A semicolon rejects only this call, not its ancestors.
+                stack[-1] = closer, opening, start, None
+    # Unclosed selected calls retain None. Completed nested calls remain
+    # available if their surrounding call is later truncated or rejected.
+    return results
+
+
 def _call_arguments(
     text: str, code: bytearray, opening: int, limit: int,
 ) -> tuple[list[str], int] | None:
@@ -2091,8 +2149,9 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     openings.update(start for index, (token, start, _end) in enumerate(bindings.tokens)
                     if token == "(" and bindings.token(index - 2) in {".", "?."}
                     and re.fullmatch(NAME, bindings.token(index - 1)))
+    inline_arguments = _inline_call_argument_spans(text, bindings.masked, openings)
     for opening in sorted(openings):
-        arguments = _call_argument_spans(text, code, opening, len(text))
+        arguments = inline_arguments[opening]
         if arguments is None:
             continue
         for argument in arguments[0]:
