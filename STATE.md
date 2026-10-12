@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-12 (Action and CI source preparation integrated; R1 qualification pending)
+Updated: 2026-10-12 (R1 integrated; fixed historical scheduling retired)
 
 ## 2026-10-12: separate development and published-release checks
 
@@ -26,7 +26,7 @@ No new release, version bump, public Action pin or adoption claim follows from
 it. T-528's original A–D work remains incomplete; independent adoption is
 UNSATISFIED. Current public installation commands continue to identify v0.7.0.
 
-## 2026-10-12: Quality Action integrated; bounded R1 repair prepared
+## 2026-10-12: Quality Action and bounded R1 repair integrated
 
 PR #375 merged at `259f32db06bb4bdc28cf2a71c10e4ea47f1c9c3b`.
 Its tree exactly matches the qualified `cdcfcd0` head and hosted `8c4e657`
@@ -36,19 +36,38 @@ the separate qualifier and raw-step review passed. All 24 original normal-cost
 invocations completed. Public delivery and recommended-pin advancement remain
 outstanding; the source integration does not establish independent adoption.
 
-The next single behavior package addresses the measured root-BinOp binding
-RecursionError. It preserves successful stdlib keys and retries that specific
-failure with iterative binary emission. It does not change AST budgets,
-severity, existing fixture expectations or the separately observed deep
-asserted-subject limitation. The earlier diagnostic trace and strict failures
-remain recorded; the repaired candidate has not yet been runtime-qualified.
+PR #374 integrated the bounded root-BinOp binding repair at
+`9afe51801c6448e86846fdb8f92d97dd6bdd44d4`, with the exact qualified
+`ac155e2` / hosted `90db945` tree. Successful stdlib keys are preserved;
+only a failing root binary expression uses iterative binary emission.
+All nine exact-head CI legs, source/wheel/pyz assertion qualification,
+185 verdict cases and three-interpreter strict recursion checks passed.
+The earlier diagnostic failures remain recorded. AST budgets, severity,
+existing fixture expectations and the separate deep asserted-subject
+limitation are unchanged. This integration is not a release or adoption claim.
 
-The already-seen Python comparison fixes original A at the Quality merge
-above, uses the exact existing 4,271 members and 432 logical shards, and keeps
-all 8,542 arm rows. The ordinary PR workflow runs synthetic capture controls
-and source/wheel/pyz qualification before corpus work. Both original readers,
-raw failures, missing observations and every changed result remain visible.
-This is nonblind cost evidence; it consumes no held-out data or old EC grant.
+The nonblind R1 comparison fixes original A at the Quality merge above and
+retains all 4,271 members, 432 logical shards and 8,542 original arm rows.
+Its fixed-source scheduling is now retired; original readers, raw failures,
+missing observations and every changed result remain part of the historical
+[first-attempt run](https://github.com/taipei49314/checkwash/actions/runs/38247155157/attempts/1).
+The [original workflow](https://github.com/taipei49314/checkwash/blob/ac155e2501e99fa8bf825f395de56cfb711814c7/.github/workflows/r1-seen-cost.yml),
+collectors, synthetic tests and cohort bytes remain available for audit.
+The same workflow path continues the unchanged synthetic capture/accounting
+pytest job and its original triggers; it no longer builds or runs the fixed
+historical cohort. Ordinary strict R1/canonicalization tests and the separate
+PR-base reliability trace remain active. Retirement does not turn captured
+errors or missing rows into PASS, authorize another cohort run, consume
+held-out data, or reuse an old EC grant.
+
+Final cost accounting verified all 48 workers / 8,542 original arms, with no
+missing observations, capture failures or paired stdout/stderr differences.
+Both arms retain 132 product errors, 33 verdicts with skipped files and 81
+stderr-only verdicts; none is relabeled as clean analysis. All-member midpoint
+medians were 1.649062441 and 1.649664511 seconds. Paired increase P95 was
+0.095745692 seconds; individual increases and all per-commit records remain
+in the original artifact. This supports the finite repair under existing
+requirements without changing budgets, standards or held-out status.
 
 ## 2026-10-12: v0.7.0 publication verified
 
