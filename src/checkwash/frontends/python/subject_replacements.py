@@ -487,6 +487,19 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                         or not b.positive or not a.positive or b.right_literal is None
                         or a.right_literal != b.right_literal):
                     continue
+                # A direct subject Call is returned unchanged by _subject_call.
+                # Equal callable ASTs already exclude this pair below, without
+                # needing either module. Captured Names still need full scope
+                # and assignment provenance even when their text is unchanged.
+                direct_before = parse_expr(b.left or "")
+                direct_after = parse_expr(a.left or "")
+                if isinstance(direct_before, ast.Call) and isinstance(direct_after, ast.Call):
+                    try:
+                        same_callable = stable_dump(direct_before.func) == stable_dump(direct_after.func)
+                    except RecursionError:
+                        same_callable = False  # No cheap proof; preserve the old path.
+                    if same_callable:
+                        continue
                 if trees is None:
                     trees = (_parse(change.before), _parse(change.after))
                 if any(tree is None for tree in trees):
