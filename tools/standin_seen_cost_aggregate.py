@@ -1,8 +1,8 @@
 """Independent raw receipt validation and full fixed-denominator accounting."""
-from collections import Counter, defaultdict
 import json
 import math
 import os
+from collections import Counter, defaultdict
 from pathlib import PurePosixPath
 
 import r1_cost_capture as cap
@@ -15,14 +15,14 @@ SEMANTIC_FIELDS = ("rule", "severity", "path", "unit", "before", "after", "finge
 
 
 def semantics(finding):
-    return {key: dict(present=key in finding, value=finding.get(key)) for key in SEMANTIC_FIELDS}
+    return {key: {"present": key in finding, "value": finding.get(key)} for key in SEMANTIC_FIELDS}
 
 
 def finding_delta(left, right):
     a = Counter(c.encoded(semantics(item)) for item in left)
     b = Counter(c.encoded(semantics(item)) for item in right)
-    return dict(added=[json.loads(item) for item, n in (b - a).items() for _ in range(n)],
-                removed=[json.loads(item) for item, n in (a - b).items() for _ in range(n)])
+    return {"added": [json.loads(item) for item, n in (b - a).items() for _ in range(n)],
+                "removed": [json.loads(item) for item, n in (a - b).items() for _ in range(n)]}
 
 
 def streams(root, prefix, observation, argv, resolved):
@@ -96,7 +96,7 @@ def validate_row(root, ledger, row, expected, plan, commands):
             # intent. The former can survive interruption before the latter.
             c.require(row.get("stage") == "LAUNCH_INTENT" and isinstance(row.get("argv"), list)
                       and row.get("raw_prefix"), "unknown launch has no durable worker intent")
-        return dict(outcome=row["outcome"], reason=row.get("reason"), observation=None, payload=None)
+        return {"outcome": row["outcome"], "reason": row.get("reason"), "observation": None, "payload": None}
     member, arm = row["member"], row["arm"]
     engine = plan["engines"][arm]
     c.require(row["engine"] == engine, "row engine differs")
@@ -104,7 +104,7 @@ def validate_row(root, ledger, row, expected, plan, commands):
     argv = [ledger["interpreter"], "-I", artifact, "check", member["parent"] + ".." + member["commit"],
             "--repo", ledger["repository_path"], "--format", "json"]
     c.require(row["argv"] == argv and row["cwd"] == str(PurePosixPath(ledger["repository_path"]).parent), "full CLI argv/cwd differs")
-    c.require(row["artifact_read"] == dict(sha256=engine["artifact_sha256"], bytes=engine["artifact_bytes"]), "prelaunch artifact read differs")
+    c.require(row["artifact_read"] == {"sha256": engine["artifact_sha256"], "bytes": engine["artifact_bytes"]}, "prelaunch artifact read differs")
     order = c.ARMS if member["ordinal"] % 2 == 0 else tuple(reversed(c.ARMS))
     c.require(row["order_index"] == order.index(arm), "original ordinal arm order differs")
     labels = labels_for(root, ledger, member, commands)
@@ -120,9 +120,9 @@ def validate_row(root, ledger, row, expected, plan, commands):
     c.require(row["payload"] == metadata and row["finding_count"] == count, "parsed row differs from raw JSON")
     outcome = cap.classify(observation, payload, member, engine, labels)
     c.require(row["outcome"] == outcome, "classification differs from raw evidence")
-    return dict(outcome=outcome, observation=observation, payload=payload,
-                raw_prefix=str(root / row["raw_prefix"]),
-                stdout_sha256=observation["streams"]["stdout"]["sha256"], stderr_sha256=observation["streams"]["stderr"]["sha256"])
+    return {"outcome": outcome, "observation": observation, "payload": payload,
+                "raw_prefix": str(root / row["raw_prefix"]),
+                "stdout_sha256": observation["streams"]["stdout"]["sha256"], "stderr_sha256": observation["streams"]["stderr"]["sha256"]}
 
 
 def difference(member, before, after):
@@ -139,22 +139,22 @@ def difference(member, before, after):
     af, bf = a.get("findings"), b.get("findings")
     delta = (finding_delta(af, bf) if isinstance(af, list) and isinstance(bf, list)
              and all(isinstance(item, dict) for item in af + bf) else None)
-    return dict(member=member, before_outcome=before["outcome"], after_outcome=after["outcome"],
-                before_exit=av.get("exit_code"), after_exit=bv.get("exit_code"),
-                before_verdict=a.get("verdict"), after_verdict=b.get("verdict"),
-                before_raw=before.get("raw_prefix"), after_raw=after.get("raw_prefix"),
-                stdout_changed=before.get("stdout_sha256") != after.get("stdout_sha256"),
-                stderr_changed=before.get("stderr_sha256") != after.get("stderr_sha256"),
-                diagnostics_changed=any(a.get(key) != b.get(key) for key in ("config_errors", "skipped_files")),
-                findings=delta, disposition="PENDING_SOURCE_ADJUDICATION")
+    return {"member": member, "before_outcome": before["outcome"], "after_outcome": after["outcome"],
+                "before_exit": av.get("exit_code"), "after_exit": bv.get("exit_code"),
+                "before_verdict": a.get("verdict"), "after_verdict": b.get("verdict"),
+                "before_raw": before.get("raw_prefix"), "after_raw": after.get("raw_prefix"),
+                "stdout_changed": before.get("stdout_sha256") != after.get("stdout_sha256"),
+                "stderr_changed": before.get("stderr_sha256") != after.get("stderr_sha256"),
+                "diagnostics_changed": any(a.get(key) != b.get(key) for key in ("config_errors", "skipped_files")),
+                "findings": delta, "disposition": "PENDING_SOURCE_ADJUDICATION"}
 
 
 def statistics(values):
     values = sorted(values)
     if not values:
-        return dict(n=0)
-    return dict(n=len(values), min=values[0], median=values[math.ceil(.5 * len(values)) - 1],
-                p95=values[math.ceil(.95 * len(values)) - 1], max=values[-1], total=sum(values))
+        return {"n": 0}
+    return {"n": len(values), "min": values[0], "median": values[math.ceil(.5 * len(values)) - 1],
+                "p95": values[math.ceil(.95 * len(values)) - 1], "max": values[-1], "total": sum(values)}
 
 
 def worker_rows(ledger, group, wanted, identity, manifest_hash):
@@ -169,7 +169,7 @@ def worker_rows(ledger, group, wanted, identity, manifest_hash):
 def aggregate(output, inputs):
     members, shards, groups = c.cohort()
     expected = c.expected_rows(members, shards, groups)
-    results = {(row["member"]["ordinal"], row["arm"]): dict(outcome="MISSING_WORKER", observation=None, payload=None) for row in expected}
+    results = {(row["member"]["ordinal"], row["arm"]): {"outcome": "MISSING_WORKER", "observation": None, "payload": None} for row in expected}
     errors = []
     prepared = inputs / "standin-seen-cost-prepared-attempt-1"
     plan = None
@@ -179,13 +179,13 @@ def aggregate(output, inputs):
         c.validate_plan(plan)
         verify_artifacts(prepared, plan)
     except Exception as error:
-        errors.append(dict(stage="PLAN_OR_BUILD", error=repr(error)))
+        errors.append({"stage": "PLAN_OR_BUILD", "error": repr(error)})
         plan = None
     if plan is not None:
         expected_dirs = {"standin-seen-cost-prepared-attempt-1"} | {"standin-seen-cost-" + group["name"] + "-attempt-1" for group in groups}
         unexpected = [path.name for path in inputs.iterdir() if path.is_dir() and path.name not in expected_dirs]
         if unexpected:
-            errors.append(dict(stage="UNEXPECTED_ARTIFACT", paths=unexpected))
+            errors.append({"stage": "UNEXPECTED_ARTIFACT", "paths": unexpected})
         for group in groups:
             root = inputs / ("standin-seen-cost-" + group["name"] + "-attempt-1")
             try:
@@ -199,24 +199,24 @@ def aggregate(output, inputs):
                 commands = c.read(root / "setup/commands.json") if (root / "setup/commands.json").exists() else []
                 validate_commands(root / "setup", commands)
                 if ledger.get("worker_error"):
-                    errors.append(dict(group=group["name"], stage="WORKER_REPORTED_FAILURE", error=ledger["worker_error"]))
+                    errors.append({"group": group["name"], "stage": "WORKER_REPORTED_FAILURE", "error": ledger["worker_error"]})
                 observed = [row.get("observation") for row in rows]
                 if ledger.get("capture_complete") is not all(item and item.get("capture_complete") for item in observed):
-                    errors.append(dict(group=group["name"], stage="WORKER_CAPTURE_CLAIM", error="terminal completeness claim differs"))
+                    errors.append({"group": group["name"], "stage": "WORKER_CAPTURE_CLAIM", "error": "terminal completeness claim differs"})
                 for row in rows:
                     key = (row["member"]["ordinal"], row["arm"])
                     try:
                         results[key] = validate_row(root, ledger, row, wanted[key], plan, commands)
                     except Exception as error:
-                        results[key] = dict(outcome="QUARANTINED_ROW", reason=repr(error), raw_worker=str(root), observation=None, payload=None)
-                        errors.append(dict(group=group["name"], key=key, error=repr(error)))
+                        results[key] = {"outcome": "QUARANTINED_ROW", "reason": repr(error), "raw_worker": str(root), "observation": None, "payload": None}
+                        errors.append({"group": group["name"], "key": key, "error": repr(error)})
             except Exception as error:
-                errors.append(dict(group=group["name"], stage="WORKER", error=repr(error)))
+                errors.append({"group": group["name"], "stage": "WORKER", "error": repr(error)})
                 if root.exists():
                     for row in expected:
                         if row["group"] == group["name"]:
-                            results[(row["member"]["ordinal"], row["arm"])] = dict(
-                                outcome="QUARANTINED_WORKER", reason=repr(error), raw_worker=str(root), observation=None, payload=None)
+                            results[(row["member"]["ordinal"], row["arm"])] = {
+                                "outcome": "QUARANTINED_WORKER", "reason": repr(error), "raw_worker": str(root), "observation": None, "payload": None}
     counts, phase_counts, repo_counts, transitions = defaultdict(Counter), defaultdict(lambda: defaultdict(Counter)), defaultdict(lambda: defaultdict(Counter)), Counter()
     reported_verdicts = Counter()
     attempted, captures, clean_pairs = 0, 0, 0
@@ -255,7 +255,7 @@ def aggregate(output, inputs):
             delta = times["candidate"] - times["base"] if all(value is not None for value in times.values()) else None
             if delta is not None:
                 paired.append(delta)
-            costs.write(c.encoded(dict(member=member, outcomes={arm: row["outcome"] for arm, row in pair.items()}, seconds=times, candidate_minus_base=delta)) + "\n")
+            costs.write(c.encoded({"member": member, "outcomes": {arm: row["outcome"] for arm, row in pair.items()}, "seconds": times, "candidate_minus_base": delta}) + "\n")
             changed = difference(member, a, b)
             if changed:
                 differences.append(changed)
@@ -263,26 +263,26 @@ def aggregate(output, inputs):
         for row in differences:
             handle.write(c.encoded(row) + "\n")
     complete = attempted == captures == c.EXPECTED_ARMS and not errors
-    summary = dict(expected_pairs=c.EXPECTED_PAIRS, expected_arm_rows=c.EXPECTED_ARMS, accounted_arm_rows=sum(sum(v.values()) for v in counts.values()),
-                   phase_denominators=c.PHASE_VIEWS, cohort_accounting=c.COHORT_ACCOUNTING,
-                   attempts=attempted, complete_captures=captures, execution_complete=complete, clean_comparable_pairs=clean_pairs,
-                   counts=counts, phases=phase_counts, repositories=repo_counts, outcome_transitions=transitions,
-                   reported_verdict_transitions_including_diagnostics=reported_verdicts,
-                   differences=len(differences), cost_qualification="NOT_ADJUDICATED", errors=errors,
-                   elapsed=[dict(arm=arm, outcome=kind, **statistics(values)) for (arm, kind), values in sorted(elapsed.items())],
-                   repository_elapsed=[dict(repository=repo, arm=arm, outcome=kind, **statistics(values))
+    summary = {"expected_pairs": c.EXPECTED_PAIRS, "expected_arm_rows": c.EXPECTED_ARMS, "accounted_arm_rows": sum(sum(v.values()) for v in counts.values()),
+                   "phase_denominators": c.PHASE_VIEWS, "cohort_accounting": c.COHORT_ACCOUNTING,
+                   "attempts": attempted, "complete_captures": captures, "execution_complete": complete, "clean_comparable_pairs": clean_pairs,
+                   "counts": counts, "phases": phase_counts, "repositories": repo_counts, "outcome_transitions": transitions,
+                   "reported_verdict_transitions_including_diagnostics": reported_verdicts,
+                   "differences": len(differences), "cost_qualification": "NOT_ADJUDICATED", "errors": errors,
+                   "elapsed": [dict(arm=arm, outcome=kind, **statistics(values)) for (arm, kind), values in sorted(elapsed.items())],
+                   "repository_elapsed": [dict(repository=repo, arm=arm, outcome=kind, **statistics(values))
                                        for (repo, arm, kind), values in sorted(repo_elapsed.items())],
-                   phase_elapsed=[dict(phase=phase, arm=arm, outcome=kind, **statistics(values))
+                   "phase_elapsed": [dict(phase=phase, arm=arm, outcome=kind, **statistics(values))
                                   for (phase, arm, kind), values in sorted(phase_elapsed.items())],
-                   paired_attempt_candidate_minus_base=statistics(paired),
-                   identity=plan["identity"] if plan else None, manifest_sha256=cap.digest(prepared / "run-manifest.json") if (prepared / "run-manifest.json").exists() else None,
-                   files={name: cap.digest(output / name) for name in ("records.jsonl", "per-commit-cost.jsonl", "differences.jsonl")},
-                   limitations=["capture completeness is not engine PASS", "all changed results require source adjudication",
+                   "paired_attempt_candidate_minus_base": statistics(paired),
+                   "identity": plan["identity"] if plan else None, "manifest_sha256": cap.digest(prepared / "run-manifest.json") if (prepared / "run-manifest.json").exists() else None,
+                   "files": {name: cap.digest(output / name) for name in ("records.jsonl", "per-commit-cost.jsonl", "differences.jsonl")},
+                   "limitations": ["capture completeness is not engine PASS", "all changed results require source adjudication",
                                 "seen standard/D088 union only; 45 overlap members execute once per arm",
                                 "targeted_cotag_only is 119 selected members, not the full 1372 targeted view",
                                 "original aiohttp142 membership remains UNKNOWN and is not replaced",
                                 "median uses nearest-rank lower-middle, not interpolated midpoint",
                                 "CLI time includes capture and startup; build/Git setup excluded",
-                                "original A readers unchanged; errors are not repaired or removed", "no automatic retry or replacement attempt"])
+                                "original A readers unchanged; errors are not repaired or removed", "no automatic retry or replacement attempt"]}
     c.write(output / "summary.json", summary)
     return 0 if complete else 3

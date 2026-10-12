@@ -8,12 +8,12 @@ import ast
 import hashlib
 import json
 import os
-from pathlib import Path
 import resource
 import subprocess
 import sys
 import time
 import traceback
+from pathlib import Path
 
 
 def sha(raw):
@@ -29,22 +29,22 @@ def save(path, data):
 def exception_fact(error):
     frames = traceback.extract_tb(error.__traceback__)
     def rows(items):
-        return [dict(file=f.filename, line=f.lineno, function=f.name) for f in items]
-    return dict(type=type(error).__name__, message=str(error), traceback=traceback.format_exc(),
-                first_frames=rows(frames[:12]), last_frames=rows(frames[-12:]))
+        return [{"file": f.filename, "line": f.lineno, "function": f.name} for f in items]
+    return {"type": type(error).__name__, "message": str(error), "traceback": traceback.format_exc(),
+                "first_frames": rows(frames[:12]), "last_frames": rows(frames[-12:])}
 
 
 def source_fact(repo, revision, path, dest):
     # This is a separate parse observation of a named blob, not proof that
     # stand-in requested/used this side. It runs after the diagnostic CLI.
-    result = dict(revision=revision, path=path, used_by_standin="UNKNOWN",
-                  phase="STANDALONE_SOURCE_PARSE", nodes=None)
+    result = {"revision": revision, "path": path, "used_by_standin": "UNKNOWN",
+                  "phase": "STANDALONE_SOURCE_PARSE", "nodes": None}
     commands = []
     def git(*args):
         argv = ["git", "-C", str(repo), *args]
         failure = None
         try:
-            proc = subprocess.run(argv, capture_output=True, timeout=30)
+            proc = subprocess.run(argv, capture_output=True, timeout=30, check=False)
             stdout, stderr, code = proc.stdout, proc.stderr, proc.returncode
         except subprocess.TimeoutExpired as error:
             stdout, stderr, code = error.stdout or b"", error.stderr or b"", None
@@ -52,8 +52,8 @@ def source_fact(repo, revision, path, dest):
         prefix = dest.with_name(dest.name + f"-git-{len(commands):02d}")
         prefix.with_suffix(prefix.suffix + ".stdout").write_bytes(stdout)
         prefix.with_suffix(prefix.suffix + ".stderr").write_bytes(stderr)
-        commands.append(dict(argv=argv, exit_code=code, failure=failure,
-                             raw_prefix=prefix.name, stdout_sha256=sha(stdout), stderr_sha256=sha(stderr)))
+        commands.append({"argv": argv, "exit_code": code, "failure": failure,
+                             "raw_prefix": prefix.name, "stdout_sha256": sha(stdout), "stderr_sha256": sha(stderr)})
         if code != 0:
             raise RuntimeError("metadata Git command failed; see raw stderr")
         return stdout
@@ -97,13 +97,13 @@ def main():
     args = parser.parse_args()
     output = Path(args.output)
     artifact = Path(args.artifact).resolve(strict=True)
-    receipt = dict(purpose="INSTRUMENTED_DIAGNOSTIC_NOT_NATIVE_COST_OR_QUALIFICATION",
-                   engine_sha=args.engine_sha, artifact_sha256=args.artifact_sha,
-                   run_id=args.run, attempt=args.attempt, base=args.base, head=args.head,
-                   python=sys.version, executable=sys.executable, sources=[],
-                   complete=False, recorder_errors=[],
-                   standin=dict(state="NOT_REACHED", elapsed_seconds=None),
-                   cli_exit=None, first_failure_phase="UNKNOWN", exception=None)
+    receipt = {"purpose": "INSTRUMENTED_DIAGNOSTIC_NOT_NATIVE_COST_OR_QUALIFICATION",
+                   "engine_sha": args.engine_sha, "artifact_sha256": args.artifact_sha,
+                   "run_id": args.run, "attempt": args.attempt, "base": args.base, "head": args.head,
+                   "python": sys.version, "executable": sys.executable, "sources": [],
+                   "complete": False, "recorder_errors": [],
+                   "standin": {"state": "NOT_REACHED", "elapsed_seconds": None},
+                   "cli_exit": None, "first_failure_phase": "UNKNOWN", "exception": None}
     save(output, receipt)
     code = 2
     started = time.perf_counter()
@@ -111,8 +111,8 @@ def main():
         if sha(artifact.read_bytes()) != args.artifact_sha:
             raise ValueError("qualified artifact bytes changed")
         sys.path.insert(0, str(artifact))
-        from checkwash import cli, engine
         import checkwash
+        from checkwash import cli, engine
         if not str(checkwash.__file__).startswith(str(artifact) + "/checkwash/"):
             raise ValueError("diagnostic imported a different package")
         receipt["package_path"] = str(checkwash.__file__)
@@ -159,9 +159,9 @@ def main():
             result = source_fact(args.repo, revision, args.path, output.with_name(output.stem + "-" + side + ".source"))
             receipt["sources"].append(dict(named_side=side, **result))
         usage = resource.getrusage(resource.RUSAGE_SELF)
-        receipt["process_usage"] = dict(ru_maxrss=usage.ru_maxrss, ru_maxrss_unit="KiB on Linux",
-            user_seconds=usage.ru_utime, system_seconds=usage.ru_stime,
-            scope="whole diagnostic child including standalone parses; not pass-only or total Git memory")
+        receipt["process_usage"] = {"ru_maxrss": usage.ru_maxrss, "ru_maxrss_unit": "KiB on Linux",
+            "user_seconds": usage.ru_utime, "system_seconds": usage.ru_stime,
+            "scope": "whole diagnostic child including standalone parses; not pass-only or total Git memory"}
         receipt["complete"] = not receipt["recorder_errors"] and all(s["state"] != "METADATA_ERROR" for s in receipt["sources"])
         receipt["diagnostic_cli_outcome_exit"] = code
         if not receipt["complete"]:

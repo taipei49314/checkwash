@@ -1,9 +1,9 @@
 """Owned metadata/receipt controls; never execute a corpus or import an engine."""
 import copy
 import hashlib
-from pathlib import Path
 import shutil
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -48,12 +48,12 @@ def test_five_excluded_groups_and_original_noncontiguous_ordinals_are_preserved(
 
 
 def test_group_lookup_uses_original_ordinal_not_compact_index():
-    members = [dict(ordinal=17, commit="first"), dict(ordinal=41, commit="second")]
-    assert c.members_for_group(members, dict(member_ordinals=[41, 17])) == [members[1], members[0]]
+    members = [{"ordinal": 17, "commit": "first"}, {"ordinal": 41, "commit": "second"}]
+    assert c.members_for_group(members, {"member_ordinals": [41, 17]}) == [members[1], members[0]]
     with pytest.raises(KeyError):
-        c.members_for_group(members, dict(member_ordinals=[0]))
+        c.members_for_group(members, {"member_ordinals": [0]})
     with pytest.raises(ValueError, match="duplicate"):
-        c.members_for_group([members[0], members[0]], dict(member_ordinals=[17]))
+        c.members_for_group([members[0], members[0]], {"member_ordinals": [17]})
 
 
 def test_all_selected_arms_start_not_attempted_with_overlap_counted_once():
@@ -129,8 +129,8 @@ def event(own_data):
     contract = c.read(own_data / "contract.json")
     contract["baseline_sha"] = "a" * 40
     c.write(own_data / "contract.json", contract)
-    return dict(GITHUB_EVENT_NAME="pull_request", GITHUB_RUN_ATTEMPT="1", GITHUB_RUN_ID="1234",
-                GITHUB_SHA="b" * 40, PR_HEAD_SHA="c" * 40, PR_BASE_SHA="a" * 40)
+    return {"GITHUB_EVENT_NAME": "pull_request", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_RUN_ID": "1234",
+                "GITHUB_SHA": "b" * 40, "PR_HEAD_SHA": "c" * 40, "PR_BASE_SHA": "a" * 40}
 
 
 @pytest.mark.parametrize("key,value", [("GITHUB_EVENT_NAME", "workflow_dispatch"),
@@ -147,41 +147,41 @@ def test_unfixed_source_baseline_prevents_any_launch(own_data, baseline):
     contract = c.read(own_data / "contract.json")
     contract["baseline_sha"] = baseline
     c.write(own_data / "contract.json", contract)
-    env = dict(GITHUB_EVENT_NAME="pull_request", GITHUB_RUN_ATTEMPT="1", GITHUB_RUN_ID="1",
-               GITHUB_SHA="b" * 40, PR_HEAD_SHA="c" * 40, PR_BASE_SHA="a" * 40)
+    env = {"GITHUB_EVENT_NAME": "pull_request", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_RUN_ID": "1",
+               "GITHUB_SHA": "b" * 40, "PR_HEAD_SHA": "c" * 40, "PR_BASE_SHA": "a" * 40}
     with pytest.raises(ValueError, match="not fixed"):
         c.event_identity(env)
 
 
 def test_valid_event_resolves_candidate_without_self_referential_source_sha(event):
     assert c.fixed_contract()["candidate_sha"] is None
-    assert c.event_identity(event) == dict(run_id="1234", attempt="1", event="pull_request",
-                                         candidate="b" * 40, pr_head="c" * 40, baseline="a" * 40)
+    assert c.event_identity(event) == {"run_id": "1234", "attempt": "1", "event": "pull_request",
+                                         "candidate": "b" * 40, "pr_head": "c" * 40, "baseline": "a" * 40}
 
 
 @pytest.fixture
 def plan(monkeypatch):
     members, shards, groups = c.cohort()
-    identity = dict(run_id="1234", attempt="1", event="pull_request", baseline="a" * 40,
-                    candidate="b" * 40, pr_head="c" * 40)
+    identity = {"run_id": "1234", "attempt": "1", "event": "pull_request", "baseline": "a" * 40,
+                    "candidate": "b" * 40, "pr_head": "c" * 40}
     monkeypatch.setattr(c, "event_identity", lambda: copy.deepcopy(identity))
     hashes = c.tool_hashes()
     engines = {}
     for arm in c.ARMS:
-        source = dict(commit=identity["baseline" if arm == "base" else "candidate"],
-                      tree="d" * 40, package_tree="e" * 40)
-        engines[arm] = dict(source=source, artifact_path=f"arms/{arm}/artifacts/checkwash.pyz",
-                            artifact_sha256="f" * 64, artifact_bytes=10, version="0.7.0", findings_version=2,
-                            input_trust="UNMODIFIED_EXACT_SOURCE_NO_READER_SUBSTITUTION")
-    return dict(schema_version=1, purpose=c.PURPOSE, classification="ALREADY_SEEN_NONBLIND",
-                cost_qualification="NOT_ADJUDICATED", identity=copy.deepcopy(identity), harness_hashes=hashes,
-                members_sha256=c.MEMBERS_HASH, partitions_sha256=c.PARTITIONS_HASH,
-                selection_ordinals_sha256=c.SELECTION_HASH, cohort_accounting=copy.deepcopy(c.COHORT_ACCOUNTING),
-                phases=copy.deepcopy(c.PHASE_VIEWS), expected_pairs=len(members), expected_arm_rows=6036,
-                today=c.DATE, primary_distribution="pyz", limits=copy.deepcopy(c.LIMITS),
-                arm_order="alternate_by_original_ordinal", groups=groups, shards=shards,
-                build_complete=True, engines=engines, harness_source=copy.deepcopy(engines["candidate"]["source"]),
-                pr_head_tree="d" * 40)
+        source = {"commit": identity["baseline" if arm == "base" else "candidate"],
+                      "tree": "d" * 40, "package_tree": "e" * 40}
+        engines[arm] = {"source": source, "artifact_path": f"arms/{arm}/artifacts/checkwash.pyz",
+                            "artifact_sha256": "f" * 64, "artifact_bytes": 10, "version": "0.7.0", "findings_version": 2,
+                            "input_trust": "UNMODIFIED_EXACT_SOURCE_NO_READER_SUBSTITUTION"}
+    return {"schema_version": 1, "purpose": c.PURPOSE, "classification": "ALREADY_SEEN_NONBLIND",
+                "cost_qualification": "NOT_ADJUDICATED", "identity": copy.deepcopy(identity), "harness_hashes": hashes,
+                "members_sha256": c.MEMBERS_HASH, "partitions_sha256": c.PARTITIONS_HASH,
+                "selection_ordinals_sha256": c.SELECTION_HASH, "cohort_accounting": copy.deepcopy(c.COHORT_ACCOUNTING),
+                "phases": copy.deepcopy(c.PHASE_VIEWS), "expected_pairs": len(members), "expected_arm_rows": 6036,
+                "today": c.DATE, "primary_distribution": "pyz", "limits": copy.deepcopy(c.LIMITS),
+                "arm_order": "alternate_by_original_ordinal", "groups": groups, "shards": shards,
+                "build_complete": True, "engines": engines, "harness_source": copy.deepcopy(engines["candidate"]["source"]),
+                "pr_head_tree": "d" * 40}
 
 
 def test_plan_accepts_only_complete_event_bound_selected_inventory(plan):
@@ -194,7 +194,7 @@ def test_plan_accepts_only_complete_event_bound_selected_inventory(plan):
 def test_plan_identity_or_manifest_misbinding_is_rejected(plan, fault):
     if fault == "old_purpose": plan["purpose"] = "R1_SEEN_FIXED_COHORT_COST"
     elif fault == "old_rows": plan["expected_arm_rows"] = 8542
-    elif fault == "old_phases": plan["phases"] = dict(standard=1800, d088=1263, targeted=1372)
+    elif fault == "old_phases": plan["phases"] = {"standard": 1800, "d088": 1263, "targeted": 1372}
     elif fault == "selection": plan["selection_ordinals_sha256"] = "a" * 64
     elif fault == "missing_harness": plan["harness_hashes"].pop("tools/r1_cost_capture.py")
     elif fault == "missing_field": del plan["cohort_accounting"]
@@ -216,7 +216,7 @@ def test_delivered_row_inventory_is_required_before_artifacts(tmp_path, fault):
     if fault != "missing":
         c.write(tmp_path / "expected-rows.json", rows[:-1] if fault == "truncated" else [])
     with pytest.raises((ValueError, FileNotFoundError)):
-        worker.verify_artifacts(tmp_path, dict(engines={}))
+        worker.verify_artifacts(tmp_path, {"engines": {}})
 
 
 def test_missing_prepare_keeps_every_selected_arm_in_accounting(tmp_path, monkeypatch):
@@ -229,17 +229,17 @@ def test_missing_prepare_keeps_every_selected_arm_in_accounting(tmp_path, monkey
     assert summary["counts"] == {arm: {"MISSING_WORKER": 3018} for arm in c.ARMS}
     assert summary["attempts"] == summary["complete_captures"] == 0
     assert summary["execution_complete"] is False and summary["cost_qualification"] == "NOT_ADJUDICATED"
-    assert summary["phase_denominators"] == dict(standard=1800, d088=1263, targeted_cotag_only=119)
+    assert summary["phase_denominators"] == {"standard": 1800, "d088": 1263, "targeted_cotag_only": 119}
     assert summary["cohort_accounting"]["aiohttp142"] == "UNKNOWN_NOT_REPLACED"
 
 
 @pytest.mark.parametrize("fault", [None, "missing", "duplicate", "run", "attempt", "source", "manifest", "group"])
 def test_worker_receipts_are_unique_and_bound_to_this_experiment(fault):
-    group = dict(name="r03-g00")
-    identity = dict(run_id="1", attempt="1", candidate="a" * 40)
-    rows = [dict(member=dict(ordinal=n), arm=arm) for n in (17, 41) for arm in c.ARMS]
+    group = {"name": "r03-g00"}
+    identity = {"run_id": "1", "attempt": "1", "candidate": "a" * 40}
+    rows = [{"member": {"ordinal": n}, "arm": arm} for n in (17, 41) for arm in c.ARMS]
     wanted = {(row["member"]["ordinal"], row["arm"]): row for row in rows}
-    ledger = dict(identity=dict(identity), group=dict(group), manifest_sha256="d" * 64, records=copy.deepcopy(rows))
+    ledger = {"identity": dict(identity), "group": dict(group), "manifest_sha256": "d" * 64, "records": copy.deepcopy(rows)}
     if fault == "missing": ledger["records"].pop()
     elif fault == "duplicate": ledger["records"].append(copy.deepcopy(rows[0]))
     elif fault in ("run", "attempt", "source"):
@@ -254,8 +254,8 @@ def test_worker_receipts_are_unique_and_bound_to_this_experiment(fault):
 
 
 def observed(outcome, raw, code, payload=None):
-    return dict(outcome=outcome, stdout_sha256=raw, stderr_sha256="stderr", raw_prefix=raw,
-                observation=dict(exit_code=code), payload=payload)
+    return {"outcome": outcome, "stdout_sha256": raw, "stderr_sha256": "stderr", "raw_prefix": raw,
+                "observation": {"exit_code": code}, "payload": payload}
 
 
 def test_same_engine_error_with_changed_original_reason_remains_a_difference():
@@ -265,25 +265,25 @@ def test_same_engine_error_with_changed_original_reason_remains_a_difference():
 
 
 def test_reported_block_pass_with_config_diagnostics_is_not_hidden():
-    before = observed("CONFIG_DIAGNOSTICS_BLOCK", "a", 1, dict(verdict="block", findings=[], config_errors=["old"]))
-    after = observed("CONFIG_DIAGNOSTICS_PASS", "b", 0, dict(verdict="pass", findings=[], config_errors=["new"]))
+    before = observed("CONFIG_DIAGNOSTICS_BLOCK", "a", 1, {"verdict": "block", "findings": [], "config_errors": ["old"]})
+    after = observed("CONFIG_DIAGNOSTICS_PASS", "b", 0, {"verdict": "pass", "findings": [], "config_errors": ["new"]})
     row = aggregate.difference({}, before, after)
     assert (row["before_verdict"], row["after_verdict"]) == ("block", "pass")
-    assert row["diagnostics_changed"] and row["findings"] == dict(added=[], removed=[])
+    assert row["diagnostics_changed"] and row["findings"] == {"added": [], "removed": []}
 
 
 def test_new_error_is_kept_with_exit_and_raw_links():
-    row = aggregate.difference({}, observed("ANALYZED_BLOCK", "a", 1, dict(verdict="block", findings=[])),
+    row = aggregate.difference({}, observed("ANALYZED_BLOCK", "a", 1, {"verdict": "block", "findings": []}),
                                observed("PRODUCT_ERROR_EXIT", "b", 2))
     assert row["before_verdict"] == "block" and row["after_verdict"] is None
     assert row["after_exit"] == 2 and row["after_raw"] == "b"
 
 
 def test_raw_message_only_finding_change_still_requires_disposition():
-    before = observed("ANALYZED_BLOCK", "a", 1, dict(findings=[dict(rule="X", message="old")]))
-    after = observed("ANALYZED_BLOCK", "b", 1, dict(findings=[dict(rule="X", message="new")]))
+    before = observed("ANALYZED_BLOCK", "a", 1, {"findings": [{"rule": "X", "message": "old"}]})
+    after = observed("ANALYZED_BLOCK", "b", 1, {"findings": [{"rule": "X", "message": "new"}]})
     row = aggregate.difference({}, before, after)
-    assert row["stdout_changed"] and row["findings"] == dict(added=[], removed=[])
+    assert row["stdout_changed"] and row["findings"] == {"added": [], "removed": []}
     assert row["disposition"] == "PENDING_SOURCE_ADJUDICATION"
 
 
@@ -297,12 +297,12 @@ def test_shared_capture_identity_and_namespace_are_in_dependency_inventory():
 
 
 def test_synthetic_complete_exit_two_is_collected_as_error_not_pass():
-    stream = dict(path="empty", sha256=hashlib.sha256(b"").hexdigest(), bytes=0,
-                  retained_bytes=0, observed_bytes=0)
-    observation = dict(spawned=True, capture_complete=True, cleanup_complete=True, output_limit_observed=False,
-                       status="EXITED", first_stop_reason=None, exit_code=2, capture_errors=[],
-                       elapsed_seconds=1.0, output_limit_bytes=100,
-                       streams={"stdout": dict(stream), "stderr": dict(stream)})
+    stream = {"path": "empty", "sha256": hashlib.sha256(b"").hexdigest(), "bytes": 0,
+                  "retained_bytes": 0, "observed_bytes": 0}
+    observation = {"spawned": True, "capture_complete": True, "cleanup_complete": True, "output_limit_observed": False,
+                       "status": "EXITED", "first_stop_reason": None, "exit_code": 2, "capture_errors": [],
+                       "elapsed_seconds": 1.0, "output_limit_bytes": 100,
+                       "streams": {"stdout": dict(stream), "stderr": dict(stream)}}
     cap.validate_capture(observation)
     assert cap.classify(observation, None, {}, {}) == "PRODUCT_ERROR_EXIT"
     assert cap.classify(observation, {"verdict": "pass"}, {}, {}) == "PRODUCT_ERROR_WITH_VERDICT"

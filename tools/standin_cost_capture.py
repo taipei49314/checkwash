@@ -3,13 +3,13 @@ import argparse
 import json
 import math
 import os
-from pathlib import Path
 import platform
 import re
 import signal
 import statistics
 import sys
 import time
+from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -75,8 +75,8 @@ def envelope(raw, exit_code):
 
 
 def skeleton(names):
-    return [dict(case=name, arm=arm, kind=kind, sample=sample,
-                 state="NOT_ATTEMPTED", reason="NOT_STARTED", observation=None, verdict=None)
+    return [{"case": name, "arm": arm, "kind": kind, "sample": sample,
+                 "state": "NOT_ATTEMPTED", "reason": "NOT_STARTED", "observation": None, "verdict": None}
             for name in names for kind, samples in (("native", 3), ("diagnostic", 1))
             for sample in range(samples) for arm in ARMS]
 
@@ -106,7 +106,7 @@ class Commands:
 
     def run(self, argv, cwd, extra=None):
         prefix = self.output / f"command-{len(self.rows):04d}"
-        row = dict(argv=list(map(str, argv)), cwd=str(cwd), observation=None)
+        row = {"argv": list(map(str, argv)), "cwd": str(cwd), "observation": None}
         self.rows.append(row)
         cap.write(self.output / "commands.json", self.rows)
         observation = cap.capture(row["argv"], cwd, dict(self.env, **(extra or {})), prefix,
@@ -129,7 +129,7 @@ def source(commands, root, expected):
     status = commands.git(root, "status", "--porcelain").decode()
     tree = commands.git(root, "rev-parse", "HEAD^{tree}").decode().strip()
     require(head == expected and not status, "engine source HEAD/cleanliness differs")
-    return dict(commit=head, tree=tree, status=status)
+    return {"commit": head, "tree": tree, "status": status}
 
 
 def build_arm(commands, root, expected, candidate, output):
@@ -145,7 +145,7 @@ def build_arm(commands, root, expected, candidate, output):
                 "--distribution", distribution, "--output", proof]
         if distribution == "pyz":
             argv += ["--artifact", artifact]
-        extra = dict(ENGINE_SOURCE=expected, CANDIDATE_SOURCE=candidate)
+        extra = {"ENGINE_SOURCE": expected, "CANDIDATE_SOURCE": candidate}
         commands.run(argv, output, extra)
         argv = [sys.executable, "-I", "-B", HERE / "release_inventory.py", "--source-root", root,
                 "--distribution", distribution, "--qualification", proof, "--output", inventory]
@@ -156,16 +156,16 @@ def build_arm(commands, root, expected, candidate, output):
         require(q["status"] == inv["status"] == "passed" and q["source_commit"] == inv["source_commit"] == expected
                 and inv["source_tree"] == identity["tree"] and inv["builder_source_commit"] == candidate,
                 "source/artifact qualification identity differs")
-        proofs[distribution] = dict(qualification_sha256=cap.digest(proof), inventory_sha256=cap.digest(inventory),
-            suite_sha256=q["suite_sha256"], package_sha256=q["source_package_sha256"])
+        proofs[distribution] = {"qualification_sha256": cap.digest(proof), "inventory_sha256": cap.digest(inventory),
+            "suite_sha256": q["suite_sha256"], "package_sha256": q["source_package_sha256"]}
     require(proofs["source"]["suite_sha256"] == proofs["pyz"]["suite_sha256"]
             and proofs["source"]["package_sha256"] == proofs["pyz"]["package_sha256"], "arm proof inputs differ")
     require(source(commands, root, expected) == identity, "source moved during qualification")
     schema = re.search(r"^FINDINGS_VERSION\s*=\s*(\d+)\s*$", (root / "src/checkwash/__init__.py").read_text(), re.MULTILINE)
     require(schema is not None, "findings schema identity absent")
-    return dict(source=identity, artifact=str(artifact), artifact_bytes=artifact.stat().st_size,
-                artifact_sha256=cap.digest(artifact), proofs=proofs, untouched_arm_reader=True,
-                version=q["version"].removeprefix("checkwash "), findings_version=int(schema.group(1)))
+    return {"source": identity, "artifact": str(artifact), "artifact_bytes": artifact.stat().st_size,
+                "artifact_sha256": cap.digest(artifact), "proofs": proofs, "untouched_arm_reader": True,
+                "version": q["version"].removeprefix("checkwash "), "findings_version": int(schema.group(1))}
 
 
 def prepare_cases(commands, private, known):
@@ -193,8 +193,8 @@ def prepare_cases(commands, private, known):
                 base = revision
             else:
                 head = revision
-        cases.append(dict(name=name, repo=str(repo), base=base, head=head, path=owned.PATH,
-                          source=owned.metadata(name), cohort="OWNED_NOT_HISTORICAL"))
+        cases.append({"name": name, "repo": str(repo), "base": base, "head": head, "path": owned.PATH,
+                          "source": owned.metadata(name), "cohort": "OWNED_NOT_HISTORICAL"})
     repo = private / "aiohttp"
     repo.mkdir()
     commands.git(repo, "init", "-b", "main")
@@ -210,25 +210,25 @@ def prepare_cases(commands, private, known):
         commit = commands.git(repo, "cat-file", "commit", row["commit"]).decode("utf-8")
         parents = [line[7:] for line in commit.split("\n\n", 1)[0].splitlines() if line.startswith("parent ")]
         require(parents and parents[0] == row["parent"], "fixed first parent differs")
-        cases.append(dict(name="aiohttp_" + row["issue_prefix"], repo=str(repo), base=row["parent"],
-            head=row["commit"], path="tests/test_client_functional.py", cohort=row["status"]))
+        cases.append({"name": "aiohttp_" + row["issue_prefix"], "repo": str(repo), "base": row["parent"],
+            "head": row["commit"], "path": "tests/test_client_functional.py", "cohort": row["status"]})
     return cases
 
 
 def parse_usage(path):
     if not path.exists():
-        return dict(state="UNKNOWN", reason="GNU time receipt missing")
+        return {"state": "UNKNOWN", "reason": "GNU time receipt missing"}
     raw = path.read_text(encoding="utf-8", errors="replace")
     try:
         memory, user, system, code = raw.splitlines()[-1].split("\t")
         memory, user, system, code = int(memory), float(user), float(system), int(code)
         require(memory >= 0 and all(math.isfinite(value) and value >= 0 for value in (user, system)),
                 "invalid GNU time values")
-        return dict(state="RECORDED", peak_rss_kib=memory, user_seconds=user,
-            system_seconds=system, reported_exit=code, raw=raw,
-            scope="GNU time invocation accounting; not stand-in-only or summed Git memory")
+        return {"state": "RECORDED", "peak_rss_kib": memory, "user_seconds": user,
+            "system_seconds": system, "reported_exit": code, "raw": raw,
+            "scope": "GNU time invocation accounting; not stand-in-only or summed Git memory"}
     except (IndexError, ValueError):
-        return dict(state="UNKNOWN", reason="GNU time receipt malformed", raw=raw)
+        return {"state": "UNKNOWN", "reason": "GNU time receipt malformed", "raw": raw}
 
 
 def trace_facts(raw):
@@ -245,8 +245,8 @@ def trace_facts(raw):
                 or not event["sid"] or not isinstance(event.get("event"), str)):
             malformed += 1
             continue
-        state = sessions.setdefault(event["sid"], dict(start=0, exit=0, atexit=0, last=None,
-                                                     exit_code=None, exit_time=None))
+        state = sessions.setdefault(event["sid"], {"start": 0, "exit": 0, "atexit": 0, "last": None,
+                                                     "exit_code": None, "exit_time": None})
         kind = event["event"]
         if state["last"] == "atexit" or kind in ("signal", "too_many_files"):
             protocol_errors += 1
@@ -271,13 +271,13 @@ def trace_facts(raw):
         state["last"] = kind
     incomplete = sorted(sid for sid, state in sessions.items()
                         if (state["start"], state["exit"], state["atexit"], state["last"]) != (1, 1, 1, "atexit"))
-    return dict(start_events=sum(state["start"] for state in sessions.values()),
-                session_count=len(sessions), incomplete_sids=incomplete,
-                malformed_lines=malformed, protocol_errors=protocol_errors,
-                complete=bool(sessions and not incomplete and not malformed and not protocol_errors and raw.endswith(b"\n")),
-                completeness="per observed SID start/exit/final atexit; missing/duplicate/truncated sessions are incomplete",
-                scope="extra instrumented CLI only; not primary native samples or metadata parse",
-                git_phase_time="UNKNOWN; raw events retained for independent analysis")
+    return {"start_events": sum(state["start"] for state in sessions.values()),
+                "session_count": len(sessions), "incomplete_sids": incomplete,
+                "malformed_lines": malformed, "protocol_errors": protocol_errors,
+                "complete": bool(sessions and not incomplete and not malformed and not protocol_errors and raw.endswith(b"\n")),
+                "completeness": "per observed SID start/exit/final atexit; missing/duplicate/truncated sessions are incomplete",
+                "scope": "extra instrumented CLI only; not primary native samples or metadata parse",
+                "git_phase_time": "UNKNOWN; raw events retained for independent analysis"}
 
 
 def has_git_trace(raw):
@@ -307,8 +307,8 @@ def summaries(rows, names):
         for arm in ARMS:
             selected = sorted((r for r in rows if r["case"] == name and r["arm"] == arm and r["kind"] == "native"), key=lambda r: r["sample"])
             samples = [r["observation"]["elapsed_seconds"] if r["observation"] else None for r in selected]
-            entry[arm] = dict(samples_seconds=samples, states=[r["state"] for r in selected],
-                median_seconds=statistics.median(samples) if len(selected) == 3 and all(complete(r) for r in selected) else None)
+            entry[arm] = {"samples_seconds": samples, "states": [r["state"] for r in selected],
+                "median_seconds": statistics.median(samples) if len(selected) == 3 and all(complete(r) for r in selected) else None}
         medians = [entry[arm]["median_seconds"] for arm in ARMS]
         entry["candidate_minus_base_seconds"] = medians[1] - medians[0] if all(x is not None for x in medians) else None
         entry["interpretation"] = "Descriptive native CLI cost including GNU time/capture overhead, no TRACE2/prlimit; outcomes remain separate; no budget acceptance"
@@ -343,7 +343,7 @@ def validate_measurement(row, case, arm, output, identity, python, env, config):
     prefix, argv, additions = expected_command(row, case, arm, output, identity, python)
     require(row["raw_prefix"] == prefix.name, "measurement prefix differs")
     require(not any(name.startswith("GIT_TRACE") for name in env), "primary environment contains Git tracing")
-    intended = dict(argv=argv, cwd=str(output), environment=dict(env, **additions))
+    intended = {"argv": argv, "cwd": str(output), "environment": dict(env, **additions)}
     require(read(prefix.with_suffix(".measurement-intent.json")) == intended, "measurement argv/cwd/environment intent differs")
     observation = read(prefix.with_suffix(".observation.json"))
     require(observation == row["observation"], "raw observation differs")
@@ -368,7 +368,7 @@ def sample(row, case, arm, output, env, deadline, config, identity, flush, tool_
     require(not any(name.startswith("GIT_TRACE") for name in env), "primary environment contains Git tracing")
     require(not any(path.exists() for path in (usage, trace, prefix.with_suffix(".diagnostic.json"))), "measurement output already exists")
     child_env = dict(env, **additions)
-    cap.write(prefix.with_suffix(".measurement-intent.json"), dict(argv=timed, cwd=str(output), environment=child_env))
+    cap.write(prefix.with_suffix(".measurement-intent.json"), {"argv": timed, "cwd": str(output), "environment": child_env})
     row.update(state="LAUNCH_INTENT", reason=None, engine_sha=arm["source"]["commit"], artifact_sha256=arm["artifact_sha256"],
         base=case["base"], head=case["head"], run_id=identity["run_id"], attempt=identity["attempt"],
         raw_prefix=prefix.name, phase="NATIVE_CLI" if row["kind"] == "native" else "INSTRUMENTED_DIAGNOSTIC",
@@ -398,7 +398,7 @@ def sample(row, case, arm, output, env, deadline, config, identity, flush, tool_
         limited = size is not None and size >= config["stream_bytes"]
         limited = limited or result["exit_code"] in (-signal.SIGXFSZ, 128 + signal.SIGXFSZ)
         row["capture_limit"] = "TRACE_SIZE_OR_SIGXFSZ" if limited else None
-        row["git_trace_file"] = dict(path=trace.name, bytes=size, sha256=cap.digest(trace) if trace.exists() else None)
+        row["git_trace_file"] = {"path": trace.name, "bytes": size, "sha256": cap.digest(trace) if trace.exists() else None}
         row["diagnostic_git_trace"] = trace_facts(trace.read_bytes()) if trace.exists() and not limited else None
         row["git_trace_observed"] = bool(row["diagnostic_git_trace"] and row["diagnostic_git_trace"]["complete"])
         if limited:
@@ -424,10 +424,10 @@ def run(output):
     config = read(DATA / "contract.json")
     known = read(DATA / "known-case-identities.json")["rows"]
     names = [*owned.NAMES, *("aiohttp_" + row["issue_prefix"] for row in known)]
-    report = dict(purpose=config["purpose"], status="INCOMPLETE", repair_qualification="NOT_ADJUDICATED",
-        rows=skeleton(names), limits=config, identity={}, engines={}, cases=[], errors=[],
-        facts=dict(python=sys.version, executable=sys.executable, platform=platform.platform(),
-                   recursion_limit=sys.getrecursionlimit()), collection_scope="3 owned + 5 known issue refs; not aio142/466/4271 sweep")
+    report = {"purpose": config["purpose"], "status": "INCOMPLETE", "repair_qualification": "NOT_ADJUDICATED",
+        "rows": skeleton(names), "limits": config, "identity": {}, "engines": {}, "cases": [], "errors": [],
+        "facts": {"python": sys.version, "executable": sys.executable, "platform": platform.platform(),
+                   "recursion_limit": sys.getrecursionlimit()}, "collection_scope": "3 owned + 5 known issue refs; not aio142/466/4271 sweep"}
     def flush():
         cap.write(output / "report.json", report)
     flush()
@@ -437,8 +437,8 @@ def run(output):
         require(os.environ.get("GITHUB_EVENT_NAME") == "pull_request" and os.environ.get("GITHUB_RUN_ATTEMPT") == "1", "first ordinary PR attempt only")
         fixed = config["baseline_sha"]
         require(isinstance(fixed, str) and SHA.fullmatch(fixed), "root must pin final baseline before promotion")
-        identity = dict(run_id=os.environ["GITHUB_RUN_ID"], attempt=os.environ["GITHUB_RUN_ATTEMPT"],
-            candidate=os.environ["GITHUB_SHA"], pr_head=os.environ["PR_HEAD_SHA"], baseline=os.environ["PR_BASE_SHA"])
+        identity = {"run_id": os.environ["GITHUB_RUN_ID"], "attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+            "candidate": os.environ["GITHUB_SHA"], "pr_head": os.environ["PR_HEAD_SHA"], "baseline": os.environ["PR_BASE_SHA"]}
         require(identity["baseline"] == fixed and all(SHA.fullmatch(identity[x]) for x in ("candidate", "pr_head", "baseline")), "event source mismatch")
         require(config["native_samples_per_arm"] == 3 and config["diagnostic_samples_per_arm"] == 1
                 and config["per_child_seconds"] == 240 and config["setup_command_seconds"] == 900
@@ -466,7 +466,7 @@ def run(output):
         for binary in (TIME_BINARY, PRLIMIT_BINARY):
             path = Path(binary)
             require(path.is_file(), "required accounting binary absent: " + binary)
-            report["native_tools"][binary] = dict(resolved=str(path.resolve()), bytes=path.stat().st_size, sha256=cap.digest(path))
+            report["native_tools"][binary] = {"resolved": str(path.resolve()), "bytes": path.stat().st_size, "sha256": cap.digest(path)}
             commands.run([binary, "--version"], private)
         for arm in ARMS:
             sha = identity["baseline"] if arm == "base" else identity["candidate"]
@@ -506,7 +506,7 @@ def run(output):
         flush()
         return 2
     finally:
-        entries = {p.relative_to(output).as_posix(): dict(bytes=p.stat().st_size, sha256=cap.digest(p))
+        entries = {p.relative_to(output).as_posix(): {"bytes": p.stat().st_size, "sha256": cap.digest(p)}
                    for p in sorted(output.rglob("*")) if p.is_file() and p.name != "files.json"}
         cap.write(output / "files.json", entries)
 
@@ -566,10 +566,10 @@ def validate(output):
                     and cap.digest(trace) == row["git_trace_file"]["sha256"] and has_git_trace(trace.read_bytes()), "diagnostic trace missing/misbound/limited")
             require(trace_facts(trace.read_bytes()) == row["diagnostic_git_trace"], "diagnostic trace summary differs")
             require(read(prefix.with_suffix(".diagnostic.json")) == row["diagnostic"], "diagnostic receipt differs")
-    cap.write(output / "capture-validation.json", dict(status="CAPTURE_COMPLETE",
-        repair_qualification="NOT_ADJUDICATED", input_count=8, native_samples=48, diagnostic_samples=16,
-        candidate_real_verdicts_complete=report["candidate_real_verdicts_complete"],
-        error_or_no_verdict_rows=sum(row["state"] != "VERDICT" for row in report["rows"]), identity=identity))
+    cap.write(output / "capture-validation.json", {"status": "CAPTURE_COMPLETE",
+        "repair_qualification": "NOT_ADJUDICATED", "input_count": 8, "native_samples": 48, "diagnostic_samples": 16,
+        "candidate_real_verdicts_complete": report["candidate_real_verdicts_complete"],
+        "error_or_no_verdict_rows": sum(row["state"] != "VERDICT" for row in report["rows"]), "identity": identity})
     return 0
 
 
