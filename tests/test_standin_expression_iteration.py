@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -230,7 +231,7 @@ def _git(repo, *args):
 
 @pytest.mark.parametrize("shape", [cases.DEEP, cases.SIBLING])
 @pytest.mark.parametrize("weakening", [True, False])
-def test_owned_deep_and_sibling_reach_a_real_cli_verdict(tmp_path, shape, weakening):
+def test_owned_deep_and_sibling_reach_a_real_cli_verdict(tmp_path, capsys, shape, weakening):
     before, after = cases.pair(shape)
     if not weakening:
         # A new owned normal control: only whitespace in the existing tail.
@@ -252,12 +253,19 @@ def test_owned_deep_and_sibling_reach_a_real_cli_verdict(tmp_path, shape, weaken
     _git(tmp_path, "add", "-A")
     _git(tmp_path, "commit", "-m", "owned head")
     head = _git(tmp_path, "rev-parse", "HEAD")
+    started = time.perf_counter()
     run = subprocess.run(
         [sys.executable, "-B", "-m", "checkwash", "check", f"{base}..{head}",
          "--repo", str(tmp_path), "--format", "json"],
         check=False, capture_output=True, text=True, encoding="utf-8", timeout=240,
         env={**os.environ, "PYTHONUTF8": "1", "NO_COLOR": "1"},
     )
+    wall_seconds = time.perf_counter() - started
+    with capsys.disabled():
+        print("CHECKWASH_OWNED_CLI_METADATA " + json.dumps({
+            "shape": shape, "weakening": weakening, "actual_exit": run.returncode,
+            "wall_seconds": wall_seconds, "python": sys.version.split()[0], "platform": sys.platform,
+        }, sort_keys=True))
     assert run.returncode == int(weakening), run.stdout + run.stderr
     assert run.stderr == ""
     report = json.loads(run.stdout)
