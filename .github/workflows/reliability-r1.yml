@@ -1,0 +1,225 @@
+name: reliability R1 diagnostics and strict regressions
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/reliability-r1.yml'
+      - 'tools/reliability_r1_cases.py'
+      - 'tools/reliability_r1_trace.py'
+      - 'tests/test_reliability_r1.py'
+      - 'src/checkwash/**'
+      - 'pyproject.toml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic-capture:
+    # Capture completeness is independent of engine success. An EXCEPTION or
+    # TIMEOUT remains a raw failure observation. Candidate jobs subsequently
+    # run strict pytest; ordinary CI keeps all nine full-suite matrix legs.
+    name: R1 initial trace (Ubuntu, py${{ matrix.python }}, ${{ matrix.arm }})
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+        arm: [baseline, candidate]
+    runs-on: ubuntu-latest
+    # 104 independently bounded 30-second workers have a maximum of 52 minutes.
+    # Leave time to upload every raw state if all of them time out.
+    timeout-minutes: 65
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHONUTF8: '1'
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      CANDIDATE_SHA: ${{ github.sha }}
+      MATRIX_OS: ubuntu-latest
+      MATRIX_PYTHON: ${{ matrix.python }}
+      ENGINE_ARM: ${{ matrix.arm }}
+      ENGINE_DIRECTORY: ${{ matrix.arm == 'baseline' && 'baseline' || 'candidate' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        id: candidate
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        id: baseline
+        if: matrix.arm == 'baseline'
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: baseline
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        id: python
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Bind the two original source identities before installing
+        id: identity
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/reliability-r1-evidence
+        run: |
+          "$TRUSTED_PYTHON" -I -B -X utf8 - <<'PY'
+          import json, os, pathlib, platform, subprocess, sys
+          root = pathlib.Path(os.environ['GITHUB_WORKSPACE'])
+          evidence = pathlib.Path(os.environ['EVIDENCE_ROOT'])
+          evidence.mkdir(parents=True, exist_ok=True)
+          def git(directory, *args):
+              return subprocess.run(['git', '-C', str(directory), *args], check=True,
+                                    capture_output=True, text=True, encoding='utf-8', timeout=30).stdout.strip()
+          candidate = root / 'candidate'
+          engine = root / os.environ['ENGINE_DIRECTORY']
+          expected = os.environ['PR_BASE_SHA'] if os.environ['ENGINE_ARM'] == 'baseline' else os.environ['CANDIDATE_SHA']
+          binding = {
+              'purpose': 'DIAGNOSTIC_CAPTURE_NOT_QUALIFICATION',
+              'arm': os.environ['ENGINE_ARM'], 'pr_base_sha': os.environ['PR_BASE_SHA'],
+              'pr_head_sha': os.environ['PR_HEAD_SHA'], 'candidate_sha': os.environ['CANDIDATE_SHA'],
+              'expected_engine_sha': expected, 'candidate_checkout': str(candidate.resolve()),
+              'engine_checkout': str(engine.resolve()),
+              'candidate_actual_sha': git(candidate, 'rev-parse', 'HEAD'),
+              'candidate_parents': git(candidate, 'rev-list', '--parents', '-n', '1', 'HEAD'),
+              'engine_actual_sha': git(engine, 'rev-parse', 'HEAD'),
+              'candidate_status': git(candidate, 'status', '--porcelain'),
+              'engine_status': git(engine, 'status', '--porcelain'),
+              'run_id': os.environ['GITHUB_RUN_ID'], 'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'matrix_os': os.environ['MATRIX_OS'], 'matrix_python': os.environ['MATRIX_PYTHON'],
+              'python': sys.version, 'executable': sys.executable, 'platform': platform.platform(),
+              'runner_os': os.environ.get('RUNNER_OS'), 'runner_arch': os.environ.get('RUNNER_ARCH'),
+              'image_os': os.environ.get('ImageOS'), 'image_version': os.environ.get('ImageVersion'),
+              'git_version': git(candidate, '--version'),
+          }
+          (evidence / 'binding.json').write_text(json.dumps(binding, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          assert binding['candidate_actual_sha'] == binding['candidate_sha'], binding
+          assert binding['engine_actual_sha'] == expected, binding
+          assert not binding['candidate_status'] and not binding['engine_status'], binding
+          PY
+      - name: Install this arm's unmodified checkout
+        id: install
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          INSTALL_SPEC: ${{ matrix.arm == 'candidate' && './candidate[dev]' || './baseline' }}
+        run: |
+          "$TRUSTED_PYTHON" -I -B -X utf8 -m pip install --no-input -e "$INSTALL_SPEC"
+      - name: Capture all 13 phases of the eight owned cases
+        id: collect
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/reliability-r1-evidence
+        run: |
+          # Both arms use this exact candidate collector and case definition.
+          # No reader, package file or test is copied into the baseline tree.
+          "$TRUSTED_PYTHON" -B -X utf8 candidate/tools/reliability_r1_trace.py --engine-root "$ENGINE_DIRECTORY" --output "$EVIDENCE_ROOT/r1-trace.json"
+      - name: Verify complete capture and source/run binding (not engine success)
+        id: completeness
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && (steps.collect.outcome == 'success' || steps.collect.outcome == 'failure') }}
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/reliability-r1-evidence
+        run: |
+          "$TRUSTED_PYTHON" -I -B -X utf8 - <<'PY'
+          import collections, hashlib, itertools, json, os, pathlib
+          root = pathlib.Path(os.environ['GITHUB_WORKSPACE'])
+          evidence = pathlib.Path(os.environ['EVIDENCE_ROOT'])
+          binding = json.loads((evidence / 'binding.json').read_text(encoding='utf-8'))
+          report = json.loads((evidence / 'r1-trace.json').read_text(encoding='utf-8'))
+          assert report['purpose'] == 'DIAGNOSTIC_CAPTURE_NOT_QUALIFICATION'
+          identity = report['identity']
+          assert identity['engine_head'] == binding['expected_engine_sha']
+          assert identity['github_sha'] == binding['candidate_sha']
+          assert identity['github_run_id'] == binding['run_id']
+          assert identity['github_run_attempt'] == binding['run_attempt']
+          assert identity['python'] == binding['python']
+          assert pathlib.Path(identity['executable']).resolve() == pathlib.Path(binding['executable']).resolve()
+          package = pathlib.Path(binding['engine_checkout']) / 'src' / 'checkwash'
+          assert pathlib.Path(identity['engine_package_path']).resolve() == package.resolve()
+          assert not identity['engine_worktree_status'], identity['engine_worktree_status']
+          def digest(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          collector = root / 'candidate' / 'tools' / 'reliability_r1_trace.py'
+          cases = collector.with_name('reliability_r1_cases.py')
+          assert identity['collector_sha256'] == digest(collector)
+          assert identity['cases_sha256'] == digest(cases)
+          actual_sources = {p.relative_to(package).as_posix(): digest(p)
+                            for p in sorted(package.rglob('*')) if p.is_file()
+                            and '__pycache__' not in p.parts and p.suffix not in ('.pyc', '.pyo')}
+          assert actual_sources and identity['engine_source_manifest'] == actual_sources
+          phases = ('syntax', 'stdlib_unparse', 'stable_dump', 'binding_maps', 'ordered_bindings',
+                    'trivial_subject', 'positive_comparisons', 'asserted_subject', 'frontend',
+                    'pipeline_format', 'pipeline_weaken', 'pipeline_expected', 'pipeline_subject')
+          locations = ('production_return', 'test_assignment', 'direct_assert', 'helper_body')
+          expected = set(itertools.product(locations, (8, 350), phases))
+          receipts = report['receipts']
+          observed = [(item['location'], item['terms'], item['phase']) for item in receipts]
+          assert len(observed) == len(expected) == 104 and set(observed) == expected
+          assert set(report['corpus']) == {f'{location}/{terms}' for location in locations for terms in (8, 350)}
+          for source in report['corpus'].values():
+              assert set(source) == {'app.py', 'tests/test_value.py'}
+              for item in source.values():
+                  raw = item['source_utf8'].encode('utf-8')
+                  assert item['bytes'] == len(raw) and item['sha256'] == hashlib.sha256(raw).hexdigest()
+          states = collections.Counter(item['status'] for item in receipts)
+          assert report['summary'] == {name: states[name] for name in (
+              'RETURNED', 'EXCEPTION', 'TIMEOUT', 'INVALID_RECEIPT', 'LAUNCH_FAILURE')}
+          for item in receipts:
+              if item['status'] == 'RETURNED':
+                  assert item['worker_returncode'] == 0 and isinstance(item['result'], dict)
+              elif item['status'] == 'EXCEPTION':
+                  assert item['worker_returncode'] == 1
+                  assert item['exception_type'] and item['traceback'] and item['first_frames'] and item['last_frames']
+              elif item['status'] == 'TIMEOUT':
+                  assert item['seconds'] == 30 and 'stdout' in item and 'stderr' in item
+              else:
+                  raise AssertionError(f'incomplete diagnostic worker: {item}')
+          receipt = {'purpose': report['purpose'], 'complete_receipts': 104,
+                     'raw_state_counts': dict(states), 'qualification': 'NOT_EVALUATED',
+                     'trace_sha256': digest(evidence / 'r1-trace.json'),
+                     'binding_sha256': digest(evidence / 'binding.json')}
+          (evidence / 'capture-completeness.json').write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(receipt, sort_keys=True))
+          PY
+      - name: Candidate strict regressions after raw trace capture
+        id: pytest
+        if: ${{ !cancelled() && matrix.arm == 'candidate' && steps.install.outcome == 'success' && (steps.collect.outcome == 'success' || steps.collect.outcome == 'failure') }}
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/reliability-r1-evidence
+        run: '"$TRUSTED_PYTHON" -B -X utf8 -m pytest candidate/tests/test_reliability_r1.py -vv --tb=long --junitxml="$EVIDENCE_ROOT/pytest.xml"'
+      - name: Preserve the actual step outcomes even after failure
+        if: ${{ always() && steps.python.outcome == 'success' }}
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/reliability-r1-evidence
+          CANDIDATE_CHECKOUT_OUTCOME: ${{ steps.candidate.outcome }}
+          BASELINE_CHECKOUT_OUTCOME: ${{ steps.baseline.outcome }}
+          IDENTITY_OUTCOME: ${{ steps.identity.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+          COMPLETENESS_OUTCOME: ${{ steps.completeness.outcome }}
+          PYTEST_OUTCOME: ${{ steps.pytest.outcome }}
+        run: |
+          "$TRUSTED_PYTHON" -I -B -X utf8 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ['EVIDENCE_ROOT'])
+          root.mkdir(parents=True, exist_ok=True)
+          names = ('CANDIDATE_CHECKOUT_OUTCOME', 'BASELINE_CHECKOUT_OUTCOME', 'IDENTITY_OUTCOME',
+                   'INSTALL_OUTCOME', 'COLLECT_OUTCOME', 'COMPLETENESS_OUTCOME', 'PYTEST_OUTCOME', 'PR_BASE_SHA',
+                   'PR_HEAD_SHA', 'CANDIDATE_SHA', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT',
+                   'MATRIX_OS', 'MATRIX_PYTHON', 'ENGINE_ARM')
+          outcome = {name: os.environ.get(name) for name in names}
+          outcome['purpose'] = 'DIAGNOSTIC_CAPTURE_NOT_QUALIFICATION'
+          (root / 'step-outcomes.json').write_text(json.dumps(outcome, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ always() }}
+        with:
+          name: r1-capture-ubuntu-latest-py${{ matrix.python }}-${{ matrix.arm }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/reliability-r1-evidence
+          if-no-files-found: error
+          retention-days: 30
