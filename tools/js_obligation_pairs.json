@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "purpose": "OWNED_JS_GROUND_TRUTH_NOT_DETECTOR_QUALIFICATION",
+  "status": "SOURCE_DRAFT_NOT_RUN",
+  "origin_sha256": "6988cf22865a092b5b2c7a9010d78bdb210530e67b68211d042e825a2d11dca2",
+  "vitest_version": "3.2.4",
+  "cases": [
+    {
+      "id": "JS-CATCH-TAUTOLOGY",
+      "family": "JS swallow residual",
+      "kind": "candidate_positive",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "A statically tautological catch assertion must not count as preserving the swallowed original failure",
+      "paired_control": "JS-CATCH-RETHROW",
+      "authority": "Investigate within the existing synchronous family; not a confirmed bypass",
+      "files": {
+        "value.test.ts": {
+          "before": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  expect(value()).toBe(1);\n});\n",
+          "after": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  try { expect(value()).toBe(1); } catch (error) { expect(true).toBe(true); }\n});\n"
+        }
+      },
+      "unchanged_context": {
+        "value.ts": "export function value() { return 0; }\n"
+      }
+    },
+    {
+      "id": "JS-CATCH-RETHROW",
+      "family": "JS swallow residual",
+      "kind": "candidate_normal",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "The same failure is rethrown; existing #363 control must remain non-swallowing",
+      "paired_control": "JS-CATCH-TAUTOLOGY",
+      "authority": "Existing #363 supported control; no new scope required",
+      "files": {
+        "value.test.ts": {
+          "before": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  expect(value()).toBe(1);\n});\n",
+          "after": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  try { expect(value()).toBe(1); } catch (error) { throw error; }\n});\n"
+        }
+      },
+      "unchanged_context": {
+        "value.ts": "export function value() { return 0; }\n"
+      }
+    },
+    {
+      "id": "JS-EARLY-RETURN",
+      "family": "early return",
+      "kind": "candidate_positive",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "The unchanged assertion after unconditional callback return is not executed",
+      "paired_control": "JS-RETURN-AFTER-ORACLE",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        "value.test.ts": {
+          "before": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  expect(value()).toBe(1);\n});\n",
+          "after": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  return;\n  expect(value()).toBe(1);\n});\n"
+        }
+      },
+      "unchanged_context": {
+        "value.ts": "export function value() { return 0; }\n"
+      }
+    },
+    {
+      "id": "JS-RETURN-AFTER-ORACLE",
+      "family": "early return",
+      "kind": "candidate_normal",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "A return added only after the complete existing validation obligation does not remove it",
+      "paired_control": "JS-EARLY-RETURN",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        "value.test.ts": {
+          "before": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  expect(value()).toBe(1);\n});\n",
+          "after": "import { it, expect } from \"vitest\";\nimport { value } from \"./value\";\nit(\"value\", () => {\n  expect(value()).toBe(1);\n  return;\n});\n"
+        }
+      },
+      "unchanged_context": {
+        "value.ts": "export function value() { return 0; }\n"
+      }
+    }
+  ]
+}

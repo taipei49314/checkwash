@@ -1,0 +1,106 @@
+name: JS obligation owned reproduction (diagnostic only)
+
+on:
+  pull_request:
+    paths:
+      - 'tools/js_obligation_pairs.json'
+      - 'tools/js_obligation_reproduction.py'
+      - 'tools/owned_process_capture.py'
+      - '.github/workflows/js-obligation-reproduction.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce:
+    name: Four JS pairs - ground truth and capture, not detector qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CANDIDATE_SHA: ${{ github.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        id: checkout
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        id: node
+        with:
+          node-version: '22'
+      - name: Bind trusted native runner paths before owned sources exist
+        id: nodepaths
+        shell: bash
+        run: |
+          printf 'node=%s\n' "$(command -v node)" >> "$GITHUB_OUTPUT"
+          printf 'npm=%s\n' "$(command -v npm)" >> "$GITHUB_OUTPUT"
+      - name: Install exact candidate
+        id: install
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: |
+          "$TRUSTED_PYTHON" -I -B -X utf8 -m pip install --no-input --no-deps -e ./candidate
+      - name: Bind source and materialize only the four owned pairs
+        id: prepare
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          TRUSTED_NODE: ${{ steps.nodepaths.outputs.node }}
+          TRUSTED_NPM: ${{ steps.nodepaths.outputs.npm }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/js_obligation_reproduction.py prepare'
+      - name: Capture four Checkwash CLIs then eight separate native Vitest processes
+        id: capture
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          TRUSTED_NODE: ${{ steps.nodepaths.outputs.node }}
+          TRUSTED_NPM: ${{ steps.nodepaths.outputs.npm }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/js_obligation_reproduction.py capture'
+      - name: Require actual native ground truth and complete raw receipts
+        id: verify
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' && (steps.capture.outcome == 'success' || steps.capture.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          TRUSTED_NODE: ${{ steps.nodepaths.outputs.node }}
+          TRUSTED_NPM: ${{ steps.nodepaths.outputs.npm }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/js_obligation_reproduction.py validate'
+      - name: Preserve original native step outcomes
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/js-obligation-evidence
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          NODE_OUTCOME: ${{ steps.node.outcome }}
+          NODE_PATHS_OUTCOME: ${{ steps.nodepaths.outcome }}
+          PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
+          CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+        run: |
+          "$TRUSTED_PYTHON" -I -B -X utf8 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["EVIDENCE_ROOT"])
+          root.mkdir(exist_ok=True)
+          record = {name: os.environ[name] for name in (
+              "GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "CANDIDATE_SHA", "PR_HEAD_SHA",
+              "PR_BASE_SHA", "CHECKOUT_OUTCOME", "INSTALL_OUTCOME", "PREPARE_OUTCOME",
+              "CAPTURE_OUTCOME", "VERIFY_OUTCOME", "NODE_OUTCOME", "NODE_PATHS_OUTCOME")}
+          record["purpose"] = "DIAGNOSTIC_CAPTURE_NOT_DETECTOR_QUALIFICATION"
+          (root / "step-outcomes.json").write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: js-obligation-owned-ubuntu-py312-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/js-obligation-evidence
+          if-no-files-found: error
