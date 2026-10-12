@@ -119,8 +119,12 @@ def prepare():
     package = {"name": "owned-js-ground-truth", "private": True,
                "version": "0.0.0", "type": "module", "devDependencies": {"vitest": "3.2.4"}}
     save(NATIVE / "package.json", package)
+    # npm rejects one real path loaded as both user and global config.
+    # Use a separate owned empty global file; keep ambient config excluded.
+    global_config = NATIVE / "empty-global.npmrc"
+    global_config.write_bytes(b"")
     install_env = environment()
-    install_env.update(NPM_CONFIG_USERCONFIG=os.devnull, NPM_CONFIG_GLOBALCONFIG=os.devnull,
+    install_env.update(NPM_CONFIG_USERCONFIG=os.devnull, NPM_CONFIG_GLOBALCONFIG=str(global_config),
                        NPM_CONFIG_CACHE=str(TEMP / "js-native-npm-cache"))
     argv = [str(NPM), "install", "--prefix", str(NATIVE), "--ignore-scripts",
             "--no-audit", "--no-fund", "--registry=https://registry.npmjs.org"]
@@ -373,6 +377,7 @@ def verify_bindings(binding):
     if (native["node"] != str(NODE) or native["node_realpath"] != str(NODE.resolve()) or native["npm"] != str(NPM)
             or native["vitest_entry"] != str(VITEST) or native["config"] != str(NATIVE / "vitest.config.mjs")
             or native["vitest_entry_sha256"] != digest(VITEST) or native["vitest_version"] != "3.2.4"
+            or (NATIVE / "empty-global.npmrc").read_bytes() != b""
             or (NATIVE / "vitest.config.mjs").read_bytes() != CONFIG_TEXT.encode("utf-8")
             or read(NATIVE / "node_modules/vitest/package.json")["version"] != "3.2.4"):
         raise ValueError("native runner/config binding differs")
