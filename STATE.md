@@ -1,6 +1,21 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-12 (v0.7.0 publication authorized; completion follows actual receipts)
+Updated: 2026-10-12 (v0.7.0 published and verified; verdict rotation remains separate)
+
+## 2026-10-12: v0.7.0 publication verified
+
+v0.7.0 was published from d647a65e9734f2b6e57b528ea595b1507dc31094.
+The main/tag verdict gates, actual release build and PyPI upload passed.
+All nine platform/Python test jobs passed, retaining two accepted macOS skips
+per macOS job; actual public-tag visitor installation and byte comparison passed.
+GitHub/PyPI wheel and sdist bytes match. See the
+[publication verification record](docs/releases/v0.7.0-publication-verification.md)
+for native run IDs/attempts, source/tree and actual asset identities.
+
+The verdict baseline rotation is being prepared separately from publication;
+the prior v0.6.0 Action recommendation remains. T-528 remains CLAIMED, its
+original A–D work incomplete, and downstream repositories were not re-pinned.
+The earlier authorization/preparation entry below remains a historical record.
 
 ## 2026-10-12: preparation accepted; publication authorized
 
