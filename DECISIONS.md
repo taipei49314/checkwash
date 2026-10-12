@@ -9403,3 +9403,89 @@ decisions. This draft records agent source reasoning and actual stored hosted
 receipts; it grants no independent human acceptance, merge, held-out freeze,
 READY status or publication. Main/tag parity, future-tag visitor installation
 and public package-description checks remain publication-phase NOT_RUN.
+
+## D-129 (2026-10-12): prepare the previous-release verdict baseline rotation to v0.7.0 (#371)
+
+The maintainer subsequently instructed "直接到1.0 所有條件準備好停下"
+(prepare all conditions for 1.0, then stop). The agent integrates this
+previously reviewed rotation as preparation under that instruction and
+docs/RELEASING.md step 8c. This records the complete initial proposal and
+the acceptance version alignment; it asserts neither a separate human
+case-label ruling nor a completed merge or authorization to publish 1.0.
+The earlier acceptance histories and D-126 through D-128 are preserved.
+
+The published baseline is v0.7.0, release commit
+`d647a65e9734f2b6e57b528ea595b1507dc31094`. Its actual public
+`checkwash.pyz` is 754757 bytes, SHA256
+`d905ea5fd63daacc8e705b7de8932ed2affac810d76ae988ca6a8e57f2e12c7c`.
+PR #371's initial pin head is
+`3207924e9424633dcb28a41c5576614c7facbe23`.
+
+The initial ordinary PR verdict run
+[38218458339/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/38218458339)
+concluded failure. Its actual checkout is
+`a625817b0920ab3462fedbcab2822a27c601be13`, tree
+`773c94be83708c3e5e74059b07b04fb6c662ff39`, with parents the released
+commit and initial PR head above. Native job 114708660117 preserved
+artifact 11733439551 (`verdict-gate-receipt-1`), a 21299-byte ZIP with
+SHA256 `370c9dcfc784877334cce6ee85ffbec0712a93d23c83a4edebdb3434db30d41b`.
+Its raw JSON receipt SHA256 is
+`ecc90009c620c5c1969ea7dbf808a9940b630cf523ca572426ae79b56fa69875`;
+the companion Markdown SHA256 is
+`60b116f0b23e8972d946e74a1730a389221068276f44ca0d43a86a09531ef409`.
+The failed native run and raw receipt remain failed and unchanged.
+
+All 185 cases completed (159 T1, 26 T3), with 159 block-to-block and
+26 pass-to-pass transitions, no reported transitions, no `not_run` or
+unevaluated row, and no required acceptance entry. All four engines have
+empty final errors and successful clean-range/invalid-ref controls.
+Per-case engine errors, config errors and skipped-file arrays are empty.
+The candidate and baseline package-member identity is
+`6564198951f89f7b5e64d079ab41849dd31e82e6cb0bc74e1bb2043262586011`.
+The candidate's build digest differs from the public pyz digest; both are
+bound to their recorded source/package identities rather than treated as
+the same archive bytes.
+
+The only failures are `acceptance-baseline` and `baseline-blocked-drift`.
+The observed blocked set changes from 158 /
+`7d757f021a568fdb97db678a1c211806e68a89f5a4b8a779f883f02fec94fa47`
+to 159 /
+`9993cab624a6ee1831a27f33fb48088676a639e9f5dd2a1b69361f1048c3f3a4`.
+Its sole added ID is `i198/T6`; none is removed. That case now blocks on
+the published baseline as well as the candidate. The agent-writable
+observed pin was adopted in `1ded57c7ad0a14954a34b9df613e661ef514a0c0`.
+
+The full 26-case T3 identity map is unchanged: added, dropped and rehashed
+lists are empty. Its source is the released commit's
+`tests/data/javascript_chai_mutations.json`, SHA256
+`f10a5ef8d76e5dbeffa4f058715a41775358b31a959778b64f2f9c6b0a8c7c3a`.
+The v0.4.2 to v0.5.0 canary engines, observations and all 71 pinned
+block-to-pass IDs are unchanged; its other recorded transitions remain
+45 block-to-block, 6 pass-to-block and 37 pass-to-pass. Canary pins,
+case inputs, labels, gate semantics and fixture expectations do not change.
+
+The protected acceptance content change is solely its file-level
+`baseline = "v0.6.0"` to `baseline = "v0.7.0"`. No acceptance entry is
+added or removed: the current active list and complete proposal are empty,
+and every case has no `needs_entry`. This change introduces no waiver or
+new semantic label. The proposal used pins SHA256
+`bed37ba11f99bce973eb80301113ebb2b84827c84beda697cc6f79f9253c13d1`,
+labels SHA256 `4ef5320861a628a590446c7f44733853ec5ae1e6e7812179bdd63907a26a3830`,
+acceptance SHA256 `732fc188f1771196f468651fbb4a1cf20a95ef750575a4b5156b93e1218131fa`,
+and T1 input-map SHA256 `f7321ccc6ae7c35bc91d2f5bf95a06111d3fc61bab0694631b83a79ac1a2cce4`.
+
+Before integration, the latest hosted run 38220085983/attempt 1 on PR head
+`9bcbac34a14a2a9f5231c079b9ac79399c1b778d` completed all 185 cases and
+failed only `acceptance-baseline`. Its raw JSON receipt SHA256 is
+`8769fa28a73aa7dfec27d8335a31907e04d8aaa3df69dfbc0ce0f0d681b2cc89`.
+Its actual PR merge checkout is
+`9fdb455743bcd504f1a44f24717c9be65c2abf1e`; that retained failure does not
+establish that the following integration passes.
+
+The agent integrates this version-only acceptance change in PR #371.
+The final protected/pin commit still requires a successful ordinary
+verdict and normal required checks before merge. The initial failed
+proposal is not substituted for that final evidence. Rotation is not
+complete until the reviewed PR merges. The recommended Action remains
+v0.6.0; no downstream repository is re-pinned, and T-528's original A-D
+held-out/custody work remains incomplete.

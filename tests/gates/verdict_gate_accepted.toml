@@ -59,4 +59,4 @@
 # remains. The agent wrote this change in the rotation PR; the maintainer
 # approves it there.
 
-baseline = "v0.6.0"
+baseline = "v0.7.0"
