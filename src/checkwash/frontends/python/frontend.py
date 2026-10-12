@@ -21,6 +21,7 @@ from checkwash.frontends.python.conditional_oracles import conditional_oracle_ca
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
 from checkwash.frontends.python.runtime_controls import runtime_controls
+from checkwash.frontends.python.syntax import parse_module
 from checkwash.frontends.python.setup_skip_controls import (
     BODY_MARKERS,
     ConftestLevel,
@@ -3738,7 +3739,7 @@ def _parse_python(
     global _walks
     raw = normalize_source(data)
     try:
-        tree = ast.parse(raw)
+        tree = parse_module(raw) if collect_tests else ast.parse(raw)
         if collect_tests and "if" in raw and ("assert" in raw or "raise" in raw and "AssertionError" in raw):
             tree = conditional_oracle_carriers(tree)
     except SyntaxError:

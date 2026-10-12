@@ -22,6 +22,7 @@ from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.frontend import _static_truth, parse_python
 from checkwash.frontends.python.mock_testcase_replacements import restructured_patch_event
+from checkwash.frontends.python.syntax import parse_module
 from checkwash.gating import unit_is_live
 from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ir.astutil import stable_dump
@@ -46,7 +47,7 @@ def _syntax(source, *, path="<unknown>", side="<unknown>"):
             f"bytes={len(source)}, limit={_MAX_SOURCE_BYTES}"
         )
     try:
-        tree = ast.parse(source.decode("utf-8-sig"))
+        tree = parse_module(source.decode("utf-8-sig"))
     except (SyntaxError, UnicodeError, ValueError, RecursionError):
         return None
     nodes = sum(1 for _node in ast.walk(tree))
