@@ -32,6 +32,7 @@ from checkwash.change import EngineError, FileChange
 from checkwash.ir.astutil import stable_dump
 from checkwash.config import Config
 from checkwash.frontends.python.frontend import _static_truth, parse_python
+from checkwash.gitio.snapshot import MAX_BATCH_BYTES, MAX_INVENTORY_PATHS, MAX_SOURCE_BYTES
 from checkwash.opaque import opaque_error, split_inventory
 from checkwash.roles import _is_runner_script, _runner_shape, _runs_tests, collectable
 
@@ -2279,6 +2280,7 @@ def find_runtime_subject_shadows(
     ]
     | None = None,
     include_equivalent: bool = False,
+    config_evidence=None,
 ) -> list[SubjectShadow]:
     """Return provider changes for existing first-party test imports."""
 
@@ -2286,7 +2288,9 @@ def find_runtime_subject_shadows(
         raise EngineError("runtime-shadow inventory requires both path and byte readers")
     analysis = _ShadowAnalysisCache()
     third_party = set(third_party_roots)
-    normally_relevant = _relevant(changes, config)
+    effective_configs = config_evidence.changes if config_evidence is not None else {}
+    normally_relevant = _relevant(changes, config) or any(
+        _config_change(path, change) for path, change in effective_configs.items())
     # A same-path provider mutation matters only when repository inventory is
     # available to prove an existing competing provider and live test import.
     # Direct engine users (including the frozen perf gate) provide neither;
@@ -2317,6 +2321,7 @@ def find_runtime_subject_shadows(
     if not normally_relevant and not provisional_staged_paths:
         return []
     change_by_path = {c.path.replace("\\", "/"): c for c in changes}
+    control_changes = {**change_by_path, **effective_configs}
     side_change_by_path = dict(change_by_path)
     for change in changes:
         old_path = (change.old_path or "").replace("\\", "/")
@@ -2327,11 +2332,13 @@ def find_runtime_subject_shadows(
         for path, change in change_by_path.items()
         if _search_order_change(path, change, config)
     }
+    changed_control_paths.update(path for path, change in effective_configs.items()
+                                 if _config_change(path, change))
     changed_config_paths = {
         path
         for path in changed_control_paths
         if path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
-        or (change_by_path[path].old_path or path)
+        or (control_changes[path].old_path or path)
         .replace("\\", "/")
         .rsplit("/", 1)[-1]
         in _PYTEST_CONFIGS
@@ -2361,6 +2368,9 @@ def find_runtime_subject_shadows(
     after_paths.update(path for path, c in change_by_path.items() if c.after is not None)
     after_paths.difference_update(path for path, c in change_by_path.items() if c.after is None)
     before_paths, after_paths = _side_paths(after_paths, changes)
+    if config_evidence is not None:
+        before_paths.update(config_evidence.requests["before"] & config_evidence.paths["before"])
+        after_paths.update(config_evidence.requests["after"] & config_evidence.paths["after"])
     added_paths = after_paths - before_paths
     removed_paths = before_paths - after_paths
 
@@ -2400,7 +2410,7 @@ def find_runtime_subject_shadows(
         modules |= _path_to_modules(path)
     if changed_config_paths or any(
         _is_conftest_path(path)
-        or _is_conftest_path(change_by_path[path].old_path or path)
+        or _is_conftest_path(control_changes[path].old_path or path)
         for path in changed_control_paths
     ):
         # Adding/deleting a higher-precedence but otherwise empty config can
@@ -2452,7 +2462,7 @@ def find_runtime_subject_shadows(
     # shadow without inventing arbitrary source roots from filename suffixes.
     changed_roots: set[str] = {""} if search_order_changed else set()
     import_mode_changed = False
-    for path, change in sorted(change_by_path.items()):
+    for path, change in sorted(control_changes.items()):
         old_path = (change.old_path or path).replace("\\", "/")
         old_config = old_path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
         new_config = path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
@@ -2604,7 +2614,7 @@ def find_runtime_subject_shadows(
     # Phase one reads only controls and candidate tests. Their active imports
     # narrow an arbitrarily large package down before provider sources are
     # requested, so repository size cannot disable the detector via a cap.
-    initial_reads = sorted(
+    initial_requests = (
         {
             *test_paths,
             *conftest_paths,
@@ -2613,6 +2623,8 @@ def find_runtime_subject_shadows(
         }
         - set(side_change_by_path)
     )
+    initial_reads = sorted(initial_requests - set(config_paths)
+                           if config_evidence is not None else initial_requests)
     snapshot: dict[str, bytes | None] = {}
     if initial_reads and head_batch_reader is not None:
         read = head_batch_reader(initial_reads)
@@ -2630,6 +2642,32 @@ def find_runtime_subject_shadows(
     for path, change in change_by_path.items():
         if change.after is not None:
             snapshot[path] = change.after
+
+    config_sources = {}
+    if config_evidence is not None:
+        for side in ("before", "after"):
+            config_sources[side] = config_evidence.sources(side, config_paths)
+        # Splitting the original initial batch does not enlarge its budget.
+        # The working snapshot also holds unrelated changed files; only the
+        # original requested paths belong to this consumer's batch boundary.
+        initial_configs = initial_requests & set(config_paths)
+        combined = {path: (config_sources["after"].get(path) if path in initial_configs
+                           else snapshot.get(path)) for path in initial_requests}
+        missing = sorted(path for path, data in combined.items() if not isinstance(data, bytes))
+        if missing:
+            raise EngineError("runtime-shadow snapshot read failed: " + ", ".join(missing[:3]))
+        link_bytes = sum(config_evidence.records["after"][path].link_bytes
+                         for path in initial_configs)
+        if len(combined) > MAX_INVENTORY_PATHS:
+            raise EngineError("runtime-shadow initial snapshot exceeds the source read limit")
+        if (any(len(data) > MAX_SOURCE_BYTES for data in combined.values())
+                or sum(map(len, combined.values())) + link_bytes > MAX_BATCH_BYTES):
+            raise EngineError("runtime-shadow initial snapshot exceeds the source byte limit")
+
+    def config_source(path, side):
+        if config_evidence is not None and path in config_sources[side]:
+            return config_sources[side][path]
+        return _side_source(path, side, side_change_by_path, snapshot)
 
     before_conftests = {
         path: _side_source(path, "before", side_change_by_path, snapshot)
@@ -2805,7 +2843,7 @@ def find_runtime_subject_shadows(
             invocation: _RunnerInvocation | None,
         ) -> tuple[str | None, tuple[str, ...], str]:
             config_contents = {
-                path: _side_source(path, side, side_change_by_path, snapshot)
+                path: config_source(path, side)
                 for path in paths
                 if path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
             }
@@ -2820,7 +2858,7 @@ def find_runtime_subject_shadows(
             roots, configured_mode = _config_search(
                 cfg or "pytest.ini",
                 (
-                    _side_source(cfg, side, side_change_by_path, snapshot)
+                    config_source(cfg, side)
                     if cfg
                     else None
                 ),
@@ -2835,7 +2873,7 @@ def find_runtime_subject_shadows(
         def selected_controls(before_cfg: str | None, after_cfg: str | None) -> set[str]:
             return {
                 path
-                for path, change in change_by_path.items()
+                for path, change in control_changes.items()
                 if (
                     path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
                     or (change.old_path or path)
