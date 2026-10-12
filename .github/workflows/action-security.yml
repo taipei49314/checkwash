@@ -1,0 +1,97 @@
+name: action-security negative cases
+
+on:
+  pull_request:
+    paths:
+      - 'action/**'
+      - '.github/workflows/action-security.yml'
+      - 'tools/action_security_qualification.py'
+      - 'tests/test_action_security.py'
+      - 'tests/test_action_identity.py'
+      - 'src/checkwash/__init__.py'
+      - 'src/checkwash/__main__.py'
+      - 'src/checkwash/cli.py'
+      - 'pyproject.toml'
+
+permissions:
+  contents: read
+
+jobs:
+  # These are real negative tests of the composite step's failure semantics.
+  # BLOCK/ERROR jobs intentionally remain red. Judge this qualification by the
+  # independent named qualification job and its complete original receipts;
+  # never describe the whole workflow as green or use continue-on-error here.
+  composite:
+    name: ${{ matrix.case == 'clean-pass' && 'normal control' || 'expected rejection' }} (${{ matrix.os }}, ${{ matrix.case }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        case: [clean-pass, clean-block, polluted-block, missing-ref]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: candidate-中文
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        id: python
+        with:
+          python-version: "3.12"
+      - name: Prepare trusted synthetic subject fixture
+        id: fixture
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          FIXTURE_CASE: ${{ matrix.case }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_security_qualification.py" prepare --case "$FIXTURE_CASE"'
+      - name: Run the actual candidate composite
+        id: audit
+        uses: ./candidate-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          # The polluted case qualifies compatibility with pythonLocation.
+          python-path: ${{ matrix.case != 'polluted-block' && steps.python.outputs.python-path || '' }}
+          comment-pr: "false"
+      - name: Preserve original outcomes and receipts
+        if: ${{ !cancelled() && steps.fixture.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.audit.outcome }}
+          FIXTURE_CASE: ${{ matrix.case }}
+          FIXTURE_SYSTEM: ${{ matrix.os }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_security_qualification.py" capture --case "$FIXTURE_CASE" --system "$FIXTURE_SYSTEM"'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: action-security-${{ matrix.os }}-${{ matrix.case }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/action-security-evidence
+          if-no-files-found: error
+
+  qualification:
+    name: action-security qualification
+    needs: composite
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        id: python
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: action-security-*-attempt-${{ github.run_attempt }}
+          path: action-security-evidence
+      - name: Verify every original hosted outcome
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 tools/action_security_qualification.py validate --root action-security-evidence'
