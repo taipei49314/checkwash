@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "purpose": "DIAGNOSTIC_CAPTURE_NOT_DETECTOR_QUALIFICATION",
+  "source_catalog_sha256": "6988cf22865a092b5b2c7a9010d78bdb210530e67b68211d042e825a2d11dca2",
+  "pytest_version": "8.4.2",
+  "python_minor": [
+    3,
+    12
+  ],
+  "cases": [
+    {
+      "id": "CI-LAST-STEP-REMOVED",
+      "family": "lost CI execution",
+      "kind": "candidate_positive",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "A surviving workflow loses its only known test execution with no replacement in the owned tree",
+      "paired_control": "CI-STEP-MOVED",
+      "authority": "#181 accepted residual must be explicitly narrowed; no blanket warn-to-high upgrade",
+      "files": {
+        ".github/workflows/ci.yml": {
+          "before": "name: owned\non: [push, pull_request]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: python -m pytest tests\n",
+          "after": "name: owned\non: [push, pull_request]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n"
+        }
+      },
+      "unchanged_context": {}
+    },
+    {
+      "id": "CI-STEP-MOVED",
+      "family": "lost CI execution",
+      "kind": "candidate_normal",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "A script called by the same live workflow preserves the exact test command, working directory and fail propagation",
+      "paired_control": "CI-LAST-STEP-REMOVED",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        ".github/workflows/ci.yml": {
+          "before": "name: owned\non: [push, pull_request]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: python -m pytest tests\n",
+          "after": "name: owned\non: [push, pull_request]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: bash scripts/test.sh\n"
+        },
+        "scripts/test.sh": {
+          "before": null,
+          "after": "#!/bin/sh\nset -e\npython -m pytest tests\n"
+        }
+      },
+      "unchanged_context": {}
+    }
+  ],
+  "augmentation": {
+    "description": "Identical context on both sides; original CI source strings are unchanged. Original and augmented CLI observations stay separate.",
+    "origin_case": "PY-NEW-ENV-CONDITION",
+    "origin_side": "before",
+    "files": {
+      "app.py": "def value():\n    return 0\n",
+      "tests/test_value.py": "import os\nfrom app import value\n\ndef test_value():\n    assert value() == 1\n"
+    }
+  }
+}

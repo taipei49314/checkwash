@@ -1,0 +1,244 @@
+name: CI obligation owned companions (expected native failures)
+
+on:
+  pull_request:
+    paths:
+      - 'tools/ci_obligation_*.py'
+      - 'tools/ci_obligation_pairs.json'
+      - 'tools/owned_process_capture.py'
+      - '.github/workflows/ci-obligation-reproduction.yml'
+
+permissions:
+  contents: read
+
+env:
+  CANDIDATE_SHA: ${{ github.sha }}
+  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+jobs:
+  engine:
+    name: Original and augmented input observations (no native tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        id: checkout
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - name: Install exact candidate
+        id: install
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 -m pip install --no-input --no-deps -e ./candidate'
+      - name: Capture four original CLI observations before companion jobs start
+        id: capture
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_reproduction.py engine'
+      - name: Preserve native step outcomes
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          OWNED_ROLE: engine
+          STEP_OUTCOMES: ${{ toJSON(steps) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_reproduction.py outcomes'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-obligation-engine-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-obligation-evidence
+          include-hidden-files: true
+          if-no-files-found: error
+
+  native:
+    name: Expected oracle failure (${{ matrix.case }} / ${{ matrix.side }})
+    needs: engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: CI-LAST-STEP-REMOVED
+            side: before
+            command: python -m pytest tests
+          - case: CI-STEP-MOVED
+            side: before
+            command: python -m pytest tests
+          - case: CI-STEP-MOVED
+            side: after
+            command: bash scripts/test.sh
+    env:
+      OWNED_CASE: ${{ matrix.case }}
+      OWNED_SIDE: ${{ matrix.side }}
+      OWNED_COMMAND: ${{ matrix.command }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        id: checkout
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - name: Install fixed native runner
+        id: install
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 -m pip install --no-input pytest==8.4.2'
+      - name: Bind augmented original bytes and native report environment
+        id: prepare
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          NATIVE_ADDOPTS: >-
+            -p ci_obligation_pytest -p no:cacheprovider
+            -c "${{ runner.temp }}/ci-native-empty.ini"
+            --rootdir="${{ runner.temp }}/ci-owned/subject"
+            --junitxml="${{ runner.temp }}/ci-obligation-evidence/native.xml"
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_reproduction.py native-prepare'
+      - name: Original owned run body (must remain a native failed step)
+        id: native
+        timeout-minutes: 1
+        working-directory: ${{ runner.temp }}/ci-owned/subject
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          PYTHONPATH: ${{ github.workspace }}/candidate/tools
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+          PYTEST_ADDOPTS: >-
+            -p ci_obligation_pytest -p no:cacheprovider
+            -c "${{ runner.temp }}/ci-native-empty.ini"
+            --rootdir="${{ runner.temp }}/ci-owned/subject"
+            --junitxml="${{ runner.temp }}/ci-obligation-evidence/native.xml"
+          OWNED_BINDING: ${{ runner.temp }}/ci-obligation-evidence/binding.json
+          OWNED_NATIVE_RECEIPT: ${{ runner.temp }}/ci-obligation-evidence/native-pytest.json
+        run: ${{ matrix.command }}
+      - name: Preserve report bytes and actual failure before checking identities
+        id: finalize
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          NATIVE_OUTCOME: ${{ steps.native.outcome }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_reproduction.py native-finish'
+      - name: Preserve native step outcomes
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          OWNED_ROLE: native
+          STEP_OUTCOMES: ${{ toJSON(steps) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_reproduction.py outcomes'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-obligation-native-${{ matrix.case }}--${{ matrix.side }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-obligation-evidence
+          include-hidden-files: true
+          if-no-files-found: error
+
+  removed:
+    name: Removed step - NOT_INVOKED, never a passing test
+    needs: engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      OWNED_CASE: CI-LAST-STEP-REMOVED
+      OWNED_SIDE: after
+      OWNED_COMMAND: NOT_INVOKED
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        id: checkout
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - name: Install same runner without invoking tests
+        id: install
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 -m pip install --no-input pytest==8.4.2'
+      - name: Bind removed-after augmented tree without a test step
+        id: prepare
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          NATIVE_ADDOPTS: NOT_INVOKED
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_reproduction.py native-prepare'
+      # No native test step exists in this job. Do not replace this with if:false
+      # or reinterpret this job's successful infrastructure as a test pass.
+      - name: Record NOT_PRESENT and require no invented native report
+        id: finalize
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          NATIVE_OUTCOME: NOT_PRESENT
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_reproduction.py native-finish'
+      - name: Preserve native step outcomes
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          OWNED_ROLE: removed
+          STEP_OUTCOMES: ${{ toJSON(steps) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_reproduction.py outcomes'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-obligation-native-CI-LAST-STEP-REMOVED--after-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-obligation-evidence
+          include-hidden-files: true
+          if-no-files-found: error
+
+  verify:
+    name: Artifact accounting (native job log readback still required)
+    needs: [engine, native, removed]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: ci-obligation-*-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-obligation-download
+      - name: Require four raw engine attempts and four accountable native cells
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          DOWNLOADED_ARTIFACTS: ${{ runner.temp }}/ci-obligation-download
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/ci_obligation_validate.py'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-obligation-verification-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-obligation-evidence
+          include-hidden-files: true
+          if-no-files-found: error
