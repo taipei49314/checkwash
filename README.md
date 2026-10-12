@@ -112,7 +112,7 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.7.0-public-launch.md#try-it-on-a-change-you-understand).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md#use-it-and-preserve-the-result).
 
 ## Know the limits
 
@@ -181,7 +181,7 @@ can inspect the local workflow, but cannot verify live branch protection.
 **Why the older Action pin?** A release cannot embed its own commit SHA,
 so the documented Action adopts a verified pin from the prior release.
 The recommended v0.6.0 Action includes the engine published on 2026-10-05,
-but not the later fixes in this v0.7.0 candidate. A CLI
+but not the later fixes in v0.7.0. A CLI
 upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
