@@ -17,15 +17,67 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  published-source:
+    # Bind this release event anew; a previous green run is not a substitute.
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # only to attach assets to an already-published release
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      RELEASE_COMMIT: ${{ github.sha }}
+      PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: validate native public tag identity and complete public surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B tools/verify_published_source.py --repo . --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --source-sha "$RELEASE_COMMIT" --remote https://github.com/taipei49314/checkwash.git --output public-receipts/tag-source.json
+      - name: install and exercise the event's actual public tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B -m venv "$RUNNER_TEMP/tag-visitor"
+          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m pip install "git+https://github.com/taipei49314/checkwash.git@$RELEASE_TAG"
+          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B - <<'PY'
+          import importlib.metadata, json, os, pathlib
+          distribution = importlib.metadata.distribution('checkwash')
+          direct = json.loads(distribution.read_text('direct_url.json'))
+          assert distribution.version == os.environ['RELEASE_TAG'][1:]
+          assert direct['vcs_info']['commit_id'] == os.environ['RELEASE_COMMIT']
+          pathlib.Path('public-receipts/tag-install.json').write_text(json.dumps({
+              'status': 'passed', 'version': distribution.version, 'direct_url': direct,
+          }, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+          "$RUNNER_TEMP/tag-visitor/bin/checkwash" --version
+          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m checkwash demo > /dev/null
+          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m checkwash check HEAD~1..HEAD --repo .
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: release-public-receipts
+          path: public-receipts/
+          if-no-files-found: error
+
+  build:
+    needs: published-source
+    if: ${{ !cancelled() && ((github.event_name == 'release' && needs['published-source'].result == 'success') || (github.event_name == 'workflow_dispatch' && needs['published-source'].result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    env:
+      CANDIDATE_SOURCE: ${{ github.sha }}
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
@@ -95,6 +147,18 @@ jobs:
           test "${#wheels[@]}" = 1
           python tools/qualify_assertions.py --distribution wheel --artifact "${wheels[0]}" --output assertion-receipts/wheel.json -- /tmp/fresh/bin/python -I -m checkwash
 
+      - name: bind all delivered bytes to the exact source and qualification receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheels=(dist/*.whl)
+          sdists=(dist/*.tar.gz)
+          test "${#wheels[@]}" = 1
+          test "${#sdists[@]}" = 1
+          python tools/release_inventory.py --distribution source --qualification assertion-receipts/source.json --output assertion-receipts/source-inventory.json
+          python tools/release_inventory.py --distribution wheel --qualification assertion-receipts/wheel.json --artifact "${wheels[0]}" --artifact "${sdists[0]}" --output assertion-receipts/wheel-inventory.json
+          python tools/release_inventory.py --distribution pyz --qualification assertion-receipts/pyz.json --artifact dist/checkwash.pyz --output assertion-receipts/pyz-inventory.json
+
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
@@ -106,12 +170,24 @@ jobs:
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
 
-      - name: attach the artifacts to the release
-        if: github.event_name == 'release'
+  publish-assets:
+    needs: [published-source, build]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+      - name: attach the source-bound artifacts to the authorized release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          GH_REPO: ${{ github.repository }}
         run: gh release upload "$RELEASE_TAG" dist/* --clobber
 
   pypi:
@@ -132,7 +208,7 @@ jobs:
     # No token is stored anywhere by anyone; trusted publishing exchanges a
     # short-lived OIDC identity instead. Until (2), this job is skipped and
     # the release is GitHub-only, which is what the README promises.
-    needs: build
+    needs: [published-source, build]
     if: github.event_name == 'release' && vars.PYPI_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: pypi

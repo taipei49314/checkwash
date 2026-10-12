@@ -9489,3 +9489,67 @@ proposal is not substituted for that final evidence. Rotation is not
 complete until the reviewed PR merges. The recommended Action remains
 v0.6.0; no downstream repository is re-pinned, and T-528's original A-D
 held-out/custody work remains incomplete.
+
+## D-130 (2026-10-12): separate candidate CI from actual published-release identity
+
+The maintainer's 1.0 roadmap called for separate development, candidate-artifact
+and published-installation checks, without masking failures. That discussion
+alone was not implementation or publication authorization. The subsequent
+instruction, "直接到1.0 所有條件準備好停下" (prepare all conditions for 1.0,
+then stop), and "目前沒有，先完成可自主推進的工作" authorize implementing this
+bounded phase separation as preparation. They do not authorize publication or
+supply missing acceptance evidence.
+
+Ordinary CI continues to run the full pytest collection, performance and
+compatibility gates, dogfood, determinism checks and candidate source/wheel/pyz
+qualification. Owned positive and negative Git fixtures exercise the same
+published-source validator that the publication path uses. A failed ordinary
+test remains a failed test; no selector, missing-subject early return,
+`continue-on-error` or "only one failure" convention makes it success.
+
+The explicit advertised-release manifest initially names the verified public
+v0.7.0 tag and commit. Its visitor job validates a clean checkout of that real
+public source, verifies installation identity and exercises the installed
+release. Candidate version and advertised version are distinct. New candidate
+capability is not claimed as included in the older advertised release or
+recommended Action. On an actual tag/release event, the new event target is
+also verified independently of the advertised pointer. Source verification
+requires the native remote tag/object and exact source commit, both version
+declarations and all four public surfaces: `src/`, `pyproject.toml`, all of
+`action/`, and `.pre-commit-hooks.yaml`. Missing tags, Git failures, wrong
+source/version, changed surfaces and dirty source fail.
+
+Release-event builds require that source/visitor validation. Existing real
+source, installed-wheel and pyz qualification remains; exact-source inventory
+and qualified-artifact digest checks must pass before distribution upload.
+GitHub attachment and PyPI require successful dependencies and an actual
+release event; manual candidate builds publish nothing. Actual public
+downloads and installation receipts remain separate from built-artifact
+evidence.
+
+This supersedes only D-031's operational use of current-source/previous-tag
+equality as an ordinary development requirement, and the corresponding
+expected-development-red instructions in RELEASING/STATE. It preserves
+D-031's prohibition on success when the checked public subject is absent and
+D-055's prohibition on waiving release qualification to make a candidate
+green. Existing decision text, historical failures and raw receipts remain
+unchanged. The check's responsibility moves to explicit, executable phases;
+it is not removed.
+
+This decision does not change detector severity, gate semantics, fixture
+expectations, BLOCK-to-PASS acceptance, resource limits, adjudication labels
+or release thresholds. PR-head, main-commit and public-tag verdict ordering,
+the separate Action trust-lag decision and applicable protected dispositions
+remain. Before a future version's one-time publication grant, no version
+bump, public tag, GitHub Release, PyPI upload or downstream re-pin follows
+from this preparation. A synthetic tag or candidate success is not a public
+receipt. Future public-only execution remains NOT_RUN until authorized and
+actually performed.
+
+This CI migration also supplies no fresh held-out custody, freeze or
+release-specific measurement authorization. T-528's original A–D status and
+the seen/nonblind status of prior corpora are unchanged. Existing numerical
+criteria are not reopened or relaxed by this decision. Independent adoption
+remains UNSATISFIED, not waived. The implemented checks and the final exact
+head's actual evidence must be recorded separately before this work is
+described as complete.

@@ -24,8 +24,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         id: checkout
         with:
-          # Tags are needed by the release-tag gate; a shallow checkout made
-          # that test silently return early (reader audit).
+          # Full history supports the trust-lag guard and Git-dependent tests.
           fetch-depth: 0
           persist-credentials: false
           ref: ${{ github.sha }} # Preserve the run's PR merge snapshot.
@@ -85,49 +84,137 @@ jobs:
           base: ${{ github.event.pull_request.base.sha || 'HEAD~1' }}
 
   install-from-tag:
-    # What a *visitor* gets, not what the checkout has. dogfood runs ./action
-    # from the working tree, so a stale action.yml (or hook definition) on the
-    # advertised tag would pass every other gate while users installed an old
-    # integration layer (owner review 2026-08-04). This installs the exact
-    # command the README hands out and runs it.
+    # Keep the existing required context. This always verifies the advertised
+    # public release; the candidate suite has its own source/artifact checks.
     runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - name: install the advertised tag from git, exactly as the README says
-        id: install_tag
+      - name: read the explicit public installation subject
+        id: advertised
         shell: bash
         run: |
           set -euo pipefail
-          tag="v$(python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
-          if ! git rev-parse --verify "refs/tags/$tag" >/dev/null 2>&1; then
-            echo "PRE_TAG_CANDIDATE: $tag not cut yet — defer visitor install-from-tag"
-            echo "mode=pretag" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "mode=posttag" >> "$GITHUB_OUTPUT"
-          pip install "git+file://$PWD@$tag"
-      - name: the installed build must run, replay the demo, and gate this push
-        if: steps.install_tag.outputs.mode == 'posttag'
+          python -I -B - <<'PY'
+          import os, pathlib, runpy
+          validator = runpy.run_path('tools/verify_published_source.py')
+          release = validator['advertised'](pathlib.Path('release/advertised.toml'))['release']
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              for key in ('tag', 'commit', 'version'):
+                  output.write(f'{key}={release[key]}\n')
+          PY
+      - name: verify the real advertised tag in its own clean checkout
         shell: bash
         env:
-          PYTHONUTF8: "1"
+          RELEASE_TAG: ${{ steps.advertised.outputs.tag }}
+          RELEASE_COMMIT: ${{ steps.advertised.outputs.commit }}
         run: |
           set -euo pipefail
-          checkwash --version
-          checkwash demo > /dev/null
-          # The installed build gates this push exactly as dogfood does from
-          # the checkout — its exit code counts. The first draft of this step
-          # swallowed that exit code with a shell or-fallback, and checkwash
-          # blocked the diff: E6 read the CI change as a weakened test
-          # command. It was right, and this wording exists because the tool
-          # corrected its author.
-          checkwash check HEAD~1..HEAD --repo .
+          git fetch --no-tags https://github.com/taipei49314/checkwash.git "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          git worktree add --detach "$RUNNER_TEMP/advertised-source" "$RELEASE_COMMIT"
+          python -I -B tools/verify_published_source.py --repo "$RUNNER_TEMP/advertised-source" --manifest release/advertised.toml --output public-receipts/advertised-source.json
+      - name: install the actual public tag and bind the installed commit and version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.advertised.outputs.tag }}
+          RELEASE_COMMIT: ${{ steps.advertised.outputs.commit }}
+          RELEASE_VERSION: ${{ steps.advertised.outputs.version }}
+        run: |
+          set -euo pipefail
+          python -I -B -m venv "$RUNNER_TEMP/visitor"
+          "$RUNNER_TEMP/visitor/bin/python" -I -B -m pip install "git+https://github.com/taipei49314/checkwash.git@$RELEASE_TAG"
+          "$RUNNER_TEMP/visitor/bin/python" -I -B - <<'PY'
+          import importlib.metadata, json, os, pathlib
+          distribution = importlib.metadata.distribution('checkwash')
+          direct = json.loads(distribution.read_text('direct_url.json'))
+          assert distribution.version == os.environ['RELEASE_VERSION']
+          assert direct['vcs_info']['commit_id'] == os.environ['RELEASE_COMMIT']
+          pathlib.Path('public-receipts/advertised-install.json').write_text(json.dumps({
+              'status': 'passed', 'version': distribution.version, 'direct_url': direct,
+          }, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+          "$RUNNER_TEMP/visitor/bin/checkwash" --version
+          "$RUNNER_TEMP/visitor/bin/python" -I -B -m checkwash demo > /dev/null
+          # The actual public engine still gates this push; failures propagate.
+          "$RUNNER_TEMP/visitor/bin/python" -I -B -m checkwash check HEAD~1..HEAD --repo .
+      - name: verify actual advertised download bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B - <<'PY'
+          import hashlib, json, pathlib, runpy, urllib.request
+          validator = runpy.run_path('tools/verify_published_source.py')
+          expected = validator['advertised'](pathlib.Path('release/advertised.toml'))['pyz']
+          with urllib.request.urlopen(expected['url'], timeout=120) as response:
+              raw = response.read(expected['bytes'] + 1)
+          actual = {'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
+          assert actual['bytes'] == expected['bytes'] and actual['sha256'] == expected['sha256']
+          pathlib.Path('public-receipts/advertised-download.json').write_text(json.dumps({
+              'status': 'passed', 'url': expected['url'], **actual,
+          }, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: advertised-public-receipts
+          path: public-receipts/
+          if-no-files-found: error
+
+  published-source:
+    # A real tag push verifies its own target even before advertised.toml moves.
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_COMMIT: ${{ github.sha }}
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: validate native public tag identity and complete public surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B tools/verify_published_source.py --repo . --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --source-sha "$RELEASE_COMMIT" --remote https://github.com/taipei49314/checkwash.git --output public-receipts/tag-source.json
+      - name: install and exercise the event's actual public tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B -m venv "$RUNNER_TEMP/tag-visitor"
+          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m pip install "git+https://github.com/taipei49314/checkwash.git@$RELEASE_TAG"
+          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B - <<'PY'
+          import importlib.metadata, json, os, pathlib
+          distribution = importlib.metadata.distribution('checkwash')
+          direct = json.loads(distribution.read_text('direct_url.json'))
+          assert distribution.version == os.environ['RELEASE_TAG'][1:]
+          assert direct['vcs_info']['commit_id'] == os.environ['RELEASE_COMMIT']
+          pathlib.Path('public-receipts/tag-install.json').write_text(json.dumps({
+              'status': 'passed', 'version': distribution.version, 'direct_url': direct,
+          }, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+          "$RUNNER_TEMP/tag-visitor/bin/checkwash" --version
+          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m checkwash demo > /dev/null
+          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m checkwash check HEAD~1..HEAD --repo .
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: tag-public-receipts
+          path: public-receipts/
+          if-no-files-found: error
 
   byte-compare:
     # The cross-OS determinism gate: every OS/Python combination must emit
