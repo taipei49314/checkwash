@@ -2,6 +2,43 @@
 
 Updated: 2026-10-12 (R1 integrated; fixed historical scheduling retired)
 
+## 2026-10-12: #345 fixed acquisition retained; repair still unaccepted
+
+The original eight-input run `38292837314/1` retains all 64 captures. Its
+core acceptance failed: the five historical candidate inputs remain exit 2;
+ordinary/deep owned inputs expose separate capacity, step, parser and read
+limitations. Candidate `6bfa81b` remains unaccepted and unmerged.
+
+The original standard/D088 run `38292837100/1` is complete and independently
+read back: 43 workers, 3,018 unique pairs / 6,036 complete arms, no missing
+records, raw differences, BLOCK-to-PASS changes or new errors. Both original
+arms retain 21 exit-2 results, 31 results with skips and 104 with stderr.
+All individual costs remain recorded; the maximum observed increase is
+3.584625 seconds and cost acceptance remains NOT_ADJUDICATED. The original
+aiohttp142 provenance remains UNKNOWN. Neither capture success nor this
+comparison establishes repair acceptance or release readiness.
+
+The fixed automatic acquisition is now retired on this unmerged repair
+branch. Its exact original workflows, collectors, data and full evidence
+remain available from the original source and native runs. The unchanged
+seen-accounting harness and owned capture controls continue in their
+workflow paths, and ordinary full pytest, assertion/artifact, verdict,
+R1 trace and dogfood obligations remain. No original error is renamed PASS.
+Fresh native qualification of this responsibility transfer is pending.
+
+Retirement follows complete evidence retention; accepted main integration
+is no longer its prerequisite. This avoids replaying the same fixed cohort
+on each follow-up parser change while the core repair is still incomplete.
+Necessary costs for a later repaired candidate must name its exact source,
+reference and data scope. No held-out use, resource-limit change, release
+authorization or public pin advance follows from this retirement.
+
+Evidence: [original eight inputs](https://github.com/taipei49314/checkwash/actions/runs/38292837314/attempts/1)
+and [complete seen cohort](https://github.com/taipei49314/checkwash/actions/runs/38292837100/attempts/1).
+The independent complete cost report is retained in the task evidence at
+`outputs/stage3-standin-6bfa81b/seen-cost/full-final-v3-20261012T204259Z/COMPLETE-COST-READBACK-v2.md`,
+SHA256 `0ab7b53e4db358c71cc28e351ee5b441bf0ac31b022a9ecdf2eb73a04a419bcb`.
+
 ## 2026-10-12: separate development and published-release checks
 
 PR #371 completed the v0.7.0 verdict-baseline rotation at `818dd6c`.
