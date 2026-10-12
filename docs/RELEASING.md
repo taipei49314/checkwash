@@ -197,6 +197,21 @@ step 8c. It does not authorize another version or downstream re-pins of
 checkwash-corpus or smallestlie. The Action remains pinned to prior stable
 v0.6.0. T-528's original A–D work remains incomplete and CLAIMED.
 
+### v0.7.0 actual publication record
+
+This grant was consumed by publication at 2026-10-12T07:17:46Z from
+`d647a65e9734f2b6e57b528ea595b1507dc31094`. PR verdict 38188853896,
+main-push verdict 38214606358 and tag-push verdict 38215791171 each succeeded
+on attempt 1, in that order. The tag ruleset was restored active before
+Release creation. Release 38216943768/attempt 1 completed its build and PyPI
+jobs; tag CI 38215791177/attempt 1 passed all 12 jobs including actual visitor
+installation and the nine-platform byte comparison. The
+[publication verification record](releases/v0.7.0-publication-verification.md)
+records exact source/tree, public assets and SHA256s, package/page checks,
+accepted macOS skips and retained earlier failed/skipped receipts. Verdict
+baseline rotation remains a separate reviewable change; this does not grant
+another release or downstream re-pins.
+
 ## The release slot
 
 The weekly automatic slot introduced by estate T-57 was canceled by T-197.
