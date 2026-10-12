@@ -17,7 +17,7 @@ import standin_cost_cases as cases
 def test_original_deep_megabyte_preserves_the_complete_tail_unit(side):
     source = cases.pair(cases.DEEP)[side]
     tail = (cases.BEFORE, cases.AFTER)[side]
-    shallow = cases.PREFIX + b"padding = 0\n#\n" + tail
+    shallow = cases.padded(b"padding = 0\n", tail, cases.SIZE)
     limit = sys.getrecursionlimit()
     assert len(source) == 1_000_000
     assert source.count(b" + ") == 9898
