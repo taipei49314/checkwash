@@ -1,4 +1,4 @@
-name: Requests 2037 snapshot diagnostic
+name: Requests snapshot observer controls
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   requests-2037-evidence:
-    name: Capture fixed requests evidence (not product qualification)
+    name: Preserve owned observer controls
     if: github.head_ref == 'diagnose/requests-snapshot-2037-v1'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -21,11 +21,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # Existing repository pin.
         with:
           path: diagnostic
-          persist-credentials: false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: 30cfb8bd39aa702aae0d59bde1d1400654137bad
-          path: engine
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -35,18 +30,6 @@ jobs:
       - name: Check observer controls
         working-directory: diagnostic
         run: python -I -B -m pytest -q tests/test_requests_snapshot_trace.py
-      - name: Capture native and metadata-only diagnostic children
-        env:
-          REQUESTS_OUTPUT: ${{ runner.temp }}/requests-2037-${{ github.run_id }}-attempt-${{ github.run_attempt }}
-        run: >-
-          python -I -B diagnostic/tools/requests_snapshot_acquisition.py
-          --engine "$GITHUB_WORKSPACE/engine"
-          --output "$REQUESTS_OUTPUT"
-      - name: Preserve all completed and partial evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: requests-2037-evidence-${{ github.run_id }}-attempt-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/requests-2037-${{ github.run_id }}-attempt-${{ github.run_attempt }}
-          if-no-files-found: error
-          retention-days: 30
+      # The fixed requests pair was captured once in run 38298683103/1.
+      # Its exit-2 result and original receipts remain evidence, not a pass.
+      # Keep the controls; subsequent PR updates do not replay that corpus.
