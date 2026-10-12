@@ -907,7 +907,7 @@ def _fixture_requests(function):
     return [name for name in names if name not in direct]
 
 
-def _observed_for_test(modules, test_path, qualname, context, side, deny, budget, search=None):
+def _test_prefix(modules, test_path, context, side, deny, budget, search=None):
     trace = _Trace(modules, context, side, deny, budget, search)
     active_modules = []
     for module in modules:
@@ -925,6 +925,80 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
     trace.block(test_module.tree.body, test_module, test_module.env, "")
     trace.test_module = test_module
     active_modules.append(test_module)
+    return trace, active_modules
+
+
+def _copy_test_prefix(trace, active_modules):
+    # Copy the mutable analysis graph, not ASTs or frozen values/effects.
+    # A function must belong to its copied module, including decorator envs.
+    originals = {id(module): module for module in (*trace.modules, *active_modules)}
+    modules = {
+        identity: replace(module, functions={}, env=dict(module.env),
+                          baseline_imports=dict(module.baseline_imports))
+        for identity, module in originals.items()
+    }
+    for identity, module in originals.items():
+        modules[identity].functions = {
+            name: replace(function, module=modules[id(function.module)],
+                          patch_env=None if function.patch_env is None else dict(function.patch_env))
+            for name, function in module.functions.items()
+        }
+    copied = _Trace([modules[id(module)] for module in trace.modules], trace.context,
+                    trace.side, trace.deny, trace.budget, trace.search)
+    copied.active = dict(trace.active)
+    copied.observed = set(trace.observed)
+    copied.patch_results = dict(trace.patch_results)
+    copied.called_patch_results = set(trace.called_patch_results)
+    copied.stack = list(trace.stack)
+    copied.steps = trace.steps
+    copied.failed_assertion = trace.failed_assertion
+    copied.test_module = modules[id(trace.test_module)]
+    return copied, [modules[id(module)] for module in active_modules]
+
+
+class _TestPrefix:
+    """One installation_events path/side; never a source-global cache."""
+
+    def __init__(self, modules, test_path, context, side, deny, budget, search=None):
+        self.arguments = (modules, test_path, context, side, deny, budget, search)
+        self.snapshot = None
+
+    def baselines(self):
+        return tuple(dict(module.baseline_imports) for module in self.arguments[0])
+
+    def observed(self, qualname):
+        active_modules = None
+        completed = False
+        try:
+            if self.snapshot is None or self.snapshot[0] != self.baselines():
+                self.snapshot = None  # A failed replay cannot leave an old entry.
+                trace, active_modules = _test_prefix(*self.arguments)
+                if not trace.failed_assertion:
+                    self.snapshot = (self.baselines(), *_copy_test_prefix(trace, active_modules))
+            else:
+                trace, active_modules = _copy_test_prefix(*self.snapshot[1:])
+            observed = _observed_test_suffix(trace, active_modules, self.arguments[1], qualname)
+            completed = True
+            return observed
+        finally:
+            # The old shallow module copies shared this monotonic import
+            # metadata with the originals. Retain those discoveries, without
+            # sharing any live suffix state with the saved prefix or next test.
+            if active_modules is not None:
+                originals = {module.path: module for module in self.arguments[0]}
+                for module in active_modules:
+                    originals[module.path].baseline_imports.update(module.baseline_imports)
+            if not completed or self.snapshot is not None and self.snapshot[0] != self.baselines():
+                self.snapshot = None
+
+
+def _observed_for_test(modules, test_path, qualname, context, side, deny, budget, search=None):
+    trace, active_modules = _test_prefix(modules, test_path, context, side, deny, budget, search)
+    return _observed_test_suffix(trace, active_modules, test_path, qualname)
+
+
+def _observed_test_suffix(trace, active_modules, test_path, qualname):
+    test_module = trace.test_module
     function = test_module.functions.get(qualname)
     if function is None:
         return set()
@@ -1164,9 +1238,11 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         event = restructured_patch_event(path, modules, live, context, deny, budget, authority_search)
         if event is not None:
             events.append(event)
+        prefixes = [_TestPrefix(modules[side], path, context, side, deny, budget, authority_search)
+                    for side in (0, 1)]
         for qualname in sorted(live[0] & live[1]):
-            before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget, authority_search)
-            after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget, authority_search)
+            before = prefixes[0].observed(qualname)
+            after = prefixes[1].observed(qualname)
             previous = {effect.key for effect in before}
             for effect in sorted(after, key=lambda e: (e.path, e.target, e.text, e.span)):
                 if effect.key not in previous:
