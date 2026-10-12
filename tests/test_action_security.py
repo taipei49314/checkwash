@@ -379,17 +379,60 @@ def test_raw_subject_log_is_inside_stop_commands(capsysbinary):
     assert remainder == payload + b"::" + token + b"::\n"
 
 
-def test_comment_without_token_never_calls_engine_or_network(runtime):
-    python, _site, repo, _directory, env = runtime
+def test_comment_keeps_tokens_out_of_engine_and_requires_explicit_token(runtime, monkeypatch):
+    python, _site, repo, directory, env = runtime
     env.pop("GH_TOKEN", None)
     result = run_python(python, DRIVER, "comment", cwd=repo, env=env)
     assert result.returncode == 0 and b"comment-pr skipped" in result.stdout
+
+    # The real comment path is exercised with owned data and process boundaries
+    # mocked below; no second environment, engine, network or review is started.
+    dummy = "owned-comment-test-token"
+    env.update(GH_TOKEN=dummy, GITHUB_TOKEN="not-for-helper",
+               ACTIONS_RUNTIME_TOKEN="not-for-helper", GH_REPO="owner/repo", PR_NUMBER="7")
+    (directory / "check-receipt.json").write_text(json.dumps({
+        "analysis_exit_code": 0, "error": None, "base": "a" * 40,
+        "head": "b" * 40, "fail_on": "high",
+    }), encoding="utf-8")
+    monkeypatch.setattr(secure, "runtime_directory", lambda _env: directory)
+    monkeypatch.setattr(secure, "identity", lambda: {})
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        # comment adds the helper token after the engine call. Snapshot the
+        # environment at each call, rather than retaining that mutable dict.
+        calls.append((list(argv), dict(kwargs["env"]), kwargs["cwd"]))
+        return subprocess.CompletedProcess(argv, 0, b'{"findings":[]}', b"")
+
+    monkeypatch.setattr(secure.subprocess, "run", fake_run)
+    assert secure.comment(env) == 0
+    assert len(calls) == 2
+    engine, helper = calls
+    assert engine[0] == [secure.sys.executable, "-I", "-B", "-X", "utf8", "-m", "checkwash", "check",
+                         "a" * 40 + "..." + "b" * 40, "--repo", str(repo.resolve()),
+                         "--fail-on", "high", "--format", "json"]
+    assert not any(key.upper().endswith("_TOKEN") for key in engine[1])
+    assert helper[0] == [secure.sys.executable, "-I", "-B", "-X", "utf8",
+                         str(secure.ROOT / "action/post_review.py"), str(directory / "findings.json")]
+    assert {key: value for key, value in helper[1].items()
+            if key.upper().endswith("_TOKEN")} == {"GH_TOKEN": dummy}
+    assert helper[1]["GH_REPO"] == "owner/repo" and helper[1]["PR_NUMBER"] == "7"
+    assert engine[2] == helper[2] == directory
 
 
 def bootstrap_script():
     action = (ROOT / "action/action.yml").read_text(encoding="utf-8")
     block = action.split("      run: |\n", 1)[1].split("    - id: check\n", 1)[0]
     return "\n".join(line.removeprefix("        ") for line in block.splitlines())
+
+
+def run_bootstrap(bash, directory, *, cwd, env):
+    # Actions invokes a temporary script file. Passing the whole shell source
+    # through `-c` adds a Windows command-line quoting boundary absent there.
+    script = directory / "bootstrap.sh"
+    script.write_text(bootstrap_script() + "\n", encoding="utf-8", newline="\n")
+    return subprocess.run([bash, "--noprofile", "--norc", "-e", "-o", "pipefail", script.as_posix()],
+                          cwd=cwd, env=env, capture_output=True, timeout=30)
 
 
 def test_bootstrap_does_not_fall_back_to_ambient_python(tmp_path):
@@ -404,8 +447,7 @@ def test_bootstrap_does_not_fall_back_to_ambient_python(tmp_path):
     env = {**os.environ, "PATH": str(subject) + os.pathsep + os.environ.get("PATH", ""),
            "CW_REQUESTED_PYTHON": "", "CW_PYTHON_LOCATION": "", "GITHUB_WORKSPACE": str(subject),
            "CW_ACTION_PATH": str(ROOT / "action"), "RUNNER_OS": "Windows" if os.name == "nt" else "Linux"}
-    result = subprocess.run([bash, "--noprofile", "--norc", "-c", bootstrap_script()],
-                            cwd=subject, env=env, capture_output=True, timeout=30)
+    result = run_bootstrap(bash, tmp_path, cwd=subject, env=env)
     assert result.returncode == 2 and not marker.exists(), result.stderr
 
 
@@ -428,8 +470,8 @@ def test_bootstrap_uses_trusted_interpreter_with_spaces_and_unicode(tmp_path, ex
            "CW_PYTHON_LOCATION": str(location), "GITHUB_WORKSPACE": str(subject),
            "CW_ACTION_PATH": str(action), "RUNNER_OS": "Windows" if os.name == "nt" else "Linux",
            "PYTHONPATH": str(subject), "PYTHONUTF8": "0"}
-    result = subprocess.run([bash, "--noprofile", "--norc", "-c", bootstrap_script()],
-                            cwd=subject, env=env, capture_output=True, timeout=30)
+    result = run_bootstrap(bash, tmp_path, cwd=subject, env=env)
     assert result.returncode == 0, result.stderr
-    _executable, isolated, utf8, args = json.loads(marker.read_text())
+    executable, isolated, utf8, args = json.loads(marker.read_text())
+    assert Path(executable).resolve() == python.resolve()
     assert isolated == 1 and utf8 == 1 and args == ["install"]

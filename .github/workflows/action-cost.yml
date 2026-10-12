@@ -1,0 +1,221 @@
+name: Action normal cost
+
+on:
+  pull_request:
+    paths:
+      - 'action/**'
+      - 'src/checkwash/**'
+      - 'pyproject.toml'
+      - 'tools/action_cost.py'
+      - 'tools/action_security_qualification.py'
+      - 'tests/test_action_security.py'
+      - '.github/workflows/action-cost.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  paired:
+    name: Action normal cost (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      CANDIDATE_SHA: ${{ github.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      COST_SYSTEM: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: candidate-中文
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 818dd6c389076569fb51558213bf570c9c9e8396
+          path: baseline-中文
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - name: Prepare one trusted clean repair fixture
+        id: fixture
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" prepare'
+      - name: Reset ambient package before A1 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" before A1'
+      - name: A1 actual baseline composite
+        id: a1
+        uses: ./baseline-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: high
+          comment-pr: 'false'
+      - name: Preserve A1 original outcome
+        if: ${{ !cancelled() && (steps.a1.outcome == 'success' || steps.a1.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.a1.outcome }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" capture A1'
+      - name: Reset ambient package before B1 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" before B1'
+      - name: B1 actual candidate composite
+        id: b1
+        uses: ./candidate-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: high
+          comment-pr: 'false'
+          python-path: ${{ steps.python.outputs.python-path }}
+      - name: Preserve B1 original outcome
+        if: ${{ !cancelled() && (steps.b1.outcome == 'success' || steps.b1.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.b1.outcome }}
+          COST_RECEIPT_PATH: ${{ steps.b1.outputs.receipt-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" capture B1'
+      - name: Reset ambient package before B2 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" before B2'
+      - name: B2 actual candidate composite
+        id: b2
+        uses: ./candidate-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: high
+          comment-pr: 'false'
+          python-path: ${{ steps.python.outputs.python-path }}
+      - name: Preserve B2 original outcome
+        if: ${{ !cancelled() && (steps.b2.outcome == 'success' || steps.b2.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.b2.outcome }}
+          COST_RECEIPT_PATH: ${{ steps.b2.outputs.receipt-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" capture B2'
+      - name: Reset ambient package before A2 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" before A2'
+      - name: A2 actual baseline composite
+        id: a2
+        uses: ./baseline-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: high
+          comment-pr: 'false'
+      - name: Preserve A2 original outcome
+        if: ${{ !cancelled() && (steps.a2.outcome == 'success' || steps.a2.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.a2.outcome }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" capture A2'
+      - name: Reset ambient package before B3 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" before B3'
+      - name: B3 actual candidate composite
+        id: b3
+        uses: ./candidate-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: high
+          comment-pr: 'false'
+          python-path: ${{ steps.python.outputs.python-path }}
+      - name: Preserve B3 original outcome
+        if: ${{ !cancelled() && (steps.b3.outcome == 'success' || steps.b3.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.b3.outcome }}
+          COST_RECEIPT_PATH: ${{ steps.b3.outputs.receipt-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" capture B3'
+      - name: Reset ambient package before A3 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" before A3'
+      - name: A3 actual baseline composite
+        id: a3
+        uses: ./baseline-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: high
+          comment-pr: 'false'
+      - name: Preserve A3 original outcome
+        if: ${{ !cancelled() && (steps.a3.outcome == 'success' || steps.a3.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.a3.outcome }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" capture A3'
+      - name: Reset ambient package before A4 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" before A4'
+      - name: A4 actual baseline composite
+        id: a4
+        uses: ./baseline-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: high
+          comment-pr: 'false'
+      - name: Preserve A4 original outcome
+        if: ${{ !cancelled() && (steps.a4.outcome == 'success' || steps.a4.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.a4.outcome }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" capture A4'
+      - name: Reset ambient package before B4 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" before B4'
+      - name: B4 actual candidate composite
+        id: b4
+        uses: ./candidate-中文/action
+        with:
+          base: ${{ steps.fixture.outputs.base }}
+          fail-on: high
+          comment-pr: 'false'
+          python-path: ${{ steps.python.outputs.python-path }}
+      - name: Preserve B4 original outcome
+        if: ${{ !cancelled() && (steps.b4.outcome == 'success' || steps.b4.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.b4.outcome }}
+          COST_RECEIPT_PATH: ${{ steps.b4.outputs.receipt-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" capture B4'
+      - name: Require all eight original normal outcomes
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/action_cost.py" finish'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: action-cost-${{ matrix.os }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/action-cost-evidence
+          if-no-files-found: error
