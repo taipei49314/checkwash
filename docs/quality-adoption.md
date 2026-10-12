@@ -1,8 +1,8 @@
 # Adopt the quality preview
 
-The v0.6.0 package includes this limited preview for coverage, Ruff and mypy
+The v0.7.0 package includes this limited preview for coverage, Ruff and mypy
 configuration review alongside the existing test-oracle check. The recommended
-v0.5.0 Action includes it too; the preview's source is unchanged from v0.4.0
+v0.6.0 Action includes it too; the preview's source was unchanged from v0.4.0
 through v0.6.0. Natural-case labels, completeness evaluation
 and frozen legacy-byte parity remain separate outstanding conditions;
 publication and these setup commands do not establish production enforcement
@@ -84,16 +84,34 @@ context without removing real checks just to obtain a complete report.
 
 ## 3. Connect a separate PR status
 
+**Current source candidate:** the entry-point hardening described below is not
+in the published v0.7.0 CLI's recommended v0.6.0 Action pin. Public delivery
+still requires a qualified release containing the repair and a separately
+approved update of the recommended immutable Action pin. No unreleased commit
+is recommended here; updating a CLI does not update an Action.
+This security boundary does not establish quality-preview enforcement maturity.
+
 The separate `action/quality` composite action accepts full fetched base/head
 commit SHAs, runs the three-dot comparison, preserves the original JSON and
 0/1/2 exit, and adds a job summary. It requires Python 3.11+. Its installer builds
 the reviewed action source in a private temporary virtual environment; installation
 may fetch build dependencies. Analysis itself remains offline and does not execute
 subject code. This action does not post PR comments or change branch protection.
+It uses a trusted `python-path` input, with setup-python's `pythonLocation` as
+the compatibility fallback; it does not search ambient PATH for Python.
+The installed package's contents and version are checked against the pinned
+Action source before analysis, and that identity is retained in the receipt.
 
-Example for a consumer repository; replace `<reviewed-quality-sha>` with the full
-immutable commit you reviewed. It must contain this preview action. Do not use a
-local action from the subject PR checkout as your trusted checker.
+Use a separate clean hosted job that has not run subject code, with no secrets
+or long-lived credentials. The runner, shell startup environment, OS paths and
+initial trusted interpreter remain caller responsibilities; this Action cannot
+recover an already-compromised runner. See the [quality Action boundary](../action/quality/README.md).
+
+Future consumer example, to be completed after that publication and pin decision:
+`<reviewed-quality-sha>` must be the qualified, published immutable commit
+selected by that decision and must contain this repair. This placeholder is not
+a current installation recommendation. Do not use a local action from the
+subject PR checkout as your trusted checker.
 
 ```yaml
 name: Checkwash quality
@@ -110,6 +128,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
         with:
           python-version: '3.12'
       - id: quality
@@ -118,6 +137,7 @@ jobs:
           base: ${{ github.event.pull_request.base.sha }}
           head: ${{ github.event.pull_request.head.sha }}
           require-enforce: 'false'
+          python-path: ${{ steps.python.outputs.python-path }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
@@ -144,6 +164,12 @@ external path is rejected. For multiple checkouts, use `repository: subject`.
 Installation failure stops before review and has no report outputs; the job and
 artifact step remain visibly failed. Temporary paths are unique per invocation.
 Publish reports with the artifact step even when the review blocks.
+An output/summary write failure is an integration error (exit 2), retaining
+the original analysis in a writable receipt. If the output channel itself
+fails, outputs may be absent or partial; the native failed step must not be
+treated as a successful review. A missing ref still retains the quality
+engine's own error JSON. Its unresolved revision labels or default report
+mode are not evidence that the base policy was successfully read.
 
 After evaluating report-mode results and completing the acceptance work, a team
 can separately review a base-policy change to `mode = "enforce"`. Set
