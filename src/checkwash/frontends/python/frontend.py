@@ -15,6 +15,7 @@ import operator
 import re
 from dataclasses import dataclass, field, replace
 
+from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
@@ -1106,7 +1107,10 @@ def _binding_maps(
             if hit is not None:
                 return hit
         try:
-            key = ast.unparse(value)
+            if isinstance(value, ast.BinOp):
+                key = _binding_key(value)
+            else:
+                key = ast.unparse(value)
         except (AttributeError, ValueError):  # pragma: no cover - defensive
             key = ""
         if unparse_memo is not None:
@@ -1214,7 +1218,10 @@ def _ordered_bindings(
             key = unparse_memo.get(id(value))
         if key is None:
             try:
-                key = ast.unparse(value)
+                if isinstance(value, ast.BinOp):
+                    key = _binding_key(value)
+                else:
+                    key = ast.unparse(value)
             except (AttributeError, ValueError):  # pragma: no cover - defensive
                 key = ""
             if unparse_memo is not None:
