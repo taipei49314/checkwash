@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import gzip
 import hashlib
 import json
 import os
@@ -22,6 +23,8 @@ ROOT = HERE.parent
 DATA = HERE / "r1_seen_cost_data"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 MEMBERS_HASH = "a628d15de4024ecc91e479b532f9c3df2ee86f43542d39dd6c6a71d708780e19"
+MEMBERS_BYTES = 1_467_316
+MEMBERS_GZIP_HASH = "a61a97a91f923a7909533d2112afca905b874156fba3718669611ec2f1e52b13"
 PARTITIONS_HASH = "907095c3c5ebffadcfbf7642d1c40086683f24bbf16e67a012f7724f84890a27"
 DATE = "2026-10-11"
 ARMS = ("base", "candidate")
@@ -59,10 +62,21 @@ def require(condition, reason):
         raise ValueError(reason)
 
 
+def member_document():
+    # Keep the original CRLF receipt byte-identical while keeping its checked-in
+    # container below the engine's existing single-blob input limit.
+    archive = DATA / "python-pairs.json.gz"
+    require(cap.digest(archive) == MEMBERS_GZIP_HASH, "fixed member archive changed")
+    with gzip.open(archive, "rb") as stream:
+        raw = stream.read(MEMBERS_BYTES + 1)
+    require(len(raw) == MEMBERS_BYTES, "fixed member byte count changed")
+    require(hashlib.sha256(raw).hexdigest() == MEMBERS_HASH, "fixed members changed")
+    return cap.decode(raw)
+
+
 def cohort():
-    require(cap.digest(DATA / "python-pairs.json") == MEMBERS_HASH, "fixed members changed")
     require(cap.digest(DATA / "python-partitions.json") == PARTITIONS_HASH, "fixed partitions changed")
-    document, partition = read(DATA / "python-pairs.json"), read(DATA / "python-partitions.json")
+    document, partition = member_document(), read(DATA / "python-partitions.json")
     members = document["members"]
     require(document["count"] == len(members) == 4271, "wrong full denominator")
     require(members == sorted(members, key=lambda row: (row["repository"].lower(), row["commit"])), "member order changed")

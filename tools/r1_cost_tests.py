@@ -4,6 +4,7 @@ Executed explicitly in the ordinary Ubuntu workflow before the historical route.
 These are not new product fixture expectations and do not run a seen/held-out repo.
 """
 import copy
+import gzip
 import hashlib
 import json
 import os
@@ -29,6 +30,45 @@ def test_exact_seen_members_and_original_shards_have_no_gaps_or_duplicates():
     assert sum("standard" in r["phases"] for r in members) == 1800
     assert sum("d088" in r["phases"] for r in members) == 1263
     assert sum("targeted" in r["phases"] for r in members) == 1372
+
+
+def test_original_members_survive_the_storage_envelope_byte_for_byte():
+    raw = gzip.decompress((c.DATA / "python-pairs.json.gz").read_bytes())
+    assert len(raw) == c.MEMBERS_BYTES == 1_467_316
+    assert hashlib.sha256(raw).hexdigest() == c.MEMBERS_HASH
+    assert raw.count(b"\r\n") == 51_478
+
+
+def test_changed_archive_is_rejected_before_decompression(tmp_path, monkeypatch):
+    (tmp_path / "python-pairs.json.gz").write_bytes(b"not the original archive")
+    monkeypatch.setattr(c, "DATA", tmp_path)
+    with pytest.raises(ValueError, match="archive changed"):
+        c.member_document()
+
+
+@pytest.mark.parametrize("kind", ["truncated", "oversized", "changed_payload"])
+def test_invalid_envelope_cannot_create_a_different_cohort(tmp_path, monkeypatch, kind):
+    raw = gzip.decompress((c.DATA / "python-pairs.json.gz").read_bytes())
+    if kind == "oversized":
+        raw += b"x"
+    elif kind == "changed_payload":
+        raw = b"!" + raw[1:]
+    archive = gzip.compress(raw, mtime=0)
+    if kind == "truncated":
+        archive = archive[:-8]
+    (tmp_path / "python-pairs.json.gz").write_bytes(archive)
+    monkeypatch.setattr(c, "DATA", tmp_path)
+    # Exercise payload/CRC checks independently of the outer archive digest.
+    monkeypatch.setattr(c, "MEMBERS_GZIP_HASH", hashlib.sha256(archive).hexdigest())
+    error = EOFError if kind == "truncated" else ValueError
+    with pytest.raises(error):
+        c.member_document()
+
+
+def test_missing_member_archive_is_an_error_not_an_empty_cohort(tmp_path, monkeypatch):
+    monkeypatch.setattr(c, "DATA", tmp_path)
+    with pytest.raises(FileNotFoundError):
+        c.member_document()
 
 
 @pytest.mark.parametrize("raw", [b'{"x":1,"x":2}', b'{"x":NaN}', b'{"x":Infinity}'])
