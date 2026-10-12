@@ -6,7 +6,6 @@ These are not new product fixture expectations and do not run a seen/held-out re
 import copy
 import gzip
 import hashlib
-import json
 import os
 from pathlib import Path
 import sys
@@ -340,7 +339,7 @@ def test_owned_complete_row_has_bound_cli_full_refs_and_raw_git_proofs(tmp_path)
                                                 ("verdict", "block", "EXIT_VERDICT_MISMATCH"),
                                                 ("findings", [None], "INVALID_FINDING_ENVELOPE")])
 def test_classifier_retains_diagnostics_skips_and_exit_contradictions(tmp_path, field, value, outcome):
-    ledger, row, expected, plan, commands = observed_row_fixture(tmp_path)
+    _ledger, row, _expected, _plan, _commands = observed_row_fixture(tmp_path)
     payload = c.read(tmp_path / "raw/pair-0000-base.stdout")
     payload[field] = value
     assert cap.classify(row["observation"], payload, row["member"], row["engine"], row["reported_labels"]) == outcome

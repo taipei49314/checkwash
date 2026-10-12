@@ -3,7 +3,7 @@ from collections import Counter, defaultdict
 import json
 import math
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 
 import r1_cost_capture as cap
 import r1_cost_contract as c
