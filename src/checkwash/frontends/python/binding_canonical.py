@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import ast
 
-
 # Relative precedence between binary operators only. Non-binary operand
 # precedence stays with the stdlib through a shallow, public AST context.
 _OPERATORS = {
@@ -30,7 +29,7 @@ _OPERATORS = {
 _CONTEXT_NAME = "_checkwash_binding_context"
 
 
-def _operand_text(node: ast.AST, operator: ast.operator, right: bool) -> str:
+def _operand_text(node: ast.expr, operator: ast.operator, right: bool) -> str:
     """Let public ast.unparse retain the exact leaf's operand parentheses.
 
     Strip one checked endpoint only. The same sentinel text inside a Name,
@@ -62,7 +61,7 @@ def _iterative_binop(root: ast.BinOp) -> str:
     the stdlib's left association except for right-associated power.
     The worklist emits tokens and joins once, without subtree strings/walks.
     """
-    pending: list[str | tuple[ast.AST, ast.operator | None, bool]] = [(root, None, False)]
+    pending: list[str | tuple[ast.expr, ast.operator | None, bool]] = [(root, None, False)]
     tokens: list[str] = []
     while pending:
         item = pending.pop()

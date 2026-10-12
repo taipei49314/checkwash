@@ -98,7 +98,7 @@ def run_phase(location: str, terms: int, phase: str) -> dict[str, object]:
         functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)]
         if phase == "syntax":
             count, depth = 0, 0
-            pending = [(tree, 0)]
+            pending: list[tuple[ast.AST, int]] = [(tree, 0)]
             while pending:
                 node, level = pending.pop()
                 count += 1
@@ -123,15 +123,16 @@ def run_phase(location: str, terms: int, phase: str) -> dict[str, object]:
             results[path] = [_digest(astutil.stable_dump(astutil._PositiveComparisons().visit(node.test)))
                              for node in ast.walk(tree) if isinstance(node, ast.Assert)]
         elif phase == "asserted_subject":
-            results[path] = []
+            assertions: list[dict[str, object]] = []
+            results[path] = assertions
             for node in ast.walk(tree):
                 if isinstance(node, ast.Assert):
                     statement = ast.get_source_segment(text, node)
                     if statement is None:
                         raise RuntimeError("owned assertion source segment is missing")
                     result = astutil.asserted_subject(statement)
-                    results[path].append({"semantic_result_missing": result is None,
-                                          "result": _digest(result) if result is not None else None})
+                    assertions.append({"semantic_result_missing": result is None,
+                                       "result": _digest(result) if result is not None else None})
         else:
             raise ValueError(f"unknown phase: {phase}")
     return results
@@ -204,6 +205,7 @@ def main() -> int:
         return _worker(args)
     if args.engine_root is None or args.output is None:
         parser.error("collector requires engine-root and output")
+    receipts: list[dict[str, object]] = []
     report = {
         "purpose": "DIAGNOSTIC_CAPTURE_NOT_QUALIFICATION",
         "identity": _identity(args.engine_root.resolve()),
@@ -212,7 +214,7 @@ def main() -> int:
                     for name, data in snapshot(location, terms).items()}
                    for location in LOCATIONS for terms in WIDTHS},
         "per_phase_timeout_seconds": 30,
-        "receipts": [],
+        "receipts": receipts,
     }
     infrastructure_errors = 0
     for terms in WIDTHS:
@@ -222,22 +224,22 @@ def main() -> int:
                 command = [sys.executable, "-X", "utf8", str(Path(__file__).resolve()), "--worker",
                            "--location", location, "--terms", str(terms), "--phase", phase]
                 try:
-                    raw = subprocess.run(command, capture_output=True, text=True,
+                    raw = subprocess.run(command, check=False, capture_output=True, text=True,
                                          encoding="utf-8", timeout=30)
                 except subprocess.TimeoutExpired as error:
-                    report["receipts"].append({**key, "status": "TIMEOUT", "seconds": 30,
+                    receipts.append({**key, "status": "TIMEOUT", "seconds": 30,
                                                "stdout": _partial_output(error.stdout),
                                                "stderr": _partial_output(error.stderr)})
                     continue
                 except OSError as error:
                     infrastructure_errors += 1
-                    report["receipts"].append({**key, "status": "LAUNCH_FAILURE",
+                    receipts.append({**key, "status": "LAUNCH_FAILURE",
                                                "exception_type": type(error).__name__, "message": str(error)})
                     continue
                 try:
                     receipt = json.loads(raw.stdout)
                     if not isinstance(receipt, dict):
-                        raise ValueError("worker receipt is not an object")
+                        raise TypeError("worker receipt is not an object")
                     if any(receipt.get(name) != value for name, value in key.items()):
                         raise ValueError("worker receipt does not match requested phase")
                     expected_code = 0 if receipt["status"] == "RETURNED" else 1
@@ -249,8 +251,8 @@ def main() -> int:
                     infrastructure_errors += 1
                     receipt = {**key, "status": "INVALID_RECEIPT", "message": str(error),
                                "worker_returncode": raw.returncode, "stdout": raw.stdout, "stderr": raw.stderr}
-                report["receipts"].append(receipt)
-    report["summary"] = {status: sum(item["status"] == status for item in report["receipts"])
+                receipts.append(receipt)
+    report["summary"] = {status: sum(item["status"] == status for item in receipts)
                          for status in ("RETURNED", "EXCEPTION", "TIMEOUT", "INVALID_RECEIPT", "LAUNCH_FAILURE")}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")

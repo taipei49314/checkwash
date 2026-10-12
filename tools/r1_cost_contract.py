@@ -11,7 +11,6 @@ import platform
 import re
 import shutil
 import sys
-import time
 
 # -I excludes the script directory; add only this exact reviewed tools directory.
 HERE = Path(__file__).resolve().parent
