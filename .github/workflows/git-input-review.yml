@@ -1,0 +1,48 @@
+name: git input review
+
+on:
+  pull_request:
+    paths:
+      - 'src/checkwash/gitio/**'
+      - 'src/checkwash/cli.py'
+      - 'src/checkwash/sweep.py'
+      - 'tests/test_git_input_failures.py'
+      - '.github/workflows/git-input-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    if: github.head_ref == 'fix/git-input-failures'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: pip install -e '.[dev]'
+      - name: Input faults and unchanged CLI contracts
+        run: python -m pytest -o addopts='' -q tests/test_git_input_failures.py tests/test_strict_snapshot.py tests/test_issue335_opaque_submodules.py tests/test_normalization_execution_context.py tests/test_perf_git.py tests/e2e/test_cli.py --junitxml=git-input-receipts/results.xml
+      - name: Record exact candidate identity
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p git-input-receipts
+          git rev-parse HEAD > git-input-receipts/source-sha.txt
+          git diff --exit-code > git-input-receipts/working-tree.diff
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: git-input-review-${{ matrix.os }}-${{ github.event.pull_request.head.sha }}
+          path: git-input-receipts
+          if-no-files-found: error

@@ -1,0 +1,56 @@
+name: JS catch review
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/test_issue363_js_catch.py'
+      - '.github/workflows/js-catch-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    if: github.head_ref == 'fix/363-js-swallowing'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: pip install -e '.[dev]'
+      - name: Named defect and existing JS regression controls
+        run: python -m pytest -o addopts='' -q tests/test_issue363_js_catch.py tests/test_js_frontend.py tests/test_js_bindings.py tests/test_js_iterator_callbacks.py tests/test_js_parse_linear.py tests/test_perf_js.py --junitxml=js-catch-receipts/results.xml
+      - name: Produce failure-ledger documentation proposal remotely
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p js-catch-receipts
+          git worktree add --detach "$RUNNER_TEMP/failure-docs" HEAD
+          (
+            cd "$RUNNER_TEMP/failure-docs"
+            python benchmarks/make_failures.py
+            cp benchmarks/FAILURES.md "$GITHUB_WORKSPACE/js-catch-receipts/FAILURES.md"
+            git diff -- benchmarks/FAILURES.md > "$GITHUB_WORKSPACE/js-catch-receipts/failure-ledger-proposal.diff"
+            git rev-parse HEAD > "$GITHUB_WORKSPACE/js-catch-receipts/failure-ledger-source-sha.txt"
+          )
+          git worktree remove "$RUNNER_TEMP/failure-docs" --force
+      - name: Record exact source identity
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p js-catch-receipts
+          git rev-parse HEAD > js-catch-receipts/source-sha.txt
+          git diff --exit-code > js-catch-receipts/working-tree.diff
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: js-catch-review-${{ github.event.pull_request.head.sha }}
+          path: js-catch-receipts
+          if-no-files-found: error

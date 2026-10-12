@@ -9027,7 +9027,8 @@ second stage after the same-file reading. 272.Q3's marker applies:
 
 Readings the ruling leaves to the implementation:
 
-1. **Only an outcome every call reaches.** As a conftest fixture's outcome
+1. **Historical reading; superseded in the #357 draft by D-128 below.**
+   Only an outcome every call reaches. As a conftest fixture's outcome
    is (D-093 reading 5), a guarded skip in an imported helper records
    nothing: its guard is written in another module's names, which
    COMPAT_GATE would read in the test module's. The conditions at the call
@@ -9336,3 +9337,69 @@ All 8 additional #358 fallback mutants were killed. The historical #351
 3,063-record sweep predates #358 and is not the cost of this candidate.
 Full CI, pool sweeps, targeted scrapy comparison and final cost remain
 pending; neither round is approved for merge by this entry.
+
+
+## D-128 (2026-10-10, draft): preserve imported helper guards (#357)
+
+The current handover agent adjudicates this change under the owner's explicit
+“裁定交給你” delegation in the current session. This entry is an agent-authored
+draft disposition, not a claim that the owner independently reviewed these
+source bytes or that an earlier exact-source approval covers the new code.
+It supersedes D-124 reading 1 for this draft; the other import and call-target
+bounds remain. An imported helper's conditional skip is retained, with the
+condition closed over bounded helper-module constants before joining the
+caller's conditions. Evidence remains in the defining helper's file and span.
+
+Unknown value names use the fixed `helper.` prefix. Import bindings, function
+parameters, enclosing locals and module names also written by conditional,
+augmented, destructuring or definition statements stay unknown. Expansion
+limits retain `helper.<unreadable>` rather than dropping the outcome. Plain
+module assignments keep the existing bounded closure, not a complete Python
+execution or symbol-table model. Call targets and attribute roots stay written.
+
+This does not establish complete namespace isolation: D6's compatibility-token
+search can still inspect surviving names through test-module constants, and an
+unknown guard containing a compatibility token can fail open. Existing one-hop
+import limits, production helpers, methods, generators, class helpers, dynamic
+binding and source-read limits remain. An individual imported helper does not
+gain the suite-control dependency compatibility exemption. Existing .gwcase
+expectations and conftest's default closure are unchanged.
+
+The independent AI source review of the earlier packet requested changes.
+This revision addresses stale helper constants and the assertion-only mutant
+receipt oracle. Candidate `0d6c5ec490c02e0d862e5bbff9bb2b8b593ebc11`
+has a bounded independent AI follow-up dated 2026-10-11. That static review
+found no necessary further change within the correction; its exact source
+bytes and retained limits are recorded in the preparation source-review report,
+SHA256 `7bd3f0ace96b1f9ace1c370773a4ccc910dfd569c54accd18f632f54acd583c3`.
+Final-candidate CI `38090723918` and qualification `38090724037`
+are accounted. Raw full CI still fails only expected pinned-tag parity before
+the new tag exists; two existing macOS performance skips remain disclosed.
+The seven fixed Python first-attempt batches account for 4,271 unique pairs /
+8,542 arms against main35. All 4,139 both-analyzed pairs preserve their full
+written finding arrays, counts and verdicts (3,595 pass/pass, 544 block/block).
+Candidate input/analysis errors are 132 versus 105 baseline errors; 27 additional
+pass/error pairs are lost analyzed coverage, not detector improvement. Bounded
+source proofs retain each error, including nonregular/byte refusals and inherited
+stand-in, importer, conftest and opaque-boundary limits. The first runtime caller,
+path and unrecorded budget counts remain UNKNOWN. Legacy input integrity is not
+certified; confident legacy-integrity pairs remain zero.
+
+The complete combined candidate/main35 process-cost record has paired delta
+median/p95 +2.4744/+7.4800 seconds for all 4,271 attempts and +2.4827/+7.4827
+seconds for the 4,139 both-analyzed pairs. Exact full outcome, repository, host
+and overlapping standard/D-088/targeted populations are retained in cost JSON
+SHA256 `33101549b7c856b1011984e3bfe2f84af41b2234fb1061282a5c71dcd64872fc`.
+These are descriptive CLI elapsed costs of the combined candidate, not a #357
+causal measurement. Python0-5 used recorded max_parallel2; Python6 and JS0-2
+used max_parallel6. Cache/contention and scheduling effects remain unmeasured.
+Historical #358/#351 costs and earlier mutation totals do not validate this
+source. The complete 1,800-pair JS comparison uses original v0.6.0 as a separate
+baseline and is registered in-sample/nonblind, not held-out FP validation.
+
+Protected text, the four proposed #363 fixture labels, final verdict and
+disclosed cost/coverage/noise/risk acceptance remain reserved maintainer
+decisions. This draft records agent source reasoning and actual stored hosted
+receipts; it grants no independent human acceptance, merge, held-out freeze,
+READY status or publication. Main/tag parity, future-tag visitor installation
+and public package-description checks remain publication-phase NOT_RUN.

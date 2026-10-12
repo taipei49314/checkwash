@@ -1,0 +1,111 @@
+name: fixed release comparator artifacts
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'tools/release_inventory.py'
+      - '.github/workflows/release-cost-artifacts.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  comparator:
+    if: github.head_ref == 'prep/v070-final-20261011'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arm: python_base
+            source: 35e74dc69b9a6582f5c8409d64027d61653acd2e
+          - arm: javascript_base
+            source: 8c70efbf93975bf3210acb8eafbaf4b38044a770
+    env:
+      CANDIDATE_SOURCE: ${{ github.event.pull_request.head.sha }}
+      ENGINE_SOURCE: ${{ matrix.source }}
+      ARM: ${{ matrix.arm }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ matrix.source }}
+          path: engine
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Build exact comparator wheel and source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install build
+          python -m build engine --wheel --sdist --outdir "$RUNNER_TEMP/comparator-dist"
+          python -m venv "$RUNNER_TEMP/comparator-runtime"
+          wheels=("$RUNNER_TEMP"/comparator-dist/*.whl)
+          sdists=("$RUNNER_TEMP"/comparator-dist/*.tar.gz)
+          test "${#wheels[@]}" = 1
+          test "${#sdists[@]}" = 1
+          "$RUNNER_TEMP/comparator-runtime/bin/python" -m pip install --no-deps "${wheels[0]}"
+          mkdir -p receipts/artifacts
+          cp "${wheels[0]}" "${sdists[0]}" receipts/artifacts/
+      - name: Preserve original v0.6.0 pyz or build the exact main35 comparator
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$ARM" = javascript_base ]; then
+            curl --fail --location --max-time 120 https://api.github.com/repos/taipei49314/checkwash/releases/tags/v0.6.0 -o receipts/release-metadata.json
+            curl --fail --location --max-time 120 https://github.com/taipei49314/checkwash/releases/download/v0.6.0/checkwash.pyz -o receipts/artifacts/checkwash.pyz
+            python - <<'PY'
+          import hashlib, json, pathlib, tomllib
+          pins = tomllib.loads(pathlib.Path('tests/verdict_gate/baseline.toml').read_text())['baseline']
+          raw = pathlib.Path('receipts/artifacts/checkwash.pyz').read_bytes()
+          release = json.loads(pathlib.Path('receipts/release-metadata.json').read_bytes())
+          assets = [a for a in release['assets'] if a['name'] == 'checkwash.pyz']
+          if (pins['commit'] != '8c70efbf93975bf3210acb8eafbaf4b38044a770' or release['tag_name'] != 'v0.6.0'
+                  or release['draft'] or len(assets) != 1 or hashlib.sha256(raw).hexdigest() != pins['sha256']
+                  or len(raw) != pins['size'] or assets[0]['size'] != pins['size']
+                  or assets[0]['digest'] != 'sha256:' + pins['sha256']):
+              raise SystemExit('Original v0.6.0 release asset identity mismatch')
+          pathlib.Path('receipts/primary-provenance.json').write_text(json.dumps(dict(
+              kind='ORIGINAL_PUBLISHED_V060', source=pins['commit'], release_id=release['id'], asset_id=assets[0]['id'],
+              sha256=pins['sha256'], bytes=len(raw), published_at=release['published_at']), indent=2) + '\n')
+          PY
+          else
+            python -m zipapp engine/src -m 'checkwash.zipapp_entry:run' -o receipts/artifacts/checkwash.pyz -c
+            python - <<'PY'
+          import hashlib, json, os, pathlib
+          raw = pathlib.Path('receipts/artifacts/checkwash.pyz').read_bytes()
+          pathlib.Path('receipts/primary-provenance.json').write_text(json.dumps(dict(
+              kind='NEW_BUILD_EXACT_MAIN35', source=os.environ['ENGINE_SOURCE'],
+              sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw)), indent=2) + '\n')
+          PY
+          fi
+      - name: Qualify exact source and delivered distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheels=(receipts/artifacts/*.whl)
+          sdists=(receipts/artifacts/*.tar.gz)
+          python tools/qualify_assertions.py --source-root engine --distribution source --output receipts/source.json
+          python tools/release_inventory.py --source-root engine --distribution source --qualification receipts/source.json --output receipts/source-inventory.json
+          python tools/qualify_assertions.py --source-root engine --distribution wheel --artifact "${wheels[0]}" --output receipts/wheel.json -- "$RUNNER_TEMP/comparator-runtime/bin/python" -I -m checkwash
+          python tools/release_inventory.py --source-root engine --distribution wheel --qualification receipts/wheel.json --artifact "${wheels[0]}" --artifact "${sdists[0]}" --output receipts/wheel-inventory.json
+          python tools/qualify_assertions.py --source-root engine --distribution pyz --artifact receipts/artifacts/checkwash.pyz --output receipts/pyz.json
+          python tools/release_inventory.py --source-root engine --distribution pyz --qualification receipts/pyz.json --artifact receipts/artifacts/checkwash.pyz --output receipts/pyz-inventory.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: release-comparator-${{ matrix.arm }}-${{ github.event.pull_request.head.sha }}
+          path: receipts/
+          if-no-files-found: error

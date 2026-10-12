@@ -847,6 +847,10 @@ class ConftestGuard:
     of the conftest's top-level functions, as `setup_outcome`'s `condition`.
     """
 
+    # Imported helpers reuse the same closure with the fixed "helper" prefix.
+    # Never derive this from a file/module name: D6 also searches guard text.
+    _prefix = 'conftest'
+
     def __init__(self, tree, text_of, span_of):
         self._text_of, self._span_of = text_of, span_of
         self._remaining = _CLOSE_TOTAL
@@ -879,7 +883,7 @@ class ConftestGuard:
         try:
             return self._close(node, frozenset(), budget)
         except _ClosureBudget:
-            return 'conftest.<unreadable>'
+            return f'{self._prefix}.<unreadable>'
 
     def _close(self, node, resolving, budget):
         if self._remaining <= 0:
@@ -899,7 +903,7 @@ class ConftestGuard:
         if not text or end - start != len(text) or any(not start <= s <= e <= end for s, e in spans):
             # No source to splice the names into (never a node this file's
             # parser built): the guard is recorded as unknown, and earns nothing.
-            return 'conftest.<unreadable>'
+            return f'{self._prefix}.<unreadable>'
         pieces, last, size = [], start, 0
         for name, (s, e) in sorted(zip(names, spans), key=lambda pair: pair[1]):
             literal = text[last - start:s - start]
@@ -924,7 +928,7 @@ class ConftestGuard:
             closed = self._close(value, resolving | {name}, budget)
             if len(closed) <= _CLOSE_TEXT:
                 return f'({closed})'
-        return f'conftest.{name}'
+        return f'{self._prefix}.{name}'
 
 
 class _ClosureBudget(Exception):

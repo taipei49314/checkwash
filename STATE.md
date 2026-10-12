@@ -1,6 +1,27 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-08 (the 2026-10-05 scope: two of its 22 issues stay open, #196 on #351's ruling and #212 until the release; the rest waits on rulings; then stop)
+Updated: 2026-10-12 (v0.7.0 publication authorized; completion follows actual receipts)
+
+## 2026-10-12: preparation accepted; publication authorized
+
+The fixed v0.7.0 preparation is complete: ten first-attempt batches account for
+6,071 pairs / 12,142 arms, including 4,271 Python pairs against main35 and
+1,800 JS/TS pairs against original v0.6.0. Bounded source dispositions, complete
+cost accounting and 612 recorded shard environments are retained.
+
+The maintainer's “核准” accepted the exact protected wording, four #363 fixture
+labels, recorded verdict/CI limits, disclosed added cost and 54 coverage losses,
+eight bounded source/noise dispositions and remaining risks. The subsequent
+“發佈” authorizes the v0.7.0 publication procedure. This entry records those
+decisions; it is not evidence that a merge, tag, release asset or PyPI upload
+has already completed. Record each actual publication result separately.
+
+[Release evidence and limits](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md)
+and [known issues](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/KNOWN-ISSUES-v0.7.0.md)
+retain raw errors/skips, legacy UNKNOWN and the nonblind scope. T-528 remains
+CLAIMED and the original A–D held-out/custody work remains incomplete. The
+protected historical materializer is unchanged. The Action keeps its v0.6.0
+one-release-lag pin; downstream re-pins require their own applicable authority.
 
 ## 2026-10-08: the last approvals land
 
@@ -2463,7 +2484,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.6.0 |
+| version | v0.7.0 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

@@ -15,4 +15,4 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@24b60a2019a5900291ecb35ab8290f34af2d5438 # v0.5.0
+      - uses: taipei49314/checkwash/action@8c70efbf93975bf3210acb8eafbaf4b38044a770 # v0.6.0

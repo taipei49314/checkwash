@@ -220,3 +220,29 @@ def test_git_does_not_retry_other_failures(monkeypatch, tmp_path):
         _git(tmp_path, "status")
     assert fake.calls == 1
     assert "not a git repository" in str(raised.value)
+
+
+def test_range_check_counts_all_snapshot_git_processes(big_repo, monkeypatch):
+    # The legacy observer above wraps gitio._run only. Snapshot plumbing has
+    # its own _run, so observe the common subprocess boundary without changing
+    # the original process budget or the generated repository/expected content.
+    from checkwash.gitio import git as gitio
+
+    original = subprocess.run
+    calls = []
+
+    def counting(argv, *args, **kwargs):
+        if argv and argv[0] == "git":
+            calls.append(tuple(argv))
+        return original(argv, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", counting)
+    changes = gitio.list_range_changes(str(big_repo), "HEAD~1", "HEAD")
+    assert len(changes) == FILES * 2
+    assert all(change.before and change.after for change in changes)
+    assert any("ls-tree" in call for call in calls), "observer missed inventory reads"
+    assert any("cat-file" in call for call in calls), "observer missed batch reads"
+    assert len(calls) <= MAX_GIT_PROCESSES, (
+        f"{len(calls)} total git processes, including snapshot reads, "
+        f"for {len(changes)} changed files; budget is {MAX_GIT_PROCESSES}"
+    )

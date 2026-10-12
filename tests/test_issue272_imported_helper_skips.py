@@ -10,8 +10,8 @@ conftest chain. The module is the one an imported assertion helper resolves
 to: a dotted module from the repository root, a dotless one beside the test.
 It is read as the conftest chain is: a file the diff changes on its own side,
 any other once from the strict head snapshot, within the chain's limits, and
-only when it is a test or conftest module. Only an outcome every call of the
-helper reaches is kept (D-124 reading 1). The marker is
+only when it is a test or conftest module. #357 extends D-124 reading 1 to
+guarded outcomes closed over the helper module's names. The marker is
 `helper.<function>.<effect>` (272.Q3), with the helper file's text and span.
 """
 import datetime
@@ -127,9 +127,10 @@ def test_a_report_locates_the_finding_in_the_helper_file():
 
 # --- what is not read --------------------------------------------------------------------------
 
-def test_a_guarded_skip_in_the_imported_helper_records_nothing():
-    """Its guard is written in the helper module's names (D-124 reading 1)."""
-    assert outcome(BASE, module("maybe()", "from tests.helpers import maybe")) == ("pass", [])
+def test_a_guarded_skip_in_the_imported_helper_is_read():
+    """#357's explicit ruling moves this unit-test pin to the closed guard."""
+    assert outcome(BASE, module("maybe()", "from tests.helpers import maybe")) == (
+        "block", [disabled("helper.maybe.skip")])
 
 
 @pytest.mark.parametrize("call, imports", [

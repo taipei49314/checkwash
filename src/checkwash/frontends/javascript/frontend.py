@@ -21,6 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
+from checkwash.frontends.javascript.exception_handlers import swallowing_handlers
 from checkwash.frontends.javascript.literals import (
     keyword_operand,
     number_operand,
@@ -2287,4 +2288,6 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     # as a test or a suite; a bare `.test(value)` call is a method.
     declares_tests = bool(units) or any(
         (d.callback or _test_body(text, code, bindings, d)) is not None for d in declarations)
-    return ParsedFile(parse_ok=True, units=units, focus=focus, declares_tests=declares_tests)
+    handlers = swallowing_handlers(bindings, [a for unit in units for a in unit.side.assertions])
+    return ParsedFile(parse_ok=True, units=units, focus=focus, declares_tests=declares_tests,
+                      swallowing_handlers=handlers)

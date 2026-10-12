@@ -1,0 +1,17 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+note: #363 — setup failure handling does not wrap the assertion outside the try.
+=== before: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+it("rounds to cents", () => {
+  setup();
+  expect(withTax(10.005, 0.1)).toBe(11.01);
+});
+=== after: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+it("rounds to cents", () => {
+  try { setup(); } catch {}
+  expect(withTax(10.005, 0.1)).toBe(11.01);
+});
+=== expect ===
+[]

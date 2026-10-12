@@ -159,6 +159,44 @@ its release run.)
   `block`; `known-regression` entries stay, held by the label anchor) and every
   added, dropped or re-hashed `chai:` case.
 
+## v0.7.0 one-time publication authorization (2026-10-12)
+
+After accepting the complete six-clause preparation proposal with “核准”, the
+maintainer instructed **“發佈”** (publish) in the same conversation. This is the
+one-time authorization for v0.7.0: integrate the reviewed stacked candidate,
+record the exact accepted protected text and four #363 fixture labels, update
+release-facing documentation, perform source-bound remote temporary-tag/full
+qualification and final packaging checks, merge through the normal required
+checks, and publish one v0.7.0 tag, GitHub Release and PyPI version. Necessary
+remote qualification registration and dispatch remain within this release
+procedure and run on the EC pool; no work-machine product execution is granted.
+
+The exact accepted preparation proposal has SHA256
+`8613b4b37a3bf1635623b87dd607ceb4ecb83a1d7c92b30c8ae6dd7255af4052`;
+the human acceptance record has SHA256
+`829c92e253aefbad57625654d486e7966675f68708f9fbd5e7c0d9ec3b3a9e23`.
+The immutable READY review ZIP has SHA256
+`9fad98171e9284fcbcd2152456dc939c651e950856f41fd1419eb6cd857a88eb`.
+Approved protected wording is preserved exactly from diff SHA256
+`c2a1181cbc947817cd261e98725f846a4d325fade693c596cdf39d98af648c7c`.
+Its historical draft/pending language records the time of that proposal; the
+later acceptance above is the applicable decision, without rewriting the
+approved bytes or earlier raw failed/skipped receipts.
+
+The tag ruleset (22162219, empty bypass list) may be disabled for the authorized
+tag push only and must be restored immediately, before creating the Release.
+The exact final-head PR verdict, main-push verdict and tag-push verdict are
+required in the order above. The post-publication record will add their actual
+run IDs/attempts, source/tree and package identities, public page/asset checks
+and actual visitor-install results. Until those receipts exist, publication
+completion is not claimed by this authorization entry.
+
+The scope includes preparation of the post-publication verdict-baseline
+rotation PR; its concrete maintainer-owned changes remain reviewable under
+step 8c. It does not authorize another version or downstream re-pins of
+checkwash-corpus or smallestlie. The Action remains pinned to prior stable
+v0.6.0. T-528's original A–D work remains incomplete and CLAIMED.
+
 ## The release slot
 
 The weekly automatic slot introduced by estate T-57 was canceled by T-197.

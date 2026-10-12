@@ -1373,6 +1373,7 @@ def build_ir(
                 g.imports_added.append(f"{path}:{module}")
                 if resolvable is not None and module.split(".", 1)[0] not in resolvable:
                     g.unresolved_imports.append((path, module))
+        if is_python or is_js_test:
             # A test file is judged on handlers that actually swallow an
             # oracle; production code on every broad handler added, because
             # there the cheat is silencing the error instead of fixing it.

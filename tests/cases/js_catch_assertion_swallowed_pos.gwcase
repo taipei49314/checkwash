@@ -1,0 +1,20 @@
+=== meta ===
+bypass: 16,22
+rule: BROAD_EXCEPT_ADDED
+note: #363 — an unchanged synchronous assertion is wrapped in a comment-only catch.
+=== before: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+it("rounds to cents", () => {
+  expect(withTax(10.005, 0.1)).toBe(11.01);
+});
+=== after: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+it("rounds to cents", () => {
+  try {
+    expect(withTax(10.005, 0.1)).toBe(11.01);
+  } catch (e) {
+    // rounding differs between CI runners
+  }
+});
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

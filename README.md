@@ -1,5 +1,13 @@
 # checkwash
 
+**v0.7.0 preserves bounded imported-helper skip guards, strengthens Git input
+failure handling, and detects supported synchronous JS/TS assertions swallowed
+by an added catch.**
+[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md).
+A pass does not prove correctness; retain exit 2 and diagnostics as analysis
+errors. The recommended Action remains pinned to v0.6.0 under the existing
+one-release lag and does not include the later CLI changes.
+
 [![CI](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml/badge.svg)](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/checkwash.svg)](https://pypi.org/project/checkwash/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/taipei49314/checkwash/blob/main/LICENSE)
@@ -68,7 +76,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.6.0/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.7.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -77,7 +85,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.6.0/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.7.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -89,7 +97,7 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.6.0/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.7.0/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
@@ -104,11 +112,11 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.6.0-public-launch.md#try-it-on-a-change-you-understand).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md#use-it-and-preserve-the-result).
 
 ## Know the limits
 
-**v0.6.0 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.7.0 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
@@ -125,9 +133,9 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action is pinned to **v0.5.0**; the CLI above is **v0.6.0**.
-The prior-release Action includes the fixes for the #172–#181 reports, but
-lacks this release's work on the reports and rulings that followed them.
+The recommended Action is pinned to **v0.6.0**; the CLI above is **v0.7.0**.
+The prior-release Action includes the published v0.6.0 engine. It lacks the
+subsequent helper, Git input, JS/TS catch and other fixes in v0.7.0.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
@@ -154,7 +162,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@24b60a2019a5900291ecb35ab8290f34af2d5438 # v0.5.0
+      - uses: taipei49314/checkwash/action@8c70efbf93975bf3210acb8eafbaf4b38044a770 # v0.6.0
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -172,8 +180,8 @@ can inspect the local workflow, but cannot verify live branch protection.
 
 **Why the older Action pin?** A release cannot embed its own commit SHA,
 so the documented Action adopts a verified pin from the prior release.
-The recommended v0.5.0 Action includes the fixes for the #172–#181 reports,
-but not the v0.6.0 work on the reports and rulings that followed them. A CLI
+The recommended v0.6.0 Action includes the engine published on 2026-10-05,
+but not the later fixes in v0.7.0. A CLI
 upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
@@ -189,9 +197,9 @@ upgrade does not update an existing Action. To verify another trusted release, u
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.6.0
+pipx install checkwash==0.7.0
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.6.0
+pipx install git+https://github.com/taipei49314/checkwash@v0.7.0
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -229,7 +237,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.6.0 guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.6.0-public-launch.md) |
+| Installation checks, versions and first use | [v0.7.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.7.0-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
@@ -244,5 +252,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 17033 tests in the current source tree.
+Alpha pre-release. 22 detectors, 17288 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

@@ -1,0 +1,16 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+note: #363 — a direct rethrow preserves the assertion's failure.
+=== before: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+it("rounds to cents", () => {
+  expect(withTax(10.005, 0.1)).toBe(11.01);
+});
+=== after: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+it("rounds to cents", () => {
+  try { expect(withTax(10.005, 0.1)).toBe(11.01); }
+  catch (e) { throw e; }
+});
+=== expect ===
+[]
