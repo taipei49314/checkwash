@@ -3739,7 +3739,7 @@ def _parse_python(
     global _walks
     raw = normalize_source(data)
     try:
-        tree = parse_module(raw) if collect_tests else ast.parse(raw)
+        tree = parse_module(raw)
         if collect_tests and "if" in raw and ("assert" in raw or "raise" in raw and "AssertionError" in raw):
             tree = conditional_oracle_carriers(tree)
     except SyntaxError:

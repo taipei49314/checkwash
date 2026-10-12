@@ -141,12 +141,15 @@ def test_subject_counts_the_complete_reconstructed_tree(monkeypatch):
         subject._syntax(source, path="owned.py", side="before")
 
 
-def test_production_caller_preserves_its_native_recursion_failure(monkeypatch):
+def test_production_caller_recovers_with_its_complete_native_fingerprint(monkeypatch):
     source = "x = 'a' + 'b'\n"
+    expected = frontend.parse_python(source.encode(), collect_tests=False)
+    assert expected.parse_ok and "x" in expected.symbols
     _failure, calls = force_first_recursion(monkeypatch)
     result = frontend.parse_python(source.encode(), collect_tests=False)
-    assert not result.parse_ok
-    assert calls == [source]
+    assert result.parse_ok
+    assert result == expected
+    assert calls[0] == source and len(calls) > 1
 
 
 def test_test_caller_recovers_without_changing_the_shallow_unit(monkeypatch):
