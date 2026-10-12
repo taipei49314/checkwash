@@ -1,0 +1,62 @@
+name: Stand-in step exception diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/standin-step-diagnostic.yml'
+      - 'tools/standin_step_capture.py'
+      - 'tools/standin_step_diagnostic.py'
+      - 'tools/standin_step_observation.py'
+      - 'tests/test_standin_step_capture.py'
+      - 'tests/test_standin_step_observation.py'
+
+permissions:
+  contents: read
+
+jobs:
+  step-evidence:
+    name: Three fixed pairs - counter evidence only
+    if: github.head_ref == 'diagnose/standin-step-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: diagnostic
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 30cfb8bd39aa702aae0d59bde1d1400654137bad
+          path: engine-base
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 6bfa81b0201243c98180d8d08c9415ae343f2feb
+          path: engine-candidate
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Install only the owned-control dependency
+        run: python -I -B -m pip install pytest==8.4.2
+      - name: Check metadata observer and complete comparator controls
+        working-directory: diagnostic
+        run: python -I -B -m pytest -q tests/test_standin_step_observation.py tests/test_standin_step_capture.py
+      - name: Capture the fixed eighteen native and diagnostic children
+        env:
+          STEP_OUTPUT: ${{ runner.temp }}/standin-step-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+        run: >-
+          python -I -B -X utf8 diagnostic/tools/standin_step_capture.py
+          --base "$GITHUB_WORKSPACE/engine-base"
+          --candidate "$GITHUB_WORKSPACE/engine-candidate"
+          --output "$STEP_OUTPUT"
+      - name: Preserve all completed and partial evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: standin-step-evidence-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/standin-step-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 30
