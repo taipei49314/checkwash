@@ -13,6 +13,7 @@ import hashlib
 import math
 import operator
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
@@ -3983,7 +3984,21 @@ def _parse_python(
         owner: ast.ClassDef | None = None,
         classes: tuple[ast.ClassDef, ...] = (),
     ) -> None:
-        for child in ast.iter_child_nodes(node):
+        # Keep suspended child iterators so preorder and lexical contexts are
+        # identical to recursive visitation, without consuming Python frames
+        # for expression nodes that cannot themselves introduce a scope.
+        frames: list[tuple[
+            Iterator[ast.AST], str, list[Marker], bool,
+            tuple[SetupScope, ...], dict[str, list[ast.expr]] | None,
+            ast.ClassDef | None, tuple[ast.ClassDef, ...],
+        ]] = [(ast.iter_child_nodes(node), prefix, inherited, collectible,
+               scopes, aliases, owner, classes)]
+        while frames:
+            children, prefix, inherited, collectible, scopes, aliases, owner, classes = frames[-1]
+            child = next(children, None)
+            if child is None:
+                frames.pop()
+                continue
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{prefix}{child.name}"
                 if want_symbols:
@@ -3998,7 +4013,8 @@ def _parse_python(
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
-                visit(child, qual + ".", inherited, False)
+                frames.append((ast.iter_child_nodes(child), qual + ".", inherited, False,
+                               (), None, None, ()))
             elif isinstance(child, ast.ClassDef):
                 qual = f"{prefix}{child.name}"
                 if want_symbols:
@@ -4013,8 +4029,8 @@ def _parse_python(
                     and (_is_test_class(child) or child.name in test_class_names)
                     and not _test_attr_disabled(child.body)
                 )
-                visit(
-                    child,
+                frames.append((
+                    ast.iter_child_nodes(child),
                     qual + ".",
                     inherited + class_markers,
                     class_collectible,
@@ -4022,7 +4038,7 @@ def _parse_python(
                     aliases_of(child) if collect_tests else None,
                     child,
                     classes + (child,),
-                )
+                ))
             elif want_symbols and isinstance(child, (ast.Assign, ast.AnnAssign)):
                 # Module- and class-level constants are behaviour too. They
                 # were not symbols, so changing `TIMEOUT = 30` to 60 produced
@@ -4033,7 +4049,8 @@ def _parse_python(
                     if isinstance(target, ast.Name):
                         symbols[f"{prefix}{target.id}"] = _fingerprint(child)
             else:
-                visit(child, prefix, inherited, collectible, scopes, aliases, classes=classes)
+                frames.append((ast.iter_child_nodes(child), prefix, inherited, collectible,
+                               scopes, aliases, None, classes))
 
     visit(tree, "", module_markers, True, setup_scopes, module_aliases)
     if collect_tests:
