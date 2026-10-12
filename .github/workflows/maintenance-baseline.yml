@@ -1,0 +1,280 @@
+# One diagnostic PR, closed after capture; never a permanent maintenance gate.
+# Fixed R1 source subjects below are distinct from the diagnostic PR checkout.
+name: temporary R1 maintenance correction diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  paired-raw-evidence:
+    if: github.head_ref == 'diagnose/maintenance-r1-correction-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE_SHA: ac155e2501e99fa8bf825f395de56cfb711814c7
+      CANDIDATE_SHA: 96c62705b24f6bca91f802a2b1cd6081d65dbdd3
+      DIAGNOSTIC_SHA: ${{ github.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Require explicit immutable source subjects
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.DIAGNOSTIC_SHA }}
+          persist-credentials: false
+          path: diagnostic
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: candidate
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.BASE_SHA }}
+          persist-credentials: false
+          path: baseline
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Install the same fixed tools for both source subjects
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I -B - <<'PY'
+          import hashlib, json, os, pathlib, subprocess, sys, time
+
+          out = pathlib.Path('maintenance-evidence')
+          out.mkdir(exist_ok=True)
+          target = pathlib.Path(os.environ['RUNNER_TEMP']) / 'maintenance-tools'
+          python = str(target / 'bin/python')
+          manifest = {'purpose': 'TOOL_INSTALL_CAPTURE', 'run_id': os.environ['GITHUB_RUN_ID'],
+                      'attempt': os.environ['GITHUB_RUN_ATTEMPT'], 'runs': []}
+          commands = [
+              ('venv', [sys.executable, '-I', '-B', '-m', 'venv', str(target)]),
+              ('pip', [python, '-I', '-B', '-m', 'pip', 'install', '--report',
+                       str(out / 'install.json'), 'ruff==0.16.6', 'mypy==2.3.1']),
+              ('freeze', [python, '-I', '-B', '-m', 'pip', 'freeze', '--all']),
+          ]
+          for name, argv in commands:
+              row = {'name': name, 'argv': argv, 'cwd': str(pathlib.Path.cwd())}
+              start = time.monotonic()
+              try:
+                  run = subprocess.run(argv, capture_output=True, timeout=240)
+                  stdout, stderr = run.stdout, run.stderr
+                  row['exit'] = run.returncode
+              except subprocess.TimeoutExpired as exc:
+                  stdout, stderr = exc.stdout or b'', exc.stderr or b''
+                  row.update(exit=None, execution_error='TimeoutExpired')
+              except OSError as exc:
+                  stdout, stderr = b'', str(exc).encode('utf-8')
+                  row.update(exit=None, execution_error=type(exc).__name__)
+              row['elapsed_seconds'] = time.monotonic() - start
+              (out / ('install-' + name + '.stdout')).write_bytes(stdout)
+              (out / ('install-' + name + '.stderr')).write_bytes(stderr)
+              row['stdout_sha256'] = hashlib.sha256(stdout).hexdigest()
+              row['stderr_sha256'] = hashlib.sha256(stderr).hexdigest()
+              manifest['runs'].append(row)
+              (out / 'install-commands.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+              if row['exit'] != 0:
+                  raise SystemExit(row['exit'] if isinstance(row['exit'], int) and row['exit'] > 0 else 2)
+              if name == 'freeze':
+                  (out / 'freeze.txt').write_bytes(stdout)
+          PY
+      - name: Preserve every native finding and exit on both exact revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/maintenance-tools/bin/python" -I -B - <<'PY'
+          import hashlib, importlib.metadata, json, os, pathlib, platform, subprocess, sys, time
+
+          root = pathlib.Path.cwd()
+          out = root / 'maintenance-evidence'
+          subjects = {'base': root / 'baseline', 'candidate': root / 'candidate'}
+          refs = {'base': os.environ['BASE_SHA'], 'candidate': os.environ['CANDIDATE_SHA']}
+          fixed_targets = [
+              'src/checkwash/frontends/python/binding_canonical.py',
+              'src/checkwash/frontends/python/frontend.py',
+              'tools/r1_cost_aggregate.py',
+              'tools/r1_cost_build.py',
+              'tools/r1_cost_capture.py',
+              'tools/r1_cost_contract.py',
+              'tools/r1_cost_tests.py',
+              'tools/r1_cost_worker.py',
+              'tools/reliability_r1_cases.py',
+              'tools/reliability_r1_trace.py',
+          ]
+          expected_candidate_source = {
+              'src/checkwash/frontends/python/binding_canonical.py':
+                  '005ea1dae58e986f5a4e70d6fb8fe8afd71723576541ce047c3aeda5918eddd3',
+              'tools/r1_cost_aggregate.py':
+                  '16911a95850c44b57053294bd49d1686ca58b2d5fecb217a8b7266e54348bd4e',
+              'tools/r1_cost_contract.py':
+                  'c1c22f04487caf81645754daa1bd9ecab26833016e9010501582e0120537c757',
+              'tools/r1_cost_tests.py':
+                  'b08b5e2554b56631da20e7f7798a3f40f4aa8a721f24e31e634c94e8199a6c62',
+              'tools/reliability_r1_trace.py':
+                  'b91dd6188e8245095ea477c8fbe1ae51b55f6f9842a45c857d1c34b5b8670f57',
+          }
+          manifest = {'status': 'RAW_EVIDENCE_NOT_NO_NEW_ERRORS_QUALIFICATION',
+                      'refs': refs, 'diagnostic_pr_head': os.environ['PR_HEAD_SHA'],
+                      'diagnostic_checkout': os.environ['DIAGNOSTIC_SHA'],
+                      'run_id': os.environ['GITHUB_RUN_ID'], 'attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+                      'python': sys.version, 'executable': sys.executable, 'platform': platform.platform(),
+                      'tools': {}, 'subjects': {}, 'runs': []}
+          result_exit = 0
+
+          def git(repo, *args):
+              return subprocess.run(['git', '-C', str(repo), *args], check=True,
+                                    capture_output=True, timeout=60).stdout
+
+          def save():
+              (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+          try:
+              diagnostic = root / 'diagnostic'
+              diagnostic_head = git(diagnostic, 'rev-parse', 'HEAD').decode().strip()
+              diagnostic_status = git(diagnostic, 'status', '--porcelain')
+              manifest['diagnostic_observed'] = {'head': diagnostic_head,
+                  'tree': git(diagnostic, 'rev-parse', 'HEAD^{tree}').decode().strip(),
+                  'status_bytes': len(diagnostic_status),
+                  'status_sha256': hashlib.sha256(diagnostic_status).hexdigest()}
+              (out / 'diagnostic-status.porcelain').write_bytes(diagnostic_status)
+              save()
+              if diagnostic_head != os.environ['DIAGNOSTIC_SHA'] or diagnostic_status:
+                  raise RuntimeError('diagnostic checkout identity or cleanliness differs')
+              for name, version in {'ruff': '0.16.6', 'mypy': '2.3.1'}.items():
+                  actual = importlib.metadata.version(name)
+                  manifest['tools'][name] = actual
+                  if actual != version:
+                      raise RuntimeError(f'{name} version differs: {actual}')
+              for side, repo in subjects.items():
+                  observed = {'expected_head': refs[side], 'paths': {}}
+                  manifest['subjects'][side] = observed
+                  save()
+                  actual = git(repo, 'rev-parse', 'HEAD').decode().strip()
+                  observed['head'] = actual
+                  save()
+                  observed['tree'] = git(repo, 'rev-parse', 'HEAD^{tree}').decode().strip()
+                  save()
+                  dirty = git(repo, 'status', '--porcelain')
+                  (out / (side + '-status.porcelain')).write_bytes(dirty)
+                  observed['status_sha256'] = hashlib.sha256(dirty).hexdigest()
+                  observed['status_bytes'] = len(dirty)
+                  save()
+                  if actual != refs[side] or dirty:
+                      raise RuntimeError(f'{side} checkout identity or cleanliness differs')
+              names = git(subjects['candidate'], 'diff', '--no-ext-diff', '--no-renames', '--name-only', '-z',
+                          refs['base'], refs['candidate'], '--').split(b'\0')
+              changed_paths = sorted(p.decode('utf-8') for p in names if p)
+              changed_python_paths = [p for p in changed_paths if p.endswith(('.py', '.pyi'))]
+              manifest['changed_paths'] = changed_paths
+              manifest['changed_python_paths'] = changed_python_paths
+              manifest['non_python_changed_paths'] = [p for p in changed_paths
+                                                       if not p.endswith(('.py', '.pyi'))]
+              manifest['target_selection'] = 'FIXED_ORIGINAL_TEN_TARGETS_NOT_DERIVED_FROM_DIFF'
+              manifest['fixed_target_paths'] = fixed_targets
+              manifest['expected_candidate_source_sha256'] = expected_candidate_source
+              patch = git(subjects['candidate'], 'diff', '--no-ext-diff', '--no-renames',
+                          refs['base'], refs['candidate'], '--')
+              (out / 'source.diff').write_bytes(patch)
+              manifest['source_diff_sha256'] = hashlib.sha256(patch).hexdigest()
+              save()
+              if changed_python_paths != sorted(expected_candidate_source):
+                  raise RuntimeError('Python source changes differ from the five reviewed corrections')
+              paths = fixed_targets
+              workflow = diagnostic / '.github/workflows/maintenance-baseline.yml'
+              manifest['workflow_sha256'] = hashlib.sha256(workflow.read_bytes()).hexdigest()
+              for side, repo in subjects.items():
+                  entries = {}
+                  for row in git(repo, 'ls-tree', '-r', '-z', 'HEAD').split(b'\0'):
+                      if row:
+                          meta, path = row.split(b'\t', 1)
+                          entries[path.decode('utf-8')] = meta.decode('ascii').split()
+                  selected = []
+                  for path in paths:
+                      entry = entries.get(path)
+                      if entry is None:
+                          manifest['subjects'][side]['paths'][path] = {'state': 'absent'}
+                          raise RuntimeError(f'{side} fixed target is absent: {path}')
+                      mode, kind, oid = entry
+                      if mode not in ('100644', '100755') or kind != 'blob':
+                          raise RuntimeError(f'{side} selected path is nonregular: {path}')
+                      file = repo / path
+                      data = file.read_bytes()
+                      if data != git(repo, 'show', f'HEAD:{path}'):
+                          raise RuntimeError(f'{side} checkout bytes differ: {path}')
+                      manifest['subjects'][side]['paths'][path] = {'state': 'selected', 'blob': oid,
+                          'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)}
+                      if side == 'candidate' and path in expected_candidate_source:
+                          if hashlib.sha256(data).hexdigest() != expected_candidate_source[path]:
+                              raise RuntimeError(f'candidate reviewed correction bytes differ: {path}')
+                      selected.append(str(file))
+                  manifest['subjects'][side]['status'] = 'SELECTED_FIXED_TEN_TARGETS'
+                  env = {k: v for k, v in os.environ.items()
+                         if not k.startswith(('RUFF_', 'MYPY_', 'PYTHON'))}
+                  env.update({'MYPYPATH': str(repo / 'src'), 'NO_COLOR': '1'})
+                  commands = {
+                      'ruff': ['check', '--isolated', '--target-version', 'py311', '--no-cache',
+                               '--cache-dir', str(pathlib.Path(os.environ['RUNNER_TEMP']) / ('maintenance-ruff-' + side)),
+                               '--output-format', 'json'],
+                      'mypy': ['--config-file=', '--python-version', '3.12', '--no-incremental',
+                               '--cache-dir', str(pathlib.Path(os.environ['RUNNER_TEMP']) / ('maintenance-mypy-' + side)),
+                               '--output', 'json', '--no-error-summary'],
+                  }
+                  for tool, options in commands.items():
+                      argv = [sys.executable, '-I', '-B', '-m', tool, *options, *selected]
+                      row = {'side': side, 'tool': tool, 'argv': argv, 'cwd': str(repo)}
+                      start = time.monotonic()
+                      try:
+                          run = subprocess.run(argv, cwd=repo, env=env, capture_output=True, timeout=180)
+                          stdout, stderr = run.stdout, run.stderr
+                          row['exit'] = run.returncode
+                          if run.returncode:
+                              result_exit = max(result_exit, 1 if run.returncode == 1 else 2)
+                      except subprocess.TimeoutExpired as exc:
+                          stdout, stderr = exc.stdout or b'', exc.stderr or b''
+                          row.update(exit=None, execution_error='TimeoutExpired')
+                          result_exit = 2
+                      except OSError as exc:
+                          stdout, stderr = b'', str(exc).encode('utf-8')
+                          row.update(exit=None, execution_error=type(exc).__name__)
+                          result_exit = 2
+                      row['elapsed_seconds'] = time.monotonic() - start
+                      prefix = side + '-' + tool
+                      (out / (prefix + '.stdout')).write_bytes(stdout)
+                      (out / (prefix + '.stderr')).write_bytes(stderr)
+                      row['stdout_sha256'] = hashlib.sha256(stdout).hexdigest()
+                      row['stderr_sha256'] = hashlib.sha256(stderr).hexdigest()
+                      manifest['runs'].append(row)
+                      save()
+                  if git(repo, 'status', '--porcelain'):
+                      raise RuntimeError(f'{side} tool run changed checkout')
+          except Exception as exc:
+              manifest['capture_error'] = {'type': type(exc).__name__, 'message': str(exc)}
+              if isinstance(exc, (subprocess.CalledProcessError, subprocess.TimeoutExpired)):
+                  manifest['capture_error']['exit'] = getattr(exc, 'returncode', None)
+                  manifest['capture_error']['argv'] = exc.cmd
+                  (out / 'failed-git.stdout').write_bytes(exc.stdout or b'')
+                  (out / 'failed-git.stderr').write_bytes(exc.stderr or b'')
+              result_exit = 2
+          finally:
+              manifest['collector_exit'] = result_exit
+              save()
+          # Baseline debt stays a visible native-tool failure. There is no
+          # score subtraction, hidden failure or approval conclusion here.
+          raise SystemExit(result_exit)
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: maintenance-raw-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: maintenance-evidence
+          if-no-files-found: error
