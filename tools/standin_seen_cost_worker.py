@@ -1,9 +1,9 @@
 """One ordinary-PR scheduling group, preserving the old logical shard identities."""
 import os
-from pathlib import Path
 import shutil
 import sys
 import time
+from pathlib import Path
 
 import r1_cost_capture as cap
 import standin_seen_cost_contract as c
@@ -29,7 +29,7 @@ def verify_artifacts(prepared, plan):
                       and inventory["builder_source_commit"] == plan["identity"]["candidate"]
                       and inventory["run_id"] == plan["identity"]["run_id"]
                       and inventory["attempt"] == plan["identity"]["attempt"], "inventory source/run/builder differs")
-            c.require(inventory["qualification"] == dict(path=qpath.name, sha256=proof["qualification_sha256"])
+            c.require(inventory["qualification"] == {"path": qpath.name, "sha256": proof["qualification_sha256"]}
                       and q["suite_sha256"] == proof["suite_sha256"]
                       and q["source_package_sha256"] == proof["package_sha256"]
                       and q["source_package_dirty"] is False and not q["errors"] and not inventory["errors"],
@@ -56,10 +56,10 @@ def worker(output, prepared, name):
     members, shards, groups = c.validate_plan(plan)
     group = next(row for row in groups if row["name"] == name)
     records = [row for row in c.expected_rows(members, shards, groups) if row["group"] == name]
-    ledger = dict(identity=plan["identity"], manifest_sha256=cap.digest(prepared / "run-manifest.json"),
-                  group=group, records=records, labels={}, setup_complete=False, capture_complete=False,
-                  facts=c.facts(), interpreter=sys.executable, prepared_root=str(prepared.resolve()),
-                  cost_qualification="NOT_ADJUDICATED")
+    ledger = {"identity": plan["identity"], "manifest_sha256": cap.digest(prepared / "run-manifest.json"),
+                  "group": group, "records": records, "labels": {}, "setup_complete": False, "capture_complete": False,
+                  "facts": c.facts(), "interpreter": sys.executable, "prepared_root": str(prepared.resolve()),
+                  "cost_qualification": "NOT_ADJUDICATED"}
     c.write(output / "result.json", ledger)
     deadline = entered + c.WORKER_SECONDS
     work = output.parent / ("work-" + name)
@@ -92,8 +92,8 @@ def worker(output, prepared, name):
                 c.require(len(short) >= 7 and pin.startswith(short)
                           and commands.git(repo, "rev-parse", "--verify", short + "^{commit}").decode().strip() == pin,
                           "ambiguous formatter label")
-                proof[side] = dict(full=pin, short=short, object_command=index,
-                                   short_command=short_index, resolve_command=resolve_index)
+                proof[side] = {"full": pin, "short": short, "object_command": index,
+                                   "short_command": short_index, "resolve_command": resolve_index}
             parent_index = len(commands.rows)
             raw_header = commands.git(repo, "cat-file", "commit", member["commit"]).split(b"\n\n", 1)[0]
             parents = [line[7:].decode("ascii") for line in raw_header.splitlines() if line.startswith(b"parent ")]
@@ -120,7 +120,7 @@ def worker(output, prepared, name):
                         "--repo", str(repo), "--format", "json"]
                 row.update(stage="LAUNCH_INTENT", outcome="LAUNCH_UNKNOWN", reason=None, argv=argv,
                            cwd=str(work), raw_prefix=str(prefix.relative_to(output)), order_index=order_index,
-                           engine=engine, artifact_read=dict(sha256=cap.digest(artifact), bytes=artifact.stat().st_size),
+                           engine=engine, artifact_read={"sha256": cap.digest(artifact), "bytes": artifact.stat().st_size},
                            reported_labels={side: ledger["labels"][member["commit"]][side]["short"] for side in ("base", "head")})
                 c.write(output / "result.json", ledger)
                 row["observation"] = cap.capture(argv, work, commands.env, prefix, c.ENGINE_TIMEOUT, c.STREAM_LIMIT, deadline)

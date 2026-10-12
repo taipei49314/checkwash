@@ -6,12 +6,12 @@ The absolute launch path preserves venv identity; resolution is evidence only.
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import signal
 import subprocess
 import threading
 import time
+from pathlib import Path
 
 
 def facts():
@@ -47,8 +47,8 @@ def capture(argv, cwd, env, prefix, timeout, limit, deadline=None):
     files = {name: prefix.with_suffix("." + name) for name in ("stdout", "stderr")}
     sizes, failures, readers = {}, [], []
     child, spawned, first_stop, exit_code, executable = None, False, None, None, None
-    intent = dict(argv=argv, streams={name: path.name for name, path in files.items()},
-                  state="LAUNCH_INTENT", timeout_seconds=timeout, utc=facts()["utc"])
+    intent = {"argv": argv, "streams": {name: path.name for name, path in files.items()},
+                  "state": "LAUNCH_INTENT", "timeout_seconds": timeout, "utc": facts()["utc"]}
     write(prefix.with_suffix(".intent.json"), intent)
     with files["stdout"].open("xb") as stdout, files["stderr"].open("xb") as stderr:
         def drain(name, pipe, output):
@@ -65,7 +65,7 @@ def capture(argv, cwd, env, prefix, timeout, limit, deadline=None):
                 failures.append(repr(error))
                 drain_failed.set()
             finally:
-                sizes[name] = dict(observed_bytes=observed, retained_bytes=kept)
+                sizes[name] = {"observed_bytes": observed, "retained_bytes": kept}
 
         try:
             executable = shutil.which(argv[0], path=env.get("PATH"))
@@ -130,16 +130,16 @@ def capture(argv, cwd, env, prefix, timeout, limit, deadline=None):
     for name, path in files.items():
         try:
             streams[name] = dict(path=path.name, sha256=digest(path), bytes=path.stat().st_size,
-                **sizes.get(name, dict(observed_bytes=None if spawned else 0, retained_bytes=path.stat().st_size)))
+                **sizes.get(name, {"observed_bytes": None if spawned else 0, "retained_bytes": path.stat().st_size}))
         except OSError as error:
             failures.append("retained stream identity unknown: " + repr(error))
-            streams[name] = dict(path=path.name, sha256=None, bytes=None, observed_bytes=None, retained_bytes=None)
+            streams[name] = {"path": path.name, "sha256": None, "bytes": None, "observed_bytes": None, "retained_bytes": None}
     status = first_stop or ("CAPTURE_FAILED" if failures else "OUTPUT_LIMIT" if overflow.is_set() else "EXITED")
-    observation = dict(argv=argv, executable=executable, spawned=spawned, exit_code=exit_code,
-                output_limit_bytes=limit,
-                elapsed_seconds=time.perf_counter() - started, first_stop_reason=first_stop,
-                output_limit_observed=overflow.is_set(), cleanup_complete=not failures,
-                status=status, capture_complete=status == "EXITED" and not failures,
-                capture_errors=failures, streams=streams)
+    observation = {"argv": argv, "executable": executable, "spawned": spawned, "exit_code": exit_code,
+                "output_limit_bytes": limit,
+                "elapsed_seconds": time.perf_counter() - started, "first_stop_reason": first_stop,
+                "output_limit_observed": overflow.is_set(), "cleanup_complete": not failures,
+                "status": status, "capture_complete": status == "EXITED" and not failures,
+                "capture_errors": failures, "streams": streams}
     write(prefix.with_suffix(".observation.json"), observation)
     return observation

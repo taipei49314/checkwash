@@ -1,7 +1,7 @@
 """Owned collector contracts; no engine, corpus checkout or subprocess run."""
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -31,8 +31,8 @@ def test_owned_source_identity_preserves_last_oracle_and_actual_statement_body(n
 
 
 def valid_payload():
-    return dict(verdict="pass", findings=[], run=dict(base="1234567", head="2345678", checkwash_version="0.7.0"),
-                checkwash_findings_version=1, summary=dict(info=0, warn=0, high=0, critical=0), skipped_files=[], config_errors=[])
+    return {"verdict": "pass", "findings": [], "run": {"base": "1234567", "head": "2345678", "checkwash_version": "0.7.0"},
+                "checkwash_findings_version": 1, "summary": {"info": 0, "warn": 0, "high": 0, "critical": 0}, "skipped_files": [], "config_errors": []}
 
 
 @pytest.mark.parametrize("exit_code", [2, -9, None])
@@ -55,9 +55,9 @@ def test_native_exit_must_match_valid_envelope():
 
 
 def row():
-    return dict(kind="native", state="ERROR_OR_NO_VERDICT", verdict=None,
-                observation=dict(capture_complete=True, cleanup_complete=True, exit_code=2), git_trace_observed=True,
-                usage=dict(state="RECORDED", reported_exit=2))
+    return {"kind": "native", "state": "ERROR_OR_NO_VERDICT", "verdict": None,
+                "observation": {"capture_complete": True, "cleanup_complete": True, "exit_code": 2}, "git_trace_observed": True,
+                "usage": {"state": "RECORDED", "reported_exit": 2}}
 
 
 @pytest.mark.parametrize("missing", ["usage", "observation"])
@@ -77,8 +77,8 @@ def test_recording_an_engine_error_is_complete_evidence_but_has_no_pass_verdict(
 
 def test_diagnostic_file_limit_is_incomplete_even_with_an_apparent_pass():
     value = row()
-    value.update(kind="diagnostic", diagnostic=dict(complete=True, recorder_errors=[],
-                 sources=[dict(state="PARSED"), dict(state="PARSED")]))
+    value.update(kind="diagnostic", diagnostic={"complete": True, "recorder_errors": [],
+                 "sources": [{"state": "PARSED"}, {"state": "PARSED"}]})
     assert collector.complete(value)
     value.update(state="CAPTURE_LIMIT", capture_limit="TRACE_SIZE_OR_SIGXFSZ")
     assert not collector.complete(value)
@@ -86,8 +86,8 @@ def test_diagnostic_file_limit_is_incomplete_even_with_an_apparent_pass():
 
 def test_partial_or_recorder_failed_diagnostic_is_not_capture_complete():
     value = row()
-    value.update(kind="diagnostic", diagnostic=dict(complete=True, recorder_errors=[],
-                 sources=[dict(state="PARSED"), dict(state="PARSED")]))
+    value.update(kind="diagnostic", diagnostic={"complete": True, "recorder_errors": [],
+                 "sources": [{"state": "PARSED"}, {"state": "PARSED"}]})
     assert collector.complete(value)
     value["diagnostic"]["recorder_errors"] = ["disk write failed"]
     assert not collector.complete(value)
@@ -110,11 +110,11 @@ def test_unknown_memory_is_not_zero_and_non_git_json_is_not_a_git_trace(tmp_path
 
 @pytest.mark.parametrize("key", ["candidate", "run_id", "attempt"])
 def test_wrong_run_attempt_or_source_rejected_before_evidence_can_be_accepted(tmp_path, monkeypatch, key):
-    identity = dict(candidate="a" * 40, run_id="1234", attempt="1")
+    identity = {"candidate": "a" * 40, "run_id": "1234", "attempt": "1"}
     for field, env in (("candidate", "GITHUB_SHA"), ("run_id", "GITHUB_RUN_ID"), ("attempt", "GITHUB_RUN_ATTEMPT")):
         monkeypatch.setenv(env, identity[field])
     identity[key] = "wrong"
-    (tmp_path / "report.json").write_text(json.dumps(dict(identity=identity)))
+    (tmp_path / "report.json").write_text(json.dumps({"identity": identity}))
     with pytest.raises(ValueError, match="mismatch"):
         collector.validate(tmp_path)
 
@@ -122,30 +122,30 @@ def test_wrong_run_attempt_or_source_rejected_before_evidence_can_be_accepted(tm
 def test_changed_qualified_artifact_rejected_before_any_child_can_launch(tmp_path):
     artifact = tmp_path / "checkwash.pyz"
     artifact.write_bytes(b"changed artifact")
-    value = dict(case="owned", kind="native", sample=0, arm="candidate")
+    value = {"case": "owned", "kind": "native", "sample": 0, "arm": "candidate"}
     with pytest.raises(ValueError, match="artifact changed before launch"):
-        collector.sample(value, {}, dict(artifact=str(artifact), artifact_sha256="0" * 64),
+        collector.sample(value, {}, {"artifact": str(artifact), "artifact_sha256": "0" * 64},
                          tmp_path, {}, None, {}, {}, lambda: None)
 
 
 @pytest.mark.parametrize("value", [False, None, "true"])
 def test_sample_flushes_unproved_cleanup_and_aborts_before_postprocessing(tmp_path, monkeypatch, value):
-    observed = dict(status="CAPTURE_FAILED", capture_complete=False, cleanup_complete=value)
+    observed = {"status": "CAPTURE_FAILED", "capture_complete": False, "cleanup_complete": value}
     monkeypatch.setattr(collector.cap, "digest", lambda path: "c" * 64)
     calls = []
     def captured(*args):
         calls.append(args)
         return observed
     monkeypatch.setattr(collector.cap, "capture", captured)
-    snapshots, item = [], dict(case="owned", arm="candidate", kind="native", sample=0)
-    case = dict(base="a" * 40, head="b" * 40, repo=str(tmp_path / "target"))
-    arm = dict(artifact=str(tmp_path / "candidate.pyz"), artifact_sha256="c" * 64,
-               source=dict(commit="d" * 40))
+    snapshots, item = [], {"case": "owned", "arm": "candidate", "kind": "native", "sample": 0}
+    case = {"base": "a" * 40, "head": "b" * 40, "repo": str(tmp_path / "target")}
+    arm = {"artifact": str(tmp_path / "candidate.pyz"), "artifact_sha256": "c" * 64,
+               "source": {"commit": "d" * 40}}
     with pytest.raises(ValueError, match="stop the entire capture"):
         collector.sample(item, case, arm, tmp_path, {}, None,
-            dict(per_child_seconds=240, stream_bytes=64_000_000), dict(run_id="123", attempt="1"),
+            {"per_child_seconds": 240, "stream_bytes": 64_000_000}, {"run_id": "123", "attempt": "1"},
             lambda: snapshots.append(json.loads(json.dumps(item))),
-            {collector.TIME_BINARY: dict(sha256="c" * 64)})
+            {collector.TIME_BINARY: {"sha256": "c" * 64}})
     assert len(calls) == 1 and snapshots[-1]["observation"] == observed
     assert snapshots[-1]["reason"] == "PROCESS_ISOLATION_UNPROVED_ABORT_ALL"
     assert not (tmp_path / (item["raw_prefix"] + ".stdout")).exists()
@@ -161,10 +161,10 @@ def test_a_fully_cleaned_timeout_can_continue_but_cannot_be_complete_cost():
 
 
 def trace_events(sid="git-A"):
-    return [dict(event="version", sid=sid),
-            dict(event="start", sid=sid, argv=["git", "diff"]),
-            dict(event="exit", sid=sid, code=0, t_abs=.1),
-            dict(event="atexit", sid=sid, code=0, t_abs=.11)]
+    return [{"event": "version", "sid": sid},
+            {"event": "start", "sid": sid, "argv": ["git", "diff"]},
+            {"event": "exit", "sid": sid, "code": 0, "t_abs": .1},
+            {"event": "atexit", "sid": sid, "code": 0, "t_abs": .11}]
 
 
 def trace_bytes(events):
@@ -183,9 +183,9 @@ def test_missing_truncated_duplicate_or_signalled_git_sessions_are_incomplete(fa
         index = {"duplicate-start": 1, "duplicate-exit": 2, "duplicate-atexit": 3}[fault]
         events.insert(index, dict(events[index]))
     elif fault == "orphan-exit":
-        events.append(dict(event="exit", sid="other-process", code=0, t_abs=.2))
+        events.append({"event": "exit", "sid": "other-process", "code": 0, "t_abs": .2})
     elif fault == "signal":
-        events.insert(2, dict(event="signal", sid="git-A", signo=9))
+        events.insert(2, {"event": "signal", "sid": "git-A", "signo": 9})
     elif fault == "wrong-exit-code":
         events[-1]["code"] = 2
     raw = trace_bytes(events)
@@ -203,20 +203,20 @@ def test_interleaved_complete_git_sessions_remain_separate_process_counts():
 
 
 def measurement_files(tmp_path, kind):
-    value = dict(case="owned", arm="candidate", kind=kind, sample=0)
-    case = dict(base="a" * 40, head="b" * 40, repo=str(tmp_path / "owned-repo"), path="tests/test_owned_cost.py")
-    arm = dict(artifact=str(tmp_path / "candidate" / "checkwash.pyz"), artifact_sha256="c" * 64,
-               source=dict(commit="d" * 40))
-    identity, env = dict(run_id="123", attempt="1"), dict(PATH="/usr/bin", LANG="C.UTF-8")
-    config, python = dict(per_child_seconds=240), "/fixed/python"
+    value = {"case": "owned", "arm": "candidate", "kind": kind, "sample": 0}
+    case = {"base": "a" * 40, "head": "b" * 40, "repo": str(tmp_path / "owned-repo"), "path": "tests/test_owned_cost.py"}
+    arm = {"artifact": str(tmp_path / "candidate" / "checkwash.pyz"), "artifact_sha256": "c" * 64,
+               "source": {"commit": "d" * 40}}
+    identity, env = {"run_id": "123", "attempt": "1"}, {"PATH": "/usr/bin", "LANG": "C.UTF-8"}
+    config, python = {"per_child_seconds": 240}, "/fixed/python"
     prefix, argv, additions = collector.expected_command(value, case, arm, tmp_path, identity, python)
     value["raw_prefix"] = prefix.name
-    value["observation"] = dict(argv=argv, cleanup_complete=True, exit_code=0, elapsed_seconds=.2)
+    value["observation"] = {"argv": argv, "cleanup_complete": True, "exit_code": 0, "elapsed_seconds": .2}
     collector.cap.write(prefix.with_suffix(".measurement-intent.json"),
-                        dict(argv=argv, cwd=str(tmp_path), environment=dict(env, **additions)))
+                        {"argv": argv, "cwd": str(tmp_path), "environment": dict(env, **additions)})
     collector.cap.write(prefix.with_suffix(".observation.json"), value["observation"])
-    collector.cap.write(prefix.with_suffix(".intent.json"), dict(argv=argv, state="LAUNCHED", timeout_seconds=240,
-        streams={name: prefix.with_suffix("." + name).name for name in ("stdout", "stderr")}))
+    collector.cap.write(prefix.with_suffix(".intent.json"), {"argv": argv, "state": "LAUNCHED", "timeout_seconds": 240,
+        "streams": {name: prefix.with_suffix("." + name).name for name in ("stdout", "stderr")}})
     prefix.with_suffix(".time.txt").write_text("100\t0.10\t0.01\t0\n", encoding="utf-8")
     value["usage"] = collector.parse_usage(prefix.with_suffix(".time.txt"))
     return value, case, arm, identity, env, config, python, prefix

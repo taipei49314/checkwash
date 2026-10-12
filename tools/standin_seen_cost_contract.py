@@ -1,16 +1,16 @@
 """Fixed #345 standard/D088 seen-cost contract; no engine or corpus import."""
 from __future__ import annotations
 
-from collections import Counter, defaultdict
 import gzip
 import hashlib
 import json
 import os
-from pathlib import Path
 import platform
 import re
 import shutil
 import sys
+from collections import Counter, defaultdict
+from pathlib import Path
 
 # -I excludes the script directory; add only this exact reviewed tools directory.
 HERE = Path(__file__).resolve().parent
@@ -31,21 +31,21 @@ CAPTURE_HASH = "668a5dc4d405e369c62819d3b7c462d3429abd0c20a0981e4e27901f683833e2
 PURPOSE = "STANDIN_345_SEEN_STANDARD_D088_COST"
 EXPECTED_PAIRS = 3018
 EXPECTED_ARMS = 6036
-PHASE_VIEWS = dict(standard=1800, d088=1263, targeted_cotag_only=119)
-COHORT_ACCOUNTING = dict(original_pairs=4271, selected_pairs=EXPECTED_PAIRS,
-                         standard_d088_overlap=45, original_targeted=1372,
-                         selected_targeted_cotag=119, outside_selected_pairs=1253,
-                         original_groups=48, selected_groups=43, outside_selected_groups=5,
-                         original_shards=432, selected_shards=382,
-                         aiohttp142="UNKNOWN_NOT_REPLACED")
+PHASE_VIEWS = {"standard": 1800, "d088": 1263, "targeted_cotag_only": 119}
+COHORT_ACCOUNTING = {"original_pairs": 4271, "selected_pairs": EXPECTED_PAIRS,
+                         "standard_d088_overlap": 45, "original_targeted": 1372,
+                         "selected_targeted_cotag": 119, "outside_selected_pairs": 1253,
+                         "original_groups": 48, "selected_groups": 43, "outside_selected_groups": 5,
+                         "original_shards": 432, "selected_shards": 382,
+                         "aiohttp142": "UNKNOWN_NOT_REPLACED"}
 DATE = "2026-10-11"
 ARMS = ("base", "candidate")
 ENGINE_TIMEOUT = 240
 GIT_TIMEOUT = 900
 WORKER_SECONDS = 6600
 STREAM_LIMIT = 64_000_000
-LIMITS = dict(invocation_seconds=ENGINE_TIMEOUT, git_seconds=GIT_TIMEOUT,
-              worker_seconds=WORKER_SECONDS, stream_bytes=STREAM_LIMIT, max_parallel=4)
+LIMITS = {"invocation_seconds": ENGINE_TIMEOUT, "git_seconds": GIT_TIMEOUT,
+              "worker_seconds": WORKER_SECONDS, "stream_bytes": STREAM_LIMIT, "max_parallel": 4}
 TOOL_NAMES = ("standin_seen_cost_contract.py", "r1_cost_capture.py", "standin_seen_cost_build.py",
               "standin_seen_cost_worker.py", "standin_seen_cost_aggregate.py", "qualify_assertions.py",
               "release_inventory.py")
@@ -108,31 +108,31 @@ def full_cohort():
     for repo_index, (repo, rows) in enumerate(sorted(grouped.items(), key=lambda item: item[0].lower())):
         repo_shards = []
         for offset in range(0, len(rows), 10):
-            item = dict(name=f"r{repo_index:02d}-{offset // 10:03d}", batch=len(shards) // 64,
-                        repository=repo, member_ordinals=[row["ordinal"] for row in rows[offset:offset + 10]])
+            item = {"name": f"r{repo_index:02d}-{offset // 10:03d}", "batch": len(shards) // 64,
+                        "repository": repo, "member_ordinals": [row["ordinal"] for row in rows[offset:offset + 10]]}
             shards.append(item)
             repo_shards.append(item)
         for offset in range(0, len(repo_shards), 10):
             selected = repo_shards[offset:offset + 10]
-            groups.append(dict(name=f"r{repo_index:02d}-g{offset // 10:02d}", repository=repo,
-                               shards=[row["name"] for row in selected],
-                               member_ordinals=[n for row in selected for n in row["member_ordinals"]]))
-    require(partition == dict(schema_version=1, cohort="python", members_sha256=MEMBERS_HASH,
-                              member_count=4271, shard_count=432, batch_count=7, shards=shards), "original logical partition differs")
+            groups.append({"name": f"r{repo_index:02d}-g{offset // 10:02d}", "repository": repo,
+                               "shards": [row["name"] for row in selected],
+                               "member_ordinals": [n for row in selected for n in row["member_ordinals"]]})
+    require(partition == {"schema_version": 1, "cohort": "python", "members_sha256": MEMBERS_HASH,
+                              "member_count": 4271, "shard_count": 432, "batch_count": 7, "shards": shards}, "original logical partition differs")
     require(len(groups) == 48, "hosted grouping changed")
     return [dict(row, ordinal=i) for i, row in enumerate(members)], shards, groups
 
 
 def fixed_contract():
     value = read(DATA / "contract.json")
-    expected = dict(schema_version=1, purpose=PURPOSE, baseline_sha=value.get("baseline_sha"),
-                    candidate_sha=None, candidate_resolution="VALIDATED_EVENT_MERGE_AFTER_BASELINE_FIXED",
-                    members_sha256=MEMBERS_HASH, partitions_sha256=PARTITIONS_HASH,
-                    selection_ordinals_sha256=SELECTION_HASH, selection="standard OR d088",
-                    expected_pairs=EXPECTED_PAIRS, expected_arm_rows=EXPECTED_ARMS,
-                    phases=PHASE_VIEWS, cohort_accounting=COHORT_ACCOUNTING,
-                    today=DATE, primary_distribution="pyz", limits=LIMITS,
-                    arm_order="alternate_by_original_ordinal", cost_qualification="NOT_ADJUDICATED")
+    expected = {"schema_version": 1, "purpose": PURPOSE, "baseline_sha": value.get("baseline_sha"),
+                    "candidate_sha": None, "candidate_resolution": "VALIDATED_EVENT_MERGE_AFTER_BASELINE_FIXED",
+                    "members_sha256": MEMBERS_HASH, "partitions_sha256": PARTITIONS_HASH,
+                    "selection_ordinals_sha256": SELECTION_HASH, "selection": "standard OR d088",
+                    "expected_pairs": EXPECTED_PAIRS, "expected_arm_rows": EXPECTED_ARMS,
+                    "phases": PHASE_VIEWS, "cohort_accounting": COHORT_ACCOUNTING,
+                    "today": DATE, "primary_distribution": "pyz", "limits": LIMITS,
+                    "arm_order": "alternate_by_original_ordinal", "cost_qualification": "NOT_ADJUDICATED"}
     require(value == expected, "fixed seen-cost contract differs")
     return value
 
@@ -170,8 +170,8 @@ def members_for_group(members, group):
 def expected_rows(members, shards, groups):
     shard_of = {n: shard["name"] for shard in shards for n in shard["member_ordinals"]}
     group_of = {n: group["name"] for group in groups for n in group["member_ordinals"]}
-    return [dict(member=member, arm=arm, shard=shard_of[member["ordinal"]], group=group_of[member["ordinal"]],
-                 stage="PLANNED", outcome="NOT_ATTEMPTED", reason="NOT_STARTED", observation=None)
+    return [{"member": member, "arm": arm, "shard": shard_of[member["ordinal"]], "group": group_of[member["ordinal"]],
+                 "stage": "PLANNED", "outcome": "NOT_ATTEMPTED", "reason": "NOT_STARTED", "observation": None}
             for member in members for arm in ARMS]
 
 
@@ -184,8 +184,8 @@ def event_identity(env=os.environ):
     require(isinstance(fixed, str) and SHA.fullmatch(fixed), "qualified baseline SHA not fixed")
     require(values["PR_BASE_SHA"] == fixed, "PR base differs from fixed qualified baseline")
     require(re.fullmatch(r"[0-9]+", env.get("GITHUB_RUN_ID", "")), "run ID required")
-    return dict(run_id=env["GITHUB_RUN_ID"], attempt="1", event="pull_request",
-                candidate=values["GITHUB_SHA"], pr_head=values["PR_HEAD_SHA"], baseline=fixed)
+    return {"run_id": env["GITHUB_RUN_ID"], "attempt": "1", "event": "pull_request",
+                "candidate": values["GITHUB_SHA"], "pr_head": values["PR_HEAD_SHA"], "baseline": fixed}
 
 
 def tool_hashes():
@@ -213,10 +213,10 @@ def clean_env():
 
 
 def facts():
-    return dict(python=sys.version, interpreter=sys.executable, resolved_interpreter=str(Path(sys.executable).resolve()),
-                platform=platform.platform(), os_name=os.name, runner=os.environ.get("RUNNER_NAME"),
-                image=os.environ.get("ImageOS"), image_version=os.environ.get("ImageVersion"),
-                locale_policy="LC_ALL=C.UTF-8", utc=cap.facts()["utc"])
+    return {"python": sys.version, "interpreter": sys.executable, "resolved_interpreter": str(Path(sys.executable).resolve()),
+                "platform": platform.platform(), "os_name": os.name, "runner": os.environ.get("RUNNER_NAME"),
+                "image": os.environ.get("ImageOS"), "image_version": os.environ.get("ImageVersion"),
+                "locale_policy": "LC_ALL=C.UTF-8", "utc": cap.facts()["utc"]}
 
 
 class Commands:
@@ -228,7 +228,7 @@ class Commands:
 
     def run(self, argv, *, timeout=GIT_TIMEOUT, extra_env=None):
         prefix = self.output / f"command-{len(self.rows):04d}"
-        row = dict(argv=list(map(str, argv)), cwd=str(self.cwd), raw_prefix=prefix.name, observation=None)
+        row = {"argv": list(map(str, argv)), "cwd": str(self.cwd), "raw_prefix": prefix.name, "observation": None}
         self.rows.append(row)
         write(self.output / "commands.json", self.rows)
         observation = cap.capture(row["argv"], self.cwd, dict(self.env, **(extra_env or {})), prefix,
@@ -248,8 +248,8 @@ class Commands:
 def source(commands, root, expected):
     require(commands.git(root, "rev-parse", "HEAD").decode().strip() == expected, "source HEAD mismatch")
     require(not commands.git(root, "status", "--porcelain").strip(), "dirty source checkout")
-    return dict(commit=expected, tree=commands.git(root, "rev-parse", "HEAD^{tree}").decode().strip(),
-                package_tree=commands.git(root, "rev-parse", "HEAD:src/checkwash").decode().strip())
+    return {"commit": expected, "tree": commands.git(root, "rev-parse", "HEAD^{tree}").decode().strip(),
+                "package_tree": commands.git(root, "rev-parse", "HEAD:src/checkwash").decode().strip()}
 
 
 def validate_plan(plan):
@@ -303,8 +303,8 @@ def main():
             return aggregate(output, Path(os.environ["STANDIN_SEEN_INPUTS"]))
         raise ValueError("unknown fixed stand-in seen-cost mode")
     except Exception as error:
-        write(output / "fatal.json", dict(error=repr(error), mode=mode, facts=facts(),
-                                         cost_qualification="NOT_ADJUDICATED"))
+        write(output / "fatal.json", {"error": repr(error), "mode": mode, "facts": facts(),
+                                         "cost_qualification": "NOT_ADJUDICATED"})
         return 3
 
 

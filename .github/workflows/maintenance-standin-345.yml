@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 15
     env:
       BASE_SHA: 30cfb8bd39aa702aae0d59bde1d1400654137bad
-      CANDIDATE_SHA: f6ea54eb55b819f531dfb431ddd4971052832791
+      CANDIDATE_SHA: 6bfa81b0201243c98180d8d08c9415ae343f2feb
       DIAGNOSTIC_SHA: ${{ github.sha }}
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
@@ -119,27 +119,27 @@ jobs:
               'src/checkwash/frontends/python/standin_installations.py':
                   '51c71734b717f28d107a19401483e80cd9cbecd68ff3687b9de220398979f591',
               'tests/test_standin_source_limits.py':
-                  '18c8cb3ff5d893a85d7384cb929075f3bd8e997473e37ccbbff79a51d2c681e7',
+                  '5df4fcaf2d20895196daad35655ec6c7a2d6368c4d936385bccd673028a9b918',
               'tests/test_standin_cost_capture.py':
-                  '65d7e8bfa532d4e7a01686bd8145dcf13f96dd6e3bb2b9dfe54f0094252be315',
+                  'beeb46717bf800ad8961a4152caef6be8c7543f197636a91ae8c10955d437b0c',
               'tools/standin_cost_cases.py':
-                  '5ffe9596f9682463e116d02ea8c509e17cc60bb2a7cf2cbd8479958f07193c13',
+                  'd75708fbd308fce4cef3c978f51ef71bc8b7924d542fde93b52f41fb3c3513d2',
               'tools/standin_cost_diagnostic.py':
-                  '7c38d424f3d69d28bd05aabe02bc3710bcd43659dc3ca02cd6efc6762aab1154',
+                  '0e113233d76ccb91f42644179b07ce631ea126a6805fb4e56d9084da6c323977',
               'tools/standin_cost_capture.py':
-                  '12e1fa0091aa7819d5dc2f9bc6f3e0e386d94d3bf980c3cac6a4f3c03c5fe5e1',
+                  '230c3637b86e786730d40b77783d189b1e1f25cd2eb9491276870d6436a05f8b',
               'tools/standin_seen_cost_contract.py':
-                  '32872abaa02ac150ff3b566fb196fc70c5cb6662918f836563b14102250daf12',
+                  'b286a04bbcbc5d3718ddae07935e0d84b445af15dded3259e97a302f3a19c434',
               'tools/standin_seen_cost_build.py':
-                  'e02e62326f55c038690ef996e1b7127f0371d178910f986c0385e382dc08a33e',
+                  '9efe71fac28cb766489edef57a26d5769ee38d27f25d18e9660d58b1cdbe4c43',
               'tools/standin_seen_cost_worker.py':
-                  '3f7315b71fd44ddec2ef6c34ba3db193a6d24ba5c6c2e13befd3d4a82cf1b07c',
+                  '1fcdb1675a640feabd45b682a66f38b9a69f03823d87d27110ac121160d6854e',
               'tools/standin_seen_cost_aggregate.py':
-                  '6eddf689309d56e7d5a6b749dbe59ecedcf3bd780d89c4b35027aaea1857320f',
+                  '1d541ebeffa809eaea1187565565dc976d618db42aa0cf988d78925afa7dbcaa',
               'tests/test_standin_seen_cost_contract.py':
-                  'ef64bbef5d8c570200c098b2ba085e7db47429b35138683844d0311a762bf499',
+                  'e3e7cf637acbe46cc98b81cebb97d35b11005eb444d5eb800b883aca788f5720',
               'tools/owned_process_capture.py':
-                  '017d3c0dafb7ac0bf71bec8d514baccc791e03073ed1f86b1ef0018232bfc643',
+                  'c13907a4310d211db69bbed9f603ba11ae3ef6ce6873fe35dfb4c41d40f5ffc0',
           }
           manifest = {'status': 'RAW_EVIDENCE_NOT_NO_NEW_ERRORS_QUALIFICATION',
                       'purpose': 'FIXED_STANDIN_345_COMMON_AND_CANDIDATE_ONLY_DIAGNOSTICS',

@@ -14,7 +14,7 @@ import pytest
 from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.frontends.python import standin_installations as subject
-from checkwash.ir.model import DiffGlobals, IR
+from checkwash.ir.model import IR, DiffGlobals
 
 
 def _source_with_nodes(nodes):
@@ -140,7 +140,7 @@ def test_legacy_direct_calls_and_parse_failure_contract_are_unchanged(monkeypatc
 
 
 def _git(repo, *args):
-    run = subprocess.run(["git", "-C", str(repo), *args], capture_output=True,
+    run = subprocess.run(["git", "-C", str(repo), *args], check=False, capture_output=True,
                          text=True, encoding="utf-8", timeout=30)
     assert run.returncode == 0, run.stdout + run.stderr
     return run.stdout.strip()
@@ -164,7 +164,7 @@ def test_real_cli_over_node_limit_remains_exit2_and_names_file_and_count(tmp_pat
     run = subprocess.run(
         [sys.executable, "-B", "-m", "checkwash", "check", f"{base}..{head}",
          "--repo", str(tmp_path), "--format", "json"],
-        capture_output=True, text=True, encoding="utf-8", timeout=90,
+        check=False, capture_output=True, text=True, encoding="utf-8", timeout=90,
         env={**os.environ, "PYTHONUTF8": "1", "NO_COLOR": "1"},
     )
     assert run.returncode == 2, run.stdout + run.stderr

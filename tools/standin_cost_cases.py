@@ -50,8 +50,8 @@ def pair(name):
 
 def metadata(name):
     before, after = pair(name)
-    return dict(name=name, path=PATH, purpose="OWNED_STATIC_STANDIN_TAIL_PAIR",
-                designated_1mb=name != SIBLING, sibling_is_not_replacement=name == SIBLING,
-                before=dict(bytes=len(before), sha256=sha(before)),
-                after=dict(bytes=len(after), sha256=sha(after)),
-                parse_status="UNMEASURED", nodes=None, behavior="NOT_QUALIFIED")
+    return {"name": name, "path": PATH, "purpose": "OWNED_STATIC_STANDIN_TAIL_PAIR",
+                "designated_1mb": name != SIBLING, "sibling_is_not_replacement": name == SIBLING,
+                "before": {"bytes": len(before), "sha256": sha(before)},
+                "after": {"bytes": len(after), "sha256": sha(after)},
+                "parse_status": "UNMEASURED", "nodes": None, "behavior": "NOT_QUALIFIED"}
