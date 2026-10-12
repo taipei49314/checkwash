@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "purpose": "OWNED_INVOICE_INTERFACE_CONTROLS_WITH_DISCLOSED_INERT_SECOND_FILE",
+  "purpose": "OWNED_INVOICE_INTERFACE_CONTROLS_WITH_COMMENT_ONLY_TEST_ORDER_CONTROL",
   "extractor": {
     "commit": "6e86ab73a02eba7bf9a635aff39c2ab22d6726c2",
     "path": "tools/qualify_zipapp.py",
@@ -10,12 +10,12 @@
   "before": {
     "billing.py": "def invoice_total(subtotal):\n    return subtotal\n",
     "tests/test_billing.py": "from billing import invoice_total\n\n\ndef test_invoice_total():\n    assert invoice_total(105.3) == 105.3\n",
-    "OWNED-COMPATIBILITY.txt": "before\n"
+    "tests/test_owned_order.py": "# before\n"
   },
   "after": {
     "billing.py": "def invoice_total(subtotal):\n    return subtotal\n",
     "tests/test_billing.py": "from billing import invoice_total\n\n\ndef test_invoice_total():\n    assert invoice_total(105.3) > 0\n",
-    "OWNED-COMPATIBILITY.txt": "after\n"
+    "tests/test_owned_order.py": "# after\n"
   },
   "hashes": {
     "before": {
@@ -27,9 +27,9 @@
         "bytes": 103,
         "sha256": "92e6eaff7d77b4af6e83f18176d1a4cb3fc75a50362fd3ff12fbbe21c514a087"
       },
-      "OWNED-COMPATIBILITY.txt": {
-        "bytes": 7,
-        "sha256": "9160d4be34c8695bd172a76c7c7966587ea5a4d991ad22c87b2b91af54aa9ebb"
+      "tests/test_owned_order.py": {
+        "bytes": 9,
+        "sha256": "33bd16e27837021a42cec7076425ee9217e1f1be818d11bb57ea47c1a0a7e56a"
       }
     },
     "after": {
@@ -41,14 +41,14 @@
         "bytes": 98,
         "sha256": "9dffecf797ecee7a7792250ee0056503a6a7e7b1170144b69e3a02ee8ce378fa"
       },
-      "OWNED-COMPATIBILITY.txt": {
-        "bytes": 6,
-        "sha256": "7b9a72466d3960eb2aacccfc848939453490db0678bd4725def3f789b891c919"
+      "tests/test_owned_order.py": {
+        "bytes": 8,
+        "sha256": "f66eeb5ed18918d664a150bb760d4d4f6b533ba28fbd01b358b9c1f8873ea109"
       }
     }
   },
   "augmentation": {
-    "path": "OWNED-COMPATIBILITY.txt",
-    "purpose": "Second actual FileChange makes reverse ordering nonvacuous; does not replace invoice assertion."
+    "path": "tests/test_owned_order.py",
+    "purpose": "Second actual FileChange is a comment-only test file under default test roles; keeps reverse ordering nonvacuous without an opaque production change. Original invoice assertion is unchanged."
   }
 }

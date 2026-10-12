@@ -270,7 +270,7 @@ def owned_repo():
             and hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest() == extractor["git_blob"],
             "original invoice extractor source differs")
     require(set(specification["before"]) == set(specification["after"])
-            == {"billing.py", "tests/test_billing.py", "OWNED-COMPATIBILITY.txt"}, "owned path denominator differs")
+            == {"billing.py", "tests/test_billing.py", "tests/test_owned_order.py"}, "owned path denominator differs")
     for side in ("before", "after"):
         for name, text in specification[side].items():
             original = text.encode("utf-8")
