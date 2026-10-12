@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-12 (Action source fix integrated; CI phase migration under qualification)
+Updated: 2026-10-12 (Action and CI source preparation integrated; R1 qualification pending)
 
 ## 2026-10-12: separate development and published-release checks
 
@@ -21,10 +21,34 @@ identity checks still fail. Earlier dated red receipts below remain historical
 failures. Candidate head, hosted checkout and published commit identities are
 reported separately.
 
-This migration is implemented but its exact-head hosted evidence is pending.
+This migration merged in #373 at `4b24cfe`; its exact PR and independent main CI, source/wheel/pyz assertion qualification and verdict gates all passed. Nine original corpus streams remain byte-identical.
 No new release, version bump, public Action pin or adoption claim follows from
 it. T-528's original A–D work remains incomplete; independent adoption is
 UNSATISFIED. Current public installation commands continue to identify v0.7.0.
+
+## 2026-10-12: Quality Action integrated; bounded R1 repair prepared
+
+PR #375 merged at `259f32db06bb4bdc28cf2a71c10e4ea47f1c9c3b`.
+Its tree exactly matches the qualified `cdcfcd0` head and hosted `8c4e657`
+checkout. All nine CI legs, assertion and verdict gates passed. Twelve actual
+Quality Action cases preserve six expected native rejections and six controls;
+the separate qualifier and raw-step review passed. All 24 original normal-cost
+invocations completed. Public delivery and recommended-pin advancement remain
+outstanding; the source integration does not establish independent adoption.
+
+The next single behavior package addresses the measured root-BinOp binding
+RecursionError. It preserves successful stdlib keys and retries that specific
+failure with iterative binary emission. It does not change AST budgets,
+severity, existing fixture expectations or the separately observed deep
+asserted-subject limitation. The earlier diagnostic trace and strict failures
+remain recorded; the repaired candidate has not yet been runtime-qualified.
+
+The already-seen Python comparison fixes original A at the Quality merge
+above, uses the exact existing 4,271 members and 432 logical shards, and keeps
+all 8,542 arm rows. The ordinary PR workflow runs synthetic capture controls
+and source/wheel/pyz qualification before corpus work. Both original readers,
+raw failures, missing observations and every changed result remain visible.
+This is nonblind cost evidence; it consumes no held-out data or old EC grant.
 
 ## 2026-10-12: v0.7.0 publication verified
 
