@@ -6,3 +6,7 @@
 *.md text eol=lf
 *.toml text eol=lf
 *.yml text eol=lf
+
+# Fixed already-seen cohort receipts preserve their original CRLF bytes/hash.
+tools/r1_seen_cost_data/python-pairs.json.gz -text
+tools/r1_seen_cost_data/python-partitions.json -text whitespace=cr-at-eol
