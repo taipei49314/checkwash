@@ -1,0 +1,106 @@
+name: quality-action security negative cases
+
+on:
+  pull_request:
+    paths:
+      - 'action/quality/**'
+      - 'action/secure.py'
+      - 'src/checkwash/quality/**'
+      - 'src/checkwash/gitio/**'
+      - 'src/checkwash/cli.py'
+      - 'src/checkwash/__init__.py'
+      - 'src/checkwash/__main__.py'
+      - 'pyproject.toml'
+      - 'tests/test_quality_action.py'
+      - 'tools/quality_action_security.py'
+      - '.github/workflows/quality-action-security.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  composite:
+    # Real rejection jobs remain failed. The independent qualification validates
+    # their raw expected outcomes; it does not turn this workflow green.
+    name: ${{ (matrix.case == 'enforce-loss' || matrix.case == 'missing-ref') && 'expected rejection' || 'normal control' }} (${{ matrix.os }}, ${{ matrix.case }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        case: [unchanged-enforce, report-loss, enforce-loss, missing-ref]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: candidate-中文
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - name: Prepare owned subject and activate separate pollution controls
+        id: fixture
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          FIXTURE_CASE: ${{ matrix.case }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/quality-security-evidence
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_security.py" prepare --case "$FIXTURE_CASE"'
+      - name: Run actual quality composite
+        id: quality
+        uses: ./candidate-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'false'
+          python-path: ${{ matrix.case != 'unchanged-enforce' && steps.python.outputs.python-path || '' }}
+      - name: Preserve original outputs, reports and native outcome
+        if: ${{ !cancelled() && steps.fixture.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          CANDIDATE_SHA: ${{ github.sha }}
+          FIXTURE_CASE: ${{ matrix.case }}
+          FIXTURE_SYSTEM: ${{ matrix.os }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/quality-security-evidence
+          ACTION_OUTCOME: ${{ steps.quality.outcome }}
+          ACTION_EXIT_CODE: ${{ steps.quality.outputs.exit_code }}
+          ACTION_ANALYSIS_EXIT_CODE: ${{ steps.quality.outputs.analysis_exit_code }}
+          ACTION_ANALYSIS_STATUS: ${{ steps.quality.outputs.analysis_status }}
+          ACTION_VERDICT: ${{ steps.quality.outputs.verdict }}
+          ACTION_REPORT_PATH: ${{ steps.quality.outputs.report_path }}
+          ACTION_RECEIPT_PATH: ${{ steps.quality.outputs.receipt_path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_security.py" capture --case "$FIXTURE_CASE" --system "$FIXTURE_SYSTEM"'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: quality-security-${{ matrix.os }}-${{ matrix.case }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/quality-security-evidence
+          if-no-files-found: error
+
+  qualification:
+    name: quality-action security qualification
+    needs: composite
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: quality-security-*-attempt-${{ github.run_attempt }}
+          path: quality-security-evidence
+      - name: Verify all twelve original composite results
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 tools/quality_action_security.py validate --root quality-security-evidence'

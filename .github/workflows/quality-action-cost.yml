@@ -1,0 +1,236 @@
+name: Quality Action normal cost
+
+# Descriptive whole-composite observations, not a release/performance threshold.
+# Each fresh runner uses ABBA then BAAB, four observations per arm.
+# Native step started_at/completed_at are collected from this exact run/attempt
+# after completion; subphase timing remains UNKNOWN. No cache purge or COE.
+on:
+  pull_request:
+    paths:
+      - 'action/quality/**'
+      - 'action/secure.py'
+      - 'tools/quality_action_cost.py'
+      - 'tools/quality_action_security.py'
+      - 'tools/action_cost.py'
+      - '.github/workflows/quality-action-cost.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  paired:
+    name: Quality Action normal cost (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      CANDIDATE_SHA: ${{ github.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      COST_SYSTEM: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: candidate-中文
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 17f4d11fe0f7c9a821f6385e9ef531cd100d1408
+          path: baseline-中文
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - name: Prepare one clean owned unchanged-enforce history
+        id: fixture
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" prepare'
+      - name: Verify clean state before A1 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" before A1'
+      - name: A1 actual baseline quality composite
+        id: a1
+        uses: ./baseline-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+      - name: Preserve A1 original outputs and outcome
+        if: ${{ !cancelled() && (steps.a1.outcome == 'success' || steps.a1.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.a1.outcome }}
+          COST_OUTPUTS: ${{ toJSON(steps.a1.outputs) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" capture A1'
+      - name: Verify clean state before B1 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" before B1'
+      - name: B1 actual candidate quality composite
+        id: b1
+        uses: ./candidate-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+          python-path: ${{ steps.python.outputs.python-path }}
+      - name: Preserve B1 original outputs and outcome
+        if: ${{ !cancelled() && (steps.b1.outcome == 'success' || steps.b1.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.b1.outcome }}
+          COST_OUTPUTS: ${{ toJSON(steps.b1.outputs) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" capture B1'
+      - name: Verify clean state before B2 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" before B2'
+      - name: B2 actual candidate quality composite
+        id: b2
+        uses: ./candidate-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+          python-path: ${{ steps.python.outputs.python-path }}
+      - name: Preserve B2 original outputs and outcome
+        if: ${{ !cancelled() && (steps.b2.outcome == 'success' || steps.b2.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.b2.outcome }}
+          COST_OUTPUTS: ${{ toJSON(steps.b2.outputs) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" capture B2'
+      - name: Verify clean state before A2 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" before A2'
+      - name: A2 actual baseline quality composite
+        id: a2
+        uses: ./baseline-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+      - name: Preserve A2 original outputs and outcome
+        if: ${{ !cancelled() && (steps.a2.outcome == 'success' || steps.a2.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.a2.outcome }}
+          COST_OUTPUTS: ${{ toJSON(steps.a2.outputs) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" capture A2'
+      - name: Verify clean state before B3 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" before B3'
+      - name: B3 actual candidate quality composite
+        id: b3
+        uses: ./candidate-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+          python-path: ${{ steps.python.outputs.python-path }}
+      - name: Preserve B3 original outputs and outcome
+        if: ${{ !cancelled() && (steps.b3.outcome == 'success' || steps.b3.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.b3.outcome }}
+          COST_OUTPUTS: ${{ toJSON(steps.b3.outputs) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" capture B3'
+      - name: Verify clean state before A3 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" before A3'
+      - name: A3 actual baseline quality composite
+        id: a3
+        uses: ./baseline-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+      - name: Preserve A3 original outputs and outcome
+        if: ${{ !cancelled() && (steps.a3.outcome == 'success' || steps.a3.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.a3.outcome }}
+          COST_OUTPUTS: ${{ toJSON(steps.a3.outputs) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" capture A3'
+      - name: Verify clean state before A4 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" before A4'
+      - name: A4 actual baseline quality composite
+        id: a4
+        uses: ./baseline-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+      - name: Preserve A4 original outputs and outcome
+        if: ${{ !cancelled() && (steps.a4.outcome == 'success' || steps.a4.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.a4.outcome }}
+          COST_OUTPUTS: ${{ toJSON(steps.a4.outputs) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" capture A4'
+      - name: Verify clean state before B4 (outside measured step)
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" before B4'
+      - name: B4 actual candidate quality composite
+        id: b4
+        uses: ./candidate-中文/action/quality
+        with:
+          repository: ${{ steps.fixture.outputs.repository }}
+          base: ${{ steps.fixture.outputs.base }}
+          head: ${{ steps.fixture.outputs.head }}
+          require-enforce: 'true'
+          python-path: ${{ steps.python.outputs.python-path }}
+      - name: Preserve B4 original outputs and outcome
+        if: ${{ !cancelled() && (steps.b4.outcome == 'success' || steps.b4.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          ACTION_OUTCOME: ${{ steps.b4.outcome }}
+          COST_OUTPUTS: ${{ toJSON(steps.b4.outputs) }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" capture B4'
+      - name: Require eight original normal outcomes and identical reports
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 "candidate-中文/tools/quality_action_cost.py" finish'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: quality-action-cost-${{ matrix.os }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/quality-action-cost-evidence
+          if-no-files-found: error

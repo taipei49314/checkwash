@@ -13,6 +13,10 @@ inputs:
   require-enforce:
     description: Fail setup with exit 2 unless the base policy selects enforce mode.
     default: 'false'
+  python-path:
+    description: Absolute trusted Python 3.11+ executable; defaults to setup-python's pythonLocation.
+    required: false
+    default: ''
 outputs:
   exit_code:
     description: Action exit (0, 1 or 2), including integration errors.
@@ -39,14 +43,59 @@ runs:
       shell: bash
       env:
         CW_ACTION_PATH: ${{ github.action_path }}
-      run: 'python -I "$CW_ACTION_PATH/install.py"'
+        CW_REQUESTED_PYTHON: ${{ inputs.python-path }}
+        CW_PYTHON_LOCATION: ${{ env.pythonLocation }}
+      run: |
+        set -euo pipefail
+        selected="$CW_REQUESTED_PYTHON"
+        if [ -z "$selected" ]; then
+          if [ -z "$CW_PYTHON_LOCATION" ]; then
+            echo "Checkwash requires a trusted setup-python interpreter" >&2
+            exit 2
+          fi
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            selected="$CW_PYTHON_LOCATION/python.exe"
+          else
+            selected="$CW_PYTHON_LOCATION/bin/python"
+          fi
+        fi
+        case "$selected" in
+          *$'\r'*|*$'\n'*) echo "Invalid Python path" >&2; exit 2 ;;
+        esac
+        workspace="$GITHUB_WORKSPACE"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          selected="${selected//\\//}"
+          workspace="${workspace//\\//}"
+          case "$selected" in
+            [A-Za-z]:/*) ;;
+            *) echo "Python path must be an absolute drive path" >&2; exit 2 ;;
+          esac
+          compared="${selected,,}"
+          workspace="${workspace,,}"
+        else
+          case "$selected" in
+            /*) ;;
+            *) echo "Python path must be absolute" >&2; exit 2 ;;
+          esac
+          compared="$selected"
+        fi
+        case "$compared" in
+          "$workspace"|"$workspace"/*)
+            echo "Python cannot come from the subject checkout" >&2; exit 2 ;;
+        esac
+        if [ ! -f "$selected" ]; then
+          echo "Trusted Python executable is unavailable" >&2
+          exit 2
+        fi
+        "$selected" -I -B -X utf8 "$CW_ACTION_PATH/install.py"
     - id: review
       shell: bash
       env:
         CW_PYTHON: ${{ steps.install.outputs.python }}
         CW_ACTION_PATH: ${{ github.action_path }}
+        CHECKWASH_RUNTIME_DIRECTORY: ${{ steps.install.outputs.directory }}
         CW_QUALITY_BASE: ${{ inputs.base }}
         CW_QUALITY_HEAD: ${{ inputs.head }}
         CW_QUALITY_REPOSITORY: ${{ inputs.repository }}
         CW_QUALITY_REQUIRE_ENFORCE: ${{ inputs.require-enforce }}
-      run: '"$CW_PYTHON" -I "$CW_ACTION_PATH/run.py"'
+      run: '"$CW_PYTHON" -I -B -X utf8 "$CW_ACTION_PATH/run.py"'
