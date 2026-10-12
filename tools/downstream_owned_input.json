@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "purpose": "OWNED_INVOICE_INTERFACE_CONTROLS_WITH_DISCLOSED_INERT_SECOND_FILE",
+  "extractor": {
+    "commit": "6e86ab73a02eba7bf9a635aff39c2ab22d6726c2",
+    "path": "tools/qualify_zipapp.py",
+    "git_blob": "665ff12dcfa3de9f8c8b6de8f583665bc97e7018",
+    "sha256": "abfc0bbb013bda3fe0ce33888141d602beaaf0233b34e8669fc75c245966c090"
+  },
+  "before": {
+    "billing.py": "def invoice_total(subtotal):\n    return subtotal\n",
+    "tests/test_billing.py": "from billing import invoice_total\n\n\ndef test_invoice_total():\n    assert invoice_total(105.3) == 105.3\n",
+    "OWNED-COMPATIBILITY.txt": "before\n"
+  },
+  "after": {
+    "billing.py": "def invoice_total(subtotal):\n    return subtotal\n",
+    "tests/test_billing.py": "from billing import invoice_total\n\n\ndef test_invoice_total():\n    assert invoice_total(105.3) > 0\n",
+    "OWNED-COMPATIBILITY.txt": "after\n"
+  },
+  "hashes": {
+    "before": {
+      "billing.py": {
+        "bytes": 49,
+        "sha256": "d2e6e2362f47f0f8e0930d7f89816633cc823eb238cf35c21b110b930103c32d"
+      },
+      "tests/test_billing.py": {
+        "bytes": 103,
+        "sha256": "92e6eaff7d77b4af6e83f18176d1a4cb3fc75a50362fd3ff12fbbe21c514a087"
+      },
+      "OWNED-COMPATIBILITY.txt": {
+        "bytes": 7,
+        "sha256": "9160d4be34c8695bd172a76c7c7966587ea5a4d991ad22c87b2b91af54aa9ebb"
+      }
+    },
+    "after": {
+      "billing.py": {
+        "bytes": 49,
+        "sha256": "d2e6e2362f47f0f8e0930d7f89816633cc823eb238cf35c21b110b930103c32d"
+      },
+      "tests/test_billing.py": {
+        "bytes": 98,
+        "sha256": "9dffecf797ecee7a7792250ee0056503a6a7e7b1170144b69e3a02ee8ce378fa"
+      },
+      "OWNED-COMPATIBILITY.txt": {
+        "bytes": 6,
+        "sha256": "7b9a72466d3960eb2aacccfc848939453490db0678bd4725def3f789b891c919"
+      }
+    }
+  },
+  "augmentation": {
+    "path": "OWNED-COMPATIBILITY.txt",
+    "purpose": "Second actual FileChange makes reverse ordering nonvacuous; does not replace invoice assertion."
+  }
+}

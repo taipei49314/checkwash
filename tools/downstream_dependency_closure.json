@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "status": "SOURCE_CLOSURE_NOT_EXECUTED",
+  "commits": {
+    "smallestlie": "e7c3b243da39e26856b10f6a6df1f2eee6b38ecb",
+    "corpus": "86ffe1560d72356f6e59a032d1c84c061753c06a"
+  },
+  "trees": {
+    "smallestlie": "b94d9f3c0c95bb7aed8267c4566d236cbba8405d",
+    "corpus": "45f374374fe0029d34b131542e3b301fca482f41"
+  },
+  "third_party": {
+    "PyYAML": "6.0.2",
+    "reason": "unchanged smallestlie.policy initializer imports authorization, which imports yaml",
+    "requires_python": "3.12"
+  },
+  "files": [
+    {
+      "path": "smallestlie/pyproject.toml",
+      "bytes": 903,
+      "sha256": "a3dc11b4afbd5952f104220e429facad64c96c810c8e3ba160e8e36f571225c8",
+      "git_blob": "a0da5e09bbe856ffef0f125702510643a6c03584"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/verdict/normalize.py",
+      "bytes": 247,
+      "sha256": "b7c4e7e192a3ff699b995b96f82bc94ce8e4b5184bc75ab99b7cfe62cdab03ef",
+      "git_blob": "45587d0639f8b3444ecc4796bc7e305a62c4d040"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/verdict/json_input.py",
+      "bytes": 734,
+      "sha256": "8ad6a43a7543e5a465c2e29a50c98be13601e1309a44b65b2c8a828b05cd823e",
+      "git_blob": "798d544181faa099e82d98bec388024ec6e22606"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/verdict/compare.py",
+      "bytes": 2141,
+      "sha256": "63e053fe700981f411bdfcb51d497aacda4669980062a21539af121a1259dae3",
+      "git_blob": "541c1175b68563840730f7f073d42a24dd8fc072"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/verdict/__init__.py",
+      "bytes": 152,
+      "sha256": "71725808d125c7e75451a228681226e2e63e5a06e618180426be099ee92c2b7c",
+      "git_blob": "af6bc2a7ffc49d1027e2a41b9145b4debf170112"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/sandbox/workspace.py",
+      "bytes": 3967,
+      "sha256": "16226899e9c1898ef5a9c5da3f3dbe90fc9a75cb46ffe717aac2f7bde6cca4ca",
+      "git_blob": "fca5bcf27a67ec54ebd539101ac628b7b81b569d"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/sandbox/limits.py",
+      "bytes": 303,
+      "sha256": "7ca893780d7592249bb9dcb4e1f25a1359cfdda28dc1e540b79b3e4115567a44",
+      "git_blob": "2ed53aa6b9afa8a0d4e8f895a2ab281fd8a64c3f"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/sandbox/fixture_binding.py",
+      "bytes": 2833,
+      "sha256": "2a8fee9c2b82e1dd389ca9986792e3ac6c6e82d513f272fddf43ad781aa1f0f4",
+      "git_blob": "b7e859c589189e7165cee8c28a15849b1bd67be2"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/sandbox/executor.py",
+      "bytes": 6667,
+      "sha256": "175a8ff9ef1198d4e8564c9acfde31ae8b9ea24dca98bafb415bab24e0d33504",
+      "git_blob": "7728c57af1a1b96ef972358ade12f471806ce605"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/sandbox/__init__.py",
+      "bytes": 300,
+      "sha256": "277e054947a7b96dfdf438b9241ddd3f06853194b28713112a087993788eddb4",
+      "git_blob": "dda78a4e10b68153e47248aafd4e86ef5ab3da33"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/policy/path_guard.py",
+      "bytes": 3198,
+      "sha256": "020c152c3fe8add5291d072983b3a15656b9857f417fc64d1577a3fb52c1bbe2",
+      "git_blob": "d153c4485111e5d1a5cf39a123c3ebe4c7fcc428"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/policy/network_policy.py",
+      "bytes": 1073,
+      "sha256": "05454dc673627a453939d147b849f65cfb6b994d8dcd5584079a6c11e2612044",
+      "git_blob": "fd06371e09b9858accdf9dec5bbccaebcd51ba64"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/policy/command_allowlist.py",
+      "bytes": 2523,
+      "sha256": "728e1bc3296f7b6ec1c21e95d31b87ffe55ff3762d4a28a567f58b99aa525e31",
+      "git_blob": "3e4910cb1811fe70c8ba4e712f8913da29cf5dd7"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/policy/authorization.py",
+      "bytes": 6414,
+      "sha256": "ae788f28e0aa438862ab38c6b2b939817379103a8537be30c46f80bb5f5ed4fc",
+      "git_blob": "1eb6c87aeb3c07dcbd0248f5063dc8b5d5ebadc1"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/policy/__init__.py",
+      "bytes": 572,
+      "sha256": "d5077c5a397ea7eb8e9477a1589021a2ff5c987154a66828a0d13955b9efc3e2",
+      "git_blob": "de5e6b4af5495c95d75c9f7dd49ba002ee377f20"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/adapters/greenwash.py",
+      "bytes": 4138,
+      "sha256": "a43eccabc697022858701a287c871e9c0fe9e877c48568a5b323aa9fbbb58531",
+      "git_blob": "931c9f7f6a5df3897d2f1c1d2d74c79c574f8093"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/adapters/fixture_gate.py",
+      "bytes": 6810,
+      "sha256": "d13f09c20c35eff3ce4d6a38e7e62107fb476a179fe03d19e308f310f0d21a02",
+      "git_blob": "cb52ca330db75852706d8bfbac8240233527897a"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/adapters/checkwash.py",
+      "bytes": 13153,
+      "sha256": "2504cc8cf57184184b485ed7b01cd84052f7181e46dd6da27d78089f3cd2923f",
+      "git_blob": "5d34d76494a149fc014a96c0319f6a8027424f8f"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/adapters/base.py",
+      "bytes": 3807,
+      "sha256": "bb8778c587830595a3dfd481503e16fe15440658e35e4f17423afa34029b6ed8",
+      "git_blob": "311d880e719d7a2c95c3f24176da2d9283a5a8c9"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/adapters/__init__.py",
+      "bytes": 264,
+      "sha256": "8e44264a630c8ecf9e3f0f86cbd1297a3fa8ac57eaaeca4c625adad4cdaec0ee",
+      "git_blob": "d4131b3ca71d5159e9d69029f2399aa27aaa48ce"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/models.py",
+      "bytes": 2443,
+      "sha256": "5705c4673278f0c56b53867f3030e3c391f340f23f90a71da663ec52d8f0102e",
+      "git_blob": "ccd3644ffdf5c4c4f1c03e85c9eba579d7299656"
+    },
+    {
+      "path": "smallestlie/src/smallestlie/__init__.py",
+      "bytes": 297,
+      "sha256": "6b5680f3cccc8265b284e8b92d9d118fc852fd7b17e95bafac49d485d4a5e40c",
+      "git_blob": "8da1fa214a28db55ff8ac048ac685d99b258adc8"
+    },
+    {
+      "path": "corpus/src/corpus/engine.py",
+      "bytes": 2882,
+      "sha256": "2460e984dad1932f208347d8c5f0a9c6ef077609e8a565362dfacee82f38d280",
+      "git_blob": "332aeb6ab1713c1ef0008535a2acd2654d2ef56f"
+    },
+    {
+      "path": "corpus/src/corpus/stress/engine.py",
+      "bytes": 9244,
+      "sha256": "a807e863f174a5fdcc177f49f3e90425af8da47d4c0e1df5c08a4ee81e3db3b7",
+      "git_blob": "d322ab28c2874768feeff1f8a2b152571f7ed0a7"
+    }
+  ]
+}
