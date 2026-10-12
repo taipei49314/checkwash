@@ -8,6 +8,13 @@ A pass does not prove correctness; retain exit 2 and diagnostics as analysis
 errors. The recommended Action remains pinned to v0.6.0 under the existing
 one-release lag and does not include the later CLI changes.
 
+**Development snapshots:** the source in this checkout may be newer than the
+published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
+records the version, commit and download bytes behind the installation commands
+below. New changes require their own candidate evidence and remain unreleased
+until the publication record verifies them; candidate CI success does not mean
+that the recommended Action pin includes them.
+
 [![CI](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml/badge.svg)](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/checkwash.svg)](https://pypi.org/project/checkwash/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/taipei49314/checkwash/blob/main/LICENSE)

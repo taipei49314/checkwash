@@ -129,59 +129,9 @@ def test_documented_test_count_is_accurate():
             )
 
 
-# Everything a user's install or integration actually executes. The engine
-# alone is not enough: dogfood runs `./action` from the checkout, so a stale
-# action.yml on the advertised tag would pass every gate while shipping users
-# an old integration layer (owner review, 2026-08-04).
-PUBLIC_SURFACES = ["src/", "pyproject.toml", "action/", ".pre-commit-hooks.yaml"]
-
-
-def test_pinned_tag_ships_the_current_source():
-    """The tag the README tells people to install must contain today's code.
-
-    Matching version *strings* is not enough: v0.1.0 pointed at a commit two
-    fixes behind main, so a visitor following the README got the pre-fix
-    engine while reading the post-fix docs. This compares the pinned tag
-    against the working tree across every public install surface — the
-    engine, the packaging metadata, the GitHub Action wrapper, and the
-    pre-commit hook definition.
-
-    A pre-tag escape hatch was added here on 2026-08-08 and is removed again:
-    it made the gate *return and pass* when the tag was missing, which is the
-    exact sentence the assertion below carries as its own history. The
-    circularity it was solving is a property of the release order, not of the
-    gate. `docs/RELEASING.md` states that order: bump, commit, **tag** locally,
-    verify, merge the release PR, re-tag its merge commit, then push the tag
-    (#201). Until the tag is pushed, this test is red on the release branch
-    and on `main`, and that red is the gate working.
-    """
-    import subprocess
-
-    version = _pyproject()["project"]["version"]
-    tag = f"v{version}"
-    exists = subprocess.run(
-        ["git", "rev-parse", "--verify", f"{tag}^{{commit}}"],
-        capture_output=True,
-        cwd=str(ROOT),
-    )
-    assert exists.returncode == 0, (
-        f"the README tells people to install {tag}, and that tag does not exist. "
-        "Bumping the version used to make this gate return early and pass, which "
-        "is the same 'green because it did not run' failure the gate exists to "
-        "prevent. Cut the tag, or do not advertise it."
-    )
-
-    diff = subprocess.run(
-        ["git", "diff", "--name-only", tag, "--", *PUBLIC_SURFACES],
-        capture_output=True,
-        cwd=str(ROOT),
-    )
-    changed = [p for p in diff.stdout.decode().split("\n") if p.strip()]
-    assert not changed, (
-        f"{tag} does not contain the current public surfaces — the README tells "
-        f"people to install it, but these differ: {changed}. Cut a new release."
-    )
-
+# Real public-tag identity is validated by tools/verify_published_source.py in
+# published-source/release jobs. Owned positive and negative Git fixtures run
+# that same validator under ordinary full pytest (test_published_source.py).
 
 def test_required_ruleset_payload_matches_documented_job_name():
     """T0.4: the gh ruleset payload must require the documented job name.
@@ -330,20 +280,19 @@ def test_perf_gate_is_in_default_collection():
     assert " -k " not in f" {blob} "
 
 
-def test_readme_install_refs_match_version():
-    """Every version-pinned install line in the README points at this version.
-
-    A README pinning a tag that doesn't exist is a broken install for the
-    first person who tries it.
-    """
-    version = _pyproject()["project"]["version"]
+def test_readme_install_refs_match_advertised_release():
+    """Public install commands name the separately verified published release."""
+    manifest = tomllib.loads((ROOT / "release/advertised.toml").read_text(encoding="utf-8"))
+    advertised = manifest["release"]
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned = set(re.findall(r"@(v\d+\.\d+\.\d+)", readme)) | set(
         re.findall(r"rev:\s*(v\d+\.\d+\.\d+)", readme)
     )
     assert pinned, "README should pin at least one install ref"
-    assert pinned == {f"v{version}"}, f"README pins {pinned}, package is v{version}"
-
+    assert pinned == {advertised["tag"]}, f"README pins {pinned}, advertised release is {advertised['tag']}"
+    assert set(re.findall(r"pipx install checkwash==(\d+\.\d+\.\d+)", readme)) == {advertised["version"]}
+    downloads = set(re.findall(r"releases/download/(v\d+\.\d+\.\d+)/checkwash\.pyz", readme))
+    assert downloads == {advertised["tag"]}
 
 def test_dogfood_job_actually_runs():
     """The job that exercises action/action.yml must not be unreachable.

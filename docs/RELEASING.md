@@ -8,156 +8,105 @@ v0.3.1 (2026-09-07) advanced the recommended pin to v0.3.0 (D-057) and v0.3.2
 advanced it to v0.3.1 (D-058). The exact ledger-cleanup review is still a
 separate governance change (D-055).
 
-The order matters, and it is the whole answer to a question that has now been
-asked twice: *the tag-parity gate fails before I cut the tag — isn't that
-circular?*
+## Candidate, published source and delivered artifacts
 
-It is not. It is an ordering constraint, and this is the order.
+Ordinary development runs the complete `pytest` collection, including the
+performance gate, package/zipapp tests, and owned positive and negative tests
+of `tools/verify_published_source.py`. The candidate package version remains
+in `pyproject.toml` and `src/checkwash/__init__.py`. A development success is
+not a receipt that the candidate is publicly installed.
 
-```bash
-# 1. bump, in both places
-#    src/checkwash/__init__.py  __version__ = "0.1.14"
-#    pyproject.toml             version = "0.1.14"
+`release/advertised.toml` separately names the actual public CLI release, its
+peeled commit, native tag object and public zipapp bytes. README CLI install
+commands follow this manifest. The unconditional `install-from-tag` job checks
+that real remote tag in a clean checkout, installs it through the public Git
+URL, verifies the installed commit and version, runs its demo and check, and
+checks the public download's size and SHA256. A missing tag/download, a wrong
+identity or any failed command makes that job fail. Candidate changes do not
+silently advance the advertised release. Public capability claims cite the
+versioned release guide; unreleased behavior is labelled as development work.
 
-# 2. update the pins the version owns
-#    README.md: every @vX.Y.Z and `rev: vX.Y.Z`
-#    STATE.md:  the version row of the authoritative table
+On an actual tag push, `published-source` also validates and installs the
+event's own tag, independently of the advertised pointer. The source validator
+requires the exact event commit and real remote/native tag identity, compares
+`src/`, `pyproject.toml`, all of `action/` (including runtime Python drivers),
+and `.pre-commit-hooks.yaml`, and rejects dirty public surfaces. Every Git
+command must succeed. Source, tree, tag object and peeled commit are retained
+in the receipt. Owned temporary Git repositories exercise these same checks in
+ordinary CI; a local/private synthetic tag is never evidence of publication.
 
-# 3. commit, on a release branch (release/v0.1.14)
-git add -A && git commit
-
-# 4. TAG — before anything verifies, and before anything is pushed
-git tag -a v0.1.14 -m "..."
-
-# 5. verify. Everything is green here or the release does not happen.
-pytest                                  # tag parity is now checkable, and checked
-checkwash check --repo .                # the judge judges itself
-
-# 5a. main first, without the tag. The release commit reaches main through
-#     its PR; the tag of step 4 stays local. Before merging, step 5 has run on
-#     the PR's final head (if the branch was updated with main, move the local
-#     tag to the new head and repeat step 5), and that head's pull_request
-#     `verdict gate` run concluded success: the first (newest) line ends in
-#     "completed success".
-git push origin release/v0.1.14         # open the PR
-gh run list --workflow verdict-gate.yml --event pull_request --commit <head-sha> \
-  --json databaseId,attempt,headSha,status,conclusion -q '.[] | "\(.databaseId) \(.attempt) \(.headSha) \(.status) \(.conclusion)"'
-#     merge it. A GitHub merge (merge, squash or rebase) always makes a new
-#     commit; that commit is the release commit, and the local tag moves onto it.
-gh pr view <pr> --json mergeCommit -q .mergeCommit.oid      # <release-commit>
-git fetch origin
-test "$(git rev-parse '<release-commit>^{tree}')" = "$(git rev-parse '<head-sha>^{tree}')"
-git tag -f -a v0.1.14 -m "..." <release-commit>
-
-# 5b. the release commit's main-push `verdict gate` run concluded success:
-#     exactly one line, ending in "completed success". Re-query an empty
-#     answer before treating the run as missing.
-gh run list --workflow verdict-gate.yml --event push --branch main --commit <release-commit> \
-  --json databaseId,attempt,headSha,status,conclusion -q '.[] | "\(.databaseId) \(.attempt) \(.headSha) \(.status) \(.conclusion)"'
-#     baseline.toml there pins the previous release: its tag is the highest
-#     other vX.Y.Z tag merged into the release commit (the tag-push run's rule),
-#     and its commit is that tag's commit. The two lines must agree.
-git show <release-commit>:tests/verdict_gate/baseline.toml | python -c "import sys, tomllib; b = tomllib.load(sys.stdin.buffer)['baseline']; print(b['tag'], b['commit'])"
-t=$(git tag --merged <release-commit> --list 'v*' --sort=-v:refname | grep -Ex 'v[0-9]+\.[0-9]+\.[0-9]+' | grep -vx v0.1.14 | head -1); echo "$t $(git rev-parse "$t^{commit}")"
-#     the local tag is on the release commit, and the release commit is on main
-test "$(git rev-parse 'v0.1.14^{commit}')" = <release-commit>
-git merge-base --is-ancestor <release-commit> origin/main
-
-# 6. unlock the tag ruleset for this push only (it rejects v* creation,
-#    update and deletion at every other moment; see "The release slot")
-printf '{"enforcement":"disabled"}' | gh api repos/taipei49314/checkwash/rulesets/22162219 --method PUT --input -
-
-# 7. push the tag, alone: main is already there (step 5a)
-git push origin v0.1.14
-
-# 8. lock it again, immediately, before the GitHub Release is cut
-printf '{"enforcement":"active"}' | gh api repos/taipei49314/checkwash/rulesets/22162219 --method PUT --input -
-
-# 8a. the tag-push `verdict gate` run concluded success, on the same commit:
-#     exactly one line, ending in "completed success"
-gh run list --workflow verdict-gate.yml --event push --branch v0.1.14 --commit <release-commit> \
-  --json databaseId,attempt,headSha,status,conclusion -q '.[] | "\(.databaseId) \(.attempt) \(.headSha) \(.status) \(.conclusion)"'
-
-# 8b. only now publish the GitHub Release (the release workflow builds,
-#     qualifies and publishes from it); the grant record cites both runs,
-#     id and attempt
-
-# 8c. after publishing: the rotation PR repoints the verdict gate's pins
-```
+The release workflow repeats the native source/visitor validation for its own
+release event. `build` cannot proceed on that event unless `published-source`
+succeeds. Existing source, installed-wheel and actual-pyz assertion
+qualification remains in place. Before distribution upload, all three
+`tools/release_inventory.py` checks bind exact source and qualification
+receipts to every wheel, sdist and pyz member and artifact digest. Diagnostic
+receipts can upload after a failure; distribution assets cannot. Both GitHub
+asset attachment and PyPI have successful source/build dependencies and remain
+conditional on a real release event; PyPI also requires `PYPI_ENABLED`.
+`workflow_dispatch` builds and qualifies a candidate without publishing.
 
 ## Main first, then the tag
 
-Steps 5a to 8c exist for the previous-release verdict gate (#201:
-`tools/verdict_gate.py`, run by `.github/workflows/verdict-gate.yml`). It runs
-the previous release's `checkwash.pyz` and the candidate through the CLI on the
-same cases and fails when a block turns into a pass that the maintainer has not
-accepted. The release workflow runs only after the tag exists, so the gate
-works through workflow runs on the exact release commit. Step 7 used to push
-`main` and the tag together, which left no green `main` run to check before the
-tag was on the remote. (v0.5.0 in practice reached `main` through #193 before
-its release run.)
+This procedure still requires explicit one-time authorization for the exact
+version. Preparation of a candidate or of these workflows is not that grant.
+The working-machine restriction remains: product runs, tests, qualification
+and builds use the sanctioned hosted path; source inspection and draft edits
+do not authorize local execution.
 
-- **Before the release PR merges (5a).** Step 5 has run on the PR's final
-  head. When `main` moved, the branch ruleset's strict status-check policy
-  makes the branch be updated before it can merge; the update is a new commit
-  with a new tree, so the local tag moves to the new head and step 5 runs
-  again. That head's `pull_request` run of `verdict gate` concluded `success`.
-  The gate is advisory on other PRs (#201 Decision 3); on a release PR this
-  run is required, because it is the last check before `main` carries the
-  bump. A GitHub merge always makes a new commit (v0.5.0 is tagged on
-  `24b60a2`, the merge commit of #193), so the local tag always moves onto it.
-  Because the PR is up to date when it merges, that commit's tree is the final
-  head's tree, and the `test` in 5a checks it.
-- **Before the tag is pushed (5b).** The release commit is on `main`, its
-  `verdict gate` run on the push to `main` is `completed` with conclusion
-  `success`, `[baseline]` in `tests/verdict_gate/baseline.toml` pins the tag
-  and commit that the tag-push run will require, and the local tag is on the
-  release commit. A failed, cancelled or missing run stops the release here.
-  `main` then carries a bumped version and README and STATE pins for a tag that
-  is not cut, so tag parity stays red: the receipt goes to the maintainer, a
-  revert PR of the release PR puts `main` back, and the release starts again
-  at step 1 once the cause is fixed. Between the merge and step 7, the tag
-  parity test in `ci.yml` is red on `main` in any case: the version is bumped
-  and the tag is not on the remote yet. That is the gate working (see below).
-  The verdict gate does not need the tag on a `main` run.
-- **Before the GitHub Release is published (8a).** The run on the tag push,
-  same commit, concluded `success`. On a tag push the gate also fails unless
-  HEAD is the pushed tag's commit and the baseline is the highest other `v*`
-  tag merged into HEAD, which is why the pins move only after publication. If
-  this run fails, the Release is not published, so nothing reaches PyPI. The
-  tag stays public (the tag ruleset rejects deletion too), and `main`'s README
-  already advertises `pipx … @vX.Y.Z` and `rev: vX.Y.Z`, so git installs get
-  that commit. The receipt goes to the maintainer, who decides between a revert
-  PR of the release PR on `main` and a fixed patch release.
-- **The grant record (8b).** The release's one-time authorization in this file
-  cites both runs, id and attempt (a re-run keeps its id): the `main` run of 5b
-  and the tag run of 8a. The authorization is written before the release, so
-  the post-publication docs PR, the one that records the publication (as #194
-  did for v0.5.0), adds them to it.
-- **After publishing (8c): the rotation PR.** One reviewed PR repoints the
-  verdict gate at the release just published:
-  - `[baseline]` in `tests/verdict_gate/baseline.toml`: tag, version and
-    commit of the new release, and the sha256 and size of its `checkwash.pyz`
-    from `gh release view vX.Y.Z --json assets` (the gate re-checks both on
-    every run);
-  - `baseline_blocked`: re-pinned from the value the rotation PR's run
-    proposes;
-  - `[t3.cases]`: re-read from the gate's proposal, since T3 comes from the new
-    tag's `tests/data/javascript_chai_mutations.json`;
-  - `[canary]`: not rotated with the baseline. Its v0.4.2 → v0.5.0 pair and,
-    once pinned, its `block_to_pass` set stay unless a reviewed PR re-pins
-    them;
-  - the acceptance file, `tests/gates/verdict_gate_accepted.toml`: its
-    `baseline`, and the removal of every stale entry the rotation PR's run
-    names (the gate fails on a stale entry). That file and `DECISIONS.md` are
-    maintainer-only (#201 Decision 1, `AGENTS.md`), so the maintainer commits
-    both changes to the rotation PR with a `DECISIONS.md` entry, and the PR
-    stays red until then.
+1. Prepare the authorized candidate version, source changes, release notes and
+   limits. Keep README public install commands and `release/advertised.toml`
+   on the last verified public release until the new release is publicly
+   verified. Label candidate capability separately. The Action recommendation
+   remains a separate one-release trust-lag decision.
+2. Open one release PR. Require its final exact head's hosted full development
+   CI, source/wheel/pyz qualification and inventory, real current-advertised
+   visitor checks, and `verdict gate` success. If the head changes, obtain new
+   evidence for that head. Retain the actual checkout SHA and tree, since PR
+   merge-checkout evidence and PR-head evidence have different subjects.
+3. Merge through the normal required checks. A merge/squash/rebase creates a
+   new commit: record it and compare its tree with the qualified head. Require
+   the exact merge commit's `main` push CI and `verdict gate` success before
+   creating a public tag. Missing, failed or cancelled required evidence stops
+   publication; neither a local tag nor an expected red replaces it.
+4. At that commit, `[baseline]` in `tests/verdict_gate/baseline.toml` still pins
+   the previous release required by the tag-push gate: the highest other
+   stable version tag merged into the commit, with its exact peeled commit.
+   Do not rotate the baseline to obtain a green release verdict.
+5. Only under the explicit publication grant, make the final annotated tag on
+   the qualified merge commit. Temporarily unlock the `v*` creation ruleset for
+   the single authorized push, push only that tag, and immediately restore the
+   ruleset before publishing the GitHub Release. Never move an existing public
+   tag to fix a failed check.
+6. Require that tag's own `ci/published-source`, actual tag visitor, full CI and
+   `verdict gate` successes, all bound to the same release commit. Record native
+   run IDs and attempts. Failure leaves the tag public and the release stopped;
+   the maintainer decides the remedy. README still advertises the previously
+   verified release rather than prematurely offering this incomplete target.
+7. Publish the authorized GitHub Release only after those receipts exist. Its
+   workflow repeats exact source identity/visitor checks, qualifies the built
+   distributions and validates all inventories before attaching assets or
+   publishing to PyPI. A job success does not by itself establish that every
+   external package service has delivered the expected bytes.
+8. Download the actual GitHub/PyPI assets, compare identities and bytes, and
+   execute the actual public visitor installation through the sanctioned path.
+   Record source, native tag, distribution digests, complete run identities,
+   result and limitations in the publication record. Advance the advertised
+   manifest and matching README CLI pins in a reviewed follow-up only once
+   these checks pass. Failed historical receipts remain failed.
+9. Separately rotate the verdict baseline after publication. `[baseline]`
+   pins the new tag/version/commit and its actual pyz size/SHA256;
+   `baseline_blocked` and `[t3.cases]` follow the gate's recorded proposal.
+   `[canary]` keeps its v0.4.2 to v0.5.0 pair unless separately reviewed.
+   Protected `tests/gates/verdict_gate_accepted.toml` and `DECISIONS.md` still
+   need the maintainer's exact disposition; remove only the stale entries
+   actually named by the rotation run. This remains separate from Action pin
+   promotion and downstream re-pins.
 
-  The rotation PR's run names every acceptance entry that went stale (the case
-  no longer needs one: the new baseline already passes it and its label is not
-  `block`; `known-regression` entries stay, held by the label anchor) and every
-  added, dropped or re-hashed `chai:` case.
+Preparation for 1.0 stops before steps 5–9. The readiness report distinguishes
+implemented publication checks from future execution against public objects
+that do not yet exist. No preparation receipt claims a v1.0.0 public download
+or visitor result.
 
 ## v0.7.0 one-time publication authorization (2026-10-12)
 
@@ -229,11 +178,11 @@ There is no automatic next slot. Outside an explicitly authorized release,
 nothing is bumped, tagged or released, and the tag ruleset
 `release tags: cut only at the release slot` (id 22162219, empty bypass list)
 rejects any `v*` tag creation, update or deletion with `GH013` — for everyone,
-owner included. Steps 6 and 8 above are the only sanctioned way through it;
-both commands are recorded with that release's authorization in this file,
-together with the id and attempt of the `verdict gate` run that cleared the
-tag push (step 5b) and of the run on the pushed tag that cleared publication
-(step 8a).
+owner included. The single authorized unlock/push/restore sequence in step 5
+is the sanctioned way through it. Record both ruleset changes with that
+release's authorization, plus the IDs and attempts of the main verdict run
+that cleared the tag push and the tag verdict run that cleared publication.
+Historical grants below use the earlier procedure's step labels (5b, 8a, 8c).
 The ruleset cannot tell an agent holding the owner's token from the owner, so
 it does not stop a deliberate actor; it turns tagging from a one-liner into a
 visible three-step.
@@ -298,46 +247,45 @@ step 5b) and the tag-push run 37337702973 (attempt 1, step 8a). The tag
 `v0.6.0` and the GitHub Release were published on 2026-10-05, and the
 rotation PR (#270, D-094) merged the same day: the grant is consumed.
 
-What the slot changes in the README, and what already guards it:
+## Release responsibility checks
 
-- `pipx … @vX.Y.Z` and `rev: vX.Y.Z` must equal the package version —
-  `tests/test_packaging.py::test_readme_install_refs_match_version`
-- the Action pin is the newest *prior* stable tag (one-release trust lag) —
-  `tests/test_packaging.py::test_readme_action_snippet_is_zizmor_blanket`
-- the advertised CLI tag contains the current public install surfaces —
-  `tests/test_packaging.py::test_pinned_tag_ships_the_current_source`
-- STATE.md's authoritative `version` row —
-  `tests/test_state_claims.py::test_version_row_matches_package`
+- README CLI tag, pipx version and download URL match the explicit advertised
+  public identity: `test_readme_install_refs_match_advertised_release`.
+- Candidate source/package versions agree: `test_version_matches_pyproject`.
+- The Action recommendation follows its separately reviewed one-release lag:
+  `test_readme_action_snippet_is_zizmor_blanket`.
+- The actual public tag exists and its complete install surfaces have the
+  expected source/native identity: `tools/verify_published_source.py`, in the
+  advertised visitor, tag-event job and release prerequisite. Its failure
+  paths run in ordinary `test_published_source.py` owned fixtures.
+- Candidate source/wheel/pyz behavior remains qualified by
+  `assertion-qualification.yml`; delivered archives are bound by
+  `release_inventory.py` before any distribution upload.
+- STATE's authoritative `version` row is the development package version;
+  its separately labelled last-public-release fields follow the manifest.
 
-Nothing else in this repository states the current version by hand.
+## Why neither phase gets an escape hatch
 
-## Why the gate does not get an escape hatch
+The historical `test_pinned_tag_ships_the_current_source` existed because
+**v0.1.0 pointed two fixes behind main**: people installed the pre-fix engine
+while reading post-fix claims. On 2026-08-08 a missing-tag early return was
+added and removed the same day. Passing because the subject is absent remains
+prohibited. These historical facts and failed receipts are unchanged.
 
-`tests/test_packaging.py::test_pinned_tag_ships_the_current_source` fails when
-the advertised tag does not exist. That is deliberate, and it is not a
-theoretical preference: **v0.1.0 shipped pointing at a commit two fixes behind
-main**, so visitors read the fixed documentation and installed the unfixed
-engine. The gate exists because that happened.
+The replacement preserves that responsibility at the phase that can actually
+prove it. Ordinary candidate CI runs the same validator against controlled
+positive/negative Git identities and verifies the already-advertised public
+release. Tag and release jobs require the real new public identity. No missing
+subject becomes a skip-success, and no new capability is advertised as shipped
+merely because the candidate passes. The prior policy of treating routine
+candidate/tag divergence as an expected development failure is superseded by
+this explicit separation; no test selection or `continue-on-error` hides it.
 
-A pre-tag escape hatch — "if the tag is missing, check something weaker and
-pass" — was added on 2026-08-08 and removed the same day. It reproduces the
-failure mode the assertion's own message describes: *bumping the version used
-to make this gate return early and pass*. A gate that passes when its subject
-is absent is the "green because it did not run" pattern that has bitten this
-project in three separate places (the dogfood job that never executed, the
-determinism check that varied the wrong axis, a perf gate that never touched
-git).
-
-If a candidate branch's CI is red between the bump and the tag, that is the
-gate working. Cut the tag.
-
-The verdict gate is held to the same rule. A release waits for a `success`
-conclusion on the release PR's final head, then on the exact release commit,
-on `main` and then on the tag; a failed, cancelled or missing run stops it. The workflow has no skip input and
-no `continue-on-error`, and moving the baseline pin is not a way to turn a run
-green: a block that turns into a pass is either fixed or accepted by the
-maintainer in the acceptance file, which the gate then checks like everything
-else.
+The verdict gate continues to require success on the release PR's final head,
+then the exact release commit on main, then that same commit on the public tag.
+A failed, cancelled or missing run stops publication. A BLOCK-to-PASS still
+requires a repair or the maintainer's recorded acceptance; this phase change
+supplies no such acceptance.
 
 ## What ships with a release
 
@@ -482,7 +430,7 @@ GitHub README and retain the old release's actual status in the launch notes.
 ## After the release
 
 - Check CI is green on the tag, not just on main.
-- Open the verdict gate's rotation PR (step 8c); until it merges, the gate
+- Open the verdict gate's separate rotation PR (step 9); until it merges, the gate
   still compares against the release before this one.
 - `benchmarks/RESULTS.md` and `benchmarks/FAILURES.md` are generated. If the
   round changed anything they summarise, regenerate and commit them —

@@ -1,6 +1,30 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-12 (v0.7.0 published and verified; verdict rotation remains separate)
+Updated: 2026-10-12 (Action source fix integrated; CI phase migration under qualification)
+
+## 2026-10-12: separate development and published-release checks
+
+PR #371 completed the v0.7.0 verdict-baseline rotation at `818dd6c`.
+PR #372 integrated the main Action trust-boundary fix at
+`0b42e2343d5c6983d22011dbd846f0da74ac623a`; its tree matches the qualified
+PR checkout. The public recommendation remains v0.6.0 and does not contain
+that fix. The separate quality Action entry point is not covered by the main
+Action qualification.
+
+Development CI continues to check the complete candidate suite and candidate
+artifacts. The explicit advertised-release manifest separately identifies the
+public installation subject; actual tag/release jobs check their own target.
+D-130 supersedes the earlier operational rule that routine development stays
+red merely because current public surfaces differ from the last release.
+Missing public subjects, failed ordinary tests and failed source/artifact
+identity checks still fail. Earlier dated red receipts below remain historical
+failures. Candidate head, hosted checkout and published commit identities are
+reported separately.
+
+This migration is implemented but its exact-head hosted evidence is pending.
+No new release, version bump, public Action pin or adoption claim follows from
+it. T-528's original A–D work remains incomplete; independent adoption is
+UNSATISFIED. Current public installation commands continue to identify v0.7.0.
 
 ## 2026-10-12: v0.7.0 publication verified
 
@@ -2481,6 +2505,12 @@ real measure of the blind spot.
 
 ## The numbers that matter right now (authoritative — every other number in this file is history)
 
+`version` is the development package version in this checkout, checked against
+`pyproject.toml` and the package. It is separate from the last published CLI
+release recorded by `release/advertised.toml`. Matching version strings do not
+imply matching source commits. Public release evidence is in the versioned
+publication verification record; candidate results must name their exact SHA.
+
 This is the authoritative inventory of release metadata and recorded
 measurements, with different provenance for each. The version and detector
 count describe the release. The human-history rates and opaque share come
@@ -2500,6 +2530,8 @@ how the measurements moved; their original dates and values remain history.
 | authoritative number | value |
 |---|---|
 | version | v0.7.0 |
+| last published CLI | v0.7.0 |
+| last published CLI commit | d647a65e9734f2b6e57b528ea595b1507dc31094 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |
