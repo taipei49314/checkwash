@@ -47,12 +47,17 @@
 # checkwash.pyz digest); the gate re-checks them on every run.
 schema_version = 1
 
+# 2026-10-12: initial postpublication rotation pin. The actual public asset
+# is the GitHub v0.7.0 Release's checkwash.pyz, verified against release
+# workflow 38216943768 attempt 1 and its complete assertion receipts. Old
+# baseline_blocked/T3 pins and protected acceptance remain for the first
+# complete PR proposal; canary pins are not rotated.
 [baseline]
-tag = "v0.6.0"
-version = "0.6.0"
-commit = "8c70efbf93975bf3210acb8eafbaf4b38044a770"
-sha256 = "4f9c7b836d1e1c40dc0a7b88ef6d63f25d482c8eafda18c05eb5a4fbac9ad949"
-size = 655217
+tag = "v0.7.0"
+version = "0.7.0"
+commit = "d647a65e9734f2b6e57b528ea595b1507dc31094"
+sha256 = "d905ea5fd63daacc8e705b7de8932ed2affac810d76ae988ca6a8e57f2e12c7c"
+size = 754757
 
 [baseline_blocked]
 count = 158
