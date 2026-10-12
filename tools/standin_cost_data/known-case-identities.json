@@ -1,0 +1,79 @@
+{
+  "purpose": "Known issue345 identity metadata only",
+  "source_manifest_sha256": "c253a31974870f2d583acd5917fdec9840e8d8ca0e079e4c91d0b49e01e80d9d",
+  "source_members_sha256": "a628d15de4024ecc91e479b532f9c3df2ee86f43542d39dd6c6a71d708780e19",
+  "issue": "https://github.com/taipei49314/checkwash/issues/345",
+  "rows": [
+    {
+      "issue_prefix": "bc504dafce",
+      "repository": "aio-libs/aiohttp",
+      "status": "EXACT_SEEN_MEMBER_METADATA",
+      "commit": "bc504dafcecad929eeb20cfcab71d2d66df9e28e",
+      "parent": "2a4247b1adba3c9a6b1cb0bd6135f332f8ff2f3a",
+      "phases": [
+        "targeted"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "issue_prefix": "5a8ebdfcae",
+      "repository": "aio-libs/aiohttp",
+      "status": "EXACT_SEEN_MEMBER_METADATA",
+      "commit": "5a8ebdfcaec5005d78bcb5ce21aadf66e56970fd",
+      "parent": "bb35b1c0a589a1553031f7d670835fd82112db34",
+      "phases": [
+        "targeted"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "issue_prefix": "0c7ce3485d",
+      "repository": "aio-libs/aiohttp",
+      "status": "ISSUE_KNOWN_IDENTITY_VERIFIED_IN_NAMED_METADATA_GIT_NOT_IN_4271_MANIFEST",
+      "commit": "0c7ce3485dbcda196e125b4ea913a67e6b54f26c",
+      "parent": "b5f1aa53fdcd01b621990ec7e4da152a3de72fb5",
+      "identity_evidence": {
+        "git_directory": "C:/Users/play/Documents/Codex/2026-10-11/checkwash-v070-release-preparation/work/corpus-metadata/python-aiohttp.git",
+        "commands": ["git rev-parse --verify 0c7ce3485d^{commit}", "git show -s --format=%H%n%P%n%s%n%aI 0c7ce3485dbcda196e125b4ea913a67e6b54f26c"],
+        "subject": "Allow decompression to continue after exceeding max_length (#11966)",
+        "author_time": "2026-04-12T19:23:03+01:00",
+        "read_only_metadata": true
+      },
+      "runtime": "NOT_RUN"
+    },
+    {
+      "issue_prefix": "92477c5a74",
+      "repository": "aio-libs/aiohttp",
+      "status": "EXACT_SEEN_MEMBER_METADATA",
+      "commit": "92477c5a74c43dfe0474bd24f8de11875daa2298",
+      "parent": "1e4120e87daec963c67f956111e6bca44d7c3dea",
+      "phases": [
+        "targeted"
+      ],
+      "runtime": "NOT_RUN"
+    },
+    {
+      "issue_prefix": "35754d4642",
+      "repository": "aio-libs/aiohttp",
+      "status": "EXACT_SEEN_MEMBER_METADATA",
+      "commit": "35754d464295aa35f22781f4389d3dd311f2db4e",
+      "parent": "b381cb4f18e470a53785bb1ef8846bce692df40a",
+      "phases": [
+        "targeted"
+      ],
+      "runtime": "NOT_RUN"
+    }
+  ],
+  "aiohttp_142_membership": "UNKNOWN",
+  "aiohttp_142_identity_audit": "../aiohttp142-identity.md",
+  "aiohttp_466_distinct_provenance": {
+    "issue": 351,
+    "archive": "sweep351_sets_tgt.tar.gz",
+    "archive_sha256": "23cdc9fc81983d908c35c8de9717ada3cca78552df89a4ce62a2f9526ec8c8cf",
+    "member_source": "targets/t-*.txt",
+    "is_original_142": false,
+    "substitution_authorized": false
+  },
+  "source_contents_read": false,
+  "engine_executed": false
+}

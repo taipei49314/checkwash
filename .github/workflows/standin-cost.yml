@@ -1,0 +1,87 @@
+name: Issue 345 bounded cost capture (not acceptance)
+
+on:
+  pull_request:
+    paths:
+      - 'src/checkwash/frontends/python/standin_installations.py'
+      - 'tools/standin_cost_*.py'
+      - 'tools/standin_cost_data/**'
+      - 'tools/owned_process_capture.py'
+      - 'tools/qualify_assertions.py'
+      - 'tools/assertion_contract.py'
+      - 'tools/release_inventory.py'
+      - '.github/workflows/standin-cost.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: Eight inputs - exact artifacts and raw capture only
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        id: candidate
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        id: base
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python
+        with:
+          python-version: '3.12'
+      - name: Capture fixed native CLIs and separate diagnostic children
+        id: capture
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/standin-cost-evidence
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/standin_cost_capture.py capture "$EVIDENCE_ROOT"'
+      - name: Verify complete raw evidence without declaring repair acceptance
+        id: validate
+        if: ${{ !cancelled() && (steps.capture.outcome == 'success' || steps.capture.outcome == 'failure') }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/standin-cost-evidence
+        run: '"$TRUSTED_PYTHON" -I -B -X utf8 candidate/tools/standin_cost_capture.py validate "$EVIDENCE_ROOT"'
+      - name: Preserve native workflow outcomes
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_PYTHON: ${{ steps.python.outputs.python-path }}
+          EVIDENCE_ROOT: ${{ runner.temp }}/standin-cost-evidence
+          CANDIDATE_OUTCOME: ${{ steps.candidate.outcome }}
+          BASE_OUTCOME: ${{ steps.base.outcome }}
+          CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+        run: |
+          "$TRUSTED_PYTHON" -I -B -X utf8 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path(os.environ['EVIDENCE_ROOT'])
+          root.mkdir(exist_ok=True)
+          keys = ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'PR_HEAD_SHA', 'PR_BASE_SHA',
+                  'CANDIDATE_OUTCOME', 'BASE_OUTCOME', 'CAPTURE_OUTCOME', 'VALIDATE_OUTCOME')
+          (root / 'step-outcomes.json').write_text(json.dumps({key: os.environ[key] for key in keys}, sort_keys=True, indent=2) + '\n')
+          inventory = {str(p.relative_to(root)): {'bytes': p.stat().st_size, 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()}
+                       for p in sorted(root.rglob('*')) if p.is_file() and p.name != 'upload-manifest.json'}
+          (root / 'upload-manifest.json').write_text(json.dumps(inventory, sort_keys=True, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: issue345-eight-inputs-ubuntu-py312-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/standin-cost-evidence
+          if-no-files-found: error

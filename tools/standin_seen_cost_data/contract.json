@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "purpose": "STANDIN_345_SEEN_STANDARD_D088_COST",
+  "baseline_sha": "30cfb8bd39aa702aae0d59bde1d1400654137bad",
+  "candidate_sha": null,
+  "candidate_resolution": "VALIDATED_EVENT_MERGE_AFTER_BASELINE_FIXED",
+  "members_sha256": "a628d15de4024ecc91e479b532f9c3df2ee86f43542d39dd6c6a71d708780e19",
+  "partitions_sha256": "907095c3c5ebffadcfbf7642d1c40086683f24bbf16e67a012f7724f84890a27",
+  "selection_ordinals_sha256": "856dc2adb5cd78534cff61e50f1011240efc93b65675e207b0937089d9c1899a",
+  "selection": "standard OR d088",
+  "expected_pairs": 3018,
+  "expected_arm_rows": 6036,
+  "phases": {"standard": 1800, "d088": 1263, "targeted_cotag_only": 119},
+  "cohort_accounting": {
+    "original_pairs": 4271,
+    "selected_pairs": 3018,
+    "standard_d088_overlap": 45,
+    "original_targeted": 1372,
+    "selected_targeted_cotag": 119,
+    "outside_selected_pairs": 1253,
+    "original_groups": 48,
+    "selected_groups": 43,
+    "outside_selected_groups": 5,
+    "original_shards": 432,
+    "selected_shards": 382,
+    "aiohttp142": "UNKNOWN_NOT_REPLACED"
+  },
+  "today": "2026-10-11",
+  "primary_distribution": "pyz",
+  "limits": {
+    "invocation_seconds": 240,
+    "git_seconds": 900,
+    "worker_seconds": 6600,
+    "stream_bytes": 64000000,
+    "max_parallel": 4
+  },
+  "arm_order": "alternate_by_original_ordinal",
+  "cost_qualification": "NOT_ADJUDICATED"
+}

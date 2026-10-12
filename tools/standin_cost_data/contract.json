@@ -1,0 +1,13 @@
+{
+  "purpose": "ISSUE_345_EIGHT_INPUT_CAPTURE_NOT_FULL_COHORT_ACCEPTANCE",
+  "baseline_sha": "30cfb8bd39aa702aae0d59bde1d1400654137bad",
+  "baseline_fix_required_before_promotion": true,
+  "date": "2026-10-11",
+  "native_samples_per_arm": 3,
+  "diagnostic_samples_per_arm": 1,
+  "per_child_seconds": 240,
+  "setup_command_seconds": 900,
+  "total_seconds": 3000,
+  "stream_bytes": 64000000,
+  "known_case_identity_sha256": "9c900570e479493e3553d4206b760a8f8b509076c0d84c69621dc8dfc25fbd7c"
+}
