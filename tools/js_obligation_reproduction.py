@@ -497,7 +497,7 @@ def validate():
                     raise ValueError("native test was absent, skipped, errored or did not have the intended outcome")
                 if expected_exit:
                     text = "\n".join(testcases[0]["failureMessages"])
-                    if "AssertionError" not in text or "expected 0 to be 1" not in text:
+                    if "AssertionError" not in text or "expected +0 to be 1 // Object.is equality" not in text:
                         raise ValueError("failure does not show the owned failing oracle")
                 elif testcases[0]["failureMessages"]:
                     raise ValueError("passing test unexpectedly carries failure messages")
