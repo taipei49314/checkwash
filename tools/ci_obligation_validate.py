@@ -43,7 +43,9 @@ def binding(directory, reference=None):
 def fixture(directory, row, case_id, augmented):
     require(row["case"] == case_id and row["augmented"] is augmented
             and set(row["refs"]) == {"before", "after"}
-            and all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in row["refs"].values()),
+            and all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in row["refs"].values())
+            and set(row["report_refs"]) == {"before", "after"}
+            and all(re.fullmatch(r"[0-9a-f]{4,40}", label) for label in row["report_refs"].values()),
             "fixture/ref identity mismatch")
     for side in ("before", "after"):
         expected = owned.snapshot(case_id, side, augmented)
@@ -127,7 +129,8 @@ def validate():
                 and receipt["binding_sha256"] == owned.digest(engine_dir / "binding.json")
                 and receipt["index"] == index and receipt["label"] == label
                 and receipt["case"] == case_id and receipt["augmented"] is (index >= 2)
-                and receipt["refs"] == source["refs"], "CLI fixture or receipt binding differs")
+                and receipt["refs"] == source["refs"]
+                and receipt["report_refs"] == source["report_refs"], "CLI fixture or receipt binding differs")
         start, stopped = receipt["started_monotonic"], receipt["ended_monotonic"]
         require(all(type(value) in (int, float) and math.isfinite(value) for value in (start, stopped))
                 and start >= end and stopped >= start, "CLI order/timing invalid")
@@ -145,8 +148,8 @@ def validate():
         code = receipt["capture"]["exit_code"]
         usable = (complete and code in (0, 1) and isinstance(report, dict) and not raw["stderr"]
                   and report.get("skipped_files") == [] and report.get("config_errors") == []
-                  and report.get("run", {}).get("base") == source["refs"]["before"]
-                  and report.get("run", {}).get("head") == source["refs"]["after"]
+                  and report.get("run", {}).get("base") == source["report_refs"]["before"]
+                  and report.get("run", {}).get("head") == source["report_refs"]["after"]
                   and report.get("run", {}).get("checkwash_version") == engine["engine_version"]
                   and report.get("verdict") == ("pass" if code == 0 else "block")
                   and isinstance(report.get("findings"), list) and isinstance(report.get("summary"), dict))
@@ -164,6 +167,7 @@ def validate():
             fixture(directory / "input", native["fixture"], case_id, True)
             require(native["case"] == case_id and native["side"] == side
                     and native["fixture"]["refs"] == source["refs"]
+                    and native["fixture"]["report_refs"] == source["report_refs"]
                     and native["fixture"]["sides"] == source["sides"], "native source is not augmented CLI source")
             step = owned.read(directory / "native-step.json")
             require(step["binding_sha256"] == owned.digest(directory / "binding.json")

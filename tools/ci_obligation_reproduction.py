@@ -187,7 +187,17 @@ def make_repo(repo, case_id, augmented, directory):
         verify_tree(repo, refs[side], files)
         sides[side] = {"files": hashes(files), "tree": text_git(repo, "rev-parse", "HEAD^{tree}")}
     (directory / "original.diff").write_bytes(git(repo, "diff", "--binary", refs["before"], refs["after"]))
-    return {"case": case_id, "augmented": augmented, "repo": str(repo), "refs": refs, "sides": sides}
+    # Match the CLI's display labels only after BOTH commits/trees exist.
+    # Invocation/tree authority remains the complete OID, never a prefix test.
+    report_refs = {}
+    for side in ("before", "after"):
+        label = text_git(repo, "rev-parse", "--short", refs[side])
+        if (not re.fullmatch(r"[0-9a-f]{4,40}", label)
+                or text_git(repo, "rev-parse", "--verify", "--end-of-options", label + "^{commit}") != refs[side]):
+            raise ValueError("report abbreviation does not resolve to the exact owned commit")
+        report_refs[side] = label
+    return {"case": case_id, "augmented": augmented, "repo": str(repo), "refs": refs,
+            "report_refs": report_refs, "sides": sides}
 
 
 def verify_source(binding):
@@ -226,7 +236,8 @@ def engine():
         started = time.monotonic()
         process = capture_tool.capture(argv, Path(fixture["repo"]), environment(), directory / "process", 30, LIMIT)
         row = {"index": index, "label": label, "case": fixture["case"], "augmented": fixture["augmented"],
-               "refs": refs, "argv": argv, "cwd": fixture["repo"], "timeout_seconds": 30,
+               "refs": refs, "report_refs": fixture["report_refs"],
+               "argv": argv, "cwd": fixture["repo"], "timeout_seconds": 30,
                "binding_sha256": digest(EVIDENCE / "binding.json"), "capture": process,
                "started_monotonic": started, "ended_monotonic": time.monotonic()}
         raw = (directory / "process.stdout").read_bytes()
