@@ -498,6 +498,23 @@ class _Trace:
             return result
         if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             return _Value()  # separate dynamic execution scope
+        if isinstance(node, ast.BinOp):
+            # Preserve generic left-to-right expression visits, without a
+            # Python frame or repeated effects union for each connected BinOp.
+            effects: set[_Effect] = set()
+            pending: list[ast.expr] = [node.right, node.left]
+            while pending:
+                child = pending.pop()
+                if isinstance(child, ast.BinOp):
+                    self._step()
+                    if not self.failed_assertion:
+                        pending.append(child.right)
+                        pending.append(child.left)
+                else:
+                    effects.update(self.expression(
+                        child, module, env, qualname, native_setattr=native_setattr,
+                    ).effects)
+            return _Value(effects=frozenset(effects))
         return _value(*(self.expression(child, module, env, qualname, native_setattr=native_setattr)
                         for child in ast.iter_child_nodes(node) if isinstance(child, ast.expr)))
 
