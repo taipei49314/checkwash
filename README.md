@@ -1,8 +1,12 @@
 # checkwash
 
-**Unpublished v0.7.0 preparation branch.** The installation references below
-are release drafts; v0.6.0 remains published. See the
-[candidate record](docs/releases/v0.7.0-public-launch.md) for pending checks.
+**v0.7.0 preserves bounded imported-helper skip guards, strengthens Git input
+failure handling, and detects supported synchronous JS/TS assertions swallowed
+by an added catch.**
+[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md).
+A pass does not prove correctness; retain exit 2 and diagnostics as analysis
+errors. The recommended Action remains pinned to v0.6.0 under the existing
+one-release lag and does not include the later CLI changes.
 
 [![CI](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml/badge.svg)](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/checkwash.svg)](https://pypi.org/project/checkwash/)
@@ -131,7 +135,7 @@ does not enforce its verdict.
 
 The recommended Action is pinned to **v0.6.0**; the CLI above is **v0.7.0**.
 The prior-release Action includes the published v0.6.0 engine. It lacks the
-subsequent helper, Git input, JS/TS catch and other fixes in this candidate.
+subsequent helper, Git input, JS/TS catch and other fixes in v0.7.0.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
@@ -233,7 +237,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.7.0 candidate guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.7.0-public-launch.md) |
+| Installation checks, versions and first use | [v0.7.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.7.0-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |

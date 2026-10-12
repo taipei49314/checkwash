@@ -1,30 +1,27 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-11 (v0.7.0 preparation draft; publication remains separately authorized)
+Updated: 2026-10-12 (v0.7.0 publication authorized; completion follows actual receipts)
 
-## 2026-10-11: v0.7.0 preparation, unpublished
+## 2026-10-12: preparation accepted; publication authorized
 
-The approved preparation plan includes main through `35e74dc`, #357/PR #362,
-Git input PR #365 and the bounded #363 catch fix in draft PR #368. The
-version row and installation references on this branch propose v0.7.0;
-the published release remains v0.6.0. The recommended Action advances to
-the published v0.6.0 pin under the existing one-release lag.
+The fixed v0.7.0 preparation is complete: ten first-attempt batches account for
+6,071 pairs / 12,142 arms, including 4,271 Python pairs against main35 and
+1,800 JS/TS pairs against original v0.6.0. Bounded source dispositions, complete
+cost accounting and 612 recorded shard environments are retained.
 
-At #363 head `15a7fd9`, remote targeted run 38088926255, attempt 1,
-reports 250 tests with no failures/errors/skips, matching source and artifact
-hash and an empty working-tree diff. Ubuntu 3.13 full run 38088926268 reports
-17,288 tests: 17,285 pass, with stale test-count prose, stale failure-ledger
-prose and expected pinned-tag parity failing. This branch updates the two
-prose checks using that remote collection count and the remotely generated
-ledger. These receipts do not qualify the later preparation head.
+The maintainer's “核准” accepted the exact protected wording, four #363 fixture
+labels, recorded verdict/CI limits, disclosed added cost and 54 coverage losses,
+eight bounded source/noise dispositions and remaining risks. The subsequent
+“發佈” authorizes the v0.7.0 publication procedure. This entry records those
+decisions; it is not evidence that a merge, tag, release asset or PyPI upload
+has already completed. Record each actual publication result separately.
 
-Final-source CI, delivered artifacts, fixed 4,271-ID Python and 1,800-ID
-JS/TS nonblind replays and necessary maintainer decisions remain required.
-The [candidate guide](docs/releases/v0.7.0-public-launch.md) and
-[known issues](docs/KNOWN-ISSUES-v0.7.0.md) preserve those boundaries.
-No candidate is merged to main, no v0.7.0 tag exists and nothing is published
-by this preparation. The protected materializer and original T-528 ownership
-are unchanged. Readiness is not claimed.
+[Release evidence and limits](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md)
+and [known issues](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/KNOWN-ISSUES-v0.7.0.md)
+retain raw errors/skips, legacy UNKNOWN and the nonblind scope. T-528 remains
+CLAIMED and the original A–D held-out/custody work remains incomplete. The
+protected historical materializer is unchanged. The Action keeps its v0.6.0
+one-release-lag pin; downstream re-pins require their own applicable authority.
 
 ## 2026-10-08: the last approvals land
 

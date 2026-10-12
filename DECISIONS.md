@@ -9367,7 +9367,39 @@ expectations and conftest's default closure are unchanged.
 
 The independent AI source review of the earlier packet requested changes.
 This revision addresses stale helper constants and the assertion-only mutant
-receipt oracle; its new remote CI, independent follow-up source review and
-standard/D-088/imported-helper-targeted cost disposition are pending. Historical
-#358/#351 costs and earlier mutation totals are not validation of this source.
-PR362 remains draft; this entry is neither a merge nor a held-out freeze.
+receipt oracle. Candidate `0d6c5ec490c02e0d862e5bbff9bb2b8b593ebc11`
+has a bounded independent AI follow-up dated 2026-10-11. That static review
+found no necessary further change within the correction; its exact source
+bytes and retained limits are recorded in the preparation source-review report,
+SHA256 `7bd3f0ace96b1f9ace1c370773a4ccc910dfd569c54accd18f632f54acd583c3`.
+Final-candidate CI `38090723918` and qualification `38090724037`
+are accounted. Raw full CI still fails only expected pinned-tag parity before
+the new tag exists; two existing macOS performance skips remain disclosed.
+The seven fixed Python first-attempt batches account for 4,271 unique pairs /
+8,542 arms against main35. All 4,139 both-analyzed pairs preserve their full
+written finding arrays, counts and verdicts (3,595 pass/pass, 544 block/block).
+Candidate input/analysis errors are 132 versus 105 baseline errors; 27 additional
+pass/error pairs are lost analyzed coverage, not detector improvement. Bounded
+source proofs retain each error, including nonregular/byte refusals and inherited
+stand-in, importer, conftest and opaque-boundary limits. The first runtime caller,
+path and unrecorded budget counts remain UNKNOWN. Legacy input integrity is not
+certified; confident legacy-integrity pairs remain zero.
+
+The complete combined candidate/main35 process-cost record has paired delta
+median/p95 +2.4744/+7.4800 seconds for all 4,271 attempts and +2.4827/+7.4827
+seconds for the 4,139 both-analyzed pairs. Exact full outcome, repository, host
+and overlapping standard/D-088/targeted populations are retained in cost JSON
+SHA256 `33101549b7c856b1011984e3bfe2f84af41b2234fb1061282a5c71dcd64872fc`.
+These are descriptive CLI elapsed costs of the combined candidate, not a #357
+causal measurement. Python0-5 used recorded max_parallel2; Python6 and JS0-2
+used max_parallel6. Cache/contention and scheduling effects remain unmeasured.
+Historical #358/#351 costs and earlier mutation totals do not validate this
+source. The complete 1,800-pair JS comparison uses original v0.6.0 as a separate
+baseline and is registered in-sample/nonblind, not held-out FP validation.
+
+Protected text, the four proposed #363 fixture labels, final verdict and
+disclosed cost/coverage/noise/risk acceptance remain reserved maintainer
+decisions. This draft records agent source reasoning and actual stored hosted
+receipts; it grants no independent human acceptance, merge, held-out freeze,
+READY status or publication. Main/tag parity, future-tag visitor installation
+and public package-description checks remain publication-phase NOT_RUN.
