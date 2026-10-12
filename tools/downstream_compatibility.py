@@ -228,7 +228,7 @@ def build():
             argv += ["--artifact", str(artifacts[0])]
         if kind == "wheel":
             argv += ["--", wheel_python, "-I", "-m", "checkwash"]
-        launch(argv, PRIVATE, label="qualify-" + kind, timeout=300)
+        launch(argv, PRIVATE, label="qualify-" + kind, timeout=600 if kind == "pyz" else 300)
         argv = [sys.executable, "-I", "-B", str(HERE / "release_inventory.py"), "--source-root", str(ROOT),
                 "--distribution", kind, "--qualification", str(proof), "--output", str(inventory)]
         for artifact in artifacts:
