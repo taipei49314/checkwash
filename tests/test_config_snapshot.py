@@ -116,8 +116,11 @@ def test_worktree_bytes_cannot_supply_a_frozen_config_target(repo):
 
 @pytest.mark.parametrize("broken_side", ["before", "after"])
 def test_one_sides_target_absence_cannot_borrow_the_other_sides_bytes(repo, broken_side):
-    valid = linked()
-    missing = {"tests/pytest.ini": valid["tests/pytest.ini"]}
+    # Keep the target's parent directory present on both sides. This isolates
+    # missing-target refusal from the separately covered missing-ancestor case.
+    valid = {**linked(), "shared/keep.txt": ("100644", b"owned parent\n")}
+    missing = {"tests/pytest.ini": valid["tests/pytest.ini"],
+               "shared/keep.txt": valid["shared/keep.txt"]}
     base = commit(repo, missing if broken_side == "before" else valid)
     head = commit(repo, missing if broken_side == "after" else valid, base)
     with pytest.raises(EngineError, match="target is not one regular blob") as caught:
@@ -325,8 +328,12 @@ def test_known_case_shape_unchanged_nested_alias_reads_config_not_python_alias(r
               "requirements/sync.py": ("100644", b"VALUE = 1\n"),
               "setup.cfg": ("100644", b"[tool:pytest]\npythonpath=src\n"),
               "src/billing.py": ("100644", b"def total(): return 1\n"),
+              "spare/billing.py": ("100644", b"def total(): return 1\n"),
               "tests/test_total.py": ("100644", b"from billing import total\ndef test_total():\n    assert total() == 1\n")}
-    after = {**before, "setup.cfg": ("100644", b"[metadata]\nname=owned\n"),
+    # An unchanged competing provider and harmless edit require the legacy
+    # consumer's inventory; neither changes the selected src/billing.py.
+    after = {**before, "src/billing.py": ("100644", b"VERSION = 1\ndef total(): return 1\n"),
+             "setup.cfg": ("100644", b"[metadata]\nname=owned\n"),
              "pytest.ini": ("100644", b"[pytest]\npythonpath=src\n")}
     _base, _head, view, evidence, changes = paired(repo, before, after)
     assert "requirements/pyproject.toml" not in evidence.changes
@@ -429,7 +436,7 @@ def test_nonrecognized_config_falls_back_to_original_source_instead_of_fake_abse
 
 def test_generic_python_alias_remains_rejected_during_shadow_analysis(repo):
     before = subject_tree()
-    before["tests/alias.py"] = ("120000", b"test_total.py")
+    before["tests/test_alias.py"] = ("120000", b"test_total.py")
     after = {**before, "settings/current.txt": ("100644", b"[pytest]\npythonpath=shadow src\n")}
     _base, _head, view, evidence, changes = paired(repo, before, after)
     with pytest.raises(EngineError, match="nonregular"):
