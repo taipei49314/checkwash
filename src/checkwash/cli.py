@@ -17,6 +17,7 @@ import os
 import sys
 
 from checkwash import __version__
+from checkwash.change import EngineError
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
 from checkwash.config import SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
@@ -554,7 +555,10 @@ def main(argv: list[str] | None = None) -> int:
         # Exit 1 means "block" (SPEC §9); an unhandled traceback exiting 1
         # is indistinguishable from a real finding for CI (confirmed
         # red-team finding). Engine errors are always 2.
-        write_text(f"checkwash engine error: {type(exc).__name__}: {exc}\n", sys.stderr)
+        detail = (exc.standin_step_diagnostic
+                  if isinstance(exc, EngineError) and exc.standin_step_diagnostic is not None
+                  else str(exc))
+        write_text(f"checkwash engine error: {type(exc).__name__}: {detail}\n", sys.stderr)
         return 2
 
 

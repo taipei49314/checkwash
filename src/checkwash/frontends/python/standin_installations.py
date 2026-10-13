@@ -423,18 +423,33 @@ class _Trace:
             return False
         return self.context.contains(target, self.side)
 
-    def _step(self):
+    def _step(self, module: _Module | None = None, qualname: str = "",
+              phase: str = "legacy") -> None:
         self.steps += 1
         self.budget[0] += 1
-        if self.steps > 20_000 or self.budget[0] > _MAX_ANALYSIS_STEPS:
-            raise EngineError("stand-in execution proof exceeds the source step limit")
+        trace_exceeded = self.steps > 20_000
+        shared_exceeded = self.budget[0] > _MAX_ANALYSIS_STEPS
+        if trace_exceeded or shared_exceeded:
+            exceeded = "trace+shared" if trace_exceeded and shared_exceeded else (
+                "trace" if trace_exceeded else "shared"
+            )
+            side = "before" if self.side == 0 else "after" if self.side == 1 else "<unknown>"
+            path = module.path if module is not None else "<unknown>"
+            failure = EngineError("stand-in execution proof exceeds the source step limit")
+            failure.standin_step_diagnostic = (
+                f"{failure}: exceeded={exceeded}, trace_steps={self.steps}, trace_limit=20000, "
+                f"shared_steps={self.budget[0]}, shared_limit={_MAX_ANALYSIS_STEPS}, "
+                f"phase={phase!r}, path={path!r}, requested_side={side!r}, "
+                f"unit={qualname!r}"
+            )
+            raise failure
 
     def effect(self, target, kind="attribute"):
         return frozenset(e for (name, k), e in self.active.items()
                          if k == kind and (name == target or kind == "module" and target.startswith(name + ".")))
 
     def expression(self, node, module, env, qualname, *, native_setattr=True):
-        self._step()
+        self._step(module, qualname, 'expression')
         if node is None or self.failed_assertion:
             return _Value()
         if isinstance(node, ast.Name):
@@ -506,7 +521,7 @@ class _Trace:
             while pending:
                 child = pending.pop()
                 if isinstance(child, ast.BinOp):
-                    self._step()
+                    self._step(module, qualname, 'binary_expression')
                     if not self.failed_assertion:
                         pending.append(child.right)
                         pending.append(child.left)
@@ -703,7 +718,7 @@ class _Trace:
         for index, node in enumerate(statements):
             if self.failed_assertion:
                 return _Value()
-            self._step()
+            self._step(module, qualname, 'block')
             previous = statements[index - 1] if index else None
             if isinstance(node, ast.Import):
                 for alias in node.names:

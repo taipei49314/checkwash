@@ -16,4 +16,6 @@ class FileChange:
 
 
 class EngineError(Exception):
-    pass
+    # Only stand-in step-limit failures attach this finite source diagnostic.
+    # Keep the legacy exception string and all other error handling unchanged.
+    standin_step_diagnostic: str | None = None
