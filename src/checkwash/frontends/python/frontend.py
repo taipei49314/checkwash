@@ -18,7 +18,7 @@ from dataclasses import dataclass, field, replace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
-from checkwash.frontends.python.environment_obligations import obligation_evidence
+from checkwash.frontends.python.environment_obligations import obligation_counts, obligation_evidence
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
 from checkwash.frontends.python.runtime_controls import runtime_controls
@@ -3007,6 +3007,7 @@ def _collect_unit(
     dead = _unreachable_ids(func, fixtures, lambda stmt: outcome_of(stmt) is not None, attrs)
     guards = _skip_call_guards(func, text)
     environment_obligations = obligation_evidence(func, off)
+    environment_counts = obligation_counts(func, off)
     receiver_names: frozenset[str] | None = None
     _unparse_memo: dict[int, str] = {}
     _refs_memo: dict[int, tuple[str, ...]] = {}
@@ -3121,6 +3122,7 @@ def _collect_unit(
                     unconditional_obligation=environment_obligations.get(id(node), (False, None, None))[0],
                     environment_guard=environment_obligations.get(id(node), (False, None, None))[1],
                     environment_guard_span=environment_obligations.get(id(node), (False, None, None))[2],
+                    environment_obligation_count=environment_counts.get(id(node)),
                 )
             )
             counter += 1

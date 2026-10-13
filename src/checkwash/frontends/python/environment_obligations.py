@@ -9,10 +9,12 @@ import ast
 from typing import Protocol, TypeAlias
 
 from checkwash.ir.astutil import stable_dump
+from checkwash.ir.model import normalize_text
 
 
 ObligationEvidence: TypeAlias = tuple[bool, str | None, tuple[int, int] | None]
 ObligationKey: TypeAlias = tuple[int, str]
+CountEvidence: TypeAlias = tuple[int, int, str | None, tuple[int, int] | None]
 
 
 class EnvironmentOffsets(Protocol):
@@ -156,4 +158,80 @@ def obligation_evidence(
             if (isinstance(assertion, ast.Assert) and id(assertion) in out
                     and keys[id(assertion)] in unconditional):
                 out[id(assertion)] = (True, None, None)
+    return out
+
+
+def obligation_counts(
+    func: ast.FunctionDef | ast.AsyncFunctionDef, offsets: EnvironmentOffsets,
+) -> dict[int, CountEvidence]:
+    """Minimum syntactic evaluations in the same finite regions/epochs.
+
+    Source normalization requires neither expression parsing nor dumping.
+    Counts describe validation attempts conditional on reaching the region;
+    they make no assertion about operand purity or successful completion.
+    """
+    eligible = any(isinstance(statement, ast.If) and _environment_test(statement.test)
+                   for statement in func.body)
+    enabled = eligible and offsets._environment_standard_os is True
+    members: dict[int, ObligationKey] = {}
+    counts: dict[ObligationKey, int] = {}
+    guards: dict[ObligationKey, tuple[str, tuple[int, int]]] = {}
+    pending: ast.If | bool | None = None
+    epoch = 0
+
+    def record(node: ast.Assert, guard: ast.If | None) -> ObligationKey:
+        key = (epoch, normalize_text(offsets.seg(node)))
+        members[id(node)] = key
+        counts.setdefault(key, 0)
+        if guard is not None:
+            guards.setdefault(key, (offsets.seg(guard.test), offsets.span(guard.test)))
+        return key
+
+    for statement in func.body:
+        if isinstance(statement, ast.Assert):
+            if pending is None:
+                key = record(statement, None)
+                counts[key] += 1
+            elif isinstance(pending, ast.If):
+                record(statement, pending)
+            continue
+        if isinstance(statement, ast.Return):
+            break
+        if isinstance(statement, ast.If):
+            if pending is not None or not enabled or not _environment_test(statement.test):
+                pending = False
+                continue
+            if (len(statement.body) == 1 and isinstance(statement.body[0], ast.Return)
+                    and statement.body[0].value is None and not statement.orelse):
+                pending = statement
+                continue
+            if not all(isinstance(item, (ast.Assert, ast.Pass))
+                       for item in statement.body + statement.orelse):
+                pending = False
+                continue
+            arms: list[dict[ObligationKey, int]] = []
+            for arm in (statement.body, statement.orelse):
+                arm_counts: dict[ObligationKey, int] = {}
+                for item in arm:
+                    if isinstance(item, ast.Assert):
+                        key = record(item, statement)
+                        arm_counts[key] = arm_counts.get(key, 0) + 1
+                arms.append(arm_counts)
+            for key in arms[0].keys() | arms[1].keys():
+                counts[key] += min(arms[0].get(key, 0), arms[1].get(key, 0))
+            continue
+        if isinstance(statement, ast.Pass) or (
+                isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant)
+                and isinstance(statement.value.value, str)):
+            continue
+        epoch += 1
+        if pending is not None or isinstance(statement, (
+                ast.For, ast.AsyncFor, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.Match)):
+            pending = False
+    out: dict[int, CountEvidence] = {}
+    for node_id, key in members.items():
+        guard = guards.get(key)
+        out[node_id] = (key[0], counts[key],
+                        guard[0] if guard is not None else None,
+                        guard[1] if guard is not None else None)
     return out

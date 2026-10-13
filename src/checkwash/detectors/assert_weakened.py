@@ -15,7 +15,7 @@ from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir import predicate as P
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import asserted_subject, same_expr
-from checkwash.ir.model import IR, Assertion, judged_as_test, normalize_text
+from checkwash.ir.model import IR, Assertion, Unit, judged_as_test, normalize_text
 from checkwash.ir import strength as S
 from checkwash.ir.strength import name_of
 
@@ -107,6 +107,88 @@ def _keyed_message(qualname: str, relation: str, b: Assertion, a: Assertion) -> 
             f"(predicate {old} -> {new})")
 
 
+def _environment_count_witness(
+    value: object,
+) -> tuple[int, int, str | None, tuple[int, int] | None] | None:
+    """Public optional metadata: reject malformed values as unknown evidence."""
+    if not isinstance(value, (tuple, list)) or len(value) != 4:
+        return None
+    epoch, count, guard, span = value
+    if type(epoch) is not int or type(count) is not int or epoch < 0 or count < 0:
+        return None
+    if guard is None and span is None:
+        return epoch, count, None, None
+    if not isinstance(guard, str) or not isinstance(span, (tuple, list)) or len(span) != 2:
+        return None
+    start, end = span
+    if type(start) is not int or type(end) is not int or start < 0 or end < start:
+        return None
+    return epoch, count, guard, (start, end)
+
+
+def _environment_count_losses(
+    unit: Unit,
+) -> tuple[list[tuple[Assertion, str, tuple[int, int], int]], set[tuple[str, str]]]:
+    """Spend each matched after group's minimum count once, in pair order.
+
+    Unmatched removed assertions remain the removal detector's obligation.
+    Legacy payloads have no count witness and retain the existing pair rule.
+    """
+    if unit.before is None or unit.after is None or unit.delta is None:
+        return [], set()
+    old = {a.id: a for a in unit.before.assertions}
+    new = {a.id: a for a in unit.after.assertions}
+    groups: dict[tuple[int, str], list[tuple[Assertion, Assertion]]] = {}
+    available: dict[tuple[int, str], int] = {}
+    for pair in unit.delta.assertion_pairs:
+        b, a = old.get(pair.before_id), new.get(pair.after_id)
+        if b is None or a is None or b.inherited or a.inherited or b.trivial:
+            continue
+        bw = _environment_count_witness(b.environment_obligation_count)
+        aw = _environment_count_witness(a.environment_obligation_count)
+        if bw is None or aw is None or normalize_text(b.text) != normalize_text(a.text):
+            continue
+        key = (bw[0], normalize_text(b.text))
+        groups.setdefault(key, []).append((b, a))
+        available.setdefault((aw[0], normalize_text(a.text)), aw[1])
+    losses: list[tuple[Assertion, str, tuple[int, int], int]] = []
+    handled: set[tuple[str, str]] = set()
+    for members in groups.values():
+        witness = _environment_count_witness(members[0][0].environment_obligation_count)
+        if witness is None:
+            continue
+        # A grouped count is repeated on each member, never added per copy.
+        demand = min(witness[1], len(members))
+        pools: list[tuple[int, str]] = []
+        seen_pools: set[tuple[int, str]] = set()
+        cause: tuple[str, tuple[int, int]] | None = None
+        for b, a in members:
+            aw = _environment_count_witness(a.environment_obligation_count)
+            if aw is None:
+                continue
+            pool = (aw[0], normalize_text(a.text))
+            if pool not in seen_pools:
+                seen_pools.add(pool)
+                pools.append(pool)
+            if cause is None and aw[2] is not None and aw[3] is not None:
+                cause = (aw[2], aw[3])
+        if cause is None:
+            # Still debit direct credits: later old epochs cannot borrow them.
+            for pool in pools:
+                used = min(demand, available[pool])
+                available[pool] -= used
+                demand -= used
+            continue
+        handled.update((b.id, a.id) for b, a in members)
+        for pool in pools:
+            used = min(demand, available[pool])
+            available[pool] -= used
+            demand -= used
+        if demand:
+            losses.append((members[0][0], cause[0], cause[1], demand))
+    return losses, handled
+
+
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     # A delta between two *inherited* assertions originates in a shared helper
@@ -125,12 +207,27 @@ def detect(ir: IR) -> list[Finding]:
                 continue
             b_by_id = {a.id: a for a in unit.before.assertions}
             a_by_id = {a.id: a for a in unit.after.assertions}
+            count_handled: set[tuple[str, str]] = set()
+            if file.path.endswith(".py"):
+                count_losses, count_handled = _environment_count_losses(unit)
+                for b, guard, span, count in count_losses:
+                    findings.append(Finding(
+                        rule="ASSERT_WEAKENED", severity="warn",
+                        message=(f"{unit.qualname}: {count} existing assertion evaluation(s) now depend "
+                                 f"on environment guard ({guard})"),
+                        path=file.path, unit=unit.qualname,
+                        before=Evidence(text=b.text, span=b.span),
+                        after=Evidence(text=guard, span=span),
+                        fingerprint=make_fingerprint(
+                            "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b)),
+                    ))
             for pair in unit.delta.assertion_pairs:
                 b = b_by_id.get(pair.before_id)
                 a = a_by_id.get(pair.after_id)
                 if b is None or a is None:
                     continue
-                if (file.path.endswith(".py") and b.unconditional_obligation
+                if ((b.id, a.id) not in count_handled
+                        and file.path.endswith(".py") and b.unconditional_obligation
                         and not b.inherited and not a.inherited and not b.trivial
                         and a.environment_guard and a.environment_guard_span is not None
                         and normalize_text(b.text) == normalize_text(a.text)):

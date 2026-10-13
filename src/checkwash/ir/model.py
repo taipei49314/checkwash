@@ -117,6 +117,10 @@ class Assertion:
     unconditional_obligation: bool = False
     environment_guard: str | None = None
     environment_guard_span: tuple[int, int] | None = None
+    # (binding epoch, minimum syntactic evaluations, actual group guard/span).
+    # Credit belongs to the group, never independently to each assertion copy.
+    # None is unknown/legacy evidence, not a count of zero.
+    environment_obligation_count: tuple[int, int, str | None, tuple[int, int] | None] | None = None
 
 
 @dataclass
