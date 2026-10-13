@@ -10,7 +10,7 @@ import posixpath
 import re
 from collections.abc import Callable, Mapping
 from types import MappingProxyType
-from typing import Literal
+from typing import Literal, cast
 
 from checkwash.change import EngineError
 from checkwash.frontends.python.conftest_controls import is_collection_control
@@ -24,6 +24,7 @@ from checkwash.gitio.snapshot import (
     MAX_BATCH_BYTES,
     MAX_INVENTORY_PATHS,
     MAX_SOURCE_BYTES,
+    ConfigSource,
 )
 from checkwash.roles import _is_runner_script, _runner_shape, collectable
 from checkwash.runner_references import ReferenceClosure, reference_closure
@@ -198,7 +199,10 @@ def defer_optional_sources(*, evidence: PairedPytestConfigs, initial: set[str],
         data = config_sources["after"].get(path) if path in initial_configs else snapshot.get(path)
         if not isinstance(data, bytes):
             raise EngineError("runtime-shadow snapshot read failed: " + path)
-        link_bytes = evidence.records["after"][path].link_bytes if path in initial_configs else 0
+        link_bytes = (
+            cast("ConfigSource", evidence.records["after"][path]).link_bytes
+            if path in initial_configs else 0
+        )
         ledger.source("after", path, len(data), link_bytes)
 
     acquired: dict[tuple[str, str], bytes] = {}
