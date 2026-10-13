@@ -16,10 +16,11 @@ jobs:
     env:
       COLLECTOR_SOURCE_SHA: 8ae5c791ae9e50cfddb9ae950a18a2d23db12e1c
       OBSERVER_ENGINE_SHA: fa11d5f305cb2cce77f9e389939d0b607a78d908
-      OWNED_RUN_ROOT: ${{ runner.temp }}/checkwash-owned-env-fa11
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Persist expected24 before checkout, network acquisition or setup
+        env:
+          OWNED_RUN_ROOT: ${{ runner.temp }}/checkwash-owned-env-fa11
         shell: bash
         run: |
           set -euo pipefail
@@ -95,6 +96,7 @@ jobs:
         shell: bash
         env:
           HOSTED_PYTHON: ${{ steps.measurement-python.outputs.python-path }}
+          OWNED_RUN_ROOT: ${{ runner.temp }}/checkwash-owned-env-fa11
         run: |
           set -euo pipefail
           "$HOSTED_PYTHON" -I -B -X utf8 - <<'PY'
@@ -109,7 +111,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: owned-env-fa11-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ env.OWNED_RUN_ROOT }}
+          path: ${{ runner.temp }}/checkwash-owned-env-fa11
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 14
