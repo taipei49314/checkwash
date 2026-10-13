@@ -1,0 +1,115 @@
+# SOURCE_ONLY / NOT_PROMOTED / NOT_RUN. Replace 8ae5c791ae9e50cfddb9ae950a18a2d23db12e1c only after review.
+# Future reviewed source branch: fix/env-guard-owned-evidence-v1. No workflow_dispatch.
+name: temporary owned environment raw evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  owned-raw24:
+    if: github.head_ref == 'fix/env-guard-owned-evidence-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      COLLECTOR_SOURCE_SHA: 8ae5c791ae9e50cfddb9ae950a18a2d23db12e1c
+      OBSERVER_ENGINE_SHA: fa11d5f305cb2cce77f9e389939d0b607a78d908
+      OWNED_RUN_ROOT: ${{ runner.temp }}/checkwash-owned-env-fa11
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Persist expected24 before checkout, network acquisition or setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 -I -B -X utf8 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path(os.environ['OWNED_RUN_ROOT'])
+          root.mkdir(exist_ok=False)
+          prep = root / 'prep'
+          prep.mkdir()
+          ids = [
+              "source/PYENVWRAP/before/UNSET",
+              "source/PYENVWRAP/before/SET1",
+              "source/PYENVWRAP/after/UNSET",
+              "source/PYENVWRAP/after/SET1",
+              "engine/PYENVWRAP/UNSET",
+              "engine/PYENVWRAP/SET1",
+              "source/PYENVRETURN/before/UNSET",
+              "source/PYENVRETURN/before/SET1",
+              "source/PYENVRETURN/after/UNSET",
+              "source/PYENVRETURN/after/SET1",
+              "engine/PYENVRETURN/UNSET",
+              "engine/PYENVRETURN/SET1",
+              "source/PYENV_BOTH_BRANCHES/before/UNSET",
+              "source/PYENV_BOTH_BRANCHES/before/SET1",
+              "source/PYENV_BOTH_BRANCHES/after/UNSET",
+              "source/PYENV_BOTH_BRANCHES/after/SET1",
+              "engine/PYENV_BOTH_BRANCHES/UNSET",
+              "engine/PYENV_BOTH_BRANCHES/SET1",
+              "source/JSENVWRAP/before/UNSET",
+              "source/JSENVWRAP/before/SET1",
+              "source/JSENVWRAP/after/UNSET",
+              "source/JSENVWRAP/after/SET1",
+              "engine/JSENVWRAP/UNSET",
+              "engine/JSENVWRAP/SET1",
+          ]
+          def save(name, value):
+              with (prep / name).open('x', encoding='utf-8') as output:
+                  output.write(json.dumps(value, sort_keys=True, indent=2) + '\n')
+                  output.flush()
+                  os.fsync(output.fileno())
+              descriptor = os.open(prep, os.O_RDONLY | os.O_DIRECTORY)
+              try:
+                  os.fsync(descriptor)
+              finally:
+                  os.close(descriptor)
+          save('expected24.json', ids)
+          save('prep-missing.json', [{'slot_id': value, 'state': 'NOT_YET_ATTEMPTED', 'missing_reason': 'PREP_OR_CAPTURE_LEDGER_REQUIRED'} for value in ids])
+          save('hosted.json', {key: os.environ.get(key) for key in ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_JOB', 'GITHUB_SHA', 'GITHUB_REPOSITORY', 'PR_HEAD_SHA', 'COLLECTOR_SOURCE_SHA', 'OBSERVER_ENGINE_SHA')})
+          release = pathlib.Path('/etc/os-release').read_bytes()
+          (prep / 'os-release.raw').write_bytes(release)
+          save('image.json', {'runner': {key: os.environ.get(key) for key in ('ImageOS', 'ImageVersion', 'RUNNER_OS', 'RUNNER_ARCH', 'RUNNER_NAME')}, 'os_release_sha256': hashlib.sha256(release).hexdigest(), 'bootstrap_python': os.path.realpath('/usr/bin/python3')})
+          if not all(os.environ.get(key) for key in ('ImageOS', 'ImageVersion', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT')) or os.environ.get('RUNNER_OS') != 'Linux' or os.environ.get('RUNNER_ARCH') != 'X64':
+              raise SystemExit('exact hosted Linux X64 image/run metadata required')
+          if len(os.environ['COLLECTOR_SOURCE_SHA']) != 40 or any(c not in '0123456789abcdef' for c in os.environ['COLLECTOR_SOURCE_SHA']):
+              raise SystemExit('reviewed collector source commit is still unbound')
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.COLLECTOR_SOURCE_SHA }}
+          persist-credentials: false
+          path: collector
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.OBSERVER_ENGINE_SHA }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: observer
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: measurement-python
+        with:
+          python-version: '3.12.15'
+      - name: Verify reviewed builder bytes; prepare and capture one original24-slot run
+        shell: bash
+        env:
+          HOSTED_PYTHON: ${{ steps.measurement-python.outputs.python-path }}
+        run: |
+          set -euo pipefail
+          "$HOSTED_PYTHON" -I -B -X utf8 - <<'PY'
+          import hashlib, os, pathlib, sys
+          script = pathlib.Path('collector/tools/owned_env_evidence/preflight.py').absolute()
+          if script.is_symlink() or hashlib.sha256(script.read_bytes()).hexdigest() != '7ad8a8a98cd40daec81737666a8599849f9442d2ff97f5c17ffeeeac1407d3f9':
+              raise SystemExit('reviewed builder byte pin mismatch')
+          os.execv(sys.executable, [sys.executable, '-I', '-B', '-X', 'utf8', str(script), str(pathlib.Path('collector').absolute()), str(pathlib.Path('observer').absolute()), os.environ['OWNED_RUN_ROOT']])
+          PY
+      - name: Retain original prep and capture partial bytes even on failure
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: owned-env-fa11-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.OWNED_RUN_ROOT }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
