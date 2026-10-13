@@ -28,7 +28,7 @@ jobs:
           path: baseline
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: df543dafd4ad19846b3c20f6a6c0aefce21060d1
+          ref: 744496a73fd61bd5c3175c527f3da68a4c4fe989
           persist-credentials: false
           path: candidate
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97

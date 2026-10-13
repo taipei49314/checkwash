@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 REFS = {"baseline": "2fd330d8e17548124f0630ccc3880561e6a05c2a",
-        "candidate": "df543dafd4ad19846b3c20f6a6c0aefce21060d1"}
+        "candidate": "744496a73fd61bd5c3175c527f3da68a4c4fe989"}
 COMMON = ["src/checkwash/detectors/assert_weakened.py",
           "src/checkwash/frontends/python/frontend.py", "src/checkwash/ir/model.py"]
 NEW = "src/checkwash/frontends/python/environment_obligations.py"
@@ -142,7 +142,7 @@ try:
         observed["package_tree"] = git(repo, "rev-parse", "HEAD:src/checkwash").decode().strip()
         observed["package_files"] = sum(path.startswith("src/checkwash/") for path in entries)
         if side == "candidate" and (observed["package_files"] != 209 or observed["package_tree"] !=
-                                    "1996e7e79b08aa19da1ea2b26933556671090de9"):
+                                    "868084f616ff63be2d99129344937e3b3f0e34e3"):
             raise RuntimeError("fixed candidate package identity differs")
         for path in COMMON + [NEW]:
             if side == "baseline" and path == NEW:
