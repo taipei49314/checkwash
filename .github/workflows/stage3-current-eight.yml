@@ -1,0 +1,48 @@
+# BLOCKED SOURCE DRAFT: root must freeze qualified diagnostic candidate/catalog.
+name: Stage3 current candidate eight input raw measurement
+on:
+  pull_request:
+    paths:
+      - .github/workflows/stage3-current-eight.yml
+      - tools/stage3_current_eight.py
+      - tools/stage3_current_eight_catalog.json
+permissions:
+  contents: read
+jobs:
+  candidate-only-32:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'measure/standin-eight-diag-v1' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CANDIDATE_SHA: 744496a73fd61bd5c3175c527f3da68a4c4fe989
+      DIAGNOSTIC_SHA: ${{ github.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.DIAGNOSTIC_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: diagnostic
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Reject unfrozen candidate before acquisition
+        run: python -I -B diagnostic/tools/stage3_current_eight.py --preflight
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: candidate
+      - name: Capture candidate32 using original inputs and primitives
+        run: python -I -B diagnostic/tools/stage3_current_eight.py
+      - name: Read back retained native observations
+        if: always()
+        run: python -I -B diagnostic/tools/stage3_current_eight.py --validate
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: stage3-current-eight-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: stage3-current-eight-evidence
+          if-no-files-found: error
