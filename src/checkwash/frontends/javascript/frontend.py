@@ -21,6 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
+from checkwash.frontends.javascript.direct_return import DirectReturns
 from checkwash.frontends.javascript.exception_handlers import swallowing_handlers
 from checkwash.frontends.javascript.literals import (
     keyword_operand,
@@ -2127,6 +2128,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     text = _decoded(data)
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
+    direct_returns = DirectReturns(bindings, code)
     declarations = _declarations(text, code, bindings)
     scanned = [d for d in declarations if d.unit and not d.table and d.name is not None]
     test_body_starts = {d.callback[0] for d in scanned if d.callback is not None}
@@ -2206,6 +2208,9 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     function_starts = [first for first, _last in functions]
     arrow_starts = [first for first, _last in arrows]
     units: list[ParsedUnit] = []
+    handler_assertions: list[Assertion] = []
+    unreachable_assertion_spans: set[tuple[int, int]] = set()
+    unreachable_unjudged_assertion_spans: set[tuple[int, int]] = set()
     for declaration in scanned:
         name = declaration.name
         callback = declaration.callback
@@ -2331,6 +2336,17 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
         covered = [assertion.span for assertion in assertions]
         assertions.extend(_candidate_assertions(text, code, bindings, start, end, covered, owned))
         assertions.sort(key=lambda assertion: assertion.span)
+        # #363 retains raw lexical callback oracles, even when a parent return
+        # makes registration unreachable. Unit liveness is a separate channel.
+        handler_assertions.extend(assertions)
+        cutoff = (direct_returns.cutoff(start, end)
+                  if callback is not None and declaration.call is not None else None)
+        if cutoff is not None:
+            unreachable_assertion_spans.update(a.span for a in assertions
+                                               if a.span[0] >= cutoff and a.strength is not None)
+            unreachable_unjudged_assertion_spans.update(a.span for a in assertions
+                                                        if a.span[0] >= cutoff and a.strength is None)
+            assertions = [a for a in assertions if a.span[0] < cutoff]
         for assertion_index, assertion in enumerate(assertions):
             assertion.id = f"a{assertion_index}"
         imperative = _imperative_skips(text, code, bindings, callback, start, end, owned)
@@ -2347,6 +2363,8 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     # as a test or a suite; a bare `.test(value)` call is a method.
     declares_tests = bool(units) or any(
         (d.callback or _test_body(text, code, bindings, d)) is not None for d in declarations)
-    handlers = swallowing_handlers(bindings, [a for unit in units for a in unit.side.assertions])
+    handlers = swallowing_handlers(bindings, handler_assertions)
     return ParsedFile(parse_ok=True, units=units, focus=focus, declares_tests=declares_tests,
-                      swallowing_handlers=handlers)
+                      swallowing_handlers=handlers,
+                      unreachable_assertion_spans=tuple(sorted(unreachable_assertion_spans)),
+                      unreachable_unjudged_assertion_spans=tuple(sorted(unreachable_unjudged_assertion_spans)))

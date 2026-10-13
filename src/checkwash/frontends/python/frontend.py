@@ -210,6 +210,12 @@ class ParsedFile:
     # (name, span, text) -> that conftest's path. Its text and span are in
     # that file, so a report locates it there, not in this one.
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = field(default_factory=dict)
+    # JS-only internal coverage evidence: already resolved, known-strength
+    # assertions omitted solely after a proved direct return. Not an IR field.
+    unreachable_assertion_spans: tuple[tuple[int, int], ...] = ()
+    # Unknown-strength dead candidates still keep their existing coverage
+    # reason. These spans must never count as represented strong assertions.
+    unreachable_unjudged_assertion_spans: tuple[tuple[int, int], ...] = ()
 
 
 # One parse's walks of a subtree (#344). A unit's tree is walked by several
