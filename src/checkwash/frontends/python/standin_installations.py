@@ -713,13 +713,50 @@ class _Trace:
                 for dest, source in zip(target.elts, replacement.elts):
                     self.assign(dest, self.expression(source, module, env, qualname), source, node, module, env, qualname)
 
+    @staticmethod
+    def _literal_binding_run(statements: Sequence[ast.stmt], start: int,
+                             module: _Module, env: dict[str, _Value]) -> tuple[list[str], int]:
+        """At most 64 direct module stores with identical empty-value semantics.
+
+        A captured import/current alias requires assign's installation proof;
+        all other statement and expression shapes remain interpreter work.
+        """
+        names: list[str] = []
+        end = start
+        while end < min(start + 64, len(statements)):
+            node = statements[end]
+            if (not isinstance(node, ast.Assign) or len(node.targets) != 1
+                    or not isinstance(node.targets[0], ast.Name)
+                    or not isinstance(node.value, ast.Constant)):
+                break
+            name = node.targets[0].id
+            bound = env.get(name)
+            if (bound is not None and bound.alias
+                    or module.baseline_imports.get(("", name))):
+                break
+            names.append(name)
+            end += 1
+        return names, end
+
     def block(self, statements, module, env, qualname, *, native_setattr=True):
         result = _Value()
-        for index, node in enumerate(statements):
+        index = 0
+        while index < len(statements):
+            node = statements[index]
             if self.failed_assertion:
                 return _Value()
+            if not qualname and statements is module.tree.body:
+                names, end = self._literal_binding_run(statements, index, module, env)
+                if len(names) > 1:
+                    # One bounded bulk operation replaces repeated generic
+                    # expression/assign dispatch; every binding is retained.
+                    self._step(module, qualname, 'literal_binding_batch')
+                    env.update(dict.fromkeys(names, _Value()))
+                    index = end
+                    continue
             self._step(module, qualname, 'block')
             previous = statements[index - 1] if index else None
+            index += 1
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     local = alias.asname or alias.name.split(".")[0]
