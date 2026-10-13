@@ -41,9 +41,31 @@ def _parse(data):
     tree = parse_text(text)
     if tree is None:
         return None
-    if sum(1 for _ in ast.walk(tree)) > 30_000:
-        raise EngineError("subject replacement source exceeds the syntax node limit")
+    nodes = sum(1 for _ in ast.walk(tree))
+    if nodes > 30_000:
+        error = EngineError("subject replacement source exceeds the syntax node limit")
+        error.source_refusal_diagnostic = {
+            "layer": "subject_replacement", "reason": "syntax_node_limit",
+            "path": None, "requested_side": None, "unit": None,
+            "pair_before_id": None, "pair_after_id": None, "trigger": None,
+            "source_bytes": len(data), "observed_nodes": nodes, "node_limit": 30_000,
+        }
+        raise error
     return tree
+
+
+def _parse_with_context(data, *, path, side, unit, trigger, pair_ids=None):
+    """Attach caller-known provenance only to the named node refusal."""
+    try:
+        return _parse(data)
+    except EngineError as error:
+        detail = error.source_refusal_diagnostic
+        if (isinstance(detail, dict) and detail.get("layer") == "subject_replacement"
+                and detail.get("reason") == "syntax_node_limit"):
+            detail.update(path=path, requested_side=side, unit=unit, trigger=trigger,
+                          pair_before_id=pair_ids[0] if pair_ids is not None else None,
+                          pair_after_id=pair_ids[1] if pair_ids is not None else None)
+        raise
 
 
 def _bindings(statements):
@@ -477,7 +499,12 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
             after = {a.id: a for a in unit.after.assertions}
             if any(assertion.inherited and assertion.right_literal is None for assertion in after.values()):
                 if trees is None:
-                    trees = (_parse(change.before), _parse(change.after))
+                    trees = (
+                        _parse_with_context(change.before, path=file.path, side="before",
+                                            unit=unit.qualname, trigger="parameterized_inherited"),
+                        _parse_with_context(change.after, path=file.path, side="after",
+                                            unit=unit.qualname, trigger="parameterized_inherited"),
+                    )
                 event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny, inventory)
                 if event is not None:
                     events.append(event)
@@ -501,7 +528,14 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                     if same_callable:
                         continue
                 if trees is None:
-                    trees = (_parse(change.before), _parse(change.after))
+                    trees = (
+                        _parse_with_context(change.before, path=file.path, side="before",
+                                            unit=unit.qualname, trigger="assertion_pair",
+                                            pair_ids=(pair.before_id, pair.after_id)),
+                        _parse_with_context(change.after, path=file.path, side="after",
+                                            unit=unit.qualname, trigger="assertion_pair",
+                                            pair_ids=(pair.before_id, pair.after_id)),
+                    )
                 if any(tree is None for tree in trees):
                     continue
                 old_scope = _assertion_scope(trees[0], unit.qualname, b)

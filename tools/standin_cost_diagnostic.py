@@ -30,8 +30,19 @@ def exception_fact(error):
     frames = traceback.extract_tb(error.__traceback__)
     def rows(items):
         return [{"file": f.filename, "line": f.lineno, "function": f.name} for f in items]
-    return {"type": type(error).__name__, "message": str(error), "traceback": traceback.format_exc(),
+    fact = {"type": type(error).__name__, "message": str(error), "traceback": traceback.format_exc(),
                 "first_frames": rows(frames[:12]), "last_frames": rows(frames[-12:])}
+    detail = getattr(error, "source_refusal_diagnostic", None)
+    if isinstance(detail, dict):
+        # Only named internal scalar facts; never locals, source text or readers.
+        keys = ("layer", "reason", "path", "requested_side", "unit",
+                "pair_before_id", "pair_after_id", "trigger", "source_bytes",
+                "observed_nodes", "node_limit", "revision", "mode", "oid", "request_count")
+        fact["source_refusal_diagnostic"] = {
+            key: detail[key] for key in keys if key in detail
+            and (detail[key] is None or type(detail[key]) in (str, int))
+        }
+    return fact
 
 
 def source_fact(repo, revision, path, dest):

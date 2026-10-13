@@ -153,7 +153,14 @@ class GitSnapshot:
                 continue
             mode, oid, size = entry
             if mode not in {b"100644", b"100755"}:
-                raise EngineError("strict snapshot batch cannot inspect nonregular source")
+                error = EngineError("strict snapshot batch cannot inspect nonregular source")
+                error.source_refusal_diagnostic = {
+                    "layer": "strict_snapshot_batch", "reason": "nonregular_source",
+                    "revision": self._resolved, "path": path,
+                    "mode": mode.decode("ascii"), "oid": oid.decode("ascii"),
+                    "request_count": len(selected),
+                }
+                raise error
             if size > MAX_SOURCE_BYTES:
                 raise EngineError("strict snapshot source exceeds the byte limit")
             size_total += size
