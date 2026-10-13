@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import re
 
 from checkwash.frontends.javascript.bindings import Bindings
+from checkwash.frontends.javascript.literals import keyword_operand
 from checkwash.ir.model import Assertion
 
 _MAX_DEPTH = 32
@@ -32,6 +33,7 @@ class Effects:
     escapes: bool = False
     supported: bool = True
     terminates: bool = False
+    failure_oracle: bool = False
 
 
 class HandlerReader:
@@ -57,6 +59,9 @@ class HandlerReader:
             if scope in boundaries and closing is not None:
                 self.roots.append((opening + 1, closing, scope))
         self.oracles: dict[int, list[int]] = {}
+        # Protected assertions and catch-side failure evidence are different:
+        # a constant passing assertion still remains protected in a try body.
+        self.failure_oracles: dict[int, list[int]] = {}
         self.unclassified: dict[int, list[int]] = {}
         for assertion in assertions:
             index = bisect_left(bindings.token_starts, assertion.span[0])
@@ -66,7 +71,11 @@ class HandlerReader:
                     self.unclassified.setdefault(self.owner(index), []).append(index)
                 elif synchronous:
                     self.oracles.setdefault(self.owner(index), []).append(index)
+                    if not self.passing_literal(assertion, index):
+                        self.failure_oracles.setdefault(self.owner(index), []).append(index)
         for indices in self.oracles.values():
+            indices.sort()
+        for indices in self.failure_oracles.values():
             indices.sort()
         for indices in self.unclassified.values():
             indices.sort()
@@ -141,6 +150,98 @@ class HandlerReader:
             return False
         cursor = self.pairs[cursor] + 1
         return self.chain_synchronous(cursor, end_position)
+
+    def literal_call(self, opening: int, arity: int, end_position: int) -> int | None:
+        """A complete call containing only direct boolean/null operands.
+
+        No extra message arguments or computed expressions are discarded:
+        their evaluation may fail even when the represented predicate passes.
+        The caller bounds the whole assertion to 4096 source characters.
+        """
+        closing = self.pairs.get(opening)
+        if (self.token(opening) != "(" or closing is None
+                or self.tokens[closing][2] > end_position):
+            return None
+        first = cursor = opening + 1
+        count = 0
+        while cursor <= closing:
+            if cursor == closing or self.token(cursor) == ",":
+                if first == cursor:
+                    return closing if cursor == opening + 1 and arity == 0 else None
+                # The shared literal reader also peels TypeScript wrappers.
+                # A new always-pass proof needs less: only keywords and
+                # parentheses, never an ambiguous type/operator tail.
+                if any(self.token(i) not in {"true", "false", "null", "(", ")"}
+                       for i in range(first, cursor)):
+                    return None
+                operand = self.bindings.text[self.tokens[first][1]:self.tokens[cursor - 1][2]]
+                if keyword_operand(operand) not in {"true", "false", "null"}:
+                    return None
+                count += 1
+                if count > arity:
+                    return None
+                first = cursor + 1
+            elif self.token(cursor) in {"(", "[", "{"}:
+                after = self.pairs.get(cursor)
+                if after is None or after >= closing:
+                    return None
+                cursor = after
+            cursor += 1
+        return closing if count == arity else None
+
+    def passing_literal(self, assertion: Assertion, first: int) -> bool:
+        """A narrow proof, not a general JavaScript tautology evaluator.
+
+        Reuse the frontend's resolved API, predicate and polarity. Only true,
+        false and null subjects are read through the existing literal reader,
+        with call tokens additionally restricted to parentheses and keywords;
+        names (including undefined), calls, numbers and strings stay unknown.
+        A failed/unknown proof retains the existing active-catch exemption.
+        """
+        if assertion.span[1] - assertion.span[0] > 4096:
+            return False
+        subject = keyword_operand(assertion.left or "")
+        if subject not in {"true", "false", "null"}:
+            return False
+        predicates = {
+            "is_true": subject == "true", "is_false": subject == "false",
+            "is_null": subject == "null", "is_nullish": subject == "null",
+            "is_undefined": False, "truthy": subject == "true",
+        }
+        if (assertion.predicate not in predicates
+                or predicates[assertion.predicate] != assertion.positive):
+            return False
+        path = [self.token(first)]
+        cursor = first + 1
+        while (step := self.member(cursor)) is not None:
+            name, cursor = step
+            path.append(name)
+        value = self.bindings.callee(".".join(path), self.tokens[first][1])
+        if value.kind in {"expect", "jest_expect"}:
+            subject_end = self.literal_call(cursor, 1, assertion.span[1])
+            if subject_end is None:
+                return False
+            step = self.member(subject_end + 1)
+            if step is not None and step[0] == "not":
+                step = self.member(step[1])
+            if step is None:
+                return False
+            matcher, opening = step
+            arity = {"toBe": 1, "toBeTruthy": 0, "toBeFalsy": 0,
+                     "toBeNull": 0, "toBeUndefined": 0, "toBeDefined": 0}.get(matcher)
+        elif value.kind in {"node", "node_method"}:
+            method = "strictEqual" if value.strict and value.method == "equal" else value.method
+            arity = {"": 1, "ok": 1, "strictEqual": 2}.get(method)
+            opening = cursor
+        elif value.kind in {"chai_assert", "chai_assert_method"}:
+            arity = {"": 1, "ok": 1, "isOk": 1, "isTrue": 1, "isFalse": 1,
+                     "isNull": 1, "isUndefined": 1, "isDefined": 1, "exists": 1,
+                     "strictEqual": 2}.get(value.method)
+            opening = cursor
+        else:
+            return False
+        closing = self.literal_call(opening, arity, assertion.span[1]) if arity is not None else None
+        return closing is not None and self.tokens[closing][2] == assertion.span[1]
 
     @staticmethod
     def contains(indices: list[int], first: int, last: int) -> bool:
@@ -270,7 +371,7 @@ class HandlerReader:
             guarded = self.flow(opening + 1, closing, owner, depth + 1)
             caught = self.flow(catch_opening + 1, catch_closing, owner, depth + 1)
             if (guarded.supported and caught.supported and guarded.oracle
-                    and not caught.oracle and not caught.escapes):
+                    and not caught.failure_oracle and not caught.escapes):
                 self.found.add(first)
             # Nested candidates inherit direct-terminal/literal-branch
             # reachability. Their effects cannot donate safety to this try.
@@ -281,10 +382,11 @@ class HandlerReader:
             return Effects(supported=False), last
         end = self.statement_end(first, last)
         oracle = self.contains(self.oracles.get(owner, []), first, end)
+        failure_oracle = self.contains(self.failure_oracles.get(owner, []), first, end)
         optional = self.contains(self.optional.get(owner, []), first, end)
         unknown = self.contains(self.unclassified.get(owner, []), first, end)
         return Effects(oracle, keyword == "throw", not optional and not unknown,
-                       keyword in {"throw", "return", "break", "continue"}), end
+                       keyword in {"throw", "return", "break", "continue"}, failure_oracle), end
 
     def flow(self, first: int, last: int, owner: int, depth: int = 0,
              collect: bool = False) -> Effects:
@@ -295,6 +397,7 @@ class HandlerReader:
             return self.cache[key]
         cursor = first
         oracle = escapes = terminates = False
+        failure_oracle = False
         supported = True
         while cursor < last:
             if self.token(cursor) == ";":
@@ -302,6 +405,7 @@ class HandlerReader:
                 continue
             effect, after = self.statement(cursor, last, owner, depth, collect)
             oracle |= effect.oracle
+            failure_oracle |= effect.failure_oracle
             escapes |= effect.escapes
             supported &= effect.supported
             if effect.terminates:
@@ -311,7 +415,7 @@ class HandlerReader:
                 supported = False
                 break
             cursor = after
-        result = Effects(oracle, escapes, supported, terminates)
+        result = Effects(oracle, escapes, supported, terminates, failure_oracle)
         if not collect:
             self.cache[key] = result
         return result
