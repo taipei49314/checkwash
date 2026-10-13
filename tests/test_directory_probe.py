@@ -503,7 +503,8 @@ def test_unrelated_malformed_conftest_is_not_acquired_for_alias_proof(repo, monk
 
 
 @pytest.mark.parametrize("mode,data", [("120000", b"missing.py"),
-                                      ("100644", b"#" * (MAX_SOURCE_BYTES + 1))])
+                                      ("100644", b"#" * (MAX_SOURCE_BYTES + 1))],
+                         ids=["nonregular-link", "oversize-source"])
 def test_new_ancestor_source_keeps_strict_mode_and_original_size_limit(repo, mode, data):
     view, evidence, changes = source_pair(repo, {
         "tests/certs/expired/conftest.py": (mode, data)})
