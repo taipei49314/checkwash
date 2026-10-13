@@ -2623,8 +2623,14 @@ def find_runtime_subject_shadows(
         }
         - set(side_change_by_path)
     )
-    initial_reads = sorted(initial_requests - set(config_paths)
-                           if config_evidence is not None else initial_requests)
+    from checkwash.directory_probe import defer_optional_sources, optional_candidates
+
+    deferred_candidates = optional_candidates(
+        config_evidence, head_batch_reader, initial_requests, config,
+        config_paths, test_paths, conftest_paths)
+    initial_reads = sorted((initial_requests - set(config_paths)
+                            if config_evidence is not None else initial_requests)
+                           - deferred_candidates)
     snapshot: dict[str, bytes | None] = {}
     if initial_reads and head_batch_reader is not None:
         read = head_batch_reader(initial_reads)
@@ -2650,19 +2656,27 @@ def find_runtime_subject_shadows(
         # Splitting the original initial batch does not enlarge its budget.
         # The working snapshot also holds unrelated changed files; only the
         # original requested paths belong to this consumer's batch boundary.
-        initial_configs = initial_requests & set(config_paths)
-        combined = {path: (config_sources["after"].get(path) if path in initial_configs
-                           else snapshot.get(path)) for path in initial_requests}
-        missing = sorted(path for path, data in combined.items() if not isinstance(data, bytes))
-        if missing:
-            raise EngineError("runtime-shadow snapshot read failed: " + ", ".join(missing[:3]))
-        link_bytes = sum(config_evidence.records["after"][path].link_bytes
-                         for path in initial_configs)
-        if len(combined) > MAX_INVENTORY_PATHS:
-            raise EngineError("runtime-shadow initial snapshot exceeds the source read limit")
-        if (any(len(data) > MAX_SOURCE_BYTES for data in combined.values())
-                or sum(map(len, combined.values())) + link_bytes > MAX_BATCH_BYTES):
-            raise EngineError("runtime-shadow initial snapshot exceeds the source byte limit")
+        if deferred_candidates:
+            snapshot = defer_optional_sources(
+                evidence=config_evidence, initial=initial_requests,
+                candidates=deferred_candidates, snapshot=snapshot,
+                config_paths=config_paths, config_sources=config_sources,
+                runner_paths=runner_snapshot_paths, conftest_paths=conftest_paths,
+                changes=side_change_by_path, config=config)
+        else:
+            initial_configs = initial_requests & set(config_paths)
+            combined = {path: (config_sources["after"].get(path) if path in initial_configs
+                               else snapshot.get(path)) for path in initial_requests}
+            missing = sorted(path for path, data in combined.items() if not isinstance(data, bytes))
+            if missing:
+                raise EngineError("runtime-shadow snapshot read failed: " + ", ".join(missing[:3]))
+            link_bytes = sum(config_evidence.records["after"][path].link_bytes
+                             for path in initial_configs)
+            if len(combined) > MAX_INVENTORY_PATHS:
+                raise EngineError("runtime-shadow initial snapshot exceeds the source read limit")
+            if (any(len(data) > MAX_SOURCE_BYTES for data in combined.values())
+                    or sum(map(len, combined.values())) + link_bytes > MAX_BATCH_BYTES):
+                raise EngineError("runtime-shadow initial snapshot exceeds the source byte limit")
 
     def config_source(path, side):
         if config_evidence is not None and path in config_sources[side]:
@@ -2720,6 +2734,9 @@ def find_runtime_subject_shadows(
         provider_paths.update(relevant)
         module_paths[module] = (relevant & before_paths, relevant & after_paths)
     provider_reads = sorted(provider_paths - set(side_change_by_path) - set(snapshot))
+    for path in provider_reads:
+        if path in getattr(snapshot, "deferred", ()):
+            snapshot.get(path)  # The original initial consumer retains this responsibility.
     if provider_reads and head_batch_reader is not None:
         read = head_batch_reader(provider_reads)
         if not isinstance(read, Mapping) or any(
@@ -2801,6 +2818,8 @@ def find_runtime_subject_shadows(
     for path in runner_snapshot_paths:
         if path in side_change_by_path:
             continue
+        if path in getattr(snapshot, "deferred", ()):
+            continue  # Only the optional shebang probe has a paired complete proof.
         data = snapshot.get(path)
         for invocation in _runner_invocations_live(path, data, config):
             expanded = _expand_invocation_targets(

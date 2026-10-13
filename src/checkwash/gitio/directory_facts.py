@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Literal
@@ -46,6 +46,8 @@ class DirectoryLinkFact:
     # Every edge was mode 040000 and its complete child tree was verified.
     # Edges include traversals subsequently reversed by a literal '..'.
     ancestors: tuple[TreeEdge, ...]
+    # None means that no complete child inventory was supplied, never empty.
+    children: tuple[tuple[str, bytes, bytes], ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -73,11 +75,15 @@ class DirectoryFactsBatch:
 @dataclass
 class _Budget:
     bytes_read: int = 0
+    reserve_bytes: Callable[[int], None] | None = None
+    reserve_entries: Callable[[int], None] | None = None
 
     def charge(self, size: int) -> None:
         self.bytes_read += size
         if self.bytes_read > MAX_BATCH_BYTES:
             raise EngineError("directory-link metadata exceeds the paired byte limit")
+        if self.reserve_bytes is not None:
+            self.reserve_bytes(size)
 
 
 def _paths(paths: Sequence[str]) -> list[str]:
@@ -182,6 +188,8 @@ class _Side:
             child = payload[nul + 1:nul + 1 + width].hex().encode("ascii")
             entries[name] = (mode, child)
             self.tree_entries += 1
+            if self.budget.reserve_entries is not None:
+                self.budget.reserve_entries(1)
             if self.tree_entries > MAX_INVENTORY_PATHS:
                 raise EngineError("directory-link metadata exceeds the tree entry limit")
             cursor = nul + 1 + width
@@ -264,19 +272,26 @@ class _Side:
             if proved:
                 facts[path] = DirectoryLinkFact(
                     self.revision, self.root, path, b"120000", oid, size,
-                    "/".join(name for name, _ in stack[1:]), b"040000", stack[-1][1], tuple(edges))
+                    "/".join(name for name, _ in stack[1:]), b"040000", stack[-1][1], tuple(edges),
+                    tuple((name, mode, oid) for name, (mode, oid)
+                          in self._tree(stack[-1][1]).items()))
         return facts
 
 
 def paired_directory_link_facts(
     before: GitSnapshot, after: GitSnapshot, paths: Sequence[str],
+    *, reserve_bytes: Callable[[int], None] | None = None,
+    reserve_entries: Callable[[int], None] | None = None,
 ) -> DirectoryFactsBatch:
     """Return a verified paired fact or explicit NO_PROOF for every requested path.
 
-    One invocation owns its metadata budget/cache. Reuse requires a separate
-    caller contract; the returned ledger includes unsuccessful proof attempts.
-    It is not an analysis-wide budget or relevance decision. A future caller
-    must combine these charges with its required-source accounting before use.
+    One invocation owns its same-side metadata cache. The optional callbacks
+    reserve payload bytes before transport and count entries before publishing
+    that side's complete verified tree cache, against a consumer's remaining
+    allowance. The original standalone transport ceiling also remains active.
+    The returned ledger includes unsuccessful proof attempts. Neither an
+    omitted callback nor a successful fact establishes analysis-wide bounded
+    work or relevance. Callback errors propagate without refund or caching.
     Generic/config source readers and existing inventory semantics are unchanged.
     """
     if not isinstance(before, GitSnapshot) or not isinstance(after, GitSnapshot):
@@ -284,7 +299,7 @@ def paired_directory_link_facts(
     selected = _paths(paths)
     if not selected:
         return DirectoryFactsBatch(MappingProxyType({}), 0, 0, 0, 0, 0, 0)
-    budget = _Budget()
+    budget = _Budget(reserve_bytes=reserve_bytes, reserve_entries=reserve_entries)
     old_side, new_side = _Side(before, budget), _Side(after, budget)
     old, new = old_side.collect(selected), new_side.collect(selected)
     result: dict[str, PairedDirectoryLinkFact | Literal["NO_PROOF"]] = {}
