@@ -18,6 +18,7 @@ from dataclasses import dataclass, field, replace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.environment_obligations import obligation_evidence
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
 from checkwash.frontends.python.runtime_controls import runtime_controls
@@ -263,6 +264,7 @@ class _Offsets:
         # The parsed module, when the parser attaches it, for the rare
         # question about the whole file (`_shadows_abs`); asked lazily.
         self.tree: ast.AST | None = None
+        self._environment_standard_os: bool | None = None
         self.abs_shadowed: bool | None = None
         self.tolerance_names: dict[str, str | None] | None = None
         # The names the module binds, and the spellings that fold as
@@ -3004,6 +3006,7 @@ def _collect_unit(
 
     dead = _unreachable_ids(func, fixtures, lambda stmt: outcome_of(stmt) is not None, attrs)
     guards = _skip_call_guards(func, text)
+    environment_obligations = obligation_evidence(func, off)
     receiver_names: frozenset[str] | None = None
     _unparse_memo: dict[int, str] = {}
     _refs_memo: dict[int, tuple[str, ...]] = {}
@@ -3115,6 +3118,9 @@ def _collect_unit(
                     right_depends_on=depends,
                     reaching=reach,
                     reaching_sig=_reaching_sig(reach, direct),
+                    unconditional_obligation=environment_obligations.get(id(node), (False, None, None))[0],
+                    environment_guard=environment_obligations.get(id(node), (False, None, None))[1],
+                    environment_guard_span=environment_obligations.get(id(node), (False, None, None))[2],
                 )
             )
             counter += 1

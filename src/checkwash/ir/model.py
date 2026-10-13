@@ -112,6 +112,11 @@ class Assertion:
     # their call site's signature, which is what tells N copies of one helper
     # assert apart; "" for cross-file and fixture-channel inherited ones.
     reaching_sig: str = ""
+    # Finite direct bare-assert path proof. Unknown/inherited assertions keep
+    # defaults; strength and the real assertion inventory are unchanged.
+    unconditional_obligation: bool = False
+    environment_guard: str | None = None
+    environment_guard_span: tuple[int, int] | None = None
 
 
 @dataclass

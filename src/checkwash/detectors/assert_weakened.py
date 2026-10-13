@@ -15,7 +15,7 @@ from checkwash.findings import Evidence, Finding, make_fingerprint
 from checkwash.ir import predicate as P
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import asserted_subject, same_expr
-from checkwash.ir.model import IR, Assertion, judged_as_test
+from checkwash.ir.model import IR, Assertion, judged_as_test, normalize_text
 from checkwash.ir import strength as S
 from checkwash.ir.strength import name_of
 
@@ -129,6 +129,24 @@ def detect(ir: IR) -> list[Finding]:
                 b = b_by_id.get(pair.before_id)
                 a = a_by_id.get(pair.after_id)
                 if b is None or a is None:
+                    continue
+                if (file.path.endswith(".py") and b.unconditional_obligation
+                        and not b.inherited and not a.inherited and not b.trivial
+                        and a.environment_guard and a.environment_guard_span is not None
+                        and normalize_text(b.text) == normalize_text(a.text)):
+                    findings.append(Finding(
+                        rule="ASSERT_WEAKENED",
+                        severity="warn",
+                        message=(f"{unit.qualname}: existing assertion now depends on "
+                                 f"environment guard ({a.environment_guard})"),
+                        path=file.path,
+                        unit=unit.qualname,
+                        before=Evidence(text=b.text, span=b.span),
+                        after=Evidence(text=a.environment_guard, span=a.environment_guard_span),
+                        fingerprint=make_fingerprint(
+                            "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                        ),
+                    ))
                     continue
                 if b.inherited and a.inherited:
                     origin = (file.path, b.span, a.span, b.text, a.text)
