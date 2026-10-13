@@ -21,8 +21,8 @@ import tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_SHA = "1ec9d1e06d24b6071474f6fd14603cf7087bce6f"
-QUALIFICATION_HEAD_REF = "fix/requests-optional-probe-346-v1"
+SOURCE_SHA = "6306c6435207267aa1c282cd5a03dd5ca7fc2cd7"
+QUALIFICATION_HEAD_REF = "qualify/requests-original-pair-6306-v1"
 PARENT = "f8aa36b92d95e6d2f133489f39f9d5c2412f1bd9"
 COMMIT = "4e383642a9ebb82a67eaeed199d0fbbb31991e3c"
 PAIR = {"repository": "psf/requests", "ordinal": 2037, "parent": PARENT, "commit": COMMIT}
