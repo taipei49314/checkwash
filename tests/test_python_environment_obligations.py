@@ -88,7 +88,7 @@ def test_existing_guard_is_not_a_new_obligation_loss(guard):
     ("    os.environ.clear()\n    if " + GUARD + ":\n        " + ORACLE, HEADER),
 ])
 def test_unknown_proofs_remain_explicitly_outside_this_finite_package(body, header):
-    parsed = parse_python(source(body, header))
+    parsed = parse_python(collect_tests=True, data=source(body, header))
     assert all(not assertion.environment_guard for unit in parsed.units for assertion in unit.side.assertions)
 
 
@@ -112,7 +112,7 @@ def test_direct_return_existing_removal_path_is_preserved():
 
 
 def test_interposed_binding_does_not_supply_complementary_obligation_credit():
-    parsed = parse_python(source("    if " + GUARD + ":\n        " + ORACLE
+    parsed = parse_python(collect_tests=True, data=source("    if " + GUARD + ":\n        " + ORACLE
                                  + "\n    other = total\n    " + ORACLE))
     unit, = parsed.units
     guarded, direct = unit.side.assertions
@@ -134,7 +134,7 @@ def test_definition_and_effectful_call_break_outside_assertion_credit(barrier, d
     guarded = "    if " + GUARD + ":\n        " + ORACLE
     body = direct + "\n" + barrier + "\n" + guarded if direct_first else (
         guarded + "\n" + barrier + "\n" + direct)
-    parsed = parse_python(source(body))
+    parsed = parse_python(collect_tests=True, data=source(body))
     unit, = parsed.units
     assertions = unit.side.assertions
     protected = assertions[1] if direct_first else assertions[0]
@@ -144,7 +144,7 @@ def test_definition_and_effectful_call_break_outside_assertion_credit(barrier, d
 
 @pytest.mark.parametrize("inert", ["    pass", '    "literal note"'])
 def test_explicit_inert_statement_preserves_outside_assertion_credit(inert):
-    parsed = parse_python(source("    " + ORACLE + "\n" + inert
+    parsed = parse_python(collect_tests=True, data=source("    " + ORACLE + "\n" + inert
                                  + "\n    if " + GUARD + ":\n        " + ORACLE))
     unit, = parsed.units
     assert all(assertion.unconditional_obligation for assertion in unit.side.assertions)
@@ -190,7 +190,7 @@ def test_deep_ordinary_assertion_never_adds_a_structural_dump(monkeypatch):
 
     monkeypatch.setattr(environment_obligations, "stable_dump", forbidden_dump)
     expression = "check(" + " + ".join(["value"] * 350) + ")"
-    parsed = parse_python(source("    assert " + expression))
+    parsed = parse_python(collect_tests=True, data=source("    assert " + expression))
     assert parsed.parse_ok
     unit, = parsed.units
     assertion, = unit.side.assertions
@@ -202,7 +202,7 @@ def test_deep_ordinary_assertion_never_adds_a_structural_dump(monkeypatch):
 def test_deep_guarded_complementary_credit_uses_existing_safe_key():
     expression = "check(" + " + ".join(["value"] * 350) + ")"
     assertion = "assert " + expression
-    parsed = parse_python(source("    if " + GUARD + ":\n        " + assertion
+    parsed = parse_python(collect_tests=True, data=source("    if " + GUARD + ":\n        " + assertion
                                  + "\n    else:\n        " + assertion))
     assert parsed.parse_ok
     unit, = parsed.units
