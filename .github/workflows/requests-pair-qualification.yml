@@ -1,0 +1,46 @@
+name: Requests single-pair repair qualification (one-time)
+
+on:
+  pull_request:
+    types: [opened]
+    paths:
+      - '.github/workflows/requests-pair-qualification.yml'
+      - 'tools/requests_pair_qualification.py'
+
+permissions:
+  contents: read
+
+jobs:
+  requests-2037-qualification:
+    name: One fixed pair, native source verdict retained
+    if: github.head_ref == 'fix/requests-optional-probe-346-v1' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: qualification
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 1ec9d1e06d24b6071474f6fd14603cf7087bce6f
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Qualify one full original range without instrumentation
+        env:
+          REQUESTS_OUTPUT: ${{ runner.temp }}/requests-single-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+        run: >-
+          python -I -B qualification/tools/requests_pair_qualification.py
+          --source "$GITHUB_WORKSPACE/source"
+          --output "$REQUESTS_OUTPUT"
+      - name: Preserve all completed and partial native evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: requests-single-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/requests-single-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 30
