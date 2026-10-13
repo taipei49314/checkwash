@@ -1,19 +1,19 @@
 """Finite source diagnostic controls; hosted execution remains NOT_RUN."""
 
 import importlib.util
-from pathlib import Path
 import sys
 import types
+from pathlib import Path
 
 import pytest
+from test_subject_call_prefilter import paired
 
 from checkwash import cli
 from checkwash.change import EngineError
 from checkwash.frontends.python import subject_replacements as subject
 from checkwash.gitio.snapshot import GitSnapshot
-from checkwash.ir.model import Assertion
 from checkwash.ir import strength as S
-from test_subject_call_prefilter import paired
+from checkwash.ir.model import Assertion
 
 NODE_MESSAGE = "subject replacement source exceeds the syntax node limit"
 MODE_MESSAGE = "strict snapshot batch cannot inspect nonregular source"
