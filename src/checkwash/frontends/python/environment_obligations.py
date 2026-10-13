@@ -11,7 +11,6 @@ from typing import Protocol, TypeAlias
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.model import normalize_text
 
-
 ObligationEvidence: TypeAlias = tuple[bool, str | None, tuple[int, int] | None]
 ObligationKey: TypeAlias = tuple[int, str]
 CountEvidence: TypeAlias = tuple[int, int, str | None, tuple[int, int] | None]
@@ -42,19 +41,19 @@ def _standard_os(tree: ast.Module) -> bool:
             return False
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == "os":
             return False
-        if isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) == "os":
-            if node not in imports:
-                return False
+        if (isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) == "os"
+                and node not in imports):
+            return False
         if isinstance(node, ast.Attribute):
             root: ast.AST = node
             while isinstance(root, ast.Attribute):
                 root = root.value
             if isinstance(root, ast.Name) and root.id == "os" and isinstance(node.ctx, (ast.Store, ast.Del)):
                 return False
-        if isinstance(node, ast.Subscript) and isinstance(node.ctx, (ast.Store, ast.Del)):
-            if (isinstance(node.value, ast.Attribute) and isinstance(node.value.value, ast.Name)
-                    and node.value.value.id == "os"):
-                return False
+        if (isinstance(node, ast.Subscript) and isinstance(node.ctx, (ast.Store, ast.Del))
+                and isinstance(node.value, ast.Attribute) and isinstance(node.value.value, ast.Name)
+                and node.value.value.id == "os"):
+            return False
         if isinstance(node, ast.Call):
             target = node.func
             if isinstance(target, ast.Name) and target.id in ("exec", "eval", "globals", "locals", "vars", "setattr", "delattr"):

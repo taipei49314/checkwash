@@ -210,16 +210,16 @@ def detect(ir: IR) -> list[Finding]:
             count_handled: set[tuple[str, str]] = set()
             if file.path.endswith(".py"):
                 count_losses, count_handled = _environment_count_losses(unit)
-                for b, guard, span, count in count_losses:
+                for lost_assertion, guard, span, count in count_losses:
                     findings.append(Finding(
                         rule="ASSERT_WEAKENED", severity="warn",
                         message=(f"{unit.qualname}: {count} existing assertion evaluation(s) now depend "
                                  f"on environment guard ({guard})"),
                         path=file.path, unit=unit.qualname,
-                        before=Evidence(text=b.text, span=b.span),
+                        before=Evidence(text=lost_assertion.text, span=lost_assertion.span),
                         after=Evidence(text=guard, span=span),
                         fingerprint=make_fingerprint(
-                            "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b)),
+                            "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, lost_assertion)),
                     ))
             for pair in unit.delta.assertion_pairs:
                 b = b_by_id.get(pair.before_id)
