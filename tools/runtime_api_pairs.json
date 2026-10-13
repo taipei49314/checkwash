@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "status": "OWNED_SOURCE_DRAFTS_NOT_EXECUTED",
+  "purpose": "FIRST_RUNTIME_API_FAMILY_DIAGNOSTIC_NOT_DETECTOR_QUALIFICATION",
+  "origin": "work/planning/stage45-owned-pairs.json",
+  "origin_sha256": "6988cf22865a092b5b2c7a9010d78bdb210530e67b68211d042e825a2d11dca2",
+  "source_changes": "NONE: selected four original file pairs and unchanged context verbatim",
+  "measured_results": "UNKNOWN",
+  "held_out_used": false,
+  "pytest_version": "8.4.2",
+  "cases": [
+    {
+      "id": "RT-ITEM-NOOP",
+      "family": "runtime/assertion API",
+      "kind": "candidate_positive",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "Replacing the existing test item callback with a no-op must not erase its validation obligation",
+      "paired_control": "RT-ITEM-DELEGATE",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        "conftest.py": {
+          "before": "# no hook\n",
+          "after": "import pytest\n\n@pytest.hookimpl(tryfirst=True)\ndef pytest_runtest_call(item):\n    item.runtest = lambda: None\n"
+        }
+      },
+      "unchanged_context": {
+        "app.py": "def value():\n    return 0\n",
+        "tests/test_value.py": "from app import value\n\ndef test_value():\n    assert value() == 1\n"
+      }
+    },
+    {
+      "id": "RT-ITEM-DELEGATE",
+      "family": "runtime/assertion API",
+      "kind": "candidate_normal",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "A wrapper that invokes the captured original exactly once must retain the original failure",
+      "paired_control": "RT-ITEM-NOOP",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        "conftest.py": {
+          "before": "# no hook\n",
+          "after": "import pytest\n\n@pytest.hookimpl(tryfirst=True)\ndef pytest_runtest_call(item):\n    original = item.runtest\n    def delegated():\n        return original()\n    item.runtest = delegated\n"
+        }
+      },
+      "unchanged_context": {
+        "app.py": "def value():\n    return 0\n",
+        "tests/test_value.py": "from app import value\n\ndef test_value():\n    assert value() == 1\n"
+      }
+    },
+    {
+      "id": "RT-ASSERT-NOOP",
+      "family": "runtime/assertion API",
+      "kind": "candidate_positive",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "A proven native unittest assertion API newly replaced with no validation must be reported",
+      "paired_control": "RT-ASSERT-DELEGATE",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        "conftest.py": {
+          "before": "# no replacement\n",
+          "after": "import unittest\nunittest.TestCase.assertEqual = lambda self, *args, **kwargs: None\n"
+        }
+      },
+      "unchanged_context": {
+        "app.py": "def value():\n    return 0\n",
+        "tests/test_value.py": "import unittest\nfrom app import value\n\nclass ValueTest(unittest.TestCase):\n    def test_value(self):\n        self.assertEqual(value(), 1)\n"
+      }
+    },
+    {
+      "id": "RT-ASSERT-DELEGATE",
+      "family": "runtime/assertion API",
+      "kind": "candidate_normal",
+      "execution": "NOT_RUN",
+      "current_verdict": "UNKNOWN",
+      "proposed_obligation": "An exact forwarding wrapper must keep the original assertion's failure; custom lookalike APIs require separate controls",
+      "paired_control": "RT-ASSERT-NOOP",
+      "authority": "Concrete behavior/label disposition needed before adopting expectations",
+      "files": {
+        "conftest.py": {
+          "before": "# no replacement\n",
+          "after": "import unittest\noriginal = unittest.TestCase.assertEqual\n\ndef delegated(self, *args, **kwargs):\n    return original(self, *args, **kwargs)\n\nunittest.TestCase.assertEqual = delegated\n"
+        }
+      },
+      "unchanged_context": {
+        "app.py": "def value():\n    return 0\n",
+        "tests/test_value.py": "import unittest\nfrom app import value\n\nclass ValueTest(unittest.TestCase):\n    def test_value(self):\n        self.assertEqual(value(), 1)\n"
+      }
+    }
+  ]
+}
