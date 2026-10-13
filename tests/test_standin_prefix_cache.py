@@ -1,12 +1,11 @@
 """Owned cache equivalence/isolation controls; input modules are never run."""
 
 import pytest
+from test_standin_installations_main import hits, judge
 
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python import standin_installations as subject
-from test_standin_installations_main import hits, judge
-
 
 PATH = "tests/test_owned.py"
 PROVIDERS = {
@@ -159,13 +158,13 @@ def test_setup_hook_fixture_and_test_order_remains_per_test(monkeypatch):
 
 
 @pytest.mark.parametrize("source", [
-    "import app.billing as billing\n"
+    ("import app.billing as billing\n"
     "def test_a():\n    billing.total = lambda: 3\n    assert billing.total() == 3\n    assert False\n"
-    "def test_b():\n    assert billing.total() == 1\n",
-    "import pytest\nfrom app.billing import total\n"
+    "def test_b():\n    assert billing.total() == 1\n"),
+    ("import pytest\nfrom app.billing import total\n"
     "@pytest.fixture\ndef replace_total(request):\n    request.module.total = lambda: 3\n"
     "def test_a(replace_total):\n    assert total() == 3\n"
-    "def test_b():\n    assert total() == 1\n",
+    "def test_b():\n    assert total() == 1\n"),
 ])
 def test_suffix_installations_observations_failure_and_module_env_do_not_leak(source):
     modules, context, budget = prepared(source)

@@ -283,7 +283,7 @@ def test_git_directory_sort_order_is_not_plain_name_order(repo):
 
 
 def test_unicode_names_and_real_dotdot_directory_traversal_keep_exact_edges(repo):
-    files = {"資料/alias": ("120000", "../目的/child/../".encode("utf-8")),
+    files = {"資料/alias": ("120000", "../目的/child/../".encode()),
              "目的/child/owned.txt": ("100644", b"owned\n")}
     old, new = pair(repo, files)
     value = read_facts(old, new, ["資料/alias"])["資料/alias"]

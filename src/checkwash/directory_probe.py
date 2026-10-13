@@ -10,15 +10,23 @@ import posixpath
 import re
 from collections.abc import Callable, Mapping
 from types import MappingProxyType
+from typing import Literal
 
 from checkwash.change import EngineError
-from checkwash.frontends.python.frontend import parse_python
 from checkwash.frontends.python.conftest_controls import is_collection_control
-from checkwash.gitio.directory_facts import PairedDirectoryLinkFact, paired_directory_link_facts
+from checkwash.frontends.python.frontend import parse_python
+from checkwash.gitio.directory_facts import (
+    PairedDirectoryLinkFact,
+    paired_directory_link_facts,
+)
 from checkwash.gitio.pytest_configs import PairedPytestConfigs
-from checkwash.gitio.snapshot import MAX_BATCH_BYTES, MAX_INVENTORY_PATHS, MAX_SOURCE_BYTES
+from checkwash.gitio.snapshot import (
+    MAX_BATCH_BYTES,
+    MAX_INVENTORY_PATHS,
+    MAX_SOURCE_BYTES,
+)
 from checkwash.roles import _is_runner_script, _runner_shape, collectable
-from checkwash.runner_references import reference_closure
+from checkwash.runner_references import ReferenceClosure, reference_closure
 
 
 class _Ledger:
@@ -55,8 +63,8 @@ class DeferredSources(dict):
         super().__init__(values)
         self.deferred = frozenset(deferred)
         self.required = required
-        self.proofs = MappingProxyType({})
-        self.contexts = MappingProxyType({})
+        self.proofs: Mapping[str, PairedDirectoryLinkFact | Literal["NO_PROOF"]] = MappingProxyType({})
+        self.contexts: Mapping[str, ReferenceClosure] = MappingProxyType({})
 
     def __getitem__(self, path):
         if path in self.deferred:
@@ -127,7 +135,7 @@ def _conftest_index(paths, reserve_work: Callable[[int], None]) -> dict[str, set
 
 def _ancestor_conftests(directory: str, index: Mapping[str, set[str]],
                        reserve_work: Callable[[int], None]) -> set[str]:
-    selected = set()
+    selected: set[str] = set()
     while True:
         reserve_work(1)
         path = posixpath.join(directory, "conftest.py")

@@ -10,10 +10,23 @@ import pytest
 
 from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
-from checkwash.directory_probe import DeferredSources, _Ledger, _flat_data, optional_candidates
-from checkwash.gitio.directory_facts import PairedDirectoryLinkFact, paired_directory_link_facts
+from checkwash.directory_probe import (
+    DeferredSources,
+    _flat_data,
+    _Ledger,
+    optional_candidates,
+)
+from checkwash.gitio.directory_facts import (
+    PairedDirectoryLinkFact,
+    paired_directory_link_facts,
+)
 from checkwash.gitio.pytest_configs import PairedPytestConfigs
-from checkwash.gitio.snapshot import MAX_BATCH_BYTES, MAX_INVENTORY_PATHS, MAX_SOURCE_BYTES, GitSnapshot
+from checkwash.gitio.snapshot import (
+    MAX_BATCH_BYTES,
+    MAX_INVENTORY_PATHS,
+    MAX_SOURCE_BYTES,
+    GitSnapshot,
+)
 from checkwash.runner_references import reference_closure
 from checkwash.shadow import find_runtime_subject_shadows
 

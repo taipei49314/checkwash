@@ -11,14 +11,13 @@ import hashlib
 import importlib.util
 import json
 import os
-from pathlib import Path
 import platform
 import re
 import subprocess
 import sys
 import time
 import tomllib
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SHA = "1ec9d1e06d24b6071474f6fd14603cf7087bce6f"

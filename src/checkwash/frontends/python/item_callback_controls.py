@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import ast
 
-
 _HOOK = "pytest_runtest_call"
 _ITEM, _ORIGINAL, _NOOP = "item", "original", "noop"
 

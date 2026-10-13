@@ -332,10 +332,10 @@ class _Closure:
                     self.tox[path] = commands
             for key in ("testpaths", "pythonpath"):
                 value = settings.get(key, ())
-                values = shlex.split(value) if isinstance(value, str) else value
-                if not isinstance(values, (tuple, list)) or any(not isinstance(item, str) for item in values):
+                path_values = shlex.split(value) if isinstance(value, str) else value
+                if not isinstance(path_values, (tuple, list)) or any(not isinstance(item, str) for item in path_values):
                     raise ValueError("path settings are not literal strings")
-                for item in values:
+                for item in path_values:
                     self.reference(path, key, "config-" + key, item, posixpath.dirname(path))
             addopts = settings.get("addopts", "")
             if isinstance(addopts, str):
@@ -449,11 +449,11 @@ class _Closure:
             if selected is not None and selected not in self.settings:
                 self.decline(call.source, call.site, "selected config lacks parsed source")
                 continue
-            settings = self.settings.get(selected, {})
+            settings = self.settings.get(selected, {}) if selected is not None else {}
             if set(settings) - {"addopts", "testpaths", "pythonpath", "minversion",
                                 "doctest_optionflags"}:
                 self.decline(call.source, call.site, "unsupported collection/config setting")
-            config_args = options.get(selected, ())
+            config_args = options.get(selected, ()) if selected is not None else ()
             effective = (*config_args, *call.argv)
             unbound_tox = call.source in self.tox and call.positional_binding is None
             modifiers = []
@@ -501,7 +501,7 @@ class _Closure:
             # Config addopts cannot silently change the explicit config used to
             # discover those same options. Such recursive selection is opaque.
             if any(word in {"-c", "--config-file"} or word.startswith("--config-file=")
-                   for word in options.get(selected, ())):
+                   for word in (options.get(selected, ()) if selected is not None else ())):
                 self.decline(call.source, call.site, "addopts changes config selection")
             targets, config_path = self.pytest_references(call.source, call.site, call.cwd,
                                                           list(effective), unbound_tox=unbound_tox)
@@ -509,7 +509,8 @@ class _Closure:
                                  config_path=config_path, effective_config=selected,
                                  collection_modifiers=tuple(modifiers),
                                  source_sha256=self.identities[call.source],
-                                 effective_config_sha256=self.identities.get(selected)))
+                                 effective_config_sha256=(self.identities.get(selected)
+                                                          if selected is not None else None)))
         self.calls = bound
 
     def close(self) -> ReferenceClosure:

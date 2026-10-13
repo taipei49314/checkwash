@@ -17,7 +17,6 @@ from checkwash.contract import Contract
 from checkwash.engine import FileChange, analyze
 from checkwash.frontends.javascript.frontend import parse_javascript
 
-
 HEADER = 'import { expect, it } from "vitest";\n'
 ORACLE = "expect(value()).toBe(1);"
 

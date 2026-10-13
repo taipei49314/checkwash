@@ -16,9 +16,15 @@ from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.detectors import test_disabled
 from checkwash.engine import analyze
-from checkwash.frontends.python.conftest_controls import RUNTIME, is_collection_control, marker_kind
+from checkwash.frontends.python.conftest_controls import (
+    RUNTIME,
+    is_collection_control,
+    marker_kind,
+)
 from checkwash.frontends.python.frontend import parse_python
-from checkwash.frontends.python.unittest_assertion_controls import unittest_assertion_controls
+from checkwash.frontends.python.unittest_assertion_controls import (
+    unittest_assertion_controls,
+)
 
 MARKER = "conftest.runtime.unittest.TestCase.assertEqual-noop"
 TARGET = "unittest.TestCase.assertEqual"

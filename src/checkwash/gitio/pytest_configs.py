@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from checkwash.change import EngineError, FileChange
-from checkwash.gitio.snapshot import MAX_BATCH_BYTES, MAX_INVENTORY_PATHS, GitSnapshot
+from checkwash.gitio.snapshot import (
+    MAX_BATCH_BYTES,
+    MAX_INVENTORY_PATHS,
+    ConfigSource,
+    GitSnapshot,
+)
 
 CONFIG_NAMES = frozenset({"pytest.toml", ".pytest.toml", "pytest.ini", ".pytest.ini",
                           "pyproject.toml", "tox.ini", "setup.cfg"})
@@ -21,11 +26,11 @@ class PairedPytestConfigs:
 
     def __init__(self, before: GitSnapshot, after: GitSnapshot):
         self.snapshots = {"before": before, "after": after}
-        self.paths = {}
-        self.requests = {"before": set(), "after": set()}
-        self.records = {"before": {}, "after": {}}
-        self.changes = {}
-        self._charged = {}
+        self.paths: dict[str, set[str]] = {}
+        self.requests: dict[str, set[str]] = {"before": set(), "after": set()}
+        self.records: dict[str, dict[str, ConfigSource | None]] = {"before": {}, "after": {}}
+        self.changes: dict[str, FileChange] = {}
+        self._charged: dict[tuple[str, str], int] = {}
         self.bytes_read = 0
         self._prepared = False
 

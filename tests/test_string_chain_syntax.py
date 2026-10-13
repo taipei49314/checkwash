@@ -10,9 +10,8 @@ from pathlib import Path
 import pytest
 
 from checkwash.change import EngineError
-from checkwash.frontends.python import frontend
+from checkwash.frontends.python import frontend, syntax
 from checkwash.frontends.python import standin_installations as subject
-from checkwash.frontends.python import syntax
 
 TOOLS = Path(__file__).resolve().parents[1] / "tools"
 sys.path.insert(0, str(TOOLS))

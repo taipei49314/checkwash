@@ -9,7 +9,6 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterator
 
-
 _MODULE, _CASE = "unittest-module", "unittest-TestCase"
 _ORIGINAL, _NOOP, _OTHER = "original", "noop", "other"
 

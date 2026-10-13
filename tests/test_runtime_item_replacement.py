@@ -7,8 +7,8 @@ import ast
 import datetime
 import hashlib
 import json
-from pathlib import Path
 import textwrap
+from pathlib import Path
 
 import pytest
 
@@ -17,7 +17,11 @@ from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.detectors import test_disabled
 from checkwash.engine import analyze
-from checkwash.frontends.python.conftest_controls import RUNTIME, is_collection_control, marker_kind
+from checkwash.frontends.python.conftest_controls import (
+    RUNTIME,
+    is_collection_control,
+    marker_kind,
+)
 from checkwash.frontends.python.frontend import parse_python
 from checkwash.frontends.python.item_callback_controls import item_callback_controls
 

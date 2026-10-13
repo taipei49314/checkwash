@@ -3,15 +3,15 @@
 import hashlib
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
 from checkwash.change import EngineError, FileChange
-from checkwash.config import Config
 from checkwash.collection_inventory import collection_inventory_changes
+from checkwash.config import Config
 from checkwash.gitio import list_range_changes
 from checkwash.gitio import snapshot as snapshots
 from checkwash.gitio.pytest_configs import PairedPytestConfigs
@@ -19,7 +19,7 @@ from checkwash.shadow import find_runtime_subject_shadows
 
 
 def git(repo, *args, data=None):
-    result = subprocess.run(["git", "-C", str(repo), *args], input=data,
+    result = subprocess.run(["git", "-C", str(repo), *args], check=False, input=data,
                             capture_output=True, timeout=30)
     assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")
     return result.stdout
@@ -360,8 +360,8 @@ CUSTOM_CWD = {
     "root": ("run.sh", b"pytest -c 'custom config' tests/\n", "custom config"),
     "cd": ("run.sh", b"cd sub && pytest -c 'custom config' tests/\n", "sub/custom config"),
     "working-directory": (".github/workflows/test.yml",
-        b"name: owned\non: [push]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n"
-        b"      - run: pytest -c 'custom config' tests/\n        working-directory: sub\n",
+        (b"name: owned\non: [push]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n"
+        b"      - run: pytest -c 'custom config' tests/\n        working-directory: sub\n"),
         "sub/custom config"),
 }
 
@@ -448,7 +448,7 @@ def cli(repo, base, head, format="json"):
     env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
     return subprocess.run([sys.executable, "-m", "checkwash", "check", "--repo", str(repo),
                            f"{base}..{head}", "--format", format],
-                          env=env, capture_output=True, timeout=60)
+                          check=False, env=env, capture_output=True, timeout=60)
 
 
 @pytest.mark.parametrize("narrow,exit_code", [(False, 0), (True, 1)])

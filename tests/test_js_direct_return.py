@@ -2,9 +2,9 @@
 
 import datetime
 import json
-from pathlib import Path
 import statistics
 import time
+from pathlib import Path
 
 import pytest
 
@@ -16,7 +16,6 @@ from checkwash.frontends.javascript.frontend import parse_javascript
 from checkwash.frontends.python.frontend import ParsedFile, parse_python
 from checkwash.report.context import ReportContext
 from checkwash.report.jsonout import findings_to_json, ir_to_json
-
 
 HEADER = 'import { it, expect } from "vitest";\nimport assert from "node:assert";\n'
 ORACLE = "expect(value()).toBe(1);"

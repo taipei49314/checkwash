@@ -5,13 +5,20 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from test_issue132_subject_replacements import BASE, PREFIX, judge
 
 from checkwash.change import EngineError, FileChange
 from checkwash.frontends.python import subject_replacements as subject
 from checkwash.ir import strength as S
-from checkwash.ir.model import Assertion, AssertionPair, FileIR, IR, Unit, UnitDelta, UnitSide
-from test_issue132_subject_replacements import BASE, PREFIX, judge
-
+from checkwash.ir.model import (
+    IR,
+    Assertion,
+    AssertionPair,
+    FileIR,
+    Unit,
+    UnitDelta,
+    UnitSide,
+)
 
 PATH = "tests/test_billing.py"
 

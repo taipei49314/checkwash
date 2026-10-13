@@ -6,11 +6,10 @@ reader is built once per file; it does not construct a HandlerReader per unit.
 
 from __future__ import annotations
 
-from bisect import bisect_left
 import re
+from bisect import bisect_left
 
-from checkwash.frontends.javascript.bindings import Bindings, NAME
-
+from checkwash.frontends.javascript.bindings import NAME, Bindings
 
 _PAIRS = {"(": ")", "[": "]", "{": "}"}
 _COMPOUND = frozenset({
