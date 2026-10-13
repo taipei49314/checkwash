@@ -140,7 +140,9 @@ SITES = sorted([
     ("frontend", "setup_markers", "setup.{}"),
     ("runtime_controls", "runtime_controls", "conftest.runtime.{}"),
     ("runtime_controls", "runtime_controls", "from fixture_setup_controls"),
+    ("runtime_controls", "runtime_controls", "from item_callback_controls"),
     ("runtime_controls", "runtime_controls", "from setup_skip_controls"),
+    ("item_callback_controls", "item_callback_controls", "conftest.runtime.pytest_runtest_call.item-runtest-noop"),
     ("setup_skip_controls", "fixture_setup_controls", "conftest.runtime.fixture.{}"),
     ("setup_skip_controls", "setup_skip_controls", "name result"),
     ("setup_skip_controls", "setup_skip_controls", "result = None"),
@@ -148,10 +150,12 @@ SITES = sorted([
 ])
 
 PLUMBING = {"name name", "name result", "name = None", "result = None", "name in runtime_controls",
-            "from fixture_setup_controls", "from setup_skip_controls", "name skip"}
+            "from fixture_setup_controls", "from item_callback_controls", "from setup_skip_controls", "name skip"}
 
 # Each family, the kind it has, and names it mints.
 FAMILIES = {
+    "conftest.runtime.pytest_runtest_call.item-runtest-noop":
+        (cc.RUNTIME, ["conftest.runtime.pytest_runtest_call.item-runtest-noop"]),
     "call _marker_identity": (cc.SKIP_MARK, sorted(_SKIP_DECORATORS) + ["pytest.mark.skipif(sys.platform == 'win32')",
                                                                          "pytest.mark.xfail(reason='flaky')"]),
     "module.__test__": (cc.MODULE, ["module.__test__"]),
