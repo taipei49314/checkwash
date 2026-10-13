@@ -16,7 +16,7 @@ jobs:
       DIAGNOSTIC_SHA: ${{ github.sha }}
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-      CANDIDATE_SOURCE: cd825183e8c577ddb2b71c5cff3f881d97b7ec42
+      CANDIDATE_SOURCE: 3d3dd1566b873eb758dbc5032a5972c42f45459d
       CANDIDATE_PACKAGE_TREE: 565654caf5a1476b86f6f539f919ed5e70401b61
     steps:
       - name: Reject unbound source before acquisition

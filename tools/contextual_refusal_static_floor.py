@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 REFS = {"baseline": "7252a1b01b0e81eada754efe827c8040a61c6e9c",
-        "candidate": "cd825183e8c577ddb2b71c5cff3f881d97b7ec42"}
+        "candidate": "3d3dd1566b873eb758dbc5032a5972c42f45459d"}
 CANDIDATE_PACKAGE_TREE = "565654caf5a1476b86f6f539f919ed5e70401b61"
 BASELINE_PACKAGE_TREE = "6169701104ec4611532be61911e9e310cfe0fb7d"
 EXPECTED_PACKAGE_FILES = 209
