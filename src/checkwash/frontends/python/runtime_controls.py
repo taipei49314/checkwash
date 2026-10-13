@@ -14,6 +14,7 @@ import hashlib
 from checkwash.ir.astutil import stable_dump
 from .item_callback_controls import item_callback_controls
 from .setup_skip_controls import fixture_setup_controls, setup_skip_controls
+from .unittest_assertion_controls import unittest_assertion_controls
 
 _HOOKS = {"pytest_pyfunc_call", "pytest_runtest_call", "pytest_runtest_protocol",
           "pytest_runtest_makereport", "pytest_runtest_logreport"}
@@ -153,6 +154,7 @@ def _walk(statements, states, hook, wrapper):
 def runtime_controls(tree: ast.Module):
     """Return stable effect names and concrete source evidence for live hooks."""
     yield from setup_skip_controls(tree)
+    yield from unittest_assertion_controls(tree)
     yield from fixture_setup_controls(tree)
     yield from item_callback_controls(tree)
     bindings = {}

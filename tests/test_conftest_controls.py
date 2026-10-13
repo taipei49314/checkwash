@@ -138,6 +138,8 @@ SITES = sorted([
     ("frontend", "_pytestmark_markers", "call _marker_identity"),
     ("frontend", "_helper_marker", "helper.{}"),
     ("frontend", "setup_markers", "setup.{}"),
+    ("runtime_controls", "runtime_controls", "from unittest_assertion_controls"),
+    ("unittest_assertion_controls", "unittest_assertion_controls", "conftest.runtime.unittest.TestCase.assertEqual-noop"),
     ("runtime_controls", "runtime_controls", "conftest.runtime.{}"),
     ("runtime_controls", "runtime_controls", "from fixture_setup_controls"),
     ("runtime_controls", "runtime_controls", "from item_callback_controls"),
@@ -151,6 +153,8 @@ SITES = sorted([
 
 PLUMBING = {"name name", "name result", "name = None", "result = None", "name in runtime_controls",
             "from fixture_setup_controls", "from item_callback_controls", "from setup_skip_controls", "name skip"}
+
+PLUMBING.add("from unittest_assertion_controls")
 
 # Each family, the kind it has, and names it mints.
 FAMILIES = {
@@ -176,6 +180,8 @@ FAMILIES = {
                                                                        "conftest.runtime.pytest_runtest_setup.xfail"]),
     "conftest.runtime.fixture.{}": (cc.FIXTURE_SETUP, ["conftest.runtime.fixture.needs_network.skip",
                                                        "conftest.runtime.fixture.needs_network.xfail"]),
+    "conftest.runtime.unittest.TestCase.assertEqual-noop":
+        (cc.RUNTIME, ["conftest.runtime.unittest.TestCase.assertEqual-noop"]),
 }
 
 JS_NAMES = ["test.skip", "test.skipIf(process.env.CI)", "test.fails", "test.unfocused"]
