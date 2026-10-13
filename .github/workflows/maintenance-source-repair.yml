@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 15
     env:
       BASE_SHA: 30cfb8bd39aa702aae0d59bde1d1400654137bad
-      CANDIDATE_SHA: b82a259c3ddd9f9cf0a3e54406b60beb60596dc9
+      CANDIDATE_SHA: c15e673e87d1e46df760f51d09709ac61720a632
       DIAGNOSTIC_SHA: ${{ github.sha }}
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
@@ -203,7 +203,7 @@ jobs:
               'src/checkwash/collection_inventory.py':
                   '3228f95adb96321d64f74f4015da9a588ea5a42161df415d513fc04933e3b104',
               'src/checkwash/directory_probe.py':
-                  '6cd3cda275bb7c6b074c0beec271762aaa2170200c591c1e292585cfb48b797f',
+                  'cae9ea02f304cfc9f9c53554806032ce4497d532793ce45c460d7c4922b49f16',
               'src/checkwash/engine.py':
                   '839c4785124e9fc4e69bf62e31ca645bc6c1f26f240c19dd11b3d7be670ac8c1',
               'src/checkwash/frontends/javascript/coverage.py':
