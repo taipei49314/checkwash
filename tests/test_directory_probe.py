@@ -577,3 +577,62 @@ def test_casefold_index_keeps_all_actual_spellings_and_is_reused_without_invento
     assert _ancestor_conftests(ALIAS, index, lambda _count: None) == expected
     assert _ancestor_conftests("tests/certs/expired/ca", index, lambda _count: None) == expected
     assert paths.iterations == 1
+
+
+@pytest.mark.parametrize("command", ["pytest {posargs}", "python -m pytest {posargs:tests}"])
+def test_declared_tox_unbound_posargs_retains_targetless_scope_and_original_argv(command):
+    sources = {"tox.ini": ("[testenv]\ncommands=" + command + "\n").encode(),
+               "pyproject.toml": b"[tool.pytest.ini_options]\naddopts='--doctest-modules'\ntestpaths=['tests']\n"}
+    result = close(sources)
+    assert result.complete, result.opaque
+    assert len(result.calls) == 1
+    call = result.calls[0]
+    assert call.source == "tox.ini" and call.positional_binding is None
+    assert call.argv == ("--doctest-modules", "{posargs}")
+    assert call.targets == () and call.config_path is None
+    assert call.effective_config == "pyproject.toml"
+    assert call.collection_modifiers == ("--doctest-modules",)
+    assert any(ref.kind == "config-testpaths" and ref.path == "tests" for ref in result.references)
+    assert not any(ref.kind == "collection" and "{posargs}" in ref.path for ref in result.references)
+
+
+@pytest.mark.parametrize("path,data", [
+    ("run.sh", b"pytest {posargs}\n"),
+    ("Makefile", b"test:\n\tpytest {posargs}\n"),
+])
+def test_non_tox_runner_posargs_text_with_none_binding_still_withholds_proof(path, data):
+    result = close({path: data, "tox.ini": b"[testenv]\ncommands=pytest tests\n"})
+    assert not result.complete
+    calls = [call for call in result.calls if call.source == path]
+    assert len(calls) == 1 and calls[0].positional_binding is None
+    assert calls[0].argv == ("{posargs}",)
+    assert any(reason == "unsupported collection target" for _source, _site, reason in result.opaque)
+
+
+@pytest.mark.parametrize("command", [
+    "pytest -c {posargs}", "pytest --cov-config {posargs}",
+    "pytest {posargs}::test_owned", "pytest {env:TARGET}",
+])
+def test_tox_unbound_token_does_not_exempt_config_slots_or_other_dynamic_syntax(command):
+    result = close({"tox.ini": ("[testenv]\ncommands=" + command + "\n").encode()})
+    assert not result.complete
+
+
+def test_config_addopts_posargs_is_not_borrowed_from_declared_tox_context():
+    result = close({"tox.ini": b"[testenv]\ncommands=pytest {posargs}\n",
+                    "pytest.ini": b"[pytest]\naddopts={posargs}\n"})
+    assert not result.complete
+    assert len(result.calls) == 1
+    assert result.calls[0].argv == ("{posargs}", "{posargs}")
+    assert any(reason == "nonliteral collection reference" for _source, _site, reason in result.opaque)
+
+
+def test_source_visible_tox_binding_keeps_actual_target_separate_from_declaration():
+    result = close({"tox.ini": b"[testenv]\ncommands=pytest {posargs:tests}\n",
+                    "run.sh": b"tox -- tests/unit\n"})
+    assert result.complete, result.opaque
+    calls = {call.positional_binding: call for call in result.calls}
+    assert set(calls) == {None, ("tests/unit",)}
+    assert calls[None].argv == ("{posargs}",) and calls[None].targets == ()
+    assert calls[("tests/unit",)].argv == ("tests/unit",)
+    assert calls[("tests/unit",)].targets == ("tests/unit",)

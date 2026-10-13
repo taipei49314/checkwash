@@ -146,7 +146,8 @@ class _Closure:
             self.references.append(Reference(source, site, kind, path))
 
     def pytest_references(self, source: str, site: str, cwd: str,
-                          args: list[str]) -> tuple[tuple[str, ...], str | None]:
+                          args: list[str], *,
+                          unbound_tox: bool = False) -> tuple[tuple[str, ...], str | None]:
         from checkwash.shadow import _pytest_cli
 
         # Keep the existing option/target contract. Explicit config slots are
@@ -166,6 +167,10 @@ class _Closure:
         targets, _, config_path = _pytest_cli(args)
         normalized = []
         for target in targets:
+            if unbound_tox and target == "{posargs}":
+                # A source-visible tox declaration has no actual positional
+                # binding. Preserve its argv/None binding and targetless scope.
+                continue
             value = _literal_path(target, cwd)
             if value is None:
                 self.decline(source, site, "unsupported collection target")
@@ -177,7 +182,8 @@ class _Closure:
 
     def pytest(self, source: str, site: str, cwd: str, args: list[str],
                binding: tuple[str, ...] | None) -> None:
-        normalized, resolved_config = self.pytest_references(source, site, cwd, args)
+        normalized, resolved_config = self.pytest_references(
+            source, site, cwd, args, unbound_tox=source in self.tox and binding is None)
         self.calls.append(RunnerCall(source, site, cwd, tuple(args), normalized,
                                      resolved_config, binding))
 
@@ -447,7 +453,9 @@ class _Closure:
             if set(settings) - {"addopts", "testpaths", "pythonpath", "minversion",
                                 "doctest_optionflags"}:
                 self.decline(call.source, call.site, "unsupported collection/config setting")
-            effective = (*options.get(selected, ()), *call.argv)
+            config_args = options.get(selected, ())
+            effective = (*config_args, *call.argv)
+            unbound_tox = call.source in self.tox and call.positional_binding is None
             modifiers = []
             index = 0
             while index < len(effective):
@@ -458,7 +466,7 @@ class _Closure:
                     modifiers.append(word)
                 elif word in {"-q", "-v", "-vv", "--quiet", "--verbose", "-s", "-x"}:
                     pass
-                elif word == "{posargs}" and call.positional_binding is None:
+                elif word == "{posargs}" and unbound_tox and index > len(config_args):
                     pass  # D-123 declaration remains targetless, not empty proof.
                 elif word.startswith("--doctest-glob"):
                     self.decline(call.source, call.site, "explicit non-Python doctest discovery")
@@ -496,7 +504,7 @@ class _Closure:
                    for word in options.get(selected, ())):
                 self.decline(call.source, call.site, "addopts changes config selection")
             targets, config_path = self.pytest_references(call.source, call.site, call.cwd,
-                                                          list(effective))
+                                                          list(effective), unbound_tox=unbound_tox)
             bound.append(replace(call, argv=tuple(effective), targets=targets,
                                  config_path=config_path, effective_config=selected,
                                  collection_modifiers=tuple(modifiers),
