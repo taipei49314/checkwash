@@ -1,0 +1,54 @@
+# Finite contextual-facts supplement; acquisition BLOCKED until root literal delivery rebind.
+name: Contextual refusal facts fixed static floor raw evidence
+on:
+  pull_request:
+    paths:
+      - .github/workflows/contextual-refusal-static-floor.yml
+      - tools/contextual_refusal_static_floor.py
+permissions:
+  contents: read
+jobs:
+  five-native-batches:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/contextual-refusal-facts-v1' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      DIAGNOSTIC_SHA: ${{ github.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+      CANDIDATE_SOURCE: cd825183e8c577ddb2b71c5cff3f881d97b7ec42
+      CANDIDATE_PACKAGE_TREE: 565654caf5a1476b86f6f539f919ed5e70401b61
+    steps:
+      - name: Reject unbound source before acquisition
+        shell: bash
+        run: |
+          [[ "$CANDIDATE_SOURCE" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CANDIDATE_PACKAGE_TREE" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.DIAGNOSTIC_SHA }}
+          persist-credentials: false
+          path: diagnostic
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 7252a1b01b0e81eada754efe827c8040a61c6e9c
+          persist-credentials: false
+          path: baseline
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.CANDIDATE_SOURCE }}
+          persist-credentials: false
+          path: candidate
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Preserve five native observations and installation receipts
+        shell: bash
+        run: python -I -B diagnostic/tools/contextual_refusal_static_floor.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: contextual-refusal-static-floor-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: contextual-refusal-static-evidence
+          if-no-files-found: error
+          include-hidden-files: true
