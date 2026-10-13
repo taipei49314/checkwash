@@ -1,0 +1,52 @@
+# Finite fixed-source supplement; source-only NOT_RUN until root promotion.
+name: Standin literal batch fixed static floor raw evidence
+on:
+  pull_request:
+    paths:
+      - .github/workflows/standin-batch-static-floor.yml
+      - tools/standin_batch_static_floor.py
+permissions:
+  contents: read
+jobs:
+  five-native-batches:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/standin-module-literal-batch-v1' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      DIAGNOSTIC_SHA: ${{ github.sha }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      CANDIDATE_SOURCE: c33f61bc37387196a1f158233024ef38d417029c
+      CANDIDATE_PACKAGE_TREE: 6169701104ec4611532be61911e9e310cfe0fb7d
+    steps:
+      - name: Reject unbound source before acquisition
+        shell: bash
+        run: |
+          [[ "$CANDIDATE_SOURCE" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CANDIDATE_PACKAGE_TREE" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.DIAGNOSTIC_SHA }}
+          persist-credentials: false
+          path: diagnostic
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 744496a73fd61bd5c3175c527f3da68a4c4fe989
+          persist-credentials: false
+          path: baseline
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.CANDIDATE_SOURCE }}
+          persist-credentials: false
+          path: candidate
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Preserve five native observations and installation receipts
+        shell: bash
+        run: python -I -B diagnostic/tools/standin_batch_static_floor.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: standin-batch-static-floor-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: standin-batch-static-evidence
+          if-no-files-found: error
