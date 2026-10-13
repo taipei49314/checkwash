@@ -230,8 +230,16 @@ def test_unjudged_return_expression_stays_live_and_keeps_original_notice():
 def test_expression_arrow_has_no_block_cutoff_and_shadowed_test_stays_unknown():
     parsed = parse_javascript((HEADER + 'it("value", () => expect(value()).toBe(1));').encode())
     assert len(parsed.units[0].side.assertions) == 1
+    assert parsed.unreachable_assertion_spans == ()
+    assert parsed.unreachable_unjudged_assertion_spans == ()
     unknown = source("const it = custom; it('inner', () => { return; " + ORACLE + " });")
-    assert [unit.qualname for unit in parse_javascript(unknown).units] == ["value"]
+    shadowed = parse_javascript(unknown)
+    assert [unit.qualname for unit in shadowed.units] == ["value", "inner"]
+    assert [unit.side.assertions for unit in shadowed.units] == [[], []]
+    oracle_start = unknown.index(ORACLE[:-1].encode())
+    assert shadowed.unreachable_assertion_spans == ((oracle_start, oracle_start + len(ORACLE) - 1),)
+    assert shadowed.unreachable_unjudged_assertion_spans == ()
+    assert javascript_coverage_gaps(unknown, shadowed, PATH, "after") == []
 
 
 def test_internal_coverage_metadata_defaults_empty_and_does_not_enter_public_reports():
