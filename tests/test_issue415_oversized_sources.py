@@ -1,0 +1,379 @@
+"""Issue #415: a changed side over the 1,000,000-byte source limit.
+
+v0.7.0 exited 2 on any changed path with a side over the limit, whatever it
+was (an image, a lockfile, a deletion, an untracked file), and on every run
+once a root `uv.lock` or `poetry.lock` at the base was that large. The
+message named no file.
+
+Ruling: a side no detector must read (images, data, lockfiles, documentation,
+production sources) is carried as unread. It earns no credit and no repair
+evidence, so a large file cannot hold another finding at warn (#419), and
+analysis continues. A test, conftest, CI, guardrail, snapshot or
+test-command file that large still refuses with exit 2. An oversized root
+lockfile at the base is skipped with a stderr note. Every remaining size
+refusal names path, side, size and limit, through the GitError re-raise too.
+
+Large files are generated here, never committed.
+"""
+import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+import pytest
+
+from checkwash.change import FileChange, SourceOverLimit, UnreadSide
+from checkwash.config import Config
+from checkwash.contract import Contract
+from checkwash.engine import analyze
+from checkwash.gitio import GitSourceOverLimit, list_range_changes, list_worktree_changes, read_base_file
+from checkwash.gitio.git import read_blobs
+from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
+
+LIMIT = 1_000_000
+TODAY = datetime.date(2026, 10, 14)
+REFUSAL = "strict snapshot source exceeds the byte limit"
+BILLING = b"def compute_invoice_total(items):\n    return sum(items)\n"
+FIXED = b"def compute_invoice_total(items):\n    return round(sum(items), 2)\n"
+TEST = (b"from billing import compute_invoice_total\n\n\n"
+        b"def test_invoice_total():\n"
+        b"    total = compute_invoice_total([10.5, 94.8])\n"
+        b"    assert total == 105.3\n")
+WEAKENED = TEST.replace(b"assert total == 105.3", b"assert total > 0")
+
+
+def blob(size, seed):
+    """`size` bytes of hex text, distinct per seed.
+
+    Hex holds no test-runner token, and two seeds are too unlike for git to
+    pair them as a rename.
+    """
+    body = hashlib.shake_256(seed.encode()).hexdigest((size + 1) // 2).encode()
+    return body[:size - 1] + b"\n"
+
+
+def unread(path, side, size=LIMIT + 1):
+    return UnreadSide(path, side, size, LIMIT)
+
+
+def described(path, side, size=LIMIT + 1):
+    return f"{path} ({side}, {size} > {LIMIT} bytes)"
+
+
+def git(repo, *args):
+    return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, check=True).stdout
+
+
+def _repo(tmp_path, files):
+    git(tmp_path, "init", "-b", "main")
+    git(tmp_path, "config", "user.name", "checkwash-test")
+    git(tmp_path, "config", "user.email", "test@example.invalid")
+    git(tmp_path, "config", "commit.gpgsign", "false")
+    git(tmp_path, "config", "core.autocrlf", "false")
+    _write(tmp_path, files)
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-m", "base")
+    return tmp_path
+
+
+def _write(repo, files):
+    for path, data in files.items():
+        (repo / path).parent.mkdir(parents=True, exist_ok=True)
+        (repo / path).write_bytes(data)
+
+
+def _commit(repo):
+    git(repo, "add", "-A")
+    git(repo, "commit", "-m", "head")
+
+
+def _check(repo, *args):
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
+           "PYTHONUTF8": "1", "GREENWASH_TODAY": "2026-10-14", "NO_COLOR": "1"}
+    result = subprocess.run([sys.executable, "-m", "checkwash", "check", *args, "--repo", str(repo)],
+                            env=env, capture_output=True, timeout=120)
+    return result.returncode, result.stdout.decode("utf-8"), result.stderr.decode("utf-8")
+
+
+def _weakened(payload):
+    found = [f for f in payload["findings"] if f["rule"] == "ASSERT_WEAKENED"]
+    assert len(found) == 1, payload["findings"]
+    return found[0]
+
+
+def _summary(findings):
+    return [(f.rule, f.severity, list(f.escalators), list(f.deescalators), f.path, f.unit)
+            for f in findings]
+
+
+# --- the engine: an unread side earns nothing -------------------------------------------------------
+
+EVIDENCE_CASES = {
+    # Readable: the documented evidence, symbol-matched and opaque.
+    "py_read": (FileChange("billing.py", "modified", BILLING, FIXED), "warn"),
+    "data_read": (FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n"), "warn"),
+    # Unread on either side, or both: no evidence of either kind (#419).
+    "py_head_unread": (FileChange("billing.py", "modified", BILLING, None,
+                                  unread=(unread("billing.py", "head"),)), "high"),
+    "py_base_unread": (FileChange("billing.py", "modified", None, FIXED,
+                                  unread=(unread("billing.py", "base"),)), "high"),
+    "py_both_unread": (FileChange("billing.py", "modified", None, None,
+                                  unread=(unread("billing.py", "base"), unread("billing.py", "head"))), "high"),
+    "data_unread": (FileChange("data/rates.csv", "modified", None, None,
+                               unread=(unread("data/rates.csv", "base"), unread("data/rates.csv", "head"))),
+                    "high"),
+}
+
+
+@pytest.mark.parametrize("case", sorted(EVIDENCE_CASES))
+def test_an_unread_side_earns_no_repair_evidence(case):
+    change, severity = EVIDENCE_CASES[case]
+    changes = [FileChange("tests/test_billing.py", "modified", TEST, WEAKENED), change]
+    _ir, findings, verdict = analyze(changes, Config(), Contract(), [], TODAY)
+    assert [(f.rule, f.severity) for f in findings] == [("ASSERT_WEAKENED", severity)]
+    if severity == "warn":
+        assert "REPAIR_EVIDENCE" in findings[0].deescalators
+        assert verdict == "pass"
+    else:
+        assert findings[0].escalators == ["NO_PROD_CHANGE_IN_DIFF"]
+        assert findings[0].deescalators == []
+        assert verdict == "block"
+
+
+@pytest.mark.parametrize("path", [
+    "tests/test_huge.py", "conftest.py", "tests/helpers.py", ".github/workflows/ci.yml",
+    "pyproject.toml", "AGENTS.md", "golden/out.txt", "package.json", "scripts/run.sh",
+    "web/app.test.js",
+])
+def test_a_path_a_detector_must_read_still_refuses_naming_it(path):
+    change = FileChange(path, "added", None, None, unread=(unread(path, "head"),))
+    with pytest.raises(SourceOverLimit) as caught:
+        analyze([change], Config(), Contract(), [], TODAY)
+    assert str(caught.value) == f"{REFUSAL}: {described(path, 'head')}"
+    assert caught.value.unread == unread(path, "head")
+
+
+def test_a_rename_out_of_a_test_path_refuses_naming_its_base_side():
+    change = FileChange("archive/old.txt", "modified", None, None, old_path="tests/test_old.py",
+                        unread=(unread("tests/test_old.py", "base"), unread("archive/old.txt", "head")))
+    with pytest.raises(SourceOverLimit) as caught:
+        analyze([change], Config(), Contract(), [], TODAY)
+    assert str(caught.value) == f"{REFUSAL}: {described('tests/test_old.py', 'base')}"
+
+
+@pytest.mark.parametrize("scope", [["data/**"], ["tests/**"]], ids=["in_scope", "out_of_scope"])
+def test_scope_drift_needs_the_content_of_an_out_of_scope_path(scope):
+    # SCOPE_DRIFT binds an out-of-scope file to its content digests.
+    change = FileChange("data/rates.csv", "added", None, None, unread=(unread("data/rates.csv", "head"),))
+    contract = Contract(present=True, scope_allow=scope)
+    if scope == ["data/**"]:
+        _ir, findings, verdict = analyze([change], Config(), contract, [], TODAY)
+        assert findings == [] and verdict == "pass"
+    else:
+        with pytest.raises(SourceOverLimit, match="data/rates.csv"):
+            analyze([change], Config(), contract, [], TODAY)
+
+
+def test_unread_sides_leave_the_verdict_on_the_test_change_unaffected():
+    test_change = FileChange("tests/test_billing.py", "modified", TEST, WEAKENED)
+    unread_changes = [
+        FileChange("assets/logo.png", "added", None, None, unread=(unread("assets/logo.png", "head"),)),
+        FileChange("docs/guide.md", "modified", None, None,
+                   unread=(unread("docs/guide.md", "base"), unread("docs/guide.md", "head"))),
+        FileChange("uv.lock", "modified", b"version = 1\n", None, unread=(unread("uv.lock", "head"),)),
+        FileChange("src/app/huge.py", "deleted", None, None, unread=(unread("src/app/huge.py", "base"),)),
+    ]
+    alone = analyze([test_change], Config(), Contract(), [], TODAY)
+    beside = analyze([test_change, *unread_changes], Config(), Contract(), [], TODAY)
+    assert _summary(beside[1]) == _summary(alone[1])
+    assert beside[2] == alone[2] == "block"
+
+
+# --- the snapshots and the git layer ------------------------------------------------------------------
+
+@pytest.fixture
+def sized_repo(tmp_path):
+    return _repo(tmp_path, {"at.csv": blob(LIMIT, "at"), "over.csv": blob(LIMIT + 1, "over")})
+
+
+def test_a_git_read_takes_the_limit_and_names_one_byte_more(sized_repo):
+    snapshot = GitSnapshot(sized_repo, "HEAD", side="base")
+    assert snapshot.read("at.csv") == blob(LIMIT, "at")
+    with pytest.raises(SourceOverLimit) as caught:
+        snapshot.read("over.csv")
+    assert str(caught.value) == f"{REFUSAL}: {described('over.csv', 'base')}"
+    assert snapshot.read("over.csv", unread_oversized=True) == unread("over.csv", "base")
+
+
+def test_a_git_batch_takes_the_limit_and_names_one_byte_more(sized_repo):
+    snapshot = GitSnapshot(sized_repo, "HEAD", side="head")
+    assert snapshot.read_many(["at.csv"]) == {"at.csv": blob(LIMIT, "at")}
+    with pytest.raises(SourceOverLimit) as caught:
+        snapshot.read_many(["at.csv", "over.csv"])
+    assert str(caught.value) == f"{REFUSAL}: {described('over.csv', 'head')}"
+    assert snapshot.read_many(["at.csv", "over.csv"], unread_oversized=True) == {
+        "at.csv": blob(LIMIT, "at"), "over.csv": unread("over.csv", "head")}
+
+
+def test_a_worktree_read_takes_the_limit_and_names_one_byte_more(sized_repo):
+    snapshot = WorkingTreeSnapshot(sized_repo)
+    assert snapshot.read("at.csv") == blob(LIMIT, "at")
+    with pytest.raises(SourceOverLimit) as caught:
+        snapshot.read("over.csv")
+    assert str(caught.value) == f"{REFUSAL}: {described('over.csv', 'worktree')}"
+    assert snapshot.read("over.csv", unread_oversized=True) == unread("over.csv", "worktree")
+
+
+def test_the_git_error_keeps_the_named_refusal(sized_repo):
+    with pytest.raises(GitSourceOverLimit) as caught:
+        read_blobs(str(sized_repo), [("HEAD", "over.csv")], sides={"HEAD": "head"})
+    assert str(caught.value) == f"{REFUSAL}: {described('over.csv', 'head')}"
+    with pytest.raises(GitSourceOverLimit) as caught:
+        read_base_file(str(sized_repo), "HEAD", "over.csv")
+    assert str(caught.value) == f"{REFUSAL}: {described('over.csv', 'base')}"
+    assert caught.value.unread == unread("over.csv", "base")
+
+
+def test_range_changes_carry_unread_sides(tmp_path):
+    repo = _repo(tmp_path, {"data/old.csv": blob(LIMIT + 1, "old"), "data/gone.csv": blob(LIMIT + 1, "gone"),
+                            "data/edit.csv": blob(LIMIT, "edit")})
+    git(repo, "mv", "data/old.csv", "data/moved.csv")
+    (repo / "data" / "gone.csv").unlink()
+    _write(repo, {"data/edit.csv": blob(LIMIT + 1, "edited"), "assets/logo.png": blob(LIMIT + 1, "logo")})
+    _commit(repo)
+    changes = {c.path: c for c in list_range_changes(str(repo), "HEAD~1", "HEAD")}
+    assert sorted(changes) == ["assets/logo.png", "data/edit.csv", "data/gone.csv", "data/moved.csv"]
+    moved = changes["data/moved.csv"]
+    assert (moved.status, moved.old_path, moved.before, moved.after) == ("modified", "data/old.csv", None, None)
+    assert moved.unread == (unread("data/old.csv", "base"), unread("data/moved.csv", "head"))
+    gone = changes["data/gone.csv"]
+    assert (gone.status, gone.before, gone.unread) == ("deleted", None, (unread("data/gone.csv", "base"),))
+    edit = changes["data/edit.csv"]
+    assert (edit.status, edit.before, edit.after) == ("modified", blob(LIMIT, "edit"), None)
+    assert edit.unread == (unread("data/edit.csv", "head"),)
+    logo = changes["assets/logo.png"]
+    assert (logo.status, logo.after, logo.unread) == ("added", None, (unread("assets/logo.png", "head"),))
+
+
+def test_worktree_changes_carry_unread_sides(tmp_path):
+    repo = _repo(tmp_path, {"data/big.csv": blob(LIMIT + 1, "big")})
+    _write(repo, {"data/big.csv": blob(LIMIT + 2, "bigger"), "assets/new.csv": blob(LIMIT + 1, "new")})
+    changes = {c.path: c for c in list_worktree_changes(str(repo))}
+    assert sorted(changes) == ["assets/new.csv", "data/big.csv"]
+    big = changes["data/big.csv"]
+    assert (big.status, big.before, big.after) == ("modified", None, None)
+    assert big.unread == (unread("data/big.csv", "base"), unread("data/big.csv", "worktree", LIMIT + 2))
+    new = changes["assets/new.csv"]
+    assert (new.status, new.after, new.unread) == ("added", None, (unread("assets/new.csv", "worktree"),))
+
+
+# --- the CLI: the issue's rows ------------------------------------------------------------------------
+
+def _base_files(extra):
+    return {"billing.py": BILLING, "tests/test_billing.py": TEST, **extra}
+
+
+ROWS = {
+    # name: (base extra files, head edit, verdict, unread sides named on stderr)
+    "image_added": (lambda: {}, lambda repo: _write(repo, {"assets/logo.png": blob(1_500_000, "logo")}),
+                    "block", [described("assets/logo.png", "head", 1_500_000)]),
+    "data_deleted": (lambda: {"data/table.csv": blob(LIMIT + 1, "table")},
+                     lambda repo: (repo / "data" / "table.csv").unlink(),
+                     "block", [described("data/table.csv", "base")]),
+    "data_renamed": (lambda: {"data/table.csv": blob(LIMIT + 1, "table")},
+                     lambda repo: git(repo, "mv", "data/table.csv", "data/moved.csv"),
+                     "block", [described("data/table.csv", "base"), described("data/moved.csv", "head")]),
+    "data_edited_over_the_limit": (lambda: {"data/table.csv": blob(LIMIT, "table")},
+                                   lambda repo: _write(repo, {"data/table.csv": blob(LIMIT + 1, "edited")}),
+                                   "block", [described("data/table.csv", "head")]),
+    # Exactly at the limit, the data file is read: the opaque-change evidence
+    # it has always earned holds the weakening at warn.
+    "data_edited_at_the_limit": (lambda: {"data/table.csv": blob(LIMIT, "table")},
+                                 lambda repo: _write(repo, {"data/table.csv": blob(LIMIT, "edited")}),
+                                 "pass", []),
+}
+
+
+@pytest.mark.parametrize("row", sorted(ROWS))
+def test_a_range_beside_an_oversized_file_gives_a_verdict(tmp_path, row):
+    base, edit, verdict, named = ROWS[row]
+    repo = _repo(tmp_path, _base_files(base()))
+    edit(repo)
+    _write(repo, {"tests/test_billing.py": WEAKENED})
+    _commit(repo)
+    code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
+    assert "engine error" not in stderr, stderr
+    payload = json.loads(stdout)
+    assert payload["verdict"] == verdict
+    finding = _weakened(payload)
+    if verdict == "block":
+        assert code == 1
+        assert finding["severity"] == "high"
+        assert "NO_PROD_CHANGE_IN_DIFF" in finding["escalators"]
+    else:
+        assert code == 0
+        assert finding["severity"] == "warn"
+        assert "REPAIR_EVIDENCE" in finding["deescalators"]
+    notes = [line for line in stderr.splitlines() if "not read, over the source byte limit" in line]
+    assert notes == [f"checkwash: not read, over the source byte limit: {side}; it earns no repair evidence"
+                     for side in named]
+
+
+@pytest.mark.parametrize("fmt", ["json", "hook-json"])
+def test_the_worktree_beside_an_untracked_oversized_file_gives_a_verdict(tmp_path, fmt):
+    repo = _repo(tmp_path, _base_files({}))
+    _write(repo, {"tests/test_billing.py": WEAKENED, "data/dump.csv": blob(1_500_000, "dump")})
+    code, stdout, stderr = _check(repo, "--format", fmt)
+    assert "engine error" not in stderr, stderr
+    payload = json.loads(stdout)
+    if fmt == "json":
+        assert code == 1
+        assert payload["verdict"] == "block"
+        assert _weakened(payload)["severity"] == "high"
+    else:
+        assert code == 0
+        assert payload["decision"] == "block"
+    note = f"checkwash: not read, over the source byte limit: {described('data/dump.csv', 'worktree', 1_500_000)}"
+    assert note in stderr
+
+
+@pytest.mark.parametrize("name", ["poetry.lock", "uv.lock"])
+def test_a_root_lockfile_over_the_limit_at_the_base_is_skipped_with_a_note(tmp_path, name):
+    repo = _repo(tmp_path, _base_files({name: blob(1_200_000, name)}))
+    _write(repo, {"tests/test_billing.py": TEST + b"# reviewed\n"})
+    _commit(repo)
+    code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
+    assert code == 0, stderr
+    assert json.loads(stdout)["verdict"] == "pass"
+    assert (f"checkwash: skipped {described(name, 'base', 1_200_000)}: over the source byte limit; "
+            "the run continues without its declared modules") in stderr.splitlines()
+
+
+def test_another_manifest_over_the_limit_at_the_base_refuses_naming_it(tmp_path):
+    repo = _repo(tmp_path, _base_files({"requirements.txt": blob(LIMIT + 1, "requirements")}))
+    _write(repo, {"tests/test_billing.py": TEST + b"# reviewed\n"})
+    _commit(repo)
+    code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
+    assert code == 2
+    assert stdout == ""
+    # The GitError branch: the message survives the re-raise whole.
+    assert stderr.splitlines() == [f"checkwash engine error: {REFUSAL}: {described('requirements.txt', 'base')}"]
+
+
+@pytest.mark.parametrize("mode", ["range", "worktree"])
+def test_an_oversized_test_file_still_exits_2_naming_it(tmp_path, mode):
+    repo = _repo(tmp_path, _base_files({}))
+    _write(repo, {"tests/test_huge.py": blob(LIMIT + 1, "huge")})
+    if mode == "range":
+        _commit(repo)
+        code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
+        side = "head"
+    else:
+        code, stdout, stderr = _check(repo, "--format", "json")
+        side = "worktree"
+    assert code == 2
+    assert stdout == ""
+    assert f"{REFUSAL}: {described('tests/test_huge.py', side)}" in stderr

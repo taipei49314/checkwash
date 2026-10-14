@@ -46,12 +46,13 @@ from checkwash.findings import Finding
 from checkwash.frontends.javascript.frontend import parse_javascript
 from checkwash.frontends.javascript.module_mocks import module_mock_events
 from checkwash.frontends.javascript.setup_files import setup_file_events
-from checkwash.frontends.javascript.paths import is_js_test_file
+from checkwash.frontends.javascript.paths import is_js_test_file, is_js_test_path
 from checkwash.frontends.javascript.runners import (
     collected,
     collection_continues,
     focus_is_file_scoped,
     focus_is_innermost,
+    may_be_evidenced_test_path,
     runner_evidence,
 )
 from checkwash.frontends.python.frontend import (
@@ -103,6 +104,8 @@ from checkwash.roles import (
     _is_runner_script,
     _mentions_test_runner,
     _one_hop_runners,
+    _runner_shape,
+    _test_command_manifest,
     _test_commands_changed,
     collectable,
     is_artifact,
@@ -202,6 +205,57 @@ def _base_manifest(changes: list[FileChange], root_reader):
     """A reader of the base side's root package.json, for runner evidence,
     read only when a JS test file names no runner itself."""
     return _base_root_file(changes, root_reader, "package.json")
+
+
+def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ...],
+                        scope_allow: list[str]) -> bool:
+    """Must a detector read this path's content (#415)?
+
+    The test rules parse Python test, conftest and collectable files and
+    JS/TS test files; the CI and guardrail rules read their files, and
+    EXPECTED_VALUE_CHANGED and SCOPE_DRIFT bind a stored expectation or an
+    out-of-scope file to the digests of its content. A file shaped like a
+    runner script, or a manifest naming the test command, can be promoted to
+    CI by what it says, which an unread side does not show. Everything else
+    (images, data, lockfiles, documentation, production sources) feeds only
+    repair evidence, which an unread side never earns. Generated output is
+    skipped whatever its role.
+    """
+    if is_artifact(path):
+        return False
+    role = config.role_of(path)
+    if role in ("ci", "guardrail", "snapshot"):
+        return True
+    if path.endswith(".py") and (role in ("test", "conftest") or collectable(path)):
+        return True
+    if is_js_test_path(path) or may_be_evidenced_test_path(path):
+        return True
+    if _runner_shape(path, *sides) or _test_command_manifest(path) is not None:
+        return True
+    return bool(scope_allow) and not any(_scope_match(path, glob) for glob in scope_allow)
+
+
+def _set_aside_unread(changes: list[FileChange], config: Config,
+                      scope_allow: list[str]) -> tuple[list[FileChange], list[FileChange]]:
+    """(readable changes, changes carried unread) (#415).
+
+    A change with a side over the source byte limit holds no bytes for that
+    side. If a detector must read either of its paths, the run refuses,
+    naming path, side, size and limit. Otherwise the whole change is set
+    aside before any pass: no detector reads it and it earns no repair
+    evidence, neither as an opaque change nor as changed symbols (#419).
+    """
+    readable, unread = [], []
+    for change in changes:
+        if not change.unread:
+            readable.append(change)
+            continue
+        paths = {change.path.replace("\\", "/"), (change.old_path or change.path).replace("\\", "/")}
+        sides = (change.before, change.after)
+        if any(_detector_must_read(path, config, sides, scope_allow) for path in sorted(paths)):
+            raise change.unread[0].refusal()
+        unread.append(change)
+    return readable, unread
 
 
 def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
@@ -503,6 +557,7 @@ def build_ir(
     root_batch_reader=None,
     pytest_configs=None,
 ) -> IR:
+    changes, unread_changes = _set_aside_unread(changes, config, scope_allow or [])
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(
         changes, config, root_reader, root_searcher, root_path_lister)
     changes = [*changes, *importer_changes]
@@ -515,7 +570,7 @@ def build_ir(
     if known_modules is not None:
         repo_roots = {
             part[:-3] if part.endswith(".py") else part
-            for change in changes
+            for change in (*changes, *unread_changes)
             for part in change.path.replace("\\", "/").split("/")
         }
         g.third_party_roots = tuple(
@@ -960,7 +1015,8 @@ def build_ir(
     expanded_changes = sorted(_expand_renames(changes, config, manifest), key=lambda c: c.path)
     # The runner each JS test file is judged under at head, for D2 liveness.
     js_head_runners: dict[str, frozenset[str] | None] = {}
-    single_context_change = sum(not is_artifact(c.path) for c in changes) == 1
+    # An unread co-change could redefine a callee too (#415).
+    single_context_change = sum(not is_artifact(c.path) for c in (*changes, *unread_changes)) == 1
     for change in expanded_changes:
         path = change.path.replace("\\", "/")
         if is_artifact(path):
