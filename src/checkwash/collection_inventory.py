@@ -36,6 +36,7 @@ import re
 import shlex
 
 from checkwash.change import EngineError
+from checkwash.gitio.snapshot import MAX_BATCH_BYTES, MAX_SOURCE_BYTES
 from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ci_control_flow import _read_yaml, _step_command, is_github_workflow
 from checkwash.pytest_collection import (
@@ -429,8 +430,12 @@ def _base_runners(changes, head_runners):
     return base_runners
 
 
-def collection_inventory_changes(changes, config, *, path_lister=None, batch_reader=None):
+def collection_inventory_changes(changes, config, *, path_lister=None, batch_reader=None,
+                                 config_evidence=None):
     touched = {c.path: c for c in changes if c.path in _CONFIGS and config.role_of(c.path) == "ci"}
+    if config_evidence is not None:
+        touched.update({path: change for path, change in config_evidence.changes.items()
+                        if path in _CONFIGS and config.role_of(path) == "ci"})
     if not touched or path_lister is None or batch_reader is None:
         return []
     if all(c.status == "modified" and resolved_collection_settings((c.before or b"").decode("utf-8-sig", errors="replace"))
@@ -452,11 +457,33 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
                           or (p.endswith(".py") and not is_artifact(p))}
     if len(selected) > 4096:
         raise EngineError("pytest collection snapshot exceeds the source read limit")
-    snapshot = batch_reader(sorted(selected))
-    if not isinstance(snapshot, dict) or set(snapshot) != selected or any(not isinstance(v, bytes) for v in snapshot.values()):
+    config_paths = {p for p in selected if p in _CONFIGS or _nested_config(p)}
+    if config_evidence is not None:
+        config_paths.update(path for path in config_evidence.requests["before"]
+                            if path in _CONFIGS or _nested_config(path))
+    ordinary = selected - config_paths if config_evidence is not None else selected
+    snapshot = batch_reader(sorted(ordinary))
+    if not isinstance(snapshot, dict) or set(snapshot) != ordinary or any(not isinstance(v, bytes) for v in snapshot.values()):
         raise EngineError("pytest collection snapshot source is incomplete")
-    if any(len(v) > 1_000_000 for v in snapshot.values()) or sum(map(len, snapshot.values())) > 64_000_000:
+    if any(len(v) > MAX_SOURCE_BYTES for v in snapshot.values()) or sum(map(len, snapshot.values())) > MAX_BATCH_BYTES:
         raise EngineError("pytest collection snapshot exceeds the source byte limit")
+    config_sources = {}
+    if config_evidence is not None:
+        for side in ("before", "after"):
+            config_sources[side] = config_evidence.sources(side, config_paths)
+        if any(config_sources["after"].get(path) is None for path in selected & config_paths):
+            raise EngineError("pytest collection snapshot config source is incomplete")
+        snapshot.update({path: data for path, data in config_sources["after"].items()
+                         if data is not None})
+        # Retain the original head-selected boundary after the split read.
+        # Before-only config records and shadow's reads are separate work;
+        # neither can consume collection's 4096-source allowance.
+        selected_sources = [snapshot[path] for path in selected]
+        link_bytes = sum(config_evidence.records["after"][path].link_bytes
+                         for path in selected & config_paths)
+        if (any(len(data) > MAX_SOURCE_BYTES for data in selected_sources)
+                or sum(map(len, selected_sources)) + link_bytes > MAX_BATCH_BYTES):
+            raise EngineError("pytest collection snapshot exceeds the source byte limit")
     from checkwash.shadow import _dedupe_roots, _pytest_config_path
     from checkwash.frontends.python.conftest_controls import is_collection_control
     from checkwash.frontends.python.frontend import parse_python
@@ -508,6 +535,12 @@ def collection_inventory_changes(changes, config, *, path_lister=None, batch_rea
                 contents[change.old_path] = change.before
                 if change.old_path != change.path:
                     contents.pop(change.path, None)
+        if config_evidence is not None:
+            for path, data in config_sources[side].items():
+                if data is None:
+                    contents.pop(path, None)
+                else:
+                    contents[path] = data
         config_path = _pytest_config_path(contents, "", contents=contents, cwd="")
         try:
             settings = _settings(config_path, contents.get(config_path))
