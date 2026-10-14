@@ -6,6 +6,8 @@ import os
 import hashlib
 import re
 import stat
+from dataclasses import dataclass
+from bisect import bisect_left
 from pathlib import Path
 import subprocess
 
@@ -17,6 +19,21 @@ MAX_SEARCH_HITS = 64
 MAX_INVENTORY_PATHS = 200_000
 MAX_BATCH_BYTES = 64_000_000
 _SKIP = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
+
+
+@dataclass(frozen=True)
+class ConfigSource:
+    """Internal provenance for an explicitly requested pytest config."""
+
+    path: str
+    revision: str
+    mode: bytes
+    oid: bytes
+    data: bytes
+    target_path: str
+    target_mode: bytes
+    target_oid: bytes
+    link_bytes: int = 0
 
 
 def search_source_mapping(snapshot, needles):
@@ -47,6 +64,16 @@ def _run(repo, args, *, data=None, no_matches=False):
     if no_matches and (not result.stdout or result.stderr):
         raise EngineError("strict snapshot search returned an inconsistent success response")
     return result.stdout
+
+
+def _nonregular(message, path, mode):
+    """A refusal that names the path and what it is (#346).
+
+    The path is shown as is, unless it would not print on one line.
+    """
+    kind = {b"120000": "a symlink", b"040000": "a directory"}.get(mode, "not a regular file")
+    shown = path if path.isprintable() else repr(path)
+    return EngineError(f"{message} {shown} ({kind})")
 
 
 def _verify_blob(oid, data):
@@ -136,13 +163,19 @@ class GitSnapshot:
                 continue
             mode, oid, size = entry
             if mode not in {b"100644", b"100755"}:
-                raise EngineError("strict snapshot batch cannot inspect nonregular source")
+                raise _nonregular("strict snapshot batch cannot inspect nonregular source", path, mode)
             if size > MAX_SOURCE_BYTES:
                 raise EngineError("strict snapshot source exceeds the byte limit")
             size_total += size
             if size_total > MAX_BATCH_BYTES:
                 raise EngineError("strict snapshot batch exceeds the byte limit")
             present.append((path, oid, size))
+        result.update(self._read_objects(present))
+        return result
+
+    def _read_objects(self, present):
+        """Exact-OID transport; public readers validate modes and budgets first."""
+        result = {}
         for start in range(0, len(present), 256):
             batch = present[start:start + 256]
             raw = _run(self.repo, ["cat-file", "--batch"], data=b"".join(oid + b"\n" for _p, oid, _s in batch))
@@ -160,6 +193,117 @@ class GitSnapshot:
                 cursor += size + 1
             if cursor != len(raw):
                 raise EngineError("strict snapshot batch returned trailing bytes")
+        return result
+
+    def read_config_many(self, paths):
+        """One same-tree link hop, only for explicit config-evidence callers.
+
+        Generic read/read_many and WorkingTreeSnapshot never call this API.
+        Each logical alias pays for its link plus effective returned bytes.
+        """
+        inventory = self.list_paths()
+
+        def directory(path):
+            if not path:
+                return True
+            prefix = path + "/"
+            index = bisect_left(inventory, prefix)
+            return index < len(inventory) and inventory[index].startswith(prefix)
+
+        selected = sorted(set(paths))
+        if len(selected) > MAX_INVENTORY_PATHS:
+            raise EngineError("strict snapshot config batch exceeds the path limit")
+        entries = {}
+        links = []
+        result = {}
+        total = 0
+        for path in selected:
+            if (not path or path.startswith("/") or ":" in path or "\\" in path
+                    or any(c in path for c in "\r\n\0")
+                    or any(part in {"", ".", ".."} for part in path.split("/"))):
+                raise EngineError(f"strict snapshot config has an unsafe path: path={path!r}, ref={self._rev()!r}")
+            owner = opaque_owner(path, self._opaque)
+            if owner is not None or path in self._opaque:
+                raise EngineError(f"strict snapshot config reaches a submodule: path={path!r}, ref={self._rev()!r}")
+            parts = path.split("/")
+            if any("/".join(parts[:end]) in self._tree_entries for end in range(1, len(parts))):
+                raise EngineError(f"strict snapshot config traverses a non-directory: path={path!r}, ref={self._rev()!r}")
+            entry = self._tree_entries.get(path)
+            if entry is None:
+                # A directory is not an absent optional config.
+                if directory(path):
+                    raise EngineError(f"strict snapshot config is a directory: path={path!r}, ref={self._rev()!r}")
+                result[path] = None
+                continue
+            mode, oid, size = entry
+            if size > MAX_SOURCE_BYTES:
+                raise EngineError(f"strict snapshot config source exceeds the byte limit: path={path!r}, ref={self._rev()!r}, bytes={size}")
+            entries[path] = entry
+            total += size
+            if total > MAX_BATCH_BYTES:
+                raise EngineError(f"strict snapshot config batch exceeds the byte limit: path={path!r}, ref={self._rev()!r}")
+            if mode == b"120000":
+                links.append((path, oid, size))
+        link_data = self._config_objects(links)
+        targets = {}
+        for path, (mode, oid, size) in entries.items():
+            target = path
+            if mode == b"120000":
+                try:
+                    text = link_data[path].decode("utf-8", errors="strict")
+                except UnicodeError as exc:
+                    raise EngineError(f"strict snapshot config link is undecodable: path={path!r}, ref={self._rev()!r}") from exc
+                if not text or text.startswith("/") or ":" in text or any(c in text for c in "\\\r\n\0"):
+                    raise EngineError(f"strict snapshot config link has an unsafe target: path={path!r}, ref={self._rev()!r}, target={text!r}")
+                parts = path.split("/")[:-1]
+                for part in text.split("/"):
+                    traversed = "/".join(parts)
+                    if (traversed in self._tree_entries or traversed in self._opaque
+                            or not directory(traversed)):
+                        raise EngineError(f"strict snapshot config link traverses a non-directory: path={path!r}, ref={self._rev()!r}, target={text!r}")
+                    if part in {"", "."}:
+                        continue
+                    if part == "..":
+                        if not parts:
+                            raise EngineError(f"strict snapshot config link leaves its tree: path={path!r}, ref={self._rev()!r}, target={text!r}")
+                        parts.pop()
+                    else:
+                        parts.append(part)
+                target = "/".join(parts)
+                prefixes = ["/".join(parts[:end]) for end in range(1, len(parts))]
+                if any(prefix in self._tree_entries or prefix in self._opaque for prefix in prefixes):
+                    raise EngineError(f"strict snapshot config link traverses a non-directory: path={path!r}, ref={self._rev()!r}, target={target!r}")
+                target_entry = self._tree_entries.get(target)
+                if target_entry is None or target_entry[0] not in {b"100644", b"100755"}:
+                    raise EngineError(f"strict snapshot config target is not one regular blob: path={path!r}, ref={self._rev()!r}, target={target!r}")
+                if target_entry[2] > MAX_SOURCE_BYTES:
+                    raise EngineError(f"strict snapshot config target exceeds the byte limit: path={path!r}, ref={self._rev()!r}, target={target!r}, bytes={target_entry[2]}")
+                total += target_entry[2]
+                if total > MAX_BATCH_BYTES:
+                    raise EngineError(f"strict snapshot config batch exceeds the byte limit: path={path!r}, ref={self._rev()!r}")
+            else:
+                target_entry = (mode, oid, size)
+            targets[path] = (target, target_entry)
+        requested = [(path, entry[1], entry[2]) for path, (_target, entry) in targets.items()]
+        data = self._config_objects(requested)
+        for path, (target, target_entry) in targets.items():
+            mode, oid, size = entries[path]
+            result[path] = ConfigSource(path, self._rev(), mode, oid, data[path],
+                                        target, target_entry[0], target_entry[1],
+                                        size if mode == b"120000" else 0)
+        return result
+
+    def _config_objects(self, present):
+        # A failed transport may not identify one object. Record the exact
+        # bounded request batch, without claiming which member caused it.
+        result = {}
+        for start in range(0, len(present), 256):
+            batch = present[start:start + 256]
+            try:
+                result.update(self._read_objects(batch))
+            except EngineError as exc:
+                paths = tuple(path for path, _oid, _size in batch)
+                raise EngineError(f"strict snapshot config object read failed: paths={paths!r}, ref={self._rev()!r}, detail={str(exc)!r}") from exc
         return result
 
     def _owner(self, path):
@@ -267,7 +411,7 @@ class GitSnapshot:
                 if not path.endswith(".py"):
                     continue
                 if mode not in {b"100644", b"100755"}:
-                    raise EngineError("strict snapshot inventory cannot inspect a nonregular Python source")
+                    raise _nonregular("strict snapshot inventory cannot inspect a nonregular Python source", path, mode)
                 if size:
                     paths.append(path)
                     if len(paths) >= MAX_SEARCH_HITS:
@@ -331,7 +475,7 @@ class WorkingTreeSnapshot:
         for path in selected:
             lexical = self.root / path
             if lexical.is_symlink():
-                raise EngineError("strict snapshot batch cannot inspect nonregular source")
+                raise _nonregular("strict snapshot batch cannot inspect nonregular source", path, b"120000")
             data = self.read(path)
             if data is not None:
                 size_total += len(data)
@@ -350,7 +494,8 @@ class WorkingTreeSnapshot:
         except FileNotFoundError:
             return None
         if not stat.S_ISREG(mode):
-            raise EngineError("strict snapshot cannot inspect nonregular source")
+            kind = b"120000" if stat.S_ISLNK(mode) else b"040000" if stat.S_ISDIR(mode) else None
+            raise _nonregular("strict snapshot cannot inspect nonregular source", path, kind)
         try:
             with target.open("rb") as source:
                 data = source.read(MAX_SOURCE_BYTES + 1)
@@ -381,9 +526,9 @@ class WorkingTreeSnapshot:
             for filename in sorted(files):
                 if not filename.endswith(".py"):
                     continue
-                if "" in needles and Path(directory, filename).is_symlink():
-                    raise EngineError("strict snapshot inventory cannot inspect a nonregular Python source")
                 path = Path(directory, filename).relative_to(self.root).as_posix()
+                if "" in needles and Path(directory, filename).is_symlink():
+                    raise _nonregular("strict snapshot inventory cannot inspect a nonregular Python source", path, b"120000")
                 data = self.read(path)
                 if data is None:
                     raise EngineError("strict snapshot source disappeared during importer search")
