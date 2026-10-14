@@ -291,9 +291,27 @@ submodule, because the startup-context proof needs every Python source, so
 that proof is withheld there, as before. The inventory limit
 is 200,000 paths, each selected source is at most 1 MB, and a selected read batch
 is at most 64 MB. Limits raise errors instead of silently truncating evidence.
-Working-tree inventory excludes Git metadata, rejects directory symlinks, and
-does not silently skip hidden source trees. It can therefore reject a very
-large or uninspectable tree instead of claiming a clean result.
+Working-tree inventory excludes Git metadata and does not silently skip hidden
+or ignored source trees: in hook mode the whole working tree is
+attacker-controlled. A directory symlink is listed as a submodule is, as its
+path with a trailing slash, and is never followed (#414). A read inside one,
+an import that resolves into one, or a pytest collection that can reach one
+fails with an `EngineError` naming its path, for example "strict snapshot
+inventory cannot follow directory symlink linked: pytest's collection can
+reach it", by the same reach rules as a submodule. pytest's default
+`norecursedirs` (`.*`, `venv`, `node_modules` and others) keeps an in-tree
+`.venv` (`lib64 -> lib`) or pnpm's `node_modules` links out of a run that
+does not name them, so those trees give a verdict. The working-tree searches
+still refuse a directory symlink they walk into, naming it; the importer
+search does not walk hidden trees, `.venv` or `node_modules`, and a refused
+empty-needle search withholds the startup-context proof. Ignored files count
+toward the 200,000-path limit, so a very large tree is still rejected instead
+of claimed clean.
+
+With `--format hook-json` (the Claude Code Stop hook), an engine error exits 0
+with a JSON payload whose `systemMessage` says the change was not analysed and
+why, and which carries no `decision`, so the agent may stop; the required CI
+check remains the gate. Every other format keeps exit 2.
 
 Only an explicitly complete, structurally valid search result may narrow the
 runtime-shadow test inventory. An ordinary sequence, capped/unknown result,

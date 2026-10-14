@@ -12,7 +12,7 @@ from pathlib import Path
 import subprocess
 
 from checkwash.change import EngineError
-from checkwash.opaque import opaque_error, opaque_owner
+from checkwash.opaque import SymlinkedDirectory, opaque_error, opaque_owner
 
 MAX_SOURCE_BYTES = 1_000_000
 MAX_SEARCH_HITS = 64
@@ -448,16 +448,31 @@ class WorkingTreeSnapshot:
         self.root = Path(repo).resolve()
 
     def list_paths(self):
-        """Inventory all repository files except Git's own metadata."""
+        """Inventory all repository files except Git's own metadata.
+
+        Ignored and hidden trees are listed like any other: in hook mode the
+        whole working tree is attacker-controlled. A directory symlink is
+        listed as its path with a trailing slash, an opaque directory as a
+        submodule is (`split_inventory`), and is never followed. A pass that
+        needs a fact from inside it, an import that could resolve there or a
+        collection that could reach it, fails closed naming it (#414).
+        """
         paths = []
 
         def fail(error):
             raise EngineError("strict snapshot inventory failed") from error
 
         for directory, dirs, files in os.walk(self.root, onerror=fail):
-            dirs[:] = sorted(d for d in dirs if d != ".git")
-            if any(Path(directory, d).is_symlink() for d in dirs):
-                raise EngineError("strict snapshot inventory cannot follow directory symlinks")
+            kept = []
+            for name in sorted(d for d in dirs if d != ".git"):
+                if not Path(directory, name).is_symlink():
+                    kept.append(name)
+                    continue
+                link = Path(directory, name).relative_to(self.root).as_posix()
+                paths.append(SymlinkedDirectory(link + "/"))
+                if len(paths) > MAX_INVENTORY_PATHS:
+                    raise EngineError("strict snapshot inventory exceeds the path limit")
+            dirs[:] = kept
             for filename in sorted(files):
                 if filename == ".git":
                     continue
@@ -473,6 +488,9 @@ class WorkingTreeSnapshot:
         result = {}
         size_total = 0
         for path in selected:
+            owner = self._symlinked_ancestor(path)
+            if owner is not None:
+                raise opaque_error(owner, f"{path} lies inside it")
             lexical = self.root / path
             if lexical.is_symlink():
                 raise _nonregular("strict snapshot batch cannot inspect nonregular source", path, b"120000")
@@ -484,7 +502,26 @@ class WorkingTreeSnapshot:
             result[path] = data
         return result
 
+    def _symlinked_ancestor(self, path):
+        """The directory symlink a path lies inside, or None (#414).
+
+        The inventory lists such a link as an opaque directory; a read must
+        not follow it either, as a read inside a submodule fails closed.
+        """
+        parts = path.replace("\\", "/").split("/")[:-1]
+        current = self.root
+        for end, part in enumerate(parts, 1):
+            if part in {"", ".", ".."}:
+                return None
+            current = current / part
+            if current.is_symlink():
+                return SymlinkedDirectory("/".join(parts[:end]))
+        return None
+
     def read(self, path):
+        owner = self._symlinked_ancestor(path)
+        if owner is not None:
+            raise opaque_error(owner, f"{path} lies inside it")
         lexical = self.root / path
         target = lexical.resolve()
         if not target.is_relative_to(self.root):
@@ -521,8 +558,11 @@ class WorkingTreeSnapshot:
             dirs[:] = sorted(d for d in dirs if d != ".git" and (
                 "" in needles or (d not in _SKIP and not d.startswith("."))
             ))
-            if any(Path(directory, d).is_symlink() for d in dirs):
-                raise EngineError("strict snapshot importer search cannot follow directory symlinks")
+            for name in dirs:
+                if Path(directory, name).is_symlink():
+                    link = SymlinkedDirectory(Path(directory, name).relative_to(self.root).as_posix())
+                    raise opaque_error(link, "the Python inventory needs its sources" if "" in needles
+                                       else "the importer search needs its sources")
             for filename in sorted(files):
                 if not filename.endswith(".py"):
                     continue
