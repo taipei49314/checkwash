@@ -228,13 +228,28 @@ def _import(stmt, state):
         elif alias.name != "*":
             if stmt.module == "builtins" and stmt.level == 0 and (alias.asname or alias.name) == alias.name:
                 # `from builtins import setattr` leaves the name the builtin
-                # it was: binding it would hide #84's `setattr(report, ...)`.
+                # it was. Inside a hook `_hook_import` already leaves it; at
+                # module scope binding it would hide `setattr(pytest.Function,
+                # "runtest", ...)`.
                 state.bindings.pop(alias.name, None)
                 state.values.pop(alias.name, None)
                 continue
             dotted = f"{stmt.module}.{alias.name}" if stmt.level == 0 and stmt.module else None
             kind = (_MODULES.get(dotted) or _CLASSES.get(dotted)) if dotted else None
             _bind(alias.asname or alias.name, kind, None, state)
+
+
+def _hook_import(stmt, state):
+    """An import inside a hook binds only the names it resolves to a known
+    module or class. It may fail inside a `try`, so every other name keeps
+    the binding it had, as #84's reader, which ignored hook imports, left it:
+    rebinding `setattr`, `report`, `outcome` or `item` would hide a rewrite
+    that really runs."""
+    imported = _State()
+    _import(stmt, imported)
+    for name, kind in imported.bindings.items():
+        if kind.startswith(("mod:", "cls:")):
+            _bind(name, kind, None, state)
 
 
 def _bind_statement(stmt, state, scope):
@@ -424,6 +439,8 @@ def _walk(statements, states, scope):
                     elif isinstance(target, ast.Attribute) and value is not None:
                         _write(target.value, target.attr, value, stmt, state, scope)
                 _bind_statement(stmt, state, scope)
+            elif isinstance(stmt, (ast.Import, ast.ImportFrom)) and scope.hook != "module":
+                _hook_import(stmt, state)
             elif _bind_statement(stmt, state, scope):
                 pass
             elif isinstance(stmt, ast.Delete):

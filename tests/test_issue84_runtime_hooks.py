@@ -76,6 +76,20 @@ def test_setattr_imported_from_builtins_still_rewrites_the_outcome():
         assert hits and all(f.severity == "high" for f in hits), source
 
 
+def test_an_import_that_may_fail_inside_a_hook_does_not_hide_the_outcome_rewrite():
+    """An import inside a hook can fail inside a `try`; the rewrite after it still runs."""
+    fallback = "    try:\n        from _compat import {name}\n    except ImportError:\n        pass\n"
+    for source in (
+        "def pytest_runtest_logreport(report):\n" + fallback.format(name="setattr")
+        + "    setattr(report, 'outcome', 'passed')\n",
+        "def pytest_runtest_logreport(report):\n" + fallback.format(name="report")
+        + "    report.outcome = 'passed'\n",
+        REPORT.replace("    outcome = yield\n", "    outcome = yield\n" + fallback.format(name="outcome")),
+    ):
+        hits = [f for f in judge(source) if f.rule == "TEST_DISABLED"]
+        assert hits and all(f.severity == "high" for f in hits), source
+
+
 @pytest.mark.parametrize("source", [
     "def pytest_pyfunc_call(pyfuncitem):\n    return None\n",
     "def pytest_pyfunc_call(pyfuncitem):\n    pyfuncitem.obj(**pyfuncitem.funcargs)\n    return True\n",
