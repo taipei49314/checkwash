@@ -1,0 +1,20 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+note: #431 — an always-passing literal next to a real inspection of the caught error is still inspection.
+=== before: tests/value.test.ts ===
+import { it, expect } from "vitest";
+import { value } from "./value";
+it("value", () => {
+  expect(value()).toBe(1);
+});
+=== after: tests/value.test.ts ===
+import { it, expect } from "vitest";
+import { value } from "./value";
+it("value", () => {
+  try { expect(value()).toBe(1); } catch (error) {
+    expect(true).toBe(true);
+    expect(error.message).toMatch(/invalid/);
+  }
+});
+=== expect ===
+[]
