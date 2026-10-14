@@ -201,6 +201,15 @@ pythonpath/import-mode configuration, supported conftest `sys.path` edits,
 and concrete recognized runner environment/command spellings. A path suffix
 collision alone is not a finding.
 
+The pass reads the root pytest configs up front, and every nested config
+whose directory holds, at any depth and on either side, a test file by
+pytest's default name patterns (`test_*.py`, `*_test.py`, outside its default
+`norecursedirs`). Any other nested config is dormant and is not read up
+front: pytest discovery walks up from a run's start directory, so that config
+governs nothing the pass analyses. A dormant config is still read lazily,
+and as strictly as any other, when a run's discovery reaches it, for example
+through `-c` or a start directory inside it (#346).
+
 Provider identity includes the selected module and every executed package
 initializer in its chain. AST identity uses the cross-version stable dump;
 Python bytes parsing honors encoding cookies. Large/unparseable providers use
@@ -244,10 +253,28 @@ not reused as the runtime-provider inventory. Its use by the installation pass
 is restricted to discovering oracle consumers. Git path metadata is read once per snapshot;
 selected regular blobs are read in batches of 256 by immutable object IDs.
 Missing required blobs, malformed paths/records, unsupported selected source
-or incomplete batches fail with `EngineError`. A submodule is listed as its
-path with a trailing slash, a directory whose content is unknown (#335). Its
-own path reads as no file, whether git answers it as missing (2.43) or as a
-submodule (2.55).
+or incomplete batches fail with `EngineError`. A refused nonregular source is
+named with what it is, for example "strict snapshot batch cannot inspect
+nonregular source requirements/pyproject.toml (a symlink)".
+
+One exception to that refusal applies to range checks only, and only to a
+recognized pytest config name (`pytest.toml`, `.pytest.toml`, `pytest.ini`,
+`.pytest.ini`, `pyproject.toml`, `tox.ini`, `setup.cfg`). When its tree entry
+is a symlink whose target is a regular file of the same commit, it reads as
+that file: the link text is resolved against the link's directory, within the
+tree. A target outside the tree, a link to a link, a link to a directory, a
+missing target and a target inside a submodule still fail with an
+`EngineError` that names the path and the commit. Base and head are read
+separately, so a link whose target changed counts as a config change even
+when the link itself did not change. For that comparison every symlinked
+config name in either tree is resolved up front, so one that fails closed
+does so even when the provider pass would treat it as dormant. Any other
+symlink, including a custom config file name given to `-c`, and the
+working-tree snapshot are not covered (#346).
+
+A submodule is listed as its path with a trailing slash, a directory whose
+content is unknown (#335). Its own path reads as no file, whether git
+answers it as missing (2.43) or as a submodule (2.55).
 A read inside one, an import that resolves into one, or a pytest collection that
 can reach one on either side of the diff fails with an `EngineError` naming
 its path; every other pass proceeds over the rest of the tree. A run reaches

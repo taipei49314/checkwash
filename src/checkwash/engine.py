@@ -497,6 +497,7 @@ def build_ir(
     root_searcher=None,
     root_path_lister=None,
     root_batch_reader=None,
+    pytest_configs=None,
 ) -> IR:
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(
         changes, config, root_reader, root_searcher, root_path_lister)
@@ -517,12 +518,32 @@ def build_ir(
             sorted(set(known_modules) - set(self_modules or ()) - repo_roots - known_baseline())
         )
     ir = IR(base=base_label, head=head_label, globals=g)
+    config_evidence = pytest_configs.prepare() if pytest_configs is not None else None
     shadow_hits = find_runtime_subject_shadows(
         changes, config, g.third_party_roots,
         head_path_lister=root_path_lister,
         head_batch_reader=root_batch_reader,
         include_equivalent=True,
+        config_evidence=config_evidence,
     )
+    if config_evidence is not None:
+        reported_hits = []
+        for hit in shadow_hits:
+            controls = set(hit.control_paths)
+            finding_path = hit.finding_path
+            contexts = []
+            for logical in sorted(controls & config_evidence.changes.keys()):
+                reported = config_evidence.reported_change(logical, changes)
+                if reported is not None:
+                    physical, context = reported
+                    controls.add(physical.path)
+                    contexts.append(context)
+                    if finding_path == logical:
+                        finding_path = physical.path
+            reported_hits.append(replace(hit, finding_path=finding_path,
+                                         trigger="; ".join([hit.trigger, *contexts]),
+                                         control_paths=tuple(sorted(controls))))
+        shadow_hits = reported_hits
     g.runtime_subject_shadows = [
         (hit.finding_path, hit.module, hit.before_provider, hit.after_provider,
          hit.test_path, hit.trigger)
@@ -553,9 +574,22 @@ def build_ir(
     # ci surface already said, not just what this diff added to it.
     one_hop = _one_hop_runners(changes, config, head_reader)
     ci_base = _ci_base_surface(changes, config, one_hop)
-    g.ci_weakening_lines.extend(collection_inventory_changes(
+    collection_events = collection_inventory_changes(
         changes, config, path_lister=root_path_lister, batch_reader=root_batch_reader,
-    ))
+        config_evidence=config_evidence,
+    )
+    config_report_changes = {}
+    for path, reason in collection_events:
+        reported = config_evidence.reported_change(path, changes) if config_evidence is not None else None
+        if reported is not None:
+            physical, context = reported
+            path = physical.path
+            reason = reason + "; " + context
+            config_report_changes[path] = physical
+            shadow_evidence_paths.add(path)
+            if physical.old_path:
+                shadow_evidence_paths.add(physical.old_path)
+        g.ci_weakening_lines.append((path, reason))
 
     # Cross-file oracle resolution (A5-x) parses helper files straight from
     # the change bytes, memoised — never from the loop's parse cache, so it
@@ -1570,6 +1604,18 @@ def build_ir(
                               if side == -1 and (path, side) in strict_oracle_sources}, root_searcher)
     # The JavaScript port of the same channel (#226).
     mark_js_expected_provenance(ir, raw_by_path)
+    # Report the changed regular target, with explicit logical-config
+    # context in the reason. Its existing FileIR is genuine raw-diff source;
+    # no synthetic regular FileIR or target span is attached to a link.
+    files_by_path = {file.path: file for file in ir.files}
+    for path, change in sorted(config_report_changes.items()):
+        if path not in files_by_path:
+            raise EngineError(f"pytest config physical change has no file evidence: path={path!r}")
+        if files_by_path[path].status != change.status:
+            raise EngineError(f"pytest config physical change has incompatible file evidence: path={path!r}")
+        files_by_path[path].change_evidence = _change_evidence(change, rename_destinations)
+        if path not in g.ci_files_changed:
+            g.ci_files_changed.append(path)
     return ir
 
 
@@ -1600,6 +1646,7 @@ def analyze(
     root_searcher=None,
     root_path_lister=None,
     root_batch_reader=None,
+    pytest_configs=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -1616,6 +1663,7 @@ def analyze(
         root_searcher=root_searcher,
         root_path_lister=root_path_lister,
         root_batch_reader=root_batch_reader,
+        pytest_configs=pytest_configs,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

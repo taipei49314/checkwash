@@ -34,6 +34,7 @@ from checkwash.gitio import (
     resolve_commit,
 )
 from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
+from checkwash.gitio.pytest_configs import PairedPytestConfigs
 from checkwash.report.jsonout import findings_to_json, ir_to_json
 from checkwash.report.sarif import findings_to_sarif
 from checkwash.report.context import ReportContext
@@ -74,6 +75,7 @@ def _write_term(text: str) -> None:
 
 def _cmd_check(args: argparse.Namespace) -> int:
     repo = args.repo
+    pytest_configs = None
     if args.range:
         if "..." in args.range:
             # Three-dot means merge-base(A,B)..B — the standard PR-diff
@@ -104,6 +106,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         # D6 resolves skip-condition constants imported from files outside
         # the diff; the head snapshot is where those files live.
         head_snapshot = GitSnapshot(repo, head)
+        pytest_configs = PairedPytestConfigs(GitSnapshot(repo, base), head_snapshot)
         head_reader = head_snapshot.read
 
         def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
@@ -192,6 +195,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         root_searcher=root_snapshot.search,
         root_path_lister=root_snapshot.list_paths,
         root_batch_reader=root_snapshot.read_many,
+        pytest_configs=pytest_configs,
     )
 
     for gap in report_context.coverage_gaps:
