@@ -21,6 +21,52 @@ checkwash is a **tripwire that raises the cost of tampering**, not a
 guarantee. It is worth running as one required check among others, not as the
 only thing standing between an agent and your main branch.
 
+## Known issue: Action trust boundary
+
+**Affected:** every published release of the GitHub Action
+`taipei49314/checkwash/action` up to and including v0.7.0. That includes the
+currently recommended pin, v0.6.0 (`8c70efbf93975bf3210acb8eafbaf4b38044a770`);
+the v0.7.0 Action is identical and equally affected.
+
+**What happens:** the composite Action runs `python -m pip` to install
+checkwash, then runs whichever `checkwash` is first on `PATH`, with the pull
+request's checkout as the working directory. Because `python -m` puts that
+directory first on the import path, a module in the checkout (for example a
+top-level `pip` package) can replace the installer and, through it, the checker.
+A pull request can therefore tamper with the result it is judged by.
+[#372](https://github.com/taipei49314/checkwash/pull/372) describes the full set
+of exposures. The engine still parses rather than executes the code under
+review; the exposure is in how the Action installs and starts it. With
+`comment-pr: true`, the step that runs `checkwash` for the comments also holds
+the job token.
+
+**Who is affected:** any workflow that runs this Action on a pull request whose
+head the author, or the agent under review, controls. Under the threat model
+above, that is every pull request checkwash judges, so until a fixed release is
+published a pass is not a trustworthy verdict on its own.
+
+**Fix:** [#372](https://github.com/taipei49314/checkwash/pull/372) (merge
+`0b42e2343d5c6983d22011dbd846f0da74ac623a`) installs into a private environment
+with the setup-python interpreter, verifies the installed package and invokes it
+explicitly; [#375](https://github.com/taipei49314/checkwash/pull/375) applies the
+same isolation to the separate quality preview Action. Both are on main and not
+yet released. The next release will include them. After it is published, the
+README on main will recommend that release's Action instead of the one before it
+(maintainer decision, 2026-10-14). Pinning an unreleased main commit is not a
+supported workaround ([action/README.md](action/README.md#public-pin-and-upgrade)).
+
+**Until then:**
+
+- Treat a pass as advisory and review the pull request before merging it. Look
+  in particular for new top-level Python modules or packages (such as `pip/` or
+  names that shadow standard-library modules) and other new files at the
+  repository root.
+- Leave `comment-pr` at its default `false`.
+- When the branch rule requires code-owner review, a code owner for
+  `.github/workflows/` ([docs/enterprise.md](docs/enterprise.md#4-codeowners))
+  must approve edits to the check itself, but that does not address this issue:
+  the files involved need not be under `.github/`.
+
 ## Reporting a vulnerability
 
 A bypass that lets real tampering through is a `false-negative` issue, not a
