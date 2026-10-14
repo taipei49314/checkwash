@@ -1,6 +1,64 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-12 (R1 integrated; fixed historical scheduling retired)
+Updated: 2026-10-14 (handover to LAPTOP-01AGNPJU; draft stack consolidated)
+
+## 2026-10-14: handover, ratification and the draft stack consolidated
+
+Work after 2026-10-12 ran in a session on another machine. It merged the
+2026-10-12 entries below, then opened 19 stacked draft pull requests
+(#389–#412) and issue #411, and stopped on 2026-10-13. On 2026-10-14 the
+maintainer stopped that session and handed maintenance to a session on
+LAPTOP-01AGNPJU. The maintainer's answers that day, quoted:
+
+- 「說過 可以追認」: the instructions quoted in D-129 and D-130
+  (「直接到1.0 所有條件準備好停下」, 「目前沒有，先完成可自主推進的工作」) and in
+  #403 (「授權 由你裁決」) are the maintainer's. The changes merged under
+  them are ratified: the v0.7.0 verdict-baseline rotation in
+  `tests/gates/verdict_gate_accepted.toml` with D-129 (#371), and D-130
+  (#373).
+- 「照建議」: the stack is not merged as a whole. Its ruled product changes
+  are re-opened from `main` without the measurement workflows and tools:
+  #439 (#345: stand-in node limit 200,000; errors name the file),
+  #441 (deep string expressions no longer crash the analysis; stacked on
+  #439) and #442 (#346: symlinked pytest configs). The other drafts are
+  closed with their branches kept; each closing comment says where the work
+  went. #411 is closed: the test it asked about existed only in draft #394.
+- 「開」: two external user reports on v0.7.0, and work found in the closed
+  drafts, are filed as #414–#438. The two P0 issues are #414 (worktree
+  `check`, as the pre-commit and Claude Code Stop hooks run it, exits 2 when
+  the working tree holds any directory symlink, such as an in-tree `.venv`)
+  and #415 (any changed file over 1,000,000 bytes, or a large root
+  `uv.lock`/`poetry.lock`, makes `check` exit 2; a v0.7.0 regression from
+  `d900018`).
+- 「回 用專業化回」: #363, #364, #366 and #367 from an external reporter
+  were answered; #363 is closed as completed in v0.7.0. #440 adds the
+  credits CONTRIBUTING.md promises, for #156, #164 and #363.
+- Action: #413 adds a README and SECURITY.md advisory. Every published
+  Action release up to and including v0.7.0 lets the pull request's checkout
+  replace the installer and checker; #372 fixes it on `main`, unreleased.
+  After the next release is published, the README on `main` recommends that
+  release's Action instead of the one before it.
+- Release gate: the maintainer will put a required reviewer on the `pypi`
+  environment and give agents a narrower token. The tag ruleset `22162219`
+  is then removed, without waiting for 1.0. Until then the procedure in
+  `docs/RELEASING.md` is unchanged.
+- 「可代合」: the consolidation pull requests above may be merged once their
+  required checks pass.
+
+Corrections to the entries below:
+
+- The "Open on 2026-10-08" list is out of date. #196 closed on 2026-10-09,
+  and #351 was ruled and merged in #360. The 22 issues it lists were ruled
+  on 2026-10-08 (「裁決依照你建議」). Of those, only #345 and #346 have work
+  in progress; the other 20 are not implemented yet.
+- T-528 (EC) was handed to LAPTOP-01AGNPJU and closed as CANCELLED on
+  2026-10-14: task A delivered with all six held-out candidates UNVERIFIED,
+  B (a first held-out measurement) not started, C (#358/#351) done, and D
+  cancelled. A held-out measurement needs a new task.
+
+Still open: the #345 and #346 acceptance sweeps and their DECISIONS text,
+which wait for the maintainer; smallestlie W3 (EC T-526) and downstream
+re-pins to v0.7.0, which are not authorized; and the 20 ruled issues.
 
 ## 2026-10-12: separate development and published-release checks
 
