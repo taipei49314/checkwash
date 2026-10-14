@@ -29,25 +29,32 @@ from checkwash.pyenv import known_baseline
 from checkwash.roles import collectable
 
 _MAX_SOURCE_BYTES = 1_000_000
-_MAX_SOURCE_NODES = 30_000
+_MAX_SOURCE_NODES = 200_000
 _MAX_CONTEXT_READS = 4096
 _MAX_CONTEXT_BYTES = 64_000_000
 _MAX_ANALYSIS_STEPS = 1_000_000
 
 
-def _syntax(source):
+def _syntax(source, *, path="<unknown>", side="<unknown>"):
     if source is not None and not isinstance(source, bytes):
         raise EngineError("stand-in source is not bytes")
     if source is None:
         return None
     if len(source) > _MAX_SOURCE_BYTES:
-        raise EngineError("stand-in source exceeds the byte limit")
+        raise EngineError(
+            f"stand-in source exceeds the byte limit: path={path!r}, requested_side={side!r}, "
+            f"bytes={len(source)}, limit={_MAX_SOURCE_BYTES}"
+        )
     try:
         tree = ast.parse(source.decode("utf-8-sig"))
     except (SyntaxError, UnicodeError, ValueError, RecursionError):
         return None
-    if sum(1 for _node in ast.walk(tree)) > _MAX_SOURCE_NODES:
-        raise EngineError("stand-in source exceeds the syntax node limit")
+    nodes = sum(1 for _node in ast.walk(tree))
+    if nodes > _MAX_SOURCE_NODES:
+        raise EngineError(
+            f"stand-in source exceeds the syntax node limit: path={path!r}, requested_side={side!r}, "
+            f"bytes={len(source)}, nodes={nodes}, limit={_MAX_SOURCE_NODES}"
+        )
     return tree
 
 
@@ -319,8 +326,8 @@ def _package(path, exists):
     return ".".join(parts)
 
 
-def _candidate(source, imported_names=()):
-    tree = _syntax(source)
+def _candidate(source, imported_names=(), *, path="<unknown>", side="<unknown>"):
+    tree = _syntax(source, path=path, side=side)
     if tree is None:
         return False
     imports = set(imported_names)
@@ -357,23 +364,23 @@ def _candidate(source, imported_names=()):
     return False
 
 
-def _imports(source):
-    tree = _syntax(source)
+def _imports(source, *, path="<unknown>", side="<unknown>"):
+    tree = _syntax(source, path=path, side=side)
     if tree is None:
         return set()
     return {a.asname or a.name.split(".")[0] for n in ast.walk(tree)
             if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
 
 
-def _import_rebind(before, after):
+def _import_rebind(before, after, *, path="<unknown>"):
     """A local import name pointing at a different dotted target after.
 
     Scheduling filter only — the import spelling of a stand-in swap (#88b)
     changes nothing the call/assignment filters see. Scope, alias and
     ownership precision belong to the trace; this keeps the diff a candidate.
     """
-    def bindings(source):
-        tree = _syntax(source)
+    def bindings(source, side):
+        tree = _syntax(source, path=path, side=side)
         if tree is None:
             return None
         out = {}
@@ -387,7 +394,7 @@ def _import_rebind(before, after):
                         out[item.asname or item.name] = f"{node.module}.{item.name}"
         return out
 
-    old, new = bindings(before), bindings(after)
+    old, new = bindings(before, "before"), bindings(after, "after")
     if not old or not new:
         return False
     return any(name in new and new[name] != target for name, target in old.items())
@@ -830,8 +837,8 @@ class _Trace:
             self.stack.pop()
 
 
-def _module(path, source, package, baseline=None):
-    tree = _syntax(source)
+def _module(path, source, package, baseline=None, *, side="<unknown>"):
+    tree = _syntax(source, path=path, side=side)
     if tree is None:
         return None
     text = source.decode("utf-8-sig")
@@ -1000,14 +1007,18 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             continue
         candidate_bytes += sum(len(source) for source in sides if source is not None)
         if candidate_bytes > _MAX_CONTEXT_BYTES:
-            raise EngineError("stand-in changed context exceeds the source byte limit")
-        imported = _imports(sides[0])
+            raise EngineError(
+                f"stand-in changed context exceeds the source byte limit: trigger_path={path!r}, "
+                f"context_bytes={candidate_bytes}, limit={_MAX_CONTEXT_BYTES}"
+            )
+        imported = _imports(sides[0], path=path, side="before")
         rebound = (
             role == "test" and sides[0] is not None and sides[1] is not None
-            and _import_rebind(sides[0], sides[1])
+            and _import_rebind(sides[0], sides[1], path=path)
         )
-        if (rebound or any(_candidate(source, imported) for source in sides)) and (
-            role == "test" or _new_assignment_candidate(sides, deny)
+        if (rebound or any(_candidate(source, imported, path=path, side=side)
+                           for side, source in zip(("before", "after"), sides))) and (
+            role == "test" or _new_assignment_candidate(sides, deny, path=path)
         ):
             candidates.add(path)
     if not candidates:
@@ -1072,8 +1083,18 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                 raise EngineError("stand-in strict snapshot returned invalid source bytes")
             if memo[path] is not None:
                 read_bytes[0] += len(memo[path])
-                if len(memo[path]) > _MAX_SOURCE_BYTES or read_bytes[0] > _MAX_CONTEXT_BYTES:
-                    raise EngineError("stand-in context exceeds the source byte limit")
+                if len(memo[path]) > _MAX_SOURCE_BYTES:
+                    raise EngineError(
+                        f"stand-in context exceeds the source byte limit: path={path!r}, "
+                        f"requested_side={('before', 'after')[side]!r}, source='root_reader', "
+                        f"bytes={len(memo[path])}, limit={_MAX_SOURCE_BYTES}"
+                    )
+                if read_bytes[0] > _MAX_CONTEXT_BYTES:
+                    raise EngineError(
+                        f"stand-in context exceeds the source byte limit: trigger_path={path!r}, "
+                        f"requested_side={('before', 'after')[side]!r}, source='root_reader', "
+                        f"context_bytes={read_bytes[0]}, limit={_MAX_CONTEXT_BYTES}"
+                    )
             if path in inventory and memo[path] is None:
                 raise EngineError("stand-in inventoried source disappeared")
         return memo[path]
@@ -1090,7 +1111,8 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         sides = [read(path, side) for side in (0, 1)]
         if any(source is None for source in sides):
             continue  # a new test has no existing oracle to replace
-        if any(_syntax(source) is None for source in sides):
+        if any(_syntax(source, path=path, side=side) is None
+               for side, source in zip(("before", "after"), sides)):
             continue
         parsed = [parse_python(source, collect_tests=True) for source in sides]
         if not all(p.parse_ok for p in parsed):
@@ -1111,7 +1133,7 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                 if source is None:
                     continue
                 package = _package(source_path, lambda candidate: read(candidate, side) is not None)
-                module = _module(source_path, source, package, baseline)
+                module = _module(source_path, source, package, baseline, side=("before", "after")[side])
                 if module is None:
                     raise EngineError("stand-in provider context could not be parsed")
                 # Baseline imports identify the removal-and-assignment form;
@@ -1135,7 +1157,7 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
     return sorted(set(events), key=lambda row: (row[0], row[1] or "", row[2], row[3], row[4]))
 
 
-def _new_assignment_candidate(sides, deny=()):
+def _new_assignment_candidate(sides, deny=(), *, path="<unknown>"):
     """Only changed, potentially first-party effects need reverse discovery.
 
     This is a scheduling filter, not the finding predicate: positional
@@ -1143,8 +1165,10 @@ def _new_assignment_candidate(sides, deny=()):
     It keeps ordinary sys.path setup and unchanged legacy installations from
     acquiring a new whole-repository inventory requirement.
     """
-    def keys(source, inherited=()):
-        tree = _syntax(source)
+    diagnostic_path = path  # keys() already has a local path(node) resolver.
+
+    def keys(source, inherited=(), *, side="<unknown>"):
+        tree = _syntax(source, path=diagnostic_path, side=side)
         if tree is None:
             return set(), (), dict(inherited)
         aliases = {"request": "@request", **dict(inherited)}
@@ -1200,6 +1224,6 @@ def _new_assignment_candidate(sides, deny=()):
                               for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)))
         return found, registrations, aliases
 
-    before, b_registration, aliases = keys(sides[0])
-    after, a_registration, _ = keys(sides[1], aliases)
+    before, b_registration, aliases = keys(sides[0], side="before")
+    after, a_registration, _ = keys(sides[1], aliases, side="after")
     return bool(after - before or after and a_registration != b_registration)
