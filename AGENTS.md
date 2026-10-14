@@ -23,7 +23,9 @@ The judge is immutable; the player runs free.
    for that version, recorded in `docs/RELEASING.md`. The weekly slot (estate
    T-57) was canceled by T-197, and since 2026-09-26 the estate no longer
    governs this repository (T-451). Without that authorization: no version
-   bump, no tag, no GitHub Release. The tag ruleset rejects `v*` creation at
-   every other moment; `docs/RELEASING.md` has the procedure. Downstream
-   re-pins (smallestlie, checkwash-corpus) follow a published release and
-   need the same explicit authorization, never an unreleased commit.
+   bump, no tag, no GitHub Release. Since 2026-10-14 no tag ruleset enforces
+   this; PyPI publication waits for the maintainer to approve the `pypi`
+   environment deployment, and `docs/RELEASING.md` has the procedure.
+   Downstream re-pins (smallestlie, checkwash-corpus) follow a published
+   release and need the same explicit authorization, never an unreleased
+   commit.
