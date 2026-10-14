@@ -62,6 +62,20 @@ def test_hook_effects_block_at_root_and_nested_conftest(source, path):
     assert any("execution/report suppression" in f.message for f in hits)
 
 
+def test_setattr_imported_from_builtins_still_rewrites_the_outcome():
+    """Importing the builtin `setattr` inside a hook does not shadow it."""
+    for source in (
+        "def pytest_runtest_logreport(report):\n    from builtins import setattr\n"
+        "    setattr(report, 'outcome', 'passed')\n",
+        "def pytest_runtest_logreport(report):\n    from builtins import setattr as setattr\n"
+        "    setattr(report, 'outcome', 'passed')\n",
+        REPORT.replace("report.outcome = 'passed'",
+                       "from builtins import setattr\n        setattr(report, 'outcome', 'passed')"),
+    ):
+        hits = [f for f in judge(source) if f.rule == "TEST_DISABLED"]
+        assert hits and all(f.severity == "high" for f in hits), source
+
+
 @pytest.mark.parametrize("source", [
     "def pytest_pyfunc_call(pyfuncitem):\n    return None\n",
     "def pytest_pyfunc_call(pyfuncitem):\n    pyfuncitem.obj(**pyfuncitem.funcargs)\n    return True\n",

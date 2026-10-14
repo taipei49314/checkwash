@@ -226,6 +226,12 @@ def _import(stmt, state):
                 top = alias.name.split(".", 1)[0]
                 _bind(top, _MODULES.get(top), None, state)
         elif alias.name != "*":
+            if stmt.module == "builtins" and stmt.level == 0 and (alias.asname or alias.name) == alias.name:
+                # `from builtins import setattr` leaves the name the builtin
+                # it was: binding it would hide #84's `setattr(report, ...)`.
+                state.bindings.pop(alias.name, None)
+                state.values.pop(alias.name, None)
+                continue
             dotted = f"{stmt.module}.{alias.name}" if stmt.level == 0 and stmt.module else None
             kind = (_MODULES.get(dotted) or _CLASSES.get(dotted)) if dotted else None
             _bind(alias.asname or alias.name, kind, None, state)
