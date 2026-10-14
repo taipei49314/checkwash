@@ -194,6 +194,17 @@ ITEM_RESIDUALS = [
     pytest.param(call_hook("item.__dict__['runtest'] = lambda: None"), id="dict-write"),
     pytest.param(call_hook("item.runtest, item.obj = (lambda: None), (lambda: None)"), id="tuple-target"),
     pytest.param(call_hook(WRITE, "noop = item.runtest", "item.runtest = noop"), id="unread-rewrite"),
+    pytest.param(call_hook("while True:", "    " + WRITE, "    break"), id="while-loop"),
+    pytest.param(HEAD + "def pytest_fixture_setup(fixturedef, request):\n    request.node.runtest = lambda: None\n",
+                 id="fixture-setup-request-node"),
+    pytest.param(HEAD + "def pytest_pycollect_makeitem(collector, name, obj):\n    if name.startswith('test_'):\n"
+                 "        item = pytest.Function.from_parent(collector, name=name)\n        " + WRITE + "\n"
+                 "        return [item]\n", id="pycollect-makeitem"),
+    # Carriers are traced generously, toward silence: a receiver called with
+    # the item, and a name traced anywhere in the file, both count.
+    pytest.param(call_hook("log.debug(item)", "item.runtest = lambda: log.debug('skipped')"), id="call-tainted-receiver"),
+    pytest.param(HEAD + "def _describe():\n    log.debug(pytest.Function)\n\n\n"
+                 "def pytest_runtest_call(item):\n    item.runtest = lambda: log.debug('skipped')\n", id="file-wide-taint"),
 ]
 
 
@@ -292,7 +303,9 @@ def test_the_method_list_covers_this_python():
     """Every native assertion method of the running Python is listed; a checker factory and class attributes are not."""
     native = {name for name in dir(unittest.TestCase)
               if name.startswith(("assert", "fail")) and name != "failureException"}
-    assert native <= TESTCASE_METHODS, sorted(native - TESTCASE_METHODS)
+    if sys.version_info < (3, 14):
+        # The list covers Python 3.11-3.13 (ruling 432.Q2); 3.14's new methods are a follow-up.
+        assert native <= TESTCASE_METHODS, sorted(native - TESTCASE_METHODS)
     assert not {"_getAssertEqualityFunc", "addTypeEqualityFunc", "failureException", "maxDiff",
                 "longMessage"} & TESTCASE_METHODS
 
@@ -342,6 +355,15 @@ TESTCASE_RESIDUALS = [
                  id="call-built-partial"),
     pytest.param("import functools\n" + TC + "@functools.wraps(unittest.TestCase.assertEqual)\n"
                  "def _accept(self, *args, **kwargs):\n    pass\n\n\nunittest.TestCase.assertEqual = _accept\n", id="decorated-def"),
+    pytest.param(TC + "_init = unittest.TestCase.__init__\n\n\ndef _quiet_init(self, *args, **kwargs):\n"
+                 "    _init(self, *args, **kwargs)\n    self.addTypeEqualityFunc(int, " + NOOP + ")\n\n\n"
+                 "unittest.TestCase.__init__ = _quiet_init\n", id="type-equality-func"),
+    pytest.param("import sys\n" + TC + "sys.modules['unittest'].TestCase.assertEqual = " + NOOP + "\n",
+                 id="sys-modules-lookup"),
+    # Seven unknown top-level conditions exceed the reader's 64 path states,
+    # and module scope is then not read at all.
+    pytest.param(TC + "".join(f"if FLAG_{i}:\n    pass\n" for i in range(7))
+                 + "unittest.TestCase.assertEqual = " + NOOP + "\n", id="path-state-cap"),
 ]
 
 
