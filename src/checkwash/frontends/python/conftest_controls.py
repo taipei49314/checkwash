@@ -21,7 +21,8 @@ COLLECTION = "collection"
 # skips, a `pytest_runtest_makereport` that rewrites the outcome, ...): the
 # test is collected, then skipped or reported as something else. Code that
 # forces pytest's exit status (`conftest.runtime.exit.`, #422) is one too: the
-# tests run, and the run reports success whatever they did.
+# tests run, and the run reports success whatever they did. So is a no-op
+# swapped in for the item callback, `item.runtest` or `item.obj` (#432).
 RUNTIME = "runtime"
 # A conftest fixture whose setup always ends in skip or xfail. A runtime
 # control too, but it fires only for the tests that request it.
