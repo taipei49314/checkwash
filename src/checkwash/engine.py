@@ -61,6 +61,7 @@ from checkwash.frontends.python.frontend import (
     parse_conftest_level,
     parse_python,
 )
+from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.helper_skips import HelperModule
 from checkwash.frontends.python.setup_skip_controls import ConftestLevel, unreadable_level
 from checkwash.frontends.python.root_oracles import project_root_oracles, root_caller_unchanged, root_imports, transparent_root_helpers
@@ -359,7 +360,10 @@ def _canonical_constants(raw: dict[str, str]) -> dict[str, str]:
         if tree is None:
             continue
         try:
-            out[name] = ast.unparse(tree)
+            if isinstance(tree, ast.Expression) and isinstance(tree.body, ast.BinOp):
+                out[name] = _binding_key(tree.body)
+            else:
+                out[name] = ast.unparse(tree)
         except ValueError:
             continue
     return out
