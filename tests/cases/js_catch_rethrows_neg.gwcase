@@ -1,6 +1,7 @@
 === meta ===
 rule: BROAD_EXCEPT_ADDED
 note: #363 — a direct rethrow preserves the assertion's failure.
+credit: @talhayme (#363)
 === before: tests/cart.test.ts ===
 import { expect, it } from "vitest";
 it("rounds to cents", () => {
