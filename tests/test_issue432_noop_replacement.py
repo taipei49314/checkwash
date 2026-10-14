@@ -1,16 +1,18 @@
 """A conftest that swaps what pytest runs for a no-op is a runtime control (#432).
 
-The item callback (`item.runtest`, `item.obj`, `item._obj`) is read in a
-closed list of hooks (ruling 432.Q2), as a generated matrix in the style of
-tests/test_neutralization_matrix.py: every cell reports TEST_DISABLED at
-high, or is an honest control that stays silent, or is a named residual
-pinned silent. Closing a residual later means striking it from its list, a
-recorded act.
+Three direct spellings are read (ruling 432.Q2): the item callback
+(`item.runtest`, `item.obj`, `item._obj`) in a closed list of hooks, `runtest`
+on pytest's item classes, and a native `unittest.TestCase` method. Each is a
+generated matrix in the style of tests/test_neutralization_matrix.py: every
+cell reports TEST_DISABLED at high, or is an honest control that stays
+silent, or is a named residual pinned silent. Closing a residual later means
+striking it from its list, a recorded act.
 """
 import datetime
 import os
 import subprocess
 import sys
+import unittest
 
 import pytest
 
@@ -20,6 +22,7 @@ from checkwash.contract import Contract
 from checkwash.engine import analyze
 from checkwash.frontends.python import conftest_controls as cc
 from checkwash.frontends.python.frontend import parse_python
+from checkwash.frontends.python.runtime_controls import TESTCASE_METHODS
 
 
 def judge(source, before=None, path="tests/conftest.py"):
@@ -56,9 +59,15 @@ def assert_silent(source):
     assert not [f for f in judge(source) if f.rule == "TEST_DISABLED"], source
 
 
-# The issue's shape (a).
+# The issue's two shapes.
 ISSUE_A = "import pytest\n\n\n@pytest.hookimpl(tryfirst=True)\ndef pytest_runtest_call(item):\n    item.runtest = lambda: None\n"
+ISSUE_B = "import unittest\n\nunittest.TestCase.assertEqual = lambda self, *args, **kwargs: None\n"
+CLASS_LEVEL = "import pytest\n\npytest.Function.runtest = lambda self: None\n"
+CALL_TEST_METHOD = "import unittest\n\nunittest.TestCase._callTestMethod = lambda self, method: None\n"
 CAPTURE_AND_CALL = "def pytest_runtest_call(item):\n    original = item.runtest\n    item.runtest = lambda: original()\n"
+FORWARDING = ("import unittest\n\n_original = unittest.TestCase.assertEqual\n\n\n"
+              "def _assert_equal(self, first, second, msg=None):\n    return _original(self, first, second, msg)\n\n\n"
+              "unittest.TestCase.assertEqual = _assert_equal\n")
 
 
 # --- The item callback -------------------------------------------------------
@@ -224,20 +233,197 @@ def test_an_unchanged_replacement_is_not_reported_again():
 
 @pytest.mark.parametrize("path", ["conftest.py", "tests/conftest.py"])
 def test_issue_shapes_block_in_a_new_and_an_existing_conftest(path):
-    for source in (ISSUE_A,):
+    for source in (ISSUE_A, ISSUE_B, CLASS_LEVEL):
         for before in (None, "import pytest\n"):
             hits = [f for f in judge(source, before, path) if f.rule == "TEST_DISABLED"]
             assert hits and all(f.severity == "high" for f in hits), (source, before)
 
 
 def test_a_test_module_does_not_carry_these_suite_controls():
-    for source in (ISSUE_A,):
+    for source in (ISSUE_A, ISSUE_B, CLASS_LEVEL):
         assert markers(source, conftest=False) == []
+
+
+# --- Native unittest.TestCase methods ----------------------------------------
+
+# (id, prefix, indent): every place a TestCase write is read.
+TESTCASE_SCOPES = [
+    ("module", "import unittest\n\n", ""),
+    ("module-beside-fixture", "import os\nimport unittest\n\nimport pytest\n\n\n" + FIXTURE, ""),
+    ("version-gated", "import sys\nimport unittest\n\nif sys.version_info >= (3, 11):\n", "    "),
+    ("configure-hook", "import unittest\n\n\ndef pytest_configure(config):\n", "    "),
+    ("local-import-hook", "def pytest_sessionstart(session):\n    import unittest\n", "    "),
+]
+
+TESTCASE_FORMS = [
+    ("assertEqual", ["unittest.TestCase.assertEqual = lambda self, *args, **kwargs: None"]),
+    ("assertTrue", ["unittest.TestCase.assertTrue = lambda self, expr, msg=None: None"]),
+    ("case-module", ["unittest.case.TestCase.assertEqual = lambda self, first, second, msg=None: None"]),
+    ("from-import", ["from unittest import TestCase as Case", "Case.assertEqual = lambda *args, **kwargs: None"]),
+    ("setattr", ["setattr(unittest.TestCase, 'assertEqual', lambda *args, **kwargs: None)"]),
+    ("alias", ["Case = unittest.TestCase", "Case.assertEqual = lambda *args, **kwargs: None"]),
+    ("same-file-def", ["def _accept(self, *args, **kwargs):", "    pass", "unittest.TestCase.assertEqual = _accept"]),
+    ("callTestMethod", ["unittest.TestCase._callTestMethod = lambda self, method: None"]),
+    ("fail", ["unittest.TestCase.fail = lambda self, msg=None: None"]),
+]
+
+
+def case_source(scope, form):
+    _id, prefix, indent = scope
+    return prefix + "".join(indent + line + "\n" for line in form)
+
+
+TESTCASE_CELLS = [pytest.param(scope, form, id=f"{scope[0]}-{form[0]}")
+                  for scope in TESTCASE_SCOPES for form in TESTCASE_FORMS]
+
+
+@pytest.mark.parametrize("scope,form", TESTCASE_CELLS)
+def test_testcase_method_cell_reports(scope, form):
+    assert_reports(case_source(scope, form))
+
+
+def test_every_listed_testcase_method_reports():
+    for method in sorted(TESTCASE_METHODS):
+        source = f"import unittest\n\nunittest.TestCase.{method} = lambda *args, **kwargs: None\n"
+        assert effects(source) == [f"testcase-{method}-replaced"], method
+
+
+def test_the_method_list_covers_this_python():
+    """Every native assertion method of the running Python is listed; a checker factory and class attributes are not."""
+    native = {name for name in dir(unittest.TestCase)
+              if name.startswith(("assert", "fail")) and name != "failureException"}
+    assert native <= TESTCASE_METHODS, sorted(native - TESTCASE_METHODS)
+    assert not {"_getAssertEqualityFunc", "addTypeEqualityFunc", "failureException", "maxDiff",
+                "longMessage"} & TESTCASE_METHODS
+
+
+TC = "import unittest\n\n"
+NOOP = "lambda *args, **kwargs: None"
+
+TESTCASE_HONEST = [
+    pytest.param(FORWARDING, id="forwarding-wrapper"),
+    pytest.param(TC + "unittest.TestCase.assertItemsEqual = unittest.TestCase.assertCountEqual\n", id="compat-alias"),
+    pytest.param(TC + "unittest.TestCase.maxDiff = None\n", id="maxDiff"),
+    pytest.param(TC + "unittest.TestCase.longMessage = True\n", id="longMessage"),
+    pytest.param(TC + "def _assert_true(self, expr, msg=None):\n    if not expr:\n        raise self.failureException(msg)\n\n\n"
+                 "unittest.TestCase.assertTrue = _assert_true\n", id="raising-reimplementation"),
+    pytest.param(TC + "unittest.TestCase.assertBetween = lambda self, value, low, high: None\n", id="new-helper"),
+    pytest.param(TC + "if not hasattr(unittest.TestCase, 'assertNoLogs'):\n"
+                 "    unittest.TestCase.assertNoLogs = lambda self, *args, **kwargs: self.assertLogs(*args, **kwargs)\n",
+                 id="version-shim"),
+    pytest.param(TC + "_original = unittest.TestCase.assertEqual\nunittest.TestCase.assertEqual = " + NOOP
+                 + "\nunittest.TestCase.assertEqual = _original\n", id="restored"),
+    pytest.param(TC + "if False:\n    unittest.TestCase.assertEqual = " + NOOP + "\n", id="dead-branch"),
+]
+
+
+@pytest.mark.parametrize("source", TESTCASE_HONEST)
+def test_honest_testcase_writes_stay_silent(source):
+    assert_silent(source)
+
+
+TESTCASE_RESIDUALS = [
+    pytest.param(TC + "unittest.TestCase.assertEqual = unittest.TestCase.assertTrue\n", id="weaker-alias"),
+    pytest.param(TC + "unittest.TestCase.assertEqual = lambda *args, **kwargs: print('skipped')\n", id="body-calls"),
+    pytest.param(TC + "unittest.TestCase._getAssertEqualityFunc = lambda self, first, second: (" + NOOP + ")\n",
+                 id="equality-func-factory"),
+    pytest.param(TC + "unittest.TestCase.failureException = type('Never', (Exception,), {})\n", id="failureException"),
+    pytest.param(TC + "import pytest\n\n\n@pytest.fixture(autouse=True)\ndef _quiet(monkeypatch):\n"
+                 "    monkeypatch.setattr(unittest.TestCase, 'assertEqual', " + NOOP + ")\n", id="monkeypatch-fixture"),
+    pytest.param(TC + "for name in ('assertEqual', 'assertTrue'):\n    setattr(unittest.TestCase, name, " + NOOP + ")\n",
+                 id="loop"),
+    pytest.param(TC + "setattr(unittest.TestCase, 'assert' + 'Equal', " + NOOP + ")\n", id="computed-name"),
+    pytest.param(TC + "class QuietCase(unittest.TestCase):\n    def assertEqual(self, *args, **kwargs):\n        pass\n",
+                 id="subclass-in-conftest"),
+    pytest.param("from django.test import TestCase\n\nTestCase.assertEqual = " + NOOP + "\n", id="imported-subclass"),
+    pytest.param(TC + "try:\n    import xmlrunner\nexcept ImportError:\n    unittest.TestCase.assertEqual = " + NOOP + "\n",
+                 id="except-handler"),
+    pytest.param("import functools\n" + TC + "unittest.TestCase.assertEqual = functools.partial(" + NOOP + ")\n",
+                 id="call-built-partial"),
+    pytest.param("import functools\n" + TC + "@functools.wraps(unittest.TestCase.assertEqual)\n"
+                 "def _accept(self, *args, **kwargs):\n    pass\n\n\nunittest.TestCase.assertEqual = _accept\n", id="decorated-def"),
+]
+
+
+@pytest.mark.parametrize("source", TESTCASE_RESIDUALS)
+def test_testcase_residual_is_pinned_silent(source):
+    assert_silent(source)
+
+
+def test_each_testcase_method_is_its_own_effect():
+    source = (TC + "_original = unittest.TestCase.assertTrue\nunittest.TestCase.assertEqual = " + NOOP + "\n"
+              "unittest.TestCase.assertTrue = lambda self, expr, msg=None: _original(self, expr, msg)\n")
+    assert effects(source) == ["testcase-assertEqual-replaced"]
+
+
+def test_module_scope_is_the_module_pseudo_hook():
+    """Never `fixture`, which conftest_controls classifies as FIXTURE_SETUP."""
+    for source, effect in ((ISSUE_B, "testcase-assertEqual-replaced"), (CLASS_LEVEL, "Function-runtest-replaced")):
+        names = [m.name for m in markers(source)]
+        assert len(names) == 1 and names[0].startswith(f"conftest.runtime.module.{effect}."), names
+
+
+# --- runtest on pytest's item classes ----------------------------------------
+
+# (id, import line, class expression)
+ITEM_CLASSES = [
+    ("pytest-Function", "import pytest\n", "pytest.Function"),
+    ("pytest-Item", "import pytest\n", "pytest.Item"),
+    ("python-Function", "import _pytest.python\n", "_pytest.python.Function"),
+    ("unittest-TestCaseFunction", "import _pytest.unittest\n", "_pytest.unittest.TestCaseFunction"),
+    ("from-python-Function", "from _pytest.python import Function\n", "Function"),
+    ("from-pytest-alias", "from pytest import Function as PyFunction\n", "PyFunction"),
+]
+CLASS_SCOPES = [("module", "\n", ""), ("configure-hook", "\n\ndef pytest_configure(config):\n", "    ")]
+CLASS_FORMS = [
+    ("lambda", ["{c}.runtest = lambda self: None"]),
+    ("setattr", ["setattr({c}, 'runtest', lambda self: None)"]),
+    ("same-file-def", ["def _runtest(self):", "    pass", "{c}.runtest = _runtest"]),
+]
+CLASS_CELLS = [pytest.param(cls, scope, form, id=f"{cls[0]}-{scope[0]}-{form[0]}")
+               for cls in ITEM_CLASSES for scope in CLASS_SCOPES for form in CLASS_FORMS]
+
+
+@pytest.mark.parametrize("cls,scope,form", CLASS_CELLS)
+def test_item_class_runtest_cell_reports(cls, scope, form):
+    _id, imports, expression = cls
+    source = imports + scope[1] + "".join(scope[2] + line.format(c=expression) + "\n" for line in form[1])
+    assert_reports(source)
+
+
+@pytest.mark.parametrize("source", [
+    pytest.param("import _pytest.unittest\n\n\ndef runtest(self):\n    self._testcase(result=self)\n\n\n"
+                 "_pytest.unittest.TestCaseFunction.runtest = runtest\n", id="django-style-runtest"),
+    pytest.param("import pytest\n\n_original = pytest.Function.runtest\npytest.Function.runtest = lambda self: _original(self)\n",
+                 id="capture-and-call"),
+    pytest.param("import time\n\nimport pytest\n\n_original = pytest.Function.runtest\n\n\ndef _timed(self):\n"
+                 "    start = time.monotonic()\n    try:\n        return _original(self)\n    finally:\n"
+                 "        print(time.monotonic() - start)\n\n\npytest.Function.runtest = _timed\n", id="timing-wrapper"),
+])
+def test_delegating_item_class_runtest_stays_silent(source):
+    assert_silent(source)
+
+
+@pytest.mark.parametrize("source", [
+    pytest.param("import pytest\n\npytest.Function.runtest = pytest.Function.setup\n", id="other-object-attribute"),
+    pytest.param("import pytest\n\nfor cls in (pytest.Function, pytest.Item):\n    cls.runtest = lambda self: None\n",
+                 id="loop"),
+    pytest.param("import pytest\n\npytest.Function.runtest = lambda self: print(self)\n", id="mentions-self"),
+    pytest.param(call_hook("type(item).runtest = lambda self: None"), id="type-of-item"),
+    pytest.param(call_hook("item.__class__.runtest = lambda self: None"), id="dunder-class"),
+    pytest.param("import pytest\n\n\nclass QuietFunction(pytest.Function):\n    def runtest(self):\n        pass\n",
+                 id="subclass-in-conftest"),
+    pytest.param("import _pytest.nodes\n\n_pytest.nodes.Item.runtest = lambda self: None\n", id="unlisted-class-spelling"),
+])
+def test_item_class_residual_is_pinned_silent(source):
+    assert_silent(source)
 
 
 # --- Real pytest ---------------------------------------------------------------
 
 PYTEST_TEST = "def test_value():\n    assert 0 == 1\n"
+UNITTEST_TEST = ("import unittest\n\n\nclass TestValue(unittest.TestCase):\n"
+                 "    def test_value(self):\n        self.assertEqual(0, 1)\n")
 
 
 def run_pytest(tmp_path, test_source, conftest):
@@ -254,6 +440,9 @@ def run_pytest(tmp_path, test_source, conftest):
 
 @pytest.mark.parametrize("test_source,conftest", [
     pytest.param(PYTEST_TEST, ISSUE_A, id="item-runtest"),
+    pytest.param(PYTEST_TEST, CLASS_LEVEL, id="class-level-runtest"),
+    pytest.param(UNITTEST_TEST, ISSUE_B, id="testcase-assertEqual"),
+    pytest.param(UNITTEST_TEST, CALL_TEST_METHOD, id="testcase-callTestMethod"),
 ])
 def test_real_pytest_failing_test_turns_green_and_detector_blocks(tmp_path, test_source, conftest):
     after = run_pytest(tmp_path, test_source, conftest)
@@ -263,6 +452,7 @@ def test_real_pytest_failing_test_turns_green_and_detector_blocks(tmp_path, test
 
 @pytest.mark.parametrize("test_source,conftest", [
     pytest.param(PYTEST_TEST, CAPTURE_AND_CALL, id="item-capture-and-call"),
+    pytest.param(UNITTEST_TEST, FORWARDING, id="testcase-forwarding"),
 ])
 def test_real_pytest_delegating_replacement_still_fails_and_detector_is_silent(tmp_path, test_source, conftest):
     after = run_pytest(tmp_path, test_source, conftest)

@@ -5,26 +5,37 @@ the same hooks. Follow the yielded Result/TestReport and the item callback,
 without importing pytest or executing repository source. Unknown predicates
 retain both paths; dead literal branches and nested uncalled functions do not.
 
-A conftest can also swap what pytest runs for a no-op (#432). The item
-callback is read: `item.runtest`, `item.obj` or `item._obj` written
-(assignment, `setattr` with a literal name, through simple aliases) on the
-`item`, `pyfuncitem` or `nextitem` parameter of a top-level, non-async hook in
-`_ITEM_HOOKS`. Each attribute is its own effect key (`item-runtest-replaced`,
-`nextitem-obj-replaced`, ...), so a later write to one never clears another
-(ruling 432.Q2).
+A conftest can also swap what pytest runs for a no-op (#432). Three direct
+spellings are read, each as its own effect key so a later write to one never
+clears another (ruling 432.Q2):
+
+- `item.runtest`, `item.obj` or `item._obj` written (assignment, `setattr`
+  with a literal name, through simple aliases) on the `item`, `pyfuncitem` or
+  `nextitem` parameter of a top-level, non-async hook in `_ITEM_HOOKS`:
+  `item-runtest-replaced`, `nextitem-obj-replaced`, ...;
+- `runtest` written on pytest's item classes (`pytest.Function`,
+  `pytest.Item`, `_pytest.python.Function`,
+  `_pytest.unittest.TestCaseFunction`): `Function-runtest-replaced`, ...;
+- a native `unittest.TestCase` method in `TESTCASE_METHODS` written:
+  `testcase-assertEqual-replaced`, ...
+
+The class and TestCase writes are read at module scope (the `module`
+pseudo-hook) and in the body of any top-level, non-async `pytest_*` function.
 
 Only a lambda or an undecorated same-file function is read as the
 replacement; one built by a call or bound from another object's attribute is
-not (ruling 432.Q4). A replacement is a no-op when it does not delegate: no
-call anywhere in it (nested scopes and defaults included) mentions a carrier
-of the original. Carriers are traced (taint), not matched by spelling: the
-item and its aliases, pytest's item classes, every name bound or written from
-an expression that mentions a carrier (a runner built from the original, an
-original stored on the item or in a container, a default parameter, a local
-function whose body mentions one), and every name bound in a statement this
-reader does not enter. A later write to the same attribute that is not a
-no-op clears that attribute's effect only, as `_outcome` does for
-`report.outcome`.
+not (ruling 432.Q4). A callback or class-level `runtest` replacement is a
+no-op when it does not delegate: no call anywhere in it (nested scopes and
+defaults included) mentions a carrier of the original. Carriers are traced
+(taint), not matched by spelling: the item and its aliases, pytest's item
+classes, a class-level replacement's first parameter, every name bound or
+written from an expression that mentions a carrier (a runner built from the
+original, an original stored on the item or in a container, a default
+parameter, a local function whose body mentions one), and every name bound in
+a statement this reader does not enter. A TestCase replacement is a no-op
+only with no call, raise or assert anywhere in it. A later write to the same
+attribute that is not a no-op clears that attribute's effect only, as
+`_outcome` does for `report.outcome`.
 
 A write under a condition is reported as #84's controls are: the guard is
 hashed into the marker name, and the marker carries none (ruling 432.Q5).
@@ -50,10 +61,32 @@ _ITEM_HOOKS = frozenset({"pytest_runtest_protocol", "pytest_runtest_setup", "pyt
 _ITEM_PARAMS = {"item": "item", "pyfuncitem": "item", "nextitem": "nextitem"}
 _ITEM_ATTRS = frozenset({"runtest", "obj", "_obj"})
 
+# Native `unittest.TestCase` methods a replacement is read for: the public
+# assertion methods of Python 3.11-3.13 with their deprecated aliases (removed
+# in 3.12), `fail`, and the methods that run a test. `_getAssertEqualityFunc`
+# and `failureException` are not methods a no-op replaces: the first returns a
+# checker, the second is a class attribute (ruling 432.Q2, Q4).
+TESTCASE_METHODS = frozenset({
+    "assertAlmostEqual", "assertCountEqual", "assertDictContainsSubset", "assertDictEqual", "assertEqual",
+    "assertFalse", "assertGreater", "assertGreaterEqual", "assertIn", "assertIs", "assertIsInstance",
+    "assertIsNone", "assertIsNot", "assertIsNotNone", "assertLess", "assertLessEqual", "assertListEqual",
+    "assertLogs", "assertMultiLineEqual", "assertNoLogs", "assertNotAlmostEqual", "assertNotEqual",
+    "assertNotIn", "assertNotIsInstance", "assertNotRegex", "assertRaises", "assertRaisesRegex", "assertRegex",
+    "assertSequenceEqual", "assertSetEqual", "assertTrue", "assertTupleEqual", "assertWarns", "assertWarnsRegex",
+    # Deprecated aliases (Python 3.11).
+    "assertAlmostEquals", "assertEquals", "assertNotAlmostEquals", "assertNotEquals", "assertNotRegexpMatches",
+    "assertRaisesRegexp", "assertRegexpMatches", "assert_", "failIf", "failIfAlmostEqual", "failIfEqual",
+    "failUnless", "failUnlessAlmostEqual", "failUnlessEqual", "failUnlessRaises",
+    # Failing and running a test.
+    "fail", "_baseAssertEqual", "_callTestMethod", "run", "__call__", "debug",
+})
+
 # What an import or an attribute of a known module binds.
-_MODULES = {"pytest": "mod:pytest", "_pytest": "mod:_pytest", "_pytest.python": "mod:_pytest.python",
+_MODULES = {"unittest": "mod:unittest", "unittest.case": "mod:unittest.case", "pytest": "mod:pytest",
+            "_pytest": "mod:_pytest", "_pytest.python": "mod:_pytest.python",
             "_pytest.unittest": "mod:_pytest.unittest"}
-_CLASSES = {"pytest.Function": "cls:Function", "pytest.Item": "cls:Item",
+_CLASSES = {"unittest.TestCase": "cls:TestCase", "unittest.case.TestCase": "cls:TestCase",
+            "pytest.Function": "cls:Function", "pytest.Item": "cls:Item",
             "_pytest.python.Function": "cls:Function", "_pytest.unittest.TestCaseFunction": "cls:TestCaseFunction"}
 _ITEM_CLASSES = {"cls:Function": "Function", "cls:Item": "Item", "cls:TestCaseFunction": "TestCaseFunction"}
 
@@ -95,6 +128,8 @@ class _Scope:
     wrapper: str | None = None
     # Read item callback writes (a hook in `_ITEM_HOOKS`)?
     item_writes: bool = False
+    # Read item-class `runtest` and TestCase method writes?
+    class_writes: bool = False
     # Carriers of the original bound in this scope.
     taint: _Lazy = _NO_TAINT
 
@@ -314,11 +349,24 @@ def _delegates(replacement, seeds, resolve):
     return any(isinstance(node, ast.Call) and _mentions(node, taint, resolve) for node in ast.walk(replacement))
 
 
-def _callback_noop(value, state, scope):
+def _callback_noop(value, state, scope, class_level):
     replacement = _readable(value, state)
     if replacement is None:
         return False
-    return not _delegates(replacement, set(scope.taint.get()), _resolver(state, scope))
+    seeds = set(scope.taint.get())
+    if class_level:
+        args = replacement.args
+        positional = args.posonlyargs + args.args
+        first = positional[0] if positional else args.vararg
+        if first is not None:
+            seeds.add(first.arg)
+    return not _delegates(replacement, seeds, _resolver(state, scope))
+
+
+def _testcase_noop(value, state):
+    replacement = _readable(value, state)
+    return replacement is not None and not any(
+        isinstance(node, (ast.Call, ast.Raise, ast.Assert)) for node in ast.walk(replacement))
 
 
 def _write(receiver, attr, value, node, state, scope):
@@ -326,7 +374,13 @@ def _write(receiver, attr, value, node, state, scope):
     kind = _kind(receiver, state, scope.hook, scope.wrapper)
     if scope.item_writes and kind in ("item", "nextitem") and attr in _ITEM_ATTRS:
         key = f"{kind}-{attr}-replaced"
-        noop = value is not None and _callback_noop(value, state, scope)
+        noop = value is not None and _callback_noop(value, state, scope, class_level=False)
+    elif scope.class_writes and kind in _ITEM_CLASSES and attr == "runtest":
+        key = f"{_ITEM_CLASSES[kind]}-runtest-replaced"
+        noop = value is not None and _callback_noop(value, state, scope, class_level=True)
+    elif scope.class_writes and kind == "cls:TestCase" and attr in TESTCASE_METHODS:
+        key = f"testcase-{attr}-replaced"
+        noop = value is not None and _testcase_noop(value, state)
     else:
         return
     if noop:
@@ -454,9 +508,11 @@ def runtime_controls(tree: ast.Module):
     yield from exit_status_controls(tree)
     kinds, values = _module_seeds(tree)
     seeded = _State(bindings=dict(kinds), values=dict(values))
-    module = _Scope("module")
+    module = _Scope("module", class_writes=True)
     module_taint = _Lazy(lambda: _taint(tree.body, _unentered(tree.body), _resolver(seeded, module)))
-    walks = []
+    # Module scope is the `module` pseudo-hook: it reads only the item-class
+    # and TestCase writes (#432), and never mints a `fixture` name.
+    walks = [(module.hook, tree.body, _State(), replace(module, taint=module_taint))]
     bindings = {}
     for stmt in tree.body:
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -467,7 +523,7 @@ def runtime_controls(tree: ast.Module):
                     bindings.pop(target.id, None)
     for name, func in bindings.items():
         plain = isinstance(func, ast.FunctionDef)
-        if name not in _HOOKS and not (plain and name in _ITEM_HOOKS):
+        if name not in _HOOKS and not (plain and name.startswith("pytest_")):
             continue
         wrapper = None
         for dec in func.decorator_list:
@@ -481,7 +537,7 @@ def runtime_controls(tree: ast.Module):
                                        or ("report" if arg.arg == "report" and name == "pytest_runtest_logreport"
                                            else "local"))
             state.values.pop(arg.arg, None)
-        scope = _Scope(name, wrapper, item_writes=plain and name in _ITEM_HOOKS)
+        scope = _Scope(name, wrapper, item_writes=plain and name in _ITEM_HOOKS, class_writes=plain)
         taint = _Lazy(lambda func=func, scope=scope, initial=state.copy(): _taint(
             func.body, _hook_seeds(func, scope, initial, module_taint), _resolver(initial, scope)))
         walks.append((name, func.body, state, replace(scope, taint=taint)))
