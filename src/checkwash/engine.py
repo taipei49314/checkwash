@@ -221,6 +221,20 @@ def _base_unread(change: FileChange) -> UnreadSide | None:
     return next((side for side in change.unread if side.side == "base"), change.unread[0])
 
 
+def _new_python_module(change: FileChange) -> bool:
+    """Is this change a Python module that did not exist at its path before (#415)?
+
+    The runtime-provider pass reads every added or renamed-in module, whatever
+    its role, because a new module can shadow the subject a test imports. An
+    unread one would hide exactly that, so it refuses like a must-read path.
+    """
+    path = change.path.replace("\\", "/")
+    if not path.endswith(".py"):
+        return False
+    return change.status == "added" or (
+        change.old_path is not None and change.old_path.replace("\\", "/") != path)
+
+
 def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ...],
                         scope_allow: list[str], listed_setup=None) -> bool:
     """Must a detector read this path's content (#415)?
@@ -277,7 +291,8 @@ def _set_aside_unread(changes: list[FileChange], config: Config, scope_allow: li
 
     for change in unread:
         sides = (change.before, change.after)
-        if any(_detector_must_read(path, config, sides, scope_allow) for path in paths(change)):
+        if _new_python_module(change) or any(
+                _detector_must_read(path, config, sides, scope_allow) for path in paths(change)):
             raise change.unread[0].refusal()
     listed: list[frozenset[str]] = []
 

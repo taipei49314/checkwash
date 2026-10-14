@@ -146,7 +146,7 @@ def test_an_unread_side_earns_no_repair_evidence(case):
 @pytest.mark.parametrize("path", [
     "tests/test_huge.py", "conftest.py", "tests/helpers.py", ".github/workflows/ci.yml",
     "pyproject.toml", "AGENTS.md", "golden/out.txt", "package.json", "scripts/run.sh",
-    "web/app.test.js", "jest.setup.js",
+    "web/app.test.js", "jest.setup.js", "app/billing.py",
 ])
 def test_a_path_a_detector_must_read_still_refuses_naming_it(path):
     change = FileChange(path, "added", None, None, unread=(unread(path, "head"),))
