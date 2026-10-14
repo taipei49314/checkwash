@@ -138,7 +138,9 @@ SITES = sorted([
     ("frontend", "_pytestmark_markers", "call _marker_identity"),
     ("frontend", "_helper_marker", "helper.{}"),
     ("frontend", "setup_markers", "setup.{}"),
+    ("exit_status_controls", "exit_status_controls", "conftest.runtime.exit.{}"),
     ("runtime_controls", "runtime_controls", "conftest.runtime.{}"),
+    ("runtime_controls", "runtime_controls", "from exit_status_controls"),
     ("runtime_controls", "runtime_controls", "from fixture_setup_controls"),
     ("runtime_controls", "runtime_controls", "from setup_skip_controls"),
     ("setup_skip_controls", "fixture_setup_controls", "conftest.runtime.fixture.{}"),
@@ -148,7 +150,7 @@ SITES = sorted([
 ])
 
 PLUMBING = {"name name", "name result", "name = None", "result = None", "name in runtime_controls",
-            "from fixture_setup_controls", "from setup_skip_controls", "name skip"}
+            "from fixture_setup_controls", "from setup_skip_controls", "name skip", "from exit_status_controls"}
 
 # Each family, the kind it has, and names it mints.
 FAMILIES = {
@@ -172,6 +174,11 @@ FAMILIES = {
                                                                        "conftest.runtime.pytest_runtest_setup.xfail"]),
     "conftest.runtime.fixture.{}": (cc.FIXTURE_SETUP, ["conftest.runtime.fixture.needs_network.skip",
                                                        "conftest.runtime.fixture.needs_network.xfail"]),
+    # Code that forces pytest's exit status (#422): a runtime control, never a
+    # fixture setup, whatever function it sits in.
+    "conftest.runtime.exit.{}": (cc.RUNTIME, ["conftest.runtime.exit.pytest_sessionfinish.exitstatus.e3b0c44298fc1c14",
+                                              "conftest.runtime.exit.module.os-exit.e3b0c44298fc1c14",
+                                              "conftest.runtime.exit.fixture.system-exit.e3b0c44298fc1c14"]),
 }
 
 JS_NAMES = ["test.skip", "test.skipIf(process.env.CI)", "test.fails", "test.unfocused"]
