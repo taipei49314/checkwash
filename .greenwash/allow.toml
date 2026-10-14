@@ -246,3 +246,11 @@ reason = "Issue #224 (ruling 196.followup.python-compare-direction, 2026-10-03; 
 author = "taipei49314"
 created = "2026-10-06"
 expires = "2026-11-05"
+
+[[allow]]
+fingerprint = "GUARDRAIL_TOUCHED/AGENTS.md/-/v2:e0a9e70ea3e15dd0d00e8169a7e0888422c15d5b192e42b3526c831c7f4d3e9d"
+rule = "GUARDRAIL_TOUCHED"
+reason = "PR #445: AGENTS.md rule 5 names the pypi deployment approval instead of the tag ruleset deleted on 2026-10-14; content-bound v2 fingerprint covers only this before/after pair; owner-approved 2026-10-14"
+author = "taipei49314"
+created = "2026-10-14"
+expires = "2026-11-13"
