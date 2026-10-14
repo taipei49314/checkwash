@@ -23,6 +23,7 @@ import posixpath
 import re
 import shlex
 import tomllib
+from collections.abc import Mapping as _MappingABC
 from dataclasses import dataclass, replace
 from fnmatch import fnmatchcase
 from types import MappingProxyType
@@ -32,6 +33,7 @@ from checkwash.change import EngineError, FileChange
 from checkwash.ir.astutil import stable_dump
 from checkwash.config import Config
 from checkwash.frontends.python.frontend import _static_truth, parse_python
+from checkwash.gitio.snapshot import MAX_BATCH_BYTES, MAX_INVENTORY_PATHS, MAX_SOURCE_BYTES
 from checkwash.opaque import opaque_error, split_inventory
 from checkwash.roles import _is_runner_script, _runner_shape, _runs_tests, collectable
 
@@ -1660,6 +1662,44 @@ def _side_source(
     return snapshot.get(path)
 
 
+def _dormant_configs(config_paths: Iterable[str], paths: Iterable[str]) -> frozenset[str]:
+    """Nested configs under a directory that holds no collected test (#346).
+
+    Config discovery walks up from a test's directory, so such a config
+    cannot be found for any test this pass analyses unless a run names it or
+    starts discovery inside it. Root configs are never dormant.
+    """
+
+    test_dirs = {""}
+    for path in paths:
+        if collectable(path):
+            parts = path.split("/")[:-1]
+            test_dirs.update("/".join(parts[:end]) for end in range(1, len(parts) + 1))
+    return frozenset(
+        path for path in config_paths if path.rpartition("/")[0] not in test_dirs
+    )
+
+
+class _LazyConfigSources(_MappingABC):
+    """Config bytes looked up on first access, for config discovery (#346)."""
+
+    def __init__(self, paths: Iterable[str], source: Callable[[str], bytes | None]):
+        self._paths = tuple(sorted(set(paths)))
+        self._known = frozenset(self._paths)
+        self._source = source
+
+    def __getitem__(self, path: str) -> bytes | None:
+        if path not in self._known:
+            raise KeyError(path)
+        return self._source(path)
+
+    def __iter__(self):
+        return iter(self._paths)
+
+    def __len__(self) -> int:
+        return len(self._paths)
+
+
 def _pytest_config_matches(path: str, data: bytes | None) -> bool:
     """Whether pytest treats this filename's contents as a config."""
 
@@ -2279,6 +2319,7 @@ def find_runtime_subject_shadows(
     ]
     | None = None,
     include_equivalent: bool = False,
+    config_evidence=None,
 ) -> list[SubjectShadow]:
     """Return provider changes for existing first-party test imports."""
 
@@ -2286,7 +2327,9 @@ def find_runtime_subject_shadows(
         raise EngineError("runtime-shadow inventory requires both path and byte readers")
     analysis = _ShadowAnalysisCache()
     third_party = set(third_party_roots)
-    normally_relevant = _relevant(changes, config)
+    effective_configs = config_evidence.changes if config_evidence is not None else {}
+    normally_relevant = _relevant(changes, config) or any(
+        _config_change(path, change) for path, change in effective_configs.items())
     # A same-path provider mutation matters only when repository inventory is
     # available to prove an existing competing provider and live test import.
     # Direct engine users (including the frozen perf gate) provide neither;
@@ -2317,6 +2360,7 @@ def find_runtime_subject_shadows(
     if not normally_relevant and not provisional_staged_paths:
         return []
     change_by_path = {c.path.replace("\\", "/"): c for c in changes}
+    control_changes = {**change_by_path, **effective_configs}
     side_change_by_path = dict(change_by_path)
     for change in changes:
         old_path = (change.old_path or "").replace("\\", "/")
@@ -2327,11 +2371,13 @@ def find_runtime_subject_shadows(
         for path, change in change_by_path.items()
         if _search_order_change(path, change, config)
     }
+    changed_control_paths.update(path for path, change in effective_configs.items()
+                                 if _config_change(path, change))
     changed_config_paths = {
         path
         for path in changed_control_paths
         if path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
-        or (change_by_path[path].old_path or path)
+        or (control_changes[path].old_path or path)
         .replace("\\", "/")
         .rsplit("/", 1)[-1]
         in _PYTEST_CONFIGS
@@ -2361,12 +2407,20 @@ def find_runtime_subject_shadows(
     after_paths.update(path for path, c in change_by_path.items() if c.after is not None)
     after_paths.difference_update(path for path, c in change_by_path.items() if c.after is None)
     before_paths, after_paths = _side_paths(after_paths, changes)
+    if config_evidence is not None:
+        before_paths.update(config_evidence.requests["before"] & config_evidence.paths["before"])
+        after_paths.update(config_evidence.requests["after"] & config_evidence.paths["after"])
     added_paths = after_paths - before_paths
     removed_paths = before_paths - after_paths
 
     config_paths = sorted(
         p for p in before_paths | after_paths if p.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
     )
+    # A nested config under a directory that holds no collected test file on
+    # either side governs nothing this pass analyses (#346). It is not read
+    # up front; it is read only if a run's config discovery reaches it.
+    dormant_configs = _dormant_configs(config_paths, before_paths | after_paths)
+    read_config_paths = [path for path in config_paths if path not in dormant_configs]
     conftest_paths = sorted(
         p for p in before_paths | after_paths if _is_conftest_path(p)
     )
@@ -2400,7 +2454,7 @@ def find_runtime_subject_shadows(
         modules |= _path_to_modules(path)
     if changed_config_paths or any(
         _is_conftest_path(path)
-        or _is_conftest_path(change_by_path[path].old_path or path)
+        or _is_conftest_path(control_changes[path].old_path or path)
         for path in changed_control_paths
     ):
         # Adding/deleting a higher-precedence but otherwise empty config can
@@ -2452,7 +2506,7 @@ def find_runtime_subject_shadows(
     # shadow without inventing arbitrary source roots from filename suffixes.
     changed_roots: set[str] = {""} if search_order_changed else set()
     import_mode_changed = False
-    for path, change in sorted(change_by_path.items()):
+    for path, change in sorted(control_changes.items()):
         old_path = (change.old_path or path).replace("\\", "/")
         old_config = old_path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
         new_config = path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
@@ -2604,15 +2658,17 @@ def find_runtime_subject_shadows(
     # Phase one reads only controls and candidate tests. Their active imports
     # narrow an arbitrarily large package down before provider sources are
     # requested, so repository size cannot disable the detector via a cap.
-    initial_reads = sorted(
+    initial_requests = (
         {
             *test_paths,
             *conftest_paths,
             *runner_snapshot_paths,
-            *config_paths,
+            *read_config_paths,
         }
         - set(side_change_by_path)
     )
+    initial_reads = sorted(initial_requests - set(config_paths)
+                           if config_evidence is not None else initial_requests)
     snapshot: dict[str, bytes | None] = {}
     if initial_reads and head_batch_reader is not None:
         read = head_batch_reader(initial_reads)
@@ -2630,6 +2686,47 @@ def find_runtime_subject_shadows(
     for path, change in change_by_path.items():
         if change.after is not None:
             snapshot[path] = change.after
+
+    config_sources = {}
+    if config_evidence is not None:
+        for side in ("before", "after"):
+            config_sources[side] = config_evidence.sources(side, read_config_paths)
+        # Splitting the original initial batch does not enlarge its budget.
+        # The working snapshot also holds unrelated changed files; only the
+        # original requested paths belong to this consumer's batch boundary.
+        initial_configs = initial_requests & set(config_paths)
+        combined = {path: (config_sources["after"].get(path) if path in initial_configs
+                           else snapshot.get(path)) for path in initial_requests}
+        missing = sorted(path for path, data in combined.items() if not isinstance(data, bytes))
+        if missing:
+            raise EngineError("runtime-shadow snapshot read failed: " + ", ".join(missing[:3]))
+        link_bytes = sum(config_evidence.records["after"][path].link_bytes
+                         for path in initial_configs)
+        if len(combined) > MAX_INVENTORY_PATHS:
+            raise EngineError("runtime-shadow initial snapshot exceeds the source read limit")
+        if (any(len(data) > MAX_SOURCE_BYTES for data in combined.values())
+                or sum(map(len, combined.values())) + link_bytes > MAX_BATCH_BYTES):
+            raise EngineError("runtime-shadow initial snapshot exceeds the source byte limit")
+
+    def read_dormant_config(path, side):
+        # The same strict readers as the initial batch, for one path, once.
+        if config_evidence is not None:
+            if path not in config_sources[side]:
+                config_sources[side].update(config_evidence.sources(side, [path]))
+            return
+        if path in side_change_by_path or path in snapshot or head_batch_reader is None:
+            return
+        read = head_batch_reader([path])
+        if not isinstance(read, Mapping) or not isinstance(read.get(path), bytes):
+            raise EngineError("runtime-shadow snapshot read failed: " + path)
+        snapshot[path] = read[path]
+
+    def config_source(path, side):
+        if path in dormant_configs:
+            read_dormant_config(path, side)
+        if config_evidence is not None and path in config_sources[side]:
+            return config_sources[side][path]
+        return _side_source(path, side, side_change_by_path, snapshot)
 
     before_conftests = {
         path: _side_source(path, "before", side_change_by_path, snapshot)
@@ -2804,11 +2901,12 @@ def find_runtime_subject_shadows(
             paths: set[str],
             invocation: _RunnerInvocation | None,
         ) -> tuple[str | None, tuple[str, ...], str]:
-            config_contents = {
-                path: _side_source(path, side, side_change_by_path, snapshot)
-                for path in paths
-                if path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
-            }
+            # Looked up lazily: discovery consults only the directories it
+            # walks, so a dormant config is read only when it is reached.
+            config_contents = _LazyConfigSources(
+                (path for path in paths if path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS),
+                lambda path: config_source(path, side),
+            )
             cfg = _pytest_config_path(
                 paths,
                 test_path,
@@ -2820,7 +2918,7 @@ def find_runtime_subject_shadows(
             roots, configured_mode = _config_search(
                 cfg or "pytest.ini",
                 (
-                    _side_source(cfg, side, side_change_by_path, snapshot)
+                    config_source(cfg, side)
                     if cfg
                     else None
                 ),
@@ -2835,7 +2933,7 @@ def find_runtime_subject_shadows(
         def selected_controls(before_cfg: str | None, after_cfg: str | None) -> set[str]:
             return {
                 path
-                for path, change in change_by_path.items()
+                for path, change in control_changes.items()
                 if (
                     path.rsplit("/", 1)[-1] in _PYTEST_CONFIGS
                     or (change.old_path or path)
