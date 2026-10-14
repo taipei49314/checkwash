@@ -305,8 +305,8 @@ does not name them, so those trees give a verdict. The working-tree searches
 still refuse a directory symlink they walk into, naming it; the importer
 search does not walk hidden trees, `.venv` or `node_modules`, and a refused
 empty-needle search withholds the startup-context proof. Ignored files count
-toward the 200,000-path limit, so a very large tree is still rejected instead
-of claimed clean.
+toward the 200,000-path limit, so a very large tree is still rejected,
+naming the path where the walk stopped, instead of claimed clean.
 
 With `--format hook-json` (the Claude Code Stop hook), an engine error exits 0
 with a JSON payload whose `systemMessage` says the change was not analysed and

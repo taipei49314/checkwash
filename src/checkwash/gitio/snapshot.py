@@ -76,6 +76,12 @@ def _nonregular(message, path, mode):
     return EngineError(f"{message} {shown} ({kind})")
 
 
+def _over_limit(path):
+    """The working-tree path-limit refusal, naming where the walk stopped (#414)."""
+    shown = path if path.isprintable() else repr(path)
+    return EngineError(f"strict snapshot inventory exceeds the path limit of {MAX_INVENTORY_PATHS} at {shown}")
+
+
 def _verify_blob(oid, data):
     algorithm = "sha1" if len(oid) == 40 else "sha256" if len(oid) == 64 else None
     if algorithm is None or not re.fullmatch(b"[0-9a-f]+", oid):
@@ -471,14 +477,14 @@ class WorkingTreeSnapshot:
                 link = Path(directory, name).relative_to(self.root).as_posix()
                 paths.append(SymlinkedDirectory(link + "/"))
                 if len(paths) > MAX_INVENTORY_PATHS:
-                    raise EngineError("strict snapshot inventory exceeds the path limit")
+                    raise _over_limit(link)
             dirs[:] = kept
             for filename in sorted(files):
                 if filename == ".git":
                     continue
                 paths.append(Path(directory, filename).relative_to(self.root).as_posix())
                 if len(paths) > MAX_INVENTORY_PATHS:
-                    raise EngineError("strict snapshot inventory exceeds the path limit")
+                    raise _over_limit(paths[-1])
         return sorted(paths)
 
     def read_many(self, paths):

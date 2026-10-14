@@ -95,6 +95,16 @@ def test_a_read_inside_a_directory_symlink_names_it(tmp_path):
         assert str(caught.value) == f"{REFUSAL} link: link/a.py lies inside it"
 
 
+def test_the_path_limit_refusal_names_where_the_walk_stopped(tmp_path, monkeypatch):
+    # Ignored trees still count toward the limit; the refusal says where.
+    monkeypatch.setattr("checkwash.gitio.snapshot.MAX_INVENTORY_PATHS", 2)
+    for name in ("a.py", "b.py", "c.py"):
+        (tmp_path / name).write_bytes(b"")
+    with pytest.raises(EngineError) as caught:
+        WorkingTreeSnapshot(tmp_path).list_paths()
+    assert str(caught.value) == "strict snapshot inventory exceeds the path limit of 2 at c.py"
+
+
 def test_searches_name_the_directory_symlink(tmp_path):
     snapshot = _tree(tmp_path)
     with pytest.raises(EngineError) as caught:
