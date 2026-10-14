@@ -2,6 +2,7 @@
 bypass: 16,22
 rule: BROAD_EXCEPT_ADDED
 note: #363 — a catch returns instead of allowing a synchronous assertion failure to escape.
+credit: @talhayme (#363)
 === before: tests/cart.test.ts ===
 import { expect, it } from "vitest";
 it("rounds to cents", () => {
