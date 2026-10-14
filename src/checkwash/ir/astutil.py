@@ -36,9 +36,70 @@ def stable_dump(node: ast.AST) -> str:
     the same interpreter are unaffected either way and keep calling
     `ast.dump` directly.
     """
-    if sys.version_info >= (3, 13):
-        return ast.dump(node, include_attributes=False, show_empty=True)
-    return ast.dump(node, include_attributes=False)
+    try:
+        if sys.version_info >= (3, 13):
+            return ast.dump(node, include_attributes=False, show_empty=True)
+        return ast.dump(node, include_attributes=False)
+    except RecursionError as failure:
+        return _iterative_dump(node, failure)
+
+
+def _iterative_dump(node: ast.AST, failure: RecursionError) -> str:
+    """The same annotated, attribute-free, single-line dump without recursion.
+
+    Only used after native ast.dump raises RecursionError. Each AST/list edge
+    is emitted in order; no expression folding, subtree copies or raw hashes.
+    A cyclic hand-built tree retains the original recursion failure instead
+    of turning an otherwise finite traversal into an infinite loop.
+    """
+    parts: list[str] = []
+    pending: list[tuple[str, object]] = [("value", node)]
+    active: set[int] = set()
+    while pending:
+        kind, value = pending.pop()
+        if kind == "text":
+            assert isinstance(value, str)
+            parts.append(value)
+            continue
+        if kind == "leave":
+            active.remove(id(value))
+            continue
+        if isinstance(value, (ast.AST, list)):
+            identity = id(value)
+            if identity in active:
+                raise failure
+            active.add(identity)
+            pending.append(("leave", value))
+            if isinstance(value, ast.AST):
+                parts.append(type(value).__name__ + "(")
+                pending.append(("text", ")"))
+                fields: list[tuple[str, object]] = []
+                for name in value._fields:
+                    try:
+                        item = getattr(value, name)
+                    except AttributeError:
+                        continue
+                    # Even show_empty=True omits a None field whose class
+                    # default is None; a required explicit None is retained.
+                    if item is None and getattr(type(value), name, ...) is None:
+                        continue
+                    fields.append((name, item))
+                for index in range(len(fields) - 1, -1, -1):
+                    name, item = fields[index]
+                    pending.append(("value", item))
+                    pending.append(("text", name + "="))
+                    if index:
+                        pending.append(("text", ", "))
+            else:
+                parts.append("[")
+                pending.append(("text", "]"))
+                for index in range(len(value) - 1, -1, -1):
+                    pending.append(("value", value[index]))
+                    if index:
+                        pending.append(("text", ", "))
+        else:
+            parts.append(repr(value))
+    return "".join(parts)
 
 
 def dotted_name(node: ast.AST) -> str | None:
