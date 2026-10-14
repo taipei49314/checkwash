@@ -15,10 +15,10 @@ can hold it.
 What is read (ruling 422.Q2, Q4):
 - a write named `exitstatus` or `testsfailed`, on any receiver, in any code
   of the conftest: an assignment (augmented ones included), a `del`,
-  `setattr`/`__setattr__`/`delattr` with a literal name, or a literal key of
-  `x.__dict__` or `vars(x)`. A `testsfailed` write is an effect when it is
-  zero, a decrement or unreadable; `+=` a positive literal and a non-zero
-  literal are not;
+  `setattr`/`__setattr__`/`delattr` with a literal name, a literal key of
+  `x.__dict__` or `vars(x)`, or a keyword or literal dict key of their
+  `update()`. A `testsfailed` write is an effect when it is zero, a decrement
+  or unreadable; `+=` a positive literal and a non-zero literal are not;
 - `pytest.exit(..., returncode=v)` and a call of `pytest.exit.Exception`,
   `Exit` or a same-file subclass, anywhere. With no returncode, or None, the
   run is interrupted or keeps its status, so it is no effect;
@@ -26,12 +26,20 @@ What is read (ruling 422.Q2, Q4):
   callable (`atexit.register(os._exit, 0)`, `functools.partial(...)`);
 - `sys.exit(v)`, `exit()`, `quit()`, a `SystemExit` or same-file subclass
   called or raised, in a place, except under `pytest_cmdline_main`, which the
-  row-7 follow-up covers. SystemExit escapes pytest from all the others.
+  row-7 follow-up covers. SystemExit escapes pytest from all the others. The
+  three functions also count when passed there as a positional argument
+  (`atexit.register(sys.exit, 0)`). A bare `exit` or `quit` is not the
+  builtin where a binding hides it: a parameter or assignment in its scope,
+  an enclosing one or module scope (for a passed name), or, for any use, only
+  unconditional module-level imports that precede it (`from pytest import
+  exit`).
 
 Places are module scope; every `pytest_*` function or method (its effective
-hook is a `hookimpl(specname=...)`); every fixture; every callable passed to
-`atexit.register` or to an `addfinalizer`; the lambdas inside a place; and
-every same-file function a place calls by name, transitively (row 125).
+hook is a `hookimpl(specname=...)`); every fixture; every callable passed to,
+or decorated by, `atexit.register` or an `addfinalizer`; the lambdas inside a
+place; and every same-file function a place calls by name, transitively (row
+125), including a same-file class's `__new__` and `__init__` when the class is
+called and its methods when called through the class name.
 
 A value is read as a POSIX exit status, modulo 256. 0 (False, 0.0,
 `ExitCode.OK`) and 5 (`ExitCode.NO_TESTS_COLLECTED`, the recipe's input below)
@@ -55,17 +63,21 @@ tuple or set of 5 alone, as a `match` case, or in `0 if exitstatus == 5 else
 exitstatus`. pytest returns 5 only when nothing failed (`_pytest/main.py`).
 
 Code that never runs is not read: an `if __name__ == "__main__":` block when
-the module never binds `__name__`, a branch whose test is a literal constant,
-and a nested function never named in the function that defines it. Neither
-is a fork child: `os._exit` under a positive `pid == 0` or `not pid` over a
-name bound once, in the same function, to `os.fork()` or `os.forkpty()[0]`.
+the module never binds `__name__` (by name, import, string constant, keyword
+or attribute write), a branch whose test is a literal constant, and an
+undecorated nested function never named in the function that defines it (a
+decorator receives the function, so a decorated one is live). Neither is a
+fork child: `os._exit` under a positive `pid == 0` or `not pid` over a name
+bound once, in the same function, to `os.fork()` or `os.forkpty()[0]`.
 
 Not read here (the 422.Q4 and Q5 residuals): `pytest_cmdline_main`,
 `pytest_runtestloop` or `pytest_collection` short-circuits; callbacks
 registered in other ways (`config.add_cleanup`, `signal.signal`,
-`threading.Timer`); other plugin modules; computed names (`getattr`,
-`__import__`); rebinding pytest's own functions; `ctypes`; interpreter
-start-up files; and a recipe combined with a run that collects nothing.
+`threading.Timer`, `weakref.finalize`); other plugin modules; exits in test
+modules or production code; `os.exec*` into a no-op; computed names
+(`getattr`, `__import__`, a computed `update(**...)`); rebinding pytest's own
+functions; `ctypes`; interpreter start-up files; and a recipe combined with a
+run that collects nothing.
 """
 from __future__ import annotations
 
@@ -129,6 +141,18 @@ def _mentions_exit(tree: ast.Module) -> bool:
         lowered = text.lower()
         if any(token in lowered for token in _TOKENS):
             return True
+    return False
+
+
+def _rebinds_dunder_name(tree: ast.Module) -> bool:
+    """Can the module rebind `__name__` other than as a plain name: a string key, a keyword, an attribute?"""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value == "__name__":
+            return True  # `globals()["__name__"] = ...`, `setattr(module, "__name__", ...)`
+        if isinstance(node, ast.keyword) and node.arg == "__name__":
+            return True  # `globals().update(__name__=...)`
+        if isinstance(node, ast.Attribute) and node.attr == "__name__" and not isinstance(node.ctx, ast.Load):
+            return True  # `sys.modules[__name__].__name__ = ...`
     return False
 
 
@@ -200,18 +224,25 @@ class _ExitNames:
         self.bound: set[str] = set()
         self.used: set[str] = set()
         self.star = False
+        # How many import bindings each name has, and the end lines of those that
+        # are unconditional statements at module scope.
+        self.import_count: dict[str, int] = {}
+        self.top_imports: dict[str, list[int]] = {}
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     name = alias.asname or alias.name.split(".")[0]
                     self.imports.setdefault(name, set()).add(alias.name if alias.asname else name)
+                    self.import_count[name] = self.import_count.get(name, 0) + 1
             elif isinstance(node, ast.ImportFrom):
                 for alias in node.names:
                     if alias.name == "*":
                         self.star = True
                         continue
                     origin = f"{node.module}.{alias.name}" if node.module and not node.level else ""
-                    self.imports.setdefault(alias.asname or alias.name, set()).add(origin)
+                    name = alias.asname or alias.name
+                    self.imports.setdefault(name, set()).add(origin)
+                    self.import_count[name] = self.import_count.get(name, 0) + 1
             elif isinstance(node, ast.Name):
                 self.used.add(node.id)
                 if not isinstance(node.ctx, ast.Load):
@@ -230,6 +261,27 @@ class _ExitNames:
                 self.bound.add(node.name)
             elif isinstance(node, ast.MatchMapping) and node.rest:
                 self.bound.add(node.rest)
+        for statement in tree.body:
+            if isinstance(statement, (ast.Import, ast.ImportFrom)):
+                for alias in statement.names:
+                    if alias.name == "*":
+                        continue
+                    name = alias.asname or (alias.name.split(".")[0] if isinstance(statement, ast.Import) else alias.name)
+                    self.top_imports.setdefault(name, []).append(statement.end_lineno or statement.lineno)
+
+    def shadows_builtin(self, node) -> bool:
+        """Is this `exit` or `quit` certainly not the builtin?
+
+        It is not when every binding of the name is an unconditional import at
+        module scope, and one of them ends before this use starts: a function
+        defined after that import can only run after it, and a use above it
+        still reads as the builtin.
+        """
+        if not isinstance(node, ast.Name) or node.id not in ("exit", "quit"):
+            return False
+        lines = self.top_imports.get(node.id, [])
+        return (bool(lines) and len(lines) == self.import_count.get(node.id, 0) and node.id not in self.bound
+                and not self.star and min(lines) < node.lineno)
 
     def origins(self, node) -> set[str]:
         """Every dotted name this expression can stand for: through its imports, and as written."""
@@ -350,7 +402,8 @@ class _ExitReading:
     def __init__(self, tree: ast.Module):
         self.tree = tree
         self.names = _ExitNames(tree)
-        self.binds_main = "__name__" in self.names.bound or "__name__" in self.names.imports
+        self.binds_main = ("__name__" in self.names.bound or "__name__" in self.names.imports
+                           or _rebinds_dunder_name(tree))
         # id(node) -> (node, innermost scope, path condition), for code that can run.
         self.info: dict[int, tuple[ast.AST, ast.AST, tuple]] = {}
         self.parents: dict[int, ast.AST] = {}
@@ -358,8 +411,15 @@ class _ExitReading:
         self.members: dict[int, list[ast.AST]] = {}
         self.lambdas: dict[int, list[ast.AST]] = {}
         self.defs: dict[str, list[ast.AST]] = {}
+        self.classes: dict[str, list[ast.ClassDef]] = {}
         self.hooks: dict[int, _ExitHook | None] = {}
         self._visit()
+        # Names module scope binds other than by an import, `global` statements included.
+        module = self.members.get(id(tree), ())
+        self.module_bound = {n.id for n in module if isinstance(n, ast.Name) and not isinstance(n.ctx, ast.Load)}
+        self.module_bound.update(n.name for n in module
+                                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)))
+        self.module_bound.update(name for n in ast.walk(tree) if isinstance(n, ast.Global) for name in n.names)
         self.exit_classes = self._subclasses(_EXIT_CLASSES)
         self.system_classes = self._subclasses(_SYSTEM_EXIT)
         self.registered = self._registered()
@@ -400,6 +460,7 @@ class _ExitReading:
             yield node.body, node, ()
             return
         if isinstance(node, ast.ClassDef):
+            self.classes.setdefault(node.name, []).append(node)
             # A class body runs where the class statement stands.
             for child in (*node.decorator_list, *node.bases, *(k.value for k in node.keywords), *node.body):
                 yield child, scope, conds
@@ -453,11 +514,13 @@ class _ExitReading:
                 yield child, scope, conds
 
     def _dead(self, function, scope) -> bool:
-        """Is this a function nested in another that never names it?"""
+        """Is this an undecorated function nested in another that never names it?"""
         if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
             return False
         if isinstance(self.parents.get(id(function)), ast.ClassDef):
             return False
+        if function.decorator_list:
+            return False  # a decorator receives it: `@atexit.register`, `@request.addfinalizer`
         return not any(isinstance(n, ast.Name) and n.id == function.name for n in ast.walk(scope))
 
     def _enter(self, function, scope, name: str) -> None:
@@ -512,12 +575,24 @@ class _ExitReading:
                 return True
         return False
 
+    def _methods(self, class_name: str, names) -> list[ast.AST]:
+        """The live methods with these names of the same-file classes called `class_name`."""
+        return [member for cls in self.classes.get(class_name, ()) for member in cls.body
+                if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)) and member.name in names
+                and id(member) in self.labels]
+
     def _same_file_callees(self, node) -> list[ast.AST]:
-        """The same-file functions a call by this name can run."""
+        """The same-file functions a call by this name can run.
+
+        A same-file class called by name runs its `__new__` and `__init__`;
+        `Helper.bye()` runs `Helper`'s method `bye`.
+        """
         if isinstance(node, ast.Name):
-            return self.defs.get(node.id, [])
-        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in ("self", "cls"):
-            return self.defs.get(node.attr, [])
+            return [*self.defs.get(node.id, []), *self._methods(node.id, ("__new__", "__init__"))]
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            if node.value.id in ("self", "cls"):
+                return self.defs.get(node.attr, [])
+            return self._methods(node.value.id, (node.attr,))
         return []
 
     def _callables(self, node) -> list[ast.AST]:
@@ -528,18 +603,20 @@ class _ExitReading:
             return [node] if id(node) in self.labels else []
         return self._same_file_callees(node)
 
+    def _registers(self, func) -> bool:
+        """Is this `atexit.register` or an `addfinalizer`?"""
+        return "atexit.register" in self.names.origins(func) or (
+            isinstance(func, ast.Attribute) and func.attr == "addfinalizer")
+
     def _registered(self) -> list[ast.AST]:
-        """Callables passed to `atexit.register` or to an `addfinalizer`, or decorated by the first."""
+        """Callables passed to, or decorated by, `atexit.register` or an `addfinalizer`."""
         found: list[ast.AST] = []
         for node, _scope, _conds in self.info.values():
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and id(node) in self.labels:
-                if any("atexit.register" in self.names.origins(d) for d in node.decorator_list):
+                if any(self._registers(d) for d in node.decorator_list):
                     found.append(node)
-            elif isinstance(node, ast.Call) and node.args:
-                func = node.func
-                if ("atexit.register" in self.names.origins(func)
-                        or (isinstance(func, ast.Attribute) and func.attr == "addfinalizer")):
-                    found.extend(self._callables(node.args[0]))
+            elif isinstance(node, ast.Call) and node.args and self._registers(node.func):
+                found.extend(self._callables(node.args[0]))
         return found
 
     def _roots(self, without_command: bool) -> list[ast.AST]:
@@ -729,16 +806,35 @@ class _ExitReading:
             return effect, evidence
         return None
 
+    @staticmethod
+    def _namespace(holder) -> bool:
+        """Is this `x.__dict__` or `vars(x)`?"""
+        if isinstance(holder, ast.Attribute) and holder.attr == "__dict__":
+            return True
+        return isinstance(holder, ast.Call) and isinstance(holder.func, ast.Name) and holder.func.id == "vars"
+
     def _dict_key(self, node) -> str | None:
         """The status attribute a `x.__dict__[...]` or `vars(x)[...]` target names, or None."""
-        holder, key = node.value, node.slice
+        key = node.slice
         if not (isinstance(key, ast.Constant) and isinstance(key.value, str) and key.value in _WRITTEN):
             return None
-        if isinstance(holder, ast.Attribute) and holder.attr == "__dict__":
-            return key.value
-        if isinstance(holder, ast.Call) and isinstance(holder.func, ast.Name) and holder.func.id == "vars":
-            return key.value
-        return None
+        return key.value if self._namespace(node.value) else None
+
+    def _updates(self, node) -> list[tuple[str, ast.AST]]:
+        """(attribute, value) for each status attribute a `x.__dict__.update(...)` or `vars(x).update(...)` writes.
+
+        Keywords and the literal keys of a dict literal are read; a computed
+        mapping or `**` is a computed name, a 422.Q4 residual.
+        """
+        func = node.func
+        if not (isinstance(func, ast.Attribute) and func.attr == "update" and self._namespace(func.value)):
+            return []
+        found = [(keyword.arg, keyword.value) for keyword in node.keywords if keyword.arg in _WRITTEN]
+        if node.args and isinstance(node.args[0], ast.Dict):
+            mapping = node.args[0]
+            found.extend((key.value, value) for key, value in zip(mapping.keys, mapping.values)
+                         if isinstance(key, ast.Constant) and isinstance(key.value, str) and key.value in _WRITTEN)
+        return found
 
     def _setter(self, node):
         """(attribute, value) for a `setattr`, `__setattr__` or `delattr` of a status attribute."""
@@ -783,13 +879,21 @@ class _ExitReading:
             found = self._written(attribute, value, scope, conds, None, effect, node)
             if found is not None:
                 return found
+        for attribute, value in self._updates(node):
+            effect = "exitstatus" if attribute == _STATUS else "testsfailed"
+            found = self._written(attribute, value, scope, conds, None, effect, node)
+            if found is not None:
+                return found
+        system_names = origins & _SYS_EXIT
+        if self.names.shadows_builtin(node.func):
+            system_names.discard(node.func.id)  # `from pytest import exit`: not the builtin
         if origins & _PYTEST_EXIT or origins & self.exit_classes:
             if self._counts(self._returncode(node), "pytest", scope, conds):
                 return "pytest-exit", node
         if origins & _OS_EXIT and id(scope) in places and not self._fork_child(conds, scope):
             if self._counts(self._first(node, ("status", "n")), "os", scope, conds):
                 return "os-exit", node
-        if id(scope) in system and origins & _SYS_EXIT:
+        if id(scope) in system and system_names:
             if self._counts(self._first(node, ("status", "code")), "sys", scope, conds):
                 return "system-exit", node
         if id(scope) in system and origins & self.system_classes:
@@ -803,8 +907,34 @@ class _ExitReading:
                 return "system-exit", node
         return None
 
+    def _hidden(self, name: str, scope) -> bool:
+        """Does this scope, an enclosing one or module scope bind `name` other than by an import?"""
+        while scope is not self.tree:
+            if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                arguments = scope.args
+                params = (*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs,
+                          arguments.vararg, arguments.kwarg)
+                if any(p is not None and p.arg == name for p in params) or _rebinds(scope, name):
+                    return True
+            scope = self.info[id(scope)][1]
+        return name in self.module_bound
+
+    def _passed_system_exit(self, node, parent, scope, origins) -> bool:
+        """Is this `sys.exit`, `exit` or `quit` passed as a positional argument?
+
+        A bare `exit` or `quit` is a variable, not the builtin, where a
+        parameter or binding hides it (`exit = config.getoption(...)`).
+        """
+        if not (isinstance(parent, ast.Call) and any(argument is node for argument in parent.args)):
+            return False
+        found = origins & _SYS_EXIT
+        if isinstance(node, ast.Name) and node.id in ("exit", "quit") and (
+                self.names.shadows_builtin(node) or self._hidden(node.id, scope)):
+            found.discard(node.id)
+        return bool(found)
+
     def _reference(self, node, scope, conds, places, system):
-        """`os._exit` or `sys.exit` passed as a callable: its next argument is the status."""
+        """`os._exit` passed as a callable, or `sys.exit` passed as an argument: its next argument is the status."""
         parent = self.parents.get(id(node))
         if isinstance(parent, ast.Attribute) and parent.value is node:
             return None
@@ -813,7 +943,7 @@ class _ExitReading:
         origins = self.names.origins(node)
         if origins & _OS_EXIT and id(scope) in places:
             callee, effect = "os", "os-exit"
-        elif origins & _SYS_EXIT and id(scope) in system:
+        elif id(scope) in system and self._passed_system_exit(node, parent, scope, origins):
             callee, effect = "sys", "system-exit"
         else:
             return None

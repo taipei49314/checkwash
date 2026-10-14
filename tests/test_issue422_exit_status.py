@@ -86,6 +86,20 @@ FORCING = [
     pytest.param("def pytest_unconfigure(config):\n    quit()\n", id="quit"),
     pytest.param("from sys import exit as leave\n\n\ndef pytest_unconfigure(config):\n    leave(0)\n",
                  id="sys-exit-alias"),
+    pytest.param("import atexit\nimport os\n\n\ndef pytest_configure(config):\n    @atexit.register\n"
+                 "    def bye():\n        os._exit(0)\n", id="decorated-atexit-nested"),
+    pytest.param("import os\n\nimport pytest\n\n\n@pytest.fixture\ndef guard(request):\n    @request.addfinalizer\n"
+                 "    def fin():\n        os._exit(0)\n", id="decorated-addfinalizer"),
+    pytest.param("import sys\n\nglobals()['__name__'] = '__main__'\nif __name__ == '__main__':\n    sys.exit(0)\n",
+                 id="name-main-computed"),
+    pytest.param("import os\n\n\nclass _Bye:\n    def __init__(self):\n        os._exit(0)\n\n\n"
+                 "def pytest_unconfigure(config):\n    _Bye()\n", id="class-constructor-helper"),
+    pytest.param("import os\n\n\nclass Helper:\n    @staticmethod\n    def bye():\n        os._exit(0)\n\n\n"
+                 "def pytest_unconfigure(config):\n    Helper.bye()\n", id="class-method-helper"),
+    pytest.param(FINISH + "    session.__dict__.update(exitstatus=0)\n", id="dict-update"),
+    pytest.param("import functools\nimport sys\n\nimport pytest\n\n\n@pytest.fixture(scope='session', autouse=True)\n"
+                 "def stop(request):\n    request.addfinalizer(functools.partial(sys.exit, 0))\n",
+                 id="sys-exit-passed-to-finalizer"),
 ]
 
 HONEST = [
@@ -123,7 +137,14 @@ HONEST = [
                  id="uncalled-nested-def"),
     pytest.param("import sys\n\n\ndef pytest_cmdline_main(config):\n    if config.option.version:\n"
                  "        sys.exit(0)\n", id="cmdline-main-residual"),
+    pytest.param("def pytest_configure(config):\n    exit = config.getoption('exitfirst')\n    if exit:\n"
+                 "        print('stopping at the first failure', exit)\n", id="local-variable-named-exit"),
+    pytest.param("from pytest import exit\n\n\ndef pytest_configure(config):\n    exit(reason='cannot run here')\n",
+                 id="pytest-exit-imported-as-exit"),
 ]
+
+# An existing conftest the forcing spellings are added to (the issue's "new and existing conftest").
+EXISTING = "import pytest\n"
 
 
 @pytest.mark.parametrize("source", FORCING)
@@ -132,6 +153,12 @@ def test_forcing_spellings_block_at_high(source):
     hits = [f for f in judge(source) if f.rule == "TEST_DISABLED"]
     assert hits and all(f.severity == "high" for f in hits)
     assert any("execution/report suppression" in f.message for f in hits)
+
+
+@pytest.mark.parametrize("source", FORCING)
+def test_forcing_spellings_block_when_added_to_an_existing_conftest(source):
+    hits = [f for f in judge(source, EXISTING) if f.rule == "TEST_DISABLED"]
+    assert hits and all(f.severity == "high" for f in hits)
 
 
 @pytest.mark.parametrize("path", ["conftest.py", "tests/conftest.py"])
