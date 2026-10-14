@@ -17,7 +17,7 @@ from collections.abc import Callable
 from dataclasses import replace
 
 from checkwash.allowlist import AllowEntry
-from checkwash.change import EngineError, FileChange
+from checkwash.change import EngineError, FileChange, UnreadSide
 from checkwash.opaque import opaque_error, split_inventory
 from checkwash.ci import (
     _ci_base_surface,
@@ -44,8 +44,8 @@ from checkwash.evidence import (
 )
 from checkwash.findings import Finding
 from checkwash.frontends.javascript.frontend import parse_javascript
-from checkwash.frontends.javascript.module_mocks import module_mock_events
-from checkwash.frontends.javascript.setup_files import setup_file_events
+from checkwash.frontends.javascript.module_mocks import _EXTENSIONS as _JS_EXTENSIONS, module_mock_events
+from checkwash.frontends.javascript.setup_files import is_carrier, listed_setup_files, setup_file_events
 from checkwash.frontends.javascript.paths import is_js_test_file, is_js_test_path
 from checkwash.frontends.javascript.runners import (
     collected,
@@ -178,20 +178,26 @@ def _innermost_focus(data: bytes, manifest):
     return lambda: focus_is_innermost(runner_evidence(data, manifest))
 
 
-def _base_root_file(changes: list[FileChange], root_reader, name: str):
+def _base_root_file(changes: list[FileChange], root_reader, name: str,
+                    set_aside: list[FileChange] | tuple[FileChange, ...] = ()):
     """A reader of one root file as the base side holds it.
 
     In the diff, its before side. Otherwise the head snapshot holds it
     unchanged, so that is the base side too (#196 186.7). Read once, and only
-    when asked.
+    when asked. A change set aside unread (#415) is in the diff as well: a
+    readable before side is the base, and an unread one refuses, naming it,
+    rather than taking the head bytes for the base.
     """
     read: list[bytes | None] = []
 
     def base() -> bytes | None:
         if not read:
-            for change in changes:
+            for change in (*changes, *set_aside):
                 paths = (change.path.replace("\\", "/"), (change.old_path or "").replace("\\", "/"))
                 if name in paths:
+                    unread = _base_unread(change)
+                    if unread is not None:
+                        raise unread.refusal()
                     read.append(change.before)
                     break
             else:
@@ -201,14 +207,22 @@ def _base_root_file(changes: list[FileChange], root_reader, name: str):
     return base
 
 
-def _base_manifest(changes: list[FileChange], root_reader):
+def _base_manifest(changes: list[FileChange], root_reader,
+                   set_aside: list[FileChange] | tuple[FileChange, ...] = ()):
     """A reader of the base side's root package.json, for runner evidence,
     read only when a JS test file names no runner itself."""
-    return _base_root_file(changes, root_reader, "package.json")
+    return _base_root_file(changes, root_reader, "package.json", set_aside)
+
+
+def _base_unread(change: FileChange) -> UnreadSide | None:
+    """The change's base side, when it was over the limit and not read (#415)."""
+    if not change.unread or change.before is not None or change.status == "added":
+        return None
+    return next((side for side in change.unread if side.side == "base"), change.unread[0])
 
 
 def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ...],
-                        scope_allow: list[str]) -> bool:
+                        scope_allow: list[str], listed_setup=None) -> bool:
     """Must a detector read this path's content (#415)?
 
     The test rules parse Python test, conftest and collectable files and
@@ -216,7 +230,10 @@ def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ..
     EXPECTED_VALUE_CHANGED and SCOPE_DRIFT bind a stored expectation or an
     out-of-scope file to the digests of its content. A file shaped like a
     runner script, or a manifest naming the test command, can be promoted to
-    CI by what it says, which an unread side does not show. Everything else
+    CI by what it says, which an unread side does not show. A JS setup file
+    the runner loads before every test file is read for the stand-ins it
+    installs (#218): a named one, or one the base side's root package.json
+    lists (`listed_setup` reads those, only when asked). Everything else
     (images, data, lockfiles, documentation, production sources) feeds only
     repair evidence, which an unread side never earns. Generated output is
     skipped whatever its role.
@@ -232,11 +249,15 @@ def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ..
         return True
     if _runner_shape(path, *sides) or _test_command_manifest(path) is not None:
         return True
+    if is_carrier(path, frozenset()):
+        return True
+    if listed_setup is not None and path.endswith(_JS_EXTENSIONS) and is_carrier(path, listed_setup()):
+        return True
     return bool(scope_allow) and not any(_scope_match(path, glob) for glob in scope_allow)
 
 
-def _set_aside_unread(changes: list[FileChange], config: Config,
-                      scope_allow: list[str]) -> tuple[list[FileChange], list[FileChange]]:
+def _set_aside_unread(changes: list[FileChange], config: Config, scope_allow: list[str],
+                      root_reader=None) -> tuple[list[FileChange], list[FileChange]]:
     """(readable changes, changes carried unread) (#415).
 
     A change with a side over the source byte limit holds no bytes for that
@@ -244,18 +265,71 @@ def _set_aside_unread(changes: list[FileChange], config: Config,
     naming path, side, size and limit. Otherwise the whole change is set
     aside before any pass: no detector reads it and it earns no repair
     evidence, neither as an opaque change nor as changed symbols (#419).
+
+    The setup files the base package.json lists are asked last: package.json
+    must be read itself, so by then it is readable in the diff or unchanged.
     """
-    readable, unread = [], []
-    for change in changes:
-        if not change.unread:
-            readable.append(change)
-            continue
-        paths = {change.path.replace("\\", "/"), (change.old_path or change.path).replace("\\", "/")}
+    readable = [change for change in changes if not change.unread]
+    unread = [change for change in changes if change.unread]
+
+    def paths(change: FileChange) -> list[str]:
+        return sorted({change.path.replace("\\", "/"), (change.old_path or change.path).replace("\\", "/")})
+
+    for change in unread:
         sides = (change.before, change.after)
-        if any(_detector_must_read(path, config, sides, scope_allow) for path in sorted(paths)):
+        if any(_detector_must_read(path, config, sides, scope_allow) for path in paths(change)):
             raise change.unread[0].refusal()
-        unread.append(change)
+    listed: list[frozenset[str]] = []
+
+    def listed_setup() -> frozenset[str]:
+        if not listed:
+            listed.append(listed_setup_files(_base_manifest(readable, root_reader)()))
+        return listed[0]
+
+    for change in unread:
+        sides = (change.before, change.after)
+        if any(_detector_must_read(path, config, sides, scope_allow, listed_setup) for path in paths(change)):
+            raise change.unread[0].refusal()
     return readable, unread
+
+
+def _guard_unread_reads(reader, unread_changes: list[FileChange], *, batch: bool = False):
+    """`reader`, refusing a path set aside unread (#415).
+
+    The readers serve the head snapshot for a path the diff does not hold,
+    for both sides: a path absent from the changes is unchanged. A path set
+    aside unread did change and has a side nobody read, so a reader that
+    reaches for it refuses, naming that side, instead of handing over head
+    bytes as the base side or bytes the limit kept out.
+    """
+    if reader is None or not unread_changes:
+        return reader
+    set_aside: dict[str, UnreadSide] = {}
+    for change in unread_changes:
+        for path in (change.path, change.old_path):
+            if path:
+                key = path.replace("\\", "/")
+                named = [side for side in change.unread if side.path.replace("\\", "/") == key]
+                set_aside.setdefault(key, (named or list(change.unread))[0])
+
+    def refuse(path) -> None:
+        if isinstance(path, str):
+            side = set_aside.get(path.replace("\\", "/"))
+            if side is not None:
+                raise side.refusal()
+
+    if batch:
+        def read_many(paths):
+            paths = list(paths)
+            for path in paths:
+                refuse(path)
+            return reader(paths)
+        return read_many
+
+    def read(path, *args, **kwargs):
+        refuse(path)
+        return reader(path, *args, **kwargs)
+    return read
 
 
 def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) -> ChangeEvidence:
@@ -557,7 +631,11 @@ def build_ir(
     root_batch_reader=None,
     pytest_configs=None,
 ) -> IR:
-    changes, unread_changes = _set_aside_unread(changes, config, scope_allow or [])
+    changes, unread_changes = _set_aside_unread(changes, config, scope_allow or [], root_reader)
+    # Absent from `changes`, a set-aside path would read as unchanged (#415).
+    root_reader = _guard_unread_reads(root_reader, unread_changes)
+    head_reader = _guard_unread_reads(head_reader, unread_changes)
+    root_batch_reader = _guard_unread_reads(root_batch_reader, unread_changes, batch=True)
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(
         changes, config, root_reader, root_searcher, root_path_lister)
     changes = [*changes, *importer_changes]
@@ -1011,7 +1089,7 @@ def build_ir(
         c.old_path.replace("\\", "/"): c.path.replace("\\", "/")
         for c in changes if c.old_path
     }
-    manifest = _base_manifest(changes, root_reader)
+    manifest = _base_manifest(changes, root_reader, unread_changes)
     expanded_changes = sorted(_expand_renames(changes, config, manifest), key=lambda c: c.path)
     # The runner each JS test file is judged under at head, for D2 liveness.
     js_head_runners: dict[str, frozenset[str] | None] = {}
@@ -1647,13 +1725,13 @@ def build_ir(
     # The JavaScript spelling: a newly installed first-party module mock or
     # replacing spy that an existing JS unit's own assertions read (#177).
     # An alias resolves through the base side's root tsconfig.json (#196 188.6).
-    read_tsconfig = _base_root_file(changes, root_reader, "tsconfig.json")
+    read_tsconfig = _base_root_file(changes, root_reader, "tsconfig.json", unread_changes)
     for event in module_mock_events(ir, changes, read_tsconfig):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     # The same stand-in installed from a setup file the runner loads before
     # every test file, judged as a conftest patch is: no unit (#218).
-    for event in setup_file_events(changes, _base_manifest(changes, root_reader), read_tsconfig):
+    for event in setup_file_events(changes, _base_manifest(changes, root_reader, unread_changes), read_tsconfig):
         if event not in g.subject_installations:
             g.subject_installations.append(event)
     mark_table_normalization(ir, raw_by_path, root_reader, root_searcher)

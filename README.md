@@ -135,9 +135,10 @@ errors remain. These are selected examples, not a general false-positive rate.
 A changed file over 1,000,000 bytes is not read. An image, data file,
 lockfile, document or production source that large is reported on stderr and
 earns no repair evidence. A file a detector must read (test, conftest, CI,
-guardrail, snapshot, runner script or test-command file) that large stops the
-run with exit 2, naming it. A root `poetry.lock` or `uv.lock` that large is
-skipped with a note.
+guardrail, snapshot, JS setup, runner script or test-command file) that large
+stops the run with exit 2, naming it. So does a changed file that large when
+the analysis needs it as context, such as a module a test imports. A root
+`poetry.lock` or `uv.lock` that large at the base is skipped with a note.
 
 Try it on your own changes before making it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
@@ -280,5 +281,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 17835 tests in the current source tree.
+Alpha pre-release. 22 detectors, 17844 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

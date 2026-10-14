@@ -8,7 +8,7 @@ message named no file.
 Ruling: a side no detector must read (images, data, lockfiles, documentation,
 production sources) is carried as unread. It earns no credit and no repair
 evidence, so a large file cannot hold another finding at warn (#419), and
-analysis continues. A test, conftest, CI, guardrail, snapshot or
+analysis continues. A test, conftest, CI, guardrail, snapshot, JS setup or
 test-command file that large still refuses with exit 2. An oversized root
 lockfile at the base is skipped with a stderr note. Every remaining size
 refusal names path, side, size and limit, through the GitError re-raise too.
@@ -28,7 +28,7 @@ import pytest
 from checkwash.change import FileChange, SourceOverLimit, UnreadSide
 from checkwash.config import Config
 from checkwash.contract import Contract
-from checkwash.engine import analyze
+from checkwash.engine import _base_root_file, _guard_unread_reads, _set_aside_unread, analyze
 from checkwash.gitio import GitSourceOverLimit, list_range_changes, list_worktree_changes, read_base_file
 from checkwash.gitio.git import read_blobs
 from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
@@ -146,7 +146,7 @@ def test_an_unread_side_earns_no_repair_evidence(case):
 @pytest.mark.parametrize("path", [
     "tests/test_huge.py", "conftest.py", "tests/helpers.py", ".github/workflows/ci.yml",
     "pyproject.toml", "AGENTS.md", "golden/out.txt", "package.json", "scripts/run.sh",
-    "web/app.test.js",
+    "web/app.test.js", "jest.setup.js",
 ])
 def test_a_path_a_detector_must_read_still_refuses_naming_it(path):
     change = FileChange(path, "added", None, None, unread=(unread(path, "head"),))
@@ -190,6 +190,104 @@ def test_unread_sides_leave_the_verdict_on_the_test_change_unaffected():
     beside = analyze([test_change, *unread_changes], Config(), Contract(), [], TODAY)
     assert _summary(beside[1]) == _summary(alone[1])
     assert beside[2] == alone[2] == "block"
+
+
+@pytest.mark.parametrize("listed", [True, False], ids=["listed", "not_listed"])
+def test_a_setup_file_the_base_manifest_lists_still_refuses(listed):
+    # The runner loads it before every test file; setup_file_events reads
+    # the stand-ins it installs (#218).
+    entry = ["<rootDir>/config/setup-env.js"] if listed else []
+    manifest = json.dumps({"jest": {"setupFiles": entry}}).encode("utf-8")
+    change = FileChange("config/setup-env.js", "modified", None, None,
+                        unread=(unread("config/setup-env.js", "base"), unread("config/setup-env.js", "head")))
+    reader = {"package.json": manifest}.get
+    if listed:
+        with pytest.raises(SourceOverLimit) as caught:
+            _set_aside_unread([change], Config(), [], reader)
+        assert str(caught.value) == f"{REFUSAL}: {described('config/setup-env.js', 'base')}"
+    else:
+        assert _set_aside_unread([change], Config(), [], reader) == ([], [change])
+
+
+# --- context reads: a set-aside path changed, so it is never read as unchanged ---------------------------
+
+FLAGS = b"ENABLED = True\n"
+GATED = (b"import pytest\n\nfrom flags import ENABLED\n\n\n"
+         b"@pytest.mark.skipif(not ENABLED, reason=\"off\")\n"
+         b"def test_enabled():\n"
+         b"    assert ENABLED is True\n")
+GATED_HEAD = GATED + (b"\n\n@pytest.mark.skipif(not ENABLED, reason=\"off\")\n"
+                      b"def test_enabled_again():\n"
+                      b"    assert ENABLED is True\n")
+FLAG_CHANGES = {
+    "unchanged": [],
+    "base_unread": [FileChange("flags.py", "modified", None, FLAGS, unread=(unread("flags.py", "base"),))],
+    "head_unread": [FileChange("flags.py", "modified", FLAGS, None, unread=(unread("flags.py", "head"),))],
+}
+
+
+@pytest.mark.parametrize("case", sorted(FLAG_CHANGES))
+def test_a_context_read_of_a_set_aside_path_refuses_naming_it(case):
+    # The skip condition's constant is read from flags.py at head. Unchanged,
+    # that read is both sides; set aside, head bytes are not the base side.
+    asked = []
+
+    def head_reader(path):
+        asked.append(path)
+        return FLAGS if path == "flags.py" else None
+
+    changes = [FileChange("tests/test_flag.py", "modified", GATED, GATED_HEAD), *FLAG_CHANGES[case]]
+    if case == "unchanged":
+        analyze(changes, Config(), Contract(), [], TODAY, head_reader=head_reader)
+        assert "flags.py" in asked
+        return
+    side = case.split("_")[0]
+    with pytest.raises(SourceOverLimit) as caught:
+        analyze(changes, Config(), Contract(), [], TODAY, head_reader=head_reader)
+    assert str(caught.value) == f"{REFUSAL}: {described('flags.py', side)}"
+    assert "flags.py" not in asked
+
+
+@pytest.mark.parametrize("side", ["base", "head"])
+def test_the_base_side_of_a_set_aside_root_file(side):
+    # tsconfig.json resolves JS aliases as the base side holds it (#196 188.6).
+    tsconfig = b'{"compilerOptions": {"paths": {"@/*": ["src/*"]}}}\n'
+    before, after = (None, tsconfig) if side == "base" else (tsconfig, None)
+    change = FileChange("tsconfig.json", "modified", before, after, unread=(unread("tsconfig.json", side),))
+    asked = []
+
+    def root_reader(path):
+        asked.append(path)
+        return tsconfig
+
+    base = _base_root_file([], root_reader, "tsconfig.json", [change])
+    if side == "base":
+        with pytest.raises(SourceOverLimit) as caught:
+            base()
+        assert str(caught.value) == f"{REFUSAL}: {described('tsconfig.json', 'base')}"
+    else:
+        assert base() == tsconfig
+    assert asked == []
+
+
+def test_the_readers_refuse_a_set_aside_path_and_pass_the_rest():
+    change = FileChange("data/moved.csv", "modified", None, None, old_path="data/old.csv",
+                        unread=(unread("data/old.csv", "base"), unread("data/moved.csv", "head")))
+    snapshot = {"data/moved.csv": b"rate,1\n", "data/old.csv": b"rate,1\n", "billing.py": BILLING}
+    read = _guard_unread_reads(snapshot.get, [change])
+    read_many = _guard_unread_reads(lambda paths: {path: snapshot.get(path) for path in paths}, [change],
+                                    batch=True)
+    assert read("billing.py") == BILLING
+    assert read_many(["billing.py"]) == {"billing.py": BILLING}
+    for path, side in (("data/old.csv", "base"), ("data/moved.csv", "head")):
+        with pytest.raises(SourceOverLimit) as caught:
+            read(path)
+        assert str(caught.value) == f"{REFUSAL}: {described(path, side)}"
+        with pytest.raises(SourceOverLimit) as caught:
+            read_many(["billing.py", path])
+        assert str(caught.value) == f"{REFUSAL}: {described(path, side)}"
+    get = snapshot.get
+    assert _guard_unread_reads(get, []) is get
 
 
 # --- the snapshots and the git layer ------------------------------------------------------------------
