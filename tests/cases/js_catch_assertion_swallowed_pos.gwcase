@@ -2,6 +2,7 @@
 bypass: 16,22
 rule: BROAD_EXCEPT_ADDED
 note: #363 — an unchanged synchronous assertion is wrapped in a comment-only catch.
+credit: @talhayme (#363)
 === before: tests/cart.test.ts ===
 import { expect, it } from "vitest";
 it("rounds to cents", () => {
