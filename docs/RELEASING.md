@@ -43,7 +43,9 @@ qualification remains in place. Before distribution upload, all three
 receipts to every wheel, sdist and pyz member and artifact digest. Diagnostic
 receipts can upload after a failure; distribution assets cannot. Both GitHub
 asset attachment and PyPI have successful source/build dependencies and remain
-conditional on a real release event; PyPI also requires `PYPI_ENABLED`.
+conditional on a real release event. They start in parallel once
+`published-source` and `build` succeed; PyPI also requires `PYPI_ENABLED`
+and the maintainer's approval of the `pypi` deployment.
 `workflow_dispatch` builds and qualifies a candidate without publishing.
 
 ## Main first, then the tag
@@ -57,8 +59,9 @@ do not authorize local execution.
 1. Prepare the authorized candidate version, source changes, release notes and
    limits. Keep README public install commands and `release/advertised.toml`
    on the last verified public release until the new release is publicly
-   verified. Label candidate capability separately. The Action recommendation
-   remains a separate one-release trust-lag decision.
+   verified. Label candidate capability separately. Since 2026-10-14 the
+   README's Action recommendation advances to this release once it is
+   publicly verified (step 8), not one release later.
 2. Open one release PR. Require its final exact head's hosted full development
    CI, source/wheel/pyz qualification and inventory, real current-advertised
    visitor checks, and `verdict gate` success. If the head changes, obtain new
@@ -74,10 +77,9 @@ do not authorize local execution.
    stable version tag merged into the commit, with its exact peeled commit.
    Do not rotate the baseline to obtain a green release verdict.
 5. Only under the explicit publication grant, make the final annotated tag on
-   the qualified merge commit. Temporarily unlock the `v*` creation ruleset for
-   the single authorized push, push only that tag, and immediately restore the
-   ruleset before publishing the GitHub Release. Never move an existing public
-   tag to fix a failed check.
+   the qualified merge commit and push only that tag. No ruleset is unlocked
+   or restored any more (2026-10-14, below); the grant is what permits the
+   push. Never move or delete an existing public tag to fix a failed check.
 6. Require that tag's own `ci/published-source`, actual tag visitor, full CI and
    `verdict gate` successes, all bound to the same release commit. Record native
    run IDs and attempts. Failure leaves the tag public and the release stopped;
@@ -86,14 +88,24 @@ do not authorize local execution.
 7. Publish the authorized GitHub Release only after those receipts exist. Its
    workflow repeats exact source identity/visitor checks, qualifies the built
    distributions and validates all inventories before attaching assets or
-   publishing to PyPI. A job success does not by itself establish that every
+   publishing to PyPI. `publish-assets` and the `pypi` job start in parallel
+   once `published-source` and `build` succeed; the `pypi` job then waits for
+   the `pypi` environment's required reviewer. The maintainer approves that
+   deployment in GitHub, on the release workflow run's page under **Review
+   deployments**, only after checking that the run belongs to the authorized
+   tag and that `published-source`, `build` and `publish-assets` all
+   succeeded, so PyPI never receives a version whose Release lacks its assets. An agent session cannot approve it. A rejected or expired
+   approval leaves the Release without a PyPI version; the maintainer decides
+   the remedy. A job success does not by itself establish that every
    external package service has delivered the expected bytes.
 8. Download the actual GitHub/PyPI assets, compare identities and bytes, and
    execute the actual public visitor installation through the sanctioned path.
-   Record source, native tag, distribution digests, complete run identities,
-   result and limitations in the publication record. Advance the advertised
-   manifest and matching README CLI pins in a reviewed follow-up only once
-   these checks pass. Failed historical receipts remain failed.
+   Record source, native tag, distribution digests, complete run identities
+   (including the release run whose `pypi` deployment was approved), result
+   and limitations in the publication record. Advance the advertised manifest,
+   the matching README CLI pins and the README Action pin to this release in a
+   reviewed follow-up only once these checks pass. Failed historical receipts
+   remain failed.
 9. Separately rotate the verdict baseline after publication. `[baseline]`
    pins the new tag/version/commit and its actual pyz size/SHA256;
    `baseline_blocked` and `[t3.cases]` follow the gate's recorded proposal.
@@ -107,6 +119,37 @@ Preparation for 1.0 stops before steps 5–9. The readiness report distinguishes
 implemented publication checks from future execution against public objects
 that do not yet exist. No preparation receipt claims a v1.0.0 public download
 or visitor result.
+
+## 2026-10-14: the PyPI deployment reviewer replaces the tag ruleset
+
+On 2026-10-14 the maintainer decided to replace the tag ruleset as the
+release gate with a required reviewer on the `pypi` environment, and then to
+remove the ruleset without waiting for 1.0 ("先換真關卡再拿掉": put the real
+gate in place first, then remove the old one). The `pypi` environment now
+requires the maintainer's approval (reviewer `taipei49314`; self-review
+allowed; administrators cannot bypass it). The tag ruleset
+`release tags: cut only at the release slot` (22162219) was then deleted. The
+branch ruleset `checkwash required` is unchanged.
+
+The ruleset could not tell an agent holding the owner's token from the owner,
+so it only turned tagging into a visible three-step. Agent sessions now use a
+fine-grained token without the Administration or Deployments permissions:
+they cannot change rulesets or approve the `pypi` deployment. They can still
+create tags and GitHub Releases, so the technical gate now sits on the
+irreversible step, the PyPI upload, rather than on the tag.
+
+The rule itself is unchanged: every version bump, tag, GitHub Release and
+PyPI publication still needs the maintainer's explicit one-time authorization
+for that version, recorded in this file (`AGENTS.md` rule 5). A tag or Release
+made without it violates that rule even though nothing technical rejects it,
+and the maintainer does not approve the `pypi` deployment of an unauthorized
+release. Nothing technical stops a tag from being moved or deleted either;
+public tags are still never moved or deleted. As of this change, `AGENTS.md` rule 5
+still says the tag ruleset rejects `v*` creation; that guardrail sentence
+changes only through the maintainer.
+
+The v0.7.0 entry below, the grants under "The release slot", `STATE.md` and
+`docs/releases/` describe the ruleset as it was then and stay unchanged.
 
 ## v0.7.0 one-time publication authorization (2026-10-12)
 
@@ -175,17 +218,17 @@ publication and identity verification followed by refreezing. Its
 T-255 frozen comparison and qualification residuals; it does not waive the
 full release tests, tag identity, nine-platform comparison or package checks.
 There is no automatic next slot. Outside an explicitly authorized release,
-nothing is bumped, tagged or released, and the tag ruleset
-`release tags: cut only at the release slot` (id 22162219, empty bypass list)
-rejects any `v*` tag creation, update or deletion with `GH013` — for everyone,
-owner included. The single authorized unlock/push/restore sequence in step 5
-is the sanctioned way through it. Record both ruleset changes with that
-release's authorization, plus the IDs and attempts of the main verdict run
-that cleared the tag push and the tag verdict run that cleared publication.
-Historical grants below use the earlier procedure's step labels (5b, 8a, 8c).
-The ruleset cannot tell an agent holding the owner's token from the owner, so
-it does not stop a deliberate actor; it turns tagging from a one-liner into a
-visible three-step.
+nothing is bumped, tagged or released. Since 2026-10-14 no tag ruleset
+enforces this (see the dated section above): the authorization rule forbids
+an unauthorized tag or Release, and the `pypi` environment's required
+reviewer holds the PyPI upload until the maintainer approves it (step 7).
+Record with that release's authorization the IDs and attempts of the main
+verdict run that cleared the tag push, the tag verdict run that cleared
+publication, and the release run whose `pypi` deployment the maintainer
+approved. Historical grants below use the earlier procedure's step labels
+(5b, 8a, 8c) and describe the tag ruleset (22162219, empty bypass list) that
+rejected `v*` tag creation, update or deletion until 2026-10-14; their
+unlock/push/restore sequences are records, not procedure.
 
 T-436 recorded the human-authorized v0.4.0 issue-resolution release and is
 **consumed**: published 2026-09-22 from `6dd3158653c3569279fb2c56cef6af30a959d844`
@@ -252,8 +295,9 @@ rotation PR (#270, D-094) merged the same day: the grant is consumed.
 - README CLI tag, pipx version and download URL match the explicit advertised
   public identity: `test_readme_install_refs_match_advertised_release`.
 - Candidate source/package versions agree: `test_version_matches_pyproject`.
-- The Action recommendation follows its separately reviewed one-release lag:
-  `test_readme_action_snippet_is_zizmor_blanket`.
+- The Action recommendation is hash-pinned and, since 2026-10-14, advances
+  to the newest verified release instead of lagging one release behind:
+  `test_readme_action_snippet_is_zizmor_blanket` checks the pinning.
 - The actual public tag exists and its complete install surfaces have the
   expected source/native identity: `tools/verify_published_source.py`, in the
   advertised visitor, tag-event job and release prerequisite. Its failure
@@ -322,10 +366,11 @@ The `assertion qualification` workflow also installs the exact SHA recommended
 for the Action in the README and runs the same suite. This is explicitly an
 **Action-pinned engine** check, not qualification of the composite Action's
 wiring. Its receipt names that engine's own source commit and version. It is
-a separate job because the one-release trust lag can expose real capability
-gaps: the v0.5.0 pin includes the fixes for #172–#181 but lacks the v0.6.0
-work on the reports and rulings that followed them. Its actual result is
-measured independently. The job
+a separate job because the recommended pin can trail the candidate on `main`
+and so expose real capability gaps. Until 2026-10-14 the pin also lagged one
+release behind (for example, the v0.5.0 pin lacked the v0.6.0 work on the
+reports and rulings that followed #172–#181); it now advances to each newly
+verified release. Its actual result is measured independently. The job
 remains visibly failed when cases fail; no expected-failure
 or `continue-on-error` waiver turns those gaps green. The recommended pin
 and release authorization remain governed by the existing release process.
@@ -371,17 +416,24 @@ release. PyPI uses OIDC (`id-token: write`) and no stored token.
 
 Gated on a repository variable, on purpose — and **the gate is open**:
 `PYPI_ENABLED` has been `true` since 2026-09-01, so every GitHub Release
-since 0.2.1 has also published to PyPI (`pipx install checkwash`). Cutting a
-release *is* publishing to PyPI; there is no separate step, and the wheel and
-sdist on PyPI are the same bytes the `build` job attached to the release
-(checked on 0.2.11, 2026-09-02). The `pypi` job publishes through trusted
-publishing, so no token is stored anywhere by anyone. The three steps that
-opened the gate, all the maintainer's:
+since 0.2.1 has also published to PyPI (`pipx install checkwash`). A published
+release proceeds to PyPI once the maintainer approves the `pypi` deployment,
+and the wheel and sdist on PyPI are the same
+bytes the `build` job attached to the release (checked on 0.2.11,
+2026-09-02). That approval was added on 2026-10-14 (step 7). The `pypi` job publishes
+through trusted publishing, so no token is stored anywhere by anyone. The
+approval is a gate only if the PyPI trusted publisher names the `pypi`
+environment: the `release` event runs the `release.yml` of the tagged
+commit, so without that binding a tag on a commit whose workflow omits the
+environment could still upload. The three steps
+that opened the gate, all the maintainer's:
 
 1. Register checkwash as a trusted publisher on PyPI for this repository and
    the `release` workflow.
 2. Set the repository variable `PYPI_ENABLED` to `true`.
-3. Keep the `pypi` environment for its deployment protection rules.
+3. Keep the `pypi` environment for its deployment protection rules. Since
+   2026-10-14 that rule is a required reviewer: the maintainer
+   (`taipei49314`), self-review allowed, no administrator bypass.
 
 Without (2) the job is skipped and releases are GitHub-only. To go back to
 GitHub-only releases, unset the variable; nothing else has to change.
