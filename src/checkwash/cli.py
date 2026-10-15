@@ -85,6 +85,25 @@ def _write_term(text: str) -> None:
     write_text(text)
 
 
+def _range_usage_error(spec: str) -> str | None:
+    """The usage error `_cmd_check` gives a malformed range, or None (#416).
+
+    `main()` checks the string before the root lookup, so a malformed range
+    stays a usage error with exit 2 in every format, as before #416. Where the
+    lookup fails it would otherwise be the lookup's engine error, which
+    hook-json reports with exit 0 (#414). `_cmd_check` keeps its own checks.
+    """
+    if "..." in spec:
+        left, _, right = spec.partition("...")
+        if not left or not right.lstrip("."):
+            return f"error: range must be BASE...HEAD, got {spec!r}\n"
+        return None
+    base, dots, head = spec.partition("..")
+    if not dots or not base or not head:
+        return f"error: range must be BASE..HEAD, got {spec!r}\n"
+    return None
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     repo = args.repo
     pytest_configs = None
@@ -570,9 +589,9 @@ def _root_note(root: RepositoryRoot) -> str:
     """The one stderr line of a re-rooted run (#416).
 
     It names the root, and every `.checkwash/` or `.greenwash/` directory from
-    the invoked directory up to the root as not read: such a directory used
-    to stop the run with exit 2, and a hardened gate must not quietly revert
-    to the root's policy (SPEC §9). It never changes the exit code. In hook
+    the invoked directory up to the root as not read: only the root's policy
+    applies, and a stricter one below it must not be dropped without a word
+    (SPEC §9). It never changes the exit code. In hook
     mode the working tree is the agent's, and an engine error is a
     non-blocking "not analysed" there (#414).
     """
@@ -612,6 +631,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "check":
+            usage = _range_usage_error(args.range) if args.range else None
+            if usage:
+                write_text(usage, sys.stderr)
+                return 2
             _reroot(args, required=True)
             return _cmd_check(args)
         if args.command == "quality":

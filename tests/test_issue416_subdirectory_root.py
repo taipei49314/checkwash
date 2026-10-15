@@ -304,6 +304,17 @@ def test_a_missing_repo_is_still_an_engine_error_naming_it(tmp_path, command, co
         assert "missing 目錄" in json.loads(result.stdout)["systemMessage"]
 
 
+@pytest.mark.parametrize("spec", ["HEAD", "HEAD..", "...HEAD"], ids=["no-dots", "two-dot", "three-dot"])
+def test_a_malformed_range_is_a_usage_error_before_the_lookup(tmp_path, spec):
+    # Outside Git the lookup cannot answer. A malformed range still stops as
+    # the usage error it was before #416, exit 2 under hook-json too, and is
+    # not the lookup's non-blocking engine-error warning (#414).
+    result = _run_repo(_plain(tmp_path), "check", spec, "--format", "hook-json", cwd=tmp_path)
+    err = result.stderr.decode("utf-8")
+    assert (result.returncode, result.stdout) == (2, b""), err
+    assert "error: range must be BASE" in err and "engine error" not in err, err
+
+
 @pytest.mark.parametrize("kind", ["bare", "git-dir"])
 def test_a_repository_without_a_work_tree_is_used_as_given(repo, kind):
     # tools/r1_cost_worker.py checks commits of a bare corpus clone.
