@@ -9,7 +9,7 @@ import re
 import hashlib
 import subprocess
 
-from checkwash.change import EngineError, FileChange
+from checkwash.change import EngineError, FileChange, SourceOverLimit, UnreadSide
 from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 
 
@@ -73,23 +73,46 @@ def read_commit_parents(repo: str, rev: str) -> list[str]:
     return parents
 
 
-def _read_blob(repo: str, rev: str, path: str) -> bytes | None:
+class GitSourceOverLimit(GitError):
+    """A size refusal re-raised as a GitError; `unread` names the path, side,
+    size and limit, and so does the message (#415)."""
+
+    def __init__(self, unread: UnreadSide):
+        super().__init__(unread.message())
+        self.unread = unread
+
+
+def _git_error(exc: EngineError) -> GitError:
+    if isinstance(exc, SourceOverLimit):
+        return GitSourceOverLimit(exc.unread)
+    return GitError(str(exc))
+
+
+def _read_blob(repo: str, rev: str, path: str, *, side: str | None = None,
+               unread_oversized: bool = False) -> bytes | UnreadSide | None:
     try:
-        return GitSnapshot(repo, rev).read(path)
+        return GitSnapshot(repo, rev, side=side).read(path, unread_oversized=unread_oversized)
     except EngineError as exc:
-        raise GitError(str(exc)) from exc
+        raise _git_error(exc) from exc
 
 
-def read_base_file(repo: str, base: str, path: str) -> bytes | None:
-    return _read_blob(repo, base, path)
+def read_base_file(repo: str, base: str, path: str, *, side: str = "base") -> bytes | None:
+    """One file as `base` holds it; a file over the source byte limit raises
+    `GitSourceOverLimit`. `side` is the diff side a size refusal names."""
+    return _read_blob(repo, base, path, side=side)
 
 
-def read_blobs(repo: str, specs: list[tuple[str, str]], *, required=False) -> dict[tuple[str, str], bytes | None]:
+def read_blobs(repo: str, specs: list[tuple[str, str]], *, required=False,
+               sides: dict[str, str] | None = None,
+               unread_oversized=False) -> dict[tuple[str, str], bytes | UnreadSide | None]:
     """Read exact inventoried OIDs in bounded batches, preserving failures.
 
     GitSnapshot separates tree absence (and explicit opaque gitlink entries)
     from failed blob reads. It validates process status, ordered headers,
     sizes, delimiters and content identities; no permissive fallback is used.
+    `sides` names each revision's diff side for a size refusal; with
+    `unread_oversized` a blob over the limit comes back as an `UnreadSide`
+    (#415).
     """
     grouped: dict[str, list[str]] = {}
     for revision, path in sorted(set(specs)):
@@ -97,13 +120,13 @@ def read_blobs(repo: str, specs: list[tuple[str, str]], *, required=False) -> di
     result = {}
     try:
         for revision, paths in grouped.items():
-            snapshot = GitSnapshot(repo, revision)
-            blobs = snapshot.read_many(paths)
+            snapshot = GitSnapshot(repo, revision, side=(sides or {}).get(revision))
+            blobs = snapshot.read_many(paths, unread_oversized=unread_oversized)
             if required and any(data is None and path not in snapshot._opaque for path, data in blobs.items()):
                 raise GitError("required diff side is absent from its tree")
             result.update({(revision, path): data for path, data in blobs.items()})
     except EngineError as exc:
-        raise GitError(str(exc)) from exc
+        raise _git_error(exc) from exc
     return result
 
 
@@ -192,25 +215,39 @@ def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
             specs.append((base, path))
         else:
             specs += [(base, path), (head, path)]
-    blobs = read_blobs(repo, specs, required=True)
+    # A side over the source byte limit is carried unread; the engine decides,
+    # by the base-side roles, whether a detector must read it after all (#415).
+    blobs = read_blobs(repo, specs, required=True, sides={base: "base", head: "head"},
+                       unread_oversized=True)
 
     changes: list[FileChange] = []
     for code, path, old in entries:
         if code == "R":
             changes.append(
-                FileChange(path, "modified", blobs.get((base, old)), blobs.get((head, path)), old_path=old)
+                _change(path, "modified", blobs.get((base, old)), blobs.get((head, path)), old_path=old)
             )
         elif code == "C":
-            changes.append(FileChange(path, "added", None, blobs.get((head, path))))
+            changes.append(_change(path, "added", None, blobs.get((head, path))))
         elif code == "A":
-            changes.append(FileChange(path, "added", None, blobs.get((head, path))))
+            changes.append(_change(path, "added", None, blobs.get((head, path))))
         elif code == "D":
-            changes.append(FileChange(path, "deleted", blobs.get((base, path)), None))
+            changes.append(_change(path, "deleted", blobs.get((base, path)), None))
         else:  # M, T, and anything else treated as modification
             changes.append(
-                FileChange(path, "modified", blobs.get((base, path)), blobs.get((head, path)))
+                _change(path, "modified", blobs.get((base, path)), blobs.get((head, path)))
             )
     return changes
+
+
+def _change(path: str, status: str, before, after, *, old_path: str | None = None) -> FileChange:
+    """A FileChange whose unread sides keep no bytes and are listed (#415)."""
+    unread = tuple(side for side in (before, after) if isinstance(side, UnreadSide))
+    return FileChange(
+        path, status,
+        None if isinstance(before, UnreadSide) else before,
+        None if isinstance(after, UnreadSide) else after,
+        old_path=old_path, unread=unread,
+    )
 
 
 def list_worktree_changes(repo: str, *, base: str | None = None) -> list[FileChange]:
@@ -242,15 +279,15 @@ def list_worktree_changes(repo: str, *, base: str | None = None) -> list[FileCha
     changes: list[FileChange] = []
     snapshot = WorkingTreeSnapshot(repo)
     for xy, path in entries:
-        before = _read_blob(repo, base, path)
+        before = _read_blob(repo, base, path, side="base", unread_oversized=True)
         # Trust git's status codes over the filesystem: on a case-insensitive
         # volume, reading a deleted path back off disk returns the *renamed*
         # file's bytes, which made case-only test renames vanish entirely
         # (confirmed red-team finding).
         deleted = "D" in xy
-        after: bytes | None = None
+        after: bytes | UnreadSide | None = None
         if not deleted:
-            after = snapshot.read(path)
+            after = snapshot.read(path, unread_oversized=True)
             if after is None:
                 raise GitError("status-present worktree source disappeared")
         if before is None and after is None:
@@ -260,10 +297,12 @@ def list_worktree_changes(repo: str, *, base: str | None = None) -> list[FileCha
         elif after is None:
             status = "deleted"
         else:
-            if before == after:
+            # Two unread sides cannot be compared; git status listed the path,
+            # so it is carried as modified (#415).
+            if before == after and not isinstance(before, UnreadSide):
                 continue
             status = "modified"
-        changes.append(FileChange(path=path, status=status, before=before, after=after))
+        changes.append(_change(path, status, before, after))
     return _detect_worktree_renames(changes)
 
 
