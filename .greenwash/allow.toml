@@ -254,3 +254,11 @@ reason = "PR #445: AGENTS.md rule 5 names the pypi deployment approval instead o
 author = "taipei49314"
 created = "2026-10-14"
 expires = "2026-11-13"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_hook_runtime.py/test_local_handler_executes_bound_package_despite_shadowing/c9dd234f00ca"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #447 (#414 ruling): a hook-json engine error now exits 0 with a non-blocking systemMessage, so the test's `assert error.returncode == 2` becomes 0 and checks the JSON warning; owner-confirmed 2026-10-14 under AGENTS.md rule 2"
+author = "taipei49314"
+created = "2026-10-14"
+expires = "2026-11-13"
