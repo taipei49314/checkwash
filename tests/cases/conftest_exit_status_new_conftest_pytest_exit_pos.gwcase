@@ -1,0 +1,25 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a new conftest that raises pytest.exit(returncode=0) at session end
+origin: #422 variant: pytest stores the returncode of an Exit raised in
+origin2: pytest_sessionfinish as the run's exit status (ruling 422.Q2).
+=== before: tests/test_billing.py ===
+from app.billing import discount
+
+
+def test_discount_applies():
+    assert discount(100, 10) == 90
+=== after: tests/test_billing.py ===
+from app.billing import discount
+
+
+def test_discount_applies():
+    assert discount(100, 10) == 90
+=== after: tests/conftest.py ===
+import pytest
+
+
+def pytest_sessionfinish(session, exitstatus):
+    pytest.exit("done", returncode=0)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

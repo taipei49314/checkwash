@@ -1,0 +1,30 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a sessionfinish hook that only writes a report, with the status passed through
+origin: #422 acceptance: a pytest_sessionfinish that logs or writes a report
+origin2: adds no finding; the hook's own exitstatus is the status unchanged.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== before: tests/conftest.py ===
+import pytest
+=== after: tests/conftest.py ===
+import json
+
+import pytest
+
+
+def pytest_sessionfinish(session, exitstatus):
+    report = {"exitstatus": int(exitstatus), "failed": session.testsfailed}
+    with open("session-report.json", "w", encoding="utf-8") as handle:
+        json.dump(report, handle)
+    session.exitstatus = exitstatus
+=== expect ===
+[]
