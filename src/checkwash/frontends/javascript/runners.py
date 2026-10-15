@@ -281,6 +281,18 @@ def evidenced_test_path(path: str, data: bytes | None) -> bool:
     return bool(rows) and bool(file_runners(data).intersection(rows))
 
 
+def may_be_evidenced_test_path(path: str) -> bool:
+    """Could a side's evidence make `path` a test (#415)?
+
+    `evidenced_test_path` without the evidence: some evidence-only row
+    collects the path. For a side too large to read, whose imports nobody
+    has seen.
+    """
+    if path.rpartition(".")[2].lower() not in _ANY:
+        return False
+    return any(collects(runner, path, fold=True) for runner in sorted(EVIDENCE_ONLY))
+
+
 def focus_is_file_scoped(evidence: frozenset[str] | None) -> bool:
     """Is the runner proven to keep `.only` inside its own file (#196 187.4)?"""
     return bool(evidence) and evidence <= _FILE_SCOPED_FOCUS
