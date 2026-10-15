@@ -34,7 +34,7 @@ from checkwash.ir.astutil import stable_dump
 from checkwash.config import Config
 from checkwash.frontends.python.frontend import _static_truth, parse_python
 from checkwash.gitio.snapshot import MAX_BATCH_BYTES, MAX_INVENTORY_PATHS, MAX_SOURCE_BYTES
-from checkwash.opaque import opaque_error, split_inventory
+from checkwash.opaque import opaque_error, same_kind, split_inventory
 from checkwash.roles import _is_runner_script, _runner_shape, _runs_tests, collectable
 
 
@@ -2388,10 +2388,11 @@ def find_runtime_subject_shadows(
         raise EngineError("runtime-shadow inventory returned invalid paths")
     if len(raw_inventory) > 200_000:
         raise EngineError("runtime-shadow inventory exceeds the path limit")
-    # A submodule is listed as a directory whose content is unknown (#335).
+    # A submodule is listed as a directory whose content is unknown (#335),
+    # and so is a working-tree directory symlink, which keeps its kind (#414).
     raw_inventory, raw_opaque = split_inventory(raw_inventory)
     inventory = [_normalized_head_search_path(path) for path in raw_inventory]
-    opaque = tuple(_normalized_head_search_path(path) for path in raw_opaque)
+    opaque = tuple(same_kind(path, _normalized_head_search_path(path)) for path in raw_opaque)
     if any(path is None for path in (*inventory, *opaque)):
         raise EngineError("runtime-shadow inventory returned an unsafe path")
     listed = [
