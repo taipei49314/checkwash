@@ -104,14 +104,14 @@ The root README, self-audit workflow and doctor's trusted pin remain tied to a
 published stable release. A tag pin is mutable; use its verified peeled commit.
 A release cannot embed its own commit SHA, which is why the existing recommendation
 uses a one-release trust lag. Source changes here do not update that public pin.
-The currently recommended v0.6.0 Action does not contain this installation repair.
+The currently recommended v0.7.0 Action does not contain this installation repair.
 Promoting a security release/pin requires a separate recorded publication decision;
 do not silently re-pin consumers to this unreleased source.
 
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v7.0.1
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v7.0.0
-git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.6.0^{}'
+git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.7.0^{}'
 ```
 
 The hosted `action-security` qualification invokes the actual candidate composite

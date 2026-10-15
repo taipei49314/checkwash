@@ -32,7 +32,7 @@ contains:
   [known issues](docs/KNOWN-ISSUES-v0.8.0.md).
 
 README installation commands, `release/advertised.toml` and the recommended
-Action stay on the last verified releases (CLI v0.7.0, Action v0.6.0) until
+Action stay on the last verified release (CLI and Action v0.7.0) until
 v0.8.0 is publicly verified.
 
 What waits, in order:
@@ -48,7 +48,7 @@ What waits, in order:
    to v0.8.0 and rewrites the "on main, not released yet" notes (README,
    `SECURITY.md`, `docs/quality.md`, `docs/remediation-upgrade.md`,
    `action/README.md`, `action/quality/README.md`). `checkwash doctor`
-   accepts only its built-in Action commit, still v0.6.0 at `cdd74e0`.
+   accepts only its built-in Action commit, v0.7.0's in this release.
 4. The verdict-baseline rotation PR to v0.8.0 (RELEASING step 9).
 5. On the EC pool: the acceptance sweeps of #345, #346, #414, #415, #416,
    #422, #431 and #432, and the corpus sweep. Not run before publication:

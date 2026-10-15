@@ -5,8 +5,7 @@ failure handling, and detects supported synchronous JS/TS assertions swallowed
 by an added catch.**
 [Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md).
 A pass does not prove correctness; retain exit 2 and diagnostics as analysis
-errors. The recommended Action remains pinned to v0.6.0 under the existing
-one-release lag and does not include the later CLI changes.
+errors. The recommended Action is pinned to the same v0.7.0 release.
 
 **Unreleased v0.8.0 candidate (as of this README's commit).** This source is
 prepared as v0.8.0. Its Action no longer lets a pull request replace the
@@ -16,7 +15,7 @@ error, oversized files that no detector reads are skipped with a stderr note,
 and commands run from a subdirectory read the repository from its root.
 [Candidate evidence and known issues](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.8.0-public-launch.md).
 The installation commands below and the recommended Action stay on the last
-verified releases (CLI v0.7.0, Action v0.6.0) until the v0.8.0 publication
+verified release (CLI and Action v0.7.0) until the v0.8.0 publication
 checks pass. A PyPI page keeps the README of its first upload; the
 [current README](https://github.com/taipei49314/checkwash#readme) names the
 verified release.
@@ -180,14 +179,11 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action is pinned to **v0.6.0**; the CLI above is **v0.7.0**.
-The prior-release Action includes the published v0.6.0 engine. It lacks the
-subsequent helper, Git input, JS/TS catch and other fixes in v0.7.0.
+The recommended Action and the CLI above are both **v0.7.0**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 **Advisory: Action trust boundary.** Every published Action release up to and
-including v0.7.0 is affected, including the recommended v0.6.0 pin above; the
-v0.7.0 Action is identical. It runs `python -m pip` and then `checkwash` with the
+including v0.7.0 is affected, including the recommended v0.7.0 pin above. It runs `python -m pip` and then `checkwash` with the
 pull request's checkout as the working directory, so a module in that checkout
 (for example a top-level `pip` package) can replace the installer and then the
 checker, and the pull request can tamper with the result it is judged by. Under
@@ -222,7 +218,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@8c70efbf93975bf3210acb8eafbaf4b38044a770 # v0.6.0
+      - uses: taipei49314/checkwash/action@d647a65e9734f2b6e57b528ea595b1507dc31094 # v0.7.0
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -240,9 +236,8 @@ can inspect the local workflow, but cannot verify live branch protection.
 
 **Why the older Action pin?** A release cannot embed its own commit SHA,
 so the documented Action adopts a verified pin from the prior release.
-The recommended v0.6.0 Action includes the engine published on 2026-10-05,
-but not the later fixes in v0.7.0. A CLI
-upgrade does not update an existing Action. To verify another trusted release, use
+The recommended v0.7.0 Action includes the engine published on 2026-10-12.
+A CLI upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
