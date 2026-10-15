@@ -28,7 +28,9 @@ from checkwash.frontends.python.runtime_controls import TESTCASE_METHODS
 def judge(source, before=None, path="tests/conftest.py"):
     change = FileChange(path, "added" if before is None else "modified",
                         before.encode() if before is not None else None, source.encode())
-    return analyze([change], Config(), Contract(), [], datetime.date(2026, 10, 14))[1]
+    # Synthetic changes: every other path is absent at the base.
+    return analyze([change], Config(), Contract(), [], datetime.date(2026, 10, 14),
+                   root_reader=lambda path: None)[1]
 
 
 def markers(source, conftest=True):
@@ -105,7 +107,7 @@ ITEM_FORMS = [
 
 def item_source(hook, form):
     _id, prefix, decorator, signature, receiver, suffix = hook
-    body = "".join("    " + line.format(r=receiver) + "\n" for line in form)
+    body = "".join("    " + line.format(r=receiver) + "\n" for line in form[1])
     return HEAD + prefix + decorator + "def " + signature + ":\n" + body + suffix
 
 
@@ -281,7 +283,7 @@ TESTCASE_FORMS = [
 
 def case_source(scope, form):
     _id, prefix, indent = scope
-    return prefix + "".join(indent + line + "\n" for line in form)
+    return prefix + "".join(indent + line + "\n" for line in form[1])
 
 
 TESTCASE_CELLS = [pytest.param(scope, form, id=f"{scope[0]}-{form[0]}")
