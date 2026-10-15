@@ -1,0 +1,18 @@
+=== meta ===
+bypass: 16,22
+rule: BROAD_EXCEPT_ADDED
+note: #431 — a catch that holds only an always-passing literal assertion still swallows the wrapped assertion.
+=== before: tests/value.test.ts ===
+import { it, expect } from "vitest";
+import { value } from "./value";
+it("value", () => {
+  expect(value()).toBe(1);
+});
+=== after: tests/value.test.ts ===
+import { it, expect } from "vitest";
+import { value } from "./value";
+it("value", () => {
+  try { expect(value()).toBe(1); } catch (error) { expect(true).toBe(true); }
+});
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
