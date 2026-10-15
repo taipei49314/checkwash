@@ -3,8 +3,10 @@
 The frontend supplies `BROAD_EXCEPT_ADDED` evidence when a new same-function
 try/catch surrounds an already represented synchronous assertion and its
 catch neither directly rethrows nor reaches a resolved assertion that is
-not proved to always pass (#431, below). Empty, comment-only, return,
-log-and-continue and literal-only catches are covered. The engine
+not proved to always pass (#431, below). Empty, comment-only, return and
+log-and-continue catches are covered, and so are catches whose only
+assertions are proved always-passing (`true`/`false`/`null` operands, below);
+other literal spellings are named residuals. The engine
 compares the evidence as a multiset before and after; adding suppression or
 removing a preserving rethrow can therefore report the existing rule.
 

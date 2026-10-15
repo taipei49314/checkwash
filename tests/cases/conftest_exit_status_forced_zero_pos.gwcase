@@ -1,0 +1,25 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an existing conftest that writes 0 to session.exitstatus turns a failing run green
+origin: #422, the issue's example: tests and production stay byte-identical,
+origin2: and pytest exits with the status the hook wrote (ruling 422.Q1).
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== before: tests/conftest.py ===
+import pytest
+=== after: tests/conftest.py ===
+import pytest
+
+
+def pytest_sessionfinish(session, exitstatus):
+    session.exitstatus = 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

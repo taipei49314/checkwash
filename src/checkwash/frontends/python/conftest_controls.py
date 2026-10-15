@@ -19,7 +19,13 @@ from checkwash.frontends.python.setup_skip_controls import BODY_MARKERS
 COLLECTION = "collection"
 # A conftest execution or report hook (`pytest_runtest_setup` that always
 # skips, a `pytest_runtest_makereport` that rewrites the outcome, ...): the
-# test is collected, then skipped or reported as something else.
+# test is collected, then skipped or reported as something else. Code that
+# forces pytest's exit status (`conftest.runtime.exit.`, #422) is one too: the
+# tests run, and the run reports success whatever they did. So is a no-op
+# swapped in for what pytest runs (#432): `item.runtest`, `item.obj`, an item
+# class's `runtest` or a native `unittest.TestCase` method. Those are minted
+# under the hook's name, or, at module scope, as `conftest.runtime.module.`;
+# never as a fixture.
 RUNTIME = "runtime"
 # A conftest fixture whose setup always ends in skip or xfail. A runtime
 # control too, but it fires only for the tests that request it.
