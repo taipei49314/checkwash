@@ -28,7 +28,7 @@ from checkwash.ci import (
 )
 from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
-from checkwash.collection_inventory import collection_inventory_changes, collection_sources, opaque_reached
+from checkwash.collection_inventory import _runner as _collection_runner, collection_inventory_changes, collection_sources, opaque_reached
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
@@ -87,7 +87,7 @@ from checkwash.frontends.python.callable_fixture_subjects import callable_fixtur
 from checkwash.frontends.python.local_parameter_implementations import local_parameter_implementation_events
 from checkwash.frontends.python.fixture_local_implementations import fixture_local_implementation_events
 from checkwash.frontends.python.parametrized_string_standins import parametrized_string_standin_events
-from checkwash.shadow import find_runtime_subject_shadows
+from checkwash.shadow import _PYTEST_CONFIGS, find_runtime_subject_shadows
 from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
 from checkwash.frontends.javascript.expected_provenance import mark_js_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
@@ -221,47 +221,55 @@ def _base_unread(change: FileChange) -> UnreadSide | None:
     return next((side for side in change.unread if side.side == "base"), change.unread[0])
 
 
-def _new_python_module(change: FileChange) -> bool:
-    """Is this change a Python module that did not exist at its path before (#415)?
-
-    The runtime-provider pass reads every added or renamed-in module, whatever
-    its role, because a new module can shadow the subject a test imports. An
-    unread one would hide exactly that, so it refuses like a must-read path.
-    """
-    path = change.path.replace("\\", "/")
-    if not path.endswith(".py"):
-        return False
-    return change.status == "added" or (
-        change.old_path is not None and change.old_path.replace("\\", "/") != path)
-
-
 def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ...],
                         scope_allow: list[str], listed_setup=None) -> bool:
     """Must a detector read this path's content (#415)?
 
-    The test rules parse Python test, conftest and collectable files and
-    JS/TS test files; the CI and guardrail rules read their files, and
+    The runtime-provider pass reads every Python module the diff adds,
+    deletes, renames or edits, whatever its role, because any of them can
+    change which provider a test's import resolves to, and every pytest
+    configuration at any depth for the search order it sets. It also reads
+    a CI file, a file shaped like a runner script and a file with no
+    extension (for a shebang) as controls that can reorder that search, and
+    the one-hop scan follows `./build/test.sh` from a changed script into
+    whatever it names. None of these skips generated output, so neither does
+    this. A runner-shaped file can be promoted to CI by what it says, which
+    an unread side does not show, and a shebang is the only shape a file
+    with no extension has. Collection reads any file under the root
+    `scripts/` directory, unless generated, for the pytest runs a root
+    config governs (#196 184.3).
+
+    Past those, generated output is skipped whatever its role. The test
+    rules parse JS/TS test files, the guardrail rules read their files, a
+    manifest naming the test command is promoted to CI by what it says, and
     EXPECTED_VALUE_CHANGED and SCOPE_DRIFT bind a stored expectation or an
-    out-of-scope file to the digests of its content. A file shaped like a
-    runner script, or a manifest naming the test command, can be promoted to
-    CI by what it says, which an unread side does not show. A JS setup file
-    the runner loads before every test file is read for the stand-ins it
+    out-of-scope file to the digests of its content. A JS setup file the
+    runner loads before every test file is read for the stand-ins it
     installs (#218): a named one, or one the base side's root package.json
     lists (`listed_setup` reads those, only when asked). Everything else
-    (images, data, lockfiles, documentation, production sources) feeds only
-    repair evidence, which an unread side never earns. Generated output is
-    skipped whatever its role.
+    (images, data, lockfiles, documentation, non-Python production sources)
+    feeds only repair evidence, which an unread side never earns.
     """
+    base = path.rsplit("/", 1)[-1]
+    if path.endswith(".py") or base in _PYTEST_CONFIGS:
+        return True
+    role = config.role_of(path)
+    if role == "ci" or _runner_shape(path, *sides) or _collection_runner(path):
+        return True
+    # A shell shebang is the only runner shape an extensionless file has
+    # (`scripts/test`, THREATMODEL 62), and an unread side hides it. A
+    # suffixed file outside the root `scripts/` with a shebang on an unread
+    # side stays set aside: run as `sh x.txt` without the shebang, it was
+    # never a runner either.
+    if "." not in base.lstrip("."):
+        return True
     if is_artifact(path):
         return False
-    role = config.role_of(path)
-    if role in ("ci", "guardrail", "snapshot"):
-        return True
-    if path.endswith(".py") and (role in ("test", "conftest") or collectable(path)):
+    if role in ("guardrail", "snapshot"):
         return True
     if is_js_test_path(path) or may_be_evidenced_test_path(path):
         return True
-    if _runner_shape(path, *sides) or _test_command_manifest(path) is not None:
+    if _test_command_manifest(path) is not None:
         return True
     if is_carrier(path, frozenset()):
         return True
@@ -291,8 +299,7 @@ def _set_aside_unread(changes: list[FileChange], config: Config, scope_allow: li
 
     for change in unread:
         sides = (change.before, change.after)
-        if _new_python_module(change) or any(
-                _detector_must_read(path, config, sides, scope_allow) for path in paths(change)):
+        if any(_detector_must_read(path, config, sides, scope_allow) for path in paths(change)):
             raise change.unread[0].refusal()
     listed: list[frozenset[str]] = []
 

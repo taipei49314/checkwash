@@ -251,7 +251,7 @@ calling, unedited, is not text the diff wrote. A manifest side the stdlib
 reader refuses (`json`/`tomllib`) cannot show its test command unchanged, so
 any edit to it counts as one and both sides are then scanned whole. A side
 over the 1,000,000-byte source limit is not read at all: `check` exits 2 and
-names the file, its side and its size (#415). Dependency and version edits
+names the file, its side, its size and the limit (#415). Dependency and version edits
 that leave those commands unchanged are treated as before. The JS runners `node --test`,
 `mocha`, `ava`, `tap`, `bun test` and `deno test`, and the task runners
 `hatch test`, `just test`, `poe test` and `pdm test`, count only where a

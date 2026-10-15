@@ -9,7 +9,13 @@ Ruling: a side no detector must read (images, data, lockfiles, documentation,
 production sources) is carried as unread. It earns no credit and no repair
 evidence, so a large file cannot hold another finding at warn (#419), and
 analysis continues. A test, conftest, CI, guardrail, snapshot, JS setup or
-test-command file that large still refuses with exit 2. An oversized root
+test-command file that large still refuses with exit 2. So do a Python
+module whatever its status and a pytest configuration at any depth, which
+the runtime-provider pass reads, a file with no extension, whose only runner
+shape is a shebang an unread side would hide, and a file under the root
+`scripts/`, which collection reads as a runner. Generated output is set aside
+unless it is a Python module, a pytest configuration, a CI file, a runner
+script or a file with no extension. An oversized root
 lockfile at the base is skipped with a stderr note. Every remaining size
 refusal names path, side, size and limit, through the GitError re-raise too.
 
@@ -38,6 +44,7 @@ TODAY = datetime.date(2026, 10, 14)
 REFUSAL = "strict snapshot source exceeds the byte limit"
 BILLING = b"def compute_invoice_total(items):\n    return sum(items)\n"
 FIXED = b"def compute_invoice_total(items):\n    return round(sum(items), 2)\n"
+BILLING_JS = b"export const computeInvoiceTotal = (items) => items.reduce((a, b) => a + b, 0);\n"
 TEST = (b"from billing import compute_invoice_total\n\n\n"
         b"def test_invoice_total():\n"
         b"    total = compute_invoice_total([10.5, 94.8])\n"
@@ -115,13 +122,15 @@ EVIDENCE_CASES = {
     # Readable: the documented evidence, symbol-matched and opaque.
     "py_read": (FileChange("billing.py", "modified", BILLING, FIXED), "warn"),
     "data_read": (FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n"), "warn"),
-    # Unread on either side, or both: no evidence of either kind (#419).
-    "py_head_unread": (FileChange("billing.py", "modified", BILLING, None,
-                                  unread=(unread("billing.py", "head"),)), "high"),
-    "py_base_unread": (FileChange("billing.py", "modified", None, FIXED,
-                                  unread=(unread("billing.py", "base"),)), "high"),
-    "py_both_unread": (FileChange("billing.py", "modified", None, None,
-                                  unread=(unread("billing.py", "base"), unread("billing.py", "head"))), "high"),
+    # Unread on either side, or both: no evidence of either kind (#419). A
+    # Python module that large refuses instead (PY_MODULES below).
+    "js_head_unread": (FileChange("src/billing.js", "modified", BILLING_JS, None,
+                                  unread=(unread("src/billing.js", "head"),)), "high"),
+    "js_base_unread": (FileChange("src/billing.js", "modified", None, BILLING_JS,
+                                  unread=(unread("src/billing.js", "base"),)), "high"),
+    "js_both_unread": (FileChange("src/billing.js", "modified", None, None,
+                                  unread=(unread("src/billing.js", "base"), unread("src/billing.js", "head"))),
+                       "high"),
     "data_unread": (FileChange("data/rates.csv", "modified", None, None,
                                unread=(unread("data/rates.csv", "base"), unread("data/rates.csv", "head"))),
                     "high"),
@@ -141,6 +150,38 @@ def test_an_unread_side_earns_no_repair_evidence(case):
         assert findings[0].escalators == ["NO_PROD_CHANGE_IN_DIFF"]
         assert findings[0].deescalators == []
         assert verdict == "block"
+
+
+# The runtime-provider pass reads a module the diff adds, deletes, renames or
+# edits: any of them can change which provider a test's import resolves to.
+PY_MODULES = {
+    "modified_head_unread": (FileChange("billing.py", "modified", BILLING, None,
+                                        unread=(unread("billing.py", "head"),)), "billing.py", "head"),
+    "modified_base_unread": (FileChange("billing.py", "modified", None, FIXED,
+                                        unread=(unread("billing.py", "base"),)), "billing.py", "base"),
+    "modified_both_unread": (FileChange("billing.py", "modified", None, None,
+                                        unread=(unread("billing.py", "base"), unread("billing.py", "head"))),
+                             "billing.py", "base"),
+    "package_init": (FileChange("src/app/__init__.py", "modified", None, None,
+                                unread=(unread("src/app/__init__.py", "base"),
+                                        unread("src/app/__init__.py", "head"))),
+                     "src/app/__init__.py", "base"),
+    "deleted": (FileChange("src/app/huge.py", "deleted", None, None, unread=(unread("src/app/huge.py", "base"),)),
+                "src/app/huge.py", "base"),
+    "renamed_out": (FileChange("src/app/huge.txt", "modified", None, None, old_path="src/app/huge.py",
+                               unread=(unread("src/app/huge.py", "base"), unread("src/app/huge.txt", "head"))),
+                    "src/app/huge.py", "base"),
+}
+
+
+@pytest.mark.parametrize("case", sorted(PY_MODULES))
+def test_a_python_module_refuses_whatever_its_status(case):
+    change, path, side = PY_MODULES[case]
+    changes = [FileChange("tests/test_billing.py", "modified", TEST, WEAKENED), change]
+    with pytest.raises(SourceOverLimit) as caught:
+        analyze(changes, Config(), Contract(), [], TODAY)
+    assert str(caught.value) == f"{REFUSAL}: {described(path, side)}"
+    assert caught.value.unread == unread(path, side)
 
 
 @pytest.mark.parametrize("path", [
@@ -164,6 +205,64 @@ def test_a_rename_out_of_a_test_path_refuses_naming_its_base_side():
     assert str(caught.value) == f"{REFUSAL}: {described('tests/test_old.py', 'base')}"
 
 
+@pytest.mark.parametrize("path", [
+    "tests/pytest.ini", "pkg/tox.ini", "pkg/setup.cfg", "tests/.pytest.ini", "tests/pytest.toml",
+    "tests/.pytest.toml",
+])
+def test_a_nested_pytest_configuration_refuses_naming_it(path):
+    # The provider pass reads a nested configuration for the search order it
+    # sets. By role alone these are test (`tests/**`) or production files.
+    change = FileChange(path, "modified", None, None, unread=(unread(path, "base"), unread(path, "head")))
+    with pytest.raises(SourceOverLimit) as caught:
+        analyze([change], Config(), Contract(), [], TODAY)
+    assert str(caught.value) == f"{REFUSAL}: {described(path, 'base')}"
+    assert caught.value.unread == unread(path, "base")
+
+
+@pytest.mark.parametrize("path", ["ci/run-tests", "data/fixtures.json"], ids=["extensionless", "suffixed"])
+def test_a_file_with_no_extension_refuses_for_the_shebang_it_may_hold(path):
+    # `scripts/test` is a runner by its shell shebang alone (THREATMODEL 62),
+    # which an unread side hides. A suffixed file is set aside: without a
+    # shebang, run as `sh data/fixtures.json`, it was never a runner either.
+    change = FileChange(path, "added", None, None, unread=(unread(path, "head"),))
+    if path == "ci/run-tests":
+        with pytest.raises(SourceOverLimit) as caught:
+            _set_aside_unread([change], Config(), [])
+        assert str(caught.value) == f"{REFUSAL}: {described(path, 'head')}"
+        assert caught.value.unread == unread(path, "head")
+    else:
+        assert _set_aside_unread([change], Config(), []) == ([], [change])
+
+
+@pytest.mark.parametrize("path", [
+    "build/run-tests", "build/run-tests.sh", "node_modules/.bin/test.cmd", "dist/Jenkinsfile", "dist/app.min.js",
+])
+def test_generated_output_refuses_where_a_runner_may_hide(path):
+    # The provider pass reads a CI, runner-shaped or extensionless file as a
+    # control, and the one-hop scan follows `./build/run-tests.sh` from
+    # `scripts/ci.sh` (THREATMODEL 89): neither skips generated output. Any
+    # other generated file is set aside.
+    change = FileChange(path, "modified", None, None, unread=(unread(path, "base"), unread(path, "head")))
+    if path == "dist/app.min.js":
+        assert _set_aside_unread([change], Config(), []) == ([], [change])
+    else:
+        with pytest.raises(SourceOverLimit) as caught:
+            _set_aside_unread([change], Config(), [])
+        assert str(caught.value) == f"{REFUSAL}: {described(path, 'base')}"
+        assert caught.value.unread == unread(path, "base")
+
+
+def test_a_deleted_file_under_scripts_refuses_whatever_its_suffix():
+    # Collection reads every root `scripts/` file for the pytest runs a root
+    # config governs. Set aside, a deleted run without an option would drop
+    # out of the base runs, and the option would read as moved (#196 184.3).
+    change = FileChange("scripts/full.txt", "deleted", None, None, unread=(unread("scripts/full.txt", "base"),))
+    with pytest.raises(SourceOverLimit) as caught:
+        _set_aside_unread([change], Config(), [])
+    assert str(caught.value) == f"{REFUSAL}: {described('scripts/full.txt', 'base')}"
+    assert caught.value.unread == unread("scripts/full.txt", "base")
+
+
 @pytest.mark.parametrize("scope", [["data/**"], ["tests/**"]], ids=["in_scope", "out_of_scope"])
 def test_scope_drift_needs_the_content_of_an_out_of_scope_path(scope):
     # SCOPE_DRIFT binds an out-of-scope file to its content digests.
@@ -184,7 +283,7 @@ def test_unread_sides_leave_the_verdict_on_the_test_change_unaffected():
         FileChange("docs/guide.md", "modified", None, None,
                    unread=(unread("docs/guide.md", "base"), unread("docs/guide.md", "head"))),
         FileChange("uv.lock", "modified", b"version = 1\n", None, unread=(unread("uv.lock", "head"),)),
-        FileChange("src/app/huge.py", "deleted", None, None, unread=(unread("src/app/huge.py", "base"),)),
+        FileChange("src/app/huge.js", "deleted", None, None, unread=(unread("src/app/huge.js", "base"),)),
     ]
     alone = analyze([test_change], Config(), Contract(), [], TODAY)
     beside = analyze([test_change, *unread_changes], Config(), Contract(), [], TODAY)
@@ -227,9 +326,10 @@ FLAG_CHANGES = {
 
 
 @pytest.mark.parametrize("case", sorted(FLAG_CHANGES))
-def test_a_context_read_of_a_set_aside_path_refuses_naming_it(case):
+def test_a_context_module_over_the_limit_refuses_before_it_is_read(case):
     # The skip condition's constant is read from flags.py at head. Unchanged,
-    # that read is both sides; set aside, head bytes are not the base side.
+    # that read is both sides. Over the limit, it is a Python module, so it
+    # refuses before any pass reads it: head bytes are not the base side.
     asked = []
 
     def head_reader(path):
@@ -378,6 +478,9 @@ ROWS = {
     # name: (base extra files, head edit, verdict, unread sides named on stderr)
     "image_added": (lambda: {}, lambda repo: _write(repo, {"assets/logo.png": blob(1_500_000, "logo")}),
                     "block", [described("assets/logo.png", "head", 1_500_000)]),
+    # A production source that is not Python: no provider pass reads it.
+    "js_source_added": (lambda: {}, lambda repo: _write(repo, {"src/billing.js": blob(LIMIT + 1, "billing.js")}),
+                        "block", [described("src/billing.js", "head")]),
     "data_deleted": (lambda: {"data/table.csv": blob(LIMIT + 1, "table")},
                      lambda repo: (repo / "data" / "table.csv").unlink(),
                      "block", [described("data/table.csv", "base")]),
