@@ -60,6 +60,12 @@ _ITEM_HOOKS = frozenset({"pytest_runtest_protocol", "pytest_runtest_setup", "pyt
                          "pytest_itemcollected"})
 _ITEM_PARAMS = {"item": "item", "pyfuncitem": "item", "nextitem": "nextitem"}
 _ITEM_ATTRS = frozenset({"runtest", "obj", "_obj"})
+# Builtins a hook reading treats as themselves while a hook leaves them
+# unbound; module scope never seeds them (#432 review).
+_READ_BUILTINS = frozenset({"setattr"})
+# The kinds #84's readings follow. An import inside a hook never takes a name
+# that carries one of them (#432 review).
+_READING_KINDS = frozenset({"report", "result", "item", "nextitem"})
 
 # Native `unittest.TestCase` methods a replacement is read for: the public
 # assertion methods of Python 3.11-3.13 with their deprecated aliases (removed
@@ -244,10 +250,14 @@ def _hook_import(stmt, state):
     module or class. It may fail inside a `try`, so every other name keeps
     the binding it had, as #84's reader, which ignored hook imports, left it:
     rebinding `setattr`, `report`, `outcome` or `item` would hide a rewrite
-    that really runs."""
+    that really runs. That holds for a known module too: `_walk` reads a
+    `try` body and its `else` as if they always ran, so an import there never
+    takes `setattr` or a name that carries a reading (#432 review)."""
     imported = _State()
     _import(stmt, imported)
     for name, kind in imported.bindings.items():
+        if name in _READ_BUILTINS or state.bindings.get(name) in _READING_KINDS:
+            continue
         if kind.startswith(("mod:", "cls:")):
             _bind(name, kind, None, state)
 
@@ -432,13 +442,19 @@ def _walk(statements, states, scope):
                 value = stmt.value
                 if value is not None:
                     _expression(value, state, scope)
+                # Python assigns the targets left to right, so
+                # `report = report.outcome = x` reads the second target with
+                # `report` already rebound. Each Name target's kind is read as
+                # it is bound, exactly as #84's reader did (#432 review).
+                readable = _readable(value, state)
                 for target in stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]:
-                    if (isinstance(target, ast.Attribute) and target.attr == "outcome"
+                    if isinstance(target, ast.Name):
+                        _bind(target.id, _kind(value, state, hook, wrapper), readable, state)
+                    elif (isinstance(target, ast.Attribute) and target.attr == "outcome"
                             and _kind(target.value, state, hook, wrapper) == "report"):
                         _outcome(value, stmt, state)
                     elif isinstance(target, ast.Attribute) and value is not None:
                         _write(target.value, target.attr, value, stmt, state, scope)
-                _bind_statement(stmt, state, scope)
             elif isinstance(stmt, (ast.Import, ast.ImportFrom)) and scope.hook != "module":
                 _hook_import(stmt, state)
             elif _bind_statement(stmt, state, scope):
@@ -508,8 +524,13 @@ def _module_seeds(tree):
                             conflicts.add(name)
 
     visit(tree.body)
+    # A builtin a hook reading relies on is never seeded. Module scope is
+    # walked down both arms of every `if` and through every `try` body, so a
+    # binding that may never run (an untaken branch, a failing import before
+    # it, a later `del`) would otherwise switch off #84's
+    # `setattr(report, 'outcome', ...)` reading in every hook.
     kinds = {name: kind for name, kind in state.bindings.items()
-             if name not in conflicts and kind.startswith(("mod:", "cls:"))}
+             if name not in conflicts and name not in _READ_BUILTINS and kind.startswith(("mod:", "cls:"))}
     values = {name: value for name, value in state.values.items() if name not in conflicts}
     return kinds, values
 
