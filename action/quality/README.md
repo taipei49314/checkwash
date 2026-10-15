@@ -1,11 +1,12 @@
 # Quality Action boundary
 
-This repair shipped in v0.8.0 (2026-10-15, #375), and the recommended Action pin
-is the v0.8.0 release commit `f02b5d8a07fa39ee1898881f66c571eb164cb11c`.
-Deployment pins do not acquire later source changes automatically, and this page
-does not recommend an unreleased commit. Passing security qualification does not
-authorize a tag, release or public-pin update, or establish quality-preview
-maturity.
+This page describes the current source candidate. The recommended published
+Action pin is still v0.6.0 alongside the published v0.7.0 CLI; those deployment
+pins do not acquire source changes automatically. Public delivery still needs
+a qualified release containing this repair and a separately approved update
+of the recommended immutable Action pin. This page does not recommend an
+unreleased commit. Passing security qualification does not authorize a tag,
+release or public-pin update, or establish quality-preview maturity.
 
 The [adoption guide](../../docs/quality-adoption.md) describes the future setup
 after that publication and pin decision: a separate clean hosted job whose

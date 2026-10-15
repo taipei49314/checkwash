@@ -221,10 +221,10 @@ gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.j
 This adds a ruleset; it does not replace existing ones. `checkwash doctor`
 can inspect the local workflow, but cannot verify live branch protection.
 
-**Why is the pin added after the release?** A release cannot embed its own
-commit SHA, so a release commit carries the prior release's pin; once a
-release's publication is verified, a follow-up on main recommends that
-release's own peeled commit. The recommended v0.8.0 Action includes the engine
+**Why is the pin added after the release?** A release
+cannot embed its own commit SHA, so a release commit carries the prior
+release's pin; once a release's publication is verified, a follow-up on main
+recommends that release's own peeled commit. The recommended v0.8.0 Action includes the engine
 published on 2026-10-15. A CLI upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
