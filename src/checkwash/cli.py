@@ -5,7 +5,9 @@
     checkwash allow FINGERPRINT --reason "..." [--expires YYYY-MM-DD]
     checkwash bench [--local] [--corpus DIR] [--run-sweep]
 
-Exit codes (SPEC §9): 0 pass, 1 block, 2 engine error.
+Exit codes (SPEC §9): 0 pass, 1 block, 2 engine error. `check --format
+hook-json` exits 0 on a verdict and on an engine error: its JSON carries a
+block, or the engine error as a non-blocking `systemMessage` (#414).
 `bench` uses 0 / 2 only — it never reports a verdict.
 """
 
@@ -142,7 +144,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
     for message in diagnostics:
         write_text(f"checkwash: {message}\n", sys.stderr)
     if errors and config.on_engine_error == "block":
-        return 2
+        # The diagnostics are already on stderr; hook-json warns instead (#414).
+        return _hook_not_analysed("; ".join(errors)) if _hook_json(args) else 2
 
     contract = Contract()
     if args.task:
@@ -548,14 +551,44 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
     except (GitError, OSError, RecursionError) as exc:
-        write_text(f"checkwash engine error: {exc}\n", sys.stderr)
-        return 2
+        return _engine_error(args, str(exc))
     except Exception as exc:  # noqa: BLE001 - crash must never read as a verdict
         # Exit 1 means "block" (SPEC §9); an unhandled traceback exiting 1
         # is indistinguishable from a real finding for CI (confirmed
-        # red-team finding). Engine errors are always 2.
-        write_text(f"checkwash engine error: {type(exc).__name__}: {exc}\n", sys.stderr)
+        # red-team finding). Engine errors are 2, except in hook-json mode.
+        return _engine_error(args, f"{type(exc).__name__}: {exc}")
+
+
+def _engine_error(args: argparse.Namespace, detail: str) -> int:
+    """Report an engine error: exit 2, or the hook-json warning (#414)."""
+    write_text(f"checkwash engine error: {detail}\n", sys.stderr)
+    return _hook_not_analysed(detail) if _hook_json(args) else 2
+
+
+def _hook_json(args: argparse.Namespace) -> bool:
+    return (getattr(args, "command", None) == "check" and getattr(args, "format", None) == "hook-json"
+            and not getattr(args, "emit_ir", False))
+
+
+def _hook_not_analysed(detail: str) -> int:
+    """A non-blocking hook-json payload for an engine error (#414).
+
+    A Claude Code Stop hook that exits 2 blocks the stop and hands stderr to
+    the agent, which cannot fix an engine error and would loop on it. The
+    hook is an author-side check; the required CI check remains the gate. So
+    `check --format hook-json` exits 0 with a JSON payload whose
+    `systemMessage` tells the user the change was not analysed and why, and
+    carries no `decision`, so the agent may stop. Every other mode keeps 2.
+    """
+    import json as _json
+
+    message = ("checkwash: this change was not analysed, so it was neither passed nor blocked. "
+               f"Engine error: {detail}")
+    try:
+        _write_machine(_json.dumps({"systemMessage": message}, ensure_ascii=False, sort_keys=True) + "\n")
+    except (OSError, ValueError):
         return 2
+    return 0
 
 
 if __name__ == "__main__":
