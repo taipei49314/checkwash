@@ -28,7 +28,7 @@ checkwash quality profiles
 checkwash quality explain QW_THRESHOLD_LOWERED
 ```
 
-On main, not released yet
+Since v0.8.0
 ([#416](https://github.com/taipei49314/checkwash/issues/416)): the forms that
 read a repository (`init`, `doctor`, and the range and worktree reviews) run
 from the Git repository root when `--repo`, by default the current directory,

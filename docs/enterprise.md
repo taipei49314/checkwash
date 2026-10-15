@@ -27,11 +27,10 @@ the [README](../README.md):
 
 3. `checkwash doctor` — it cannot see branch protection; confirm step 2.
 
-The README's Action is hash-pinned to **v0.5.0** under the one-release
-trust-lag policy. Installing the v0.6.0 CLI does not update that Action;
-the work on the reports and rulings that followed #172–#181 is only in the
-newer package. Always
-record both deployed versions. A required check enforces that version's
+The README's Action is hash-pinned to **v0.8.0**, the release its CLI commands
+install. A release commit cannot embed its own SHA, so the pin advances in a
+follow-up once a release's publication is verified. Installing a newer CLI does
+not update an existing Action. Always record both deployed versions. A required check enforces that version's
 configured verdict, not a guarantee that the change is correct.
 
 Optional PR line comments (T2.2): set `comment-pr: true` and add

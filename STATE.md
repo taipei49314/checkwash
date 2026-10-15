@@ -1,6 +1,27 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-15 (v0.8.0 release prepared from `cdd74e0`; publication waits; maintenance on LAPTOP-01AGNPJU)
+Updated: 2026-10-16 (v0.8.0 published and verified; sweeps running on LAPTOP-01AGNPJU)
+
+## 2026-10-16: v0.8.0 published and verified
+
+v0.8.0 was published on 2026-10-15 at 17:00:03Z from release commit `f02b5d8`
+(PR #458, tag object `1d869062`). The PR, main and tag verdict stages each
+passed 185 cases with zero failures; tag CI passed every job, including the
+actual tag visitor install; release run 38773654788 completed with the
+maintainer's `pypi` approval; the PyPI wheel and sdist digests equal the
+GitHub assets. The [publication record](docs/releases/v0.8.0-publication-verification.md)
+has the details. This record advances `release/advertised.toml`, the README CLI
+pins and the README Action pin (with doctor's built-in pin) to v0.8.0.
+
+The same day the maintainer authorized checkwash sweeps on LAPTOP-01AGNPJU
+while it is on (EC POLICY `checkwash-pju-sweep`, T-546) and approved the frozen
+acceptance-sweep manifest of checkwash-lab branch
+`prep/acceptance-sweep-v080-20261016` (`793fe135`, manifest sha256
+`c5bdcf0b…`): v0.7.0 against v0.8.0 over the standard, D-088, targeted and
+JavaScript batches (6,354 commits). It started at 16:34Z; its results are
+labelled human-authorized local PJU, NOT EC pool, and will be recorded when it
+finishes. Still open: the verdict-baseline rotation to v0.8.0, the sweep
+adjudication, #454–#457, and the ruled P1 issues.
 
 ## 2026-10-15: v0.8.0 release prepared
 
@@ -2733,8 +2754,8 @@ how the measurements moved; their original dates and values remain history.
 | authoritative number | value |
 |---|---|
 | version | v0.8.0 |
-| last published CLI | v0.7.0 |
-| last published CLI commit | d647a65e9734f2b6e57b528ea595b1507dc31094 |
+| last published CLI | v0.8.0 |
+| last published CLI commit | f02b5d8a07fa39ee1898881f66c571eb164cb11c |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

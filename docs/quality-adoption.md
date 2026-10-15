@@ -1,9 +1,8 @@
 # Adopt the quality preview
 
-The v0.7.0 package includes this limited preview for coverage, Ruff and mypy
+The v0.8.0 package includes this limited preview for coverage, Ruff and mypy
 configuration review alongside the existing test-oracle check. The recommended
-v0.6.0 Action includes it too; the preview's source was unchanged from v0.4.0
-through v0.6.0. Natural-case labels, completeness evaluation
+v0.8.0 Action includes it too. Natural-case labels, completeness evaluation
 and frozen legacy-byte parity remain separate outstanding conditions;
 publication and these setup commands do not establish production enforcement
 maturity. See the [release evidence](releases/v0.4.0-public-launch.md).
@@ -84,11 +83,9 @@ context without removing real checks just to obtain a complete report.
 
 ## 3. Connect a separate PR status
 
-**Current source candidate:** the entry-point hardening described below is not
-in the published v0.7.0 CLI's recommended v0.6.0 Action pin. Public delivery
-still requires a qualified release containing the repair and a separately
-approved update of the recommended immutable Action pin. No unreleased commit
-is recommended here; updating a CLI does not update an Action.
+**Since v0.8.0:** the entry-point hardening described below shipped in v0.8.0
+(#375), and the recommended Action pin is the v0.8.0 release commit. No
+unreleased commit is recommended here; updating a CLI does not update an Action.
 This security boundary does not establish quality-preview enforcement maturity.
 
 The separate `action/quality` composite action accepts full fetched base/head
