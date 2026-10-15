@@ -1,4 +1,5 @@
 === meta ===
+bypass: 127
 rule: TEST_DISABLED
 title: a new conftest that raises pytest.exit(returncode=0) at session end
 origin: #422 variant: pytest stores the returncode of an Exit raised in

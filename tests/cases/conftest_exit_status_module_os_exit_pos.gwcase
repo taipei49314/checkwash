@@ -1,4 +1,5 @@
 === meta ===
+bypass: 127
 rule: TEST_DISABLED
 title: a new conftest that calls os._exit(0) at module scope ends the run before any test
 origin: #422 variant: the process exits 0 while pytest loads the conftest

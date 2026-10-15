@@ -1,4 +1,5 @@
 === meta ===
+bypass: 127
 rule: TEST_DISABLED
 title: an existing conftest that writes 0 to session.exitstatus turns a failing run green
 origin: #422, the issue's example: tests and production stay byte-identical,

@@ -9553,3 +9553,980 @@ criteria are not reopened or relaxed by this decision. Independent adoption
 remains UNSATISFIED, not waived. The implemented checks and the final exact
 head's actual evidence must be recorded separately before this work is
 described as complete.
+
+## D-131 (2026-10-15): the stand-in pass's node limit is 200,000, and its limit errors name the file (#345)
+
+Found during #335's sweep. Five of the 142 commits of #324's config-touching
+aiohttp set whose tree holds a submodule (`bc504dafce`, `5a8ebdfcae`,
+`0c7ce3485d`, `92477c5a74`, `35754d4642`) ended in `EngineError: stand-in
+source exceeds the syntax node limit` (exit 2). `standin_installations._syntax`
+refused a source over 1,000,000 bytes and, once parsed, one over 30,000 AST
+nodes. Ordinary Python runs at about 170 nodes per kilobyte, so the node limit
+bound at about 175 KB, far below the byte limit: aiohttp's
+`tests/test_client_functional.py` is 199,244 bytes and 34,123 nodes at
+`bc504dafce`.
+
+**Ruling** (owner, 2026-10-08, 「裁決依照你建議」; #345's ruling comment):
+1. `_MAX_SOURCE_NODES` goes from 30,000 to 200,000, about the node count of
+   1 MB of ordinary Python, so the byte limit binds first on ordinary code.
+2. The stand-in pass's time at the new limit is measured on a 1 MB test file
+   of ordinary statements and on a 1 MB file of nested expressions, and both
+   numbers go in this entry.
+3. The node-limit error names the file and its node count, and the
+   byte-limit error names the file.
+
+**As implemented** (PR #439, items 1 and 3; the product change and its tests
+ported from draft #389):
+- `_MAX_SOURCE_NODES` is 200,000. The pass's other limits (1,000,000 bytes
+  per source, 64,000,000 context bytes, 4,096 context reads, 1,000,000
+  analysis steps) are unchanged, and over-limit input still exits 2.
+- The per-file byte and node errors name the logical path (as `repr()`), the
+  requested side (`before` or `after`), the byte count, the node count where
+  it was counted, and the limit. The aggregate context byte errors name the
+  path that triggered them and the running total; the changed-context one
+  names no side.
+- `subject_replacements._parse` keeps its own 30,000-node limit. The ruling
+  did not cover it.
+
+**Timings** (#389, run 38292837314). These are whole-run native medians up
+to a refusal, not stand-in pass time. 1 MB of ordinary statements: 4.263 s
+before, 9.788 s after; both exit 2, and after this change the refusal comes
+from the separate step guard. 1 MB of nested expressions: fails in recursive
+frontend traversal before the stand-in pass, so it has no stand-in time.
+
+Ruling item 2 is therefore not met yet. Neither number is the stand-in
+pass's own time, neither was taken at the merged head, and the
+nested-expression input never reaches the stand-in pass, so its stand-in
+time needs a different input or an owner decision, not only a re-run.
+
+**Open.** #389 reported that all five aiohttp commits still exit 2 with this
+change: two at the stand-in step guard, two at the subject-replacement node
+limit, one at a nonregular snapshot error. That report was not re-run at
+the merged head. The subject-replacement pass keeps its own 30,000-node
+limit. #345 stays open.
+
+**Tests.** `tests/test_standin_source_limits.py` (16 collected items), with
+#389's import-order fix. The documented count goes from 17567 to 17583. No
+existing expectation changes.
+
+**Sweep.** Not run (D-140): the standard set, D-088's sets and the aiohttp
+set, including the five aiohttp commits. Its cost will be recorded after the
+release.
+
+The agent wrote this entry in the v0.8.0 release PR from the approved draft
+in #439's description; the maintainer approved the drafts on 2026-10-15
+(「照草稿全部核准」).
+
+## D-132 (2026-10-15): a deep module-level string concatenation is read, not refused (#441)
+
+PR #441 has no issue of its own: it was found while working on #345, whose
+ruling does not cover it, so it needed the maintainer's acceptance. A file
+with one long module-level string concatenation (`NAME = "a" + "b" + ...`,
+thousands of terms) made `ast.parse`, `ast.dump`, `ast.unparse` or
+checkwash's recursive walks raise `RecursionError`. Where the stdlib parser
+raised it, the Python frontend read the file as unparseable
+(`parse_ok=False`); where a later recursive step raised it, `check` exited 2
+instead of giving a verdict.
+
+**The rule** (#441's approved text): when the stdlib parser raises
+`RecursionError`, checkwash rebuilds only complete top-level
+`NAME = STRING (+ STRING)+` lines from tokens with exact positions; any
+other shape keeps the original error. Dump, unparse and stand-in tracing use
+iterative equivalents with identical output and step charges. No limit
+changes.
+
+**As implemented:**
+- `frontends/python/syntax.py`: `parse_module()` tries `ast.parse`, and only
+  on `RecursionError` reads the source's tokens. An eligible line is one
+  physical line at column 0 and indent level 0: a name, `=`, and at least two
+  plain `str` literals joined by `+`, with no comment, adjacent string,
+  parenthesis or continuation inside it. Each such chain is replaced by a
+  placeholder of the same byte width, the stdlib parses the shallow module,
+  and the chain is put back as a left-nested `BinOp` tree with exact line and
+  byte-column positions. A bytes literal, an f-string or any other shape is
+  left to the stdlib. If no line qualifies, or the shallow module does not
+  match, the original `RecursionError` is raised.
+- The Python frontend and the stand-in pass's `_syntax` parse through
+  `parse_module`. The frontend's scope walk is iterative, in the same
+  preorder and with the same lexical contexts.
+- `ir/astutil.stable_dump` falls back to a byte-identical iterative dump only
+  after native `ast.dump` raises `RecursionError`.
+- A module constant whose root is a `BinOp` is canonicalised through
+  `binding_key` (#374): native `ast.unparse` first, the iterative emitter
+  only after `RecursionError`.
+- The stand-in trace walks connected `BinOp` nodes iteratively, charging the
+  same steps.
+- The callers' byte and node budgets still apply to the original input and
+  to the rebuilt tree (D-131).
+
+**Consequence.** A file the frontend read as unparseable because of such a
+line is now parsed, and gets the findings an ordinary parse gives it. No
+round measured how often that happens on real history.
+
+**Open question.** #391 reported, on Python 3.11, per deep CLI case: Linux
+17.5 s, macOS 22.4 s, Windows 31.7 s, with two such cases per leg. #441 asked
+whether both stay in the default suite, or only the weakening case. It has
+no answer, and both are in the default suite on main.
+
+**Tests.** Five test files with 118 collected items
+(`tests/test_string_chain_syntax.py`, `tests/test_deep_production_dump.py`,
+`tests/test_frontend_iterative_visit.py`, `tests/test_module_constant_binop.py`
+and `tests/test_standin_expression_iteration.py`), ported from #391
+(`e63ba5b5`) with timing and metadata output removed and assertions
+unchanged. The documented count goes from 17583 to 17701. No existing
+expectation changes.
+
+**Sweep.** Not run (D-140). Its result will be recorded after the release.
+
+The agent wrote this entry in the v0.8.0 release PR from the optional draft
+in #441's description; the maintainer approved the drafts on 2026-10-15
+(「照草稿全部核准」).
+
+## D-133 (2026-10-15): a dormant nested pytest config is not read up front, and a symlinked config reads as its target in a range check (#346)
+
+Found during #335's sweep. aiohttp `ce32557b72` ("Move pytest config into a
+`pytest.ini`") ended in `EngineError: strict snapshot batch cannot inspect
+nonregular source` (exit 2), with no verdict. Its tree holds
+`requirements/pyproject.toml` as a symlink to `../pyproject.toml`. The
+runtime-provider pass read every pytest config at any depth in its first
+batch, and `GitSnapshot.read_many` refuses a selected path that is not a
+regular file. No test lives under `requirements/`, so pytest never reads
+that file as a config, and the message named no path.
+
+**Ruling** (owner, 2026-10-08, 「裁決依照你建議」; #346's ruling comment):
+1. The runtime-provider pass does not read a nested config under a directory
+   that holds no test file.
+2. A symlink whose target is a regular file of the same tree reads as that
+   file, with the link text resolved against the link's directory, within
+   the tree. A target outside the tree, a link to a link and a link to a
+   directory still fail closed.
+3. The error names the path, for example "strict snapshot batch cannot
+   inspect nonregular source requirements/pyproject.toml (a symlink)".
+
+**The decision** (#442's approved text): (1) The runtime-provider pass does
+not read a nested config whose directory holds no test file by pytest's
+default name patterns on either side, unless a run's discovery reaches it.
+(2) In a range check, a recognized pytest config name that is a symlink to a
+regular file of the same commit reads as that file, resolved against the
+link's directory. Other links fail closed. (3) A nonregular-source refusal
+names the path.
+
+**As implemented** (PR #442; `docs/subject-integrity.md` describes all
+three):
+- Item 1, in every mode. The pass reads the root pytest configs up front,
+  and every nested config whose directory holds, at any depth and on either
+  side, a test file by pytest's default name patterns (`test_*.py`,
+  `*_test.py`, outside its default `norecursedirs`). Any other nested config
+  is dormant and is not read up front: pytest's discovery walks up from a
+  run's start directory, so that config governs nothing the pass analyses. A
+  dormant config is still read, lazily and as strictly as any other, when a
+  run's discovery reaches it, for example through `-c` or a start directory
+  inside it.
+- Item 2, in range checks only. A recognized pytest config name
+  (`pytest.toml`, `.pytest.toml`, `pytest.ini`, `.pytest.ini`,
+  `pyproject.toml`, `tox.ini`, `setup.cfg`) whose tree entry is a symlink to
+  a regular file of the same commit reads as that file. A target outside the
+  tree, a link to a link, a link to a directory, a missing target and a
+  target inside a submodule fail with an `EngineError` that names the path
+  and the commit. Base and head are read separately, so a link whose target
+  changed counts as a config change even when the link itself did not. Such
+  an event is reported on the changed regular target, with the logical
+  config and both targets named in its reason; one that no single changed
+  regular file explains fails closed. For that comparison every symlinked
+  config name in either tree is resolved up front, so an unsafe link fails
+  closed even where the provider pass would treat it as dormant.
+- Item 3, in every mode. A refused nonregular source is named with what it
+  is.
+
+**Remaining scope.**
+- The working-tree snapshot gets no item 2: a symlinked config is still
+  refused there, and so is any other symlink, including a custom config file
+  name given to `-c`.
+- Item 1 covers only the runtime-provider pass. In working-tree mode the
+  collection-inventory pass can still refuse a nested config symlink when a
+  root config is touched.
+- psf/requests' directory-symlink row from the #396/#397 scope may still
+  exit 2 in D-088's sweep and needs its own ruling.
+
+**Tests.** `tests/test_issue346_config_reads.py` and additions to
+`tests/test_config_snapshot.py`; the documented count goes from 17701 to
+17786. A recording reader shows that a run naming the dormant config with
+`-c` requests it later, on its own, not in the initial batch. The CLI test,
+an owned analogue of the reported shape, exits 2 before this change. Item 2
+ports closed draft #395 (`bfe6da1d`, `abc260d7`); its known-case test
+expects no finding instead of an error, because item 1 removes that read. No
+existing expectation changes.
+
+**Sweep.** Not run (D-140): aiohttp `ce32557b72` giving a verdict, and the
+standard set, D-088's sets and the aiohttp set. Its cost will be recorded
+after the release.
+
+The agent wrote this entry in the v0.8.0 release PR from the approved draft
+in #442's description; the maintainer approved the drafts on 2026-10-15
+(「照草稿全部核准」).
+
+## D-134 (2026-10-15): a worktree directory symlink is an opaque directory, and the Stop hook warns on an engine error (#414)
+
+From an external user report. Without a range, `check` compares the working
+tree with HEAD; the pre-commit hook and the Claude Code Stop hook run in that
+mode. It exited 2 with no verdict on any change that added, deleted or
+edited a `.py` file whenever the working tree held a symlink to a directory,
+tracked, untracked or gitignored: an in-tree Linux `.venv` (`lib64 -> lib`)
+or pnpm's `node_modules` was enough. `WorkingTreeSnapshot.list_paths` walked
+the whole tree and refused the first directory symlink it met, naming no
+path. The refusal dates from v0.3.4. With `--format hook-json` the error also
+exited 2, which Claude Code reads as a Stop hook blocking the stop, with
+stderr shown to the model, so the agent would loop on an error it cannot
+fix. Range mode, `sweep` and the Action read `git ls-tree` and were not
+affected.
+
+**Ruling** (owner, 2026-10-14; options chosen 「當成不透明目錄」 and
+「exit 0，JSON 警告」, path naming as in the #345 and #346 rulings; #414's
+ruling comment):
+1. A directory symlink in the working tree is listed as an opaque directory,
+   as a submodule is (D-123), so `check` fails only when pytest collection or
+   an import can actually reach it. The working tree stays attacker-controlled
+   in hook mode, and ignored trees are not skipped wholesale.
+2. A hook-json engine error exits 0 with a JSON payload that tells the user
+   the change was not analysed and why, and does not block the agent from
+   stopping. The hook is an author-side check; the required CI check remains
+   the gate. Term mode (pre-commit) keeps exit 2.
+3. Refusals name the path.
+
+**As implemented** (PR #447):
+- `WorkingTreeSnapshot.list_paths` lists a directory symlink as `path/` and
+  never follows it. Ignored trees are still listed, and the 200,000-path cap
+  is unchanged. A read inside the link, an import that resolves into it, or
+  a collection that can reach it fails with `strict snapshot inventory
+  cannot follow directory symlink <path>: <reason>`. pytest's default
+  `norecursedirs` keeps `.venv`, `venv`, `.*` and `node_modules` out of
+  collection, so the common layouts give a verdict.
+- `opaque.SymlinkedDirectory`, a `str` subclass, keeps the kind through
+  `split_inventory` and the shadow pass, so the submodule wording is
+  unchanged.
+- The working-tree searches and the path-limit refusal name the path.
+- `check --format hook-json`: an engine error, and a config or allowlist
+  parse error under `on_engine_error = "block"`, exit 0 with
+  `{"systemMessage": "checkwash: this change was not analysed, so it was
+  neither passed nor blocked. Engine error: ..."}` and no `decision`. The
+  error still goes to stderr. Every other format keeps exit 2. So does
+  hook-json when the payload cannot be written, for a malformed range (a
+  usage error, exit 2 in every format) and with `--emit-ir`.
+
+**The exit-code contract.** `docs/stability.md` lists the exit codes, `0`
+pass, `1` block, `2` engine error, as a frozen contract: "If one of them
+changes, the version's minor number changes with it and `DECISIONS.md`
+carries the entry explaining why." This is that entry.
+- Before: `check --format hook-json` already exited 0 on both verdicts,
+  carrying a block in its JSON `decision`, as the Stop-hook protocol needs.
+  An engine error exited 2.
+- Now: in hook-json an engine error exits 0 with the warning above.
+- Why: in the Stop hook, exit 2 traps the agent on an error it cannot fix,
+  and the hook is not the gate.
+- What still holds: a crash is never reported as a block, because the
+  warning carries no `decision`. Every other format keeps exit 2, and so does
+  the required CI check, which runs in range mode.
+
+The release is minor for this change (D-140). SPEC §9 states the exception
+in #447's approved wording, and the v0.8.0 release PR adds the same
+exception to the exit-code row of `docs/stability.md`.
+
+**An existing expectation changed.**
+`tests/test_hook_runtime.py::test_local_handler_executes_bound_package_despite_shadowing`
+asserted exit 2 for an engine error under the hook handler. It now asserts
+exit 0, no `decision`, and a `systemMessage` saying the change was not
+analysed. The owner confirmed this exact change on 2026-10-14
+(「確認 #447 測試改動」) under AGENTS.md rule 2, and #451 added its exemption
+to `.greenwash/allow.toml` (expires 2026-11-13). No fixture expectation
+changed.
+
+**Residuals.**
+- An untracked, non-ignored directory symlink is still refused by the
+  change-list read (`... (a symlink)`, path named).
+- The importer search still refuses a directory symlink outside hidden,
+  `.venv` and `node_modules` trees, naming it.
+- Windows junctions are not treated as symlinks.
+- An agent can make the Stop hook non-blocking by provoking an engine error
+  on purpose, for example with an untracked, non-ignored directory symlink
+  or a link a collection can reach. The hook then warns instead of blocking,
+  and the required CI check, which runs in range mode, still judges the
+  change. This is the cost of the ruling's choice not to trap the agent on
+  errors it cannot fix (#447's approved THREATMODEL row). #456 records one
+  such route through D-135's size refusals.
+
+**Tests.** `tests/test_issue414_worktree_directory_symlinks.py` (11
+collected items): `list_paths`, reads, searches and the path limit; the
+`.venv` `lib64` and pnpm layouts in term and hook-json formats, each giving a
+verdict; a reachable link that fails naming it, exit 2 in term and exit 0
+with the warning in hook-json; and a blocking config error in both formats.
+The documented count goes from 17786 to 17797.
+
+**Sweep.** Not run (D-140): the sweep, and the issue's real-world rows (Linux
+`python3 -m venv`, a pnpm workspace, an npm tree over 200,000 files).
+
+#447's description carried no DECISIONS draft. The agent wrote this entry in
+the v0.8.0 release PR from #414's ruling and #447's description; the
+maintainer approved #447's SPEC and THREATMODEL drafts on 2026-10-15
+(「照草稿全部核准」) and approves this entry in the release PR.
+
+## D-135 (2026-10-15): an oversized side no detector must read is carried unread (#415)
+
+In v0.7.0, `check` exited 2 when any changed path had a side over 1,000,000
+bytes, whatever its role. Images, lockfiles, deletions and untracked files
+counted, and the run stopped before any detector saw the diff. A root
+`poetry.lock` or `uv.lock` over the limit at the base made every run exit 2,
+even when the diff did not touch it. The message named no file, and no
+setting avoided the exit. v0.6.0 read these sides uncapped; the cap reached
+them in `d900018` (#365, through #369).
+
+**Ruling** (owner, 2026-10-14; option chosen 「非必要檔記為未讀」, path naming
+as in the #345 and #346 rulings; #415's ruling comment):
+1. An oversized side is carried as unread when no detector must parse it
+   (images, data, lockfiles, documentation, production sources). It earns no
+   credit and no repair evidence, so adding a large file cannot hold other
+   findings at warn (#419). Files a detector must parse (test, conftest, CI,
+   guardrail and test-command configuration files) still refuse with exit 2.
+2. An oversized root `poetry.lock` or `uv.lock` at the base no longer fails
+   every run: the run continues without that file's declared modules and
+   prints a stderr note naming it.
+3. Every remaining size refusal names path, side, size and limit, kept
+   through the `GitError` re-raise.
+
+**The decision** (#448's approved text): an oversized side no detector
+parses is unread rather than fail-closed, and it earns no evidence (#419).
+Python modules, pytest configuration and extensionless files refuse, because
+the runtime-provider pass and the runner shape read them.
+
+**As implemented** (PR #448):
+- Snapshots return an oversized side as an `UnreadSide` (path, side, size,
+  limit), and both diff modes list it in `FileChange.unread`. `build_ir` sets
+  unread changes aside before any pass; they earn no opaque or symbol
+  evidence.
+- The run still exits 2, naming path, side, size and limit, when a detector
+  must read the change. That covers test and conftest files; any `.py`
+  module, whether added, deleted, renamed in or out, or edited, because the
+  runtime-provider pass reads every module that can change which provider a
+  test's import resolves to; pytest configuration at any depth
+  (`pytest.ini`, `.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`,
+  `setup.cfg`, `pyproject.toml`), which that pass reads for search order;
+  JS/TS tests and JS setup files; CI, guardrail and snapshot roles;
+  runner-shaped files and test-command manifests; a file with no extension,
+  whose only runner shape is a shebang an unread side hides (THREATMODEL 62);
+  any non-generated file under the root `scripts/`, which collection reads as
+  a runner; and paths outside `scope.allow`.
+- Generated output is set aside unless it is a Python module, a pytest
+  configuration, a CI file, a runner script or a file with no extension. The
+  provider pass and the one-hop scan (THREATMODEL 89) read those without an
+  artifact filter.
+- When the engine reads a set-aside path as context, it refuses and names the
+  side. It no longer treats the head as unchanged.
+- `check` prints one stderr note per unread side: `checkwash: not read, over
+  the source byte limit: <path> (<side>, <size> > <limit> bytes); it earns no
+  repair evidence`.
+- An oversized base `poetry.lock` or `uv.lock` is skipped with the note
+  `checkwash: skipped <path> (base, <size> > <limit> bytes): over the source
+  byte limit; the run continues without its declared modules`; `sweep` skips
+  it silently. Every other manifest that large still refuses.
+- Refusals read `strict snapshot source exceeds the byte limit: uv.lock
+  (base, 1200000 > 1000000 bytes)`, and the `GitError` re-raise keeps that
+  text. The generic CLI prefix is now `SourceOverLimit:`.
+- README and `docs/stability.md` match.
+
+**Wider than the ruling's list.** Ruling 1 named production sources among the
+unread; a Python production module refuses instead, and so do pytest
+configuration at any depth and files with no extension, as the approved text
+says. `a94b7ca` widened the must-read set after an independent review
+(#448's review comment): at `8731c30` a deleted, renamed-out or edited
+oversized `.py`, a nested pytest configuration and an extensionless shebang
+runner were set aside and passed, where main exited 2.
+
+**Residuals.**
+- An oversized side carried unread is not scanned by the rules that read
+  content: HIDDEN_UNICODE, BROAD_EXCEPT_ADDED and SUPPRESSION_ADDED do not see
+  an oversized non-Python production source or a test-role data file (for
+  example `tests/data/big.json`). Whether a test-role data file counts as a
+  "test" file that must refuse is for the owner to decide; #448 sets it
+  aside.
+- A suffixed file with a shell shebang only on an unread side stays set aside
+  (for example `ci/run.txt`). Without the shebang, run as `sh ci/run.txt`, it
+  is not runner-shaped either, so this adds no capability.
+- Fail-closed side effect: an extensionless file over the limit now exits 2
+  even when it is a document, such as `README`, `LICENSE` or `.envrc`.
+- A refusal for a change with two unread sides names the first unread side,
+  not necessarily the side of the path that must be read.
+- Aggregate budget refusals and `read_config_many` do not name the side yet.
+- Filed as follow-ups: #454 (name unread sides in JSON and SARIF), #455 (a
+  bounded read for the shell-shebang check, or HIDDEN_UNICODE), and #456 (a
+  must-read file padded past the limit makes the Stop hook non-blocking,
+  through D-134).
+
+**Tests.** `tests/test_issue415_oversized_sources.py` (69 collected items;
+large files are generated under `tmp_path`): the limit boundary; renames,
+deletions and worktree mode; no evidence from unread sides; the must-read
+refusals, a Python module at every status included; context reads of
+set-aside paths; issue rows 1 to 3 through the CLI; the lockfile skip; and
+named refusals in both CLI branches. The documented count goes from 17797 to
+17866. No existing expectation changes.
+
+**Sweep.** Not run (D-140): the standard set. Its cost will be recorded after
+the release.
+
+The agent wrote this entry in the v0.8.0 release PR from the approved draft
+in #448's description; the maintainer approved the drafts on 2026-10-15
+(「照草稿全部核准」).
+
+## D-136 (2026-10-15): a conftest that forces pytest's exit status is a runtime control (#422)
+
+Reported by a user. A `conftest.py` could make a failing suite exit 0
+without touching a test, a collection setting or production code:
+`session.exitstatus = 0` in `pytest_sessionfinish`,
+`pytest.exit("done", returncode=0)` raised there, or `os._exit(0)` in a hook
+or at module scope. checkwash read none of these, in a new or an existing
+conftest. pytest's `wrap_session` returns `session.exitstatus` as the exit
+code, after `pytest_sessionfinish` and `pytest_unconfigure`. This is the
+in-process form of the exit-code swallows that THREATMODEL rows 61, 65 and
+69 close for shell scripts, make recipes and runner scripts.
+
+**Ruling** (owner, 2026-10-14, 「P1 全部照建議」; #422's ruling comment):
+- **422.Q1 (A).** An exit-status override is a conftest runtime control in
+  #84's family: TEST_DISABLED, kind RUNTIME, the existing
+  `collection_control` shape, one marker per effect on the `<suite>` unit,
+  named `conftest.runtime.exit.<place>.<effect>.<path-hash>`. It carries no
+  guard, so COMPAT_GATE and repair evidence never hold it, and it blocks at
+  high through the existing unguarded-suite-control path.
+- **422.Q2 (B).** Places: module scope, `pytest_*` functions and class
+  methods, conftest fixtures with their teardown and finalizers, `atexit`
+  callables, and the same-file functions these call. Effects: `exitstatus`
+  writes on any receiver; `pytest.exit(returncode=...)` or a raised `Exit`;
+  `os._exit` under any alias, outside a recognised fork child; and SystemExit
+  spellings outside `pytest_cmdline_main`. Ints are read modulo 256. Zero, 5
+  and unreadable values count, and so does None for writes and SystemExit.
+  The unchanged status does not count: that is the hook's own unrebound
+  parameters, in a hook the conftest never calls.
+- **422.Q3 (A).** The exit-5 recipe gets no marker: a zero write to
+  `session.exitstatus` on the unrebound `session` parameter of an effective
+  `pytest_sessionfinish`, in a conftest that never calls or references that
+  hook, under a positive conjunct that proves the status equals 5. Any wider
+  spelling is an effect: `or`, `!= 0`, `testscollected == 0`, the else
+  branch, or 5 through a named constant.
+- **422.Q4 (B).** Zero, decrementing or unreadable writes to
+  `session.testsfailed` join this round through Q2's reader. The other
+  neighbouring spellings are named residuals for a follow-up issue in the
+  row-7 family: `pytest_cmdline_main`, `pytest_runtestloop` and
+  `pytest_collection` short-circuits; other callback registrations; hooks in
+  plugin modules; exits in test modules or production code; `os.exec*`;
+  computed names and callees; rebinding pytest internals; and `ctypes` exits.
+- **422.Q5 (A).** The recipe combined with a run that collects nothing is a
+  residual of the new THREATMODEL row, with a follow-up issue against
+  `collection_inventory.py` and the SPEC.md:396 sentence. The inventory does
+  not change in this round.
+- **422.Q6 (B).** A separate reader module mints the `conftest.runtime.exit.`
+  names. `tests/test_conftest_controls.py` gains `SITES`, `PLUMBING` and
+  `FAMILIES` rows, and no existing row changes.
+
+The gating severity table does not change, and no rule ID or kind is added.
+
+**209.Q1 covers the collection family only.** D-088's 209.Q1 lets a
+suite-level control earn COMPAT_GATE on its own guard when that guard can be
+false. That ruling covers the collection controls: `collect_ignore`, the two
+collection hooks and an `add_marker` skip in one. An exit-status control
+carries no guard, so 209.Q1 never qualifies it, and as an unguarded
+suite-level control it gets no repair evidence (209.Q4). The path condition
+it sits under is hashed into its marker name and nowhere else.
+
+**As implemented** (PR #450, `frontends/python/exit_status_controls.py`,
+yielded from `runtime_controls`):
+- The reader runs only on a conftest that names `exit`, `quit` or
+  `testsfailed` somewhere.
+- The effects are `exitstatus`, `testsfailed`, `pytest-exit`, `os-exit` and
+  `system-exit`. `<place>` is the function the effect sits in, qualified by
+  its class, or `module` at module scope; the hash is taken over the path
+  condition, as `runtime_controls` takes it.
+- Read anywhere in the conftest: a write named `exitstatus` or `testsfailed`
+  on any receiver (an assignment, augmented ones included; a `del`;
+  `setattr`, `__setattr__` or `delattr` with a literal name; a literal key of
+  `x.__dict__` or `vars(x)`; a keyword or literal key of their `update()`);
+  `pytest.exit(..., returncode=v)`; and a call of `pytest.exit.Exception`,
+  `Exit` or a same-file subclass. `pytest.exit` with no returncode, or None,
+  interrupts the run or keeps its status, so it is no effect. A
+  `testsfailed` write counts when it is zero, a decrement or unreadable;
+  `+=` a positive literal and a non-zero literal do not.
+- Read in places: `os._exit(v)` under any alias, called or passed as a
+  callable (`atexit.register(os._exit, 0)`, `functools.partial(...)`); and
+  `sys.exit(v)`, `exit()`, `quit()`, or a `SystemExit` or same-file subclass
+  called or raised, except under `pytest_cmdline_main`, the three functions
+  also when passed as a positional argument. A bare `exit` or `quit` that a
+  binding hides is not the builtin.
+- Places are module scope; every `pytest_*` function or method, by its
+  effective hook name under `hookimpl(specname=...)`; every fixture; every
+  callable passed to, or decorated by, `atexit.register` or an
+  `addfinalizer`; the lambdas inside a place; and every same-file function a
+  place calls by name, transitively, including a same-file class's `__new__`
+  and `__init__` when the class is called and its methods when called through
+  the class name.
+- Values are read as a POSIX exit status, modulo 256. 0 (`False`, `0.0`,
+  `ExitCode.OK`), 5 (`ExitCode.NO_TESTS_COLLECTED`) and anything the reading
+  cannot show to be neither, a named constant included, are effects. None or
+  an absent value is 0 for a write and for SystemExit; a string or a float
+  given to SystemExit prints and exits 1.
+- Code that never runs is not read: an `if __name__ == "__main__":` block in
+  a module that never binds `__name__`, a branch whose test is a literal
+  constant, an undecorated nested function its definer never names, and
+  `os._exit` in a fork child (under a positive `pid == 0` or `not pid` over a
+  name bound once, in the same function, to `os.fork()` or
+  `os.forkpty()[0]`).
+
+**Readings the ruling leaves to the implementation:**
+1. **The unchanged status** is read in `pytest_terminal_summary` as well as
+   in `pytest_sessionfinish`: the hook's own unrebound `exitstatus`
+   parameter, `session.exitstatus` on its own unrebound `session` parameter,
+   `int()` or `ExitCode()` of either, and a zero under a positive conjunct
+   `exitstatus == 0` (`== ExitCode.OK`, `not exitstatus`) over either. None of
+   this holds when the conftest calls or names that hook anywhere else, since
+   it could pass a forged argument. Any other `<x>.exitstatus` is unreadable.
+2. **The recipe** may compare the status with 5 by `==` or `is`, by `in` a
+   literal tuple or set of 5 alone, as a `match` case, or in
+   `0 if exitstatus == 5 else exitstatus`. pytest returns 5 only when nothing
+   failed.
+
+**What newly blocks.** A conftest, root or nested, that the diff adds, or
+edits to introduce one of these effects, gets a TEST_DISABLED finding at high
+on its `<suite>` unit, which neither COMPAT_GATE nor repair evidence holds: a
+zero, 5 or unreadable write to `exitstatus` outside the unchanged status and
+the recipe; a zero, decrementing or unreadable `testsfailed` write;
+`pytest.exit` with such a returncode; `os._exit` with such a status outside a
+fork child; and SystemExit, `sys.exit`, `exit()` or `quit()` with such a
+status in a place other than `pytest_cmdline_main`.
+
+**Residuals.** 422.Q4's spellings, 422.Q5's recipe combined with a run that
+collects nothing, and interpreter start-up files. The Q4 and Q5 follow-up
+issues had not been filed by 2026-10-15.
+
+**Merge order.** #432's ruling put #432 first. This round was built first,
+and on 2026-10-14 the maintainer accepted it landing first.
+
+**Tests.** `tests/test_issue422_exit_status.py` (115 collected items: 41
+forcing spellings, each as a new conftest and as an edit to an existing one;
+23 honest spellings; root and nested paths; kind and delta checks; 5 runs of
+real pytest from red to green) and seven fixtures, four positives
+(`conftest_exit_status_*_pos`) and three negatives (the recipe, its
+`ExitCode` spelling and a reporting hook). The documented count goes from
+17866 to 17988. `tests/test_conftest_controls.py` gains rows only, under
+422.Q6. Dogfood may warn EXPECTATION_DEFINITION_CHANGED on those rows.
+
+**Sweep.** Not run (D-140): the standard and D-088 sets, a targeted
+false-positive set (conftests containing `exit`, `quit` or `testsfailed`),
+the tamper positives under real pytest, the refactor and tamper gates, and
+dogfood. Its cost will be recorded after the release.
+
+The agent wrote this entry in the v0.8.0 release PR from the outline in
+#450's description, the ruling and the merged code; the maintainer approved
+the drafts on 2026-10-15 (「照草稿全部核准」).
+
+## D-137 (2026-10-15): a conftest that swaps a no-op in for what pytest runs is a runtime control (#432)
+
+A new `conftest.py` could make failing tests pass, with tests and production
+byte-identical, by swapping what pytest runs for a no-op:
+`item.runtest = lambda: None` in a `pytest_runtest_call` hook,
+`pytest.Function.runtest = lambda self: None`, or
+`unittest.TestCase.assertEqual = lambda self, *args, **kwargs: None` at
+module scope. None of these minted a suite-level marker. This is #84's
+family; #84 named `pytest_runtest_call` wrappers as further spellings.
+
+**Ruling** (owner, 2026-10-14, 「P1 全部照建議」; #432's ruling comment):
+- **432.Q1 (c), the marker-site registry.** Rows in
+  `tests/test_conftest_controls.py` (`SITES`, `PLUMBING`, `FAMILIES`) may be
+  appended for a new family without a ruling, provided existing rows stay
+  byte-identical, a new `FAMILIES` entry classifies to its intended kind, and
+  `PLUMBING` gains only carrier heads. Editing or removing a row, moving a
+  head into `PLUMBING` or changing a kind stays under AGENTS.md rule 2. An
+  allowlist entry is needed only if dogfood rates the finding blocking; it
+  then uses the assertion-level EXPECTATION_DEFINITION_CHANGED fingerprint,
+  is owner-approved, and expires when the round merges.
+- **432.Q2 (b), scope.** One round reads the direct spellings with
+  `runtime_controls`' existing precision, each hook read on its own,
+  decorated or not, beside fixtures and imports: `item.runtest`, `item.obj`
+  and `item._obj` writes in a closed list of hooks; class-level `runtest` on
+  pytest's item classes; and writes of an enumerated list of native
+  `unittest.TestCase` methods, `_callTestMethod` included. Each attribute is
+  its own effect key. Every other spelling is a named residual pinned silent;
+  fixture, loop and cross-file spellings become follow-up issues, and #399
+  and #400 are reference only.
+- **432.Q3 (b).** A new THREATMODEL row 7a under row 7 covers conftest
+  runtime controls, #84's hooks and #432's shapes. Row 91 points to it for
+  the conftest `assertEqual` spelling.
+- **432.Q4 (b), the no-op proof.** A callback or class-level `runtest`
+  replacement reports only when it does not delegate, with delegation traced
+  through carriers of the original (taint), not matched by spelling. A
+  `TestCase` replacement reports only with no call, raise or assert anywhere
+  in it. Only a lambda or an undecorated same-file function is read.
+- **432.Q5 (a), conditional writes.** They are reported as #84's runtime
+  controls are: the guard hashed into the marker name, not carried to D6,
+  unguarded, high.
+- **432.Q6 (a).** TEST_DISABLED, the existing RUNTIME kind and the existing
+  message: no new kind or rule ID.
+- **432.Q7 (a), round shape.** Fix commits, a maintainer-owned docs commit,
+  then fixtures with the regenerated `benchmarks/FAILURES.md`; the round
+  lands before #422.
+
+**As implemented** (PR #452, `frontends/python/runtime_controls.py`):
+- **Item callbacks.** `item.runtest`, `item.obj` or `item._obj` written (an
+  assignment, `setattr` with a literal name, through simple aliases) on the
+  `item`, `pyfuncitem` or `nextitem` parameter of a top-level, non-async hook
+  from a closed list: `pytest_runtest_protocol`, `pytest_runtest_setup`,
+  `pytest_runtest_call`, `pytest_runtest_makereport`,
+  `pytest_runtest_teardown`, `pytest_pyfunc_call` and
+  `pytest_itemcollected`. Keys `item-runtest-replaced`,
+  `nextitem-obj-replaced`, and so on.
+- **Item classes.** `runtest` written on `pytest.Function`, `pytest.Item`,
+  `_pytest.python.Function` or `_pytest.unittest.TestCaseFunction`
+  (`Function-runtest-replaced`, ...).
+- **TestCase methods.** A method in `TESTCASE_METHODS` written on
+  `unittest.TestCase` (`testcase-assertEqual-replaced`, ...): the public
+  assertion methods of Python 3.11 to 3.13 with their deprecated aliases,
+  `fail`, `_baseAssertEqual`, `_callTestMethod`, `run`, `__call__` and
+  `debug`. `_getAssertEqualityFunc` and `failureException` are left out: the
+  first returns a checker, the second is a class attribute.
+- Class and TestCase writes are read at module scope, minted under the
+  `module` pseudo-hook (`conftest.runtime.module.`, never `fixture`), and in
+  the body of any top-level, non-async `pytest_*` function.
+- **The proofs.** A callback or class-level `runtest` replacement is a no-op
+  when no call anywhere in it, nested scopes and defaults included, mentions
+  a carrier of the original. Carriers are traced generously toward silence:
+  the item and its aliases, pytest's item classes, a class-level
+  replacement's first parameter, every name bound or written from an
+  expression that mentions a carrier, and every name bound in a statement the
+  reader does not enter. A TestCase replacement is a no-op only with no call,
+  raise or assert in it. A replacement built by a call, or bound from another
+  object's attribute, is not read.
+- **Per-attribute keys.** Each attribute is its own key, so a later write to
+  one never clears another. A later write to the same attribute that is not
+  proved a no-op, a delete included, clears that key only, as a later
+  `report.outcome` write clears #84's `report-passed`.
+- **Guards** (432.Q5). A write under a condition mints as #84's controls do:
+  the guard is hashed into the marker name and the marker carries none.
+  #422's exit-status controls are read the same way (D-136), as 432.Q5
+  required of them.
+- The new effects mint through the existing `conftest.runtime.{}` site, so
+  `tests/test_conftest_controls.py` needed no new row. CONFTEST_PATCHES_PROD
+  and the existing rows are untouched.
+
+**No #84 reading is narrowed.** Inside a hook, an import now binds only the
+names it resolves to a known module or class; every other name keeps its
+binding, so `from builtins import setattr` and an import that may fail in a
+`try` no longer hide #84's `report-passed`. Review of the merged head found
+three narrowings, fixed in `86e9286` before the merge, each of which main
+blocks at high:
+- module-scope seeds that may never run switched off #84's
+  `setattr(report, 'outcome', 'passed')` reading in every hook; `setattr` is
+  no longer seeded;
+- a known-module import in a hook's `try` body or its `else` rebound
+  `report` or `outcome`; a hook import no longer takes `setattr` or a name
+  that carries a report, result, item or nextitem reading;
+- `report = report.outcome = x` cleared an earlier rewrite; targets are now
+  bound left to right, each Name's kind read as it is bound, as #84's reader
+  did.
+
+Tests in `tests/test_issue84_runtime_hooks.py` pin these spellings, and a
+final review found every #84 reading equal to main's.
+
+**D-023 unchanged.** D-023's hygiene clause, that CONFTEST_PATCHES_PROD
+stays quiet for a conftest's stdlib or third-party stubbing, is unchanged.
+It does not cover the test framework's own assertion and execution methods:
+a no-op swapped in for those is read here, as a runtime control.
+
+**Residuals pinned silent,** each a named test in
+`tests/test_issue432_noop_replacement.py`: loops, `with` and `except`
+bodies, async hooks, hooks bound by assignment, class plugins, autouse
+fixtures, call-built or attribute-sourced replacements, computed names,
+`__dict__` writes, subclasses, `sys.modules` lookups, `addTypeEqualityFunc`,
+the 64-path-state cap, and others. The fixture, loop and cross-file follow-up
+issues (432.Q2) had not been filed by 2026-10-15.
+
+**Pre-registered fallback** (432.Q4), recorded before the sweep as D-060
+recorded its answer: if the sweep finds an honest block from a callback
+replacement that calls something, the callback proof narrows to call-free
+bodies and that spelling is listed as a residual.
+
+**Not yet on main.** 432.Q7's fixtures and the regenerated
+`benchmarks/FAILURES.md` come after row 7a, which must land before any
+fixture that claims `bypass: 7a`; #432 stays open for them and for the Q2
+follow-up issues. 432.Q7 put this round before #422; on 2026-10-14 the
+maintainer accepted #450 landing first. #432's ruling also asks the next
+release guide to name #432's new blocks.
+
+**Tests.** `tests/test_issue432_noop_replacement.py` (265 collected items:
+matrix cells, honest controls, named residuals and runs of real pytest) and
+additions to `tests/test_issue84_runtime_hooks.py`. The documented count goes
+from 17988 to 18258. No existing expectation or `.gwcase` output changes.
+
+**Sweep.** Not run (D-140): the standard and D-088 sets, conftest-touching
+commits, a conftest census and real-pytest proof of every reporting cell,
+with the gates unchanged (refactor false blocks stay 22/60). Its result, and
+whether the fallback applies, will be recorded after the release.
+
+The agent wrote this entry in the v0.8.0 release PR from the outline in
+#452's description, the ruling and the merged code; the maintainer approved
+the drafts on 2026-10-15 (「照草稿全部核准」).
+
+## D-138 (2026-10-15): in JS/TS, a catch assertion proved to always pass is not inspection, refining D-015 (#431)
+
+The bounded #363 reader in v0.7.0 blocks a new `try`/`catch` that swallows a
+synchronous assertion. It exempts a catch that reaches a resolved assertion,
+so that asserting on the caught error stays legal. Any resolved assertion
+counted, including one that cannot fail: adding `expect(true).toBe(true)` to
+the catch turned the #363 block back into a clean pass, and
+`expect(null).toBeNull()`, node:assert `assert.ok(true)` and chai
+`assert.isTrue(true)` did the same.
+
+**Ruling** (owner, 2026-10-14, 「P1 全部照建議」; #431's ruling comment):
+- **431.Q1 (A).** #401's narrow proof. A resolved Vitest/Jest `expect`,
+  node:assert or chai `assert` call with a true/false/null subject, a
+  matching predicate and polarity, and no extra arguments leaves a new
+  catch-side `failure_oracles` index. Anything unproven keeps the exemption.
+  The try-side `oracles` index and the IR form and strength are unchanged.
+- **431.Q2 (b).** The Python counterpart (`except Exception: assert True`) is
+  a separate issue and PR in the 1.0 scope, filed as P1 after a
+  reproduction. There a handler assertion stops counting only when proved to
+  always pass, not on the TAUTOLOGY rating.
+- **431.Q3 (a).** #401's tests are ported without the catalog-bound one, with
+  a relative IR check, and the issue's pair becomes a `.gwcase` positive
+  beside an inspection negative.
+- **431.Q4 (a).** A fresh PR from main, without the #400 stack or the #377
+  catalog.
+- **431.Q5 (a').** Both-literal and self-comparison spellings close through a
+  shared constant-truth helper added by #429. The catch index leaves out only
+  "always passes", never TAUTOLOGY, so sentinels such as
+  `expect(true).toBe(false)` stay inspection. Self-comparison counts as
+  always passing only where proved. Until then these spellings are named
+  residuals.
+- **431.Q6 (a).** A new THREATMODEL row, Partly closed; row 16 stays Closed
+  and gets a pointer.
+- **431.Q7 (b).** A catch whose reachable assertions are all proved to
+  always pass emits a second event text, and `catch assertion` stays exactly
+  main's set. Every diff main blocks still blocks; the fingerprint function,
+  schema and rule IDs are unchanged.
+
+**D-015, refined.** D-015 froze that, in a test file, a broad handler counts
+only when the guarded block holds an oracle and the handler neither
+re-raises nor asserts. For Python that stands as written. In JS/TS,
+"asserts" now means "reaches a resolved assertion not proved to always
+pass".
+
+**As implemented** (PR #449, `frontends/javascript/exception_handlers.py`;
+`docs/js-catch-swallowing.md` states the rule, the second text and the named
+residuals):
+- **The proof is narrow.** It covers a resolved Vitest/Jest `expect`
+  (`toBe`, `toBeTruthy`, `toBeFalsy`, `toBeNull`, `toBeUndefined`,
+  `toBeDefined`, with or without `.not`), a node:assert call (`assert`,
+  `assert.ok`, `assert.strictEqual`, and `assert.equal` in strict mode) or a
+  chai `assert` call (`ok`, `isOk`, `isTrue`, `isFalse`, `isNull`,
+  `isUndefined`, `isDefined`, `exists`, `strictEqual`), whose operands are
+  only `true`, `false` or `null`, with no extra arguments, and whose
+  represented predicate and polarity evaluate to a pass, within 4,096 source
+  characters. Names (`undefined` among them), calls, numbers and strings stay
+  unknown, and an unknown proof keeps the exemption.
+- **An always-failing assertion stays inspection.** `expect(true).toBe(false)`
+  and `assert(false)` are the "fail if we get here" idiom and never swallow.
+- **The try side is unchanged.** An always-passing assertion inside the
+  guarded block still counts as a protected assertion, and the assertion's IR
+  form and strength do not change.
+- **A second evidence text** (431.Q7). A catch that reaches no assertion
+  keeps `catch assertion`, exactly the v0.7.0 set. A catch whose reachable
+  assertions are all proved to always pass reports `catch always-passing
+  assertion`. The two texts are compared separately in the per-file
+  multiset, so a pre-existing literal-only catch cannot offset a newly added
+  swallowing catch in the same test file, and an old empty catch cannot
+  offset a new literal-only one. The cost: adding an always-passing assertion
+  to a catch that already swallows reports the new text.
+- **Literal spellings follow #429's always-pass helper,** keyed on the
+  evaluated outcome, never on the TAUTOLOGY strength rating.
+
+**Fingerprints.** A BROAD_EXCEPT_ADDED fingerprint is its rule, path and
+evidence text. `catch assertion` is exactly v0.7.0's set, so a finding with
+that text keeps its fingerprint; the new text gives new findings fingerprints
+of their own.
+
+**Residuals,** which keep the exemption: number and string literal equality
+(`expect(1).toBe(1)`), `toEqual(true)`, `toStrictEqual(true)`, loose
+`assert.equal(true, true)` and `expect(undefined).toBeUndefined()`; a message
+argument; a local bound to a literal, and TypeScript wrappers; non-boolean
+truthiness (`expect(1).toBeTruthy()`); chai BDD, AVA `t.true(true)` and tap
+`t.ok(true)`; assertions on the caught binding that cannot fail when the
+guarded assertion fails (`expect(e).toBeDefined()`), and assertions on
+unrelated always-true state; equal-count exchange of two sites with the same
+text; and the Python counterpart. The Python issue (431.Q2) had not been
+filed by 2026-10-15.
+
+**Tests.** `tests/test_issue431_js_catch_literal.py` (70 collected items:
+#401's labels without the catalog-bound test, the IR check made relative,
+and verdict-level offset cases); `js_catch_always_passing_literal_pos.gwcase`
+(the issue's pair, high, `NO_PROD_CHANGE_IN_DIFF`) and
+`js_catch_literal_beside_inspection_neg.gwcase`, with `benchmarks/FAILURES.md`
+regenerated. The documented count goes from 18258 to 18330. The #363
+controls and the four v0.7.0 `js_catch_*.gwcase` fixtures keep their
+results; no existing expectation changes.
+
+**Sweep.** Not run (D-140): the issue's pair before this change (expected to
+pass) and with it (expected to block); the standard and D-088 sets, byte for
+byte; #212's JS/TS replay transitions; a targeted mined set of
+literal-in-catch commits, including the exchange population and the cost of
+literals added to swallowing catches; the refactor benchmark, unchanged; and
+the JS/TS cost delta.
+
+The agent wrote this entry in the v0.8.0 release PR from the outline in
+#449's description, the ruling and the merged code; the maintainer approved
+the drafts on 2026-10-15 (「照草稿全部核准」).
+
+## D-139 (2026-10-15): commands read the repository from its root (#416)
+
+Ruling 416 (owner, 2026-10-14, 「P1 全部照建議」) chose B for Q1 and A for Q2
+to Q7.
+
+#416 reports that `--repo` (default `.`) reached Git unchanged. From a
+subdirectory, Git answers in two path bases: `diff`, `status` and
+`cat-file <rev>:<path>` are root-relative, while `ls-tree`, `git grep` and
+the working-tree walker are scoped to the subtree. As a result, `check` and
+`sweep` could stop with engine errors, `doctor` looked under the
+subdirectory, and `allow` wrote a ledger that `check` does not read. #416
+also reports a wrong-blob false pass: an unchanged copy under the
+subdirectory standing in for a changed root file. That has not been
+reproduced on main, so THREATMODEL gets no row. The new regression test for
+it asserts the fixed behaviour only.
+
+How each ruling answer is implemented:
+
+- Q1 (B): one resolver, `resolve_repository_root` in `gitio/git.py`, is
+  called inside `main()`'s existing try. It replaces `--repo` with Git's
+  `--show-toplevel` when Git reports a non-empty prefix. For `check` and
+  `sweep`, any resolver failure is an engine error.
+- Q2 (A) and Q4 (A): `allow`, `doctor` and the repository-reading `quality`
+  forms re-root the same way and otherwise keep `--repo` as given. `doctor`
+  resolves in its own sanitized Git environment. `quality profiles` and
+  `quality explain` never ask Git.
+- Q3 (A): `hook install` is unchanged. `docs/remediation-upgrade.md` explains
+  the doctor message after a subdirectory `hook install --local`.
+- Q5 (A): bare repositories and `.git` keep `--repo`, so the bare-corpus runs
+  in `tools/r1_cost_worker.py` are unaffected.
+- Q6 (A): there are no per-call path guards.
+- Q7 (A): `--task` is mapped lexically (§4c). Review found that Git's prefix
+  is not lexical: it is spelled as the directory is on disk, which on a
+  case-insensitive checkout the head can choose, so the untracked fallback
+  could read the head's TASK.md where main exits 2. The owner ruled on
+  2026-10-15 (「#453 用 A：re-root 時 --task 在 base 查不到就是 engine
+  error，未追蹤的 fallback 只在根目錄保留。」): from a subdirectory a base miss
+  is an engine error, and the untracked fallback stays at the root only.
+
+SPEC §9 and §4c state the exact behaviour.
+
+Beyond re-rooting, the change has these observable effects, accepted with
+this entry:
+
+- Where the first query exits non-zero (outside Git, or a missing `--repo`),
+  the engine-error text of `check` and `sweep` names
+  `git rev-parse --is-inside-work-tree`.
+- When Git names a subdirectory but its root cannot be resolved, `allow`,
+  `doctor` and `quality` print one stderr line with the reason and use
+  `--repo` as given. `GitRootUnresolved`, a `GitError` subclass, marks that
+  case. Outside Git these commands stay silent.
+- Each of these commands starts one more git process at the root, and two
+  more from a subdirectory.
+- From a subdirectory, `allow` writes the root's ledger and `doctor` reports
+  on the root. `quality init`'s draft, `--root` and `--paths` are
+  root-relative, as `docs/quality.md` says. A `.checkwash/` or `.greenwash/`
+  directory below the root is named on stderr as not read.
+- The commands do not behave as they would under `git -C <subdirectory>`:
+  they analyse the whole repository.
+- From a subdirectory, `--task` naming a file the base tree does not hold is
+  an engine error, where a run at the root still falls back to the
+  working-tree copy (§4c).
+
+Evidence status: NOT RUN. The change was prepared on a work machine where no
+pytest, checkwash or Python ran.
+
+- Tests were only added, in `tests/test_issue416_subdirectory_root.py`: 64
+  collected items, none under `tests/gates`. No existing test's expectation
+  changed.
+- The documented test count of 18394 assumes 18330 at main ea56350.
+  `test_documented_test_count_is_accurate` checks it.
+- The non-Git cases hold only if CI's pytest basetemp is outside any Git work
+  tree. `test_the_temporary_directory_is_outside_any_git_work_tree` must
+  confirm that on CI.
+- The sweep remains to be run: zero delta expected at the root, plus
+  subdirectory, bare-repository, `--task`-symlink, nested-config and
+  wrong-blob runs (D-140).
+
+The agent wrote this entry in #453's description, where it was drafted as
+D-131; it is renumbered D-139 in the v0.8.0 release PR. The maintainer
+approved the drafts on 2026-10-15 (「照草稿全部核准」).
+
+## D-140 (2026-10-15): v0.8.0 — an exit-code change since v0.7.0
+
+The rounds merged since v0.7.0 (PRs #370 to #453, main `cdd74e0`) keep the
+rule IDs, the severity model, the finding JSON shape and the IR:
+IR_VERSION and FINDINGS_VERSION stay 2, and no IR field is added. They add no
+escalator and no `shape` value. One frozen contract changes, the exit codes:
+- D-134: `check --format hook-json` exits 0 on an engine error, and on a
+  config or allowlist parse error under `on_engine_error = "block"`, with a
+  non-blocking `systemMessage` and no `decision`, where it exited 2. Every
+  other format, a malformed range and the required CI check keep exit 2.
+
+Exit codes are a frozen contract (`docs/stability.md`), so the release is
+minor: v0.8.0, authorized by the maintainer on 2026-10-15 from main
+`cdd74e0`.
+
+**Fingerprints.** No round recorded a change to an existing finding's
+fingerprint, and no existing fixture expectation changed. The new findings
+carry new marker names or a new evidence text, so they have fingerprints of
+their own, and no allowlist entry recorded on v0.7.0 needs re-recording:
+- D-136: TEST_DISABLED on `conftest.runtime.exit.<place>.<effect>.<hash>`;
+- D-137: TEST_DISABLED on
+  `conftest.runtime.<hook or module>.<...>-replaced.<guard>`;
+- D-138: BROAD_EXCEPT_ADDED with the evidence text
+  `catch always-passing assertion`.
+
+Without the sweep, that no existing fingerprint moved rests on the fixtures
+and each round's tests, not on real history.
+
+**Other changes a user can see,** none of them a frozen contract:
+- Runs that exited 2 now give a verdict: a stand-in source between 30,000 and
+  200,000 nodes (D-131); a deep module-level string concatenation (D-132); a
+  dormant nested pytest config, and in a range check a symlinked one
+  (D-133); a working-tree directory symlink that no collection or import
+  reaches (D-134); an oversized side no detector must read, and an oversized
+  root `poetry.lock` or `uv.lock` (D-135); and most runs from a repository
+  subdirectory, which now equal the run at the root (D-139).
+- A file the frontend read as unparseable because of a deep string
+  concatenation is now parsed (D-132).
+- Refusals name what they refuse: the stand-in limits (D-131), a nonregular
+  source (D-133), a directory symlink (D-134), an oversized side, with the
+  CLI prefix `SourceOverLimit:` (D-135). Outside Git, the engine error of
+  `check` and `sweep` names `git rev-parse --is-inside-work-tree` (D-139).
+- New stderr lines: one per unread side and one per skipped lockfile
+  (D-135); the re-root line and the could-not-resolve line (D-139).
+- From a subdirectory, `check`, `sweep`, `allow`, `doctor` and the
+  repository-reading `quality` forms read the repository from its root;
+  `allow` writes the root ledger, and a `--task` the base tree lacks is an
+  engine error (D-139).
+- PRs #374 and #384 retry a binding key with an iterative emitter only where
+  `ast.unparse` raised RecursionError, and #386 indexes JS inline call
+  arguments in one scan. Each PR's CI reported the nine corpus outputs
+  byte-identical. They recorded no DECISIONS entry.
+- PRs #372 and #375 run the composite Action and the quality Action from a
+  private, verified runtime (`action/README.md`).
+
+**Sweeps.** None of this release's sweeps has run:
+`NOT_RUN：工作機規則（POLICY work-machine-local），the owner chose to release first and run the sweeps on the pool after publication (2026-10-15)`.
+That covers the fixed 1,800-commit sweep against v0.7.0 and each round's
+acceptance sweep (D-131 to D-139). So this entry gives no cost figure against
+v0.7.0. The results, including whether D-137's pre-registered fallback
+applies, will be recorded after publication.
+
+THREATMODEL: no existing status said "unreleased" for a change since
+v0.7.0. The new rows 7a, 127, 128 and 129 name v0.8.0 (#452's draft said
+`vX`); their text and pins are the approved drafts', with the outlines of
+#449, #450 and #452 written out from the merged code.
+
+The agent wrote this entry in the release PR, beside D-131 to D-139. All of
+those but D-134 come from drafts the maintainer approved on 2026-10-15
+(「照草稿全部核准」); the maintainer approves D-134 and this entry there.

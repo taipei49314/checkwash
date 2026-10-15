@@ -1,4 +1,5 @@
 === meta ===
+bypass: 127
 rule: TEST_DISABLED
 title: a runtestloop wrapper that resets session.testsfailed hides every failure
 origin: #422 ruling Q4: testsfailed is the other input to the exit status;

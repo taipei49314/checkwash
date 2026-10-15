@@ -1,6 +1,64 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-15 (P1 fixes #447-#452 merged; maintenance on LAPTOP-16NUA5I8)
+Updated: 2026-10-15 (v0.8.0 release prepared from `cdd74e0`; publication waits; maintenance on LAPTOP-01AGNPJU)
+
+## 2026-10-15: v0.8.0 release prepared
+
+On 2026-10-15 at about 13:00Z the owner handed maintenance back from
+LAPTOP-16NUA5I8 to LAPTOP-01AGNPJU. The handover is on the checkwash-lab
+branch `handover/5i8-20261015`. #453 (#416) then merged at `cdd74e0`.
+
+The same day the maintainer said 「這版要先發了」 (release this version
+first). Asked in the agent session, he chose:
+
+- version 0.8.0, a minor release: #414 changed the frozen exit-code contract
+  for `check --format hook-json`;
+- to approve the maintainer-text drafts of #439, #441, #442, #447, #448,
+  #449, #450, #452 and #453 as written;
+- to publish first and run the acceptance sweeps on the EC pool after
+  publication;
+- the scope: `main` exactly as it stood at `cdd74e0`, the 25 pull requests
+  merged since v0.7.0 (#370 to #453). #421 moves to a later minor release,
+  and #456 goes into the known issues.
+
+`docs/RELEASING.md` records the one-time authorization. The release PR
+contains:
+
+- the version bump to 0.8.0 (`pyproject.toml`, `src/checkwash/__init__.py`,
+  `uv.lock`) and the `version` row below;
+- the maintainer-owned commit with the approved SPEC, THREATMODEL and
+  DECISIONS text for those nine pull requests;
+- the [release guide](docs/releases/v0.8.0-public-launch.md) and the
+  [known issues](docs/KNOWN-ISSUES-v0.8.0.md).
+
+README installation commands, `release/advertised.toml` and the recommended
+Action stay on the last verified release (CLI and Action v0.7.0) until
+v0.8.0 is publicly verified.
+
+What waits, in order:
+
+1. Hosted CI, source/wheel/pyz qualification, the advertised v0.7.0 visitor
+   and the verdict gate on the release PR's final head; the merge; push CI
+   and the verdict gate on the release commit.
+2. The tag `v0.8.0` on that commit and its own published-source, visitor,
+   full CI and verdict runs; the GitHub Release; the maintainer's approval of
+   the `pypi` deployment.
+3. The publication record, then a reviewed follow-up that advances
+   `release/advertised.toml`, the README CLI pins and the README Action pin
+   to v0.8.0 and rewrites the "on main, not released yet" notes (README,
+   `SECURITY.md`, `docs/quality.md`, `docs/remediation-upgrade.md`,
+   `action/README.md`, `action/quality/README.md`). `checkwash doctor`
+   accepts only its built-in Action commit, v0.7.0's in this release.
+4. The verdict-baseline rotation PR to v0.8.0 (RELEASING step 9).
+5. On the EC pool: the acceptance sweeps of #345, #346, #414, #415, #416,
+   #422, #431 and #432, and the corpus sweep. Not run before publication:
+   `NOT_RUN：工作機規則（POLICY work-machine-local），the owner chose to release first and run them on the pool after publication`.
+   Those issues stay open until their sweeps land.
+
+Still open: #454, #455 and #456 wait for rulings; the seven ruled P1 issues
+#306, #418, #419, #421, #424, #428 and #429 are not implemented; #212 is
+open. Downstream re-pins of checkwash-corpus and smallestlie are not
+authorized. 1.0 remains NOT MET.
 
 ## 2026-10-15: P1 fixes merged
 
@@ -2674,7 +2732,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.7.0 |
+| version | v0.8.0 |
 | last published CLI | v0.7.0 |
 | last published CLI commit | d647a65e9734f2b6e57b528ea595b1507dc31094 |
 | detectors | 22 |
