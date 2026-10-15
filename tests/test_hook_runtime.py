@@ -56,11 +56,15 @@ def test_local_handler_executes_bound_package_despite_shadowing(repo, shadow):
     assert blocked.returncode == 0, blocked.stderr
     assert json.loads(blocked.stdout)["decision"] == "block"
     assert b"ASSERT_WEAKENED" in blocked.stdout
-    # An input/engine error remains a hook failure, not a verdict JSON.
+    # An input/engine error does not block the stop: hook-json warns instead
+    # of failing, and carries no verdict (maintainer ruling on #414).
     broken = json.loads(json.dumps(handler))
     broken["args"] += ["--repo", str(repo / "absent")]
     error = _run(broken, repo)
-    assert error.returncode == 2
+    assert error.returncode == 0, error.stderr
+    payload = json.loads(error.stdout)
+    assert "decision" not in payload
+    assert "not analysed" in payload["systemMessage"]
     assert b"engine error" in error.stderr
 
 
