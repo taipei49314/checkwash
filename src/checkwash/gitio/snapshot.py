@@ -11,7 +11,7 @@ from bisect import bisect_left
 from pathlib import Path
 import subprocess
 
-from checkwash.change import EngineError
+from checkwash.change import EngineError, UnreadSide
 from checkwash.opaque import SymlinkedDirectory, opaque_error, opaque_owner
 
 MAX_SOURCE_BYTES = 1_000_000
@@ -82,6 +82,13 @@ def _over_limit(path):
     return EngineError(f"strict snapshot inventory exceeds the path limit of {MAX_INVENTORY_PATHS} at {shown}")
 
 
+def _batch_over_limit(path, side, total):
+    """The batch byte-limit refusal, naming the path that crossed it (#415)."""
+    shown = path if path.isprintable() else repr(path)
+    return EngineError(f"strict snapshot batch exceeds the byte limit at {shown} "
+                       f"({side}, {total} > {MAX_BATCH_BYTES} bytes)")
+
+
 def _verify_blob(oid, data):
     algorithm = "sha1" if len(oid) == 40 else "sha256" if len(oid) == 64 else None
     if algorithm is None or not re.fullmatch(b"[0-9a-f]+", oid):
@@ -92,9 +99,12 @@ def _verify_blob(oid, data):
 
 
 class GitSnapshot:
-    def __init__(self, repo, revision):
+    def __init__(self, repo, revision, side=None):
         self.repo = repo
         self.revision = revision
+        # The diff side this tree is ("base" or "head"), named in a size
+        # refusal; a snapshot no caller labelled names its revision (#415).
+        self.side = side
         self._resolved = None
         self._tree_entries = None
         self._opaque = None
@@ -148,8 +158,16 @@ class GitSnapshot:
             self._opaque = tuple(sorted(opaque))
         return sorted([*self._tree_entries, *(directory + "/" for directory in self._opaque)])
 
-    def read_many(self, paths):
-        """Read selected regular blobs in bounded batches from one frozen tree."""
+    def _side(self):
+        return self.side or str(self.revision)
+
+    def read_many(self, paths, *, unread_oversized=False):
+        """Read selected regular blobs in bounded batches from one frozen tree.
+
+        A blob over MAX_SOURCE_BYTES refuses, naming path, side, size and
+        limit; with `unread_oversized` it comes back as an `UnreadSide`
+        instead, and costs the batch nothing (#415).
+        """
         self.list_paths()
         selected = sorted(set(paths))
         if len(selected) > MAX_INVENTORY_PATHS:
@@ -171,10 +189,14 @@ class GitSnapshot:
             if mode not in {b"100644", b"100755"}:
                 raise _nonregular("strict snapshot batch cannot inspect nonregular source", path, mode)
             if size > MAX_SOURCE_BYTES:
-                raise EngineError("strict snapshot source exceeds the byte limit")
+                unread = UnreadSide(path, self._side(), size, MAX_SOURCE_BYTES)
+                if not unread_oversized:
+                    raise unread.refusal()
+                result[path] = unread
+                continue
             size_total += size
             if size_total > MAX_BATCH_BYTES:
-                raise EngineError("strict snapshot batch exceeds the byte limit")
+                raise _batch_over_limit(path, self._side(), size_total)
             present.append((path, oid, size))
         result.update(self._read_objects(present))
         return result
@@ -243,11 +265,11 @@ class GitSnapshot:
                 continue
             mode, oid, size = entry
             if size > MAX_SOURCE_BYTES:
-                raise EngineError(f"strict snapshot config source exceeds the byte limit: path={path!r}, ref={self._rev()!r}, bytes={size}")
+                raise EngineError(f"strict snapshot config source exceeds the byte limit: path={path!r}, ref={self._rev()!r}, bytes={size}, limit={MAX_SOURCE_BYTES}")
             entries[path] = entry
             total += size
             if total > MAX_BATCH_BYTES:
-                raise EngineError(f"strict snapshot config batch exceeds the byte limit: path={path!r}, ref={self._rev()!r}")
+                raise EngineError(f"strict snapshot config batch exceeds the byte limit: path={path!r}, ref={self._rev()!r}, bytes={total}, limit={MAX_BATCH_BYTES}")
             if mode == b"120000":
                 links.append((path, oid, size))
         link_data = self._config_objects(links)
@@ -283,10 +305,10 @@ class GitSnapshot:
                 if target_entry is None or target_entry[0] not in {b"100644", b"100755"}:
                     raise EngineError(f"strict snapshot config target is not one regular blob: path={path!r}, ref={self._rev()!r}, target={target!r}")
                 if target_entry[2] > MAX_SOURCE_BYTES:
-                    raise EngineError(f"strict snapshot config target exceeds the byte limit: path={path!r}, ref={self._rev()!r}, target={target!r}, bytes={target_entry[2]}")
+                    raise EngineError(f"strict snapshot config target exceeds the byte limit: path={path!r}, ref={self._rev()!r}, target={target!r}, bytes={target_entry[2]}, limit={MAX_SOURCE_BYTES}")
                 total += target_entry[2]
                 if total > MAX_BATCH_BYTES:
-                    raise EngineError(f"strict snapshot config batch exceeds the byte limit: path={path!r}, ref={self._rev()!r}")
+                    raise EngineError(f"strict snapshot config batch exceeds the byte limit: path={path!r}, ref={self._rev()!r}, bytes={total}, limit={MAX_BATCH_BYTES}")
             else:
                 target_entry = (mode, oid, size)
             targets[path] = (target, target_entry)
@@ -366,7 +388,8 @@ class GitSnapshot:
             self._resolved = raw.decode("ascii").strip()
         return self._resolved
 
-    def read(self, path):
+    def read(self, path, *, unread_oversized=False):
+        """One blob, None when absent; over the limit as `read_many` (#415)."""
         if any(c in path for c in "\r\n\0"):
             raise EngineError("strict snapshot path cannot be represented in the batch protocol")
         spec = f"{self._rev()}:{path}".encode("utf-8")
@@ -389,12 +412,17 @@ class GitSnapshot:
                 return None
             raise EngineError("strict snapshot returned an invalid blob header")
         size = int(parts[2])
+        unread = None
         if size > MAX_SOURCE_BYTES:
-            raise EngineError("strict snapshot source exceeds the byte limit")
+            unread = UnreadSide(path, self._side(), size, MAX_SOURCE_BYTES)
+            if not unread_oversized:
+                raise unread.refusal()
         self.list_paths()
         entry = self._tree_entries.get(path)
         if entry is None or entry[0] not in {b"100644", b"100755"} or entry[1:] != (parts[0], size):
             raise EngineError("strict snapshot blob header does not match its regular tree entry")
+        if unread is not None:
+            return unread
         raw = _run(self.repo, ["cat-file", "--batch"], data=spec + b"\n")
         actual_header, separator, body = raw.partition(b"\n")
         if not separator or actual_header != header or len(body) != size + 1 or not body.endswith(b"\n"):
@@ -450,8 +478,9 @@ class GitSnapshot:
 
 
 class WorkingTreeSnapshot:
-    def __init__(self, repo):
+    def __init__(self, repo, side="worktree"):
         self.root = Path(repo).resolve()
+        self.side = side  # named in a size refusal (#415)
 
     def list_paths(self):
         """Inventory all repository files except Git's own metadata.
@@ -504,7 +533,7 @@ class WorkingTreeSnapshot:
             if data is not None:
                 size_total += len(data)
                 if size_total > MAX_BATCH_BYTES:
-                    raise EngineError("strict snapshot batch exceeds the byte limit")
+                    raise _batch_over_limit(path, self.side, size_total)
             result[path] = data
         return result
 
@@ -524,7 +553,8 @@ class WorkingTreeSnapshot:
                 return SymlinkedDirectory("/".join(parts[:end]))
         return None
 
-    def read(self, path):
+    def read(self, path, *, unread_oversized=False):
+        """One file, None when absent; over the limit as `GitSnapshot.read` (#415)."""
         owner = self._symlinked_ancestor(path)
         if owner is not None:
             raise opaque_error(owner, f"{path} lies inside it")
@@ -542,10 +572,15 @@ class WorkingTreeSnapshot:
         try:
             with target.open("rb") as source:
                 data = source.read(MAX_SOURCE_BYTES + 1)
+                if len(data) > MAX_SOURCE_BYTES:
+                    size = max(os.fstat(source.fileno()).st_size, len(data))
         except FileNotFoundError as exc:
             raise EngineError("strict snapshot source disappeared after inventory") from exc
         if len(data) > MAX_SOURCE_BYTES:
-            raise EngineError("strict snapshot source exceeds the byte limit")
+            unread = UnreadSide(path, self.side, size, MAX_SOURCE_BYTES)
+            if not unread_oversized:
+                raise unread.refusal()
+            return unread
         return data
 
     def search(self, needles):

@@ -22,11 +22,12 @@ from checkwash import __version__
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
 from checkwash.config import SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
-from checkwash.deps import MANIFESTS, parse_manifest, project_names
+from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
 from checkwash.engine import analyze
 from checkwash.pyenv import known_baseline
 from checkwash.gitio import (
     GitError,
+    GitSourceOverLimit,
     grep_head_paths,
     list_range_changes,
     list_worktree_changes,
@@ -107,8 +108,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
         # D6 resolves skip-condition constants imported from files outside
         # the diff; the head snapshot is where those files live.
-        head_snapshot = GitSnapshot(repo, head)
-        pytest_configs = PairedPytestConfigs(GitSnapshot(repo, base), head_snapshot)
+        head_snapshot = GitSnapshot(repo, head, side="head")
+        pytest_configs = PairedPytestConfigs(GitSnapshot(repo, base, side="base"), head_snapshot)
         head_reader = head_snapshot.read
 
         def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
@@ -170,7 +171,16 @@ def _cmd_check(args: argparse.Namespace) -> int:
     self_modules: set[str] = set()
     found_manifest = False
     for manifest in MANIFESTS:
-        data = read_base_file(repo, config_side, manifest)
+        try:
+            data = read_base_file(repo, config_side, manifest)
+        except GitSourceOverLimit as exc:
+            # A root lockfile is read on every run, touched or not. Over the
+            # limit, it is skipped as if absent, with a note (#415).
+            if manifest not in SKIPPABLE_OVERSIZED:
+                raise
+            write_text(f"checkwash: skipped {exc.unread.described()}: over the source byte limit; "
+                       "the run continues without its declared modules\n", sys.stderr)
+            continue
         if data is None:
             continue
         found_manifest = True
@@ -201,6 +211,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
         pytest_configs=pytest_configs,
     )
 
+    # Sides over the source byte limit that no detector must read (#415).
+    for change in changes:
+        for unread in change.unread:
+            write_text(f"checkwash: {unread.note()}\n", sys.stderr)
     for gap in report_context.coverage_gaps:
         write_text(f"checkwash: {gap.message()}\n", sys.stderr)
     if args.coverage_report:

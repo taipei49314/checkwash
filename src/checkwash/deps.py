@@ -20,6 +20,12 @@ MANIFESTS = (
     "uv.lock",
 )
 
+# Root lockfiles a run reads on every diff, whether or not the diff touches
+# them. One over the source byte limit at the base is skipped with a stderr
+# note, and the run continues without its declared modules (#415); every
+# other manifest that large still refuses, naming it.
+SKIPPABLE_OVERSIZED = ("poetry.lock", "uv.lock")
+
 _REQ_LINE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 _NAME_FIELD = re.compile(r'^\s*name\s*=\s*"([^"]+)"', re.MULTILINE)
 
