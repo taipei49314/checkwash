@@ -1,10 +1,10 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.6.0 is alpha** (bounded JS/TS assertion evidence). Its versioned interfaces and
+checkwash **v0.8.0 is alpha**. Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
-[public-launch brief](releases/v0.6.0-public-launch.md) records this release's
+[public-launch brief](releases/v0.8.0-public-launch.md) records this release's
 evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
@@ -30,7 +30,7 @@ changes with it and `DECISIONS.md` carries the entry explaining why.
 |---|---|---|
 | Rule IDs | `SPEC.md` §4 | `ASSERT_WEAKENED` will never be renamed or reused for something else. Your allowlist entries and your log greps keep working |
 | Severity model | `SPEC.md` §5 | Every detector reports at `warn`; only the escalator table promotes to `high`/`critical`. A detector will never start blocking on its own |
-| Exit codes | `SPEC.md` §9 | `0` pass, `1` block, `2` engine error. A crash is never reported as a block — that distinction is gated by an end-to-end test, because it once was not |
+| Exit codes | `SPEC.md` §9 | `0` pass, `1` block, `2` engine error. A crash is never reported as a block — that distinction is gated by an end-to-end test, because it once was not. Since v0.8.0, in `check --format hook-json` (the Claude Code Stop hook) an engine error, or a config or allowlist parse error under `on_engine_error = "block"`, exits 0 instead, with a JSON `systemMessage` saying the change was not analysed and why, and no `decision`; a usage error such as a malformed range still exits 2. The hook is an author-side check; the required CI check remains the gate, and every other format keeps exit 2 for an engine error ([#414](https://github.com/taipei49314/checkwash/issues/414)) |
 | Finding fingerprints | `src/checkwash/findings.py` | Within a compatible release line, a recorded exemption keeps matching. v0.3.0 deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. Other namespaces keep their identities |
 | IR / findings schema version | `checkwash.IR_VERSION`, `checkwash_findings_version` | `--format json` and `--emit-ir` are versioned machine interfaces. A shape change bumps the number; see the pre-rename compatibility note below. `--format sarif` is a separate 2.1.0 projection (T2.1), not this schema |
 | Config schema | `SPEC.md` §1, §6 | Both `.checkwash/config.toml` and `.greenwash/config.toml` are supported, with the precedence below. A malformed config is reported, never silently ignored |
@@ -285,7 +285,7 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.6.0 is not a 1.0 readiness
+**Status: NOT MET.** Public availability as v0.8.0 is not a 1.0 readiness
 decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |

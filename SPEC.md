@@ -181,6 +181,123 @@ between the two is a laundering route (all confirmed by reproduction):
   about the diff, not about evidence: `COLLECTION_CONTROL_UNEXPLAINED` if the
   diff changes any production-role file, `NO_PROD_CHANGE_IN_DIFF` if it changes
   none. This is a label, not evidence: severity is high either way (#205)
+- `conftest.py` is also analysed for suite-level **runtime controls**: code
+  that leaves a test collected and keeps its failure from failing the run.
+  Beside the execution and report hooks of #84 (a `pytest_runtest_makereport`
+  that rewrites the outcome to `passed`, for one) and a fixture whose setup
+  always skips, two families are read, in the next two items: code that
+  forces pytest's exit status (#422) and a no-op swapped in for what pytest
+  runs (#432). A runtime control's marker carries no guard. Where an effect
+  sits under a condition, in #84's hooks and in both families, the condition
+  is hashed into the marker's name, so a changed condition is a new control;
+  D6 `COMPAT_GATE` has no guard to judge, and the control is unguarded in the
+  sense above, so repair evidence does not hold it. TEST_DISABLED reports a
+  runtime control the diff adds on the conftest's `<suite>` unit, at high,
+  labelled as above; one the base already had is not reported again
+- code that forces pytest's **exit status** is a runtime control (#422).
+  pytest exits with the status the session ends with unless the process ends
+  first, so a conftest can turn a failing run green without touching a test.
+  The marker is `conftest.runtime.exit.<place>.<effect>.<hash>`: `<place>` is
+  the function the effect sits in (`module` at module scope), `<effect>` is
+  `exitstatus`, `testsfailed`, `pytest-exit`, `os-exit` or `system-exit`,
+  and `<hash>` is taken over the path condition. Read anywhere in the
+  conftest: a write of `exitstatus` or `testsfailed` on any receiver (an
+  assignment, augmented ones included, a `del`, `setattr`, `__setattr__` or
+  `delattr` with a literal name, a literal key of `x.__dict__` or `vars(x)`,
+  or a keyword or literal dict key of their `update()`), and
+  `pytest.exit(..., returncode=v)` or a call of `pytest.exit.Exception`,
+  `Exit` or a same-file subclass. Read in a place: `os._exit(v)` under any
+  alias, called or passed as a callable (`atexit.register(os._exit, 0)`),
+  and, outside `pytest_cmdline_main`, `sys.exit(v)`, `exit()`, `quit()` or
+  a `SystemExit` or same-file subclass, called or raised, the three
+  functions also when passed as a positional argument. A place is module
+  scope; every function or method named `pytest_*`; every fixture; every
+  callable passed to, or decorated by, `atexit.register` or an
+  `addfinalizer`; the lambdas in a place; and every same-file function a
+  place calls by name, transitively, with a same-file class's `__new__` and
+  `__init__` when the class is called and its methods when called through
+  the class name. A value is read as a POSIX exit status, modulo 256: 0
+  (`False`, `ExitCode.OK`, and `0.0` for a write or a returncode) and 5
+  (`ExitCode.NO_TESTS_COLLECTED`) count, and so does any value this reading
+  cannot show to be neither, a named constant included. No value, or
+  `None`, is 0 for a write and for `SystemExit`; `pytest.exit` with no
+  returncode, or `None`, interrupts the run or keeps its status and counts
+  for nothing; `SystemExit` with a string or a float prints it and exits 1.
+  A `testsfailed` write counts unless it writes a truthy literal or adds a
+  positive one (`+= 1`). The status the run already had is no effect: in a
+  `pytest_*` function implementing `pytest_sessionfinish` or
+  `pytest_terminal_summary` (by its name, or the hook its
+  `hookimpl(specname=...)` names), its own unrebound `exitstatus` parameter,
+  `session.exitstatus` on its own unrebound `session` parameter, `int()` or
+  `ExitCode()` of either, and a zero under a positive conjunct
+  `exitstatus == 0` (`== ExitCode.OK`, `not exitstatus`) over either. None
+  of this holds when the conftest calls or names that function anywhere
+  else, since it could pass a forged status. The recipe that turns "no tests
+  collected" into success is no control either: a zero written to
+  `session.exitstatus` in such a `pytest_sessionfinish`, under a positive
+  conjunct, not negated and not in an `or`, that compares its status with 5
+  by `==` or `is`, by `in` a literal tuple or set of 5 alone, as a `match`
+  case, or in `0 if exitstatus == 5 else exitstatus`. pytest returns 5 only
+  when nothing failed. Code that never runs is not read: an
+  `if __name__ == "__main__":` block in a module that never binds
+  `__name__`, a branch a literal test rules out, an undecorated nested
+  function its enclosing function never names, and `os._exit` in a fork
+  child (under a positive `pid == 0` or `not pid` over a name bound once, in
+  the same function, to `os.fork()` or `os.forkpty()[0]`). A called `exit`
+  or `quit` is not the builtin when only unconditional module-level imports
+  that precede it bind the name (`from pytest import exit`); a passed one
+  is not the builtin either when a parameter or another binding in its
+  scope, an enclosing scope or module scope holds the name. Not read (#422
+  Q4, Q5): `pytest_cmdline_main`, `pytest_runtestloop` and
+  `pytest_collection` short-circuits; callbacks registered another way
+  (`config.add_cleanup`, `signal.signal`, `threading.Timer`,
+  `weakref.finalize`); other plugin modules; exits in test modules or
+  production code; `os.exec*` into a no-op; computed names (`getattr`,
+  `__import__`, a computed `update(**...)`); rebinding pytest's own
+  functions beyond the next item; `ctypes`; interpreter start-up files; and
+  the recipe together with a run that collects no test, which the resolved
+  collection inventory (§4 `CI_WORKFLOW_TOUCHED`) still takes to fail
+- a **no-op swapped in** for what pytest runs is a runtime control (#432).
+  Three direct spellings are read, each under its own effect, so a later
+  write to one never clears another: `item.runtest`, `item.obj` or
+  `item._obj` written on the `item`, `pyfuncitem` or `nextitem` parameter of
+  a top-level, non-async `pytest_runtest_protocol`, `pytest_runtest_setup`,
+  `pytest_runtest_call`, `pytest_runtest_makereport`,
+  `pytest_runtest_teardown`, `pytest_pyfunc_call` or `pytest_itemcollected`
+  (`item-runtest-replaced`, `nextitem-obj-replaced`, ...; `pyfuncitem` reads
+  as `item`); `runtest` written on `pytest.Function`, `pytest.Item`,
+  `_pytest.python.Function` or `_pytest.unittest.TestCaseFunction`
+  (`Function-runtest-replaced`, ...); and a native `unittest.TestCase`
+  method written (`testcase-assertEqual-replaced`, ...): an assertion
+  method of Python 3.11–3.13 or a deprecated alias of one, `fail`,
+  `_baseAssertEqual`, or `_callTestMethod`, `run`, `__call__` or `debug`,
+  which run a test (`TESTCASE_METHODS` in
+  `frontends/python/runtime_controls.py`). A write is an assignment or a
+  `setattr` with a literal name, on the object itself or through a simple
+  alias (`node = item`, `Case = unittest.TestCase`,
+  `from unittest import TestCase as Case`). The marker is
+  `conftest.runtime.<hook>.<effect>.<hash>`. The class and TestCase writes
+  are read at module scope, where `<hook>` is the `module` pseudo-hook and
+  never a fixture, and in the body of any top-level, non-async `pytest_*`
+  function. Only a lambda or an undecorated same-file function is read as
+  the replacement. An item callback or item-class `runtest` replacement is
+  a no-op when no call anywhere in it, nested scopes and defaults included,
+  mentions a carrier of the original. Carriers are traced, not matched by
+  spelling, and generously toward silence: the item and its aliases,
+  pytest's item classes, a class-level replacement's first parameter, every
+  name bound or written from an expression that mentions a carrier, and
+  every name bound in a statement this reader does not enter. A TestCase
+  replacement is a no-op, one that cannot fail, only with no call, `raise`
+  or `assert` anywhere in it. A later write to the same attribute that is
+  not a no-op, or its `del`, clears that attribute's effect only. Not read,
+  each pinned silent by a named test in
+  `tests/test_issue432_noop_replacement.py`: loops, `with` and `except`
+  bodies, async hooks, hooks bound by assignment, class plugins, autouse
+  fixtures, replacements built by a call or taken from another object's
+  attribute, computed names, `__dict__` writes, subclasses, `sys.modules`
+  lookups, `addTypeEqualityFunc`, a hook or module scope whose unknown
+  conditions branch into more than 64 paths (then not read at all), and
+  the others named there
 - module-level `pytest.skip(..., allow_module_level=True)` and
   `importorskip` disable the whole file
 - a skip marker's identity includes its **condition**, so
@@ -296,7 +413,8 @@ failures retain their engine-error behavior. Inert repository test startup
 and a complete bounded inventory (fewer than 64 nonempty Python sources)
 reject conftest/package effects and unproved sibling test modules. Worktree
 inventory includes untracked/hidden source trees, so it can withhold precision
-when the committed range has a smaller complete snapshot. This is not a
+when the committed range has a smaller complete snapshot. A directory symlink
+in it is an opaque directory, as a submodule is (#414). This is not a
 guarantee about arbitrary installed plugins or dynamic import hooks.
 
 The context also probes pytest.ini, .pytest.ini, pyproject.toml, tox.ini,
@@ -391,7 +509,7 @@ detectors can only be disabled whole.
 | `EXPECTATION_DEFINITION_CHANGED` | an aligned assertion whose **text is unchanged** and whose expectation resolves to something outside the assertion whose definition changed: a unit-local binding, a `parametrize` **column the expectation actually consumes**, a same-file `@pytest.fixture`'s return/yield, or a **same-file top-level constant** (canonical on both sides so reformatting is not a change; last-wins on both sides, which is module execution order, so an appended rebind is caught; a constant the subject also consumes is a shared producer and excluded — D-051, the 2026-08-25 census's largest blind bucket). Which column is the expectation is decided by consumption, not by position or by the name `expected`. Pure row additions and net deletions are excluded — those are `TEST_DISABLED`'s event. When live count does not fall, disappeared input rows whose consumed answers are replaced by different new answers also belong to this rule: input-only renames retaining the old answers have their own bounded owner in `SUBJECT_INPUT_CHANGED` since the issue #93 contract decision (D-060); pure append, disabled rows and skip-plus-append retain their prior behavior. A cell is read through `pytest.param(...)`, so marking rows skipped is not an expectation edit. Since v0.3.0 (#135) the parametrize comparison is row-keyed: rows are identified by their input cells and the consumed column is compared per key as a multiset — a key that disappeared is a deletion or the replacement event just described, a key whose answers still contain everything they had is an addition or a reorder, a key that lost an answer it had and gained one it did not is this rule's event — and every positional cell of a `pytest.param(...)` row is read, so a fully wrapped table is compared like a bare one; a single-column table has no inputs to key on, so its identity is position and the before cells must survive as a subsequence (insertion anywhere, edit or reshuffle reported). A binding that gains a **branch-exclusive alternative** is excluded the same way, and only then: the after side must have more definitions, every before-side definition must survive verbatim (multiset containment), and the name's bindings must sit in pairwise-exclusive `if`/`match` arms — a sequential rebind fails the third clause because the last unconditional binding is the one the assertion reads (THREATMODEL 95 records the tautological-gate residual). Compared structurally, so reformatting is not a change. Escalates through repair evidence like every oracle rule — and D9 `DEPENDENCY_DRIFT` and `PACKAGE_REPAIR` de-escalate it the same way. Blocking status is a measured decision taken twice, not a hedge: as a blocking rule in v0.1.19 it cost 12 extra blocks on 1800 human commits and shipped at `info`; after the T1.9/T1.10/T1.11 credit rounds the 2026-08-25 promotion sweep cost 5, each adjudicated false and named (`benchmarks/adjudication-2026-08-25.json`), inside the pre-registered line of five |
 | `SUBJECT_NORMALIZED` | an aligned assertion keeps its form, strength **and** expected literal, and the asserted subject now wraps its old self — `f(x)` became `f(x).replace(...)`, `sorted(f(x))`, `f(x)[0]`. Structural containment, so spelling does not matter. Resolved through **one hop** of the unit's own bindings, so hoisting the wrapper to the previous line is the same event; and applied to **argument positions** too, so `f(x)` becoming `f(normalise(x))` counts — same callee, same arity, every argument unchanged or containing its counterpart, at least one actually wrapped. Two hops are a stated residual; a subject replaced outright is a different test, not a laundered one. Escalates through repair evidence like every oracle rule, because wrapping is routine when production changed under it. Direct containment is retained alongside one-hop resolved containment. The bounded concrete ASCII-string proof below can establish that an added normalization is redundant for the unchanged production expression. Separate literal-table events can expose the same wrapper when ordinary assertion alignment does not; exact raw oracles that remain present are consumed first, so merely adding wrapped cases does not replace them. Neither extension changes severity or the ordinary restructure policy. |
 | `SUBJECT_INPUT_CHANGED` | an aligned assertion keeps its form, strength, polarity and expected answer, and the subject's **input data** changed — `f("Hello")` became `f("hello")` while `== "hello"` stayed (issue #93). Bounded: the subject must be a plain call with the structurally same callee on both sides (a provider bound in the unit, as a same-file fixture or as a module constant must be defined identically, so a changed provider invents no evidence), and every changed argument must resolve to a concrete literal on **both** sides — directly, or through the straight-line local binding / module constant the assertion reads. A changed argument that resolves to the *same* value is a rename and stays silent, as do a computed argument, a changed callable, a new test, and a name the expectation also reads (a shared producer moves both sides of the comparison and explains itself). The literal `parametrize` spelling counts too: a vanished live row paired with an arriving live row that keeps the consumed expected cells beside different input cells — but only when the vanished input does not survive with a different answer, which is EXPECTATION_DEFINITION_CHANGED's row-keyed event (#135). Row reorders and pure row additions stay silent. Escalates through repair evidence like every oracle rule, because feeding a test different data is routine when production changed under it |
-| `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression |
+| `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression. In JS/TS, an assertion the frontend proves always passes (resolved Vitest/Jest expect, node:assert or chai assert; true/false/null subject; matching predicate and polarity; no extra arguments) is not inspection, and its catch reports `catch always-passing assertion`. An always-failing assertion stays inspection. |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` (JS forms in v0.2) added |
 | `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`, `setup.cfg`, `pyproject.toml`), content-classified runner scripts and package manifests whose test command changed (§2), **plus one hop**: a changed script that runs no test runner of its own but invokes another script that does is ci too, resolved against the diff or the head snapshot. Exactly one hop. A shell-script hop must terminate in a real runner — a `ci.sh` calling `compile.sh` stays production, which is the line the content gate has drawn since v0.1.8. A manifest's hop is bounded by where it starts instead: a script that `test` or a `test:*` script names through a script runner is part of the test command whatever it runs, because `npm test` runs `scripts.test` whatever it says (#196 185.2). Test command weakened → high. Weakening is two families, and the difference is the rule's precision. A **swallow** discards an exit code (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`): introducing one anywhere is a weakened command. A **narrowing** restricts which tests run (`--ignore`, `--deselect`, `-k`, `python_files`, `python_classes`, `python_functions`, `testpaths`, `norecursedirs`, `collect_ignore`, `-p no:`, and `--test-only`, under which node's runner runs only the tests marked `only` (#196 187.1, #216)): it counts only when the diff *introduces* it — the token must be absent from the base side of every ci-role file in the diff, and the file carrying it must have existed at base. For a package manifest that base side is its base-side test command, not the whole file: a token that only a non-test script carried at base counts once the diff writes it into the test command (#196 185.1). Additionally, literal option/value comparison recognizes newly introduced `--co`/`--collect-only`, `--ignore-glob`, and quoted or unquoted `-k`/`-m` selectors, including a changed value of an existing option. Literal `testpaths` and collection-name lists are narrowing when the new selection is a provable strict subset; additional `norecursedirs` exclusions also count. Restating, reordering or provably broadening a setting is not narrowing it. Identical configuration migration stays quiet, while narrowing during a migration remains visible. First configuration adoption without a base CI surface keeps the syntax scanner at warn; the resolved collection inventory (§2b) still judges a first configuration when it runs. Where it runs, a new root-config selector is judged against the base-suite tests that a run it governs collects: all of them for a run without targets, and those beneath the targets for a run with explicit targets whose discovery finds the same root config on both sides (#196 184.1). `-m`, `-k` and `--co` count whenever such a test exists; `--ignore`, `--ignore-glob` and `--deselect` only when they drop one, and `-p no:` only for a plugin other than `cacheprovider`, `faulthandler`, `pastebin` and `stepwise` (#196 184.2). A positional target in the root config's addopts is an explicit target of every run, read with the one definition of explicit targets a command's arguments use, which knows pytest's own and the common plugins' options that take a value, so `-n auto` or `--cov src` is no target (#173): a run collects beneath its command's targets and the addopts targets together, and when the addopts targets change, a base-suite test the base runs collected and no head run collects is excluded, a weakened command. A target moved between a command and addopts loses nothing. A word in addopts that names no file or directory on its side is no target: it is the value of an option the reader does not know, or a target that fails every run. A head run whose command names a missing path, or that collects no test, fails, and no claim is made for it; ambiguous addopts withholds the inventory. The inventory's settings proof does not reach a run with explicit targets, its command's or its config's addopts'. Also weakening: a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests: a runner name anywhere in it, as row 69 reads one, or a runner site in it, live or dead (#216); deleting a runner script or a config file does not — that is consolidation until proven otherwise. A condition, a trigger, a hook inventory or a GitLab job's keys can stop a runner without touching its line (#181, #214), so GitHub workflows, `.pre-commit-config.yaml` and `.gitlab-ci.yml` are also read as an inventory of **runner sites**, each with whether it can execute for a pull request's commits and fail them. A runner site is a workflow step, a pre-commit hook or a command in a GitLab job's `script:` whose own command invokes a test runner, by a whole-word runner name outside the contexts known not to run it (`echo` and `printf` text, heredoc text written out, install commands, comments; #196 191.5), or by one of the runners #216 adds, `node --test`, `mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch test`, `just test`, `poe test` and `pdm test`, where a command starts: the first word of a simple command, past assignments, wrappers, package launchers, `sh -c` and `eval`, or inside a command substitution or a heredoc a shell reads, and never as a word elsewhere; or it is a `uses:` step whose action name and one of its `with:` inputs both name a runner. The same reading decides whether a runner-shaped script, a manifest script or a one-hop target invokes a test runner (§2); the opaque-exemption denial (THREATMODEL row 87) keeps row 69's names alone. A site is dead only for a static reason: a step or job `if:` that no event able to run the workflow on a pull request can make true, with status functions read as on an otherwise green run; a job that `needs:` a dead job and has no status function to run anyway; a trigger set with no event that runs on a pull request's commits, including activity `types` without `opened`, `synchronize` or `reopened` and a path filter that leaves no file (#196 191.9, 191.2(d)); a hook parked on the `manual` stage; a GitLab job that does not start by itself on a green pipeline (`when: manual`, `when: never`, or `when: on_failure`) or whose failure is allowed (`allow_failure: true`, or `exit_codes`), where each `rules:` entry that may match decides as the job's own keys do (an entry's condition is not evaluated, an entry with none ends the list, and a job no entry adds is not in the pipeline) and the job's `extends:` templates are merged in first; a hidden GitLab job (`.name`) that no job extends; and every GitLab job when `workflow: rules:` can only keep the pipeline from running (#214). There is no global GitLab token: `allow_failure: true` on a job whose `script:` runs no test runner is not a weakening. A runner command that lost a live site and gained a dead one is a disabled suite, and so is a runner reworded as the inventory moves a site from live to dead (#196 191.8); a pre-commit config whose hook entries invoked a recognised runner at base and invoke none at head, whatever its hook ids and names say, has removed its suite (#196 191.7). Both are weakened test commands. A workflow or `.pre-commit-config.yaml` whose base side the bounded YAML reader read with at least one live runner site, and whose head side it declines, is out of reach rather than weakened: high under E8, with a reason that names what the reader declined and the runner the base side ran (#196 191.3). A workflow is a `.yml` or `.yaml` file beneath `.github/workflows/`, `.gitlab-ci.yml` or `.pre-commit-config.yaml`; any other file kept beneath `.github/workflows/` is ci-role but not a workflow. A ci-role file that carries test obligations (§2) is reported at warn and is not scanned for swallows, narrowings or runner tokens: its lines are test code, judged by the test rules |
 | `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions). A guardrail file the diff **created** is reported at warn instead: a constraint that did not exist has not been relaxed, and rating creation critical meant `greenwash hook install --agent claude-code` produced a blocking verdict on greenwash's own artefact. Exception to that exception (issue #79): a created `.checkwash/config.toml` / `.greenwash/config.toml` whose content disables any detector or sets `fail_on` above `high` is critical like a modification — with no file the defaults were in force, that file relaxes them, and on the base-side read it governs the next diff, so its creation is the only place the two-commit plant can be caught. A created config that only tightens stays warn; `roles` overrides in a created config stay warn (stated residual) |
@@ -546,12 +664,16 @@ Matching is **path-segment anchored**, never substring. Bare substrings made
 `build/` match `mybuild/` and `dist/` match `redist/`, which silently deleted
 real source trees from the analysis and made a directory rename a bypass.
 
+A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration, and any file with no extension. The run also exits 2 when the analysis reads the path as context. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note.
+
 ## 4c. The task contract is base-side too
 
 `--task` carries `oracle_freeze` and the scope globs, i.e. two escalators. It
 is therefore read from the **base** side like config and the allowlist (§1);
 the working-tree copy is a fallback only when the file is untracked.
 Otherwise a diff could edit TASK.md to disarm E2 and E7 for itself.
+
+From a subdirectory (§9), the task path is mapped lexically: `--task` is taken relative to the directory `--repo` named, Git's `--show-prefix` is prepended, and `.` and `..` are collapsed as text. checkwash resolves no working-tree symlink to compute the path, but Git resolves `--repo` itself: when `--repo` is reached through a directory symlink, the prefix is that of the target, and a `--task` outside `--repo` can map to a path other than the one named. At the root the mapping is unchanged: `--task` relative to `--repo`. The base-side lookup reads the base tree at that lexical path, so a head-side symlink at the task path cannot choose which base file supplies the contract. That guarantee covers the base-side lookup only. From a subdirectory, a task file the base does not hold at that path is an engine error (exit 2, or the non-blocking `hook-json` warning, #414). Git spells the prefix as the directory is on disk, which on a case-insensitive checkout the head can choose, and a symlink or junction on the way to `--repo` moves it too, so the working-tree copy could be the head's contract. At the root, when the base has no file at that path, the untracked fallback opens `--task` as given, and the operating system follows a symlink there, as before.
 
 ## 5. Escalators / de-escalators (applied in order, all deterministic)
 
@@ -789,11 +911,31 @@ base-branch prod commits into the diff and disarm E1.
 traceback exiting 1 would be indistinguishable from a real block for CI, so
 every crash path is mapped to 2.
 
+In `check --format hook-json` (the Claude Code Stop hook) an engine error, or a config or allowlist parse error under `on_engine_error = "block"`, exits 0 instead, with a JSON `systemMessage` saying the change was not analysed and why, and no `decision`. The hook is an author-side check; the required CI check remains the gate (#414).
+
 Base-side `config.toml` / `allow.toml` that fail to parse are never silently
 ignored: the diagnostic goes to stderr and to `config_errors` in the JSON
-payload, and with `on_engine_error = "block"` the run exits 2. A hardened
+payload, and with `on_engine_error = "block"` the run exits 2 (in
+`check --format hook-json`, 0 with the `systemMessage` above). A hardened
 gate must not quietly revert to defaults, and a corrupt ledger must not
 quietly void every exemption in the repo.
+
+**Which directory a command reads (#416).** `check`, `sweep`, `allow`, `doctor` and the `quality` forms that read a repository (a range, the worktree review, `init`, `doctor`) first ask Git about `--repo` (default `.`) with `git -C <--repo> rev-parse --is-inside-work-tree --show-prefix`. If Git answers `true` with a non-empty prefix, a second query, `git -C <--repo> rev-parse --show-toplevel`, names the root. Its answer must decode as UTF-8, be a single line, be absolute and name an existing directory. The command then uses that root in place of `--repo` for every later Git call and working-tree read. A run from a subdirectory therefore analyses the whole repository. For `check`, `sweep`, `doctor` and the `quality` forms its stdout and exit code are those of the same run at the root; `allow` writes the root ledger and names it under Git's spelling of the root. This is not the behaviour of `git -C <subdirectory>`, under which `ls-tree` and `git grep` stay scoped to the subdirectory. The root is never `--repo` joined with `--show-cdup`.
+
+A re-rooted run prints one line on stderr: `checkwash: using the repository root <root>, not its subdirectory <prefix>`. The line may name `.checkwash/` or `.greenwash/` directories in the working tree. It checks the invoked directory and each directory between it and the root, but not the root itself. If any exist, the line continues `; not read: <paths> (only the root's .checkwash/ or .greenwash/ applies)`. The line is written in every format, including `json`, `sarif` and `hook-json`, and changes neither stdout nor the exit code.
+
+Git may answer `false`, or `true` with an empty prefix: at the root, in a bare repository, or inside `.git`. In those cases `--repo` is used unchanged and nothing is printed. `hook install` never asks Git; it writes under `--repo` as given. `quality profiles`, `quality explain`, `bench` and `demo` never look up the root either; their `--repo` is not re-rooted.
+
+`checkwash doctor` asks in the same sanitized Git environment its own later queries use, without their discovery ceiling. In that environment the caller's `GIT_*` variables are removed, and global and system configuration, prompts and optional locks are off. So a caller's `GIT_DIR` or `GIT_WORK_TREE` cannot point it at another repository. The other commands ask in the caller's environment, as their later Git calls do.
+
+When Git cannot answer, `check` and `sweep` report an engine error: exit 2, or exit 0 with the non-blocking `systemMessage` for `check --format hook-json` (#414). `allow`, `doctor` and the `quality` forms instead use `--repo` as given, as before #416:
+
+- The fallback is silent when the first query fails or its answer is not a `true`/`false` work-tree answer: outside Git, with a missing directory, or with no git binary.
+- One stderr line is printed when Git has answered that `--repo` is a subdirectory and then the root cannot be resolved. That covers a first answer of `true` whose prefix is unusable (undecodable, containing `..`, or split by a newline in a directory name), an unusable root, and a second query that fails or times out. The line is `checkwash: could not resolve the repository root: <reason>; using --repo as given`. stdout and the exit code are those of `--repo` as given, and `quality` keeps its own JSON error reporting.
+
+`check` validates the syntax of a range before the lookup, so a malformed range is still `error: range must be BASE..HEAD` (or `BASE...HEAD`) with exit 2 in every format, `hook-json` included, whether or not Git can answer.
+
+Where the first query exits non-zero (outside Git, or a missing directory), the engine-error text of `check` and `sweep` now names the lookup's query (`git rev-parse --is-inside-work-tree failed: ...`), not the first Git call that failed before. With no git binary, or when the query times out, the text is `git read could not complete`, as before. Where the lookup succeeds, range validation and its exit 2 are unchanged.
 
 ## 10. Corpora: tuning versus held-out
 

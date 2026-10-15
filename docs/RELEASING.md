@@ -163,7 +163,7 @@ known issue. This is the one-time authorization for v0.8.0.
 
 It covers:
 - the version bump, minor because #414 changed the frozen exit-code contract
-  for `check --format hook-json` (D-RELEASE_EXIT);
+  for `check --format hook-json` (D-134; the release entry is D-140);
 - the maintainer-owned commit carrying the approved SPEC, THREATMODEL and
   DECISIONS text, and the release guide and known issues;
 - one release PR merged through the normal required checks, one tag `v0.8.0`

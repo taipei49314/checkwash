@@ -1,5 +1,5 @@
 === meta ===
-bypass: 115
+bypass: 7a, 115
 rule: TEST_DISABLED
 title: an honest gate lends nothing to a hook that reports every test as passed
 origin: #208 S11: a runtime control (pytest_runtest_makereport setting the

@@ -1,5 +1,5 @@
 === meta ===
-bypass: 16,22
+bypass: 16,22,129
 rule: BROAD_EXCEPT_ADDED
 note: #431 — a catch that holds only an always-passing literal assertion still swallows the wrapped assertion.
 === before: tests/value.test.ts ===
