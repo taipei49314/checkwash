@@ -2,8 +2,13 @@
 
     checkwash check [BASE..HEAD] [--task FILE] [--format term|json|sarif]
                     [--fail-on SEV] [--emit-ir] [--repo PATH] [--coverage-report FILE]
-    checkwash allow FINGERPRINT --reason "..." [--expires YYYY-MM-DD]
+    checkwash allow FINGERPRINT --reason "..." [--expires YYYY-MM-DD] [--repo PATH]
     checkwash bench [--local] [--corpus DIR] [--run-sweep]
+
+`--repo` (default: the current directory) may be any directory of a Git work
+tree. `check`, `sweep`, `allow`, `doctor` and the repository-reading `quality`
+modes run from that repository's root and say so in one stderr line when it
+is not `--repo` itself (#416). `hook install` writes under `--repo` as given.
 
 Exit codes (SPEC §9): 0 pass, 1 block, 2 engine error. `check --format
 hook-json` exits 0 on a verdict and on an engine error: its JSON carries a
@@ -16,23 +21,27 @@ from __future__ import annotations
 import argparse
 import datetime
 import os
+import posixpath
 import sys
 
 from checkwash import __version__
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
-from checkwash.config import SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
+from checkwash.config import CONFIG_DIRS, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
 from checkwash.engine import analyze
 from checkwash.pyenv import known_baseline
 from checkwash.gitio import (
     GitError,
+    GitRootUnresolved,
     GitSourceOverLimit,
+    RepositoryRoot,
     grep_head_paths,
     list_range_changes,
     list_worktree_changes,
     merge_base,
     read_base_file,
+    resolve_repository_root,
     rev_parse,
     resolve_commit,
 )
@@ -155,7 +164,15 @@ def _cmd_check(args: argparse.Namespace) -> int:
         # for itself. Same rule as config and the allowlist: base side wins
         # (SPEC §1); the working-tree copy is only a fallback when the task
         # file is untracked.
-        rel = os.path.relpath(args.task, repo).replace("\\", "/")
+        prefix = getattr(args, "repo_prefix", "")
+        if prefix:
+            # Re-rooted (#416): relative to the directory `--repo` named, then
+            # into the root with Git's prefix, lexically. Never realpath: a
+            # head-side symlink at the task path would choose which base file
+            # supplies the contract, or hand the fallback attacker bytes.
+            rel = posixpath.normpath(prefix + os.path.relpath(args.task, args.repo_given).replace("\\", "/"))
+        else:
+            rel = os.path.relpath(args.task, repo).replace("\\", "/")
         data = read_base_file(repo, config_side, rel)
         if data is not None:
             contract = parse_contract(data.decode("utf-8", errors="replace"))
@@ -380,6 +397,9 @@ class _ArgumentParser(argparse.ArgumentParser):
             write_text(message, file or sys.stderr)
 
 
+_REPO_HELP = "any directory of the Git repository (default: .); runs from the repository root"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = _ArgumentParser(prog="checkwash")
     parser.add_argument("--version", action="version", version=f"checkwash {__version__}")
@@ -392,13 +412,13 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--fail-on", choices=list(SEVERITY_ORDER), default=None)
     check.add_argument("--emit-ir", action="store_true", help="print the IR JSON and exit")
     check.add_argument("--coverage-report", metavar="FILE", help="write a separate JS assertion-coverage JSON report")
-    check.add_argument("--repo", default=".")
+    check.add_argument("--repo", default=".", help=_REPO_HELP)
 
     quality = sub.add_parser("quality", help="review bounded quality configuration weakening")
     quality.add_argument("range", nargs="?", help="BASE..HEAD, BASE...HEAD, init, doctor, profiles or explain")
     quality.add_argument("rule", nargs="?", help="rule ID for quality explain")
     quality.add_argument("--format", choices=["term", "json", "sarif"], default="term")
-    quality.add_argument("--repo", default=".")
+    quality.add_argument("--repo", default=".", help=_REPO_HELP + " (not for profiles or explain)")
     quality.add_argument("--root", help="init only: repository-relative target root")
     quality.add_argument("--paths", action="append", help="init only: literal source file or directory ending /; repeatable")
     quality.add_argument("--tool", action="append", choices=["coverage", "ruff", "mypy"], help="init only: requested tool; repeatable")
@@ -410,7 +430,7 @@ def build_parser() -> argparse.ArgumentParser:
     sweep_p.add_argument("revs", nargs="?", default="HEAD", help="rev-list range, e.g. HEAD or main")
     sweep_p.add_argument("--limit", type=int, default=200)
     sweep_p.add_argument("--fail-on", choices=list(SEVERITY_ORDER), default=None)
-    sweep_p.add_argument("--repo", default=".")
+    sweep_p.add_argument("--repo", default=".", help=_REPO_HELP)
 
     hook = sub.add_parser("hook", help="integration helpers")
     hook_sub = hook.add_subparsers(dest="hook_command", required=True)
@@ -419,7 +439,10 @@ def build_parser() -> argparse.ArgumentParser:
         description="For claude-code, write Stop hook settings. For pre-commit, print a YAML template only; save it and run pre-commit install yourself.",
     )
     hook_install.add_argument("--agent", choices=["claude-code", "pre-commit"], required=True)
-    hook_install.add_argument("--repo", default=".")
+    hook_install.add_argument(
+        "--repo", default=".",
+        help="directory whose .claude/ receives the settings, used as given (default: .)",
+    )
     hook_install.add_argument(
         "--local",
         action="store_true",
@@ -431,7 +454,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor = sub.add_parser(
         "doctor", help="is this installation able to block anything?"
     )
-    doctor.add_argument("--repo", default=".")
+    doctor.add_argument("--repo", default=".", help=_REPO_HELP + "; outside Git, the directory as given")
 
     bench = sub.add_parser(
         "bench",
@@ -463,7 +486,7 @@ def build_parser() -> argparse.ArgumentParser:
     allow.add_argument("--reason", required=True)
     allow.add_argument("--expires", default=None)
     allow.add_argument("--author", default=os.environ.get("USERNAME") or os.environ.get("USER") or "")
-    allow.add_argument("--repo", default=".")
+    allow.add_argument("--repo", default=".", help=_REPO_HELP + "; outside Git, the directory as given")
     return parser
 
 
@@ -503,6 +526,69 @@ def _closest_command(token: str) -> str | None:
     return None
 
 
+def _reroot(args: argparse.Namespace, *, required: bool, env: dict[str, str] | None = None) -> None:
+    """Point `args.repo` at the repository root when it names a subdirectory (#416).
+
+    For a `required` command (check, sweep) a GitError reaches the engine
+    error path; the others keep `--repo` as given when Git cannot answer,
+    outside Git or with no git binary, as they ran before. When Git has
+    named a subdirectory but not its root, one stderr line says so and why;
+    stdout and the exit code are unchanged. `repo_given` and `repo_prefix`
+    keep what a `--task` path is mapped from.
+    """
+    given = args.repo
+    try:
+        root = resolve_repository_root(given, env=env)
+    except GitError as exc:
+        if required:
+            raise
+        if isinstance(exc, GitRootUnresolved):
+            reason = " ".join(str(exc).splitlines())
+            _advise(f"checkwash: could not resolve the repository root: {reason}; using --repo as given\n")
+        root = RepositoryRoot(given)
+    args.repo, args.repo_given, args.repo_prefix = root.path, given, root.prefix
+    if root.prefix:
+        _advise(_root_note(root))
+
+
+def _advise(line: str) -> None:
+    """Write an advisory stderr line that can never reach stdout or the exit code (#416).
+
+    `write_text` falls back to stdout when `sys.stderr` is None (fd 2 closed,
+    pythonw), which would land ahead of a JSON or SARIF report, and a broken
+    stderr pipe must not turn a run into an engine error.
+    """
+    if sys.stderr is None:
+        return
+    try:
+        write_text(line, sys.stderr)
+    except (OSError, ValueError):
+        pass
+
+
+def _root_note(root: RepositoryRoot) -> str:
+    """The one stderr line of a re-rooted run (#416).
+
+    It names the root, and every `.checkwash/` or `.greenwash/` directory from
+    the invoked directory up to the root as not read: such a directory used
+    to stop the run with exit 2, and a hardened gate must not quietly revert
+    to the root's policy (SPEC §9). It never changes the exit code. In hook
+    mode the working tree is the agent's, and an engine error is a
+    non-blocking "not analysed" there (#414).
+    """
+    parts = root.prefix[:-1].split("/")
+    unread = [
+        "/".join(parts[:end]) + f"/{name}/"
+        for end in range(len(parts), 0, -1)
+        for name in CONFIG_DIRS
+        if os.path.isdir(os.path.join(root.path, *parts[:end], name))
+    ]
+    line = f"checkwash: using the repository root {root.path}, not its subdirectory {root.prefix}"
+    if unread:
+        line += f"; not read: {', '.join(unread)} (only the root's .checkwash/ or .greenwash/ applies)"
+    return line + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
@@ -526,22 +612,33 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "check":
+            _reroot(args, required=True)
             return _cmd_check(args)
         if args.command == "quality":
             from checkwash.quality.cli import run as run_quality
 
+            # profiles and explain read no repository, so they never ask Git.
+            # Elsewhere an unanswered root keeps `--repo`, and quality's own
+            # JSON error reporting applies as before (#416).
+            if args.range not in ("profiles", "explain"):
+                _reroot(args, required=False)
             output, code = run_quality(args, _today())
             (_write_term if args.format == "term" else _write_machine)(output)
             return code
         if args.command == "allow":
+            # Outside Git, or with no answer from it, the ledger stays under
+            # `--repo` as given, as before (#416).
+            _reroot(args, required=False)
             return _cmd_allow(args)
         if args.command == "hook":
             # The subparser is required, so argparse has already rejected a
             # missing subcommand with usage on stderr and exit 2. This used to
             # print `hook --help` instead, which argparse exits 0 for, so a CI
             # step that omitted `install` reported success (issue #70).
+            # Settings are written under `--repo` as given, never re-rooted.
             return _cmd_hook_install(args)
         if args.command == "sweep":
+            _reroot(args, required=True)
             result = sweep(args.repo, args.revs, args.limit, _today(), args.fail_on)
             _write_machine(result.to_json())
             return 0
@@ -550,8 +647,11 @@ def main(argv: list[str] | None = None) -> int:
 
             return run_demo()
         if args.command == "doctor":
-            from checkwash.doctor import run as run_doctor
+            from checkwash.doctor import discovery_env, run as run_doctor
 
+            # Doctor's own sanitized Git environment, or the caller's GIT_DIR
+            # could name a repository its later queries never see (#416).
+            _reroot(args, required=False, env=discovery_env())
             return run_doctor(args.repo)
         if args.command == "bench":
             from checkwash.bench import run as run_bench

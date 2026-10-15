@@ -170,10 +170,15 @@ def _regular_bytes(path: Path) -> bytes | None:
             os.close(descriptor)
 
 
-def _git_query(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | None:
+def discovery_env() -> dict[str, str]:
+    """`_git_query`'s sanitized Git environment without its discovery ceiling.
+
+    `checkwash doctor` finds the repository root with it (#416). With the
+    caller's environment, GIT_DIR could name a different repository from the
+    one doctor's own queries then see at that root.
+    """
     env = {key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")}
     env.update({
-        "GIT_CEILING_DIRECTORIES": str(root.parent.resolve()),
         "GIT_CONFIG_GLOBAL": os.devnull,
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_DISCOVERY_ACROSS_FILESYSTEM": "0",
@@ -182,6 +187,12 @@ def _git_query(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | N
         "GIT_TERMINAL_PROMPT": "0",
         "GCM_INTERACTIVE": "Never",
     })
+    return env
+
+
+def _git_query(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | None:
+    env = discovery_env()
+    env["GIT_CEILING_DIRECTORIES"] = str(root.parent.resolve())
     try:
         result = subprocess.run(
             [

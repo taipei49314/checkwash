@@ -97,7 +97,7 @@ python checkwash.pyz --version
 python checkwash.pyz demo
 ```
 
-Then, from a repository with at least two commits:
+Then, from the root of a repository with at least two commits:
 
 ```bash
 python checkwash.pyz check HEAD~1..HEAD
@@ -108,6 +108,12 @@ You can also [download the file in your browser](https://github.com/taipei49314/
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
+
+Run v0.7.0 from the repository root; from a subdirectory its result is not
+reliable. The fix for [#416](https://github.com/taipei49314/checkwash/issues/416)
+is on main; it is not released yet. There, `check` from a subdirectory
+analyses the whole repository from its Git root and says so in one line on
+stderr.
 
 | Result | What to do |
 |---|---|
@@ -293,5 +299,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 17866 tests in the current source tree.
+Alpha pre-release. 22 detectors, 17925 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

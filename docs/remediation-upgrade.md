@@ -116,6 +116,21 @@ and unsupported syntax while keeping its strict accepted workflow set. A
 reviewed `git add` can resolve an index problem; a commit is not required just
 for recognition. Doctor cannot verify live branch protection.
 
+On main, not released yet
+([#416](https://github.com/taipei49314/checkwash/issues/416)): inside a Git
+repository, doctor and the installed handler's `check` run from the
+repository root, wherever they are started. The handler therefore analyses
+the whole repository from any directory, and doctor reads the root's
+`.github/workflows` and `.claude/`. `hook install` is different: it writes
+`.claude/settings*.json` under `--repo` exactly as given. After
+`hook install --local` in a subdirectory, doctor from that subdirectory names
+the root on stderr and does not see those settings, which are not in the
+root's `.claude/`. With nothing else installed it reports "no checkwash
+installation found" rather than "configured locally but not in CI", exit 1
+either way. Outside Git, doctor and `allow` use the directory as given, as
+before. When Git names a subdirectory but its root cannot be resolved, they
+also use the directory as given and say why in one line on stderr.
+
 `hook install --agent pre-commit` still emits a YAML template. Its leading
 comments explain how to save/merge the configuration and install/run pre-commit;
 the command does not itself write that file or install Git hooks.
