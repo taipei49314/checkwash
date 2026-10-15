@@ -13,7 +13,8 @@ line. The root, a bare repository, `.git` and a directory outside Git keep
 `--repo` as given; so do `allow`, `doctor` and `quality` when Git names a
 subdirectory but its root cannot be resolved, with one stderr line saying
 why. A `--task` path is mapped lexically through Git's prefix
-and never through a symlink. These runs compare outputs and use
+and never through a symlink, and from a subdirectory a task file the base
+lacks is an engine error, not the working-tree fallback. These runs compare outputs and use
 `os.path.samefile`, never path strings: a temporary directory may be an 8.3
 short name, or a symlinked one, while Git prints the long real path.
 """
@@ -498,6 +499,29 @@ def test_a_task_path_maps_through_the_prefix(repo, how):
     else:
         result = _run_repo(repo / "pkg", *args, "--task", str(repo / "pkg" / "TASK.md"), cwd=repo.parent)
     assert _frozen(result)
+
+
+@pytest.mark.parametrize("fmt,code", [("json", 2), ("hook-json", 0)])
+def test_a_task_file_the_base_lacks_is_an_engine_error_from_a_subdirectory(repo, fmt, code):
+    # Owner's ruling on #416 (2026-10-15). Git spells the prefix as the
+    # directory is on disk; on a case-insensitive checkout the head chooses
+    # that spelling, so `PKG/TASK.md` misses the base's `pkg/TASK.md` while
+    # the working-tree copy is the head's. Renaming the directory on disk
+    # gives the same prefix on every platform. The fallback would read the
+    # loose copy; from a subdirectory a base miss is an engine error instead.
+    _write(repo, "pkg/TASK.md", FREEZE)
+    _commit(repo, "contract")
+    _write(repo, "tests/test_calc.py", WEAK)
+    _commit(repo, "weaken")
+    os.rename(repo / "pkg", repo / "PKG")
+    (repo / "PKG" / "TASK.md").write_bytes(LOOSE)
+    result = _run(repo / "PKG", "check", "HEAD~1..HEAD", "--task", "TASK.md", "--format", fmt)
+    err = result.stderr.decode("utf-8")
+    assert result.returncode == code, err
+    assert "engine error: --task TASK.md maps to PKG/TASK.md" in err, err
+    if code == 0:  # The hook-json warning (#414) carries no decision.
+        payload = json.loads(result.stdout)
+        assert "decision" not in payload and "PKG/TASK.md" in payload["systemMessage"], payload
 
 
 # --- quality ----------------------------------------------------------------------------------------

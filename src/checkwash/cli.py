@@ -182,7 +182,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         # it from the head side let a diff edit TASK.md to disarm E2 and E7
         # for itself. Same rule as config and the allowlist: base side wins
         # (SPEC §1); the working-tree copy is only a fallback when the task
-        # file is untracked.
+        # file is untracked, and only at the root.
         prefix = getattr(args, "repo_prefix", "")
         if prefix:
             # Re-rooted (#416): relative to the directory `--repo` named, then
@@ -195,6 +195,20 @@ def _cmd_check(args: argparse.Namespace) -> int:
         data = read_base_file(repo, config_side, rel)
         if data is not None:
             contract = parse_contract(data.decode("utf-8", errors="replace"))
+        elif prefix:
+            # Git spells the prefix as the directory is on disk. On a
+            # case-insensitive checkout the head chooses that spelling (`PKG/`
+            # for the base's `pkg/`), so the mapped path can miss the base
+            # contract while the working-tree copy is the head's. A symlink or
+            # junction on the way to `--repo` moves the prefix the same way.
+            # From a subdirectory a base miss is therefore an engine error
+            # (owner's ruling on #416, 2026-10-15).
+            return _engine_error(
+                args,
+                f"--task {args.task} maps to {rel}, which the base tree does not hold; "
+                "from a subdirectory only the base copy is read, so run from the "
+                "repository root to use an untracked task file",
+            )
         else:
             with open(args.task, encoding="utf-8") as fh:
                 contract = parse_contract(fh.read())
