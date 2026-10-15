@@ -5,9 +5,11 @@ The head side may be attacker-controlled; nothing here executes repo content.
 
 from __future__ import annotations
 
+import os
 import re
 import hashlib
 import subprocess
+from dataclasses import dataclass
 
 from checkwash.change import EngineError, FileChange, SourceOverLimit, UnreadSide
 from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
@@ -17,13 +19,20 @@ class GitError(Exception):
     pass
 
 
-def _run(repo: str, args: list[str]) -> bytes:
+class GitRootUnresolved(GitError):
+    """Git confirmed a subdirectory of a work tree but its root could not be
+    resolved (#416). A command that then keeps `--repo` as given says so;
+    outside Git it stays silent."""
+
+
+def _run(repo: str, args: list[str], *, env: dict[str, str] | None = None) -> bytes:
     try:
         proc = subprocess.run(
             ["git", "-C", repo, *args],
             capture_output=True,
             check=False,
             timeout=60,
+            env=env,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise GitError("git read could not complete") from exc
@@ -32,6 +41,66 @@ def _run(repo: str, args: list[str]) -> bytes:
             f"git {' '.join(args[:2])} failed: {proc.stderr.decode('utf-8', 'replace').strip()}"
         )
     return proc.stdout
+
+
+@dataclass(frozen=True)
+class RepositoryRoot:
+    """Where a command reads the repository that `--repo` names (#416).
+
+    `path` is Git's `--show-toplevel` when `--repo` is a subdirectory of a
+    work tree, and `--repo` itself everywhere else. `prefix` is Git's
+    `--show-prefix` for `--repo` (`pkg/sub/`), empty unless `path` moved.
+    """
+
+    path: str
+    prefix: str = ""
+
+
+def resolve_repository_root(repo: str, *, env: dict[str, str] | None = None) -> RepositoryRoot:
+    """The directory every later Git call runs in, for `--repo` (#416).
+
+    From a subdirectory Git answers in two path bases: `diff`, `status` and
+    `cat-file <rev>:<path>` are root-relative, while `ls-tree`, `git grep`
+    and the working-tree walker see only the subtree, so a run could fail or
+    read the wrong blob. At the root, and where Git has no work tree (a bare
+    repository, inside `.git`), `repo` comes back unchanged. The toplevel is
+    a second query because `--show-toplevel` fails without a work tree. It is
+    never `repo` joined with `--show-cdup`: through a symlinked or junction
+    directory a lexical `..` lands elsewhere. Any failure, Git's own message
+    included, is a GitError; the caller decides whether it is fatal. Once Git
+    has answered that `repo` is a subdirectory of a work tree, it is a
+    GitRootUnresolved, so a caller that keeps `repo` can say why.
+    """
+    raw = _run(repo, ["rev-parse", "--is-inside-work-tree", "--show-prefix"], env=env)
+    answer = re.fullmatch(rb"(true|false)\n([^\n]*)\n", raw)
+    if answer is None:
+        # Git prints the prefix raw, so a directory name holding a newline
+        # breaks the line format after Git has confirmed a work tree.
+        if raw.startswith(b"true\n"):
+            raise GitRootUnresolved("git rev-parse returned an invalid prefix")
+        raise GitError("git rev-parse returned an invalid work-tree answer")
+    if answer.group(1) != b"true" or not answer.group(2):
+        return RepositoryRoot(repo)
+    try:
+        prefix = answer.group(2).decode("utf-8", "strict")
+    except UnicodeError as exc:
+        raise GitRootUnresolved("git rev-parse returned an undecodable prefix") from exc
+    if not prefix.endswith("/") or any(part in {"", ".", ".."} for part in prefix[:-1].split("/")):
+        raise GitRootUnresolved(f"git rev-parse returned an invalid prefix {prefix!r}")
+    try:
+        raw = _run(repo, ["rev-parse", "--show-toplevel"], env=env)
+    except GitError as exc:
+        raise GitRootUnresolved(str(exc)) from exc
+    try:
+        top = raw.decode("utf-8", "strict")
+    except UnicodeError as exc:
+        raise GitRootUnresolved("git rev-parse returned an undecodable repository root") from exc
+    if not top.endswith("\n") or "\n" in top[:-1]:
+        raise GitRootUnresolved("git rev-parse returned an incomplete repository root")
+    top = top[:-1]
+    if not top or not os.path.isabs(top) or not os.path.isdir(top):
+        raise GitRootUnresolved(f"git rev-parse returned an unusable repository root {top!r}")
+    return RepositoryRoot(top, prefix)
 
 
 def rev_parse(repo: str, rev: str) -> str:

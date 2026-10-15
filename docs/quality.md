@@ -28,6 +28,17 @@ checkwash quality profiles
 checkwash quality explain QW_THRESHOLD_LOWERED
 ```
 
+On main, not released yet
+([#416](https://github.com/taipei49314/checkwash/issues/416)): the forms that
+read a repository (`init`, `doctor`, and the range and worktree reviews) run
+from the Git repository root when `--repo`, by default the current directory,
+is a subdirectory, and say so in one line on stderr. From a subdirectory, the
+`init` draft, `--root` and `--paths` are therefore relative to the repository
+root, not to that subdirectory. `profiles` and `explain` read no repository.
+Outside Git, `--repo` is used as given and quality reports its own error as
+before. When Git names a subdirectory but its root cannot be resolved,
+`--repo` is also used as given, and one stderr line says why.
+
 Targets and enforcement are read only from the base revision's
 `.checkwash/quality.toml`. With no base targets, discovery reports declarations
 and `incomplete`, never an assertion of effective enforcement.
