@@ -19,9 +19,9 @@ from checkwash import __version__
 from checkwash.allowlist import load_allowlist
 from checkwash.config import load_config, read_base_config_file
 from checkwash.contract import Contract
-from checkwash.deps import MANIFESTS, parse_manifest, project_names
+from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
 from checkwash.engine import analyze
-from checkwash.gitio import grep_head_paths, list_range_changes, read_base_file
+from checkwash.gitio import GitSourceOverLimit, grep_head_paths, list_range_changes, read_base_file
 from checkwash.gitio.snapshot import GitSnapshot
 from checkwash.ir.model import judged_as_test
 from checkwash.pyenv import known_baseline
@@ -114,18 +114,24 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
             self_modules: set[str] = set()
             found = False
             for manifest in MANIFESTS:
-                data = read_base_file(repo, parent, manifest)
+                try:
+                    data = read_base_file(repo, parent, manifest)
+                except GitSourceOverLimit:
+                    # As `check` does, without its stderr note (#415).
+                    if manifest not in SKIPPABLE_OVERSIZED:
+                        raise
+                    continue
                 if data is not None:
                     found = True
                     declared |= parse_manifest(manifest, data)
                     self_modules |= project_names(manifest, data)
             known = (known_baseline() | declared) if found else None
 
-            root_snapshot = GitSnapshot(repo, sha)
+            root_snapshot = GitSnapshot(repo, sha, side="head")
             ir, findings, verdict = analyze(
                 changes, config, Contract(), allow, today, base_label=parent,
                 head_label=sha, known_modules=known, self_modules=self_modules,
-                head_reader=lambda p, _sha=sha: read_base_file(repo, _sha, p),
+                head_reader=lambda p, _sha=sha: read_base_file(repo, _sha, p, side="head"),
                 head_searcher=lambda needles, _sha=sha: grep_head_paths(repo, _sha, needles),
                 root_reader=root_snapshot.read,
                 root_searcher=root_snapshot.search,

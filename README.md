@@ -131,6 +131,27 @@ Legitimate refactors can be flagged. The frozen historical corpus records
 **22 blocks out of 60 (36.7%)**. A separate pre-release source replay records
 4/60 blocks, including 2/57 strictly qualified cases; three existing fixture
 errors remain. These are selected examples, not a general false-positive rate.
+
+A changed file over 1,000,000 bytes is not read. An image, data file,
+lockfile, document or non-Python production source that large is reported on
+stderr and earns no repair evidence. A file a detector must read (test,
+conftest, CI, guardrail, snapshot, JS setup, runner script or test-command
+file) that large stops the run with exit 2, naming it. So do a `.py` module
+that large, whether added, deleted, renamed or edited, and a pytest
+configuration file (`pytest.ini`, `.pytest.ini`, `pytest.toml`,
+`.pytest.toml`, `tox.ini`, `setup.cfg`, `pyproject.toml`) at any depth:
+either can change the module a test's import resolves to. So do any
+non-generated file under the root `scripts/` directory, read for the pytest
+commands it runs, a file with no extension (a dotfile such as `.envrc`
+counts), since a shebang the run cannot see could make it a runner script,
+and any other changed file that large the analysis needs as context.
+Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
+aside like a production source unless it is a Python module, a pytest
+configuration, a CI file, a runner script or a file with no extension. A root
+`poetry.lock` or `uv.lock` that large at the base is skipped with a note; a
+root `pyproject.toml` or `requirements*.txt` that large at the base stops
+every run with exit 2, naming it.
+
 Try it on your own changes before making it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
 
@@ -272,5 +293,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 17797 tests in the current source tree.
+Alpha pre-release. 22 detectors, 18330 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

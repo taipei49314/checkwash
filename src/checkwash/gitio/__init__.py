@@ -1,5 +1,6 @@
 from checkwash.gitio.git import (
     GitError,
+    GitSourceOverLimit,
     grep_head_paths,
     list_range_changes,
     list_worktree_changes,
@@ -11,6 +12,7 @@ from checkwash.gitio.git import (
 
 __all__ = [
     "GitError",
+    "GitSourceOverLimit",
     "grep_head_paths",
     "list_range_changes",
     "list_worktree_changes",

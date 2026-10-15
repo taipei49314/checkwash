@@ -62,6 +62,93 @@ def test_hook_effects_block_at_root_and_nested_conftest(source, path):
     assert any("execution/report suppression" in f.message for f in hits)
 
 
+def test_setattr_imported_from_builtins_still_rewrites_the_outcome():
+    """Importing the builtin `setattr` inside a hook does not shadow it."""
+    for source in (
+        "def pytest_runtest_logreport(report):\n    from builtins import setattr\n"
+        "    setattr(report, 'outcome', 'passed')\n",
+        "def pytest_runtest_logreport(report):\n    from builtins import setattr as setattr\n"
+        "    setattr(report, 'outcome', 'passed')\n",
+        REPORT.replace("report.outcome = 'passed'",
+                       "from builtins import setattr\n        setattr(report, 'outcome', 'passed')"),
+    ):
+        hits = [f for f in judge(source) if f.rule == "TEST_DISABLED"]
+        assert hits and all(f.severity == "high" for f in hits), source
+
+
+def test_an_import_that_may_fail_inside_a_hook_does_not_hide_the_outcome_rewrite():
+    """An import inside a hook can fail inside a `try`; the rewrite after it still runs."""
+    fallback = "    try:\n        from _compat import {name}\n    except ImportError:\n        pass\n"
+    for source in (
+        "def pytest_runtest_logreport(report):\n" + fallback.format(name="setattr")
+        + "    setattr(report, 'outcome', 'passed')\n",
+        "def pytest_runtest_logreport(report):\n" + fallback.format(name="report")
+        + "    report.outcome = 'passed'\n",
+        REPORT.replace("    outcome = yield\n", "    outcome = yield\n" + fallback.format(name="outcome")),
+    ):
+        hits = [f for f in judge(source) if f.rule == "TEST_DISABLED"]
+        assert hits and all(f.severity == "high" for f in hits), source
+
+
+def test_a_module_level_setattr_binding_does_not_hide_the_outcome_rewrite():
+    """A module-level `setattr` that may never be bound (an untaken `if`, a
+    `try` that fails first, a later `del`) leaves every hook the builtin."""
+    rewrite = REPORT.replace("report.outcome = 'passed'", "setattr(report, 'outcome', 'passed')")
+    logreport = "def pytest_runtest_logreport(report):\n    setattr(report, 'outcome', 'passed')\n"
+    for prefix in (
+        "if False:\n    from pytest import Item as setattr\n",
+        "import pytest as setattr\ndel setattr\n",
+        "try:\n    import _missing\n    import pytest as setattr\nexcept ImportError:\n    pass\n",
+        "import sys\nif sys.version_info < (3,):\n    import pytest as setattr\n",
+    ):
+        for hook in (rewrite, logreport):
+            hits = [f for f in judge(prefix + hook) if f.rule == "TEST_DISABLED"]
+            assert hits and all(f.severity == "high" for f in hits), prefix + hook
+
+
+def test_a_known_module_import_that_may_not_run_inside_a_hook_keeps_the_readings():
+    """Inside a hook an import of a known module can sit in a `try` that fails
+    first, or in that `try`'s `else`; `report` and `outcome` keep their readings."""
+    blocks = (
+        "    try:\n        import _missing\n        import pytest as {name}\n    except ImportError:\n        pass\n",
+        "    try:\n        import _missing\n    except ImportError:\n        pass\n    else:\n        import pytest as {name}\n",
+    )
+    for block in blocks:
+        for source in (
+            "def pytest_runtest_logreport(report):\n" + block.format(name="report") + "    report.outcome = 'passed'\n",
+            REPORT.replace("    report = outcome.get_result()\n",
+                           "    report = outcome.get_result()\n" + block.format(name="report")),
+            REPORT.replace("    outcome = yield\n", "    outcome = yield\n" + block.format(name="outcome")),
+            FORCE.replace("    outcome = yield\n", "    outcome = yield\n" + block.format(name="outcome")),
+            # `global` keeps the name module-level: the import never ran, so
+            # the call below reaches the builtin.
+            "def pytest_runtest_logreport(report):\n    global setattr\n" + block.format(name="setattr")
+            + "    setattr(report, 'outcome', 'passed')\n",
+        ):
+            hits = [f for f in judge(source) if f.rule == "TEST_DISABLED"]
+            assert hits and all(f.severity == "high" for f in hits), source
+
+
+def test_a_chained_assignment_rebinds_report_before_its_outcome_target():
+    """Python assigns the targets left to right: in `report = report.outcome = x`
+    the second target is the new `report`, so the rewrite before it stands."""
+    for source in (
+        "from types import SimpleNamespace\n" + REPORT.replace(
+            "        report.longrepr = None\n",
+            "        report.longrepr = None\n        report = report.outcome = SimpleNamespace()\n"),
+        "from types import SimpleNamespace\ndef pytest_runtest_logreport(report):\n"
+        "    report.outcome = 'passed'\n    report = report.outcome = SimpleNamespace()\n",
+    ):
+        hits = [f for f in judge(source) if f.rule == "TEST_DISABLED"]
+        assert hits and all(f.severity == "high" for f in hits), source
+    # The same order keeps a base line that never rewrites from hiding a
+    # rewrite the head adds.
+    before = "def pytest_runtest_logreport(report):\n    report = report.outcome = 'passed'\n"
+    after = "def pytest_runtest_logreport(report):\n    report.outcome = 'passed'\n"
+    hits = [f for f in judge(after, before=before) if f.rule == "TEST_DISABLED"]
+    assert hits and all(f.severity == "high" for f in hits)
+
+
 @pytest.mark.parametrize("source", [
     "def pytest_pyfunc_call(pyfuncitem):\n    return None\n",
     "def pytest_pyfunc_call(pyfuncitem):\n    pyfuncitem.obj(**pyfuncitem.funcargs)\n    return True\n",

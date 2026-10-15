@@ -1,0 +1,26 @@
+=== meta ===
+rule: TEST_DISABLED
+title: the recipe that turns "no tests collected" into success is not a control
+origin: #422 ruling Q3: pytest returns 5 only when no test failed, so a zero
+origin2: written when the status is 5 cannot hide a failing test.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== before: tests/conftest.py ===
+import pytest
+=== after: tests/conftest.py ===
+import pytest
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if exitstatus == 5:
+        session.exitstatus = 0
+=== expect ===
+[]

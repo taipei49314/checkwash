@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a runtestloop wrapper that resets session.testsfailed hides every failure
+origin: #422 ruling Q4: testsfailed is the other input to the exit status;
+origin2: with it at 0 the run exits OK whatever the tests did.
+=== head: app/__init__.py ===
+=== head: app/billing.py ===
+def total(items):
+    return round(sum(items), 2)
+=== head: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== before: tests/conftest.py ===
+import pytest
+=== after: tests/conftest.py ===
+import pytest
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtestloop(session):
+    result = yield
+    session.testsfailed = 0
+    return result
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

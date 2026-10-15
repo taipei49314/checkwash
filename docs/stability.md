@@ -248,10 +248,11 @@ the manifest is CI configuration for that diff. It grants no opaque exemption,
 and a swallowed exit code or an introduced narrowing that the diff writes into
 those commands is a weakened test command; a script the diff only starts
 calling, unedited, is not text the diff wrote. A manifest side the stdlib
-reader cannot open (over 1 MB, or refused by `json`/`tomllib`) cannot show
-its test command unchanged, so any edit to it counts as one and both sides
-are then scanned whole. Dependency and version edits that leave those
-commands unchanged are treated as before. The JS runners `node --test`,
+reader refuses (`json`/`tomllib`) cannot show its test command unchanged, so
+any edit to it counts as one and both sides are then scanned whole. A side
+over the 1,000,000-byte source limit is not read at all: `check` exits 2 and
+names the file, its side, its size and the limit (#415). Dependency and version edits
+that leave those commands unchanged are treated as before. The JS runners `node --test`,
 `mocha`, `ava`, `tap`, `bun test` and `deno test`, and the task runners
 `hatch test`, `just test`, `poe test` and `pdm test`, count only where a
 command starts, in a manifest script, a shell runner script, a workflow step
