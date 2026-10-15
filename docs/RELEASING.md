@@ -151,6 +151,38 @@ changes only through the maintainer.
 The v0.7.0 entry below, the grants under "The release slot", `STATE.md` and
 `docs/releases/` describe the ruleset as it was then and stay unchanged.
 
+## v0.8.0 one-time publication authorization (2026-10-15)
+
+On 2026-10-15 the maintainer instructed **「這版要先發了」** (release this
+version first). Asked in the agent session, he chose version 0.8.0; approved
+the maintainer-text drafts of #439, #441, #442, #447, #448, #450, #452, #449
+and #453 as written (「照草稿全部核准」); chose to release first and run the
+acceptance sweeps on the EC pool after publication; and set the scope to
+`main` as it stood at `cdd74e0`, so #421 moves to a later minor and #456 is a
+known issue. This is the one-time authorization for v0.8.0.
+
+It covers:
+- the version bump, minor because #414 changed the frozen exit-code contract
+  for `check --format hook-json` (D-RELEASE_EXIT);
+- the maintainer-owned commit carrying the approved SPEC, THREATMODEL and
+  DECISIONS text, and the release guide and known issues;
+- one release PR merged through the normal required checks, one tag `v0.8.0`
+  on the qualified merge commit, the GitHub Release, and its PyPI publication
+  once the maintainer approves the `pypi` deployment;
+- the publication checks (step 8) and the follow-up that advances
+  `release/advertised.toml`, the README CLI pins and the README Action pin to
+  v0.8.0, no longer one release behind (2026-10-14);
+- the verdict-baseline rotation PR (step 9), whose protected changes keep the
+  maintainer's disposition.
+
+It does not authorize another version or the downstream re-pins of
+checkwash-corpus and smallestlie. Product runs, tests and qualification run on
+hosted CI or the EC pool; no work-machine execution is granted. The acceptance
+sweeps of #345, #346, #414, #415, #416, #422, #431 and #432 and the corpus
+sweep have not run (`NOT_RUN：工作機規則（POLICY work-machine-local），the owner
+chose to release first and run them on the pool after publication`).
+Publication and artifact verification consume this grant.
+
 ## v0.7.0 one-time publication authorization (2026-10-12)
 
 After accepting the complete six-clause preparation proposal with “核准”, the

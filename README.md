@@ -8,6 +8,19 @@ A pass does not prove correctness; retain exit 2 and diagnostics as analysis
 errors. The recommended Action remains pinned to v0.6.0 under the existing
 one-release lag and does not include the later CLI changes.
 
+**Unreleased v0.8.0 candidate (as of this README's commit).** This source is
+prepared as v0.8.0. Its Action no longer lets a pull request replace the
+installer or checker ([#372](https://github.com/taipei49314/checkwash/pull/372)),
+`check --format hook-json` exits 0 with a "not analysed" message on an engine
+error, oversized files that no detector reads are skipped with a stderr note,
+and commands run from a subdirectory read the repository from its root.
+[Candidate evidence and known issues](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.8.0-public-launch.md).
+The installation commands below and the recommended Action stay on the last
+verified releases (CLI v0.7.0, Action v0.6.0) until the v0.8.0 publication
+checks pass. A PyPI page keeps the README of its first upload; the
+[current README](https://github.com/taipei49314/checkwash#readme) names the
+verified release.
+
 **Development snapshots:** the source in this checkout may be newer than the
 published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
 records the version, commit and download bytes behind the installation commands
