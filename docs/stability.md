@@ -328,10 +328,10 @@ checkwash --version                 # what you have
 checkwash check HEAD~1..HEAD        # what it says now
 ```
 
-The v0.6.0 documentation pins the Action to v0.5.0 under the one-release
-trust-lag policy. That Action includes the fixes for the #172–#181 reports,
-but lacks the work on the reports and rulings that followed them. See the
-[v0.6.0 evidence and limits](releases/v0.6.0-public-launch.md#evidence-and-limits).
+Since 2026-10-14 the README recommends the newest verified release's Action
+instead of the one before it; the v0.8.0 documentation pins the v0.8.0 Action,
+which closes the Action trust boundary (#372). See the
+[v0.8.0 evidence and limits](releases/v0.8.0-public-launch.md).
 Treat each installed surface as its own versioned dependency; see the
 [README](../README.md#required-check--the-only-configuration-that-blocks-a-merge).
 

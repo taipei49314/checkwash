@@ -29,9 +29,9 @@ _BANNED = {"if", "continue-on-error", "env", "defaults", "strategy", "container"
 _PINS = {
     "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
     "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
-    # The one-release trust lag: the newest stable tag's peeled commit, moved
-    # forward with every release (v0.7.0 here, per the v0.8.0 preparation).
-    "taipei49314/checkwash/action": "d647a65e9734f2b6e57b528ea595b1507dc31094",
+    # The newest verified stable tag's peeled commit, moved
+    # forward after each publication is verified (v0.8.0 here, RELEASING step 8).
+    "taipei49314/checkwash/action": "f02b5d8a07fa39ee1898881f66c571eb164cb11c",
 }
 
 

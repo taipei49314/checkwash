@@ -116,7 +116,7 @@ and unsupported syntax while keeping its strict accepted workflow set. A
 reviewed `git add` can resolve an index problem; a commit is not required just
 for recognition. Doctor cannot verify live branch protection.
 
-On main, not released yet
+Since v0.8.0
 ([#416](https://github.com/taipei49314/checkwash/issues/416)): inside a Git
 repository, doctor and the installed handler's `check` run from the
 repository root, wherever they are started. The handler therefore analyses

@@ -1,24 +1,13 @@
 # checkwash
 
-**v0.7.0 preserves bounded imported-helper skip guards, strengthens Git input
-failure handling, and detects supported synchronous JS/TS assertions swallowed
-by an added catch.**
-[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md).
+**v0.8.0's Action no longer runs code from the pull request it judges; commands
+run from a subdirectory read the repository from its root; and oversized files
+that no detector reads are carried unread instead of stopping the run.**
+[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/v0.8.0/docs/releases/v0.8.0-public-launch.md).
 A pass does not prove correctness; retain exit 2 and diagnostics as analysis
-errors. The recommended Action is pinned to the same v0.7.0 release.
-
-**Unreleased v0.8.0 candidate (as of this README's commit).** This source is
-prepared as v0.8.0. Its Action no longer lets a pull request replace the
-installer or checker ([#372](https://github.com/taipei49314/checkwash/pull/372)),
-`check --format hook-json` exits 0 with a "not analysed" message on an engine
-error, oversized files that no detector reads are skipped with a stderr note,
-and commands run from a subdirectory read the repository from its root.
-[Candidate evidence and known issues](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.8.0-public-launch.md).
-The installation commands below and the recommended Action stay on the last
-verified release (CLI and Action v0.7.0) until the v0.8.0 publication
-checks pass. A PyPI page keeps the README of its first upload; the
-[current README](https://github.com/taipei49314/checkwash#readme) names the
-verified release.
+errors. With `--format hook-json` (the Claude Code Stop hook) an engine error
+now exits 0 with a "not analysed" message. The recommended Action is pinned to
+the same v0.8.0 release.
 
 **Development snapshots:** the source in this checkout may be newer than the
 published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
@@ -95,7 +84,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.7.0/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.8.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -104,7 +93,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.7.0/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.8.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -116,16 +105,15 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.7.0/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.8.0/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
 
-Run v0.7.0 from the repository root; from a subdirectory its result is not
-reliable. The fix for [#416](https://github.com/taipei49314/checkwash/issues/416)
-is on main; it is not released yet. There, `check` from a subdirectory
-analyses the whole repository from its Git root and says so in one line on
-stderr.
+From a subdirectory, `check` analyses the whole repository from its Git root
+and says so in one line on stderr (since v0.8.0,
+[#416](https://github.com/taipei49314/checkwash/issues/416)). Before v0.8.0,
+run it from the repository root.
 
 | Result | What to do |
 |---|---|
@@ -137,11 +125,11 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/v0.7.0/docs/releases/v0.7.0-public-launch.md#use-it-and-preserve-the-result).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/v0.8.0/docs/releases/v0.8.0-public-launch.md#use-it-and-preserve-the-result).
 
 ## Know the limits
 
-**v0.7.0 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.8.0 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
@@ -179,20 +167,19 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action and the CLI above are both **v0.7.0**.
+The recommended Action and the CLI above are both **v0.8.0**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 **Advisory: Action trust boundary.** Every published Action release up to and
-including v0.7.0 is affected, including the recommended v0.7.0 pin above. It runs `python -m pip` and then `checkwash` with the
-pull request's checkout as the working directory, so a module in that checkout
-(for example a top-level `pip` package) can replace the installer and then the
+including v0.7.0 runs `python -m pip` and then `checkwash` with the pull
+request's checkout as the working directory, so a module in that checkout (for
+example a top-level `pip` package) can replace the installer and then the
 checker, and the pull request can tamper with the result it is judged by. Under
-checkwash's threat model that applies to every pull request it judges.
-[#372](https://github.com/taipei49314/checkwash/pull/372) fixes it on main; it is
-not released yet. Until it is, treat a pass as advisory, review the pull request
-before merging and keep `comment-pr` off. After the next release is published,
-the README on main will recommend that release's Action instead of the one
-before it. [Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
+checkwash's threat model that applies to every pull request it judges. v0.8.0
+fixes it ([#372](https://github.com/taipei49314/checkwash/pull/372)); pin the
+v0.8.0 Action below. If you stay on v0.7.0 or earlier, treat a pass as
+advisory, review the pull request before merging and keep `comment-pr` off.
+[Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
 
 <a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
 <details>
@@ -218,7 +205,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@d647a65e9734f2b6e57b528ea595b1507dc31094 # v0.7.0
+      - uses: taipei49314/checkwash/action@f02b5d8a07fa39ee1898881f66c571eb164cb11c # v0.8.0
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -234,10 +221,11 @@ gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.j
 This adds a ruleset; it does not replace existing ones. `checkwash doctor`
 can inspect the local workflow, but cannot verify live branch protection.
 
-**Why the older Action pin?** A release cannot embed its own commit SHA,
-so the documented Action adopts a verified pin from the prior release.
-The recommended v0.7.0 Action includes the engine published on 2026-10-12.
-A CLI upgrade does not update an existing Action. To verify another trusted release, use
+**Why is the pin added after the release?** A release cannot embed its own
+commit SHA, so a release commit carries the prior release's pin; once a
+release's publication is verified, a follow-up on main recommends that
+release's own peeled commit. The recommended v0.8.0 Action includes the engine
+published on 2026-10-15. A CLI upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
@@ -252,9 +240,9 @@ A CLI upgrade does not update an existing Action. To verify another trusted rele
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.7.0
+pipx install checkwash==0.8.0
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.7.0
+pipx install git+https://github.com/taipei49314/checkwash@v0.8.0
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -292,7 +280,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.7.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.7.0-public-launch.md) |
+| Installation checks, versions and first use | [v0.8.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.8.0-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |

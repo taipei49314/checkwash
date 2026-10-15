@@ -183,6 +183,22 @@ sweep have not run (`NOT_RUN：工作機規則（POLICY work-machine-local），
 chose to release first and run them on the pool after publication`).
 Publication and artifact verification consume this grant.
 
+### v0.8.0 actual publication record
+
+This grant was consumed by publication at 2026-10-15T17:00:03Z from
+`f02b5d8a07fa39ee1898881f66c571eb164cb11c` (tag object `1d869062`). PR verdict
+38759751890, main-push verdict 38764439879 and tag-push verdict 38768985301
+each succeeded on attempt 1, in that order. Tag CI 38768985550/attempt 1 passed
+every job, including `published-source` and its actual tag visitor install.
+Release 38773654788/attempt 1 completed `published-source`, `build`,
+`publish-assets` and `pypi`; the maintainer approved its `pypi` deployment.
+The PyPI wheel and sdist have the same SHA256 as the GitHub assets. The
+[publication verification record](releases/v0.8.0-publication-verification.md)
+records the source, tree, assets, run identities and the earlier failed head.
+The follow-up that records it advances `release/advertised.toml`, the README CLI
+pins and the README Action pin to v0.8.0. The verdict-baseline rotation and the
+sweeps remain separate; this grants no other release or downstream re-pin.
+
 ## v0.7.0 one-time publication authorization (2026-10-12)
 
 After accepting the complete six-clause preparation proposal with “核准”, the

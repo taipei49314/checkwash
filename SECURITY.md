@@ -24,9 +24,10 @@ only thing standing between an agent and your main branch.
 ## Known issue: Action trust boundary
 
 **Affected:** every published release of the GitHub Action
-`taipei49314/checkwash/action` up to and including v0.7.0. That includes the
-currently recommended pin, v0.7.0 (`d647a65e9734f2b6e57b528ea595b1507dc31094`),
-and v0.6.0, whose Action is identical.
+`taipei49314/checkwash/action` up to and including v0.7.0
+(`d647a65e9734f2b6e57b528ea595b1507dc31094`), and v0.6.0, whose Action is
+identical. Fixed in v0.8.0 (`f02b5d8a07fa39ee1898881f66c571eb164cb11c`), the
+currently recommended pin.
 
 **What happens:** the composite Action runs `python -m pip` to install
 checkwash, then runs whichever `checkwash` is first on `PATH`, with the pull
@@ -42,20 +43,21 @@ the job token.
 
 **Who is affected:** any workflow that runs this Action on a pull request whose
 head the author, or the agent under review, controls. Under the threat model
-above, that is every pull request checkwash judges, so until a fixed release is
-published a pass is not a trustworthy verdict on its own.
+above, that is every pull request checkwash judges, so on v0.7.0 or earlier a
+pass is not a trustworthy verdict on its own.
 
 **Fix:** [#372](https://github.com/taipei49314/checkwash/pull/372) (merge
 `0b42e2343d5c6983d22011dbd846f0da74ac623a`) installs into a private environment
 with the setup-python interpreter, verifies the installed package and invokes it
 explicitly; [#375](https://github.com/taipei49314/checkwash/pull/375) applies the
-same isolation to the separate quality preview Action. Both are on main and not
-yet released. The next release will include them. After it is published, the
-README on main will recommend that release's Action instead of the one before it
-(maintainer decision, 2026-10-14). Pinning an unreleased main commit is not a
-supported workaround ([action/README.md](action/README.md#public-pin-and-upgrade)).
+same isolation to the separate quality preview Action. Both shipped in v0.8.0
+(2026-10-15), and the README recommends the v0.8.0 Action (maintainer decision,
+2026-10-14: no one-release lag). Pin it by its peeled commit
+([action/README.md](action/README.md#public-pin-and-upgrade)). The v0.8.0
+Action needs setup-python in the same job, a checkout with both refs, and a
+dedicated job that runs no pull-request code before the check.
 
-**Until then:**
+**If you stay on v0.7.0 or earlier:**
 
 - Treat a pass as advisory and review the pull request before merging it. Look
   in particular for new top-level Python modules or packages (such as `pip/` or
