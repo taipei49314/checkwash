@@ -1,6 +1,49 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-14 (handover to LAPTOP-01AGNPJU; draft stack consolidated)
+Updated: 2026-10-15 (P1 fixes #447-#452 merged; maintenance on LAPTOP-16NUA5I8)
+
+## 2026-10-15: P1 fixes merged
+
+Maintenance moved to a session on LAPTOP-16NUA5I8. The handover is on the
+checkwash-lab branch `handover/pju-20261015`. The agent's `gh` login there
+was first switched to the narrower token.
+
+The owner's delegation for P1 fix PRs is to merge once the required checks
+and the test matrix are green and the scope matches the ruling. These merged
+under it, one at a time because the branch ruleset is strict. Each had an
+independent review first:
+
+- #447 (#414): a worktree directory symlink is an opaque directory, and a
+  hook-json engine error exits 0 with a `systemMessage`. #451 holds the
+  owner-approved exemption for the changed hook-runtime test.
+- #448 (#415): an oversized side that no detector reads is carried unread.
+  A path a detector must read refuses, naming path, side, size and limit.
+  The review found fail-opens at the first head:
+  - deleted, renamed or edited Python modules;
+  - nested pytest configs;
+  - extensionless runner scripts.
+  a94b7ca made them refuse before the merge.
+- #450 (#422): conftest code that forces pytest's exit status is read as a
+  runtime control.
+- #452 (#432): conftest no-op replacements of what pytest runs are read as
+  runtime controls. The review found three regressions in #84's readings
+  against main, fixed in 86e9286 before the merge.
+- #449 (#431): an always-passing assertion in a JS/TS catch no longer
+  exempts the catch.
+
+Each issue stays open ("Part of"). The maintainer text in each PR body waits
+for the owner's approval, and the acceptance sweeps have not run. Each merge
+comment lists the residual spellings for follow-ups.
+
+Open:
+- #453 (#416): `check`, `sweep`, `allow`, `doctor` and `quality` from a
+  subdirectory. This is next.
+- Filed for the owner's ruling:
+  - #454: unread sides in JSON and SARIF.
+  - #455: a bounded shebang read of unread sides.
+  - #456: a must-read file over the limit lets the Stop hook stop.
+- A comment on #448 corrects its residual list: the content rules it named
+  never read the files an unread side sets aside.
 
 ## 2026-10-14: handover, ratification and the draft stack consolidated
 
@@ -38,10 +81,11 @@ LAPTOP-01AGNPJU. The maintainer's answers that day, quoted:
   replace the installer and checker; #372 fixes it on `main`, unreleased.
   After the next release is published, the README on `main` recommends that
   release's Action instead of the one before it.
-- Release gate: the maintainer will put a required reviewer on the `pypi`
-  environment and give agents a narrower token. The tag ruleset `22162219`
-  is then removed, without waiting for 1.0. Until then the procedure in
-  `docs/RELEASING.md` is unchanged.
+- Release gate: done the same day, by the maintainer. The `pypi`
+  environment requires the maintainer's approval, agents use a narrower
+  token, and the tag ruleset `22162219` is removed, without waiting for 1.0.
+  `docs/RELEASING.md` (#444) and AGENTS.md rule 5 (#445, with the
+  owner-approved exemption in #446) describe the procedure.
 - 「可代合」: the consolidation pull requests above may be merged once their
   required checks pass.
 
