@@ -1,0 +1,23 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a new conftest that calls os._exit(0) at module scope ends the run before any test
+origin: #422 variant: the process exits 0 while pytest loads the conftest
+origin2: (ruling 422.Q2: module scope is a place).
+=== before: tests/test_billing.py ===
+from app.billing import discount
+
+
+def test_discount_applies():
+    assert discount(100, 10) == 90
+=== after: tests/test_billing.py ===
+from app.billing import discount
+
+
+def test_discount_applies():
+    assert discount(100, 10) == 90
+=== after: tests/conftest.py ===
+import os
+
+os._exit(0)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

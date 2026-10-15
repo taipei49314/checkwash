@@ -12,6 +12,7 @@ from dataclasses import dataclass, field, replace
 import hashlib
 
 from checkwash.ir.astutil import stable_dump
+from .exit_status_controls import exit_status_controls
 from .setup_skip_controls import fixture_setup_controls, setup_skip_controls
 
 _HOOKS = {"pytest_pyfunc_call", "pytest_runtest_call", "pytest_runtest_protocol",
@@ -153,6 +154,8 @@ def runtime_controls(tree: ast.Module):
     """Return stable effect names and concrete source evidence for live hooks."""
     yield from setup_skip_controls(tree)
     yield from fixture_setup_controls(tree)
+    # Session-level: code that forces pytest's exit status (#422).
+    yield from exit_status_controls(tree)
     bindings = {}
     for stmt in tree.body:
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
