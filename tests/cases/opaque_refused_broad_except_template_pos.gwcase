@@ -1,0 +1,35 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+issue: 419
+title: Route B - a template edit no longer holds an assertion swallowed by a broad except at warn
+origin: #419 ruling Q1 (b), Q5 (b) (issuecomment-6170353038): broad_except_in_test_pos plus a comment edit
+origin2: in an existing template. A broad except in a test has no unit, so opaque-change evidence was
+origin3: the only credit it could take (row36_file_scoped_no_sibling_evidence_pos); a Python test now
+origin4: refuses it.
+=== before: app/templates/status.html ===
+<!-- status panel -->
+<p>Version: {{ version }}</p>
+=== after: app/templates/status.html ===
+<!-- status panel, shown to admins -->
+<p>Version: {{ version }}</p>
+=== before: tests/test_cache.py ===
+from cache import Cache
+
+
+def test_miss_on_newer_version():
+    c = Cache()
+    c.put("k", "v1", version=1)
+    assert c.get("k", version=2) is None
+=== after: tests/test_cache.py ===
+from cache import Cache
+
+
+def test_miss_on_newer_version():
+    c = Cache()
+    c.put("k", "v1", version=1)
+    try:
+        assert c.get("k", version=2) is None
+    except Exception:
+        pass  # cache invalidation behaviour is environment dependent
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"]}]

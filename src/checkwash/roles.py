@@ -365,8 +365,10 @@ def _mentions_test_runner(change) -> bool:
     Deliberately independent of `_runner_shape`: a file whose name checkwash
     does not recognise still loses the opaque exemption if it runs the tests.
     It does **not** become `ci` — a Makefile that builds a C extension has no
-    runner token, stays production, and keeps its full repair-evidence weight
-    (`runner_build_makefile_neg`).
+    runner token, stays production, and keeps the opaque-change weight
+    (`runner_build_makefile_neg`). Since #419 gating does not let that weight
+    hold a weakening-class finding in a Python test or conftest; the role
+    answer here is unchanged.
     """
     return _runs_tests(change.before) or _runs_tests(change.after)
 

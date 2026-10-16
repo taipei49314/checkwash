@@ -1,7 +1,12 @@
 === meta ===
-rule: ASSERT_WEAKENED
-title: a changed C extension is a real behaviour change greenwash cannot read
+rule: EXPECTED_VALUE_CHANGED
+issue: 419
+title: a changed C extension is a real behaviour change checkwash cannot read, and still explains a rewritten expected value
 origin: the conservative fallback survives the narrowing — code in other languages stays THREATMODEL #4
+origin2: for the expectation family. Kept under this name by the #419 ruling (issuecomment-6170353038:
+origin3: Q6 (a), rule 2); the weakened assertion it pinned until then moved, same inputs, to
+origin4: c_extension_still_opaque_pos, where it blocks. The expectation family keeps opaque-change
+origin5: evidence in every language (Q1 (b)), so the same .c edit still holds a rewritten expected value.
 === before: src/app/_speedups.c ===
 int add(int a, int b) { return a + b; }
 === after: src/app/_speedups.c ===
@@ -17,6 +22,6 @@ from app import total
 
 
 def test_total():
-    assert total(3) > 0
+    assert total(3) == 7
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

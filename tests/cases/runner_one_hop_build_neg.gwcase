@@ -1,7 +1,11 @@
 === meta ===
 rule: CI_WORKFLOW_TOUCHED
-title: A script that builds, called from the same place, is still production
+issue: 419
+title: A script that builds, called from the same place, is still production and still explains a rewritten expected value
 origin: FP guard — one hop must terminate in a test runner, or every build script becomes ci
+origin2: Kept under this name by the #419 ruling (issuecomment-6170353038: Q6 (a), rule 2) for the
+origin3: expectation family; the weakened assertion it pinned until then moved, same inputs, to
+origin4: runner_one_hop_build_pos. The exact count still forbids CI_WORKFLOW_TOUCHED.
 === head: scripts/compile.sh ===
 #!/bin/sh -e
 cc -O2 -shared -o libfast.so fast.c
@@ -16,12 +20,12 @@ from billing import invoice_total
 
 
 def test_total():
-    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+    assert invoice_total([50.0, 50.0], 0.05) == 100.0
 === after: tests/test_billing.py ===
 from billing import invoice_total
 
 
 def test_total():
-    assert invoice_total([50.0, 50.0], 0.05) > 0
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn"}]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

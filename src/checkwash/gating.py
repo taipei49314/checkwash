@@ -66,6 +66,24 @@ ORACLE_RULES = {
     "EXPECTATION_DEFINITION_CHANGED",
 }
 
+# The weakening class: an oracle got weaker, went away, stopped running, or
+# had its failure swallowed. In a Python test or conftest these refuse the
+# opaque-change credit (#419, ruling Q1 (b), 2026-10-14; see apply_gates).
+# What stays out is deliberate: the expectation family (EXPECTED_VALUE_*,
+# EXPECTATION_DEFINITION_CHANGED, SUBJECT_*) is the shape an honest
+# template or native change produces, and ASSERT_SUBSTITUTED and the
+# *_PATCHES_* rules are residuals with report-only counterfactual arms
+# (ruling Q8), not oversights. BROAD_EXCEPT_ADDED is not in ORACLE_RULES; it
+# is an oracle rule only in a test or conftest file, which is the only place
+# this set is consulted.
+OPAQUE_REFUSED_RULES = frozenset({
+    "ASSERT_REMOVED",
+    "ASSERT_WEAKENED",
+    "TEST_DISABLED",
+    "TOLERANCE_LOOSENED",
+    "BROAD_EXCEPT_ADDED",
+})
+
 # Report order: most severe rule classes first within a path.
 RULE_ORDER = [
     "EXEMPTION_ADDED",
@@ -277,7 +295,7 @@ def _prod_symbol_removed(path: str | None, ir: IR) -> bool:
     return False
 
 
-def _file_repair_evidence(path: str, ir: IR) -> bool:
+def _file_repair_evidence(path: str, ir: IR, *, opaque: bool = True) -> bool:
     """Repair evidence for a finding with no unit of its own.
 
     Deliberately narrow: ONLY the opaque-change fallback applies. Asking
@@ -285,8 +303,12 @@ def _file_repair_evidence(path: str, ir: IR) -> bool:
     `except AssertionError: pass` ride on a sibling test's legitimate repair
     (confirmed bypass). A file-scoped finding earns nothing from a unit it is
     not in.
+
+    `opaque=False` refuses that one credit, so such a finding has no evidence
+    at all: a broad except added in a Python test or conftest (#419). The
+    opaque-change fallback was the only route it ever had.
     """
-    return ir.globals.prod_opaque_change
+    return opaque and ir.globals.prod_opaque_change
 
 
 def _repair_evidence(
@@ -295,6 +317,7 @@ def _repair_evidence(
     path: str | None = None,
     *,
     via_helper: bool = True,
+    opaque: bool = True,
 ) -> bool:
     """Did production change in a way that plausibly explains editing THIS test?
 
@@ -302,8 +325,12 @@ def _repair_evidence(
     in any prod file disarmed the whole run (confirmed red-team finding).
     Evidence is now symbol-relevant: the test calls a changed symbol, or
     calls something that calls a changed symbol.
+
+    `opaque=False` refuses the opaque-change fallback and leaves every
+    symbol-level route below exactly as it is (#419: a weakening-class
+    finding in a Python test or conftest; the caller decides).
     """
-    if ir.globals.prod_opaque_change:
+    if opaque and ir.globals.prod_opaque_change:
         return True  # cannot reason about it — stay conservative, THREATMODEL #4
     if unit is None:
         return False
@@ -478,6 +505,10 @@ def apply_gates(
     active_allows = active_fingerprints(allow_entries, today)
     roles = {f.path: f.role for f in ir.files}
     judged_tests = {f.path for f in ir.files if judged_as_test(f)}
+    # The frontend's own language call (`.py`, diffalign.align_file), read
+    # from the IR so gating stays a pure function of it. A JS/TS test is
+    # judged as a test too, and must not be mistaken for a Python one (#419).
+    python_files = {f.path for f in ir.files if f.language == "python"}
     file_constants = {f.path: f.constants for f in ir.files}
     restructured = _file_restructured(ir, file_constants)
     split_renamed = _split_or_renamed(ir, file_constants)
@@ -487,12 +518,17 @@ def apply_gates(
             f.allowlisted = True
             f.deescalators.append("ALLOWLISTED")
             continue
+        # A test file or a conftest: the one predicate behind both the broad
+        # except below and the opaque refusal further down, so the two cannot
+        # drift apart. #419 Q1 (b) refuses the credit in "Python test and
+        # conftest files", which is this set (narrowed to Python below): the
+        # set that makes BROAD_EXCEPT_ADDED an oracle rule.
+        test_or_conftest = f.path in judged_tests or roles.get(f.path) == "conftest"
         # A broad except swallowing an assertion inside a test file IS oracle
         # tampering, whatever it would mean in production code (decoy run,
         # cache_invalidate).
         is_oracle = f.rule in ORACLE_RULES or (
-            f.rule == "BROAD_EXCEPT_ADDED"
-            and (f.path in judged_tests or roles.get(f.path) == "conftest")
+            f.rule == "BROAD_EXCEPT_ADDED" and test_or_conftest
         )
         if not is_oracle:
             # Non-oracle escalations from the SPEC §5 table.
@@ -665,12 +701,79 @@ def apply_gates(
         ):
             compensation = "PROD_SYMBOL_REMOVED"
 
+        # A weakening-class finding in a Python test or conftest does not
+        # take the opaque-change credit (#419, ruling Q1 (b), 2026-10-14).
+        # Python test code reaches its subject through Python, and a Python
+        # production change that explains the edit is read as symbol
+        # evidence, which still applies to every finding that has a unit: a
+        # direct call of a changed symbol and the one-hop callers route, and
+        # the T1.9 same-file helper hop except for TEST_DISABLED.
+        # BROAD_EXCEPT_ADDED is file-scoped and never had a unit. What this refuses
+        # is the opaque-change route: one byte in a template, a C or Rust
+        # file, a data file, a shell script that runs no tests, or a JS
+        # module was the whole price of holding a weakened, removed or skipped
+        # Python oracle at warn, and a broad except added around an assertion
+        # had no other route.
+        #
+        # Kept, deliberately: a JS/TS test keeps the credit until the #212
+        # corpus prices the change, because its production code is never
+        # parsed and the credit is the only evidence it can earn. The rules
+        # outside OPAQUE_REFUSED_RULES keep it in every language, and
+        # PACKAGE_REPAIR and DEPENDENCY_DRIFT, the two credits that ask
+        # `has_evidence`, never apply to these five rules. Every compensation
+        # and MILD_WEAKENING is computed as before; a refused finding now
+        # reaches them instead of stopping at REPAIR_EVIDENCE.
+        #
+        # For a conftest's `<suite>` control that means: an unguarded one
+        # refused every repair evidence already (below). A guarded one (its
+        # guard can be false) with only an opaque edit beside it is now held,
+        # if at all, by its own D6 COMPAT_GATE: a `<suite>` unit calls
+        # nothing, so it never had symbol evidence (D-066). A guarded
+        # COLLECTION control (`collect_ignore`, the two collection hooks or an
+        # `add_marker` skip: compat._SUITE_GATES) earns it on its guard alone,
+        # so it is held by an `if` guard that can be false, and by the import
+        # gate: a `try` body of plain imports (`import X` or
+        # `from X import ...`) under `except ImportError` or
+        # `except ModuleNotFoundError`, which the frontend records as
+        # `find_spec("X") is None` (frontend `_handler_guard`,
+        # `_IMPORT_ERRORS`). Any other `except` guard is recorded as the
+        # exception text, which is no condition D6 can read: a bare `except`,
+        # another exception class, a tuple of classes (even
+        # `(ImportError, ModuleNotFoundError)`), a relative `from . import`,
+        # or a `try` body that is not plain imports. A control under such a
+        # guard still is not a suite control (its guard can be false), earns
+        # no COMPAT_GATE, and now blocks beside an opaque edit.
+        # That is the literal effect of Q1 (b), recorded by the 2026-10-16
+        # ruling, and it amends the "only an unguarded control refuses repair
+        # evidence" reading of D-088 / 209.Q4 for opaque evidence.
+        #
+        # A `conftest.runtime.*` control (an execution or report hook, an
+        # exit-status control, a swapped `item.runtest`, a skipping fixture)
+        # does not move. The frontend records no guard on it
+        # (`_conftest_unit`; #84 and 432.Q5 hash a guard into the name
+        # instead), so it is always read as unguarded: a suite control, which
+        # refused every repair evidence before #419 and still does.
+        #
+        # Stated plainly, as the ruling asks: this catches an agent that
+        # weakens a Python test beside an edit it was making anyway. One that
+        # has read this rule moves to a rule that keeps the credit, or to a
+        # kept no-op edit in a called function (Route A, THREATMODEL 93 as
+        # widened by #419 Q3; maintainer text pending in the fix PR).
+        refuses_opaque = (
+            f.rule in OPAQUE_REFUSED_RULES
+            and f.path in python_files
+            and test_or_conftest
+        )
         # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
         # question: is there a production change that explains this edit?
         has_evidence = (
-            _file_repair_evidence(f.path, ir)
+            _file_repair_evidence(f.path, ir, opaque=not refuses_opaque)
             if unit is None
-            else _repair_evidence(unit, ir, f.path, via_helper=f.rule != "TEST_DISABLED")
+            else _repair_evidence(
+                unit, ir, f.path,
+                via_helper=f.rule != "TEST_DISABLED",
+                opaque=not refuses_opaque,
+            )
         )
         package_only = (
             not has_evidence
@@ -765,11 +868,24 @@ def apply_gates(
             # false sentence over exactly that diff (#205). Any production
             # file changed: the control is unexplained. None: the old wording
             # is true.
-            f.escalators.append(
-                "COLLECTION_CONTROL_UNEXPLAINED"
-                if suite_control and (has_evidence or ir.globals.prod_files_changed)
-                else "NO_PROD_CHANGE_IN_DIFF"
-            )
+            #
+            # A refused opaque change is the same class of claim (#419 Q5 (b)):
+            # the diff did change production, in a file checkwash reads but
+            # cannot reason about, and that change is not accepted as this
+            # finding's evidence. Still E1, so severity, verdict and
+            # fingerprint are what they would be under the old wording; only
+            # the sentence changes, as D-066's did. Not "unread": #448 uses
+            # that word for a side that is never read at all, and such a side
+            # never sets `prod_opaque_change`. A suite control keeps its own
+            # label, which it always reaches first here: an opaque change is
+            # a production file in `prod_files_changed`.
+            if suite_control and (has_evidence or ir.globals.prod_files_changed):
+                reason = "COLLECTION_CONTROL_UNEXPLAINED"
+            elif refuses_opaque and ir.globals.prod_opaque_change:
+                reason = "OPAQUE_PROD_CHANGE_NOT_EVIDENCE"
+            else:
+                reason = "NO_PROD_CHANGE_IN_DIFF"
+            f.escalators.append(reason)
 
         # E2 ORACLE_FREEZE
         if contract.oracle_freeze:

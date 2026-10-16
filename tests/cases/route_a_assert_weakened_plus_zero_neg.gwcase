@@ -1,0 +1,31 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 419
+title: Route A - a no-op `+ 0` in the called function still buys repair evidence for a weakened assertion
+origin: #419 acceptance and ruling Q2 (a), Q3 (b) (issuecomment-6170353038): symbol evidence is
+origin2: unchanged and the fingerprint normalisation keeps `+ 0`, so the issue's Route A reproduction
+origin3: holds at warn. Current behaviour pinned as a named residual (THREATMODEL row 93 as widened by
+origin4: #419 ruling Q3 (b), maintainer text pending in the fix PR; Open), not a claim that the
+origin5: edit is honest; assert_weakened_with_prod_change_warn is the honest twin.
+=== before: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.3
+=== after: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total > 0
+=== before: billing.py ===
+def compute_invoice_total(items):
+    return sum(items)
+=== after: billing.py ===
+def compute_invoice_total(items):
+    return sum(items) + 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

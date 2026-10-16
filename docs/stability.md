@@ -237,9 +237,18 @@ credit. Hooks, block callbacks defined elsewhere, destructured contexts,
 `test.extend` functions and parametrized `.each`/`.for` units stay outside
 this model.
 It is a bounded text scan, not a full JavaScript parser or a general assertion
-library model. JS/TS production semantics remain unread; a production change
-the engine cannot parse can still suppress escalation through the documented
-opaque-change rule. A package manifest's test command is not production
+library model. JS/TS production semantics remain unread, so a modified
+production file the engine cannot parse is the only repair evidence a JS/TS
+test can earn. It still suppresses escalation there, through the documented
+opaque-change rule, until the JS/TS history replay
+([#212](https://github.com/taipei49314/checkwash/issues/212)) prices a
+change. For a Python test or conftest, since
+[#419](https://github.com/taipei49314/checkwash/issues/419), it no longer
+holds a weakened, removed, skipped or loosened assertion, or an added broad
+`except`, at warn: with no symbol evidence, compensation or MILD_WEAKENING
+such a finding is high, with the reason `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`. It still holds a
+rewritten expected value, a substituted assertion and a stand-in for the code
+under test. A package manifest's test command is not production
 (issue #174): when a diff changes what `package.json` runs as its tests —
 `scripts.test`, `test:*` scripts, scripts that invoke a recognised runner, and
 the scripts `test` and `test:*` name through `npm run`, `yarn`, `pnpm`,

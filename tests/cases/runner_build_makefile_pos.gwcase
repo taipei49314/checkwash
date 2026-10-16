@@ -1,0 +1,28 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 419
+title: A Makefile that builds instead of testing is still production, but no longer holds a weakened Python assertion at warn
+origin: successor of runner_build_makefile_neg with the same inputs, re-pinned by the #419 ruling
+origin2: (issuecomment-6170353038: Q1 (b), Q5 (b), rule 2). Content still decides the role: the recipe
+origin3: runs no test runner, so the file stays production and the exact count forbids
+origin4: CI_WORKFLOW_TOUCHED. A Python test refuses its opaque-change evidence for ASSERT_WEAKENED.
+=== before: Makefile ===
+libfast.so: fast.c
+	$(CC) -O2 -shared -o libfast.so fast.c
+=== after: Makefile ===
+libfast.so: fast.c
+	$(CC) -O3 -shared -fPIC -o libfast.so fast.c
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"]}]

@@ -71,6 +71,13 @@ fix generalises.
 > at all, so it does not inherit the enumeration it exists to backstop. All
 > eleven measured cases now block; the two over-reach guards
 > (`runner_build_makefile_neg`, `runner_opaque_native_neg`) stay green.
+>
+> **Since #419** a build Makefile and a native source are still production,
+> but their edit no longer holds a weakened assertion in a Python test at
+> warn, so the "full repair-evidence weight" below is no longer full. The two
+> guards' original inputs block as `runner_build_makefile_pos` and
+> `runner_opaque_native_pos`; the `_neg` names now pin an expected value
+> rewritten beside the same edit, which still takes the evidence.
 
 
 Widening the list is the obvious move and it is the weaker half. The list will
@@ -573,6 +580,16 @@ subject).
 ## Group B: buying `warn`
 
 ### B1. The opaque blanket, per-relationship instead of diff-global (P1)
+
+> **Narrowed by rule and language instead (#419).** The design below was not
+> built. Opaque-change evidence stays diff-global, but a weakened, removed,
+> skipped or loosened oracle, and an added broad `except`, in a Python test
+> or conftest no longer take it: Python test code reaches its subject through
+> Python, which checkwash reads. JS/TS tests keep it until #212 prices the
+> change, and so do the expectation family, `ASSERT_SUBSTITUTED` and the
+> `*_PATCHES_*` rules. It catches an agent that weakens a Python test beside
+> a template, JS or native edit it was making anyway, not one that has read
+> this rule. The first paragraph below describes the blanket before #419.
 
 One unreadable production file suppresses E1 for **every** oracle finding in
 the diff. This is the largest structural hole on the *attack surface*.
