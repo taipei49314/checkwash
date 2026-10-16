@@ -10549,59 +10549,91 @@ How each ruling answer is implemented:
 
 - 1, the session base. `checkwash hook session-start`, the managed
   SessionStart handler, records HEAD once per session under
-  `<git-dir>/checkwash/sessions/<sha256(session_id)>` (`session.py`). It
-  writes only when no record exists (`O_EXCL`), never when `source` is
-  `compact`, and prunes at a session start by age (30 days) or a missing
-  commit, never by count. It prints nothing, because Claude Code adds a
-  SessionStart hook's stdout to the model's context, and it exits 0 on every
-  outcome.
+  `<git-dir>/checkwash/sessions/<sha256(session_id)>` (`session.py`).
+  - It writes only when no record exists (`O_EXCL`). It never writes when
+    `source` is `compact` or `resume`: a resumed session that has no record
+    keeps none, so it is not given a base partway through.
+  - After writing, it prunes other sessions' records by age (30 days) or a
+    missing commit, never by count. It never prunes the starting session's
+    own record, or a record that does not parse, which may be another
+    session's record mid-write.
+  - Records are read with `O_NOFOLLOW` and `O_NONBLOCK`, checked with
+    `fstat` to be regular files, and capped at 4,096 bytes.
+  - It prints nothing, because Claude Code adds a SessionStart hook's stdout
+    to the model's context, and it exits 0 on every outcome.
 - 2, no record. With hook input and no usable record, the Stop runs today's
-  check; a pass adds a `systemMessage` saying the session's commits were not
-  analysed and why. Input that does not parse, or that has no `session_id`,
-  counts as hook input. Empty stdin, a TTY, or nothing within 10 seconds
-  counts as none, and the output is then the one without the flag.
+  check, and a pass adds a `systemMessage` saying the session's commits were
+  not analysed and why.
+  - These count as hook input: input that does not parse, input with no
+    `session_id`, and a record whose commit Git cannot compare with HEAD.
+  - These count as no input, and the output is then the one without the
+    flag: empty stdin, a TTY, or nothing within 10 seconds.
 - 3, maintainer text. SPEC §1, §6 and §9, THREATMODEL item 2, the attacker
   model and row 133, and this entry, each in its own commit.
-- 4, what the Stop judges. HEAD against the working tree decides the verdict
-  with policy read from the session base. The session base against the
-  working tree is analysed in a second pass; its findings at or above
-  `fail_on` that the first pass does not report (by fingerprint, or by rule,
-  path and unit) are named in a non-blocking `systemMessage` for the required
-  check.
-- 5, HEAD not descending from the base. The base is
-  `merge-base(record, HEAD)`; with no merge base, the run is item 2's.
+- 4, what the Stop judges. HEAD against the working tree decides the verdict,
+  with policy read from the session base. On a pass, the session base
+  against the working tree is analysed as well, and its findings at or above
+  `fail_on` are named in a non-blocking `systemMessage` for the required
+  check. Nothing is matched away: on a pass the first analysis has nothing at
+  or above `fail_on`. A block skips the second analysis, so a block is never
+  delayed, and the note comes at a later Stop.
+- 5, HEAD not descending from the base. The session base is
+  `merge-base(record, HEAD)`. With no merge base, the run is item 2's.
 - 6, policy committed during a session. It applies from the next session. A
   block's reason says so and that `/clear` starts one, keeps the
   `checkwash allow` command, and does not suggest committing.
 - 7, the entry point. `check --format hook-json --hook-input stdin` and
-  `hook session-start`. The flag with another format or a range is a usage
-  error, exit 2, checked before the root lookup. Without the flag the output
-  is byte-identical. stdin is read from its descriptor in a daemon thread,
-  at most 1,000,000 bytes. The installer replaces the earlier managed Stop
-  shapes, adds the SessionStart handler in a group of its own, and doctor
-  notes a Stop hook without one at info level.
+  `hook session-start`.
+  - The flag with another format or with a range is a usage error, exit 2,
+    checked before the root lookup. Without the flag the output is
+    byte-identical.
+  - stdin is read from its descriptor in a daemon thread, at most 1,000,000
+    bytes.
+  - The installer replaces the earlier managed Stop shapes and adds the
+    SessionStart handler in a group of its own.
+  - doctor notes, at info level, a Stop hook that has no SessionStart handler
+    beside it, or that does not pass its hook input.
 
 Effects beyond the ruling's text, accepted with this entry:
 
-- `gitio.list_session_changes` diffs a commit against the working tree: the
-  paths of `git diff --name-only since HEAD` plus `git status`. Its changes
-  are sorted by path, where `list_worktree_changes` keeps status order.
-- A Stop with a session base that is not HEAD runs the engine twice. The
-  second pass writes nothing to stderr.
+- `gitio.list_session_changes` diffs a commit against the working tree. It
+  takes the paths of `git diff --name-only since HEAD --` plus `git status`,
+  and sorts its changes by path; `list_worktree_changes` keeps status order.
+- A pass with a session base other than HEAD runs the engine twice. The
+  second analysis writes nothing to stderr or stdout.
 - `hook install` prints one more line, about the SessionStart handler.
+- Shared settings run the `checkwash` on each teammate's PATH. A checkwash
+  older than #418 exits 2 on the unknown flag, which Claude Code reads as a
+  blocked stop. `docs/remediation-upgrade.md` says to upgrade every CLI
+  before committing the reinstalled settings.
+
+Row 133 is Partly closed, and its residuals are listed there. Two read-only
+reviews before merge, one for correctness and one for bypasses by the agent
+in the session, shaped them:
+
+- a record rewritten to name HEAD, or created by the agent running
+  `hook session-start` itself, restores the old window with no note;
+- moving HEAD moves the window;
+- a committed exemption is warn, so the note does not name it.
+
+The same reviews found that matching second-analysis findings against
+first-analysis ones by rule, path and unit let one harmless uncommitted edit
+hide a committed cheat. That matching is removed.
 
 Evidence status: NOT RUN. The change was prepared on a work machine where no
 pytest, checkwash or Python ran.
 
-- Tests were only added, in `tests/test_issue418_session_base.py`: 21
-  collected items, none under `tests/gates`. The two pre-approved lines of
-  `tests/test_hook_runtime.py` changed (rule 2, in the ruling); no other
-  existing expectation changed.
+- Tests were only added, in `tests/test_issue418_session_base.py`: 25
+  collected items, none under `tests/gates`.
+- The two pre-approved lines of `tests/test_hook_runtime.py` changed (rule 2,
+  in the ruling). `tests/test_threatmodel_pinned.py` gains the `E2E_PINNED`
+  entry for row 133. No other existing expectation changed.
+- The documented test count is 18459. The first CI run, at 7cff4c7, had
+  18454 passed and 1 error, the oversized case's test id, which is now fixed.
 - Whether `/clear`, `--resume` and compaction keep `session_id` is not in
   Claude Code's documentation. The design assumes `/clear` starts a new
   `session_id` and resume and compaction keep it. A lifecycle receipt from a
-  real Claude Code run, on the pool or on PJU, must confirm that before the
-  release.
+  real Claude Code run must confirm that before the release.
 - The sweep measures the change (ruling).
 
 The agent wrote this entry in #418's fix PR. The maintainer approves it

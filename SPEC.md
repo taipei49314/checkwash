@@ -17,8 +17,9 @@ are always read from the **base** side.
 
 In the managed Claude Code Stop hook (`check --format hook-json --hook-input
 stdin`, #418) the verdict's diff is HEAD against the working tree, and the base
-side that configuration and exemptions are read from is the commit the session
-started from, as the SessionStart hook recorded it (§9). That record lives
+side that configuration and exemptions are read from is the session base: the
+commit the session started from, as the SessionStart hook recorded it, or its
+merge base with HEAD (§9). That record lives
 under `.git`, which the agent can write, so it narrows the hook's window and is
 not a reviewed base; only a required CI check in range mode reads one.
 
@@ -784,8 +785,8 @@ expires = "2026-10-01"
 
 - `reason` and `expires` required; `expires` at most 180 days out.
 - In the managed Stop hook with a recorded session, the base side is the
-  commit the session started from (§1, §9), so an entry committed during a
-  session applies from the next session.
+  session base (§1, §9), so an entry committed during a session applies from
+  the next session.
 - Evaluation reads the **base** side. However, **append-only, schema-valid
   additions** to `allow.toml` in the head side do not trigger
   `GUARDRAIL_TOUCHED`(critical); they produce a prominent `EXEMPTION_ADDED`
@@ -923,13 +924,13 @@ every crash path is mapped to 2.
 
 In `check --format hook-json` (the Claude Code Stop hook) an engine error, or a config or allowlist parse error under `on_engine_error = "block"`, exits 0 instead, with a JSON `systemMessage` saying the change was not analysed and why, and no `decision`. The hook is an author-side check; the required CI check remains the gate (#414).
 
-**The managed Stop hook's window (#418).** `hook session-start`, the managed SessionStart handler, reads the hook input from stdin and records HEAD as `{"created": <UTC time>, "head": <commit>, "version": 1}` in `<git-dir>/checkwash/sessions/<sha256(session_id)>`. It writes only when no record exists and never when `source` is `compact`. When a session starts, it prunes records older than 30 days or naming a commit that is gone, never by count. It prints nothing and exits 0 on every outcome.
+**The managed Stop hook's window (#418).** `hook session-start`, the managed SessionStart handler, reads the hook input from stdin and records HEAD as `{"created": <UTC time>, "head": <commit>, "version": 1}` in `<git-dir>/checkwash/sessions/<sha256(session_id)>`. It writes only when no record exists, and never when `source` is `compact` or `resume`. After writing, it prunes other sessions' records that are older than 30 days or name a commit that is gone, never by count; it never prunes the starting session's own record, or one that does not parse. A record is read only as a regular file of at most 4,096 bytes. It prints nothing and exits 0 on every outcome.
 
-`check --format hook-json --hook-input stdin`, the managed Stop handler, reads the hook input from stdin: at most 1,000,000 bytes, never from a TTY, waiting at most 10 seconds. The flag with another format or with a range is a usage error, exit 2. Without the flag, or with no input (empty stdin, a TTY, nothing within the wait), the run is the one without the flag, byte for byte. With input:
+`check --format hook-json --hook-input stdin`, the managed Stop handler, reads the hook input from stdin: at most 1,000,000 bytes, never from a TTY, waiting at most 10 seconds. The flag with another format or with a range is a usage error, exit 2. Without the flag, or with no input (empty stdin, a TTY, nothing within the wait), the run is the one without the flag, byte for byte. With input, the *session base* is the recorded commit when HEAD descends from it, and otherwise their merge base:
 
-- **A record, with HEAD descending from it** (otherwise their merge base is the base): HEAD against the working tree decides the verdict, as before, with configuration, exemptions, the `--task` contract and manifests read from the base. A block's `reason` then adds that an exemption, config change or hook upgrade committed during the session applies from the next session, and that `/clear` starts one. The base against the working tree is analysed too. Its findings at or above `fail_on` that the first diff does not report are named in a non-blocking `systemMessage`, which says the required check will judge them. An engine error in that second analysis is a `systemMessage` saying the session's commits were not analysed; the verdict stands.
-- **A record equal to HEAD:** the output is the one without the flag.
-- **No usable record** (input that does not parse, no `session_id`, no record, or HEAD with no history in common with it): the run is the one without the flag, and a pass adds a `systemMessage` saying the session's commits were not analysed and why.
+- **A session base other than HEAD:** HEAD against the working tree decides the verdict, as before, with configuration, exemptions, the `--task` contract and manifests read from the session base. A block's `reason` then adds that an exemption, config change or hook upgrade committed during the session applies from the next session, and that `/clear` starts one. On a pass, the session base against the working tree is analysed too, and its findings at or above `fail_on` are named in a non-blocking `systemMessage`, which says the required check will judge them; a block leaves them to a later Stop. An engine error in that second analysis is a `systemMessage` saying the session's commits were not analysed; the verdict stands.
+- **A session base equal to HEAD:** the output is the one without the flag.
+- **No usable record** (input that does not parse, no `session_id`, no record, a record whose commit Git cannot compare with HEAD, or HEAD with no history in common with it): the run is the one without the flag, and a pass adds a `systemMessage` saying the session's commits were not analysed and why.
 
 Base-side `config.toml` / `allow.toml` that fail to parse are never silently
 ignored: the diagnostic goes to stderr and to `config_errors` in the JSON
