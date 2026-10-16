@@ -11,20 +11,19 @@ it is known not to.
 
 ## The short version
 
-- **149 bypasses** are documented, of which **36 are not closed**.
+- **152 bypasses** are documented, of which **37 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Narrowed, still open (3)
+## Narrowed, still open (2)
 
 | # | shape | pinned by |
 |---|---|---|
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `param_row_all_wrapped_cell_edit_pos.gwcase`, `param_row_all_wrapped_middle_column_pos.gwcase`, `param_row_all_wrapped_plus_tuple_cell_edit_pos.gwcase`, `param_row_cell_edit_appended_pos.gwcase`, `param_row_cell_edit_rows_added_renamed_pos.gwcase`, `param_row_stacked_cell_edit_appended_pos.gwcase`, `param_row_wrapped_cell_edit_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
-| 93 | Buy repair evidence with an alpha-rename inside the called symbol — `total` → `subtotal` changes the AST fingerprint and nothing else | — |
 
 ## Closed in part (12)
 
@@ -66,7 +65,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (110)
+## Closed — each pinned by something that runs (112)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -160,6 +159,7 @@ behind it* unshippable.
 | 89 | Weaken the suite in an **intermediate** script: the CI entry only calls another script, so it holds no runner token of its own — `./scripts/run-tests.sh` becoming `./scripts/run-tests.sh \|\| true` | `runner_one_hop_pos.gwcase` |
 | 90 | Patch the code under test **from inside the test**, not from a conftest: `monkeypatch.setattr(billing, "invoice_total", lambda *a: 105.3)` two lines above `assert billing.invoice_total(...) == 105.3`, or the same thing spelled `mock.patch(...)` / `patch.object(...)` / `mocker.patch(...)`. Production and the assertion line both stay byte-identical | `test_patches_subject_import_alias_pos.gwcase`, `test_patches_subject_import_alias_rename_neg.gwcase`, `test_patches_subject_import_alias_third_party_neg.gwcase`, `test_patches_subject_import_module_alias_pos.gwcase`, `test_patches_subject_import_realias_neg.gwcase`, `test_patches_subject_mock_patch_pos.gwcase`, `test_patches_subject_new_test_neg.gwcase`, `test_patches_subject_pos.gwcase`, `test_patches_subject_runtime_constant_pos.gwcase`, `test_patches_subject_runtime_fstring_pos.gwcase`, `test_patches_subject_runtime_opaque_pos.gwcase`, `test_patches_subject_stdlib_neg.gwcase`, `test_patches_subject_unrelated_attr_neg.gwcase`, `test_patches_subject_via_local_pos.gwcase` |
 | 91b | The two `with`-context spellings of assertion neutralization that row 91a's "swallowing `__exit__`" bucket never named outright: `with contextlib.suppress(AssertionError): assert X` swallows the failure, and `with pytest.raises(AssertionError): assert X` inverts the oracle so a wrong answer is required. `except AssertionError: pass` was already a broad handler; these are the `with` dialects of the same move | `raises_assertionerror_neutralizes_pos.gwcase`, `raises_assertionerror_tuple_neutralizes_pos.gwcase`, `suppress_assertionerror_neutralizes_pos.gwcase` |
+| 93 | Buy repair evidence with an edit inside a called symbol that `_normalize_for_fingerprint` keeps: an alpha-rename (`total` → `subtotal`), `+ 0`, a single-use temporary (`r = sum(items); return r`) or a dead `if False:` branch. None changes behaviour; each changes the AST fingerprint (#419 Route A) | — |
 | 97 | Replace an independently derived **call-expression** expectation with a **literal of the current buggy output** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == 100.0` — no production change in the diff | `expected_call_to_literal_pos.gwcase` |
 | 98 | Replace an independently derived **call-expression** expectation with a **call to a same-bug twin** — `assert invoice_total(items) == reference_total(items)` → `assert invoice_total(items) == twin_total(items)` — twin unused at baseline, implements the identical bug | `expected_call_to_twin_pos.gwcase` |
 | 99 | Edit checkwash's own config under its renamed directory — `.checkwash/config.toml` — either a comment change in the same diff as a weakened assertion, or a committed `[detectors] disable`. The path matched no role and was classified production: the comment change granted `REPAIR_EVIDENCE` (verdict pass) and the planted disable produced zero findings; the same edits under `.greenwash/` were critical | `exemption_added_checkwash_pos.gwcase`, `guardrail_checkwash_config_and_weakening_pos.gwcase`, `guardrail_checkwash_config_pos.gwcase` |
@@ -186,8 +186,9 @@ behind it* unshippable.
 | 125 | Move the skip one call away instead of fixing code: a same-file function the test calls (`def _later(): pytest.skip(...)`, then `_later()`), a nested def it calls, the raised spelling in a helper, or the same helper called from a fixture or xunit setup the test runs; or add the skip to a helper the test already calls (#272) | `helper_skip_added_to_called_helper_pos.gwcase`, `helper_skip_imported_module_pos.gwcase`, `helper_skip_imported_relative_pos.gwcase`, `helper_skip_module_function_pos.gwcase`, `helper_skip_nested_def_pos.gwcase`, `helper_skip_raised_pos.gwcase`, `helper_skip_through_fixture_pos.gwcase` |
 | 126 | Weaken or delete an AVA or tap assertion instead of fixing code: `t.is(total(), 78.75)` -> `t.truthy(total())` in AVA, `t.equal(...)` -> `t.ok(...)` in tap, the expected value rewritten, or the assertion deleted; beneath `tests/`, any edit to an AVA or tap test (#233) | `js_ava_expected_rewrite_pos.gwcase`, `js_ava_is_to_truthy_pos.gwcase`, `js_ava_tests_dir_weakened_pos.gwcase`, `js_tap16_synonym_weakened_pos.gwcase`, `js_tap_assertion_deleted_pos.gwcase`, `js_tap_equal_to_ok_pos.gwcase`, `js_tap_tests_dir_weakened_pos.gwcase` |
 | 127 | A conftest forces pytest's exit status to 0: `exitstatus`/`testsfailed` writes, `pytest.exit(returncode=0)`, `os._exit(0)` or `SystemExit`, in hooks, fixtures, atexit callables, module scope or same-file helpers | `conftest_exit_status_forced_zero_pos.gwcase`, `conftest_exit_status_module_os_exit_pos.gwcase`, `conftest_exit_status_new_conftest_pytest_exit_pos.gwcase`, `conftest_exit_status_testsfailed_reset_pos.gwcase` |
+| 130 | Launder a Python test through a rule that still takes opaque-change evidence. Make the same one-comment edit to an existing template, native source or JS module that #419 stopped accepting for a weakened oracle, and rewrite the expected value to the buggy output (`EXPECTED_VALUE_CHANGED`, or an expectation's definition, `EXPECTATION_DEFINITION_CHANGED`), put a different assertion of the same strength in the old one's slot (`ASSERT_SUBSTITUTED`), or install a stand-in for the code under test (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`) | — |
 
-## Unclassified (11)
+## Unclassified (13)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -202,6 +203,8 @@ behind it* unshippable.
 | 86j | The expectation lives in a **conftest** fixture, not a same-file one | — |
 | 91a | Everything row 91's reachable set cannot see: subvert the *meaning* of a syntactically strong assertion (`__eq__`/`__bool__`/`__contains__` always true, a swallowing `__exit__`, a no-op `TestResult`, `int()`/`set()`/`bool()` coercion inside the helper, a default `expected` parameter never overridden); make the subject vacuous while keeping the assert (`for n in nums if False`, `mismatches[:0]`, `assert pred` where `pred` was called); compute zero runs (exhausted iterator, unscheduled coroutine, table filtered to passing inputs); put the helper in *another file* (conftest.py, tests/helpers.py); or change unit identity (merge, split, params fixture) | — |
 | 92 | (False positive, and the largest one) Restructure where a test's assertions live, without weakening anything: extract the check into a helper or a `conftest.py`, move it into a fixture's teardown, merge two tests into one, split one into two, drive them from a params fixture, put the comparison behind `operator.eq` or a comparison object's method, replace exact equality with `pytest.approx` and a tolerance | — |
+| 131 | Weaken, remove, skip or loosen an assertion in a JS/TS test, or add a broad catch around one, beside a no-op edit to any existing production file checkwash cannot read. In a JS/TS project that is any production module, because checkwash parses JS/TS tests but no JS/TS production code | — |
+| 132 | Rewrite a stored snapshot, golden or expected file to the buggy output, and buy silence with any production change anywhere in the diff: a modified production file checkwash cannot read, any changed Python production symbol whether or not a test reaches it, or a new `.py` production module holding one definition or top-level binding (`X = 1`) | — |
 
 ## False positives on human-written commits
 
