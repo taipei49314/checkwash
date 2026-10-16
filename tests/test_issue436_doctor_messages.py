@@ -3,8 +3,8 @@
 A user evaluating v0.7.0 reported that `doctor` right after install cites
 README sections that no longer exist, gives only a generic reason for a
 workflow it does not prove, and names the wrong file when an allowlist does
-not parse. These tests pin those texts. The accepted workflow set is pinned in
-tests/test_doctor.py and is not changed here.
+not parse. These tests pin those texts, and that setup-python's other supported
+versions, "3.11" and "3.13", are now proven too (owner approval, 2026-10-16).
 """
 
 import datetime
@@ -15,7 +15,7 @@ import pytest
 from checkwash.allowlist import summarize_allowlist
 from checkwash.doctor import collect
 
-from test_doctor import CANONICAL, CI, README, _canonical_repo, _repo
+from test_doctor import CANONICAL, CI, README, _canonical_repo, _healthy, _repo
 
 
 def _incomplete_detail(root):
@@ -60,9 +60,14 @@ def test_an_unproven_trigger_names_the_trigger_doctor_proves(tmp_path, on, found
 def test_an_unproven_python_version_names_the_version_doctor_proves(tmp_path, version):
     workflow = CANONICAL.replace('python-version: "3.12"', f"python-version: {version}")
     detail = _incomplete_detail(_canonical_repo(tmp_path, workflow))
-    assert 'actions/setup-python: doctor proves only with python-version: "3.12"' in detail
+    assert 'actions/setup-python: doctor proves only with python-version: "3.11", "3.12" or "3.13"' in detail
     assert f"found python-version: {version}" in detail
     assert "unsupported or ambiguous workflow shape" not in detail
+
+
+@pytest.mark.parametrize("version", ['"3.11"', '"3.13"'])
+def test_the_other_supported_python_versions_are_healthy(tmp_path, version):
+    _healthy(_canonical_repo(tmp_path, CANONICAL.replace('python-version: "3.12"', f"python-version: {version}")))
 
 
 def test_an_unproven_checkout_input_names_the_inputs_doctor_proves(tmp_path):

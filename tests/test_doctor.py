@@ -184,7 +184,7 @@ def test_checkout_setup_and_gate_must_be_exact_and_in_order(tmp_path):
         "late-checkout": CANONICAL.replace(checkout, "__SETUP__").replace(setup, checkout).replace("__SETUP__", setup),
         "pre-mutation": CANONICAL.replace(checkout, "      - run: git checkout -- action/action.yml\n" + checkout),
         "post-mutation": CANONICAL.replace(gate, gate + "\n      - run: git reset --hard HEAD~1"),
-        "wrong-python": CANONICAL.replace('python-version: "3.12"', 'python-version: "3.11"'),
+        "wrong-python": CANONICAL.replace('python-version: "3.12"', 'python-version: "3.10"'),
         "tagged-checkout": re.sub(r"actions/checkout@[0-9a-f]{40}", "actions/checkout@v4", CANONICAL),
         "uppercase-gate": re.sub(
             r"taipei49314/checkwash/action@[0-9a-f]{40}",

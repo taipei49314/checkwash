@@ -33,9 +33,17 @@ _PINS = {
     # forward after each publication is verified (v0.8.0 here, RELEASING step 8).
     "taipei49314/checkwash/action": "f02b5d8a07fa39ee1898881f66c571eb164cb11c",
 }
+# Each step's accepted `with:` mappings, and how a reason spells them. The
+# Python versions are the ones pyproject.toml and action/README.md support,
+# each as an exact double-quoted string (#436).
+_PYTHONS = ('"3.11"', '"3.12"', '"3.13"')
 _WITH = {
-    "actions/checkout": {"fetch-depth": "0", "persist-credentials": "false"},
-    "actions/setup-python": {"python-version": '"3.12"'},
+    "actions/checkout": [{"fetch-depth": "0", "persist-credentials": "false"}],
+    "actions/setup-python": [{"python-version": version} for version in _PYTHONS],
+}
+_WITH_TEXT = {
+    "actions/checkout": "fetch-depth: 0, persist-credentials: false",
+    "actions/setup-python": "python-version: " + ", ".join(_PYTHONS[:-1]) + " or " + _PYTHONS[-1],
 }
 
 
@@ -302,10 +310,8 @@ def _with_issue(props: dict[str, str], with_values: dict[str, str], owner: str) 
     if set(props) - {"uses", "with"} or props.get("with"):
         return None
 
-    def spell(values: dict[str, str]) -> str:
-        return ", ".join(f"{key}: {value}" for key, value in values.items()) or "nothing"
-
-    return f"{owner}: doctor proves only with {spell(_WITH[owner])}, found {spell(with_values)}"
+    found = ", ".join(f"{key}: {value}" for key, value in with_values.items()) or "nothing"
+    return f"{owner}: doctor proves only with {_WITH_TEXT[owner]}, found {found}"
 
 
 def _healthy_job(body: list[str], reasons: list[str]) -> bool:
@@ -337,7 +343,7 @@ def _healthy_job(body: list[str], reasons: list[str]) -> bool:
         parsed.append(value)
     checkout, setup, gate = parsed
     for (props, with_values), owner in ((checkout, "actions/checkout"), (setup, "actions/setup-python")):
-        if _uses(props, owner) and with_values == _WITH[owner]:
+        if _uses(props, owner) and with_values in _WITH[owner]:
             continue
         if props.get("uses") != f"{owner}@{_PINS[owner]}":
             reasons.append(_pin_issue(props, owner))
