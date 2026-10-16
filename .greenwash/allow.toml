@@ -262,3 +262,11 @@ reason = "PR #447 (#414 ruling): a hook-json engine error now exits 0 with a non
 author = "taipei49314"
 created = "2026-10-14"
 expires = "2026-11-13"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue208_209_suite_guards.py/test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one/c3afb3f3087d"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #464 (#419 ruling Q1 (b)): a guarded collection hook beside an opaque production edit no longer takes REPAIR_EVIDENCE and is held at warn by COMPAT_GATE, so the expected de-escalator tuple changes; owner-approved in the #419 ruling of 2026-10-14 (issuecomment-6170353038) under AGENTS.md rule 2"
+author = "taipei49314"
+created = "2026-10-16"
+expires = "2026-11-15"
