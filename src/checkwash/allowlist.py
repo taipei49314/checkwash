@@ -105,11 +105,16 @@ def _entry_state(e: AllowEntry, today: datetime.date) -> str:
     return "active"
 
 
-def summarize_allowlist(data: bytes | None, today: datetime.date) -> AllowSummary:
-    """How the ledger will be honoured today. Same rules as `active_fingerprints`."""
+def summarize_allowlist(
+    data: bytes | None, today: datetime.date, path: str = ".greenwash/allow.toml"
+) -> AllowSummary:
+    """How the ledger will be honoured today. Same rules as `active_fingerprints`.
+
+    `path` is the file the data came from; a parse error names it (#436).
+    """
     if not data:
         return AllowSummary(False, None, 0, 0, 0, 0)
-    entries, err = load_allowlist(data)
+    entries, err = load_allowlist(data, path=path)
     if err:
         return AllowSummary(True, err, 0, 0, 0, 0)
     active = expired = over_cap = retired = invalid = 0
