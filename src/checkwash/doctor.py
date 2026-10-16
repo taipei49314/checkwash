@@ -33,6 +33,10 @@ _PINS = {
     # forward after each publication is verified (v0.8.0 here, RELEASING step 8).
     "taipei49314/checkwash/action": "f02b5d8a07fa39ee1898881f66c571eb164cb11c",
 }
+_WITH = {
+    "actions/checkout": {"fetch-depth": "0", "persist-credentials": "false"},
+    "actions/setup-python": {"python-version": '"3.12"'},
+}
 
 
 def _read(path: Path) -> str:
@@ -104,6 +108,25 @@ def _unfiltered_event(lines: list[str], on_index: int, on_value: str) -> bool:
         return False
     item = _mapping(lines[on_index + 1], 2)
     return bool(item and item[0] == _EVENT and not item[1])
+
+
+def _event_issue(lines: list[str], on_index: int, on_value: str) -> str:
+    """Name the trigger doctor proves when the workflow's differs (#436)."""
+    if on_value:
+        found = "on: " + (on_value if len(on_value) <= 60 else on_value[:57] + "...")
+    else:
+        end = next((i for i in range(on_index + 1, len(lines)) if _indent(lines[i]) == 0), len(lines))
+        body = lines[on_index + 1:end]
+        events = [item[0] for line in body if (item := _mapping(line, 2))]
+        found = "an on: block with " + (", ".join(events) or "no event")
+        if any(_indent(line) > 2 for line in body) or any(
+            item[1] for line in body if (item := _mapping(line, 2))
+        ):
+            found += " and event filters"
+    return (
+        "unsupported or ambiguous workflow shape: doctor proves only on: [pull_request] "
+        f"or an on: block holding one unfiltered pull_request:, found {found}"
+    )
 
 
 def _step(lines: list[str]) -> tuple[dict[str, str], dict[str, str]] | None:
@@ -270,6 +293,21 @@ def _pin_issue(props: dict[str, str], owner: str) -> str:
     return f"{owner}: {kind} {ref}; this CLI requires {_PINS[owner]}"
 
 
+def _with_issue(props: dict[str, str], with_values: dict[str, str], owner: str) -> str | None:
+    """Name the `with:` values doctor proves when only they differ (#436).
+
+    None when the step also carries keys other than `uses` and `with`, or an
+    inline `with:` value, which the generic text still covers.
+    """
+    if set(props) - {"uses", "with"} or props.get("with"):
+        return None
+
+    def spell(values: dict[str, str]) -> str:
+        return ", ".join(f"{key}: {value}" for key, value in values.items()) or "nothing"
+
+    return f"{owner}: doctor proves only with {spell(_WITH[owner])}, found {spell(with_values)}"
+
+
 def _healthy_job(body: list[str], reasons: list[str]) -> bool:
     job_items: list[tuple[int, str, str]] = []
     for index, line in enumerate(body[1:], 1):
@@ -298,15 +336,13 @@ def _healthy_job(body: list[str], reasons: list[str]) -> bool:
             return False
         parsed.append(value)
     checkout, setup, gate = parsed
-    if not _uses(checkout[0], "actions/checkout") or checkout[1] != {
-        "fetch-depth": "0", "persist-credentials": "false"
-    }:
-        if checkout[0].get("uses") != "actions/checkout@" + _PINS["actions/checkout"]:
-            reasons.append(_pin_issue(checkout[0], "actions/checkout"))
-        return False
-    if not _uses(setup[0], "actions/setup-python") or setup[1] != {"python-version": '"3.12"'}:
-        if setup[0].get("uses") != "actions/setup-python@" + _PINS["actions/setup-python"]:
-            reasons.append(_pin_issue(setup[0], "actions/setup-python"))
+    for (props, with_values), owner in ((checkout, "actions/checkout"), (setup, "actions/setup-python")):
+        if _uses(props, owner) and with_values == _WITH[owner]:
+            continue
+        if props.get("uses") != f"{owner}@{_PINS[owner]}":
+            reasons.append(_pin_issue(props, owner))
+        elif (issue := _with_issue(props, with_values, owner)) is not None:
+            reasons.append(issue)
         return False
     props, with_values = gate
     remote = set(props) == {"uses"} and not with_values and props["uses"] == (
@@ -344,7 +380,10 @@ def _workflow(data: bytes, reasons: list[str]) -> tuple[list[str], bool]:
         return [], candidate
     on = [item for item in top if item[1] == "on"]
     jobs = [item for item in top if item[1] == "jobs"]
-    if len(on) != 1 or len(jobs) != 1 or jobs[0][2] or not _unfiltered_event(lines, on[0][0], on[0][2]):
+    if len(on) != 1 or len(jobs) != 1 or jobs[0][2]:
+        return [], candidate
+    if not _unfiltered_event(lines, on[0][0], on[0][2]):
+        reasons.append(_event_issue(lines, on[0][0], on[0][2]))
         return [], candidate
     permissions = next(item for item in top if item[1] == "permissions")
     name_offset = 1 if keys[0] == "name" else 0
@@ -431,7 +470,8 @@ def collect(root: Path) -> list[Note]:
         notes.append(Note(
             "warn", "workflow analysis incomplete",
             "No exact supported gate was proven. " + "; ".join(incomplete) + ". "
-            "Use the three-step, hash-pinned workflow from the README; direct run steps are never trusted.",
+            "Use the three-step, hash-pinned workflow under \"Use it in CI\" in the README; "
+            "direct run steps are never trusted.",
         ))
     else:
         where = [name for name, present in (
@@ -448,8 +488,9 @@ def collect(root: Path) -> list[Note]:
         else:
             notes.append(Note(
                 "problem", "no checkwash installation found",
-                "No exact supported workflow invokes checkwash and no local hook was found. "
-                "See the Required check section of the README.",
+                "The checkwash command runs, but no exact supported workflow invokes checkwash "
+                "and no local hook was found, so nothing blocks a merge yet. Copy the workflow "
+                "under \"Use it in CI\" in the README and require its checkwash status check.",
             ))
 
     if hook_paths:
@@ -465,8 +506,8 @@ def collect(root: Path) -> list[Note]:
         "info", "checkwash cannot tell whether the check is *required*",
         "Branch protection lives behind GitHub API token scopes this tool does not ask for. "
         "A green job that is not a required status check does not prevent a merge. Make the "
-        "job's status check required. The README step 2 command is: gh api "
-        "repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json",
+        "job's status check required; \"Use it in CI\" in the README gives the steps and this "
+        "command: gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json",
     ))
     notes.append(Note(
         "info", "checkwash cannot block when it does not run",
@@ -484,7 +525,7 @@ def collect(root: Path) -> list[Note]:
         "takes effect on the next diff and must be committed.",
     ))
     ledger_data = allow.read_bytes() if allow.exists() else None
-    ledger = summarize_allowlist(ledger_data, datetime.date.today())
+    ledger = summarize_allowlist(ledger_data, datetime.date.today(), path=allow_rel)
     if ledger.parse_error:
         notes.append(Note("warn", "allow.toml could not be parsed; no exemptions are active", ledger.parse_error))
     else:

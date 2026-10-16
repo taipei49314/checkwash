@@ -15,8 +15,9 @@ not update a deployed Action or an existing hook.
 
 ## 1. Required check
 
-A job that runs and is not required does not block a merge. Three steps in
-the [README](../README.md):
+A job that runs and is not required does not block a merge. Three steps; the
+workflow and the ruleset command are under
+[Use it in CI](../README.md#use-it-in-ci) in the README:
 
 1. Add the hash-pinned workflow.
 2. Require status context `checkwash` (job name, not filename):
