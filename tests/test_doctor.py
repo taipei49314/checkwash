@@ -369,7 +369,7 @@ def test_ambiguous_duplicate_and_unknown_yaml_is_incomplete(tmp_path):
 
 def test_fake_workflow_extensions_and_case_mismatches_are_not_healthy(tmp_path):
     notes = collect(_canonical_repo(tmp_path, suffix=".yml.bak"))
-    assert _levels(notes, "no checkwash installation found") == ["problem"]
+    assert _levels(notes, "no checkwash gate found") == ["problem"]
     assert not _levels(notes, "runs unconditionally")
 
     remote = _repo(tmp_path / "mixed-remote", {
@@ -519,7 +519,7 @@ def test_local_hook_without_ci_and_empty_repo_remain_problems(tmp_path):
         ]}]}})
     })
     assert _levels(collect(hooked), "configured locally but not in CI") == ["problem"]
-    assert _levels(collect(_repo(tmp_path / "empty", {"README.md": "hello"})), "no checkwash installation found") == ["problem"]
+    assert _levels(collect(_repo(tmp_path / "empty", {"README.md": "hello"})), "no checkwash gate found") == ["problem"]
 
 
 def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
@@ -645,7 +645,7 @@ def test_doctor_does_not_infer_stop_hooks_from_substrings(tmp_path, settings):
     root = _repo(tmp_path, {".claude/settings.local.json": json.dumps(settings)})
     notes = collect(root)
     assert not _levels(notes, "configured locally")
-    assert _levels(notes, "no checkwash installation found") == ["problem"]
+    assert _levels(notes, "no checkwash gate found") == ["problem"]
 
 
 def test_install_local_then_doctor_accepts_bom_and_does_not_claim_gitignore(tmp_path, capsys):

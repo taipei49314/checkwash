@@ -125,9 +125,9 @@ the whole repository from any directory, and doctor reads the root's
 `.claude/settings*.json` under `--repo` exactly as given. After
 `hook install --local` in a subdirectory, doctor from that subdirectory names
 the root on stderr and does not see those settings, which are not in the
-root's `.claude/`. With nothing else installed it reports "no checkwash
-installation found" rather than "configured locally but not in CI", exit 1
-either way. Outside Git, doctor and `allow` use the directory as given, as
+root's `.claude/`. With nothing else installed it reports "no checkwash gate
+found" (up to v0.8.0, "no checkwash installation found") rather than
+"configured locally but not in CI", exit 1 either way. Outside Git, doctor and `allow` use the directory as given, as
 before. When Git names a subdirectory but its root cannot be resolved, they
 also use the directory as given and say why in one line on stderr.
 

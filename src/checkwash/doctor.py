@@ -487,7 +487,7 @@ def collect(root: Path) -> list[Note]:
 
         else:
             notes.append(Note(
-                "problem", "no checkwash installation found",
+                "problem", "no checkwash gate found",
                 "The checkwash command runs, but no exact supported workflow invokes checkwash "
                 "and no local hook was found, so nothing blocks a merge yet. Copy the workflow "
                 "under \"Use it in CI\" in the README and require its checkwash status check.",
