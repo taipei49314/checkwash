@@ -72,7 +72,8 @@ def bypass_rows() -> list[tuple[str, str, str]]:
 
 def status_of(raw: str) -> str:
     """Bucket a status cell. Deliberately coarse and deliberately pessimistic:
-    anything that is not plainly Closed counts as not closed."""
+    anything that is not plainly Closed counts as not closed, and a bold
+    verdict beginning "Open" is never bucketed as closed."""
     low = raw.lower()
     if "out of scope" in low:
         return "out of scope"
@@ -82,7 +83,7 @@ def status_of(raw: str) -> str:
         return "narrowed, still open"
     if "closed in part" in low or "partly closed" in low:
         return "closed in part"
-    if raw.startswith("**Open**") or low.startswith("open"):
+    if raw.startswith("**Open") or low.startswith("open"):
         return "open"
     if "closed" in low:
         return "closed"
