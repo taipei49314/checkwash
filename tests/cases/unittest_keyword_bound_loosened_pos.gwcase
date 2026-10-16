@@ -1,0 +1,29 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: self.assertLess(a=total(), b=80) -> b=1e12 rewrites the bound into one that holds for everything
+origin: #462 — keyword operands were not read, so the bound had no value and no key and the rewrite passed with zero findings
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertLess(a=total(), b=80)
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertLess(a=total(), b=1e12)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

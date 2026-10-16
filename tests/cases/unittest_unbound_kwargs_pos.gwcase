@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertEqual(total(), 78.75) -> assertEqual(**case) replaces a known oracle with operands checkwash cannot bind
+origin: #462 ruling Q2 (b) — "cannot verify", never mild; the subjectless keyword record paired at no strength change and the rewrite passed with zero findings
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total(), 78.75)
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        case = {"first": total(), "second": 78.75}
+        self.assertEqual(**case)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

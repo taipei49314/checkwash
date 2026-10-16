@@ -1,0 +1,32 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+title: The expectation a keyword operand reads is redefined while the assertion line stays byte-identical
+origin: #462 — keyword operands were not read, so the assertion depended on no name and the redefinition passed with zero findings (pytest twin: expectation_definition_changed_pos)
+=== before: tests/test_billing.py ===
+import unittest
+
+from billing import invoice_total
+
+TAX = 0.05
+
+
+class TestBilling(unittest.TestCase):
+    def test_invoice_total_applies_tax(self):
+        items = [50.0, 50.0]
+        expected = round(sum(items) * (1 + TAX), 2)
+        self.assertEqual(first=invoice_total(items, TAX), second=expected)
+=== after: tests/test_billing.py ===
+import unittest
+
+from billing import invoice_total
+
+TAX = 0.05
+
+
+class TestBilling(unittest.TestCase):
+    def test_invoice_total_applies_tax(self):
+        items = [50.0, 50.0]
+        expected = round(sum(items), 2)
+        self.assertEqual(first=invoice_total(items, TAX), second=expected)
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

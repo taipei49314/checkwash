@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: self.assertEqual(value(), 3) -> assertEqual(first=value(), second=4) respells the call and rewrites the expected value
+origin: #462 — the keyword record had no subject, so the pair fell to the order fallback at no strength change and passed with zero findings
+=== before: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), 3)
+=== after: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(first=value(), second=4)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

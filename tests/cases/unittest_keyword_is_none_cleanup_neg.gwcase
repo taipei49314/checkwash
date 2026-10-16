@@ -1,0 +1,26 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertIs(expr1=result, expr2=None) -> assertIs(result, None) is the same NON_NULL check: no finding
+origin: #462 — the keyword record missed the assertIs(x, None) conversion, so the cleanup read as EXACT_VALUE(90) -> NON_NULL(30) and blocked at high
+=== before: tests/test_users.py ===
+import unittest
+
+import app
+
+
+class Users(unittest.TestCase):
+    def test_missing_user(self):
+        result = app.find_user(404)
+        self.assertIs(expr1=result, expr2=None)
+=== after: tests/test_users.py ===
+import unittest
+
+import app
+
+
+class Users(unittest.TestCase):
+    def test_missing_user(self):
+        result = app.find_user(404)
+        self.assertIs(result, None)
+=== expect ===
+[]

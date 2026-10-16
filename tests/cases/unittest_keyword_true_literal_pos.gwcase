@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertTrue(expr=answer()) -> assertTrue(expr=True) asserts a literal, as assertTrue(True) does
+origin: #462 — keyword operands were not read, so both sides were the same subjectless TRUTHY record and the rewrite passed with zero findings
+=== before: tests/test_engine.py ===
+import unittest
+
+from engine import answer
+
+
+class TestAnswer(unittest.TestCase):
+    def test_answer(self):
+        self.assertTrue(expr=answer())
+=== after: tests/test_engine.py ===
+import unittest
+
+from engine import answer
+
+
+class TestAnswer(unittest.TestCase):
+    def test_answer(self):
+        self.assertTrue(expr=True)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
