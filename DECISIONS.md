@@ -10530,3 +10530,79 @@ v0.7.0. The new rows 7a, 127, 128 and 129 name v0.8.0 (#452's draft said
 The agent wrote this entry in the release PR, beside D-131 to D-139. All of
 those but D-134 come from drafts the maintainer approved on 2026-10-15
 (「照草稿全部核准」); the maintainer approves D-134 and this entry there.
+
+## D-142 (2026-10-16): the Claude Code Stop hook reads its window from the session's start (#418)
+
+Ruling 418 (owner, 2026-10-14, 「P1 全部照建議」) answered its seven questions
+as recommended. The number is D-142 because D-141 is drafted for #419 in
+#464's description and is not on main yet; the release PR renumbers both if
+needed.
+
+#418 reports that the Stop hook ran `check --format hook-json` with no range,
+so it diffed HEAD against the working tree. Work the agent committed during
+the session was never analysed. A clean working tree printed `{}`, which is
+what a real pass prints. And an exemption or config change the agent
+committed governed its own next Stop check, because policy was read from
+HEAD.
+
+How each ruling answer is implemented:
+
+- 1, the session base. `checkwash hook session-start`, the managed
+  SessionStart handler, records HEAD once per session under
+  `<git-dir>/checkwash/sessions/<sha256(session_id)>` (`session.py`). It
+  writes only when no record exists (`O_EXCL`), never when `source` is
+  `compact`, and prunes at a session start by age (30 days) or a missing
+  commit, never by count. It prints nothing, because Claude Code adds a
+  SessionStart hook's stdout to the model's context, and it exits 0 on every
+  outcome.
+- 2, no record. With hook input and no usable record, the Stop runs today's
+  check; a pass adds a `systemMessage` saying the session's commits were not
+  analysed and why. Input that does not parse, or that has no `session_id`,
+  counts as hook input. Empty stdin, a TTY, or nothing within 10 seconds
+  counts as none, and the output is then the one without the flag.
+- 3, maintainer text. SPEC §1, §6 and §9, THREATMODEL item 2, the attacker
+  model and row 133, and this entry, each in its own commit.
+- 4, what the Stop judges. HEAD against the working tree decides the verdict
+  with policy read from the session base. The session base against the
+  working tree is analysed in a second pass; its findings at or above
+  `fail_on` that the first pass does not report (by fingerprint, or by rule,
+  path and unit) are named in a non-blocking `systemMessage` for the required
+  check.
+- 5, HEAD not descending from the base. The base is
+  `merge-base(record, HEAD)`; with no merge base, the run is item 2's.
+- 6, policy committed during a session. It applies from the next session. A
+  block's reason says so and that `/clear` starts one, keeps the
+  `checkwash allow` command, and does not suggest committing.
+- 7, the entry point. `check --format hook-json --hook-input stdin` and
+  `hook session-start`. The flag with another format or a range is a usage
+  error, exit 2, checked before the root lookup. Without the flag the output
+  is byte-identical. stdin is read from its descriptor in a daemon thread,
+  at most 1,000,000 bytes. The installer replaces the earlier managed Stop
+  shapes, adds the SessionStart handler in a group of its own, and doctor
+  notes a Stop hook without one at info level.
+
+Effects beyond the ruling's text, accepted with this entry:
+
+- `gitio.list_session_changes` diffs a commit against the working tree: the
+  paths of `git diff --name-only since HEAD` plus `git status`. Its changes
+  are sorted by path, where `list_worktree_changes` keeps status order.
+- A Stop with a session base that is not HEAD runs the engine twice. The
+  second pass writes nothing to stderr.
+- `hook install` prints one more line, about the SessionStart handler.
+
+Evidence status: NOT RUN. The change was prepared on a work machine where no
+pytest, checkwash or Python ran.
+
+- Tests were only added, in `tests/test_issue418_session_base.py`: 21
+  collected items, none under `tests/gates`. The two pre-approved lines of
+  `tests/test_hook_runtime.py` changed (rule 2, in the ruling); no other
+  existing expectation changed.
+- Whether `/clear`, `--resume` and compaction keep `session_id` is not in
+  Claude Code's documentation. The design assumes `/clear` starts a new
+  `session_id` and resume and compaction keep it. A lifecycle receipt from a
+  real Claude Code run, on the pool or on PJU, must confirm that before the
+  release.
+- The sweep measures the change (ruling).
+
+The agent wrote this entry in #418's fix PR. The maintainer approves it
+there.
