@@ -454,6 +454,18 @@ def _asserted_approx_comparison(test: ast.AST) -> tuple[ast.cmpop, ast.Call] | N
     return None
 
 
+def _approx_expected(call: ast.Call) -> ast.AST | None:
+    """The expected value of an approx call: its first argument, else `expected=` (#462).
+
+    `pytest.approx(expected, rel=None, abs=None, nan_ok=False)` takes it by
+    name as well. A call with a positional argument keeps the reading it
+    always had, so a starred one (`approx(*values)`) still records no value.
+    """
+    if call.args:
+        return call.args[0]
+    return next((kw.value for kw in call.keywords if kw.arg == "expected"), None)
+
+
 def _approx_epsilon(call: ast.Call, text: str) -> tuple[str | None, str | None]:
     """All tolerances on the call, joined — not just the first.
 
@@ -562,6 +574,9 @@ class _Classified:
     operand_source: str | None = None
     # The expected call checkwash neither folds nor resolves (#226).
     unevaluated_expected: str | None = None
+    # A unittest assertion whose operands come through `*` or `**` and so
+    # cannot be bound (#462 Q2): it records no operand, and is not trivial.
+    unbound_operands: bool = False
 
 
 # A comparison's bound key, and the key it states read from the other side:
@@ -928,8 +943,11 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # The argument of the approx call is the expected value; recording it
         # puts `approx(105.0)` -> `approx(100.0)` in front of
         # EXPECTED_VALUE_CHANGED. Strength is APPROX on both sides, so the
-        # rewrite was completely invisible before (audit 2026-08-19).
-        expected = approx.args[0] if approx.args else None
+        # rewrite was completely invisible before (audit 2026-08-19). It is
+        # read by name too: `approx(expected=100.0)` recorded no expected
+        # value, so a rewrite into it passed and its cleanup back into
+        # `approx(100.0)` read as a call replaced by a literal (#462).
+        expected = _approx_expected(approx)
         return _Classified(
             "approx",
             S.APPROX,
@@ -1547,6 +1565,99 @@ def _tolerance_statement_classified(node: ast.Call, text) -> _Classified | None:
     return _tolerance_classified(node, name, text) if name is not None else None
 
 
+# Each assertion method's operands by unittest's own parameter names, in
+# positional order (`unittest.case.TestCase`). The raises family is not here:
+# its operands keep their positional reading (#462).
+_UNITTEST_OPERANDS: dict[str, tuple[str, ...]] = {
+    "assertEqual": ("first", "second"),
+    "assertNotEqual": ("first", "second"),
+    "assertMultiLineEqual": ("first", "second"),
+    "assertCountEqual": ("first", "second"),
+    "assertAlmostEqual": ("first", "second"),
+    "assertNotAlmostEqual": ("first", "second"),
+    "assertListEqual": ("list1", "list2"),
+    "assertTupleEqual": ("tuple1", "tuple2"),
+    "assertSetEqual": ("set1", "set2"),
+    "assertDictEqual": ("d1", "d2"),
+    "assertSequenceEqual": ("seq1", "seq2"),
+    "assertIs": ("expr1", "expr2"),
+    "assertIsNot": ("expr1", "expr2"),
+    "assertIn": ("member", "container"),
+    "assertNotIn": ("member", "container"),
+    "assertIsInstance": ("obj", "cls"),
+    "assertNotIsInstance": ("obj", "cls"),
+    "assertGreater": ("a", "b"),
+    "assertGreaterEqual": ("a", "b"),
+    "assertLess": ("a", "b"),
+    "assertLessEqual": ("a", "b"),
+    "assertRegex": ("text", "expected_regex"),
+    "assertNotRegex": ("text", "unexpected_regex"),
+    "assertTrue": ("expr",),
+    "assertFalse": ("expr",),
+    "assertIsNone": ("obj",),
+    "assertIsNotNone": ("obj",),
+}
+
+
+def _unittest_operands(method: str, node: ast.Call) -> list[ast.expr] | None:
+    """A unittest assertion's operands in positional order, or None when they cannot be bound (#462).
+
+    Each operand is taken by position or, failing that, by its parameter
+    name: `assertEqual(first=value(), second=[1, 2])` and
+    `assertEqual(value(), second=[1, 2])` state what
+    `assertEqual(value(), [1, 2])` states. Only the positional reading
+    existed, so a keyword operand was no operand at all: a rewritten
+    expectation passed, and a respelling read as a weakening.
+
+    As for a tolerance call (#222), no operand is read from a position at
+    or after a starred argument; its keyword is taken instead. An operand
+    that has neither, in a call with a `*` or `**` argument
+    (`assertEqual(*pair)`, `assertEqual(**case)`, `assertEqual(x, **kw)`),
+    could be anything, so the call's operands are unbound: None (462.Q2).
+
+    The list is exactly `node.args`, the same nodes, for a call that states
+    every operand by position before any starred argument, extra positional
+    arguments (`places`, `msg`) included; for an all-positional call with no
+    starred argument, even one that lacks an operand; and for a method with
+    no name table (the raises family). Those records are unchanged.
+    """
+    args = node.args
+    names = _UNITTEST_OPERANDS.get(method)
+    starred = next((i for i, arg in enumerate(args) if isinstance(arg, ast.Starred)), len(args))
+    if names is None or starred >= len(names):
+        return list(args)
+    operands = list(args[:starred])
+    spread = starred < len(args) or any(kw.arg is None for kw in node.keywords)
+    for name in names[starred:]:
+        value = next((kw.value for kw in node.keywords if kw.arg == name), None)
+        if value is None:
+            if spread:
+                return None
+            break
+        operands.append(value)
+    return operands
+
+
+def _unbound_unittest(node: ast.Call, form: str, level: int | None, positive: bool, text) -> _Classified:
+    """A unittest assertion whose operands cannot be bound (462.Q2).
+
+    Its form and strength are the method's; it records no subject, no
+    expected value and no names, and it is not trivial: what it compares is
+    unknown, not known to be vacuous. ASSERT_WEAKENED reports a known oracle
+    replaced by one as unverifiable. A tolerance stated by keyword is read
+    as it always is; with none, the default is not assumed, since the
+    spread may carry `places` or `delta`.
+    """
+    epsilon = epsilon_kind = None
+    if form == "approx" and positive:
+        for kw in node.keywords:
+            if kw.arg in ("places", "delta"):
+                epsilon = text.seg(kw.value)
+                epsilon_kind = kw.arg
+    return _Classified(form, level, epsilon=epsilon, epsilon_kind=epsilon_kind, positive=positive,
+                       unbound_operands=True)
+
+
 def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     if not (isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "self"):
         return None
@@ -1554,13 +1665,18 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     if method not in _UNITTEST_MAP:
         return None
     form, level = _UNITTEST_MAP[method]
+    # Every operand below is read from the bound list, by position or by
+    # name (#462); a call whose operands cannot be bound records none.
+    args = _unittest_operands(method, node)
+    if args is None:
+        return _unbound_unittest(node, form, level, method not in _NEGATED_UNITTEST, text)
     # `assertIs(x, None)` / `assertIsNot(x, None)` are the generic spellings of
     # assertIsNone / assertIsNotNone. Leaving them at compare_eq made the
     # dialects incoherent — bare `assert x is None` is non_null, so a pure
     # spelling conversion was reported as a polarity inversion while a genuine
     # cross-dialect inversion was not (audit 2026-08-19).
-    if method in ("assertIs", "assertIsNot") and len(node.args) > 1:
-        for arg in node.args[:2]:
+    if method in ("assertIs", "assertIsNot") and len(args) > 1:
+        for arg in args[:2]:
             if isinstance(arg, ast.Constant) and arg.value is None:
                 method = "assertIsNone" if method == "assertIs" else "assertIsNotNone"
                 form, level = _UNITTEST_MAP[method]
@@ -1568,8 +1684,8 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     positive = method not in _NEGATED_UNITTEST
     # `assertTrue(math.isclose(...))` is read as the call it wraps (222.Q2), and
     # `assertFalse(...)` as its negation.
-    if method in ("assertTrue", "assertFalse") and node.args:
-        wrapped, holds = node.args[0], positive
+    if method in ("assertTrue", "assertFalse") and args:
+        wrapped, holds = args[0], positive
         while isinstance(wrapped, ast.UnaryOp) and isinstance(wrapped.op, ast.Not):
             wrapped, holds = wrapped.operand, not holds
         found = (_find_tolerance_predicate(wrapped, _tolerance_names(text))
@@ -1580,12 +1696,12 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     # `assertGreater(eps, abs(d))` and `assertTrue(abs(d) < eps)` (#196 189.2),
     # and each lower bound, `assertGreater(abs(d), eps)` (#224).
     hand = None
-    if method in ("assertLess", "assertLessEqual") and len(node.args) > 1:
-        hand = _hand_rolled(node.args[0], node.args[1], method == "assertLess", text, form, level)
-    elif method in ("assertGreater", "assertGreaterEqual") and len(node.args) > 1:
-        hand = _hand_rolled(node.args[1], node.args[0], method == "assertGreater", text, form, level)
-    elif method == "assertTrue" and node.args:
-        hand = _hand_rolled_comparison(node.args[0], text, form, level)
+    if method in ("assertLess", "assertLessEqual") and len(args) > 1:
+        hand = _hand_rolled(args[0], args[1], method == "assertLess", text, form, level)
+    elif method in ("assertGreater", "assertGreaterEqual") and len(args) > 1:
+        hand = _hand_rolled(args[1], args[0], method == "assertGreater", text, form, level)
+    elif method == "assertTrue" and args:
+        hand = _hand_rolled_comparison(args[0], text, form, level)
     if hand is not None:
         return hand
     left_text = None
@@ -1595,19 +1711,19 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
     epsilon_kind = None
     subject_node: ast.AST | None = None
     expect_node: ast.AST | None = None
-    if node.args:
-        subject_node = node.args[0]
-        if len(node.args) > 1:
-            expect_node = node.args[1]
+    if args:
+        subject_node = args[0]
+        if len(args) > 1:
+            expect_node = args[1]
             # Same literal-side flip as bare assert: `assertEqual(3, calc())`.
-            if _is_literal(node.args[0]) and not _is_literal(node.args[1]):
-                expect_node, subject_node = node.args[0], node.args[1]
+            if _is_literal(args[0]) and not _is_literal(args[1]):
+                expect_node, subject_node = args[0], args[1]
         left_text = text.seg(subject_node) if subject_node is not None else None
         if expect_node is not None:
             right_lit = _literal_repr(expect_node, text, conversions=_conversions(text))
             right_val = _literal_value(expect_node, conversions=_conversions(text))
-        if form == "compare_eq" and level == S.EXACT_VALUE and len(node.args) > 1:
-            if _is_container_literal(node.args[0]) or _is_container_literal(node.args[1]):
+        if form == "compare_eq" and level == S.EXACT_VALUE and len(args) > 1:
+            if _is_container_literal(args[0]) or _is_container_literal(args[1]):
                 level = S.EXACT_STRUCT
         # The len() shape rule, on the post-flip subject, same as the bare
         # lattice: `assertEqual(len(x), 3)` and `assert len(x) == 3` are both
@@ -1630,8 +1746,8 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
                 epsilon = text.seg(kw.value)
                 epsilon_kind = kw.arg
         # assertAlmostEqual(a, b, places) — positional third argument.
-        if epsilon is None and len(node.args) > 2:
-            seg = text.seg(node.args[2])
+        if epsilon is None and len(args) > 2:
+            seg = text.seg(args[2])
             if seg:
                 epsilon, epsilon_kind = seg, "places"
         if epsilon is None:
@@ -1640,7 +1756,7 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             # of silence — same one-sided-event defect as pytest.approx
             # (audit 2026-08-19).
             epsilon, epsilon_kind = "7", "places"
-    if form == "truthy" and node.args and _is_literal(node.args[0]):
+    if form == "truthy" and args and _is_literal(args[0]):
         form, level = "tautology", S.TAUTOLOGY
     if form == "compare_eq" and subject_node is not None and expect_node is not None:
         # Self-comparison with identity ops stripped, on the two actual
@@ -1672,7 +1788,7 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         # unittest dialect (THREATMODEL 20/25/46, audit 2026-08-19).
         _is_trivial_subject(subject_node)
         and (expect_node is None or _is_trivial_subject(expect_node)),
-        *_unittest_bound(method, form, node, subject_node, expect_node, text),
+        *_unittest_bound(method, form, args, subject_node, expect_node, text),
         unevaluated_expected=_unevaluated(expect_node, text) if form in _EXPECTED_FORMS else None,
     )
 
@@ -1682,12 +1798,17 @@ _UNITTEST_BOUND_KEYS = {"assertLess": "lt", "assertLessEqual": "le", "assertGrea
                         "assertGreaterEqual": "ge"}
 
 
-def _unittest_bound(method, form, node, subject_node, expect_node, text) -> tuple[str | None, str | None]:
-    """(predicate, operand_source) of `assertLess(x, 80)` and its kin, read from the subject's side."""
+def _unittest_bound(method, form, operands, subject_node, expect_node, text) -> tuple[str | None, str | None]:
+    """(predicate, operand_source) of `assertLess(x, 80)` and its kin, read from the subject's side.
+
+    `operands` is the call's bound operand list (`_unittest_operands`), so
+    `assertLess(a=x, b=80)` states what `assertLess(x, 80)` states (#462).
+    Both operands were found, so the list holds at least two.
+    """
     key = _UNITTEST_BOUND_KEYS.get(method)
     if key is None or form != "compare_ord" or subject_node is None or expect_node is None:
         return None, None
-    if subject_node is not node.args[0]:
+    if subject_node is not operands[0]:
         # `assertGreater(80, total())` states `total() < 80`.
         key = _REVERSED_KEYS[key]
     return key, _operand_source(expect_node, text)
@@ -3101,6 +3222,7 @@ def _collect_unit(
                     predicate=c.predicate,
                     operand_source=c.operand_source,
                     unevaluated_expected=c.unevaluated_expected,
+                    unbound_operands=c.unbound_operands,
                     # A tolerance call (#222) judges its two values, as
                     # `assertTrue(<call>)` and `assertAlmostEqual` do.
                     trivial=_is_trivial_subject(node.test) or c.trivial or id(node) in vacuous,
@@ -3171,6 +3293,7 @@ def _collect_unit(
                         predicate=c.predicate,
                         operand_source=c.operand_source,
                         unevaluated_expected=c.unevaluated_expected,
+                        unbound_operands=c.unbound_operands,
                         positive=c.positive,
                         left_names=c.left_names,
                         right_depends_on=depends,
@@ -3265,6 +3388,7 @@ def _collect_unit(
                         predicate=c.predicate,
                         operand_source=c.operand_source,
                         unevaluated_expected=c.unevaluated_expected,
+                        unbound_operands=c.unbound_operands,
                         trivial=trivial,
                         positive=c.positive,
                         left_names=c.left_names,
@@ -4243,6 +4367,7 @@ def _classified_asserts(nodes, text, off) -> tuple:
                 predicate=c.predicate,
                 operand_source=c.operand_source,
                 unevaluated_expected=c.unevaluated_expected,
+                unbound_operands=c.unbound_operands,
                 trivial=trivial,
                 positive=c.positive,
                 left_names=c.left_names,
