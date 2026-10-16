@@ -108,6 +108,24 @@ installation, direct handler execution, a real Stop event, and CI enforcement
 are separate checks. The installer preserves custom hooks and does not create
 a Git ignore rule.
 
+**Which window the Stop hook checks (#418).** Since #418 the installer writes
+two handlers: the Stop handler runs `check --format hook-json --hook-input
+stdin`, and a SessionStart handler in a group of its own runs `hook
+session-start`, which records HEAD once per session under
+`<git-dir>/checkwash/sessions/` and prints nothing. At each Stop, the working
+tree against HEAD decides the verdict, as before, but policy (config,
+allowlist, `--task`, manifests) is read from the commit the session started
+from. An exemption or config change the agent commits during a session
+therefore applies from the next session; `/clear` starts one. Findings that
+only the session's commits hold are named in a non-blocking `systemMessage`
+and left to the required check. When the hook input arrives but no record
+does (a handler installed before #418, a record pruned after 30 days, or HEAD
+with no history in common with it), a pass says the session's commits were
+not analysed. Run `checkwash hook install --agent claude-code` again to add
+the SessionStart handler; the installer replaces the earlier managed Stop
+handler. A record under `.git` is still writable by the agent, so the
+required CI check remains the gate.
+
 Doctor reads local and shared Stop configuration. A local-only installation
 should be reported as configured locally but missing CI, exit 1. Doctor does
 not run Claude or inspect all global/managed settings. For workflows, it now

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from checkwash.config import resolve_config_file
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, summarize_allowlist
-from checkwash.hooks import HookInstallError, has_stop_hook
+from checkwash.hooks import HookInstallError, has_session_start_hook, has_stop_hook
 from checkwash.report.textio import write_text
 
 
@@ -454,6 +454,7 @@ def collect(root: Path) -> list[Note]:
     notes: list[Note] = []
     jobs, incomplete = _workflow_gates(root)
     hook_paths = []
+    session_paths = []
     hook_issues = []
     for relative in (".claude/settings.json", ".claude/settings.local.json"):
         path = root / relative
@@ -463,6 +464,8 @@ def collect(root: Path) -> list[Note]:
             settings = json.loads(path.read_text(encoding="utf-8-sig"))
             if has_stop_hook(settings):
                 hook_paths.append(relative)
+            if has_session_start_hook(settings):
+                session_paths.append(relative)
         except (OSError, ValueError, HookInstallError) as exc:
             hook_issues.append(f"{relative}: {exc}")
     precommit_blob = _read(root / ".pre-commit-config.yaml")
@@ -505,6 +508,14 @@ def collect(root: Path) -> list[Note]:
             "Found " + ", ".join(hook_paths) + ". Doctor does not execute Claude or evaluate "
             "its complete managed/global settings. Verify the Stop event in your Claude runtime.",
         ))
+        if not session_paths:
+            notes.append(Note(
+                "info", "no SessionStart hook: the Stop hook cannot see what a session commits",
+                "No `checkwash hook session-start` handler was found beside the Stop hook, so "
+                "the Stop hook checks the working tree against HEAD only, and work committed "
+                "during a session is not analysed there. Run `checkwash hook install --agent "
+                "claude-code` again to add it (#418).",
+            ))
     if hook_issues:
         notes.append(Note("info", "local hook configuration could not be read", "; ".join(hook_issues)))
 

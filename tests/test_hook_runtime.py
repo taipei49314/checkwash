@@ -143,7 +143,7 @@ def test_shared_handler_is_portable_and_probed(monkeypatch):
     calls = []
     monkeypatch.setattr("checkwash.hooks._shared_executable", lambda: "C:/tool/checkwash.exe")
     monkeypatch.setattr("checkwash.hooks._probe", lambda command, args: calls.append((command, args)))
-    assert build_handler(False) == {"type": "command", "command": "checkwash", "args": ["check", "--format", "hook-json"]}
+    assert build_handler(False) == {"type": "command", "command": "checkwash", "args": ["check", "--format", "hook-json", "--hook-input", "stdin"]}
     assert calls == [("C:/tool/checkwash.exe", ["--version"])]
 
 
@@ -212,4 +212,4 @@ def test_shared_probe_uses_absolute_path_entry_ahead_of_repo_dummy(repo, tmp_pat
     monkeypatch.setattr("checkwash.hooks._probe", lambda command, args: calls.append((command, args)))
     handler = build_handler(False)
     assert calls == [(str(trusted / filename), ["--version"])]
-    assert handler == {"type": "command", "command": "checkwash", "args": ["check", "--format", "hook-json"]}
+    assert handler == {"type": "command", "command": "checkwash", "args": ["check", "--format", "hook-json", "--hook-input", "stdin"]}
