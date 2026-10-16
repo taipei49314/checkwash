@@ -1,0 +1,30 @@
+=== meta ===
+rule: ASSERT_REMOVED
+issue: 419
+title: Route B - a template edit no longer holds an assertion removed from a Python test at warn
+origin: #419 ruling Q1 (b), Q5 (b) (issuecomment-6170353038): assert_removed_pos plus a comment edit in an
+origin2: existing template. ASSERT_REMOVED is one of the five refused rules; with the other Route B pins
+origin3: and opaque_refused_tolerance_native_pos every refused rule has a pin of its own.
+=== before: app/templates/login.html ===
+<!-- login form -->
+<form method="post"></form>
+=== after: app/templates/login.html ===
+<!-- login form, posts to /session -->
+<form method="post"></form>
+=== before: tests/test_auth.py ===
+from auth import login
+
+
+def test_login_rejects_bad_password():
+    session = login("alice", "wrong")
+    assert session is None
+    assert login("alice", "correct") is not None
+=== after: tests/test_auth.py ===
+from auth import login
+
+
+def test_login_rejects_bad_password():
+    session = login("alice", "wrong")
+    assert login("alice", "correct") is not None
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"]}]

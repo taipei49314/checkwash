@@ -1,0 +1,37 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+issue: 419
+title: a substituted assertion beside a template edit still holds at warn on opaque evidence (named residual)
+origin: #419 ruling Q8 (a) (issuecomment-6170353038): ASSERT_SUBSTITUTED keeps opaque-change evidence in
+origin2: this round and is named as a residual with a report-only counterfactual arm.
+origin3: assert_substituted_pos plus a comment edit in an existing template holds at warn: the cheapest
+origin4: Route B substitute for a removed oracle in a Python test.
+=== before: app/templates/changelog.html ===
+<!-- changelog header -->
+<h1>Release {{ tag }}</h1>
+=== after: app/templates/changelog.html ===
+<!-- changelog header, newest first -->
+<h1>Release {{ tag }}</h1>
+=== before: tests/test_release.py ===
+import subprocess
+
+from release import readme_pins
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    exists = subprocess.run(["git", "rev-parse", tag])
+    assert exists.returncode == 0
+=== after: tests/test_release.py ===
+import subprocess
+
+from release import readme_pins
+
+
+def test_tag_exists():
+    tag = "v1.2.3"
+    exists = subprocess.run(["git", "rev-parse", tag])
+    pinned = readme_pins()
+    assert pinned == {tag}
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

@@ -1,7 +1,12 @@
 === meta ===
-rule: ASSERT_WEAKENED
-title: A genuinely unreadable production file still grants the opaque exemption
+rule: EXPECTED_VALUE_CHANGED
+issue: 419
+title: A genuinely unreadable production file still grants the opaque exemption to a rewritten expected value
 origin: FP guard — the 2026-08-11 widening must not turn every unreadable prod change into a block
+origin2: Kept under this name by the #419 ruling (issuecomment-6170353038: Q6 (a), rule 2) for the
+origin3: expectation family, which keeps opaque-change evidence (Q1 (b)); the weakened assertion it
+origin4: pinned until then moved, same inputs, to runner_opaque_native_pos. The Rust edit adds the tax
+origin5: and the expected value follows it: the honest shape this guard exists for.
 === before: src/core.rs ===
 pub fn invoice_total(items: &[f64], tax: f64) -> f64 {
     items.iter().sum::<f64>()
@@ -15,12 +20,12 @@ from billing import invoice_total
 
 
 def test_total():
-    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+    assert invoice_total([50.0, 50.0], 0.05) == 100.0
 === after: tests/test_billing.py ===
 from billing import invoice_total
 
 
 def test_total():
-    assert invoice_total([50.0, 50.0], 0.05) > 0
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn"}]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

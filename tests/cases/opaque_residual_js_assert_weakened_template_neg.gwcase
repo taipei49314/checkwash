@@ -1,0 +1,27 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 419
+title: a JS test weakened beside a template edit still holds at warn on opaque evidence (named residual)
+origin: #419 ruling Q1 (b) (issuecomment-6170353038): JS/TS tests keep opaque-change evidence until #212
+origin2: prices the change, so js_expect_weakened_pos plus a comment edit in an existing template holds
+origin3: at warn. A pinned residual (Route B for JS/TS tests), not a claim that the edit explains it.
+=== before: app/templates/invoice.html ===
+<!-- invoice summary -->
+<p>Total: {{ total }}</p>
+=== after: app/templates/invoice.html ===
+<!-- invoice summary, two decimals -->
+<p>Total: {{ total }}</p>
+=== before: tests/invoice.test.js ===
+const { total } = require("../src/invoice");
+
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBe(105);
+});
+=== after: tests/invoice.test.js ===
+const { total } = require("../src/invoice");
+
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBeTruthy();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

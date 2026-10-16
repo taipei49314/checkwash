@@ -1,0 +1,30 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 419
+title: A genuinely unreadable production file is still opaque, and no longer holds a weakened Python assertion at warn
+origin: successor of runner_opaque_native_neg with the same inputs, re-pinned by the #419 ruling
+origin2: (issuecomment-6170353038: Q1 (b), Q5 (b), rule 2). src/core.rs still sets the opaque change;
+origin3: a Python test refuses it for ASSERT_WEAKENED. The 2026-08-11 FP guard stays under the old name
+origin4: for the expectation family, which keeps the evidence.
+=== before: src/core.rs ===
+pub fn invoice_total(items: &[f64], tax: f64) -> f64 {
+    items.iter().sum::<f64>()
+}
+=== after: src/core.rs ===
+pub fn invoice_total(items: &[f64], tax: f64) -> f64 {
+    items.iter().sum::<f64>() * (1.0 + tax)
+}
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"]}]

@@ -1,9 +1,14 @@
 === meta ===
-rule: ASSERT_WEAKENED
-title: a shell script that does not run tests is still an unreadable prod change
+rule: EXPECTED_VALUE_CHANGED
+issue: 419
+title: a shell script that does not run tests is still an unreadable prod change, and still explains a rewritten expected value
 origin: the honest residual of the 2026-08-07 round, pinned rather than
 origin2: described: only scripts that run the suite were reclassified, so any
 origin3: other script still grants THREATMODEL #4. Open row, with a probe task.
+origin4: Kept under this name by the #419 ruling (issuecomment-6170353038: Q6 (a), rule 2) for the
+origin5: expectation family, which keeps the grant (row 68); the weakened assertion it pinned until then
+origin6: moved, same inputs, to deploy_script_still_opaque_pos. The expected value here is rewritten to
+origin7: the untaxed output (100.0), and it still holds at warn: that is the residual.
 === before: scripts/deploy.sh ===
 #!/usr/bin/env bash
 set -euo pipefail
@@ -23,6 +28,6 @@ from app.billing import invoice_total
 
 
 def test_invoice_total():
-    assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) > 0
+    assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) == 100.0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

@@ -1,0 +1,31 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+issue: 419
+title: Route B - a comment edited in a C source no longer holds a loosened tolerance in a Python test at warn
+origin: #419 ruling Q1 (b), Q5 (b) (issuecomment-6170353038): tolerance_loosened_pos plus a comment edit
+origin2: in an existing native source. D-028 named a repository with a C extension as where the grant
+origin3: starts doing work; this pins the refusal there, and the pre-registered sweep prices it.
+=== before: src/sim/_kernel.c ===
+/* Physical constants. */
+double gravity(void) { return 9.81; }
+=== after: src/sim/_kernel.c ===
+/* Physical constants, SI units. */
+double gravity(void) { return 9.81; }
+=== before: tests/test_physics.py ===
+import pytest
+
+from sim import energy
+
+
+def test_energy():
+    assert energy(2.0) == pytest.approx(19.62, rel=1e-8)
+=== after: tests/test_physics.py ===
+import pytest
+
+from sim import energy
+
+
+def test_energy():
+    assert energy(2.0) == pytest.approx(19.62, rel=1e-2)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"]}]
