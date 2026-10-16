@@ -13,7 +13,7 @@ from pathlib import Path
 
 from checkwash.config import resolve_config_file
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, summarize_allowlist
-from checkwash.hooks import HookInstallError, has_session_start_hook, has_stop_hook
+from checkwash.hooks import HookInstallError, has_session_start_hook, has_stop_hook, stop_reads_hook_input
 from checkwash.report.textio import write_text
 
 
@@ -455,6 +455,7 @@ def collect(root: Path) -> list[Note]:
     jobs, incomplete = _workflow_gates(root)
     hook_paths = []
     session_paths = []
+    input_paths = []
     hook_issues = []
     for relative in (".claude/settings.json", ".claude/settings.local.json"):
         path = root / relative
@@ -466,6 +467,8 @@ def collect(root: Path) -> list[Note]:
                 hook_paths.append(relative)
             if has_session_start_hook(settings):
                 session_paths.append(relative)
+            if stop_reads_hook_input(settings):
+                input_paths.append(relative)
         except (OSError, ValueError, HookInstallError) as exc:
             hook_issues.append(f"{relative}: {exc}")
     precommit_blob = _read(root / ".pre-commit-config.yaml")
@@ -508,13 +511,17 @@ def collect(root: Path) -> list[Note]:
             "Found " + ", ".join(hook_paths) + ". Doctor does not execute Claude or evaluate "
             "its complete managed/global settings. Verify the Stop event in your Claude runtime.",
         ))
-        if not session_paths:
+        missing = [part for part, absent in (
+            ("no `checkwash hook session-start` handler", not session_paths),
+            ("no Stop handler that passes its hook input (`--hook-input stdin`)", not input_paths),
+        ) if absent]
+        if missing:
             notes.append(Note(
-                "info", "no SessionStart hook: the Stop hook cannot see what a session commits",
-                "No `checkwash hook session-start` handler was found beside the Stop hook, so "
-                "the Stop hook checks the working tree against HEAD only, and work committed "
-                "during a session is not analysed there. Run `checkwash hook install --agent "
-                "claude-code` again to add it (#418).",
+                "info", "the Stop hook cannot see what a session commits",
+                "Found " + " and ".join(missing) + ", so the Stop hook checks the working tree "
+                "against HEAD only, and work committed during a session is not analysed there. "
+                "Run `checkwash hook install --agent claude-code` again, with `--local` for "
+                ".claude/settings.local.json, to install both (#418).",
             ))
     if hook_issues:
         notes.append(Note("info", "local hook configuration could not be read", "; ".join(hook_issues)))

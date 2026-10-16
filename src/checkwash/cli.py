@@ -135,10 +135,15 @@ def _session_window(repo: str, hook_input: HookInput) -> _Window:
     recorded = session_base(repo, hook_input)
     if recorded is None:
         return _Window(head, missing=(
-            "no start was recorded for this session; `checkwash hook install` adds the "
-            "SessionStart hook that records it"
+            "no start was recorded for this session (a resumed session, or no SessionStart "
+            "hook; `checkwash hook install` adds it)"
         ))
-    base = session_merge_base(repo, recorded, head)
+    try:
+        base = session_merge_base(repo, recorded, head)
+    except GitError as exc:
+        # A record naming a commit Git cannot walk is no usable record: the
+        # verdict is today's, never an engine error the record chose.
+        return _Window(head, missing=f"the commit this session started from could not be compared with HEAD ({exc})")
     if base is None:
         return _Window(head, missing="HEAD shares no history with the commit this session started from")
     return _Window(head, base=base)
@@ -160,7 +165,9 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
     """One analysis of `changes` with policy read from `config_side`.
 
     `quiet` leaves stderr to an earlier run with the same `config_side`, so a
-    session's second leg (#418) does not repeat its diagnostics.
+    session's second leg (#418) does not repeat its diagnostics, and makes
+    the early returns write nothing to stdout either: the first leg owns the
+    one JSON object the hook prints.
     """
     repo = args.repo
 
@@ -189,6 +196,8 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         advise(f"checkwash: {message}\n")
     if errors and config.on_engine_error == "block":
         # The diagnostics are already on stderr; hook-json warns instead (#414).
+        if quiet:
+            return 2
         return _hook_not_analysed("; ".join(errors)) if _hook_json(args) else 2
 
     contract = Contract()
@@ -218,6 +227,8 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
             # junction on the way to `--repo` moves the prefix the same way.
             # From a subdirectory a base miss is therefore an engine error
             # (owner's ruling on #416, 2026-10-15).
+            if quiet:
+                return 2
             return _engine_error(
                 args,
                 f"--task {args.task} maps to {rel}, which the base tree does not hold; "
@@ -283,30 +294,35 @@ def _visible(run: _Run) -> list:
     return [f for f in run.findings if not f.allowlisted and SEVERITY_ORDER[f.severity] >= threshold]
 
 
-def _session_note(args: argparse.Namespace, window: _Window, run: _Run, readers: dict) -> str | None:
-    """The non-blocking note on what the session's commits hold (#418)."""
+def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> str | None:
+    """The non-blocking note on what the session's commits hold, for a pass (#418).
+
+    On a pass the first leg reports nothing at or above `fail_on`, so every
+    such finding of the second leg is one only the session's window holds;
+    nothing is matched away. A block leaves the note to a later Stop, so the
+    second leg never delays a block.
+    """
     if window.missing is not None:
         return ("checkwash: commits made during this session were not analysed, because "
                 f"{window.missing}. The working tree was checked against HEAD.")
     if window.base == window.head:
         return None
+    unread = "checkwash: commits made during this session were not analysed. "
     try:
         leg = _analyse(args, list_session_changes(args.repo, window.base), window.base,
                        base_label=rev_parse(args.repo, window.base), head_label="worktree",
                        quiet=True, **readers)
     except Exception as exc:  # noqa: BLE001 - leg 1's verdict stands; say what was not analysed
-        return ("checkwash: commits made during this session were not analysed. "
-                f"Engine error: {type(exc).__name__}: {exc}")
+        return unread + f"Engine error: {type(exc).__name__}: {exc}"
     if isinstance(leg, int):
-        return None
-    seen = {f.fingerprint for f in run.findings} | {(f.rule, f.path, f.unit) for f in run.findings}
-    extra = [f for f in _visible(leg) if f.fingerprint not in seen and (f.rule, f.path, f.unit) not in seen]
-    if not extra:
+        return unread + "Their policy could not be read."
+    found = sorted(_visible(leg), key=lambda f: -SEVERITY_ORDER[f.severity])
+    if not found:
         return None
     listed = "; ".join(
-        f"{f.rule} {f.path}" + (f" :: {f.unit}" if f.unit else "") + f" — {f.message}" for f in extra[:5]
-    ) + (f"; and {len(extra) - 5} more" if len(extra) > 5 else "")
-    return (f"checkwash: commits made during this session hold {len(extra)} finding(s) at or above "
+        f"{f.rule} {f.path}" + (f" :: {f.unit}" if f.unit else "") + f" — {f.message}" for f in found[:5]
+    ) + (f"; and {len(found) - 5} more" if len(found) > 5 else "")
+    return (f"checkwash: commits made during this session hold {len(found)} finding(s) at or above "
             f"fail_on that this Stop does not block; the required check will judge them: {listed}.")
 
 
@@ -414,13 +430,15 @@ def _cmd_check(args: argparse.Namespace) -> int:
                 + (f'checkwash allow "{head.fingerprint}" --reason "..."' if head else "")
             )
             if window is not None and window.base is not None and window.base != window.head:
-                reason += (". An exemption, config change or hook upgrade committed during this "
-                           "session applies from the next session; /clear starts one.")
+                reason = reason.rstrip(": ") + (
+                    ". An exemption, config change or hook upgrade committed during this "
+                    "session applies from the next session; /clear starts one."
+                )
             payload = {"decision": "block", "reason": reason}
-        if window is not None:
-            note = _session_note(args, window, run, readers)
-            # With no usable record, the note is only for a pass (#418 ruling 2).
-            if note is not None and not (window.missing is not None and verdict == "block"):
+        elif window is not None:
+            # The session note is for a pass only (#418 ruling 2 and 4).
+            note = _session_note(args, window, readers)
+            if note is not None:
                 payload["systemMessage"] = note
         _write_machine((_json.dumps(payload) if payload else "{}") + "\n")
         return 0

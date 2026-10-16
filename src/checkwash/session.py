@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,8 +31,9 @@ INPUT_BYTE_CAP = 1_000_000
 # Claude Code closes stdin after writing; a pipe that stays open with nothing
 # on it must not hang the hook.
 INPUT_WAIT_SECONDS = 10.0
-# Records older than this are pruned when a session starts. A session resumed
-# after that has no record, and its Stop says so.
+# Other sessions' records older than this are pruned when a session starts.
+# Resume never writes, so a session resumed after its record was pruned has
+# none, and its Stop says so.
 RECORD_MAX_AGE_DAYS = 30
 _OID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
@@ -143,21 +145,50 @@ def _commit_exists(repo: str, oid: str) -> bool:
         return False
 
 
-def _prune(repo: str, directory: Path, now: datetime.datetime) -> None:
-    """Remove records by age or a missing commit, never by count."""
+def _read_record(path: str | Path) -> bytes | None:
+    """A record's bytes, or None unless it is a regular file of at most 4096.
+
+    Opened without following a link and without blocking, then checked on the
+    open descriptor, so a link, FIFO or device swapped in is never read.
+    """
+    flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+             | getattr(os, "O_NONBLOCK", 0))
+    try:
+        descriptor = os.open(path, flags)
+    except OSError:
+        return None
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            return None
+        data = os.read(descriptor, 4097)
+    except OSError:
+        return None
+    finally:
+        os.close(descriptor)
+    return data if len(data) <= 4096 else None
+
+
+def _prune(repo: str, directory: Path, now: datetime.datetime, keep: str) -> None:
+    """Remove other sessions' records by age or a missing commit, never by count.
+
+    `keep` is the starting session's own record, which is never pruned. A
+    record that does not parse is left alone: it may be one another session
+    is still writing.
+    """
     try:
         entries = list(os.scandir(directory))
     except OSError:
         return
     limit = datetime.timedelta(days=RECORD_MAX_AGE_DAYS)
     for entry in entries:
-        if not re.fullmatch(r"[0-9a-f]{64}", entry.name):
+        if entry.name == keep or not re.fullmatch(r"[0-9a-f]{64}", entry.name):
+            continue
+        data = _read_record(entry.path)
+        parsed = _parse_record(data) if data is not None else None
+        if parsed is None:
             continue
         try:
-            if not entry.is_file(follow_symlinks=False) or entry.stat(follow_symlinks=False).st_size > 4096:
-                continue
-            parsed = _parse_record(Path(entry.path).read_bytes())
-            if parsed is None or now - parsed[1] > limit or not _commit_exists(repo, parsed[0]):
+            if now - parsed[1] > limit or not _commit_exists(repo, parsed[0]):
                 os.unlink(entry.path)
         except OSError:
             continue
@@ -166,27 +197,32 @@ def _prune(repo: str, directory: Path, now: datetime.datetime) -> None:
 def record_session_start(repo: str, hook_input: HookInput | None) -> None:
     """Record HEAD as the session's base, once. Never raises.
 
-    Nothing is written on compaction, when the input has no `session_id`, or
-    when HEAD has no commit. An existing record is never replaced.
+    Nothing is written on compaction or resume, when the input has no
+    `session_id`, or when HEAD has no commit; a resumed session with no
+    record keeps none, so its Stop says its commits were not analysed. An
+    existing record is never replaced. Other sessions' records are pruned
+    after the write, so planted records cannot delay it.
     """
     try:
-        if hook_input is None or hook_input.session_id is None or hook_input.source == "compact":
+        if hook_input is None or hook_input.session_id is None or hook_input.source in ("compact", "resume"):
             return
         head = resolve_commit(repo, "HEAD")
         directory = _sessions_dir(repo)
         now = _now()
-        _prune(repo, directory, now)
+        name = _record_name(hook_input.session_id)
         directory.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(
             {"version": 1, "head": head, "created": now.isoformat(timespec="seconds")}, sort_keys=True,
         ).encode("utf-8") + b"\n"
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
         try:
-            descriptor = os.open(directory / _record_name(hook_input.session_id), flags, 0o600)
+            descriptor = os.open(directory / name, flags, 0o600)
         except FileExistsError:
-            return
-        with os.fdopen(descriptor, "wb") as handle:
-            handle.write(payload)
+            pass
+        else:
+            with os.fdopen(descriptor, "wb") as handle:
+                handle.write(payload)
+        _prune(repo, directory, now, keep=name)
     except Exception:  # noqa: BLE001 - a session start must never fail on checkwash
         return
 
@@ -196,12 +232,10 @@ def session_base(repo: str, hook_input: HookInput | None) -> str | None:
     if hook_input is None or hook_input.session_id is None:
         return None
     try:
-        path = _sessions_dir(repo) / _record_name(hook_input.session_id)
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > 4096:
-            return None
-        parsed = _parse_record(path.read_bytes())
+        data = _read_record(_sessions_dir(repo) / _record_name(hook_input.session_id))
     except (OSError, GitError):
         return None
+    parsed = _parse_record(data) if data is not None else None
     if parsed is None or not _commit_exists(repo, parsed[0]):
         return None
     return parsed[0]

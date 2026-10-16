@@ -116,15 +116,25 @@ session-start`, which records HEAD once per session under
 tree against HEAD decides the verdict, as before, but policy (config,
 allowlist, `--task`, manifests) is read from the commit the session started
 from. An exemption or config change the agent commits during a session
-therefore applies from the next session; `/clear` starts one. Findings that
-only the session's commits hold are named in a non-blocking `systemMessage`
-and left to the required check. When the hook input arrives but no record
-does (a handler installed before #418, a record pruned after 30 days, or HEAD
-with no history in common with it), a pass says the session's commits were
-not analysed. Run `checkwash hook install --agent claude-code` again to add
-the SessionStart handler; the installer replaces the earlier managed Stop
-handler. A record under `.git` is still writable by the agent, so the
-required CI check remains the gate.
+therefore applies from the next session; `/clear` starts one. On a pass,
+findings the session's commits hold are named in a non-blocking
+`systemMessage` and left to the required check; a block leaves them to a
+later Stop. When the Stop handler reads hook input but finds no usable record
+(no SessionStart handler, a resumed session, which is never recorded, a record
+pruned after 30 days, or HEAD with no history in common with it), a pass says
+the session's commits were not analysed. A Stop handler installed before #418
+reads no hook input, so it keeps the old window and says nothing; doctor notes
+it. Run `checkwash hook install --agent claude-code` again, with `--local` for
+`.claude/settings.local.json`, to install both handlers; the installer
+replaces the earlier managed Stop handler.
+
+Shared settings (`.claude/settings.json`) run the `checkwash` on each
+teammate's PATH. A checkwash older than #418 rejects `--hook-input` as an
+unknown argument and exits 2, which Claude Code reads as a blocked stop, so
+upgrade every teammate's CLI before committing the reinstalled settings.
+
+A record under `.git` is still writable by the agent, and the agent can run
+`hook session-start` itself, so the required CI check remains the gate.
 
 Doctor reads local and shared Stop configuration. A local-only installation
 should be reported as configured locally but missing CI, exit 1. Doctor does

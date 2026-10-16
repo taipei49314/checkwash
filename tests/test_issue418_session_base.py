@@ -10,7 +10,7 @@ governed its own next Stop. Now the managed SessionStart handler
 
 - HEAD..worktree still decides the verdict, with policy read from the
   session's start;
-- what only the session's commits hold is named in a non-blocking
+- on a pass, what the session's commits hold is named in a non-blocking
   `systemMessage` for the required check to judge;
 - with hook input and no usable record, a pass says the commits were not
   analysed;
@@ -31,7 +31,9 @@ import sys
 
 import pytest
 
+import checkwash.cli as cli_module
 from checkwash.doctor import collect
+from checkwash.gitio import GitError
 from checkwash.hooks import (
     install_claude,
     is_managed_handler,
@@ -171,8 +173,10 @@ def test_without_hook_input_the_flag_changes_nothing(repo):
     ("unknown session", _input("never-started", "Stop"), "no start was recorded for this session"),
     ("no session id", b'{"hook_event_name": "Stop"}', "the hook input carries no session id"),
     ("unparsable", b'{"session_id": ', "the hook input could not be read"),
+    # The id names the case: pytest would otherwise build it from the
+    # megabyte of input and put it in PYTEST_CURRENT_TEST.
     ("oversized", b" " * 1_000_001, "the hook input could not be read"),
-])
+], ids=["unknown-session", "no-session-id", "unparsable", "oversized"])
 def test_hook_input_without_a_usable_record_passes_with_a_note(repo, label, stdin, reason):
     weaken(repo)
     commit(repo)
@@ -188,6 +192,53 @@ def test_without_a_record_a_block_carries_no_note(repo):
     payload = stop(repo, "never-started")
     assert payload["decision"] == "block"
     assert "systemMessage" not in payload
+
+
+def test_a_block_leaves_the_session_note_to_a_later_stop(repo):
+    (repo / "test_other.py").write_bytes(b"def test_other():\n    assert other() == 7\n")
+    commit(repo, "second test")
+    start(repo)
+    weaken(repo)
+    commit(repo, "weaken one")
+    (repo / "test_other.py").write_bytes(b"def test_other():\n    assert other() > 0\n")
+    blocked = stop(repo)
+    assert blocked["decision"] == "block" and "systemMessage" not in blocked
+    assert "test_other.py" in blocked["reason"]
+    git(repo, "checkout", "--", "test_other.py")
+    passed = stop(repo)
+    assert "decision" not in passed
+    assert "ASSERT_WEAKENED test_total.py :: test_total" in passed["systemMessage"]
+
+
+def test_a_file_named_after_the_session_base_does_not_break_the_second_pass(repo):
+    start(repo)
+    (repo / git(repo, "rev-parse", "HEAD")).write_bytes(b"")
+    weaken(repo)
+    git(repo, "add", "--", "test_total.py")
+    git(repo, "commit", "-m", "weaken")
+    payload = stop(repo)
+    assert "ASSERT_WEAKENED test_total.py :: test_total" in payload["systemMessage"]
+
+
+def test_a_record_git_cannot_compare_is_a_note_not_an_engine_error(repo, monkeypatch):
+    def fail(*args):
+        raise GitError("git merge-base failed: fatal: bad object")
+
+    monkeypatch.setattr(cli_module, "session_base", lambda *args: "1" * 40)
+    monkeypatch.setattr(cli_module, "session_merge_base", fail)
+    window = cli_module._session_window(str(repo), HookInput({"session_id": "s-1"}))
+    assert window.base is None
+    assert window.missing.startswith("the commit this session started from could not be compared with HEAD")
+
+
+def test_a_record_that_is_not_a_regular_file_is_no_record(repo):
+    record = repo / ".git" / "checkwash" / "sessions" / hashlib.sha256(b"s-1").hexdigest()
+    record.mkdir(parents=True)
+    start(repo)
+    assert session_base(str(repo), HookInput({"session_id": "s-1"})) is None
+    weaken(repo)
+    commit(repo)
+    assert "no start was recorded for this session" in stop(repo)["systemMessage"]
 
 
 def test_head_moved_off_the_session_base_uses_the_merge_base(repo):
@@ -226,15 +277,16 @@ def test_the_flag_needs_hook_json_and_no_range(repo, args):
 
 # --- the session record ----------------------------------------------------------------------------
 
-def test_compaction_never_writes_and_a_record_is_never_replaced(repo):
+def test_compaction_and_resume_never_write_and_a_record_is_never_replaced(repo):
     start(repo, source="compact")
+    start(repo, source="resume")
     assert _records(repo) == []
     start(repo)
     recorded = session_base(str(repo), HookInput({"session_id": "s-1"}))
     assert recorded == git(repo, "rev-parse", "HEAD")
     (repo / "other.py").write_bytes(b"X = 1\n")
     commit(repo)
-    start(repo, source="resume")
+    start(repo)
     assert session_base(str(repo), HookInput({"session_id": "s-1"})) == recorded
     assert _records(repo) == [hashlib.sha256(b"s-1").hexdigest()]
 
@@ -244,15 +296,21 @@ def test_records_are_pruned_by_age_and_by_a_missing_commit_at_session_start(repo
     directory.mkdir(parents=True)
     head = git(repo, "rev-parse", "HEAD")
     now = datetime.datetime.now(datetime.timezone.utc)
+    old = (now - datetime.timedelta(days=RECORD_MAX_AGE_DAYS + 1)).isoformat()
     records = {
-        "old": {"version": 1, "head": head, "created": (now - datetime.timedelta(days=RECORD_MAX_AGE_DAYS + 1)).isoformat()},
+        "old": {"version": 1, "head": head, "created": old},
         "gone": {"version": 1, "head": "0" * 40, "created": now.isoformat()},
         "kept": {"version": 1, "head": head, "created": now.isoformat()},
+        # The starting session's own record is never pruned, however old.
+        "mine": {"version": 1, "head": head, "created": old},
     }
     for name, record in records.items():
         (directory / hashlib.sha256(name.encode()).hexdigest()).write_text(json.dumps(record), encoding="utf-8")
-    record_session_start(str(repo), HookInput({"session_id": "new", "source": "startup"}))
-    assert _records(repo) == sorted(hashlib.sha256(name.encode()).hexdigest() for name in ("kept", "new"))
+    # One that does not parse may be another session's record mid-write.
+    (directory / hashlib.sha256(b"partial").hexdigest()).write_bytes(b"")
+    record_session_start(str(repo), HookInput({"session_id": "mine", "source": "startup"}))
+    assert _records(repo) == sorted(hashlib.sha256(name.encode()).hexdigest() for name in ("kept", "mine", "partial"))
+    assert session_base(str(repo), HookInput({"session_id": "mine"})) == head
 
 
 def test_a_session_start_never_fails_and_never_prints(repo, tmp_path):
@@ -333,15 +391,23 @@ def test_the_local_session_handler_records_the_start(repo):
     assert session_base(str(repo), HookInput({"session_id": "s-1"})) == git(repo, "rev-parse", "HEAD")
 
 
-def test_doctor_notes_a_stop_hook_without_a_session_start_hook(repo):
+def test_doctor_notes_a_stop_hook_that_cannot_see_the_session(repo):
     path = repo / ".claude/settings.local.json"
     path.parent.mkdir()
     legacy = {"type": "command", "command": "checkwash", "args": ["check", "--format", "hook-json"]}
-    path.write_text(json.dumps({"hooks": {"Stop": [{"hooks": [legacy]}]}}), encoding="utf-8")
-    title = "no SessionStart hook: the Stop hook cannot see what a session commits"
-    assert [n.level for n in collect(repo) if n.title == title] == ["info"]
-    path.write_text(json.dumps({"hooks": {
-        "Stop": [{"hooks": [legacy]}],
-        "SessionStart": [{"hooks": [{"type": "command", "command": "checkwash", "args": ["hook", "session-start"]}]}],
-    }}), encoding="utf-8")
-    assert not [n for n in collect(repo) if n.title == title]
+    current = {"type": "command", "command": "checkwash", "args": ["check", "--format", "hook-json", "--hook-input", "stdin"]}
+    session = {"type": "command", "command": "checkwash", "args": ["hook", "session-start"]}
+    title = "the Stop hook cannot see what a session commits"
+
+    def note(hooks):
+        path.write_text(json.dumps({"hooks": hooks}), encoding="utf-8")
+        return [n for n in collect(repo) if n.title == title]
+
+    alone = note({"Stop": [{"hooks": [legacy]}]})
+    assert [n.level for n in alone] == ["info"]
+    assert "no `checkwash hook session-start` handler and no Stop handler" in alone[0].detail
+    assert "--local" in alone[0].detail
+    legacy_stop = note({"Stop": [{"hooks": [legacy]}], "SessionStart": [{"hooks": [session]}]})
+    assert "no Stop handler that passes its hook input" in legacy_stop[0].detail
+    assert "session-start` handler and" not in legacy_stop[0].detail
+    assert not note({"Stop": [{"hooks": [current]}], "SessionStart": [{"hooks": [session]}]})

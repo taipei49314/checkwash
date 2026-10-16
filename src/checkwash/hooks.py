@@ -207,6 +207,37 @@ def has_session_start_hook(settings: object) -> bool:
     return _has_hook(session_start_handlers(settings), is_managed_session_handler, _SESSION_ARGS)
 
 
+def stop_reads_hook_input(settings: object) -> bool:
+    """A Stop handler that hands checkwash its hook input (#418)."""
+    for handler in stop_handlers(settings):
+        if handler.get("type") != "command":
+            continue
+        shape = {key: handler[key] for key in ("type", "command", "args") if key in handler}
+        if _managed_shape(shape, (_CHECK_ARGS,)):
+            return True
+        words = _checkwash_words(handler)
+        if words and words[1:4] == _LEGACY_CHECK_ARGS and any(
+            words[i:i + 2] == ["--hook-input", "stdin"] for i in range(4, len(words))
+        ):
+            return True
+    return False
+
+
+def _checkwash_words(handler: dict) -> list[str] | None:
+    """A command handler's words when it runs a checkwash executable, else None."""
+    if "args" in handler:
+        words = [handler["command"], *handler["args"]]
+    else:
+        try:
+            words = shlex.split(handler["command"])
+        except ValueError:
+            return None
+    if not words:
+        return None
+    name = words[0].replace("\\", "/").rsplit("/", 1)[-1]
+    return words if name in {"checkwash", "checkwash.exe", "greenwash", "greenwash.exe"} else None
+
+
 def _has_hook(handlers: list[dict], managed, prefix: list[str]) -> bool:
     for handler in handlers:
         if handler.get("type") != "command":
@@ -214,17 +245,8 @@ def _has_hook(handlers: list[dict], managed, prefix: list[str]) -> bool:
         shape = {key: handler[key] for key in ("type", "command", "args") if key in handler}
         if managed(shape):
             return True
-        if "args" in handler:
-            words = [handler["command"], *handler["args"]]
-        else:
-            try:
-                words = shlex.split(handler["command"])
-            except ValueError:
-                continue
-        if not words:
-            continue
-        name = words[0].replace("\\", "/").rsplit("/", 1)[-1]
-        if name in {"checkwash", "checkwash.exe", "greenwash", "greenwash.exe"} and words[1:1 + len(prefix)] == prefix:
+        words = _checkwash_words(handler)
+        if words and words[1:1 + len(prefix)] == prefix:
             return True
     return False
 

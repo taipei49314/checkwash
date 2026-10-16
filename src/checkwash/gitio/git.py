@@ -374,7 +374,9 @@ def git_dir(repo: str) -> str:
 
 
 def _committed_paths(repo: str, since: str, head: str) -> list[str]:
-    out = _run(repo, ["diff", "--name-only", "-z", "--no-renames", since, head])
+    # `--` ends the revisions: a working-tree file named like either commit
+    # would otherwise make Git refuse the arguments as ambiguous.
+    out = _run(repo, ["diff", "--name-only", "-z", "--no-renames", since, head, "--"])
     if len(out) > 64_000_000 or (out and not out.endswith(b"\0")):
         raise GitError("incomplete or over-budget diff path list")
     try:
