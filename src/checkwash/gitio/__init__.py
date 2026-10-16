@@ -3,14 +3,17 @@ from checkwash.gitio.git import (
     GitRootUnresolved,
     GitSourceOverLimit,
     RepositoryRoot,
+    git_dir,
     grep_head_paths,
     list_range_changes,
+    list_session_changes,
     list_worktree_changes,
     merge_base,
     read_base_file,
     resolve_repository_root,
     rev_parse,
     resolve_commit,
+    session_merge_base,
 )
 
 __all__ = [
@@ -18,12 +21,15 @@ __all__ = [
     "GitRootUnresolved",
     "GitSourceOverLimit",
     "RepositoryRoot",
+    "git_dir",
     "grep_head_paths",
     "list_range_changes",
+    "list_session_changes",
     "list_worktree_changes",
     "merge_base",
     "read_base_file",
     "resolve_repository_root",
     "rev_parse",
     "resolve_commit",
+    "session_merge_base",
 ]

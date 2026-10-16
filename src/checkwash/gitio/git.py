@@ -322,10 +322,78 @@ def _change(path: str, status: str, before, after, *, old_path: str | None = Non
 def list_worktree_changes(repo: str, *, base: str | None = None) -> list[FileChange]:
     """HEAD vs working tree (staged + unstaged + untracked)."""
     base = resolve_commit(repo, "HEAD" if base is None else base)
-    if resolve_commit(repo, "HEAD") != base:
+    entries = _worktree_status(repo, base)
+    return _worktree_changes(repo, base, [(path, "D" in xy) for xy, path in entries])
+
+
+def list_session_changes(repo: str, since: str) -> list[FileChange]:
+    """A commit vs the working tree, for the Claude Code Stop hook (#418).
+
+    `since` is the commit the session started from. The paths are those the
+    commits since then changed (`git diff --name-only since HEAD`) and those
+    `git status` lists against HEAD. Each change's before side is `since`'s
+    blob; its after side is the working tree, or absent where status says
+    deleted or a committed path is gone from HEAD.
+    """
+    since = resolve_commit(repo, since)
+    head = resolve_commit(repo, "HEAD")
+    committed = _committed_paths(repo, since, head)
+    entries = _worktree_status(repo, head)
+    listed = {path for _, path in entries}
+    items = [(path, "D" in xy) for xy, path in entries]
+    for path in committed:
+        if path not in listed:
+            # Clean in the working tree, so it holds HEAD's version or nothing.
+            items.append((path, _read_blob(repo, head, path, side="head", unread_oversized=True) is None))
+    return _worktree_changes(repo, since, sorted(items))
+
+
+def session_merge_base(repo: str, a: str, b: str) -> str | None:
+    """`git merge-base a b`, or None when the two share no history (#418)."""
+    try:
+        proc = subprocess.run(["git", "-C", repo, "merge-base", a, b], capture_output=True, check=False, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise GitError("git read could not complete") from exc
+    if proc.returncode == 1 and not proc.stdout and not proc.stderr:
+        return None
+    if proc.returncode != 0 or not re.fullmatch(rb"(?:[0-9a-f]{40}|[0-9a-f]{64})\n", proc.stdout):
+        raise GitError(f"git merge-base failed: {proc.stderr.decode('utf-8', 'replace').strip()}")
+    return proc.stdout.decode("ascii").strip()
+
+
+def git_dir(repo: str) -> str:
+    """The absolute Git directory of the work tree at `repo` (#418)."""
+    raw = _run(repo, ["rev-parse", "--absolute-git-dir"])
+    try:
+        text = raw.decode("utf-8", "strict")
+    except UnicodeError as exc:
+        raise GitError("git rev-parse returned an undecodable Git directory") from exc
+    if not text.endswith("\n") or "\n" in text[:-1] or not os.path.isabs(text[:-1]):
+        raise GitError("git rev-parse returned an unusable Git directory")
+    return text[:-1]
+
+
+def _committed_paths(repo: str, since: str, head: str) -> list[str]:
+    # `--` ends the revisions: a working-tree file named like either commit
+    # would otherwise make Git refuse the arguments as ambiguous.
+    out = _run(repo, ["diff", "--name-only", "-z", "--no-renames", since, head, "--"])
+    if len(out) > 64_000_000 or (out and not out.endswith(b"\0")):
+        raise GitError("incomplete or over-budget diff path list")
+    try:
+        paths = out[:-1].decode("utf-8", "strict").split("\0") if out else []
+    except UnicodeError as exc:
+        raise GitError("undecodable diff path list") from exc
+    if any(not path or any(c in path for c in "\r\n\0") for path in paths) or len(paths) != len(set(paths)):
+        raise GitError("unsafe or duplicate diff path")
+    return paths
+
+
+def _worktree_status(repo: str, head: str) -> list[tuple[str, str]]:
+    """`git status` records against `head`, which must stay HEAD throughout."""
+    if resolve_commit(repo, "HEAD") != head:
         raise GitError("worktree HEAD changed before status collection")
     out = _run(repo, ["status", "--porcelain", "-z", "--untracked-files=all", "--no-renames"])
-    if resolve_commit(repo, "HEAD") != base:
+    if resolve_commit(repo, "HEAD") != head:
         raise GitError("worktree HEAD changed during status collection")
     if len(out) > 64_000_000 or (out and not out.endswith(b"\0")):
         raise GitError("incomplete or over-budget worktree status")
@@ -345,15 +413,19 @@ def list_worktree_changes(repo: str, *, base: str | None = None) -> list[FileCha
             raise GitError("unsafe or duplicate worktree status path")
         seen.add(path)
         entries.append((xy, path))
+    return entries
+
+
+def _worktree_changes(repo: str, base: str, items: list[tuple[str, bool]]) -> list[FileChange]:
+    """`base`'s blob against the working tree for each (path, deleted) item."""
     changes: list[FileChange] = []
     snapshot = WorkingTreeSnapshot(repo)
-    for xy, path in entries:
+    for path, deleted in items:
         before = _read_blob(repo, base, path, side="base", unread_oversized=True)
         # Trust git's status codes over the filesystem: on a case-insensitive
         # volume, reading a deleted path back off disk returns the *renamed*
         # file's bytes, which made case-only test renames vanish entirely
         # (confirmed red-team finding).
-        deleted = "D" in xy
         after: bytes | UnreadSide | None = None
         if not deleted:
             after = snapshot.read(path, unread_oversized=True)

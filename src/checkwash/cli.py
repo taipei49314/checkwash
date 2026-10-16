@@ -12,7 +12,10 @@ is not `--repo` itself (#416). `hook install` writes under `--repo` as given.
 
 Exit codes (SPEC §9): 0 pass, 1 block, 2 engine error. `check --format
 hook-json` exits 0 on a verdict and on an engine error: its JSON carries a
-block, or the engine error as a non-blocking `systemMessage` (#414).
+block, or the engine error as a non-blocking `systemMessage` (#414). With
+`--hook-input stdin` (the managed Stop hook) it also reads the session's start
+from what `hook session-start` (the managed SessionStart hook) recorded, which
+prints nothing and always exits 0 (#418).
 `bench` uses 0 / 2 only — it never reports a verdict.
 """
 
@@ -23,6 +26,7 @@ import datetime
 import os
 import posixpath
 import sys
+from dataclasses import dataclass
 
 from checkwash import __version__
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
@@ -38,12 +42,14 @@ from checkwash.gitio import (
     RepositoryRoot,
     grep_head_paths,
     list_range_changes,
+    list_session_changes,
     list_worktree_changes,
     merge_base,
     read_base_file,
     resolve_repository_root,
     rev_parse,
     resolve_commit,
+    session_merge_base,
 )
 from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 from checkwash.gitio.pytest_configs import PairedPytestConfigs
@@ -53,6 +59,7 @@ from checkwash.report.context import ReportContext
 from checkwash.report.coverage import coverage_to_json
 from checkwash.report.term import render
 from checkwash.report.textio import write_text
+from checkwash.session import HookInput, read_hook_input, record_session_start, session_base
 from checkwash.sweep import sweep
 
 
@@ -104,9 +111,229 @@ def _range_usage_error(spec: str) -> str | None:
     return None
 
 
+@dataclass
+class _Window:
+    """Where the Stop hook's session started, for `--hook-input stdin` (#418).
+
+    `base` is the commit policy is read from and the session's commits are
+    diffed from: the recorded session base when HEAD descends from it, else
+    their merge base. It is None when there is no usable record; `missing`
+    then says why, and the run is today's HEAD..worktree check.
+    """
+
+    head: str
+    base: str | None = None
+    missing: str | None = None
+
+
+def _session_window(repo: str, hook_input: HookInput) -> _Window:
+    head = resolve_commit(repo, "HEAD")
+    if hook_input.data is None:
+        return _Window(head, missing="the hook input could not be read")
+    if hook_input.session_id is None:
+        return _Window(head, missing="the hook input carries no session id")
+    recorded = session_base(repo, hook_input)
+    if recorded is None:
+        return _Window(head, missing=(
+            "no start was recorded for this session (a resumed session, or no SessionStart "
+            "hook; `checkwash hook install` adds it)"
+        ))
+    try:
+        base = session_merge_base(repo, recorded, head)
+    except GitError as exc:
+        # A record naming a commit Git cannot walk is no usable record: the
+        # verdict is today's, never an engine error the record chose.
+        return _Window(head, missing=f"the commit this session started from could not be compared with HEAD ({exc})")
+    if base is None:
+        return _Window(head, missing="HEAD shares no history with the commit this session started from")
+    return _Window(head, base=base)
+
+
+@dataclass
+class _Run:
+    ir: object
+    findings: list
+    verdict: str
+    config: object
+    diagnostics: list[str]
+    report_context: ReportContext
+    changes: list
+
+
+def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label: str, head_label: str,
+             head_reader, head_searcher, root_snapshot, pytest_configs, quiet: bool = False) -> _Run | int:
+    """One analysis of `changes` with policy read from `config_side`.
+
+    `quiet` leaves stderr to an earlier run with the same `config_side`, so a
+    session's second leg (#418) does not repeat its diagnostics, and makes
+    the early returns write nothing to stdout either: the first leg owns the
+    one JSON object the hook prints.
+    """
+    repo = args.repo
+
+    def advise(text: str) -> None:
+        if not quiet:
+            write_text(text, sys.stderr)
+
+    config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
+    config, config_error, config_warnings = load_config(config_data, path=config_path)
+    if args.fail_on:
+        config.fail_on = args.fail_on
+    allow_path, allow_data = read_base_config_file(repo, config_side, "allow.toml")
+    allow_entries, allow_error = load_allowlist(allow_data, path=allow_path)
+    # Unsupported exemptions are not TOML parse errors. Keep machine stdout
+    # intact and report the ignored base-side keys on stderr in every format.
+    for message in fingerprint_diagnostics(allow_entries):
+        advise(f"checkwash: {allow_path}: ignored exemption: {message}\n")
+    # A config that silently fails to parse used to revert a hardened gate to
+    # defaults with no diagnostic anywhere (confirmed red-team finding).
+    # Value-level warnings are visible in the same channels but never fatal:
+    # the one value a warning can concern (on_engine_error itself) must not
+    # become the engine error it describes (audit 2026-08-19).
+    errors = [e for e in (config_error, allow_error) if e]
+    diagnostics = errors + config_warnings
+    for message in diagnostics:
+        advise(f"checkwash: {message}\n")
+    if errors and config.on_engine_error == "block":
+        # The diagnostics are already on stderr; hook-json warns instead (#414).
+        if quiet:
+            return 2
+        return _hook_not_analysed("; ".join(errors)) if _hook_json(args) else 2
+
+    contract = Contract()
+    if args.task:
+        # The contract carries oracle_freeze and the scope globs, so reading
+        # it from the head side let a diff edit TASK.md to disarm E2 and E7
+        # for itself. Same rule as config and the allowlist: base side wins
+        # (SPEC §1); the working-tree copy is only a fallback when the task
+        # file is untracked, and only at the root.
+        prefix = getattr(args, "repo_prefix", "")
+        if prefix:
+            # Re-rooted (#416): relative to the directory `--repo` named, then
+            # into the root with Git's prefix, lexically. Never realpath: a
+            # head-side symlink at the task path would choose which base file
+            # supplies the contract, or hand the fallback attacker bytes.
+            rel = posixpath.normpath(prefix + os.path.relpath(args.task, args.repo_given).replace("\\", "/"))
+        else:
+            rel = os.path.relpath(args.task, repo).replace("\\", "/")
+        data = read_base_file(repo, config_side, rel)
+        if data is not None:
+            contract = parse_contract(data.decode("utf-8", errors="replace"))
+        elif prefix:
+            # Git spells the prefix as the directory is on disk. On a
+            # case-insensitive checkout the head chooses that spelling (`PKG/`
+            # for the base's `pkg/`), so the mapped path can miss the base
+            # contract while the working-tree copy is the head's. A symlink or
+            # junction on the way to `--repo` moves the prefix the same way.
+            # From a subdirectory a base miss is therefore an engine error
+            # (owner's ruling on #416, 2026-10-15).
+            if quiet:
+                return 2
+            return _engine_error(
+                args,
+                f"--task {args.task} maps to {rel}, which the base tree does not hold; "
+                "from a subdirectory only the base copy is read, so run from the "
+                "repository root to use an untracked task file",
+            )
+        else:
+            with open(args.task, encoding="utf-8") as fh:
+                contract = parse_contract(fh.read())
+
+    known_modules: set[str] | None = None
+    declared: set[str] = set()
+    # The project's own name, kept apart from what it depends on: "declared"
+    # answers yes for `flask` inside flask, and a first-party check built on it
+    # would deny the first party.
+    self_modules: set[str] = set()
+    found_manifest = False
+    for manifest in MANIFESTS:
+        try:
+            data = read_base_file(repo, config_side, manifest)
+        except GitSourceOverLimit as exc:
+            # A root lockfile is read on every run, touched or not. Over the
+            # limit, it is skipped as if absent, with a note (#415).
+            if manifest not in SKIPPABLE_OVERSIZED:
+                raise
+            advise(f"checkwash: skipped {exc.unread.described()}: over the source byte limit; "
+                   "the run continues without its declared modules\n")
+            continue
+        if data is None:
+            continue
+        found_manifest = True
+        declared |= parse_manifest(manifest, data)
+        self_modules |= project_names(manifest, data)
+    if found_manifest:
+        known_modules = known_baseline() | declared
+
+    report_context = ReportContext(collect_locations=args.format == "sarif")
+    ir, findings, verdict = analyze(
+        changes,
+        config,
+        contract,
+        allow_entries,
+        _today(),
+        base_label=base_label,
+        head_label=head_label,
+        known_modules=known_modules,
+        self_modules=self_modules,
+        head_reader=head_reader,
+        head_searcher=head_searcher,
+        report_context=report_context,
+        root_reader=root_snapshot.read,
+        root_searcher=root_snapshot.search,
+        root_path_lister=root_snapshot.list_paths,
+        root_batch_reader=root_snapshot.read_many,
+        pytest_configs=pytest_configs,
+    )
+    return _Run(ir, findings, verdict, config, diagnostics, report_context, changes)
+
+
+def _visible(run: _Run) -> list:
+    """Findings at or above `fail_on` that no exemption covers."""
+    threshold = SEVERITY_ORDER[run.config.fail_on]
+    return [f for f in run.findings if not f.allowlisted and SEVERITY_ORDER[f.severity] >= threshold]
+
+
+def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> str | None:
+    """The non-blocking note on what the session's commits hold, for a pass (#418).
+
+    On a pass the first leg reports nothing at or above `fail_on`, so every
+    such finding of the second leg is one only the session's window holds;
+    nothing is matched away. A block leaves the note to a later Stop, so the
+    second leg never delays a block.
+    """
+    if window.missing is not None:
+        return ("checkwash: commits made during this session were not analysed, because "
+                f"{window.missing}. The working tree was checked against HEAD.")
+    if window.base == window.head:
+        return None
+    unread = "checkwash: commits made during this session were not analysed. "
+    try:
+        leg = _analyse(args, list_session_changes(args.repo, window.base), window.base,
+                       base_label=rev_parse(args.repo, window.base), head_label="worktree",
+                       quiet=True, **readers)
+    except Exception as exc:  # noqa: BLE001 - leg 1's verdict stands; say what was not analysed
+        return unread + f"Engine error: {type(exc).__name__}: {exc}"
+    if isinstance(leg, int):
+        return unread + "Their policy could not be read."
+    found = sorted(_visible(leg), key=lambda f: -SEVERITY_ORDER[f.severity])
+    if not found:
+        return None
+    listed = "; ".join(
+        f"{f.rule} {f.path}" + (f" :: {f.unit}" if f.unit else "") + f" — {f.message}" for f in found[:5]
+    ) + (f"; and {len(found) - 5} more" if len(found) > 5 else "")
+    return (f"checkwash: commits made during this session hold {len(found)} finding(s) at or above "
+            f"fail_on that this Stop does not block; the required check will judge them: {listed}.")
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     repo = args.repo
     pytest_configs = None
+    window = None
+    if getattr(args, "hook_input", None) and not args.emit_ir:
+        hook_input = read_hook_input(sys.stdin)
+        if hook_input is not None:
+            window = _session_window(repo, hook_input)
     if args.range:
         if "..." in args.range:
             # Three-dot means merge-base(A,B)..B — the standard PR-diff
@@ -139,127 +366,31 @@ def _cmd_check(args: argparse.Namespace) -> int:
         head_snapshot = GitSnapshot(repo, head, side="head")
         pytest_configs = PairedPytestConfigs(GitSnapshot(repo, base, side="base"), head_snapshot)
         head_reader = head_snapshot.read
+        root_snapshot = head_snapshot
 
         def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
             return grep_head_paths(repo, _rev, needles)
     else:
-        base = resolve_commit(repo, "HEAD")
+        base = resolve_commit(repo, "HEAD") if window is None else window.head
         changes = list_worktree_changes(repo, base=base)
         base_label = rev_parse(repo, base)
         head_label = "worktree"
-        config_side = base
+        # In a recorded session, policy comes from where it started: what the
+        # agent commits during the session governs the next one (#418).
+        config_side = base if window is None or window.base is None else window.base
 
         worktree_snapshot = WorkingTreeSnapshot(repo)
         head_reader = worktree_snapshot.read
         head_searcher = worktree_snapshot.search
+        root_snapshot = worktree_snapshot
 
-    config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
-    config, config_error, config_warnings = load_config(config_data, path=config_path)
-    if args.fail_on:
-        config.fail_on = args.fail_on
-    allow_path, allow_data = read_base_config_file(repo, config_side, "allow.toml")
-    allow_entries, allow_error = load_allowlist(allow_data, path=allow_path)
-    # Unsupported exemptions are not TOML parse errors. Keep machine stdout
-    # intact and report the ignored base-side keys on stderr in every format.
-    for message in fingerprint_diagnostics(allow_entries):
-        write_text(f"checkwash: {allow_path}: ignored exemption: {message}\n", sys.stderr)
-    # A config that silently fails to parse used to revert a hardened gate to
-    # defaults with no diagnostic anywhere (confirmed red-team finding).
-    # Value-level warnings are visible in the same channels but never fatal:
-    # the one value a warning can concern (on_engine_error itself) must not
-    # become the engine error it describes (audit 2026-08-19).
-    errors = [e for e in (config_error, allow_error) if e]
-    diagnostics = errors + config_warnings
-    for message in diagnostics:
-        write_text(f"checkwash: {message}\n", sys.stderr)
-    if errors and config.on_engine_error == "block":
-        # The diagnostics are already on stderr; hook-json warns instead (#414).
-        return _hook_not_analysed("; ".join(errors)) if _hook_json(args) else 2
-
-    contract = Contract()
-    if args.task:
-        # The contract carries oracle_freeze and the scope globs, so reading
-        # it from the head side let a diff edit TASK.md to disarm E2 and E7
-        # for itself. Same rule as config and the allowlist: base side wins
-        # (SPEC §1); the working-tree copy is only a fallback when the task
-        # file is untracked, and only at the root.
-        prefix = getattr(args, "repo_prefix", "")
-        if prefix:
-            # Re-rooted (#416): relative to the directory `--repo` named, then
-            # into the root with Git's prefix, lexically. Never realpath: a
-            # head-side symlink at the task path would choose which base file
-            # supplies the contract, or hand the fallback attacker bytes.
-            rel = posixpath.normpath(prefix + os.path.relpath(args.task, args.repo_given).replace("\\", "/"))
-        else:
-            rel = os.path.relpath(args.task, repo).replace("\\", "/")
-        data = read_base_file(repo, config_side, rel)
-        if data is not None:
-            contract = parse_contract(data.decode("utf-8", errors="replace"))
-        elif prefix:
-            # Git spells the prefix as the directory is on disk. On a
-            # case-insensitive checkout the head chooses that spelling (`PKG/`
-            # for the base's `pkg/`), so the mapped path can miss the base
-            # contract while the working-tree copy is the head's. A symlink or
-            # junction on the way to `--repo` moves the prefix the same way.
-            # From a subdirectory a base miss is therefore an engine error
-            # (owner's ruling on #416, 2026-10-15).
-            return _engine_error(
-                args,
-                f"--task {args.task} maps to {rel}, which the base tree does not hold; "
-                "from a subdirectory only the base copy is read, so run from the "
-                "repository root to use an untracked task file",
-            )
-        else:
-            with open(args.task, encoding="utf-8") as fh:
-                contract = parse_contract(fh.read())
-
-    known_modules: set[str] | None = None
-    declared: set[str] = set()
-    # The project's own name, kept apart from what it depends on: "declared"
-    # answers yes for `flask` inside flask, and a first-party check built on it
-    # would deny the first party.
-    self_modules: set[str] = set()
-    found_manifest = False
-    for manifest in MANIFESTS:
-        try:
-            data = read_base_file(repo, config_side, manifest)
-        except GitSourceOverLimit as exc:
-            # A root lockfile is read on every run, touched or not. Over the
-            # limit, it is skipped as if absent, with a note (#415).
-            if manifest not in SKIPPABLE_OVERSIZED:
-                raise
-            write_text(f"checkwash: skipped {exc.unread.described()}: over the source byte limit; "
-                       "the run continues without its declared modules\n", sys.stderr)
-            continue
-        if data is None:
-            continue
-        found_manifest = True
-        declared |= parse_manifest(manifest, data)
-        self_modules |= project_names(manifest, data)
-    if found_manifest:
-        known_modules = known_baseline() | declared
-
-    report_context = ReportContext(collect_locations=args.format == "sarif")
-    root_snapshot = head_snapshot if args.range else worktree_snapshot
-    ir, findings, verdict = analyze(
-        changes,
-        config,
-        contract,
-        allow_entries,
-        _today(),
-        base_label=base_label,
-        head_label=head_label,
-        known_modules=known_modules,
-        self_modules=self_modules,
-        head_reader=head_reader,
-        head_searcher=head_searcher,
-        report_context=report_context,
-        root_reader=root_snapshot.read,
-        root_searcher=root_snapshot.search,
-        root_path_lister=root_snapshot.list_paths,
-        root_batch_reader=root_snapshot.read_many,
-        pytest_configs=pytest_configs,
-    )
+    readers = {"head_reader": head_reader, "head_searcher": head_searcher,
+               "root_snapshot": root_snapshot, "pytest_configs": pytest_configs}
+    run = _analyse(args, changes, config_side, base_label=base_label, head_label=head_label, **readers)
+    if isinstance(run, int):
+        return run
+    ir, findings, verdict, config = run.ir, run.findings, run.verdict, run.config
+    diagnostics, report_context = run.diagnostics, run.report_context
 
     # Sides over the source byte limit that no detector must read (#415).
     for change in changes:
@@ -286,13 +417,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         # exit 0 either way (non-zero would read as a hook failure).
         import json as _json
 
+        payload: dict[str, str] = {}
         if verdict == "block":
-            threshold = SEVERITY_ORDER[config.fail_on]
-            visible = [
-                f for f in findings
-                if not f.allowlisted
-                and SEVERITY_ORDER[f.severity] >= threshold
-            ]
+            visible = _visible(run)
             head = visible[0] if visible else None
             reason = "checkwash: " + (
                 f"{len(visible)} finding(s) blocking. "
@@ -302,9 +429,18 @@ def _cmd_check(args: argparse.Namespace) -> int:
                 + "Fix the production code, or record a reviewed exemption: "
                 + (f'checkwash allow "{head.fingerprint}" --reason "..."' if head else "")
             )
-            _write_machine(_json.dumps({"decision": "block", "reason": reason}) + "\n")
-        else:
-            _write_machine("{}\n")
+            if window is not None and window.base is not None and window.base != window.head:
+                reason = reason.rstrip(": ") + (
+                    ". An exemption, config change or hook upgrade committed during this "
+                    "session applies from the next session; /clear starts one."
+                )
+            payload = {"decision": "block", "reason": reason}
+        elif window is not None:
+            # The session note is for a pass only (#418 ruling 2 and 4).
+            note = _session_note(args, window, readers)
+            if note is not None:
+                payload["systemMessage"] = note
+        _write_machine((_json.dumps(payload) if payload else "{}") + "\n")
         return 0
     else:
         _write_term(render(
@@ -367,6 +503,21 @@ def _cmd_hook_install(args: argparse.Namespace) -> int:
         write_text(f"error: {exc}\n", sys.stderr)
         return 2
     _write_term(message)
+    return 0
+
+
+def _cmd_session_start(args: argparse.Namespace) -> int:
+    """The managed SessionStart hook (#418): record HEAD, print nothing.
+
+    Claude Code adds a SessionStart hook's stdout to the model's context, so
+    nothing is ever printed there, and a session start never fails on
+    checkwash: every outcome exits 0.
+    """
+    try:
+        _reroot(args, required=False)
+        record_session_start(args.repo, read_hook_input(sys.stdin))
+    except Exception:  # noqa: BLE001 - a session start must never fail on checkwash
+        pass
     return 0
 
 
@@ -446,6 +597,11 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--emit-ir", action="store_true", help="print the IR JSON and exit")
     check.add_argument("--coverage-report", metavar="FILE", help="write a separate JS assertion-coverage JSON report")
     check.add_argument("--repo", default=".", help=_REPO_HELP)
+    check.add_argument(
+        "--hook-input", choices=["stdin"], default=None,
+        help="read the Claude Code Stop hook input from stdin and check the session's commits too "
+             "(only with --format hook-json and no range)",
+    )
 
     quality = sub.add_parser("quality", help="review bounded quality configuration weakening")
     quality.add_argument("range", nargs="?", help="BASE..HEAD, BASE...HEAD, init, doctor, profiles or explain")
@@ -481,6 +637,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="write machine-local .claude/settings.local.json instead of shared settings.json; this installer does not configure Git ignore",
     )
+    hook_session = hook_sub.add_parser(
+        "session-start", help="record where a Claude Code session starts (the managed SessionStart hook)",
+        description="Read the SessionStart hook input from stdin and record HEAD as the session's base, "
+                    "once per session. Prints nothing and always exits 0.",
+    )
+    hook_session.add_argument("--repo", default=".", help=_REPO_HELP)
 
     sub.add_parser("demo", help="replay real tampering cases offline")
 
@@ -646,6 +808,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "check":
             usage = _range_usage_error(args.range) if args.range else None
+            if args.hook_input and (args.format != "hook-json" or args.range):
+                usage = "error: --hook-input stdin requires --format hook-json and no range\n"
             if usage:
                 write_text(usage, sys.stderr)
                 return 2
@@ -673,6 +837,8 @@ def main(argv: list[str] | None = None) -> int:
             # print `hook --help` instead, which argparse exits 0 for, so a CI
             # step that omitted `install` reported success (issue #70).
             # Settings are written under `--repo` as given, never re-rooted.
+            if args.hook_command == "session-start":
+                return _cmd_session_start(args)
             return _cmd_hook_install(args)
         if args.command == "sweep":
             _reroot(args, required=True)

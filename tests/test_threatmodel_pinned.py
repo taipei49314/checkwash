@@ -40,6 +40,9 @@ E2E_PINNED = {
     # Issue #173: the resolved inventory needs a real path lister, which a
     # .gwcase fixture never supplies, so only an end-to-end run reaches it.
     "105": "test_marker_deselecting_the_only_test_blocks",
+    # Issue #418: a session record and real commits, which only the CLI with
+    # its hook input can exercise.
+    "133": "test_an_exemption_committed_during_the_session_governs_only_the_next_one",
 }
 
 
