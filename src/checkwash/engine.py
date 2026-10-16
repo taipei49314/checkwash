@@ -1448,6 +1448,10 @@ def build_ir(
                 # Other-language code, templates, data files, or a Python
                 # parse failure: checkwash cannot tell repair from decoy
                 # here, so it conservatively suppresses E1 (THREATMODEL #4).
+                # The flag records the fact for the whole diff; which
+                # findings may take it as evidence is gating's call, and a
+                # weakening-class finding in a Python test or conftest may
+                # not (#419).
                 #
                 # But it must be a *change to something that was already
                 # production*. Told to defeat this tool and handed its source,
@@ -1480,7 +1484,10 @@ def build_ir(
                 # The cost of all three is bounded and known: re-sweeping the
                 # 1800-commit corpus with this exemption disabled *entirely*
                 # moved the block set by zero commits in all six repositories,
-                # so no subset of it can cost more than nothing here.
+                # so no subset of it can cost more than nothing here. That
+                # figure is from the corpus and engine of its day; #419's
+                # refusal (another subset) is priced by its own pre-registered
+                # sweep, not by this note.
                 old_path = (change.old_path or path).replace("\\", "/")
                 self_inflicted = (
                     is_python
