@@ -1,7 +1,7 @@
 === meta ===
 rule: EXPECTED_VALUE_CHANGED
 issue: 419
-title: a prod file greenwash cannot parse still explains a rewritten expected value
+title: a prod file checkwash cannot parse still explains a rewritten expected value
 origin: the conservative fallback survives the narrowing — genuinely unreadable changes stay THREATMODEL #4
 origin2: for the expectation family. INPUTS AMENDED 2026-08-07: the base side used
 origin3: to be valid Python that the head side broke, which is not "genuinely

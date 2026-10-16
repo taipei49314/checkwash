@@ -4,8 +4,9 @@ issue: 419
 title: Route A - a no-op `+ 0` in the called function still buys repair evidence for a weakened assertion
 origin: #419 acceptance and ruling Q2 (a), Q3 (b) (issuecomment-6170353038): symbol evidence is
 origin2: unchanged and the fingerprint normalisation keeps `+ 0`, so the issue's Route A reproduction
-origin3: holds at warn. Current behaviour pinned as a named residual (THREATMODEL row 93, Open), not a
-origin4: claim that the edit is honest; assert_weakened_with_prod_change_warn is the honest twin.
+origin3: holds at warn. Current behaviour pinned as a named residual (THREATMODEL row 93 as widened by
+origin4: #419 ruling Q3 (b), maintainer text pending in the fix PR; Open), not a claim that the
+origin5: edit is honest; assert_weakened_with_prod_change_warn is the honest twin.
 === before: tests/test_billing.py ===
 from billing import compute_invoice_total
 

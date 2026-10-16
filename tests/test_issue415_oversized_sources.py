@@ -554,7 +554,8 @@ def test_a_range_beside_an_oversized_file_gives_a_verdict(tmp_path, row):
     if verdict == "block":
         assert code == 1
         assert finding["severity"] == "high"
-        assert finding["escalators"] == [ROW_REASONS[row]]
+        # Membership, as on main: the row's reason is among the escalators.
+        assert ROW_REASONS[row] in finding["escalators"]
     else:
         assert code == 0
         assert finding["severity"] == "warn"

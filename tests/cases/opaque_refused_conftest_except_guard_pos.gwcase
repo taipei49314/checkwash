@@ -3,12 +3,14 @@ rule: TEST_DISABLED
 issue: 419
 title: a collect_ignore guarded by `except Exception` is no compat gate, and an opaque edit beside it no longer holds it at warn
 origin: #419 implementation stop and ruling of 2026-10-16 (issuecomment-6209672882, issuecomment-6209791221):
-origin2: the literal effect of Q1 (b) (issuecomment-6170353038). Only `try: import X` / `except ImportError`
-origin3: is recorded as the condition `find_spec("X") is None` (collect_ignore_import_gate_neg). Any other
-origin4: except guard is recorded as the exception text, which is no condition: guard_can_be_false still
-origin5: counts it, so this is not an unguarded suite control, and compat_gate_for grants nothing. Until
-origin6: #419 the opaque scripts/deploy.sh held it at warn (REPAIR_EVIDENCE); a Python conftest now
-origin7: refuses that evidence for TEST_DISABLED, so it blocks and names the opaque change.
+origin2: the literal effect of Q1 (b) (issuecomment-6170353038). Only the import gate, a `try` body of
+origin3: plain imports (`import X` or `from X import ...`) under `except ImportError` or
+origin4: `except ModuleNotFoundError`, is recorded as the condition `find_spec("X") is None`
+origin5: (frontend _handler_guard / _IMPORT_ERRORS; collect_ignore_import_gate_neg). Any other except
+origin6: guard is recorded as the exception text, which is no condition: guard_can_be_false still
+origin7: counts it, so this is not an unguarded suite control, and compat_gate_for grants nothing. Until
+origin8: #419 the opaque scripts/deploy.sh held it at warn (REPAIR_EVIDENCE); a Python conftest now
+origin9: refuses that evidence for TEST_DISABLED, so it blocks and names the opaque change.
 === head: app/__init__.py ===
 === head: app/billing.py ===
 def total():

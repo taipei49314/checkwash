@@ -4,13 +4,13 @@ the opaque-change credit (ruling Q1 (b) and Q5 (b), 2026-10-14).
 A byte edit to a production file checkwash does not parse (a template, C or
 Rust, a data file, a shell script that runs no tests, a JS module) sets
 `prod_opaque_change`, and that credit held every oracle finding in the diff
-at warn. ASSERT_WEAKENED, ASSERT_REMOVED, TEST_DISABLED, TOLERANCE_LOOSENED
-and BROAD_EXCEPT_ADDED in a Python test or conftest refuse it now. Symbol
-evidence still holds them. A refused finding that reaches high says why, with
+at warn, except an unguarded conftest suite control (D-028). ASSERT_WEAKENED,
+ASSERT_REMOVED, TEST_DISABLED, TOLERANCE_LOOSENED and BROAD_EXCEPT_ADDED in a
+Python test or conftest refuse it now. Symbol evidence still holds them. A refused finding that reaches high says why, with
 OPAQUE_PROD_CHANGE_NOT_EVIDENCE: still E1, only the sentence differs.
 
-The .gwcase fixtures carry the end-to-end shapes: the opaque_refused_* and
-*_still_opaque_pos cases block, a JS/TS test keeps the credit
+The .gwcase fixtures carry the end-to-end shapes: the opaque_refused_* cases
+and the seven re-pinned _pos successors block, a JS/TS test keeps the credit
 (opaque_residual_js_assert_weakened_template_neg), and a guarded conftest
 control is held by COMPAT_GATE instead (conftest_hook_guard_opaque_prod_neg).
 """
@@ -33,6 +33,13 @@ TEST = (b"from billing import compute_invoice_total\n\n\n"
 WEAKENED = TEST.replace(b"assert total == 105.3", b"assert total > 0")
 # A data file nothing parses: the same opaque change #415's `data_read` uses.
 DATA = FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n")
+# A comment edited in an existing template: the Route B edit of
+# opaque_refused_assert_weakened_template_pos, verbatim.
+TEMPLATE = FileChange(
+    "app/templates/invoice.html", "modified",
+    b"<!-- invoice summary -->\n<p>Total: {{ total }}</p>",
+    b"<!-- invoice summary, two decimals -->\n<p>Total: {{ total }}</p>",
+)
 # broad_except_in_test_pos, verbatim.
 CACHE = (b"from cache import Cache\n\n\n"
          b"def test_miss_on_newer_version():\n"
@@ -72,7 +79,9 @@ def test_broad_except_is_the_one_member_outside_oracle_rules():
 
 
 def test_a_python_weakening_beside_an_opaque_change_blocks_and_says_why():
-    ir, findings, verdict = _run(FileChange(TEST_PATH, "modified", TEST, WEAKENED), DATA)
+    # A template, not the data file: #415's data_read row already pins that
+    # input through the same engine path.
+    ir, findings, verdict = _run(FileChange(TEST_PATH, "modified", TEST, WEAKENED), TEMPLATE)
     assert ir.globals.prod_opaque_change is True
     assert findings == [("ASSERT_WEAKENED", "high", ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"], [])]
     assert verdict == "block"
@@ -82,7 +91,7 @@ def test_symbol_evidence_still_holds_it_beside_the_same_opaque_change():
     _ir, findings, verdict = _run(
         FileChange(TEST_PATH, "modified", TEST, WEAKENED),
         FileChange("billing.py", "modified", BILLING, FIXED),
-        DATA,
+        TEMPLATE,
     )
     assert findings == [("ASSERT_WEAKENED", "warn", [], ["REPAIR_EVIDENCE"])]
     assert verdict == "pass"

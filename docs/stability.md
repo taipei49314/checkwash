@@ -245,8 +245,8 @@ opaque-change rule, until the JS/TS history replay
 change. For a Python test or conftest, since
 [#419](https://github.com/taipei49314/checkwash/issues/419), it no longer
 holds a weakened, removed, skipped or loosened assertion, or an added broad
-`except`, at warn: with no other evidence or compensation such a finding is
-high, with the reason `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`. It still holds a
+`except`, at warn: with no symbol evidence, compensation or MILD_WEAKENING
+such a finding is high, with the reason `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`. It still holds a
 rewritten expected value, a substituted assertion and a stand-in for the code
 under test. A package manifest's test command is not production
 (issue #174): when a diff changes what `package.json` runs as its tests —

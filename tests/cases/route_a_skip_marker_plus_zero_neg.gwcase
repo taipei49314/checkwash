@@ -3,9 +3,10 @@ rule: TEST_DISABLED
 issue: 419
 title: Route A - a no-op `+ 0` in the directly called function still holds an added skip marker at warn
 origin: #419 acceptance and ruling Q2 (a), Q3 (b) (issuecomment-6170353038): TEST_DISABLED takes symbol
-origin2: evidence from direct calls only (no helper hop), and a kept `+ 0` in the called function supplies
-origin3: it. Current behaviour pinned as a named residual (THREATMODEL row 93, Open), with
-origin4: test_disabled_skip_pos as the same diff without the production edit.
+origin2: evidence from direct calls and the one-hop callers route (no helper hop), and a kept `+ 0` in the called function supplies
+origin3: it. Current behaviour pinned as a named residual (THREATMODEL row 93 as widened by #419
+origin4: ruling Q3 (b), maintainer text pending in the fix PR; Open), with test_disabled_skip_pos
+origin5: as the same diff without the production edit.
 === before: tests/test_billing.py ===
 import pytest
 
