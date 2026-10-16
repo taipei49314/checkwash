@@ -85,7 +85,8 @@ def test_the_rows_that_already_blocked_still_block(test, extra):
 
 
 def test_unreadable_production_data_outside_them_keeps_the_exemption():
-    # As runner_opaque_native_neg pins: THREATMODEL #4 is unchanged elsewhere.
+    # As runner_opaque_native_neg pins for a rewritten expected value, and as
+    # #419 keeps for a JS/TS test: THREATMODEL #4 is unchanged elsewhere.
     _ir, findings, verdict = _analyze([JEST, _edit("src/data.json", DATA, NOTED)])
     assert verdict == "pass"
     assert _summary(findings) == [("ASSERT_WEAKENED", "warn", (), ("REPAIR_EVIDENCE",))]

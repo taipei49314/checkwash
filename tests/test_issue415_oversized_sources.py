@@ -119,9 +119,13 @@ def _summary(findings):
 # --- the engine: an unread side earns nothing -------------------------------------------------------
 
 EVIDENCE_CASES = {
-    # Readable: the documented evidence, symbol-matched and opaque.
+    # Readable: symbol-matched evidence holds the weakening at warn. A read
+    # data edit is an opaque change, which a weakened Python assertion no
+    # longer takes as evidence (#419 Q1 (b); ruling (a) of 2026-10-16 moved
+    # this row to high). REWRITTEN below shows it still explains an
+    # expectation rewritten beside it.
     "py_read": (FileChange("billing.py", "modified", BILLING, FIXED), "warn"),
-    "data_read": (FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n"), "warn"),
+    "data_read": (FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n"), "high"),
     # Unread on either side, or both: no evidence of either kind (#419). A
     # Python module that large refuses instead (PY_MODULES below).
     "js_head_unread": (FileChange("src/billing.js", "modified", BILLING_JS, None,
@@ -135,6 +139,19 @@ EVIDENCE_CASES = {
                                unread=(unread("data/rates.csv", "base"), unread("data/rates.csv", "head"))),
                     "high"),
 }
+# Why a blocking row is high (#419 Q5 (b)). A read side the finding may not
+# take as evidence is still a production change, and the reason says so; an
+# unread side is no change checkwash saw at all.
+EVIDENCE_REASONS = {
+    "data_read": "OPAQUE_PROD_CHANGE_NOT_EVIDENCE",
+    "js_head_unread": "NO_PROD_CHANGE_IN_DIFF",
+    "js_base_unread": "NO_PROD_CHANGE_IN_DIFF",
+    "js_both_unread": "NO_PROD_CHANGE_IN_DIFF",
+    "data_unread": "NO_PROD_CHANGE_IN_DIFF",
+}
+# The expectation family keeps opaque-change evidence (#419 Q1 (b)): the
+# expected literal rewritten, as assert_weakened_repair_neg rewrites it.
+REWRITTEN = TEST.replace(b"assert total == 105.3", b"assert total == 110.57")
 
 
 @pytest.mark.parametrize("case", sorted(EVIDENCE_CASES))
@@ -147,9 +164,20 @@ def test_an_unread_side_earns_no_repair_evidence(case):
         assert "REPAIR_EVIDENCE" in findings[0].deescalators
         assert verdict == "pass"
     else:
-        assert findings[0].escalators == ["NO_PROD_CHANGE_IN_DIFF"]
+        assert findings[0].escalators == [EVIDENCE_REASONS[case]]
         assert findings[0].deescalators == []
         assert verdict == "block"
+
+
+def test_a_read_data_edit_still_explains_a_rewritten_expected_value():
+    # The expectation-family sibling of `data_read` (#419 ruling (a),
+    # 2026-10-16): the same data edit, an expected value rewritten beside it.
+    change = EVIDENCE_CASES["data_read"][0]
+    changes = [FileChange("tests/test_billing.py", "modified", TEST, REWRITTEN), change]
+    _ir, findings, verdict = analyze(changes, Config(), Contract(), [], TODAY)
+    assert [(f.rule, f.severity, f.escalators, f.deescalators) for f in findings] == [
+        ("EXPECTED_VALUE_CHANGED", "warn", [], ["REPAIR_EVIDENCE"])]
+    assert verdict == "pass"
 
 
 # The runtime-provider pass reads a module the diff adds, deletes, renames or
@@ -490,11 +518,24 @@ ROWS = {
     "data_edited_over_the_limit": (lambda: {"data/table.csv": blob(LIMIT, "table")},
                                    lambda repo: _write(repo, {"data/table.csv": blob(LIMIT + 1, "edited")}),
                                    "block", [described("data/table.csv", "head")]),
-    # Exactly at the limit, the data file is read: the opaque-change evidence
-    # it has always earned holds the weakening at warn.
+    # Exactly at the limit, the data file is read, so it is an opaque change.
+    # A weakened Python assertion no longer takes that as evidence (#419
+    # Q1 (b); ruling (a) of 2026-10-16 moved this row from pass to block), and
+    # the reason names the change instead of denying it. The sibling test
+    # below keeps the warn for a rewritten expected value.
     "data_edited_at_the_limit": (lambda: {"data/table.csv": blob(LIMIT, "table")},
                                  lambda repo: _write(repo, {"data/table.csv": blob(LIMIT, "edited")}),
-                                 "pass", []),
+                                 "block", []),
+}
+# Why a blocking row is high (#419 Q5 (b)): no side the run read changed
+# production, or one did and the finding may not take it as evidence.
+ROW_REASONS = {
+    "image_added": "NO_PROD_CHANGE_IN_DIFF",
+    "js_source_added": "NO_PROD_CHANGE_IN_DIFF",
+    "data_deleted": "NO_PROD_CHANGE_IN_DIFF",
+    "data_renamed": "NO_PROD_CHANGE_IN_DIFF",
+    "data_edited_over_the_limit": "NO_PROD_CHANGE_IN_DIFF",
+    "data_edited_at_the_limit": "OPAQUE_PROD_CHANGE_NOT_EVIDENCE",
 }
 
 
@@ -513,7 +554,7 @@ def test_a_range_beside_an_oversized_file_gives_a_verdict(tmp_path, row):
     if verdict == "block":
         assert code == 1
         assert finding["severity"] == "high"
-        assert "NO_PROD_CHANGE_IN_DIFF" in finding["escalators"]
+        assert finding["escalators"] == [ROW_REASONS[row]]
     else:
         assert code == 0
         assert finding["severity"] == "warn"
@@ -521,6 +562,22 @@ def test_a_range_beside_an_oversized_file_gives_a_verdict(tmp_path, row):
     notes = [line for line in stderr.splitlines() if "not read, over the source byte limit" in line]
     assert notes == [f"checkwash: not read, over the source byte limit: {side}; it earns no repair evidence"
                      for side in named]
+
+
+def test_a_data_edit_at_the_limit_still_explains_a_rewritten_expected_value(tmp_path):
+    # The expectation-family sibling of `data_edited_at_the_limit` (#419
+    # ruling (a), 2026-10-16): the same read data edit, an expected value
+    # rewritten beside it, which keeps the opaque-change evidence at warn.
+    repo = _repo(tmp_path, _base_files({"data/table.csv": blob(LIMIT, "table")}))
+    _write(repo, {"data/table.csv": blob(LIMIT, "edited"), "tests/test_billing.py": REWRITTEN})
+    _commit(repo)
+    code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
+    assert "engine error" not in stderr, stderr
+    payload = json.loads(stdout)
+    assert (code, payload["verdict"]) == (0, "pass")
+    found = [(f["rule"], f["severity"], f["escalators"], f["deescalators"]) for f in payload["findings"]]
+    assert found == [("EXPECTED_VALUE_CHANGED", "warn", [], ["REPAIR_EVIDENCE"])]
+    assert "not read, over the source byte limit" not in stderr
 
 
 @pytest.mark.parametrize("fmt", ["json", "hook-json"])
