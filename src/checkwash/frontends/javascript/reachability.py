@@ -101,10 +101,9 @@ _REGEX_AFTER_WORDS = frozenset({"return", "typeof", "case", "do", "else", "throw
 # Tokens after which a name is read, never bound, and heads whose `(` is no call.
 _READ_AFTER = frozenset({"!", "&", "|", "?", "==", "===", "!=", "!==", "=", "return", "typeof", "void", "case"})
 _NOT_CALLS = frozenset({"for", "catch", "function", "switch", "with", "if", "while", "async"})
-# A `with` statement or `eval` anywhere in the text, comments and strings included,
-# a comment or U+FEFF between `with` and its `(` too.
-_SCOPE_CHANGERS = re.compile(
-    r"(?<![\w$])(?:with(?:[\s\N{ZERO WIDTH NO-BREAK SPACE}]|/\*[\s\S]*?\*/|//[^\n]*)*\(|eval(?![\w$]))")
+# A `with (` or `eval` anywhere in the text, comments and strings included; one
+# pass, no backtracking. A comment between `with` and `(` is caught on the tokens.
+_SCOPE_CHANGERS = re.compile(r"(?<![\w$])(?:with[\s\N{ZERO WIDTH NO-BREAK SPACE}]*\(|eval(?![\w$]))")
 
 
 class _Folder:
@@ -390,6 +389,8 @@ class Reachability:
                 return True
         for index in range(first, closing):
             token, following = self.token(index), self.token(index + 1)
+            if not token.isascii() and token[:1] not in "'\"":
+                return True  # a name or a space the binder does not read: a non-ASCII name, U+FEFF
             adjacent = index + 1 < len(self.tokens) and self.tokens[index][2] == self.tokens[index + 1][1]
             if adjacent and ((token == "<" and following == "!" and self.token(index + 2) == "--")
                              or (token == "--" and following == ">")):
@@ -499,6 +500,9 @@ class Reachability:
         text = self.bindings.text
         if self.separators or "\\u" in text or _SCOPE_CHANGERS.search(text):
             return False  # a line separator, a `\u` escape that may spell the name, `with`, `eval`
+        if any(token == "with" and self.token(index + 1) == "("
+               for index, (token, _start, _end) in enumerate(self.tokens)):
+            return False  # `with /* scope */ (`: the mask blanks the comment
         visible = {start: index for index, (token, start, _end) in enumerate(self.tokens) if token == name}
         for match in re.finditer(r"(?<![\w$])" + name + r"(?![\w$])", text):
             index = visible.get(match.start())

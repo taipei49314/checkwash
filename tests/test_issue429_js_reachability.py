@@ -151,6 +151,10 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "const \\u0075ndefined = 1;\nif (undefined) { " + ORACLE + " }",
     "class H extends class {} {\n return() {}\n}\n" + ORACLE,
     "return class H\n extends Base { static { " + ORACLE + " } };",
+    # A token the binder does not read as JavaScript does: U+FEFF is a space, a non-ASCII letter a name.
+    "return load()\n\N{ZERO WIDTH NO-BREAK SPACE}.then(() => { " + ORACLE + " });",
+    "const view = <\N{GREEK CAPITAL LETTER OMEGA}>Saved; return; later</\N{GREEK CAPITAL LETTER OMEGA}>; "
+    "const ratio = done / total;\n" + ORACLE,
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -253,11 +257,18 @@ def test_a_spelling_of_undefined_the_walk_cannot_read_leaves_it_unfolded(prelude
     assert parsed.unreachable_assertion_spans == ()
 
 
-@pytest.mark.parametrize("head", ["with (", "with /* s */ ("])
+@pytest.mark.parametrize("head", ["with (", "with /* s */ (", "with\N{ZERO WIDTH NO-BREAK SPACE}("])
 def test_a_with_statement_in_the_file_leaves_undefined_unfolded(head):
     """`with ({ undefined: 1 })` around a test shadows the global the binder sees."""
     text = HEADER + head + '{ undefined: 1 }) {\nit("value", () => {\nif (undefined) { ' + ORACLE + " }\n});\n}\n"
     assert parse_javascript(text.encode()).unreachable_assertion_spans == ()
+
+
+def test_the_with_search_does_not_backtrack():
+    """A run of slashes after a `with` in a comment is read in one pass (no regex backtracking)."""
+    text = HEADER + "// shared with\n" + "/" * 5000 + "\n" + 'it("value", () => {\nif (x === undefined) { ' + ORACLE
+    parsed = parse_javascript((text + " }\n});\n").encode())
+    assert parsed.unreachable_assertion_spans == ()
 
 
 def test_undefined_and_nan_fold_only_as_unshadowed_globals():
