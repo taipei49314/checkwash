@@ -14,11 +14,12 @@ iterator callback ends nothing outside it. A literal-decided `&&`/`||`
 expression statement drops the assertion it ends with (Q3).
 
 Not a parser. The token stream omits templates and regular expressions, so a
-line break next to one, an unpaired bracket, a `switch` or `with` body, a
+line break next to one, an unpaired bracket, a `with` statement, a
 TypeScript-annotated function declaration, or any statement whose end is not
 proved stops the walk of its statement list there, and everything after it
 keeps today's reading. The same holds for a callback whose text holds U+2028
-or U+2029, which the shared line-break test does not read.
+or U+2029, which the shared line-break test does not read. A `switch` body is
+not read: the walk steps over it and goes on after it.
 """
 
 from __future__ import annotations

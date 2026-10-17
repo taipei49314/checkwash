@@ -5,8 +5,8 @@ test with zero findings: a self-comparison (`expect(total).toBe(total)`), an
 assertion parked under a constant-false branch, and a `return` before the
 assertion. Each assertion stayed in the unit at its original strength, so no
 rule fired. This page states what the JS/TS frontend now reads in their
-place, and what it still does not. THREATMODEL row 10 points here for its
-JS/TS clause.
+place, and what it still does not. THREATMODEL rows 8, 10, 29 and 48 point
+here for their JS/TS clauses.
 
 The ruling (issue #429, 2026-10-14) splits the work into two changes. The
 first rates an assertion that can never fail at SPEC §3's TAUTOLOGY rung. The
@@ -185,14 +185,16 @@ after the stop keeps its reading:
   (`return /x/\n.test(...)`, a template spanning lines);
 - an unpaired bracket, a call the frontend could only recover, or U+2028 or
   U+2029 anywhere in the callback;
-- a `switch` or `with` body, `import` and `export`, and a TypeScript-typed
-  or generic function declaration (`function f(): T {}`);
+- a `with` statement, `import` and `export`, and a TypeScript-typed or
+  generic function declaration (`function f(): T {}`);
 - an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
   statements.
 
 ### Not read
 
 - `break` and `continue` cut nothing after them.
+- A `switch` body is not read: a `return` in a case cuts nothing, and the
+  walk steps over the `switch` and goes on after it.
 - A `switch` on a literal that no case meets, and `for (... of [])`, are not
   folded, though Python folds an unmatchable `match` and `for _ in []`.
 - `while (true)` and `for (;;)` without a `break` never end, but the
