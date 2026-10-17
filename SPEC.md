@@ -880,7 +880,7 @@ to an unrelated function disarm the gate for the whole run.
 
 ```toml
 [[allow]]
-fingerprint = "ASSERT_WEAKENED/tests/test_billing.py/test_total/5d41c9e2a7f0"
+fingerprint = "ASSERT_WEAKENED/tests/test_billing.py/test_total/v2:37f08a9259e7ed09de22a72c46a0f36042da9710d7db47f91c5c1ad72bc93d67"
 rule = "ASSERT_WEAKENED"
 reason = "behaviour change #482: totals now tax-inclusive; replaced by range+property tests"
 author = "alice"
@@ -902,11 +902,56 @@ expires = "2026-10-01"
   pin it — else the current date. This is the only clock read that can affect
   a verdict, and it is overridable precisely so runs can be reproduced.
 
-Except for the content-bound forms and literal-table SUBJECT_NORMALIZED events described below, fingerprint remains
+Except for the content-bound forms described below, fingerprint remains
 `sha256(rule + "/" + path + "/" + qualname + "/" + normalize(before_text))[:12]`,
 prefixed `rule/path/qualname/` for readability. That legacy normalization
 strips whitespace outside string literals and preserves whitespace within
-them; line numbers are excluded.
+them; line numbers are excluded. Since #421 this legacy form is the key of
+TEST_DISABLED, EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD,
+TEST_PATCHES_SUBJECT and the rules that are not oracle rules; for those,
+one approval still covers any after state of the same before text.
+
+ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
+EXPECTED_VALUE_CHANGED (assertion level), EXPECTED_VALUE_DERIVED,
+EXPECTATION_DEFINITION_CHANGED (both emitters), SUBJECT_NORMALIZED and
+SUBJECT_INPUT_CHANGED (both forms) use assertion-level content-bound v2
+fingerprints (#421), emitted as `rule/path/qualname/v2:<64hex>`. A JS
+qualname is the raw test title and may hold `/`, even last; only the last
+segment is read as the digest. The digest is the complete SHA256 of ASCII canonical JSON (sorted keys, compact
+separators) of an identity under the scheme name
+`checkwash/assertion-fingerprint/v2`. The identity holds:
+
+- the rule, path and qualname;
+- the exact legacy pre-image, `rule/path/qualname/normalize(text)` with the
+  text the legacy key hashed, so every v2 key refines its legacy key;
+- the complete before and after assertion texts, null for an absent side;
+- the event kind (for ASSERT_WEAKENED: unbindable operands, an unreadable
+  tolerance, a predicate relation, a polarity change, or a strength drop);
+- the ordinal and the count of the before side's assertions with the same
+  text, in the unit's own order (its own and same-file assertions in source
+  order, the copies of one helper assertion in the order of their call
+  sites, then those from other files), so identical copies are separate
+  approvals;
+- the rule's context: the tolerance kind with both recorded values; for
+  each name whose definition moved under an unchanged expectation, its
+  recorded definitions (reaching definition, local binding, parametrize
+  column and rows, module constant, same-file fixture), before and after;
+  the changed subject inputs; the resolved subjects of a normalization, in
+  the same normal form as the texts; the names a derived expectation shares
+  with the subject.
+
+Texts use the legacy normalization, except that a JavaScript template
+literal is kept as written, since it is the literal's value, and the code of
+each `${...}` in it is normalized as code; pairing and move detection keep
+the legacy form. Spans, line numbers,
+messages, strengths, severities, file digests and revision labels are
+excluded, so reformatting outside string literals and moving the line keep
+the key. A set (a literal argument or table cell) is encoded as a list in
+sorted order, so the key does not depend on the hash seed. Computing the
+identity never raises: an input that cannot be read is null, and so is a
+context that cannot be encoded. A different after on
+the same before, another copy of the same assertion, or a different relevant
+context requires a different approval.
 
 GUARDRAIL_TOUCHED, CI_WORKFLOW_TOUCHED, TEST_FILE_UNPARSEABLE, SCOPE_DRIFT,
 and SNAPSHOT_CODE_COCHANGE use content-bound v2 fingerprints. Their identity
@@ -926,10 +971,10 @@ surrounding source. Inherited assertions and unknown spans cannot provide
 this proof; it does not affect fingerprint identity.
 
 The stored-expectation form of EXPECTED_VALUE_CHANGED uses the same v2
-file identity and `stored_expectation_rewritten` event. Its assertion-level
-fingerprints retain their existing scheme and are not retired. SARIF labels
-the stored form `checkwash/v2`; a malformed v2 key cannot fall back to a legacy
-assertion key.
+file identity and `stored_expectation_rewritten` event, keyed
+`EXPECTED_VALUE_CHANGED/path/-/v2:<64hex>`; the `-` unit tells it apart
+from the rule's assertion-level v2 keys above. SARIF labels both forms
+`checkwash/v2`; a malformed v2 key cannot fall back to a legacy assertion key.
 
 FileIR.normalization_equivalent_pairs is an optional sequence, default empty,
 of (unit qualname, before assertion id, after assertion id) proof records.
@@ -947,16 +992,17 @@ remove an ordinary finding or grant equivalence/restructure credit. Records
 survive JSON arrays, and malformed records raise an engine error. Source
 locations are report evidence and do not enter fingerprint identity.
 
-For these literal-table SUBJECT_NORMALIZED events, the digest uses the same
-rule/path/unit prefix and normalization function, with canonical JSON of
-(unit, before text, after text, concrete before subject, concrete after
-subject, operator, concrete expected expression) as the fingerprint input.
-JSON uses ASCII escapes and compact separators. Operator is `Eq` or `Is`;
-the concrete expectation is canonical expression text from `ast.unparse`.
-Before/after spans
-are excluded. This retains distinct concrete row identities, including a
-fixed expectation declared inside an old helper rather than at its call.
-Ordinary aligned-assertion SUBJECT_NORMALIZED fingerprints are unchanged.
+For these literal-table SUBJECT_NORMALIZED events, the legacy text of the
+assertion-level v2 identity is canonical JSON of (unit, before text, after
+text, concrete before subject, concrete after subject, operator, concrete
+expected expression). JSON uses ASCII escapes and compact separators.
+Operator is `Eq` or `Is`; the concrete expectation is canonical expression
+text from `ast.unparse`. Before/after spans are excluded, and so are the
+ordinal and count: the record alone is the identity, so it survives a JSON
+round trip of the events without the units. This retains distinct concrete
+row identities, including a fixed expectation declared inside an old helper
+rather than at its call. Two records with the same legacy key are one
+finding, as before #421.
 
 Context includes guardrail creation/loosening, all detected CI weakening
 lines, the previous parser state, effective scope globs/role, or the complete
@@ -965,10 +1011,12 @@ after on the same before, or a different relevant event context, requires a
 different approval. An identical reviewed content pair can survive rebasing
 when its paths and relevant context are unchanged.
 
-Legacy keys in these five namespaces are retired even if their expiry has
+Legacy keys in these five namespaces, and since #421 in the nine
+assertion-level namespaces above, are retired even if their expiry has
 not passed. They remain parsed records so ledger deletions/rewrites remain
 detectable, but are excluded from eligibility; the writer rejects new legacy
-keys. An entry's rule label cannot disguise a retired fingerprint namespace.
+keys, and `doctor` and `check` report them. An entry's rule label cannot
+disguise a retired fingerprint namespace.
 Other namespaces keep their existing matching compatibility. Old reasons do
 not contain enough evidence for automatic migration; re-review the intended
 diff and record its complete v2 identity. Expiry and base-side loading policy

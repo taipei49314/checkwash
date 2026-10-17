@@ -59,8 +59,18 @@ the rule's context, rejects old keys, and requires a newly reviewed v2 approval.
 The expiry limits below do not narrow an old key's scope. Do not mechanically
 rewrite the digest or use a ledger entry to approve its own cleanup.
 
+Through v0.8.0 the assertion-level rules (ASSERT_WEAKENED, ASSERT_SUBSTITUTED,
+ASSERT_REMOVED, TOLERANCE_LOOSENED, EXPECTED_VALUE_CHANGED,
+EXPECTED_VALUE_DERIVED, EXPECTATION_DEFINITION_CHANGED, SUBJECT_NORMALIZED and
+SUBJECT_INPUT_CHANGED) were keyed on the old assertion only: one exemption
+allowed every later rewrite of that line. From the next minor (#421) their key
+also binds the new assertion, the kind of change, which identical copy changed
+and the rule's context, and their old keys are retired the same way. Each
+reviewed rewrite needs its own entry. TEST_DISABLED, EXPECTED_VALUE_HARDCODED,
+CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep before-only keys for now.
+
 ```bash
-checkwash allow "ASSERT_WEAKENED/tests/test_x.py/test_x/abcd1234ef56" \
+checkwash allow "ASSERT_WEAKENED/tests/test_x.py/test_x/v2:<the full 64-hex digest from the report>" \
   --reason "literal tracks a documented API rename in #1234"
 # then commit the ledger path printed by the command
 ```
