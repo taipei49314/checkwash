@@ -209,9 +209,11 @@ after the stop keeps its reading:
   `;`: TypeScript types, class heritage and decorators may go on past it
   (`return x as readonly` then `string[]`, `implements` then `Base`, `@dec`
   then `class`), so nothing after it is cut;
-- an unpaired bracket, a call the frontend could only recover, or U+2028 or
-  U+2029 anywhere in the callback, and text the token stream misreads as
-  code anywhere in it: a template nested in another's substitution (each
+- an unpaired bracket or a call the frontend could only recover anywhere
+  in the callback, and U+2028 or U+2029 or text the token stream misreads
+  as code anywhere from the file's start to the callback's end, since a
+  misreading shifts what the mask reads from there on: a template nested in
+  another's substitution (each
   template is read again as the operand reader reads it, so a quoted `}` or
   a `//` comment in a substitution hides none, and one it leaves unread, such
   as a `/` in a substitution, stops the walk too), JSX (`<p>...</p>`, after a

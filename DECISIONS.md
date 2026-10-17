@@ -11700,8 +11700,10 @@ Readings left to the implementation, accepted with this entry:
    IR_VERSION nor FINDINGS_VERSION changes.
 9. An imperative skip (`t.skip()`) in dead code still marks its test, as
    before.
-10. A callback is not walked when the shared token stream misreads its text
-    as code: a template nested in another's substitution (the mask ends a
+10. A callback is not walked when the shared token stream misreads text as
+    code anywhere from the file's start to the callback's end, since a
+    misreading shifts what the mask reads from there on (sixteenth review
+    round): a template nested in another's substitution (the mask ends a
     template at its first backtick; each template is read again as
     `literals` reads it, a quoted `}` or a `//` comment in a substitution
     included, and one it leaves unread refuses the callback too), JSX or a
@@ -11793,11 +11795,11 @@ nothing, now reports `ASSERT_REMOVED` under the key its deletion has.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 289 collected items in
+- Tests were added: 291 collected items in
   `tests/test_issue429_js_reachability.py` and twelve `.gwcase` fixtures,
   nine of which carry `bypass:` (8, 29 and 48, and 8, 10 and 29 on the
   issue's own edits, `js_issue429_repro_pos`).
-- The documented test count is 19331 (19030 + 301).
+- The documented test count is 19333 (19030 + 303).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates, and
   the perf gate. `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
