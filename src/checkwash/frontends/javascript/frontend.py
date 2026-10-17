@@ -2256,7 +2256,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     function_starts = [first for first, _last in functions]
     arrow_starts = [first for first, _last in arrows]
     units: list[ParsedUnit] = []
-    reachability = Reachability(bindings)
+    reachability = Reachability(bindings, code)
     # The catch evidence reads every assertion a callback spells, run or not
     # (#363); a unit keeps only those its statements reach (#429 Q1).
     spelled: list[Assertion] = []

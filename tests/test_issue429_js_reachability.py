@@ -98,6 +98,14 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "with (scope) { step(); } return; " + ORACLE,
     "function helper(): number { return 1; } return; " + ORACLE,
     "return; expect(value).toBe(1;" + ORACLE,
+    # Text the token stream misreads as code: a nested template, JSX, an HTML-like comment.
+    "const src = `function f() { ${`setup(); return 1;`} }`\n" + ORACLE,
+    "const view = <p>Saved; return later</p>;\nrender(view);\n" + ORACLE,
+    "foo() <!-- ;\nreturn\n" + ORACLE,
+    "if (x <!-- || true\n) {} else { " + ORACLE + " }",
+    # A dead body that is no block, whose end at a line break is in doubt, is not killed.
+    "if (false) skip()\n{\n" + ORACLE + "\n}",
+    "while (false) step()\n{ " + ORACLE + " }",
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -156,6 +164,7 @@ def test_an_assertion_in_a_branch_the_folder_decides_dead_is_not_reached(stateme
     "while (true) { " + ORACLE + " break; }", "for (;;) { " + ORACLE + " break; }",
     "for (const row of []) { " + ORACLE + " }", "do { " + ORACLE + " } while (false);",
     "switch (0) { case 1: " + ORACLE + " }",
+    "if (" + "!" * 1000 + "true) {} " + ORACLE,
 ])
 def test_a_branch_the_folder_cannot_decide_or_that_runs_keeps_the_assertion(statement):
     """`const` bindings, coercions, `??`, `?:` and empty iterables are residuals (Q5)."""
@@ -177,6 +186,8 @@ def test_a_branch_the_folder_cannot_decide_or_that_runs_keeps_the_assertion(stat
     ("x = 0", None), ("1 < 2 < 3", None), ("1 === 1 === true", None), ("Infinity", None),
     ("void 0", None), ("typeof x", None), ("`${x}`", None), ("/a/", None), ("'a\nb'", None), ("", None),
     ("(", None), ("1 /* c */ === // d\n 1", True), ("1 in x", None),
+    ("!" * 1000 + "true", None), ("(" * 400 + "false" + ")" * 400, None),
+    ("i++ / 2 || x / 1 && false", None), ("x <!-- || true", None), ("x --> 0 || true", None),
 ])
 def test_the_condition_folder(condition, truth):
     assert fold_condition(condition, lambda _name: True) is truth

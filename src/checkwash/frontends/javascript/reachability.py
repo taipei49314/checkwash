@@ -17,8 +17,11 @@ Not a parser. The token stream omits templates and regular expressions, so a
 line break next to one, an unpaired bracket, a `with` statement, a
 TypeScript-annotated function declaration, or any statement whose end is not
 proved stops the walk of its statement list there, and everything after it
-keeps today's reading. The same holds for a callback whose text holds U+2028
-or U+2029, which the shared line-break test does not read. A `switch` body is
+keeps today's reading. A callback is not walked at all when its text holds
+U+2028 or U+2029, which the shared line-break test does not read, or text the
+token stream misreads as code: a template nested in a substitution, JSX, or
+an Annex B HTML-like comment. A dead body that is no block is not killed where
+its end at a line break is in doubt. A `switch` body is
 not read: the walk steps over it and goes on after it.
 """
 
@@ -30,7 +33,7 @@ from bisect import bisect_left
 from collections.abc import Callable
 
 from checkwash.frontends.javascript.bindings import NAME, Bindings
-from checkwash.frontends.javascript.literals import scalar_literal
+from checkwash.frontends.javascript.literals import operand_tokens, scalar_literal
 
 _MAX_DEPTH = 32
 _BRACKETS = {"(": ")", "[": "]", "{": "}"}
@@ -69,18 +72,7 @@ def _within(positions: list[int], first: int, last: int) -> bool:
 
 # --- Q5: the literal-only condition folder ---------------------------------------------------
 
-_PUNCTUATORS = sorted((
-    ">>>=", "...", "===", "!==", "**=", "<<=", ">>=", ">>>", "&&=", "||=", "??=", "=>", "==", "!=",
-    "<=", ">=", "&&", "||", "??", "?.", "**", "++", "--", "<<", ">>", "+=", "-=", "*=", "/=", "%=",
-    "&=", "|=", "^=", "{", "}", "(", ")", "[", "]", ";", ",", "<", ">", "+", "-", "*", "/", "%", "&",
-    "|", "^", "!", "~", "?", ":", "=", ".", "@", "#",
-), key=len, reverse=True)
-_NUMBER = re.compile(
-    r"(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+"
-    r"|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9][0-9_]*)(?:[eE][+-]?[0-9][0-9_]*)?)n?"
-)
 _WORD = re.compile(NAME)
-_REGEX = re.compile(r"/(?![*/])(?:\\.|\[(?:\\.|[^\]\\\r\n])*\]|[^/\\\[\r\n])+/[A-Za-z]*")
 # Operators that bind looser than `&&` and `||`, or that are no part of a
 # condition this folder reads.
 _LOOSER = frozenset({
@@ -89,65 +81,8 @@ _LOOSER = frozenset({
 })
 _EQUALITY = frozenset({"===", "!==", "==", "!="})
 _RELATIONAL = frozenset({"<", ">", "<=", ">="})
-# Tokens after which a `/` divides: they end an operand.
-_PREFIX_WORDS = frozenset({"typeof", "void", "delete", "await", "new", "in", "instanceof", "of", "yield",
-                           "return", "throw", "case", "do", "else"})
-
-
-def _condition_tokens(source: str) -> list[str] | None:
-    """The tokens of a condition's text, or None for anything this folder does not read."""
-    tokens: list[str] = []
-    i = 0
-    while i < len(source):
-        char = source[i]
-        if char in _TRIVIA_SPACE:
-            i += 1
-            continue
-        if source.startswith("//", i):
-            newline = source.find("\n", i + 2)
-            i = len(source) if newline < 0 else newline + 1
-            continue
-        if source.startswith("/*", i):
-            closing = source.find("*/", i + 2)
-            if closing < 0:
-                return None
-            i = closing + 2
-            continue
-        if char in "'\"`":
-            close = i + 1
-            while close < len(source) and source[close] != char:
-                if char != "`" and source[close] == "\n":
-                    return None
-                if char == "`" and source.startswith("${", close):
-                    return None  # a substitution is no literal
-                close += 2 if source[close] == "\\" else 1
-            if close >= len(source):
-                return None
-            tokens.append(source[i:close + 1])
-            i = close + 1
-            continue
-        operand_ends = bool(tokens) and (
-            tokens[-1][:1] in "'\"`/" or tokens[-1] in {")", "]", "}"}
-            or (bool(_WORD.fullmatch(tokens[-1])) and tokens[-1] not in _PREFIX_WORDS)
-            or tokens[-1][:1].isdigit() or tokens[-1][:1] == ".")
-        if char.isdigit() or (char == "." and source[i + 1:i + 2].isdigit()):
-            match = _NUMBER.match(source, i)
-        elif _WORD.match(source, i):
-            match = _WORD.match(source, i)
-        elif char == "/" and not operand_ends:
-            match = _REGEX.match(source, i)
-        else:
-            match = None
-        if match is not None:
-            tokens.append(match.group())
-            i = match.end()
-            continue
-        punctuator = next((p for p in _PUNCTUATORS if source.startswith(p, i)), None)
-        if punctuator is None:
-            return None
-        tokens.append(punctuator)
-        i += len(punctuator)
-    return tokens
+# How deep `!` and parentheses nest before the folder gives up: unknown.
+_FOLD_DEPTH = 64
 
 
 class _Folder:
@@ -189,25 +124,25 @@ class _Folder:
         parts.append((start, hi))
         return parts
 
-    def expression(self, lo: int, hi: int):
-        if lo >= hi or any(self.tokens[index] in _LOOSER for index in self._top(lo, hi)):
+    def expression(self, lo: int, hi: int, depth: int = 0):
+        if depth > _FOLD_DEPTH or lo >= hi or any(self.tokens[index] in _LOOSER for index in self._top(lo, hi)):
             return None
         for operator, decides in (("||", True), ("&&", False)):
             parts = self._split(lo, hi, operator)
             if len(parts) > 1:
-                truths = [self.truth(self.expression(first, last)) for first, last in parts]
+                truths = [self.truth(self.expression(first, last, depth + 1)) for first, last in parts]
                 if decides in truths:
                     return ("truth", decides)
                 if all(truth is (not decides) for truth in truths):
                     return ("truth", not decides)
                 return None
-        return self._comparison(lo, hi)
+        return self._comparison(lo, hi, depth)
 
-    def _comparison(self, lo: int, hi: int):
+    def _comparison(self, lo: int, hi: int, depth: int):
         operators = [index for index in self._top(lo, hi)
                      if self.tokens[index] in _EQUALITY | _RELATIONAL | {"in", "instanceof"}]
         if not operators:
-            return self._unary(lo, hi)
+            return self._unary(lo, hi, depth)
         if len(operators) != 1 or self.tokens[operators[0]] in {"in", "instanceof"}:
             return None
         index = operators[0]
@@ -217,14 +152,14 @@ class _Folder:
         result = _compare(self.tokens[index], left, right)
         return None if result is None else ("boolean", result)
 
-    def _unary(self, lo: int, hi: int):
-        if lo >= hi:
+    def _unary(self, lo: int, hi: int, depth: int):
+        if lo >= hi or depth > _FOLD_DEPTH:
             return None
         if self.tokens[lo] == "!":
-            truth = self.truth(self._unary(lo + 1, hi))
+            truth = self.truth(self._unary(lo + 1, hi, depth + 1))
             return None if truth is None else ("boolean", not truth)
         if self.tokens[lo] == "(" and self.pairs.get(lo) == hi - 1:
-            return self.expression(lo + 1, hi - 1)
+            return self.expression(lo + 1, hi - 1, depth + 1)
         return self._literal(lo, hi)
 
     def _literal(self, lo: int, hi: int):
@@ -301,7 +236,7 @@ def fold_condition(source: str, is_global: Callable[[str], bool]) -> bool | None
     """
     if len(source) > 4096:
         return None
-    tokens = _condition_tokens(source)
+    tokens = operand_tokens(source)
     if not tokens:
         return None
     folder = _Folder(tokens, is_global)
@@ -315,8 +250,9 @@ def fold_condition(source: str, is_global: Callable[[str], bool]) -> bool | None
 class Reachability:
     """The spans of each test callback in one file that never run, read on demand."""
 
-    def __init__(self, bindings: Bindings):
+    def __init__(self, bindings: Bindings, code: bytearray):
         self.bindings = bindings
+        self.code = code
         self.tokens = bindings.tokens
         self.pairs = bindings.pairs
         # Pair every bracket again rather than trust the binder's recovery.
@@ -338,6 +274,8 @@ class Reachability:
                            re.finditer("[\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]", bindings.text)]
         self.dead: list[tuple[int, int]] = []
         self.assertions: dict[int, int] = {}
+        # Line breaks where JavaScript may end a statement that `_end` reads on past.
+        self.doubtful = 0
 
     def token(self, index: int) -> str:
         return self.bindings.token(index)
@@ -356,12 +294,52 @@ class Reachability:
                 or self.tokens[closing][0] != "}" or self.tokens[closing][1] != end
                 or self.pairs.get(opening) != closing
                 or _within(self.unpaired, opening, closing + 1)
-                or _within(self.separators, start, end)):
+                or _within(self.separators, start, end)
+                or self._misread(first, closing, start, end)):
             return []
         self.dead = []
         self.assertions = dict(assertions)
         self._list(first, closing, 0)
         return sorted(self.dead)
+
+    def _misread(self, first: int, closing: int, start: int, end: int) -> bool:
+        """Does the token stream misread this callback: a nested template, JSX, an HTML-like comment?
+
+        The shared mask ends a template at its first backtick, so a template
+        nested in a substitution leaves its text to be read as code; JSX text
+        reads as code too, and Annex B's `<!--` and `-->` comments as
+        operators. A callback holding any of them is not walked.
+        """
+        text, code = self.bindings.text, self.code
+        position = start
+        while position < end:
+            if code[position]:
+                position += 1
+                continue
+            run = position
+            while position < end and not code[position]:
+                position += 1
+            segment = text[run:position]
+            opening = segment.find("${")
+            while opening >= 0:
+                braces = 1
+                for char in segment[opening + 2:]:
+                    braces += {"{": 1, "}": -1}.get(char, 0)
+                    if not braces:
+                        break
+                if braces:
+                    return True  # the mask ended this template inside a substitution
+                opening = segment.find("${", opening + 2)
+        for index in range(first, closing):
+            token, following = self.token(index), self.token(index + 1)
+            adjacent = index + 1 < len(self.tokens) and self.tokens[index][2] == self.tokens[index + 1][1]
+            if adjacent and ((token == "<" and following == "!" and self.token(index + 2) == "--")
+                             or (token == "--" and following == ">")):
+                return True
+            if (token == "<" and index > 0 and not self.bindings._completes(index - 1)
+                    and (_NAME.fullmatch(following) or following in {">", "/"})):
+                return True  # JSX, or a TypeScript `<T>` assertion
+        return False
 
     def _kill(self, first: int, after: int) -> None:
         """Statements from token `first` up to token `after` never run."""
@@ -445,23 +423,33 @@ class Reachability:
         if closing is None or closing >= last:
             return None
         truth = self._fold(head, closing)
+        mark = self.doubtful
         yes = self._statement(closing + 1, last, depth + 1)
         if yes is None:
             return None
         after, yes_terminates = yes
-        no = None
+        # A body that is no block may end at a line break this walk read past;
+        # where its end is in doubt it is not killed.
+        yes_doubtful = self.doubtful != mark and self.token(closing + 1) != "{"
+        no, no_doubtful = None, False
         if after < last and self.token(after) == "else":
+            mark = self.doubtful
             no = self._statement(after + 1, last, depth + 1)
             if no is None:
-                if truth is False:
+                if truth is False and not yes_doubtful:
                     self._kill(closing + 1, after)
                 return None
+            no_doubtful = self.doubtful != mark and self.token(after + 1) != "{"
         if truth is False:
+            if yes_doubtful:
+                return None
             self._kill(closing + 1, after)
             return no if no is not None else (after, False)
         end = no[0] if no is not None else after
         if truth is True:
             if no is not None:
+                if no_doubtful:
+                    return None
                 self._kill(after + 1, end)
             return end, yes_terminates
         return end, False
@@ -488,10 +476,13 @@ class Reachability:
                 truth = True if _trivia(self._gap(semicolons[0], semicolons[1])) else self._fold(*semicolons)
             elif semicolons:
                 return None
+        mark = self.doubtful
         body = self._statement(closing + 1, last, depth + 1)
         if body is None:
             return None
         if truth is False:
+            if self.doubtful != mark and self.token(closing + 1) != "{":
+                return None  # a body that is no block, whose end is in doubt
             self._kill(closing + 1, body[0])
         return body[0], False
 
@@ -595,8 +586,12 @@ class Reachability:
             if cursor > first and bindings._line_break(cursor):
                 if not _trivia(self._gap(cursor - 1, cursor)):
                     return None
-                if bindings._completes(cursor - 1) and not bindings._continues(cursor):
+                completes = bindings._completes(cursor - 1)
+                if completes and not bindings._continues(cursor):
                     return cursor
+                if ((completes and self.token(cursor) == "{")
+                        or (self.token(cursor - 1) in {"!", "yield"} and not bindings._continues(cursor))):
+                    self.doubtful += 1  # JavaScript may end the statement here; this reads on
             token = self.token(cursor)
             if token == ";":
                 if cursor == first or not (bindings._completes(cursor - 1)
