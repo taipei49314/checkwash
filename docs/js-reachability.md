@@ -237,6 +237,12 @@ after the stop keeps its reading:
   the next line is still decided);
 - a statement keyword (`do`, `while`) inside a statement read on past a
   line break: the binder read past the statement's end;
+- a statement with a template or regular expression right before it, such
+  as one that is the whole body of `if (false)`: the tokens omit it, so
+  they cannot say which statement is the body;
+- a literal-decided `&&`/`||` statement after a statement that ended at a
+  line break rather than on a `;` or its own `}`: TypeScript may read past
+  that line break (`v is` then `false`), so it is not decided;
 - a `with` statement, `import` and `export`, and a TypeScript-typed or
   generic function declaration (`function f(): T {}`);
 - an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
