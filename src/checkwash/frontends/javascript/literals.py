@@ -801,8 +801,8 @@ def _substitution_end(source: str, start: int, depth: int) -> int | None:
         elif source.startswith("//", i):
             terminator = _LINE_TERMINATOR.search(source, i + 2)
             end = None if terminator is None else terminator.end()
-        elif char == "/":
-            return None  # a division or a regular expression, which may hold a `}`: unread
+        elif char == "/" or source.startswith(("<!--", "-->"), i):
+            return None  # a division or a regular expression, which may hold a `}`, or an HTML-like comment
         elif char in "{}":
             braces += 1 if char == "{" else -1
             if not braces:

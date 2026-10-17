@@ -184,6 +184,9 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     # (`v is` then `false`), so a boundary ASI gives is not proved.
     "const y: any = get();\n y as (v: unknown) => v is\n false && " + TEXT + ";",
     "setup()\nfalse && " + ORACLE,
+    # JSX first on its line after a TypeScript type; an HTML-like comment in a substitution.
+    "let el: Element\n<i>`</i> // `;return;\n" + ORACLE,
+    "const s = `${ 1 <!-- }`; return; `\n}`;\n" + ORACLE,
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -293,7 +296,7 @@ def test_a_branch_the_folder_cannot_decide_or_that_runs_keeps_the_assertion(stat
     ("!" * 1000 + "true", None), ("(" * 400 + "false" + ")" * 400, None),
     ("i++ / 2 || x / 1 && false", None), ("x <!-- || true", None), ("x --> 0 || true", None),
     ("`${ x // }` && false && `\n}`", None), ("++/ || true || x/.lastIndex && false", None),
-    ("this.#new / 2 || true || 1 / 1 && false", None),
+    ("this.#new / 2 || true || 1 / 1 && false", None), ("`${ 1 <!-- }` && false", None),
 ])
 def test_the_condition_folder(condition, truth):
     assert fold_condition(condition, lambda _name: True) is truth

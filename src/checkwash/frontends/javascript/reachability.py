@@ -430,7 +430,7 @@ class Reachability:
                 found.append(start)
                 break
             if token == "<" and (index == 0 or self.token(index - 1) == "}" or (
-                    not self._completes(index - 1)
+                    (not self._completes(index - 1) or self.bindings._line_break(index))
                     and (_NAME.fullmatch(following) or following in {">", "/"}))):
                 found.append(start)  # JSX (at the start or after a block too), or a TypeScript `<T>` assertion
                 break
