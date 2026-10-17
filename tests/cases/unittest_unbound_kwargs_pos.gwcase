@@ -1,4 +1,5 @@
 === meta ===
+bypass: 134
 rule: ASSERT_WEAKENED
 title: self.assertEqual(total(), 78.75) -> assertEqual(**case) replaces a known oracle with operands checkwash cannot bind
 origin: #462 ruling Q2 (b) — "cannot verify", never mild; the subjectless keyword record paired at no strength change and the rewrite passed with zero findings
