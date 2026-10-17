@@ -155,6 +155,18 @@ def test_a_class_name_the_module_rebinds_leaves_the_call_unresolved():
     assert via(SOURCE + "\n\nTotalTest = TotalTest\n") == []
 
 
+@pytest.mark.parametrize("source", [
+    # the running class bound again under a module-level `if`
+    SOURCE + "\n\nif FLAG:\n    class TotalTest(unittest.TestCase):\n        pass\n",
+    # a base bound again under a module-level `try` (raised by GLM, verified by Claude)
+    HEAD + "class Base(unittest.TestCase):\n" + CHECK + "\ntry:\n    class Base(unittest.TestCase):\n"
+    "        def _check(self, value):\n            self.assertTrue(value)\nexcept ImportError:\n    pass\n\n\n"
+    "class TotalTest(Base):\n" + TEST,
+])
+def test_a_class_name_bound_again_under_a_compound_statement_leaves_the_call_unresolved(source):
+    assert via(source) == []
+
+
 # -- Sub-Q3: what rebinds the name --------------------------------------------------
 
 
@@ -162,6 +174,7 @@ def test_a_class_name_the_module_rebinds_leaves_the_call_unresolved():
     "TotalTest._check = staticmethod(print)\n",
     "del TotalTest._check\n",
     "setattr(TotalTest, '_check', print)\n",
+    "builtins.setattr(TotalTest, '_check', print)\n",
     "delattr(TotalTest, '_check')\n",
     "TotalTest.__dict__['_check'] = print\n",
 ])
@@ -187,6 +200,9 @@ def test_an_instance_assignment_of_the_name_leaves_it_unresolved():
 @pytest.mark.parametrize("patch", [
     "    def test_other(self, monkeypatch):\n        monkeypatch.setattr(TotalTest, '_check', print)\n",
     "    def test_other(self):\n        with mock.patch.object(TotalTest, '_check'):\n            pass\n",
+    # the name passed by keyword (raised by GLM, verified by Claude)
+    "    def test_other(self, monkeypatch):\n        monkeypatch.setattr(TotalTest, name='_check', value=print)\n",
+    "    def test_other(self):\n        with mock.patch.object(TotalTest, attribute='_check'):\n            pass\n",
 ])
 def test_a_patch_naming_the_method_leaves_it_unresolved(patch):
     assert via(SOURCE + "\n" + patch) == []
@@ -194,6 +210,14 @@ def test_a_patch_naming_the_method_leaves_it_unresolved(patch):
 
 def test_a_computed_setattr_on_the_receiver_leaves_it_unresolved():
     source = SOURCE.replace("    def test_total(self):\n", "    def setUp(self):\n        setattr(self, NAME, print)\n\n"
+                            "    def test_total(self):\n")
+    assert via(source) == []
+
+
+def test_a_computed_setattr_on_the_receivers_type_leaves_it_unresolved():
+    # `type(self)` is the receiver's class (raised by GLM, verified by Claude).
+    source = SOURCE.replace("    def test_total(self):\n",
+                            "    def setUp(self):\n        setattr(type(self), NAME, print)\n\n"
                             "    def test_total(self):\n")
     assert via(source) == []
 

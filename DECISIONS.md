@@ -11262,7 +11262,7 @@ passes with zero findings, as on main.
 Evidence status: the change was prepared on a work machine where no
 pytest, checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 10 `.gwcase` fixtures and 45 collected items in
+- Tests were added: 10 `.gwcase` fixtures and 51 collected items in
   `tests/test_issue306_self_methods.py`. The two pins above changed.
 - The diffalign and `gating.py` changes for Sub-Q8 and Sub-Q11 are in their
   own commit, for the owner's approval as the ruling asks.

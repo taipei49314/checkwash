@@ -70,7 +70,8 @@ _DEFS = (ast.FunctionDef, ast.AsyncFunctionDef)
 # Names a same-file class in the order must not define: each lets the class
 # answer an attribute lookup with something its body does not say.
 _LOOKUP = ("__init_subclass__", "__getattribute__")
-_SETATTR = {"setattr", "delattr", "object.__setattr__", "object.__delattr__"}
+_SETATTR = {"setattr", "delattr", "object.__setattr__", "object.__delattr__",
+            "builtins.setattr", "builtins.delattr"}
 
 
 def _literal(node) -> str | None:
@@ -79,8 +80,20 @@ def _literal(node) -> str | None:
 
 def _root(node) -> str | None:
     while isinstance(node, (ast.Attribute, ast.Subscript, ast.Call)):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "type"
+                and len(node.args) == 1 and not node.keywords):
+            # `type(self)` is the receiver's class, as `self.__class__` is.
+            node = node.args[0]
+            continue
         node = node.func if isinstance(node, ast.Call) else node.value
     return node.id if isinstance(node, ast.Name) else None
+
+
+def _argument(node: ast.Call, position: int, keyword: str):
+    """The call's argument at `position`, or passed as `keyword`, or None."""
+    if len(node.args) > position:
+        return node.args[position]
+    return next((k.value for k in node.keywords if k.arg == keyword), None)
 
 
 def _class_binds(cls: ast.ClassDef) -> dict[str, list[ast.stmt]]:
@@ -123,6 +136,11 @@ class Methods:
                 self.rebound.add(node.id)
             elif isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) in self.classes:
                 self.rebound.add(node.asname or node.name.split(".")[0])
+            elif (isinstance(node, (*_DEFS, ast.ClassDef)) and node.name in self.classes
+                  and node is not self.classes[node.name]):
+                # Another class or def of that name anywhere, under a module-level
+                # `if` or `try` too, may be the one that runs (Sub-Q2).
+                self.rebound.add(node.name)
             elif isinstance(node, ast.Attribute) and isinstance(node.ctx, (ast.Store, ast.Del)):
                 self.stored.add(node.attr)
             elif isinstance(node, ast.Subscript) and isinstance(node.ctx, (ast.Store, ast.Del)):
@@ -142,11 +160,13 @@ class Methods:
                 self.stored.add(key)
             else:
                 self.computed.add(_root(node.args[0]) or "")
-        elif (name.endswith("patch.object") or name.endswith("monkeypatch.setattr")) and node.args:
-            key = _literal(node.args[1]) if len(node.args) >= 2 else None
+        elif name.endswith("patch.object") or name.endswith("monkeypatch.setattr"):
+            # By position or by keyword: `patch.object(target, attribute)`,
+            # `monkeypatch.setattr(target, name)`.
+            key = _literal(_argument(node, 1, "attribute" if name.endswith("patch.object") else "name"))
             if key is not None:
                 self.stored.add(key)
-            target = _literal(node.args[0])
+            target = _literal(_argument(node, 0, "target"))
             if target is not None:
                 self.stored.add(target.rsplit(".", 1)[-1])
 
