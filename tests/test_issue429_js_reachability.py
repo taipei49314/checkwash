@@ -113,12 +113,15 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "if (false) // note\N{LINE SEPARATOR}skip()\n{ " + ORACLE + " }",
     # A body whose end at a line break TypeScript or a restricted production may take.
     "if (false) ref.current!\n{\n" + ORACLE + "\n}",
-    "if (false) handler = noop as () => void\n{ " + ORACLE + " }",
+    "if (false) value = undefined as void\n{ " + ORACLE + " }",
     "if (false) cache = new Map<string, number>\n{ " + ORACLE + " }",
     "if (false) x = yield\n{ " + ORACLE + " }",
     "if (false) value = ref.current!\n" + ORACLE,
     "if (false) cache = new Map<string, number>\n" + ORACLE,
-    "if (false) handler = noop as () => void\n" + ORACLE,
+    "if (false) value = undefined as void\n" + ORACLE,
+    # A TypeScript type ends at the line break; `[` or `(` on the next line starts a statement.
+    "if (false) config = load() as Config\n[value()].forEach(() => { " + ORACLE + " });",
+    "if (false) var settings: Settings\n[value()].forEach(() => { " + ORACLE + " });",
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))

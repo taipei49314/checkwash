@@ -93,6 +93,9 @@ _FOLD_DEPTH = 64
 # at a line break, where the binder reads an operator: `x!`, `Map<K, V>`,
 # `() => void`, `yield`, `async`, and `await` outside an async function.
 _DOUBTFUL_ENDS = frozenset({"!", ">", "yield", "void", "async", "await"})
+# A TypeScript type follows these in a statement and ends at a line break,
+# which the binder may read on past: `x = load() as Config` then `[1].forEach(...)`.
+_TYPE_MARKS = frozenset({"as", "satisfies", ":"})
 
 
 class _Folder:
@@ -619,6 +622,7 @@ class Reachability:
                     return label
                 return None
         cursor = first
+        typed = False  # a top-level `as`, `satisfies` or `:` came before
         while cursor < last:
             if cursor > first and bindings._line_break(cursor):
                 if not _trivia(self._gap(cursor - 1, cursor)):
@@ -626,9 +630,11 @@ class Reachability:
                 completes = bindings._completes(cursor - 1)
                 if completes and not bindings._continues(cursor):
                     return cursor
-                if self.token(cursor) == "{" or (not completes and self.token(cursor - 1) in _DOUBTFUL_ENDS):
+                if (typed or self.token(cursor) == "{"
+                        or (not completes and self.token(cursor - 1) in _DOUBTFUL_ENDS)):
                     self.doubtful += 1  # JavaScript or TypeScript may end the statement here; this reads on
             token = self.token(cursor)
+            typed = typed or token in _TYPE_MARKS
             if token == ";":
                 if cursor == first or not (bindings._completes(cursor - 1)
                                            or not _trivia(self._gap(cursor - 1, cursor))):
