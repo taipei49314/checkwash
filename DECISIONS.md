@@ -11652,7 +11652,9 @@ Readings left to the implementation, accepted with this entry:
    `break` and `continue` do not.
 4. An absent three-part `for` condition is true. A `for ... of` or
    `for ... in`, a `do ... while` condition, `switch` and `with` are not
-   folded; `switch` and `with` bodies are not read.
+   folded. A `switch` body is not read: the walk steps over it, so a
+   `return` in a case cuts nothing and a `return` after the `switch` still
+   cuts. A `with` statement stops the walk of its list.
 5. `&&` and `||` fold as Python's `_static_truth` folds `and` and `or`: one
    false operand decides an `&&` and one true operand an `||`, wherever it
    stands. Their truthiness is JavaScript's, whatever is evaluated first.
@@ -11700,7 +11702,7 @@ checkwash or Python ran. CI ran the tests.
   `tests/test_issue429_js_reachability.py` and twelve `.gwcase` fixtures,
   nine of which carry `bypass:` (8, 29 and 48, and 8, 10 and 29 on the
   issue's own edits, `js_issue429_repro_pos`).
-- The documented test count is 19166 (18942 + 224).
+- The documented test count is 19206 (18982 + 224).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates, and
   the perf gate. `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
