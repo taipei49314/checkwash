@@ -11251,16 +11251,102 @@ records this changes in `tools/emit_corpus.py`'s output comes from CI's
 artifacts (NOT_RUN on the work machine), and the next release guide names
 the field.
 
-**Cost.** NOT_RUN: work-machine rule (POLICY work-machine-local); the sweep
-was not run on the work machine. The ruling asks the sweep to measure it,
-with resolution toggled in both directions and with what Sub-Q8 (a) and
-Sub-Q11 (a) would have changed. The two stated costs are pinned: a helper
-method moved to a base in another module (Sub-Q7), and a conversion to
-`staticmethod` (Sub-Q4). A skip added together with a decorator still
-passes with zero findings, as on main.
+**Cost.** The sweep the ruling asks for ran in part on 2026-10-17, on
+LAPTOP-01AGNPJU under POLICY `checkwash-pju-sweep` (T-546), as a
+checkwash-lab-declared run whose manifest (`54706f99…c88c`) and engine
+commits the owner approved first. It is labelled human-authorized local
+PJU, NOT EC pool. Its plain before/after compares #424's engine
+(`f541f748`) with this entry's (`81c69d28`):
+- **Standard set** (1,800 commits): no change.
+- **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088 batch,
+  and the 45 that are also in the standard set ran in the standard
+  batch, where none changes): 15 commits differ, all scrapy and all
+  beyond fingerprints. In 14 of them findings are only added:
+  ASSERT_REMOVED (high 286, warn 1), EXPECTED_VALUE_CHANGED (warn 28),
+  ASSERT_SUBSTITUTED (high 6), ASSERT_WEAKENED (high 2) and
+  EXPECTATION_DEFINITION_CHANGED (high 2, warn 1). In the fifteenth,
+  scrapy `fada8be1db`, no finding is added or removed: six TEST_DISABLED
+  findings keep their fingerprints and go from info (4) or warn (2) to
+  high. No finding is removed or lowered. Three verdicts go from pass to
+  block, and none from block to pass. 19 of the 1,218 end in the same
+  engine error on both engines and are not judged.
+- **Stated costs:** Sub-Q4's conversion to `staticmethod` shows in 3
+  commits (68 findings, all high; see below). In the standard set and
+  D-088's sets, no commit shows Sub-Q7's, a helper method moved to a base
+  in another module. Sub-Q4's other cost, a skip added in a helper method
+  together with a decorator on that method, leaves the skip unread on
+  both engines, so a before/after comparison cannot count it; any of the
+  method's assertions that were reached at the parent read as removed,
+  as for `staticmethod`.
+- **Source review** (read-only, after the run). Agents read the upstream
+  commits, the engine source and the harness's result files, and a
+  second agent tried to refute each verdict change and each survey of
+  the other commits. Nothing was rerun, so the mechanisms below are read
+  from source, not observed:
+  `NOT_RUN：工作機規則（POLICY work-machine-local），no engine run or IR emission`.
+  None of the added findings is a weakening, and the three blocks are
+  false:
+  - scrapy `c8aa429c9b` (168 ASSERT_REMOVED high) adds class-level
+    pytest marks (`requires_reactor`, `requires_http_handler`) to 23
+    test classes, and all 168 findings fall in six of them, whose tests
+    reach assertion-holding helper methods through `self`. `e058a05763`
+    (8) adds `pytest.mark.skipif(sys.version_info >= (3, 12), ...)` to
+    two TestCase classes, with all 8 findings in one of them; both
+    engines already report that version skip as TEST_DISABLED warn
+    (COMPAT_GATE), so the block comes from the 8 findings alone. Sub-Q2
+    leaves a call unresolved under a decorator on the running class, so
+    each helper method resolves on the parent side only, and its
+    assertions read as removed. A pytest mark returns the class it
+    marks.
+  - scrapy `fada8be1db` merges six proxy tests into parametrized ones
+    that each call `self._maybe_skip(...)`. That helper's skip is now
+    followed (Q1 (a)). Its guard is no D6 compat gate, so each new unit
+    is not live (SPEC §5 D2), and the six disappeared units lose the
+    credit they had under #424's engine, move credit (D2) for four of
+    them and restructure credit (D5) for the other two, and go to high.
+    D-087 and D-111 read setup skips and same-file helper skips the same
+    way.
+  - The other 12 commits add 150 findings and change no verdict:
+    Sub-Q4's staticmethod cost in 3 (68, all high); a decorator added to
+    the running class in 4 (37), where the class does run in fewer
+    places (in `14737e91ed` because its tox.ini moves mitmproxy out of
+    the default environments, not because of the mark) and #424's engine
+    already reports TEST_DISABLED, so the ASSERT_REMOVED findings repeat
+    it under a false reason; detector readings that already applied to
+    own assertions, now applied to each helper-method copy, in 4 (37); a
+    class local to a test method, named like the test class, read as
+    rebinding it, in 1 (1), which goes beyond Sub-Q2's "a class name the
+    module binds more than once"; and a removed helper call site in 2
+    (7): in `e853d9e910` the call moves to a new test and its helper
+    assertions earn no move credit there (Sub-Q11), and in `3a36955261`
+    a repeated check is dropped while a later call of the same helper
+    still covers it, which checkwash does not model. Two commits fall
+    under two of these.
+  - The decorator reading and the local-class reading are filed as
+    #NNN, the helper-skip liveness as #MMM.
+- **Not measured:** resolution toggled in both directions, and what
+  Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
+  variant that is not a commit on main. Sub-Q7 asks for its cost to be
+  counted in the targeted sweep: of the 1,372 commits in the sweep's
+  `targeted` phase, only the 119 that are also in D-088's sets ran.
 
-Evidence status: the change was prepared on a work machine where no
-pytest, checkwash or Python ran. CI ran the tests.
+The counts are read from the harness output. The summaries and the
+source review's records are in checkwash-lab
+`prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+`runs/acceptance-sweep-421/20261017-pju/`. Two of the ruling's three
+stated costs are pinned: a helper method moved to a base in another
+module (Sub-Q7, `self_method_moved_to_imported_base_pos`), and a
+conversion to `staticmethod` (Sub-Q4,
+`self_method_staticmethod_conversion_pos`). Sub-Q4's other stated cost
+is not pinned: a skip added in a helper method together with a decorator
+on that method is not read, so it passes with zero findings, as before
+this entry, unless the method's assertions were reached at the parent;
+those then read as removed, as for `staticmethod`. A decorator on the
+running class falls under Sub-Q2 instead (`c8aa429c9b` and `e058a05763`
+above).
+
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
 
 - Tests were added: 10 `.gwcase` fixtures and 51 collected items in
   `tests/test_issue306_self_methods.py`. The two pins above changed.
