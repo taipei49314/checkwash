@@ -11272,13 +11272,187 @@ on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's lis
 for approval of this PR's SPEC (6dba5aa), THREATMODEL (e3e4b79) and D-145
 (93c25a6) text and of the diffalign and gating commit ea98b62.
 
+## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
+
+Ruling 421 (owner, 2026-10-14, 「P1 全部照建議」) answered its six questions
+as recommended, and the order decision puts round 1 before #429 and #428.
+D-145 is #306's entry in PR #476, so this entry is D-146.
+
+#421 reports that an assertion-level exemption was keyed on rule, path, unit
+and the normalized before text. While the base still held the original line,
+one `checkwash allow` for a reviewed rewrite also passed any other rewrite of
+that line the same rule reported, until the entry expired. The key was broader
+in four more ways. The event kind was not in it, so an approved strength drop
+also covered an inversion. A Jest or Vitest assertion was keyed by its text
+through the matcher's `(`, so `toBe(1)` and `toBe(2)` on one subject shared a
+key. TOLERANCE_LOOSENED was keyed by `kind:old value`, so one approval covered
+any widening of a tolerance with that kind and old value in the unit. And
+identical before lines collided.
+
+How each answer is implemented:
+
+- Q1 (b) and Q2 (b), the scope. ASSERT_WEAKENED (its five branches),
+  ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
+  EXPECTED_VALUE_CHANGED at assertion level, EXPECTED_VALUE_DERIVED,
+  EXPECTATION_DEFINITION_CHANGED (the aligned emitter and the helper/loop
+  provenance channel), SUBJECT_NORMALIZED and SUBJECT_INPUT_CHANGED (both
+  forms of each) now emit `make_assertion_fingerprint`. TEST_DISABLED waits
+  for round 2 under its own issue and ruling. EXPECTED_VALUE_HARDCODED,
+  CONFTEST_PATCHES_PROD, TEST_PATCHES_SUBJECT and the rules that are not
+  oracle rules keep `make_fingerprint`.
+- Q3 (b), the identity. `assertion_identity` builds it and `assertion_key`
+  hashes it: `rule/path/unit/v2:<64hex>`, the full SHA256 of ASCII canonical
+  JSON under the scheme name `checkwash/assertion-fingerprint/v2`. It holds
+  the legacy pre-image exactly as `make_fingerprint` builds it, the complete
+  before and after texts, the event kind, the before side's ordinal and
+  count of the text (`assertion_position`), and the rule's context. The
+  texts are in `identity_text`'s form, a v2-only scanner: `normalize_text`'s
+  form, except that a JS template literal is kept as written and the code
+  of each `${...}` in it is normalized as code. `normalize_text` is
+  unchanged, so pairing, move detection and the legacy keys are as they
+  were. A span
+  only finds the assertion among its copies. Spans, line numbers, messages,
+  strengths, severities, file digests and revision labels stay out. Nothing
+  raises: an unreadable text is null, and a context JSON cannot encode is
+  recorded as null.
+- Q4 (a), legacy keys. `fingerprint_state` retires a legacy key of these
+  nine rules. It is still parsed and counted, never eligible, and `allow`
+  refuses it (exit 2) with a message that names #421. `doctor` and `check`
+  report it as they report the five D-055 namespaces. Nothing is migrated.
+  The legacy entries in checkwash's own ledger cover merged PRs, so no
+  current verdict changes; they stay as ignored records until they expire
+  or are removed through the GUARDRAIL_TOUCHED route.
+- Q5 (a), versioning. The next minor (or 1.0), never a patch.
+  FINDINGS_VERSION and IR_VERSION stay at 2: no IR field is added. The
+  release needs the one-time authorization in AGENTS.md rule 5.
+- Q6 (b), the report listing, is filed separately at P3.
+
+Readings the ruling leaves to the implementation:
+
+1. **The context per rule.** TOLERANCE_LOOSENED: the tolerance kind and both
+   recorded values. EXPECTATION_DEFINITION_CHANGED (aligned): for each name
+   whose definition moved, its reaching definition, local binding,
+   parametrize column, parametrize rows, module constant and same-file
+   fixture, before and after. EXPECTED_VALUE_DERIVED: the names the new
+   expectation shares with the subject. SUBJECT_INPUT_CHANGED: the changed
+   inputs. SUBJECT_NORMALIZED (aligned): both resolved subjects.
+   ASSERT_WEAKENED: whether the subject changed in the polarity branch, and
+   the tolerance an unreadable one lost; its other branches need nothing
+   beyond the kind and the texts. The provenance channel and both table
+   forms already put their whole event in the legacy text.
+2. **Which assertion a tolerance change came from.** `tolerance_changes`
+   records values only. The detector takes, in alignment order, the next
+   pair whose tolerances are those values; when there is none, the texts
+   and the position are null and the key still differs by its context.
+3. **Literal-table SUBJECT_NORMALIZED events carry no position.** The record
+   alone is the identity, so it survives the JSON round trip of the events
+   without the units. Duplicate suppression, between the two forms and
+   between equal records, stays on the legacy keys, so no finding count
+   changes.
+4. **The stored expectation.** `EXPECTED_VALUE_CHANGED/path/-/v2:<64hex>`
+   stays the D-055 file form. The same rule with a unit is now an
+   assertion-level v2 key, so the key that was `invalid` at
+   `test_snapshot_expectations.py:125` is `supported`.
+5. **Sets.** `ast.literal_eval` makes sets of literal arguments and table
+   cells, and a set's iteration order, so its `str()`, follows the hash seed.
+   `canonical` encodes a set as a list sorted by its members' encodings, and
+   another value JSON has no form for as its `repr`, so a key is the same in
+   every process. SUBJECT_INPUT_CHANGED's table-row legacy text goes through
+   it too. A row without a set encodes as it always has, and so does a dict
+   with int, float or None keys; a tuple key, on which json.dumps raised,
+   is now written as its JSON encoding. Raised by a GLM review of #477 and
+   verified by the agent.
+6. **Which copy.** The ordinal counts in the side's own order, not by span:
+   spans of assertions from other files share no coordinates with the
+   unit's, and the copies of one helper line share a span. Own and
+   same-file assertions come in source order, a helper line's copies by
+   call site, then those from other files; an assertion is found by itself,
+   never by its span.
+7. **A unit named with `/`.** A JS unit is the raw test title, so
+   `fingerprint_state` reads only the last segment as the digest, after a
+   non-empty path and unit: `it("GET /")` keeps an exemptible key.
+8. **TOLERANCE_LOOSENED's pair.** Alignment and the detector share
+   `tolerance_change`, so each recorded change is matched to the pair that
+   records exactly it, not to another pair whose values merely fit.
+9. **SUBJECT_NORMALIZED's subjects** are in the texts' normal form, so
+   reformatting outside string literals keeps the key.
+
+Readings 6 to 9 were raised by a read-only Claude review workflow of #477 and
+verified against the source by the agent.
+
+This supersedes, for these nine namespaces, D-055's "Keep unaffected
+identities ... unchanged" and D-077's list of the keys that stay (six rules
+keying a JS assertion by its legacy matcher identity; TOLERANCE_LOOSENED,
+EXPECTED_VALUE_CHANGED and EXPECTED_VALUE_DERIVED keeping every other key).
+The D-084 practice, a changed assertion riding on an existing exemption whose
+key binds only the before text, ends.
+
+**Fingerprints.** Every finding of the nine rules has a new key, so every
+recorded exemption for them stops matching and the reviewed change must be
+re-run and approved again. Other rules keep their keys. Findings of one rule
+in one unit sort by key, so their order in a report can change.
+
+**Pinned tests (rule 2).** Changed as approved:
+`test_js_assertion_identity.py`'s four named tests, which now pin the
+legacy pre-image inside the v2 identity (`_refines`);
+`test_tolerance_absolute_bound.py`'s
+`test_a_finding_reported_before_keeps_its_fingerprint`, likewise;
+`test_snapshot_expectations.py:125,127` (its name, which says assertion
+keys are not retired, is left as approved);
+`test_doctor.py:537-546`, whose over-cap entry becomes a v2 key;
+`test_human_encoding.py:120-121`; and `test_fingerprint_scope.py:189-233`,
+moved to BROAD_EXCEPT_ADDED. Beyond that list, two, for the owner's approval:
+`test_issue416_subdirectory_root.py`'s `FINGERPRINT`, a legacy ASSERT_WEAKENED
+key its three tests pass to `checkwash allow`, becomes a v2 key (an input; no
+expectation changes); and `tests/e2e/test_cli.py::test_sarif_format_is_github_code_scanning_subset`
+reads the ASSERT_WEAKENED result's `partialFingerprints` under `checkwash/v2`,
+as SPEC §6 says. No `.gwcase` expectation changes.
+`allowlist_future_created_pos` is unaffected: the golden runner passes it no
+ledger either, so its `bypass: 39` claim holds no exemption, a gap that
+predates #421. `test_a_future_created_content_bound_key_is_still_capped` pins
+the cap on a v2 key with a real entry.
+
+**Cost.**
+- **New blocks:** a rewrite of an assertion under an exemption recorded for
+  another rewrite of the same line, for another identical copy, or for
+  another context.
+- **Re-review:** every recorded exemption for the nine rules.
+- **Not measured yet:** the sweep (ruling: the standard set and D-088's
+  sets). The owner chose to run it on LAPTOP-01AGNPJU, under POLICY
+  `checkwash-pju-sweep` (T-546), as a checkwash-lab-declared run whose
+  manifest and engine commits he approves first.
+
+Row 136 is Closed. Its residuals: TEST_DISABLED (its own round),
+EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep
+before-only keys; an approval still covers the identical reviewed rewrite on a
+later diff, as D-055 intends; and the identity holds what the frontends
+record. Rows 100 and 101 now point to it.
+
+Evidence status: the change was prepared on a work machine where no pytest,
+checkwash or Python ran. CI ran the tests.
+
+- Tests were added: 38 collected items in
+  `tests/test_issue421_assertion_keys.py`. None is under `tests/gates`.
+  Row 136 is pinned through `E2E_PINNED` by
+  `test_the_reviewed_rewrite_is_exempt_and_another_still_blocks`: the
+  golden runner passes no ledger, so the `.gwcase` first written for it held
+  no exemption at all (raised by a GLM review of #477 and verified by the
+  agent), and it was removed.
+- The documented test count is 18774 (18736 after #306, + 38).
+
+The agent wrote this entry in #421's fix PR #477. The maintainer approved it
+on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
+for approval of this PR's SPEC (a332ad42), THREATMODEL (87e932ca), D-146
+(285f5d4f) and user-doc (f6f9c3db) text and of the two pinned tests outside
+the ruled list. The second half of that reply chose this host for the
+ruling's sweep, under POLICY `checkwash-pju-sweep` (T-546).
+
 ## D-147 (2026-10-17): a JS/TS assertion that can never fail reads as TAUTOLOGY (#429, first change)
 
 Ruling 429 (owner, 2026-10-14, 「P1 全部照建議」) answered its ten
 questions as recommended. Q8 (b) splits the round into two changes, each
 with its own qualification and sweep; this entry is the first (Q2, Q6,
-Q7). D-145 (#306) is on main and D-146 (#421) is drafted in its open PR, so this
-entry is D-147.
+Q7). D-145 (#306) and D-146 (#421) are on main, so this entry is D-147.
 
 #429 reports three one-line JS/TS edits that the Python frontend blocks and
 the JS/TS frontend passed with zero findings. This change closes the first:
@@ -11348,9 +11522,15 @@ Readings left to the implementation, accepted with this entry:
    three existing expected outputs below. The owner ruled so on 2026-10-17
    (rule 2, below).
 4. A negated self-comparison is TAUTOLOGY too, as Python reads `x != x`;
-   it can never pass and states no oracle. Exclusive bounds (`x < x`),
-   which Python does not read either, keep their rung, and so do
-   `toBeCloseTo(x)`, `toContain(x)`, `include`, `toMatch` and `within`.
+   it can never pass and states no oracle. With `positive=True` (Q6), paired
+   with a negated check of a value it reads as a change of form and
+   polarity, as in Python. Exclusive bounds (`x < x`), which Python does not
+   read either, keep their rung, and so do `toBeCloseTo(x)`, `toContain(x)`,
+   `include`, `toMatch` and `within`. So does a property's value compared
+   with that property (`.property("total", order.total)`,
+   `assert.propertyVal`), which still asserts that the property is there.
+   The row-10 stripping is Python's reading, not an evaluation: `x + 0`
+   reads as `x` although `-0 + 0` is positive zero under `Object.is`.
 5. An assertion whose predicate is not read (strength None: `raises`,
    `unknown`) keeps strength None.
 
@@ -11376,7 +11556,8 @@ The three confirmations the ruling asks for are pinned in
   included, reaches `swallowing_handlers` before any key is dropped
   (`test_the_catch_proof_reads_the_predicate_before_it_is_dropped`; both
   test files are unchanged).
-- A removed `expect(1).toBe(1)` keeps its legacy key, `expect(1).toBe(`
+- A removed `expect(1).toBe(1)` keeps its identity: the content-bound key
+  (#421) is computed from the legacy pre-image `expect(1).toBe(`
   (`test_a_removed_literal_assertion_keeps_its_fingerprint`).
 
 No `.gwcase` expectation and nothing under `tests/gates` changed.
@@ -11384,18 +11565,19 @@ No `.gwcase` expectation and nothing under `tests/gates` changed.
 **Fingerprints.** No fingerprint scheme or existing key changes. The
 message of a removed literal assertion says `strength TAUTOLOGY` instead of
 the rung it read before, and pairs that were silent now report
-`ASSERT_WEAKENED` under new keys. If #421's content-bound keys (#477) land
-first, the pin above checks the legacy pre-image instead of the key itself.
+`ASSERT_WEAKENED` under new keys. #421's content-bound keys (#477) landed
+first, so the pin above checks the legacy pre-image each key is computed
+from, as `tests/test_js_assertion_identity.py` does.
 
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 202 collected items in
+- Tests were added: 204 collected items in
   `tests/test_issue429_js_tautology.py` and four `.gwcase` fixtures
   (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
   `bypass: 10`, `js_literal_replaces_oracle_pos` and
   `js_tautology_reformatted_neg`).
-- The documented test count is 18942 (18736 + 206).
+- The documented test count is 18982 (18774 + 208).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.

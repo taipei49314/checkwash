@@ -14,13 +14,14 @@ labels; they run only in remote CI.
 from __future__ import annotations
 
 import datetime
-import hashlib
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import FileChange, analyze
+from checkwash.findings import assertion_key
 from checkwash.frontends.javascript.exception_handlers import ALWAYS_PASSING
 from checkwash.frontends.javascript.frontend import parse_javascript
 from checkwash.frontends.javascript.literals import literal_operand, same_operand
@@ -146,6 +147,9 @@ def test_a_different_operand_keeps_the_exact_rung(expected):
     (VITEST, "expect(total === total).toBe(true);", "compare_eq", S.EXACT_VALUE),
     # Two spellings of one property are two operands: nothing is evaluated.
     (VITEST, 'expect(order.total).toBe(order["total"]);', "compare_eq", S.EXACT_VALUE),
+    # A property's value compared with that property still asserts that the property is there.
+    (CHAI, "expect(order).to.have.property('total', order.total);", "compare_eq", S.EXACT_VALUE),
+    (CHAI, "assert.propertyVal(order, 'total', order.total);", "compare_eq", S.EXACT_VALUE),
 ])
 def test_named_residuals_keep_their_rung(header, body, form, strength):
     assertion = _assertion(header, body)
@@ -321,14 +325,28 @@ def test_an_unchanged_tautology_reports_nothing(before, after):
     assert (verdict, findings) == ("pass", [])
 
 
-def test_a_removed_literal_assertion_keeps_its_fingerprint():
-    """Rule 2 (#429): Q6 keeps `left`, so the legacy identity still reads the matcher prefix."""
+def test_a_removed_literal_assertion_keeps_its_fingerprint(monkeypatch):
+    """Rule 2 (#429): Q6 keeps `left`, so the legacy identity still reads the matcher prefix.
+
+    Since #421 the key is content-bound. As `tests/test_js_assertion_identity.py`
+    pins it, the identity the key is computed from holds the legacy pre-image,
+    spelled here independently of either parser.
+    """
+    seen = []
+    real = findings_module.assertion_identity
+
+    def record(*args, **kwargs):
+        seen.append(real(*args, **kwargs))
+        return seen[-1]
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
     path = "tests/identity.test.ts"
     _verdict, findings = _outcome(VITEST, "expect(1).toBe(1); expect(subject()).toBe(42);",
                                   "expect(subject()).toBe(42);", path)
     finding, = [finding for finding in findings if finding.rule == "ASSERT_REMOVED"]
-    digest = hashlib.sha256(f"ASSERT_REMOVED/{path}/sample/expect(1).toBe(".encode()).hexdigest()[:12]
-    assert finding.fingerprint == f"ASSERT_REMOVED/{path}/sample/{digest}"
+    legacy = f"ASSERT_REMOVED/{path}/sample/expect(1).toBe("
+    assert finding.fingerprint.startswith(f"ASSERT_REMOVED/{path}/sample/v2:")
+    assert finding.fingerprint in {assertion_key(i) for i in seen if i["legacy"] == legacy}
     assert finding.before.text == "expect(1).toBe(1)"
     assert finding.message.endswith("assertion removed (strength TAUTOLOGY)")
 

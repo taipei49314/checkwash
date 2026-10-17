@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.model import IR, judged_as_test
 from checkwash.ir.strength import name_of
@@ -33,8 +33,10 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=a.text, span=a.span),
                         after=None,
-                        fingerprint=make_fingerprint(
-                            "ASSERT_REMOVED", file.path, unit.qualname, fingerprint_text(file.path, a)
+                        fingerprint=make_assertion_fingerprint(
+                            "ASSERT_REMOVED", file.path, unit.qualname, fingerprint_text(file.path, a),
+                            before=a.text, after=None, kind="removed",
+                            position=assertion_position(unit.before, a),
                         ),
                     )
                 )

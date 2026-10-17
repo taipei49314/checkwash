@@ -18,7 +18,7 @@ import math
 import operator
 import re
 
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
 from checkwash.frontends.javascript.literals import comparable_operand, operand_names
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.expected_values import literal_value, same_value
@@ -256,8 +256,10 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
-                        fingerprint=make_fingerprint(
-                            "EXPECTED_VALUE_CHANGED", file.path, unit.qualname, b.text
+                        fingerprint=make_assertion_fingerprint(
+                            "EXPECTED_VALUE_CHANGED", file.path, unit.qualname, b.text,
+                            before=b.text, after=a.text, kind="expected_changed",
+                            position=assertion_position(unit.before, b),
                         ),
                     )
                 )
@@ -338,8 +340,10 @@ def detect_derived(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
-                        fingerprint=make_fingerprint(
-                            "EXPECTED_VALUE_DERIVED", file.path, unit.qualname, b.text
+                        fingerprint=make_assertion_fingerprint(
+                            "EXPECTED_VALUE_DERIVED", file.path, unit.qualname, b.text,
+                            before=b.text, after=a.text, kind="expected_derived",
+                            position=assertion_position(unit.before, b), context={"shared": list(shared)},
                         ),
                     )
                 )
