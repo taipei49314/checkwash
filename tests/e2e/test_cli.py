@@ -111,7 +111,7 @@ def test_sarif_format_is_github_code_scanning_subset(repo):
         "tests/test_billing.py"
     )
     assert hit["locations"][0]["physicalLocation"]["region"] == {"startLine": 6}
-    assert hit["partialFingerprints"]["checkwash/v1"]
+    assert hit["partialFingerprints"]["checkwash/v2"]
     again = _checkwash(repo, "check", "HEAD~1..HEAD", "--format", "sarif")
     assert again.stdout == result.stdout
 

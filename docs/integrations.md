@@ -562,6 +562,8 @@ It needs a code fence. And the README workflow has no `actions/setup-python`, so
 - **Fingerprint collision.** In requests `e36f3459`, two genuinely distinct deleted `pytest.raises`
   statements (different `before.span`: `[61012, 61040]` vs `[61151, 61179]`) share one fingerprint.
   `greenwash allow` on it silently exempts both. Soundness hole in the exemption workflow.
+  (From the next minor, #421: the key of an assertion-level rule includes which of the identical
+  copies it is, so each deletion needs its own approval.)
 - **Volume control.** One commit produced **96 findings** in a single `check` (89
   `SUPPRESSION_ADDED` from a typing migration), printed as 96 stanzas with no cap, grouping, or
   `--quiet`. `--fail-on warn` is unusable on any typed Python codebase.

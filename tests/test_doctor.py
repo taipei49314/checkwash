@@ -537,7 +537,7 @@ def test_limits_allowlist_and_exit_semantics_are_preserved(tmp_path):
 
     allow = (
         "[[allow]]\n"
-        'fingerprint = "ASSERT_WEAKENED/tests/x.py/t/deadbeefdead"\n'
+        'fingerprint = "ASSERT_WEAKENED/tests/x.py/t/v2:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"\n'
         'rule = "ASSERT_WEAKENED"\nreason = "hand-edited decade"\nauthor = "audit"\n'
         'created = "2020-01-01"\nexpires = "2030-01-01"\n'
     )
