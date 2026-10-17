@@ -11550,10 +11550,13 @@ Readings left to the implementation, accepted with this entry:
    spells another's placeholder. These came from a read-only review workflow and were
    checked by Claude.
 7. A cast to one named type inside an operand binds as TypeScript binds
-   it, before the no-op arithmetic around it: `total as number + 0` is
-   `(total as number) + 0` and reads as `total`, as the parenthesized
-   spelling did. A cast to anything more, or a type followed by `|`, `&` or
-   `<`, still leaves the operand whole. Raised by GLM, verified by Claude.
+   it: looser than the arithmetic before it, which is the cast's own
+   operand, while what follows applies to the cast. `total as number + 0`
+   is `(total as number) + 0` and reads as `total`, as the parenthesized
+   spelling did; `0 + s as any * 2` is `((0 + s) as any) * 2` and keeps its
+   `0 +`. A cast to anything more, or a type followed by `|`, `&` or `<`,
+   still leaves the operand whole. Raised by GLM, verified by Claude; the
+   precedence before the cast came from a review workflow.
 
 Rule 2. By reading, the ruling expected no existing output to move. Three
 do, in
