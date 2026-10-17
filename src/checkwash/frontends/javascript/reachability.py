@@ -628,13 +628,18 @@ class Reachability:
         operators = []
         index = first
         while index < stop:
-            if self.token(index) in {"&&", "||"}:
+            token = self.token(index)
+            # The binder spells `&&` and `||` as two adjacent `&` or `|` tokens.
+            if (token in {"&", "|"} and index + 1 < stop and self.token(index + 1) == token
+                    and self.tokens[index][2] == self.tokens[index + 1][1]):
                 operators.append(index)
-            index = self.pairs.get(index, index) + 1 if self.token(index) in _BRACKETS else index + 1
-        if not operators or operators[-1] + 1 >= stop:
+                index += 2
+                continue
+            index = self.pairs.get(index, index) + 1 if token in _BRACKETS else index + 1
+        if not operators or operators[-1] + 2 >= stop:
             return
         operator = operators[-1]
-        start_char, end_char = self.tokens[operator + 1][1], self.tokens[stop - 1][2]
+        start_char, end_char = self.tokens[operator + 2][1], self.tokens[stop - 1][2]
         if self.assertions.get(start_char) != end_char:
             return
         if stop < end and not _trivia(self._gap(stop - 1, stop)):
@@ -643,5 +648,5 @@ class Reachability:
         source = self.bindings.text[self.tokens[before][2]:self.tokens[operator][1]] if before >= 0 else ""
         position = self.tokens[first][1]
         truth = fold_condition(source, lambda name: self.bindings.is_global((name,), position))
-        if truth is (self.token(operator) == "||"):
+        if truth is (self.token(operator) == "|"):
             self.dead.append((start_char, end_char))
