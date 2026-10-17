@@ -106,6 +106,19 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     # A dead body that is no block, whose end at a line break is in doubt, is not killed.
     "if (false) skip()\n{\n" + ORACLE + "\n}",
     "while (false) step()\n{ " + ORACLE + " }",
+    # A nested template behind a quoted brace or a comment; JSX after a block; a comment U+2028 ends.
+    "const s = `${ \"}\" + `x; return; y` }`;\n" + ORACLE,
+    "if (`${ x // }` && false && `\n}`) { " + ORACLE + " }",
+    "{ setup(); }\n<p>Saved; return; later</p>;\n" + ORACLE,
+    "if (false) // note\N{LINE SEPARATOR}skip()\n{ " + ORACLE + " }",
+    # A body whose end at a line break TypeScript or a restricted production may take.
+    "if (false) ref.current!\n{\n" + ORACLE + "\n}",
+    "if (false) handler = noop as () => void\n{ " + ORACLE + " }",
+    "if (false) cache = new Map<string, number>\n{ " + ORACLE + " }",
+    "if (false) x = yield\n{ " + ORACLE + " }",
+    "if (false) value = ref.current!\n" + ORACLE,
+    "if (false) cache = new Map<string, number>\n" + ORACLE,
+    "if (false) handler = noop as () => void\n" + ORACLE,
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -188,6 +201,7 @@ def test_a_branch_the_folder_cannot_decide_or_that_runs_keeps_the_assertion(stat
     ("(", None), ("1 /* c */ === // d\n 1", True), ("1 in x", None),
     ("!" * 1000 + "true", None), ("(" * 400 + "false" + ")" * 400, None),
     ("i++ / 2 || x / 1 && false", None), ("x <!-- || true", None), ("x --> 0 || true", None),
+    ("`${ x // }` && false && `\n}`", None),
 ])
 def test_the_condition_folder(condition, truth):
     assert fold_condition(condition, lambda _name: True) is truth

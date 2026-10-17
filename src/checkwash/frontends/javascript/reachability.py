@@ -33,7 +33,13 @@ from bisect import bisect_left
 from collections.abc import Callable
 
 from checkwash.frontends.javascript.bindings import NAME, Bindings
-from checkwash.frontends.javascript.literals import operand_tokens, scalar_literal
+from checkwash.frontends.javascript.literals import (
+    _REGEX_LITERAL,
+    _string_end,
+    _template_end,
+    operand_tokens,
+    scalar_literal,
+)
 
 _MAX_DEPTH = 32
 _BRACKETS = {"(": ")", "[": "]", "{": "}"}
@@ -83,6 +89,10 @@ _EQUALITY = frozenset({"===", "!==", "==", "!="})
 _RELATIONAL = frozenset({"<", ">", "<=", ">="})
 # How deep `!` and parentheses nest before the folder gives up: unknown.
 _FOLD_DEPTH = 64
+# Tokens after which TypeScript or a restricted production may end a statement
+# at a line break, where the binder reads an operator: `x!`, `Map<K, V>`,
+# `() => void`, `yield`, `async`, and `await` outside an async function.
+_DOUBTFUL_ENDS = frozenset({"!", ">", "yield", "void", "async", "await"})
 
 
 class _Folder:
@@ -247,6 +257,41 @@ def fold_condition(source: str, is_global: Callable[[str], bool]) -> bool | None
 
 # --- Q1, Q3: the statement walker ------------------------------------------------------------
 
+def _misread_run(text: str, start: int, end: int) -> bool:
+    """Does the mask misread this run of literals and comments?
+
+    It ends a template at the next backtick, where one nested in a
+    substitution may stand: each template is read again as the operand
+    reader reads it, its substitutions nested. (A U+2028 or U+2029, which
+    ends a `//` comment the mask runs on to a line feed, refuses the whole
+    callback before this.)
+    """
+    index = start
+    while index < end:
+        char = text[index]
+        if char == "`":
+            shallow = index + 1
+            while shallow < len(text) and text[shallow] != "`":
+                shallow += 2 if text[shallow] == "\\" else 1
+            if _template_end(text, index) != shallow + 1:
+                return True  # a template nested in a substitution, or one the reader leaves unread
+            index = shallow + 1
+        elif char in "'\"":
+            index = _string_end(text, index) or index + 1
+        elif text.startswith("/*", index):
+            closing = text.find("*/", index + 2)
+            index = end if closing < 0 else closing + 2
+        elif text.startswith("//", index):
+            newline = text.find("\n", index + 2)
+            index = end if newline < 0 else newline + 1
+        elif char == "/":
+            regex = _REGEX_LITERAL.match(text, index)
+            index = index + 1 if regex is None else regex.end()
+        else:
+            index += 1
+    return False
+
+
 class Reachability:
     """The spans of each test callback in one file that never run, read on demand."""
 
@@ -319,26 +364,18 @@ class Reachability:
             run = position
             while position < end and not code[position]:
                 position += 1
-            segment = text[run:position]
-            opening = segment.find("${")
-            while opening >= 0:
-                braces = 1
-                for char in segment[opening + 2:]:
-                    braces += {"{": 1, "}": -1}.get(char, 0)
-                    if not braces:
-                        break
-                if braces:
-                    return True  # the mask ended this template inside a substitution
-                opening = segment.find("${", opening + 2)
+            if _misread_run(text, run, position):
+                return True
         for index in range(first, closing):
             token, following = self.token(index), self.token(index + 1)
             adjacent = index + 1 < len(self.tokens) and self.tokens[index][2] == self.tokens[index + 1][1]
             if adjacent and ((token == "<" and following == "!" and self.token(index + 2) == "--")
                              or (token == "--" and following == ">")):
                 return True
-            if (token == "<" and index > 0 and not self.bindings._completes(index - 1)
-                    and (_NAME.fullmatch(following) or following in {">", "/"})):
-                return True  # JSX, or a TypeScript `<T>` assertion
+            if token == "<" and index > 0 and (self.token(index - 1) == "}" or (
+                    not self.bindings._completes(index - 1)
+                    and (_NAME.fullmatch(following) or following in {">", "/"}))):
+                return True  # JSX (after a block too), or a TypeScript `<T>` assertion
         return False
 
     def _kill(self, first: int, after: int) -> None:
@@ -589,9 +626,8 @@ class Reachability:
                 completes = bindings._completes(cursor - 1)
                 if completes and not bindings._continues(cursor):
                     return cursor
-                if ((completes and self.token(cursor) == "{")
-                        or (self.token(cursor - 1) in {"!", "yield"} and not bindings._continues(cursor))):
-                    self.doubtful += 1  # JavaScript may end the statement here; this reads on
+                if self.token(cursor) == "{" or (not completes and self.token(cursor - 1) in _DOUBTFUL_ENDS):
+                    self.doubtful += 1  # JavaScript or TypeScript may end the statement here; this reads on
             token = self.token(cursor)
             if token == ";":
                 if cursor == first or not (bindings._completes(cursor - 1)
