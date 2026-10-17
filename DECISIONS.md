@@ -11522,9 +11522,15 @@ Readings left to the implementation, accepted with this entry:
    three existing expected outputs below. The owner ruled so on 2026-10-17
    (rule 2, below).
 4. A negated self-comparison is TAUTOLOGY too, as Python reads `x != x`;
-   it can never pass and states no oracle. Exclusive bounds (`x < x`),
-   which Python does not read either, keep their rung, and so do
-   `toBeCloseTo(x)`, `toContain(x)`, `include`, `toMatch` and `within`.
+   it can never pass and states no oracle. With `positive=True` (Q6), paired
+   with a negated check of a value it reads as a change of form and
+   polarity, as in Python. Exclusive bounds (`x < x`), which Python does not
+   read either, keep their rung, and so do `toBeCloseTo(x)`, `toContain(x)`,
+   `include`, `toMatch` and `within`. So does a property's value compared
+   with that property (`.property("total", order.total)`,
+   `assert.propertyVal`), which still asserts that the property is there.
+   The row-10 stripping is Python's reading, not an evaluation: `x + 0`
+   reads as `x` although `-0 + 0` is positive zero under `Object.is`.
 5. An assertion whose predicate is not read (strength None: `raises`,
    `unknown`) keeps strength None.
 
@@ -11566,12 +11572,12 @@ from, as `tests/test_js_assertion_identity.py` does.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 202 collected items in
+- Tests were added: 204 collected items in
   `tests/test_issue429_js_tautology.py` and four `.gwcase` fixtures
   (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
   `bypass: 10`, `js_literal_replaces_oracle_pos` and
   `js_tautology_reformatted_neg`).
-- The documented test count is 18980 (18774 + 206).
+- The documented test count is 18982 (18774 + 208).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
